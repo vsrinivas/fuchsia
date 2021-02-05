@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use diagnostics_data::Severity;
+use diagnostics_reader::{ArchiveReader, Data, Logs};
+use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::LauncherMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::{
-    client::{connect_to_service, launch_with_options, LaunchOptions},
+    client::{connect_to_service, launch_with_options, App, LaunchOptions},
     server::ServiceFs,
 };
 use fuchsia_syslog::levels::{DEBUG, INFO, WARN};
@@ -15,17 +18,8 @@ use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use futures::{channel::mpsc, StreamExt};
 
 #[fasync::run_singlethreaded(test)]
-async fn embedding_stop_api() {
-    let launcher = connect_to_service::<LauncherMarker>().unwrap();
-    // launch archivist
-    let mut archivist = launch_with_options(
-        &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
-            .to_owned(),
-        Some(vec!["--disable-log-connector".to_owned()]),
-        LaunchOptions::new(),
-    )
-    .unwrap();
+async fn embedding_stop_api_for_log_listener() {
+    let mut archivist = start_archivist();
 
     let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
     let dir_req = archivist.directory_request().clone();
@@ -83,6 +77,78 @@ async fn embedding_stop_api() {
             (WARN, "my warn message.".to_owned()),
         ]
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn embedding_stop_api_works_for_batch_iterator() {
+    let mut archivist = start_archivist();
+
+    let dir_req = archivist.directory_request().clone();
+    let mut fs = ServiceFs::new();
+
+    let (env_proxy, mut logging_component) = fs
+        .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
+        .launch_component_in_nested_environment(
+            "fuchsia-pkg://fuchsia.com/test-logs-stop#meta/logging-component.cmx".to_owned(),
+            None,
+            "stop_accessor_test_env",
+        )
+        .unwrap();
+    let _fs = fasync::Task::spawn(Box::pin(async move {
+        fs.collect::<()>().await;
+    }));
+
+    let accessor = archivist
+        .connect_to_service::<ArchiveAccessorMarker>()
+        .expect("cannot connect to accessor proxy");
+    let subscription = ArchiveReader::new()
+        .with_archive(accessor)
+        .add_selector("UNKNOWN")
+        .snapshot_then_subscribe()
+        .expect("subscribed");
+
+    // wait for logging_component to die
+    assert!(logging_component.wait().await.unwrap().success());
+
+    // kill environment before stopping archivist.
+    env_proxy.kill().await.unwrap();
+
+    // connect to controller and call stop
+    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    controller.stop().unwrap();
+
+    // collect all logs
+    let logs = subscription
+        .map(|result| {
+            let data: Data<Logs> = result.expect("got result");
+            (data.metadata.severity, data.msg().unwrap().to_owned())
+        })
+        .collect::<Vec<_>>()
+        .await;
+
+    // recv_logs returned, means archivist must be dead. check.
+    assert!(archivist.wait().await.unwrap().success());
+    assert_eq!(
+        logs,
+        vec![
+            (Severity::Debug, "my debug message.".to_owned()),
+            (Severity::Info, "my info message.".to_owned()),
+            (Severity::Warn, "my warn message.".to_owned()),
+        ]
+    );
+}
+
+fn start_archivist() -> App {
+    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    // launch archivist
+    launch_with_options(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            .to_owned(),
+        Some(vec!["--disable-log-connector".to_owned()]),
+        LaunchOptions::new(),
+    )
+    .unwrap()
 }
 
 struct Listener {

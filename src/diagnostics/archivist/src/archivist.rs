@@ -73,6 +73,16 @@ pub struct ArchivistBuilder {
     /// Receiver for stream which will process LogSink connections.
     log_receiver: mpsc::UnboundedReceiver<Task<()>>,
 
+    /// Receiver for stream which will process BatchIterator connections.
+    batch_iterator_task_receiver: mpsc::UnboundedReceiver<Task<()>>,
+
+    /// Sender for stream which will process BatchIterator connections.
+    ///
+    /// Clones of the sender keep the receiver end of the channel open. As soon
+    /// as all clones are dropped or disconnected, the receiver will close. The
+    /// receiver must close for `Archivist::run` to return gracefully.
+    batch_iterator_task_sender: mpsc::UnboundedSender<Task<()>>,
+
     /// Sender which is used to close the stream of LogSink connections.
     ///
     /// Clones of the sender keep the receiver end of the channel open. As soon
@@ -105,6 +115,7 @@ impl ArchivistBuilder {
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
+        let (batch_iterator_task_sender, batch_iterator_task_receiver) = mpsc::unbounded();
 
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
@@ -223,12 +234,16 @@ impl ArchivistBuilder {
             component::inspector().root().create_child("legacy_metrics_archive_accessor"),
         ));
 
+        let sender_for_accessor = batch_iterator_task_sender.clone();
+        let sender_for_feedback = batch_iterator_task_sender.clone();
+        let sender_for_legacy = batch_iterator_task_sender.clone();
         fs.dir("svc")
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.diagnostics.ArchiveAccessor connection");
                 let all_archive_accessor =
                     ArchiveAccessor::new(all_access_pipeline.clone(), all_accessor_stats.clone());
-                all_archive_accessor.spawn_archive_accessor_server(stream)
+                all_archive_accessor
+                    .spawn_archive_accessor_server(stream, sender_for_accessor.clone())
             })
             .add_fidl_service_at(constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME, move |chan| {
                 debug!("fuchsia.diagnostics.FeedbackArchiveAccessor connection");
@@ -236,7 +251,8 @@ impl ArchivistBuilder {
                     feedback_pipeline.clone(),
                     feedback_accessor_stats.clone(),
                 );
-                feedback_archive_accessor.spawn_archive_accessor_server(chan)
+                feedback_archive_accessor
+                    .spawn_archive_accessor_server(chan, sender_for_feedback.clone())
             })
             .add_fidl_service_at(constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME, move |chan| {
                 debug!("fuchsia.diagnostics.LegacyMetricsAccessor connection");
@@ -244,7 +260,8 @@ impl ArchivistBuilder {
                     legacy_metrics_pipeline.clone(),
                     legacy_accessor_stats.clone(),
                 );
-                legacy_archive_accessor.spawn_archive_accessor_server(chan)
+                legacy_archive_accessor
+                    .spawn_archive_accessor_server(chan, sender_for_legacy.clone())
             });
 
         let events_node = diagnostics::root().create_child("event_stats");
@@ -255,6 +272,8 @@ impl ArchivistBuilder {
             log_sender,
             listen_receiver,
             listen_sender,
+            batch_iterator_task_receiver,
+            batch_iterator_task_sender,
             pipeline_exists,
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline_node, legacy_pipeline_node],
             _pipeline_configs: vec![feedback_config, legacy_config],
@@ -434,19 +453,25 @@ impl ArchivistBuilder {
         // Process messages from log sink.
         let log_receiver = self.log_receiver;
         let listen_receiver = self.listen_receiver;
+        let batch_iterator_task_receiver = self.batch_iterator_task_receiver;
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
-            debug!("Log ingestion stopped.");
+            info!("Log ingestion stopped.");
             data_repo.terminate_logs();
-            debug!("Flushing to listeners.");
+            info!("Flushing to listeners.");
             listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
-            debug!("Log listeners stopped.");
+            info!("Log listeners stopped.");
+            batch_iterator_task_receiver
+                .for_each_concurrent(None, |rx| async move { rx.await })
+                .await;
+            info!("Batch iterators stopped.")
         };
 
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
 
         let mut listen_sender = self.listen_sender;
         let mut log_sender = self.log_sender;
+        let mut batch_iterator_task_sender = self.batch_iterator_task_sender;
         let event_source_registry = self.event_source_registry;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
@@ -455,6 +480,7 @@ impl ArchivistBuilder {
                 run_event_collection_task.await;
                 listen_sender.disconnect();
                 log_sender.disconnect();
+                batch_iterator_task_sender.disconnect();
                 abort_handle.abort()
             }
             .left_future(),

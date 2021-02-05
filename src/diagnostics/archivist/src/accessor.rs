@@ -22,7 +22,7 @@ use {
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect::NumericProperty,
     fuchsia_zircon as zx,
-    futures::prelude::*,
+    futures::{prelude::*, SinkExt},
     parking_lot::RwLock,
     selectors,
     serde::Serialize,
@@ -163,7 +163,13 @@ impl ArchiveAccessor {
 
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
     /// reader session to diagnostics data.
-    pub fn spawn_archive_accessor_server(self, mut stream: ArchiveAccessorRequestStream) {
+    pub fn spawn_archive_accessor_server<S>(
+        self,
+        mut stream: ArchiveAccessorRequestStream,
+        mut batch_iterator_task_sender: S,
+    ) where
+        S: SinkExt<Task<()>> + Unpin + Send + 'static,
+    {
         // Self isn't guaranteed to live into the exception handling of the async block. We need to clone self
         // to have a version that can be referenced in the exception handling.
         fasync::Task::spawn(async move {
@@ -185,15 +191,20 @@ impl ArchiveAccessor {
                 self.archive_accessor_stats.global_stats.stream_diagnostics_requests.add(1);
                 let pipeline = self.pipeline.clone();
                 let accessor_stats = self.archive_accessor_stats.clone();
-                Task::spawn(async move {
-                    if let Err(e) =
-                        Self::run_server(pipeline, requests, stream_parameters, accessor_stats)
-                            .await
-                    {
-                        e.close(control);
-                    }
-                })
-                .detach()
+                // Store the batch iterator task so that we can ensure that the client finishes
+                // draining items through it when a Controller#Stop call happens. For example, this
+                // allows tests to fetch all isolated logs before finishing.
+                batch_iterator_task_sender
+                    .send(Task::spawn(async move {
+                        if let Err(e) =
+                            Self::run_server(pipeline, requests, stream_parameters, accessor_stats)
+                                .await
+                        {
+                            e.close(control);
+                        }
+                    }))
+                    .await
+                    .ok();
             }
             self.archive_accessor_stats.global_stats.archive_accessor_connections_closed.add(1);
         })
