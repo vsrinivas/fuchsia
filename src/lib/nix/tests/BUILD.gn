@@ -26,6 +26,7 @@ test("nix") {
     "inotify_unittests.cc",
     "random_unittests.cc",
     "sendfile_unittests.cc",
+    "statx_unittests.cc",
   ]
 
   deps = [
@@ -45,6 +46,10 @@ test("nix_hosttests") {
       "epoll_unittests.cc",
       "inotify_unittests.cc",
       "sendfile_unittests.cc",
+
+      # TODO(fxbug.dev/69302): Add 'statx_unittests.cc' to host tests once the
+      # prebuilt sysroot supports sys/statx.h.
+      #"statx_unittests.cc",
     ]
   }
 
