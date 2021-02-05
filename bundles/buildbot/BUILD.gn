@@ -32,6 +32,7 @@ group("core") {
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
+    "//third_party/go:tests",
 
     # Placed with core because core does not run scenic, in contrast to terminal bundle.
     # (perf:touch_input_test expects scenic _not_ to be running)
