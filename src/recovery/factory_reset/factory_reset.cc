@@ -24,8 +24,8 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs-management/mount.h>
-#include <kms-stateless/kms-stateless.h>
 
+#include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 
 namespace factory_reset {

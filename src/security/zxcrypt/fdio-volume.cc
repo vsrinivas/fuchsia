@@ -24,9 +24,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
-#include <kms-stateless/kms-stateless.h>
 #include <ramdevice-client/ramdisk.h>  // Why does wait_for_device_at() come from here?
 
+#include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/security/zxcrypt/volume.h"
 

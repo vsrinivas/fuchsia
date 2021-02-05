@@ -17,9 +17,9 @@
 
 #include <crypto/cipher.h>
 #include <crypto/secret.h>
-#include <kms-stateless/kms-stateless.h>
 #include <zxtest/zxtest.h>
 
+#include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/security/zxcrypt/volume.h"
 #include "src/security/zxcrypt/tests/test-device.h"

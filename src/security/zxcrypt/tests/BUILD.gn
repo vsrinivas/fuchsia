@@ -19,6 +19,7 @@ test("zxcrypt") {
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+    "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/fvm",
     "//third_party/boringssl",
@@ -35,7 +36,6 @@ test("zxcrypt") {
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
-    "//zircon/system/ulib/kms-stateless",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

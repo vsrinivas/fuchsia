@@ -714,7 +714,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/lib/framebuffer/*",
     "//src/media/audio/lib/simple-audio-stream/*",
     "//src/media/audio/lib/simple-codec/*",
-    "//src/security/zxcrypt/*",
+    "//src/security/kms-stateless/*",
     "//src/storage/lib/paver/*",
     "//src/storage/lib/watchdog/*",
     "//src/ui/input/testing/fake-hidbus-ifc/*",
