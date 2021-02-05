@@ -1334,7 +1334,7 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
     // Skip the automatic range update so we can do it ourselves more efficiently.
     VmPageOrMarker add_page = VmPageOrMarker::Page(target_page);
     zx_status_t status = cur->AddPageLocked(&add_page, cur_offset, false);
-    DEBUG_ASSERT(status == ZX_OK);
+    DEBUG_ASSERT_MSG(status == ZX_OK, "AddPageLocked returned %d\n", status);
 
     if (!skip_range_update) {
       if (cur != this) {
