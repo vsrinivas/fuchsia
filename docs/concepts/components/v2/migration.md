@@ -29,9 +29,8 @@ Components v2 is largely comprised of:
 
 *   [Component manager][component_manager], a program that manages the runtime
     environment for v2 components. Component manager is now responsible for
-    launching `appmgr`. `appmgr` has become a v2 component itself,
-    which serves as the parent of all v1 components still present in the
-    system.
+    launching `appmgr`. `appmgr` has become a v2 component itself, which serves
+    as the parent of all v1 components still present in the system.
 *   The [`.cml`][cml] file format for v2 component manifests.
 *   The [`fuchsia.sys2.*`][fuchsia-sys2] FIDL library.
 
@@ -59,10 +58,9 @@ A high-level diagram of the system's component topology is shown below:
     build configurations.
 
 Component manager is one of the [initial processes][initial-processes] that are
-started in the system boot sequence.
-The system startup sequence then launches a number of low-level system
-components that deal with various responsibilities, including in no particular
-order:
+started in the system boot sequence. The system startup sequence then launches a
+number of low-level system components that deal with various responsibilities,
+including in no particular order:
 
 *   Power management: device administration, thermals, power button, etc'.
 *   System diagnostics: logging, tracing, kernel counters etc'.
@@ -77,13 +75,13 @@ order:
 ## Interoperability with v1 components
 
 Component manager launches `appmgr`, itself a v2 component, in order to manage
-v1 components. All v1 components on the system run under `appmgr`.
-Users may continue developing and maintaining v1 components while v2 migrations
-take place at their own pace.
+v1 components. All v1 components on the system run under `appmgr`. Users may
+continue developing and maintaining v1 components while v2 migrations take place
+at their own pace.
 
 Build configurations that use the [Session Framework][session-framework] also
 include the `session_manager` component. All v1-backed capabilities the session
-needs are routed to the `session_manager ` from `appmgr`.
+needs are routed to the `session_manager` from `appmgr`.
 
 ## Current areas of focus
 
@@ -92,9 +90,12 @@ Last updated: **January 2021**
 Components v2 migrations are happening throughout the system. However there is
 currently additional focus on:
 
-*   The Software Delivery stack of components and associated tests.
-*   The Netstack2 component and associated tests.
-*   A subset of legacy sys realm components that are simpler to migrate.
+-   The stack of Software Delivery components and associated tests, including
+    the package cache and package resolver.
+-   The Netstack2 components, including migration of Netemul and associated
+    tests to Test Runner Framework.
+-   A subset of components under [sysmgr](/docs/glossary.md#sysmgr) that are
+    straightforward to migrate.
 
 [appmgr]: /src/sys/appmgr
 [cfv1]: /docs/glossary.md#components-v1
@@ -103,9 +104,9 @@ currently additional focus on:
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [cmx]: /docs/concepts/components/v1/component_manifests.md
 [component_manager]: /docs/concepts/components/v2/component_manager.md
-[fuchsia-sys]: https://fuchsia.dev/reference/fidl/fuchsia.sys
 [fuchsia-sys2]: https://fuchsia.dev/reference/fidl/fuchsia.sys2
+[fuchsia-sys]: https://fuchsia.dev/reference/fidl/fuchsia.sys
 [initial-processes]: /docs/concepts/booting/everything_between_power_on_and_your_component.md#initial-processes
 [intro]: /docs/concepts/components/v2/introduction.md
 [session-framework]: /docs/concepts/session/introduction.md
-[sysmgr]: /src/sys/sysmgr
+[sysmgr]: /docs/glossary.md#sysmgr
