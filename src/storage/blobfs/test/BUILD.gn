@@ -91,11 +91,11 @@ test("blobfs_unittest") {
     "//src/storage/blobfs:decompressor-impl",
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gtest",
+    "//third_party/zstd:zstdseek",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zstd",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -143,6 +143,7 @@ test("external_decompressor_integration") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//src/storage/blobfs/test:test-utils",
     "//third_party/googletest:gtest",
+    "//third_party/zstd",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -351,7 +352,7 @@ fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
-    "//zircon/third_party/ulib/zstd",
+    "//third_party/zstd",
   ]
 }
 
@@ -367,7 +368,7 @@ fuzzer("zstd-seekable-symmetric-fuzzer") {
   sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
-    "//zircon/third_party/ulib/zstd:zstdseek",
+    "//third_party/zstd:zstdseek",
   ]
 }
 
@@ -375,7 +376,7 @@ fuzzer("zstd-seekable-fuzzer") {
   sources = [ "zstd-seekable-fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
-    "//zircon/third_party/ulib/zstd:zstdseek",
+    "//third_party/zstd:zstdseek",
   ]
 }
 

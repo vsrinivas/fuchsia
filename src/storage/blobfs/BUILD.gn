@@ -88,15 +88,13 @@ static_library("blobfs") {
 
     # format.h has #include <digest/digest.h>.
     "//zircon/system/ulib/digest",
-
-    # Seekable zstd include_dirs config required for all compilation units that incorporate it.
-    "//zircon/third_party/ulib/zstd:zstdseek",
   ]
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/chunked-compression",
     "//src/storage/fvm",
     "//third_party/boringssl",
+    "//third_party/zstd:zstdseek",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
@@ -112,8 +110,6 @@ static_library("blobfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
-    "//zircon/third_party/ulib/zstd",
-    "//zircon/third_party/ulib/zstd:zstdseek",
   ]
   if (is_fuchsia) {
     sources += [
@@ -162,6 +158,7 @@ static_library("blobfs") {
       "//sdk/lib/fdio",
       "//sdk/lib/sys/inspect/cpp",
       "//sdk/lib/syslog/cpp",
+      "//third_party/zstd",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/sync",

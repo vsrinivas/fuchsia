@@ -77,7 +77,7 @@ source_set("internal.decompress-zstd") {
     "zstd.cc",
   ]
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
-  deps = [ "//zircon/third_party/ulib/zstd:zstd-decompress-standalone" ]
+  deps = [ "//third_party/zstd:zstd-decompress-standalone" ]
   public_deps = [
     # <lib/zbitl/decompress.h> has #include <lib/fitx/result.h>.
     "//zircon/system/ulib/zxc",

@@ -936,7 +936,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/third_party/ulib/lz4/*",
     "//zircon/third_party/ulib/ngunwind/*",
     "//zircon/third_party/ulib/safemath/*",
-    "//zircon/third_party/ulib/zstd/*",
     "//zircon/tools/kazoo/*",
     "//zircon/tools/lz4/*",
     "//zircon/tools/zbi/*",

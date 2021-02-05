@@ -37,6 +37,7 @@ config("suppress-warning.config") {
     # TODO(fxbug.dev/44971): Referenced in environment configs.
     "//build/config/fuchsia:*",
     "//build/config/sanitizers:*",
+    "//third_party/zstd/*",
     "//zircon/kernel/*",
     "//zircon/system/ulib/*",
     "//zircon/third_party/lib/*",

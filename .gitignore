@@ -86,6 +86,8 @@ tables_generator_tests_*.txt
 /third_party/*
 !/third_party/rust_crates
 !/third_party/modp_b64
+!/third_party/zstd/
+/third_party/zstd/src
 /tmp/
 /topaz/
 /vendor/

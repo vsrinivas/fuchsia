@@ -190,16 +190,8 @@
       "licenseLocation": "../COPYRIGHT"
     },
     {
-      "projectRoot": "zircon/third_party/ulib/zstd",
-      "licenseLocation": "../../../../LICENSE"
-    },
-    {
       "projectRoot": "zircon/third_party/scudo",
       "licenseLocation": "src/LICENSE.TXT"
-    },
-    {
-      "projectRoot": "zircon/third_party/zstd",
-      "licenseLocation": "src/LICENSE"
     }
   ],
   "flutterLicenses": [

@@ -1,0 +1,13 @@
+Name: zstd
+URL: https://facebook.github.io/zstd/
+License: BSD
+License File: src/LICENSE
+Description:
+Zstandard is a fast compression algorithm, providing high compression ratios.
+
+This directory has the Fuchsia build integration for zstd.  The src/
+subdirectory gets the checkout of the zstd repository, which is mirrored
+verbatim from the upstream (github) repository and pinned in the integration
+manifest.  If there are any issues with the zstd build, they should be resolved
+upstream or worked around with build-only changes in this directory.  The zstd
+sources should not be touched so as not to fork the repository at all.

@@ -1,0 +1,230 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/zircon/migrated_targets.gni")
+
+zstd_common_sources = [
+  "src/lib/common/bitstream.h",
+  "src/lib/common/compiler.h",
+  "src/lib/common/cpu.h",
+  "src/lib/common/debug.c",
+  "src/lib/common/debug.h",
+  "src/lib/common/entropy_common.c",
+  "src/lib/common/error_private.c",
+  "src/lib/common/error_private.h",
+  "src/lib/common/fse.h",
+  "src/lib/common/fse_decompress.c",
+  "src/lib/common/huf.h",
+  "src/lib/common/mem.h",
+  "src/lib/common/pool.c",
+  "src/lib/common/pool.h",
+  "src/lib/common/threading.c",
+  "src/lib/common/threading.h",
+  "src/lib/common/xxhash.c",
+  "src/lib/common/xxhash.h",
+  "src/lib/common/zstd_common.c",
+  "src/lib/common/zstd_deps.h",
+  "src/lib/common/zstd_errors.h",
+  "src/lib/common/zstd_internal.h",
+  "src/lib/zstd.h",
+]
+
+zstd_compress_sources = [
+  "src/lib/compress/fse_compress.c",
+  "src/lib/compress/hist.c",
+  "src/lib/compress/hist.h",
+  "src/lib/compress/huf_compress.c",
+  "src/lib/compress/zstd_compress.c",
+  "src/lib/compress/zstd_compress_internal.h",
+  "src/lib/compress/zstd_compress_literals.c",
+  "src/lib/compress/zstd_compress_literals.h",
+  "src/lib/compress/zstd_compress_sequences.c",
+  "src/lib/compress/zstd_compress_sequences.h",
+  "src/lib/compress/zstd_compress_superblock.c",
+  "src/lib/compress/zstd_compress_superblock.h",
+  "src/lib/compress/zstd_cwksp.h",
+  "src/lib/compress/zstd_double_fast.c",
+  "src/lib/compress/zstd_double_fast.h",
+  "src/lib/compress/zstd_fast.c",
+  "src/lib/compress/zstd_fast.h",
+  "src/lib/compress/zstd_lazy.c",
+  "src/lib/compress/zstd_lazy.h",
+  "src/lib/compress/zstd_ldm.c",
+  "src/lib/compress/zstd_ldm.h",
+  "src/lib/compress/zstd_opt.c",
+  "src/lib/compress/zstd_opt.h",
+  "src/lib/compress/zstdmt_compress.c",
+  "src/lib/compress/zstdmt_compress.h",
+  "src/lib/dictBuilder/cover.c",
+  "src/lib/dictBuilder/cover.h",
+  "src/lib/dictBuilder/divsufsort.c",
+  "src/lib/dictBuilder/divsufsort.h",
+  "src/lib/dictBuilder/fastcover.c",
+  "src/lib/dictBuilder/zdict.c",
+  "src/lib/dictBuilder/zdict.h",
+]
+
+zstd_decompress_sources = [
+  "src/lib/decompress/huf_decompress.c",
+  "src/lib/decompress/zstd_ddict.c",
+  "src/lib/decompress/zstd_ddict.h",
+  "src/lib/decompress/zstd_decompress.c",
+  "src/lib/decompress/zstd_decompress_block.c",
+  "src/lib/decompress/zstd_decompress_block.h",
+  "src/lib/decompress/zstd_decompress_internal.h",
+]
+
+# TODO(fxbug.dev/55297): Host tools (specifically blobfs) used during build
+# use zstd to compress blobs.  zstd is slow when compiled with optimize=none
+# or optimize=debug (-O0 currently); enable default optimizations for just
+# this library to speed up builds.
+if (is_host) {
+  if (zircon_toolchain == false) {
+    _config = "//build/config"
+  } else {
+    _config = "//build/config"
+  }
+  remove_opt_configs = [ "$_config:default_optimize" ]
+  add_opt_configs = [ "$_config:optimize_speed" ]
+} else {
+  remove_opt_configs = []
+  add_opt_configs = []
+}
+
+static_library("zstd") {
+  public_configs = [ ":public.config" ]
+
+  public = [
+    "include/zstd.h",
+    "include/zstd_errors.h",
+  ]
+
+  sources =
+      zstd_common_sources + zstd_compress_sources + zstd_decompress_sources
+
+  configs += [ ":internal.config" ]
+
+  configs -= remove_opt_configs
+  configs += add_opt_configs
+}
+
+config("public.config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [ "include" ]
+}
+
+config("internal.config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "src/lib",
+    "src/lib/common",
+    "src/lib/compress",
+    "src/lib/dictBuilder",
+  ]
+
+  defines = [
+    "XXH_NAMESPACE=ZSTD_",
+    "ZDICTLIB_VISIBILITY=",
+    "ZSTDERRORLIB_VISIBILITY=",
+    "ZSTDLIB_VISIBILITY=",
+  ]
+
+  if (is_host) {
+    defines += [ "ZSTD_MULTITHREAD" ]
+  }
+
+  # Suppress warnings the zstd code doesn't comply with.
+  configs = [ "//build/config:Wno-conversion" ]
+  cflags = [ "-Wno-implicit-fallthrough" ]
+  if (is_gcc) {
+    cflags += [ "-Wno-incompatible-pointer-types" ]
+  }
+}
+
+# The standalone varaint of this library supports only decompression and does
+# not depend malloc or free so it is suitable for use in userboot and physboot.
+static_library("zstd-decompress-standalone") {
+  public_configs = [ ":public.config" ]
+
+  sources = zstd_common_sources + zstd_decompress_sources
+
+  configs += [ ":internal.config" ]
+
+  defines = [
+    # The dynamic dispatch between the two implementations creates writable
+    # data, which is incompatible with being linked into userboot or physboot.
+    "HUF_FORCE_DECOMPRESS_X2",
+
+    # Removes some dead code that was causing the library to attempt to link
+    # against malloc and free.
+    "ZSTD_DEPS_MALLOC",
+    "ZSTD_malloc(s)=((void)(s),NULL)",
+    "ZSTD_calloc(n,s)=((void)((n)*(s)),NULL)",
+    "ZSTD_free(p)=(void)(p)",
+  ]
+
+  if (is_kernel) {
+    deps = [ "//zircon/kernel/lib/libc" ]
+  }
+}
+
+# This provides a superset of the zstd API with additional features.
+static_library("zstdseek") {
+  public_deps = [ ":zstd" ]
+  public_configs = [ ":zstdseek.config" ]
+
+  public = [ "include/zstd/zstd_seekable.h" ]
+  sources = [
+    "src/contrib/seekable_format/zstdseek_compress.c",
+    "src/contrib/seekable_format/zstdseek_decompress.c",
+    "src/contrib/seekable_format/zstdseek_seekable.h",
+  ]
+
+  configs += [ ":zstdseek.internal.config" ]
+}
+
+config("zstdseek.internal.config") {
+  visibility = [ ":*" ]
+  configs = [ ":internal.config" ]
+
+  # TODO(markdittmer): Upstream fixes to uninitialized variables in zstd.
+  if (is_gcc) {
+    cflags = [ "-Wno-maybe-uninitialized" ]
+  } else {
+    cflags = [ "-Wno-sometimes-uninitialized" ]
+  }
+}
+
+config("zstdseek.config") {
+  # The public <zstd/zstd_seekable.h> header does `#include "zstd.h"`.
+  include_dirs = [ "include/zstd" ]
+}
+
+if (!is_kernel) {
+  if (current_toolchain == host_toolchain) {
+    install_host_tools("host-tools") {
+      deps = [ ":zstdcli" ]
+      outputs = [ "zstd" ]
+    }
+  }
+
+  executable("zstdcli") {
+    output_name = "zstd"
+    sources = [
+      "src/programs/benchfn.c",
+      "src/programs/benchzstd.c",
+      "src/programs/datagen.c",
+      "src/programs/dibio.c",
+      "src/programs/fileio.c",
+      "src/programs/timefn.c",
+      "src/programs/util.c",
+      "src/programs/zstdcli.c",
+    ]
+    configs += [ ":internal.config" ]
+    deps = [ ":zstd" ]
+  }
+}

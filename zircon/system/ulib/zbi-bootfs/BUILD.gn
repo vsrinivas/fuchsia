@@ -19,11 +19,11 @@ zx_library("zbi-bootfs") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
     "//src/lib/bootfs",
+    "//third_party/zstd",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/third_party/ulib/lz4",
-    "//zircon/third_party/ulib/zstd",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

@@ -27,7 +27,7 @@ if (is_host) {
     non_rust_deps = [
       "//src/lib/chunked-compression",
       "//src/security/scrutiny/lib/utils/ffi-bridge",
-      "//zircon/third_party/ulib/zstd",
+      "//third_party/zstd",
     ]
 
     sources = [
