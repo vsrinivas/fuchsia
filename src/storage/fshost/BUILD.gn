@@ -240,7 +240,7 @@ test("fshost_test") {
     ":fshost-registry",
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",

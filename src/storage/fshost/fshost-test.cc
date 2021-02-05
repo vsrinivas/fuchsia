@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/fshost/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/process/lifecycle/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -33,6 +33,8 @@
 
 namespace devmgr {
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 std::unique_ptr<cobalt_client::Collector> MakeCollector() {
   return std::make_unique<cobalt_client::Collector>(
@@ -171,30 +173,61 @@ TEST(FsManagerTestCase, LifecycleStop) {
   manager.WaitForShutdown();
 }
 
-struct Context {
-  uint32_t open_flags;
-  uint32_t open_count;
-  char path[PATH_MAX + 1];
+class MockDirectoryAdminOpener : public fio::DirectoryAdmin::TypedChannelInterface {
+ public:
+  void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
+            OpenCompleter::Sync& completer) override {
+    saved_open_flags = flags;
+    saved_open_count += 1;
+    saved_path = path.get();
+  }
+
+  // Below here are a pile of stubs that aren't called in this test. Only Open() above is used.
+
+  // fuchsia.io/Node:
+  void Clone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+             CloneCompleter::Sync& completer) override {}
+  void Close(CloseCompleter::Sync& completer) override {}
+  void Describe(DescribeCompleter::Sync& completer) override {}
+  void Sync(SyncCompleter::Sync& completer) override {}
+  void GetAttr(GetAttrCompleter::Sync& completer) override {}
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
+               SetAttrCompleter::Sync& completer) override {}
+  void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) override {}
+  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) override {}
+
+  // fuchsia.io/Directory:
+  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
+  void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) override {}
+  void Rewind(RewindCompleter::Sync& completer) override {}
+  void GetToken(GetTokenCompleter::Sync& completer) override {}
+  void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
+              RenameCompleter::Sync& completer) override {}
+  void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
+            LinkCompleter::Sync& completer) override {}
+  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
+             WatchCompleter::Sync& completer) override {}
+  void AddInotifyFilter(llcpp::fuchsia::io2::InotifyWatchMask filters, fidl::StringView path,
+                        uint32_t watch_descriptor, zx::socket socket,
+                        fidl::ServerEnd<llcpp::fuchsia::io2::Inotifier> controller,
+                        AddInotifyFilterCompleter::Sync& completer) override {}
+
+  // fuchsia.io/DirectoryAdmin:
+  void Mount(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote,
+             MountCompleter::Sync& completer) override {}
+  void MountAndCreate(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote, fidl::StringView name,
+                      uint32_t flags, MountAndCreateCompleter::Sync& completer) override {}
+  void Unmount(UnmountCompleter::Sync& completer) override {}
+  void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
+  void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {}
+
+
+  // Test fields used for validation.
+  uint32_t saved_open_flags = 0;
+  uint32_t saved_open_count = 0;
+  std::string saved_path;
 };
-
-zx_status_t DirectoryOpen(void* ctx, uint32_t flags, uint32_t mode, const char* path_data,
-                          size_t path_size, zx_handle_t object) {
-  Context* context = reinterpret_cast<Context*>(ctx);
-  context->open_flags = flags;
-  context->open_count += 1;
-  memcpy(context->path, path_data, path_size);
-  context->path[path_size] = '\0';
-  // Having this handle still open does not spark joy.  Thank it for its
-  // service, and then let it go.
-  zx_handle_close(object);
-  return ZX_OK;
-}
-
-const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
-  fuchsia_io_DirectoryAdmin_ops_t ops;
-  ops.Open = DirectoryOpen;
-  return ops;
-}();
 
 // Test that asking FshostFsProvider for blobexec opens /fs/blob from the
 // current installed namespace with the EXEC right
@@ -207,14 +240,15 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 
   // Mock out an object that implements DirectoryOpen and records some state;
   // bind it to the server handle.  Install it at /fs.
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  auto admin = fidl::CreateEndpoints<fio::DirectoryAdmin>();
+  ASSERT_OK(admin.status_value());
 
-  Context context = {};
-  ASSERT_OK(fidl_bind(loop.dispatcher(), server.release(),
-                      reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_DirectoryAdmin_dispatch),
-                      &context, &kDirectoryAdminOps));
-  fdio_ns_bind(ns, "/fs", client.release());
+  auto server_ptr = std::make_unique<MockDirectoryAdminOpener>();
+  auto& server = *server_ptr;
+  ASSERT_TRUE(
+      fidl::BindServer(loop.dispatcher(), std::move(admin->server), std::move(server_ptr)).is_ok());
+
+  fdio_ns_bind(ns, "/fs", admin->client.channel().release());
 
   // Verify that requesting blobexec gets you the handle at /fs/blob, with the
   // permissions expected.
@@ -226,11 +260,11 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   int fd;
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, fdio_fd_create(blobexec.release(), &fd));
 
-  EXPECT_EQ(1, context.open_count);
+  EXPECT_EQ(1, server.saved_open_count);
   uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
                             ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
-  EXPECT_EQ(expected_flags, context.open_flags);
-  EXPECT_EQ(0, strcmp("blob", context.path));
+  EXPECT_EQ(expected_flags, server.saved_open_flags);
+  EXPECT_STR_EQ("blob", server.saved_path);
 
   // Tear down.
   ASSERT_OK(fdio_ns_unbind(ns, "/fs"));
