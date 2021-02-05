@@ -434,6 +434,14 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetPrimary802154MACAddress(uint8_t* 
   return WEAVE_NO_ERROR;
 }
 
+WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadJoinable(bool value) {
+  // TODO(fxbug.dev/58249): This is currently a no-op. Once there is an appropriate API available to
+  // set the joinable/rendezvous mode for Thread, this should forward the request to that API and
+  // return an appropriate status. For now, this will silently succeed so that assisted pairing can
+  // work in the general case.
+  return WEAVE_NO_ERROR;
+}
+
 zx_status_t ThreadStackManagerDelegateImpl::GetDeviceState(DeviceState* device_state) {
   DeviceSyncPtr device;
   zx_status_t status;

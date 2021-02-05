@@ -73,6 +73,8 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
     virtual bool IsThreadSupported() const = 0;
     // Get the primary 802154 MAC address. Supplied buffer must be 8 bytes long.
     virtual WEAVE_ERROR GetPrimary802154MACAddress(uint8_t* mac_address) = 0;
+    // Set whether Thread should be in joinable mode or not.
+    virtual WEAVE_ERROR SetThreadJoinable(bool value) = 0;
   };
 
   // Sets the delegate containing the platform-specific implementation. It is
@@ -139,6 +141,7 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
   // ThreadStackManagerImpl-specific functionality.
   const std::string& GetInterfaceName() const;
   bool IsThreadSupported() const;
+  WEAVE_ERROR SetThreadJoinable(bool value);
 
  private:
   static ThreadStackManagerImpl sInstance;

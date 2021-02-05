@@ -93,6 +93,10 @@ bool ThreadStackManagerImpl::IsThreadSupported() const {
   return delegate_->IsThreadSupported();
 }
 
+WEAVE_ERROR ThreadStackManagerImpl::SetThreadJoinable(bool value) {
+  return delegate_->SetThreadJoinable(value);
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl
