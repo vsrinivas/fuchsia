@@ -53,6 +53,7 @@ pub enum BindProgramEncodeError {
     MissingLabel(u32),
     InvalidGotoLocation(u32),
     JumpOffsetOutOfRange(u32),
+    MatchNotSupported,
 }
 
 impl fmt::Display for BindProgramEncodeError {

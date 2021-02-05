@@ -416,6 +416,12 @@ impl From<BindProgramEncodeError> for UserError {
                 None,
                 true,
             ),
+            BindProgramEncodeError::MatchNotSupported => UserError::new(
+                "E610",
+                "Match instructions are not supported in the new bytecode",
+                None,
+                true,
+            ),
         }
     }
 }

@@ -154,11 +154,11 @@ impl<'a> Encoder<'a> {
                 Instruction::Label(label_id) => {
                     self.append_and_update_label(&mut bytecode, label_id)?;
                 }
-
-                // TODO(fxb/67440): Bindc should not append an unconditional match for
-                // the new bytecode. Once that's removed, this should return an error if
-                // a Match instruction is encountered.
-                Instruction::Match(_) => {}
+                Instruction::Match(_) => {
+                    // Match statements are not supported in the new bytecode. Once
+                    // the old bytecode is removed, they can be deleted.
+                    return Err(BindProgramEncodeError::MatchNotSupported);
+                }
             };
         }
 
@@ -1077,6 +1077,22 @@ mod test {
 
         assert_eq!(
             Err(BindProgramEncodeError::MissingLabel(2)),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_missing_match_instruction() {
+        let instructions =
+            vec![SymbolicInstruction::UnconditionalAbort, SymbolicInstruction::UnconditionalBind];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::MatchNotSupported),
             encode_to_bytecode_v2(bind_program)
         );
     }

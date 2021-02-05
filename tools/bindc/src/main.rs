@@ -6,8 +6,8 @@
 
 use anyhow::{anyhow, Context, Error};
 use bind_debugger::compiler::{
-    self, encode_to_bytecode, encode_to_string, BindProgram, SymbolicInstructionInfo,
-    SymbolicInstruction,
+    self, encode_to_bytecode, encode_to_string, BindProgram, SymbolicInstruction,
+    SymbolicInstructionInfo,
 };
 use bind_debugger::{bind_library, linter, offline_debugger, test};
 use std::collections::{HashMap, HashSet};
@@ -272,16 +272,21 @@ fn handle_compile(
         bind_program
     } else {
         // Autobind is disabled and there are no bind rules. Emit only the autobind check.
-        BindProgram {
-            instructions: vec![
+        // Since the new bytecode format doesn't support match instructions, only add the
+        // UnconditionalBind instruction to the old bytecode.
+        let instructions = if use_new_bytecode {
+            vec![SymbolicInstructionInfo::disable_autobind()]
+        } else {
+            vec![
                 SymbolicInstructionInfo::disable_autobind(),
                 SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind,
                 },
-            ],
-            symbol_table: HashMap::new(),
-        }
+            ]
+        };
+
+        BindProgram { instructions: instructions, symbol_table: HashMap::new() }
     };
 
     if output_bytecode {
@@ -523,27 +528,28 @@ mod tests {
         let bind_program = BindProgram {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
-                instruction: SymbolicInstruction::UnconditionalBind,
+                instruction: SymbolicInstruction::UnconditionalAbort,
             }],
             symbol_table: HashMap::new(),
         };
 
         assert_eq!(
             encode_to_bytecode(bind_program, false).unwrap(),
-            vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         );
 
         let bind_program = BindProgram {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
-                instruction: SymbolicInstruction::UnconditionalBind,
+                instruction: SymbolicInstruction::UnconditionalAbort,
             }],
             symbol_table: HashMap::new(),
         };
         assert_eq!(
             encode_to_bytecode(bind_program, true).unwrap(),
             vec![
-                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0, 0
+                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 1, 0, 0, 0,
+                48
             ]
         );
     }
