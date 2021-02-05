@@ -293,8 +293,8 @@ std::ostream& operator<<(std::ostream& out, const VPartitionEntry& entry) {
   // length.
   out << "\"" << entry.name() << "\" slices:" << entry.slices;
   out << " flags:" << entry.flags << " (act=" << entry.IsActive() << ")";
-  out << " type:" << uuid::Uuid(entry.type).ToString();
-  out << " guid:" << uuid::Uuid(entry.guid).ToString();
+  out << " type:" << uuid::Uuid(entry.type);
+  out << " guid:" << uuid::Uuid(entry.guid);
   return out;
 }
 
