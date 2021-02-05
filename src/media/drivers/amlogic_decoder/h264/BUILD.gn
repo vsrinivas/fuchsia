@@ -29,6 +29,7 @@ source_set("h264_parser") {
     "media/video/h264_poc.h",
   ]
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//src/media/lib/codec_impl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",

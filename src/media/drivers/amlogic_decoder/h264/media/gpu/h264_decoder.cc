@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/variant.h>
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -1524,8 +1525,8 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
           } else {
             ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
             curr_slice_hdr_ =
-                std::move(curr_nalu_->preparsed_header
-                              .get<std::unique_ptr<H264SliceHeader>>());
+                std::move(cpp17::get<std::unique_ptr<H264SliceHeader>>(
+                    curr_nalu_->preparsed_header));
           }
           state_ = kTryPreprocessCurrentSlice;
         }
@@ -1574,8 +1575,8 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
         } else {
           ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
           par_res = parser_.AcceptPreparsedSPS(
-              std::move(
-                  curr_nalu_->preparsed_header.get<std::unique_ptr<H264SPS>>()),
+              std::move(cpp17::get<std::unique_ptr<H264SPS>>(
+                  curr_nalu_->preparsed_header)),
               &sps_id);
         }
         if (par_res != H264Parser::kOk)
@@ -1609,8 +1610,8 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
         } else {
           ZX_DEBUG_ASSERT(nalu_injection_mode_ == NaluInjectionMode::kOn);
           par_res = parser_.AcceptPreparsedPPS(
-              std::move(
-                  curr_nalu_->preparsed_header.get<std::unique_ptr<H264PPS>>()),
+              std::move(cpp17::get<std::unique_ptr<H264PPS>>(
+                  curr_nalu_->preparsed_header)),
               &pps_id);
         }
         if (par_res != H264Parser::kOk)
