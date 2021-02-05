@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
-#define TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
+#ifndef SRC_SECURITY_TEE_TEE_CLIENT_API_INCLUDE_TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
+#define SRC_SECURITY_TEE_TEE_CLIENT_API_INCLUDE_TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
 
 #include <zircon/types.h>
 
@@ -47,4 +47,4 @@ typedef struct teec_operation_impl {
   char reserved;
 } teec_operation_impl_t;
 
-#endif  // TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
+#endif  // SRC_SECURITY_TEE_TEE_CLIENT_API_INCLUDE_TEE_CLIENT_API_TEE_CLIENT_IMPL_H_

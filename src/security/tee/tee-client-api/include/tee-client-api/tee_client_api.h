@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_SECURITY_TEE_TEE_CLIENT_API_INCLUDE_TEE_CLIENT_API_TEE_CLIENT_API_H_
+#define SRC_SECURITY_TEE_TEE_CLIENT_API_INCLUDE_TEE_CLIENT_API_TEE_CLIENT_API_H_
 
 #include <stddef.h>
 #include <stdint.h>
-
 #include <zircon/compiler.h>
 
 #include <tee-client-api/tee-client-types.h>
@@ -193,3 +193,5 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
 void TEEC_RequestCancellation(TEEC_Operation* operation);
 
 __END_CDECLS
+
+#endif  // SRC_SECURITY_TEE_TEE_CLIENT_API_INCLUDE_TEE_CLIENT_API_TEE_CLIENT_API_H_

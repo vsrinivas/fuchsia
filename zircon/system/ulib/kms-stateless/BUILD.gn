@@ -10,9 +10,9 @@ zx_library("kms-stateless") {
   sdk_headers = [ "kms-stateless/kms-stateless.h" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/security/tee/tee-client-api",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/keysafe",
     "//zircon/system/ulib/ramdevice-client",
-    "//zircon/system/ulib/tee-client-api",
   ]
 }

@@ -43,7 +43,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  non_rust_deps = [ "//zircon/system/ulib/tee-client-api" ]
+  non_rust_deps = [ "//src/security/tee/tee-client-api" ]
 
   sources = [
     "src/common.rs",

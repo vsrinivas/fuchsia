@@ -93,7 +93,7 @@ source_set("test_common") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/tee-client-api",
+    "//src/security/tee/tee-client-api",
   ]
 }
 

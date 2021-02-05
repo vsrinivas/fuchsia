@@ -7,7 +7,7 @@ executable("tee-test") {
   sources = [ "tee-test.c" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/security/tee/tee-client-api",
     "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/tee-client-api",
   ]
 }

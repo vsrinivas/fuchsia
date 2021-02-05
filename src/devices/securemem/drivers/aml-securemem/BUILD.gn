@@ -51,6 +51,7 @@ driver_module("aml-securemem") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/security/tee/tee-client-api:tee-client-api-headers",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -60,7 +61,6 @@ driver_module("aml-securemem") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }
 
@@ -88,6 +88,7 @@ test("aml-securemem-test-bin") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
+    "//src/security/tee/tee-client-api:tee-client-api-static",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -97,7 +98,6 @@ test("aml-securemem-test-bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/tee-client-api:tee-client-api-static",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
