@@ -4,6 +4,7 @@
 
 #include "timeline_function.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 
 #include <limits>
@@ -27,14 +28,17 @@ int64_t TimelineFunction::Apply(int64_t subject_time, int64_t reference_time, Ti
   // 2 and -3, which have a difference of 5.
   int64_t scaled_value =
       rate.Scale(reference_input - reference_time, TimelineRate::RoundingMode::Floor);
-  if (scaled_value == TimelineRate::kOverflow) {
-    return TimelineRate::kOverflow;
+  if (scaled_value == TimelineRate::kOverflow || scaled_value == TimelineRate::kUnderflow) {
+    return scaled_value;
   }
 
   int64_t result_value = scaled_value + subject_time;
   auto result_value_128 = static_cast<__int128_t>(scaled_value) + subject_time;
   if (result_value_128 != result_value) {
-    return TimelineRate::kOverflow;
+    if (result_value_128 > 0) {
+      return TimelineRate::kOverflow;
+    }
+    return TimelineRate::kUnderflow;
   }
 
   return result_value;
@@ -45,9 +49,12 @@ int64_t TimelineFunction::Apply(int64_t subject_time, int64_t reference_time, Ti
 TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc, const TimelineFunction& ab,
                                            bool exact) {
   // This composition approach may compromise range and accuracy (in some cases) for simplicity.
-  // TODO(mpuryear): re-implement for improved range/accuracy (without much more cost)?
+  // TODO(fxbug.dev/13293): more accuracy here
   auto scaled_subject_time = bc.Apply(ab.subject_time());
-  ZX_ASSERT(scaled_subject_time != TimelineRate::kOverflow);
+  if (exact) {
+    ZX_ASSERT(scaled_subject_time != TimelineRate::kOverflow);
+    ZX_ASSERT(scaled_subject_time != TimelineRate::kUnderflow);
+  }
 
   return TimelineFunction(scaled_subject_time, ab.reference_time(),
                           TimelineRate::Product(ab.rate(), bc.rate(), exact));

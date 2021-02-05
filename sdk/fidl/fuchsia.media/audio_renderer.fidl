@@ -32,6 +32,7 @@ protocol AudioRenderer {
 
     /// Sets the units used by the presentation (media) timeline. By default, PTS units are
     /// nanoseconds (as if this were called with numerator of 1e9 and denominator of 1).
+    /// This ratio must lie between 1/60 (1 tick per minute) and 1e9/1 (1ns per tick).
     SetPtsUnits(uint32 tick_per_second_numerator,
                 uint32 tick_per_second_denominator);
 

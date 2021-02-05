@@ -17,8 +17,9 @@ namespace media {
 // represented, and "reference" refers to the timeline relative to which the rate is expressed.
 class TimelineRate final {
  public:
-  // Used to indicate overflow of scaling operations.
+  // Used to indicate overflow and underflow of scaling operations.
   static constexpr int64_t kOverflow = std::numeric_limits<int64_t>::max();
+  static constexpr int64_t kUnderflow = std::numeric_limits<int64_t>::min();
 
   // Zero as a TimelineRate.
   static const TimelineRate Zero;
@@ -67,7 +68,7 @@ class TimelineRate final {
     Ceiling,   // round up
   };
 
-  // Scales the value by this rate. Returns kOverflow on overflow or underflow.
+  // Scales the value by this rate. Returns kOverflow on overflow and kUnderflow on underflow.
   int64_t Scale(int64_t value, RoundingMode mode = RoundingMode::Truncate) const;
 
   uint64_t subject_delta() const { return subject_delta_; }

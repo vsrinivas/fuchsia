@@ -153,6 +153,8 @@ TEST(TimelineFunctionTest, Apply) {
   VerifyApply(1234, 0, 1, 2, 0, 1234);
   VerifyApply(1234, 0, 1, 2, 1234, 1234 + 1234 / 2);
   VerifyApply(1234, 0, 2, 1, 1234, 1234 + 1234 * 2);
+  VerifyApply(0, 0, 2, 1, std::numeric_limits<int64_t>::max(), TimelineRate::kOverflow);
+  VerifyApply(0, 0, 2, 1, std::numeric_limits<int64_t>::min(), TimelineRate::kUnderflow);
 }
 
 // Tests TimelineFunction::Apply in its variations.

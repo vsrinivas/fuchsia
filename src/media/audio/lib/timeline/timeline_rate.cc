@@ -181,12 +181,10 @@ int64_t TimelineRate::Scale(int64_t value, RoundingMode rounding_mode) const {
     }
   }
 
-  if (result > std::numeric_limits<int64_t>::max() ||
-      result < std::numeric_limits<int64_t>::min()) {
-    return TimelineRate::kOverflow;
-  }
-
-  return result;
+  static_assert(kOverflow == std::numeric_limits<int64_t>::max());
+  static_assert(kUnderflow == std::numeric_limits<int64_t>::min());
+  return static_cast<int64_t>(
+      std::clamp(result, static_cast<__int128_t>(kUnderflow), static_cast<__int128_t>(kOverflow)));
 }
 
 }  // namespace media

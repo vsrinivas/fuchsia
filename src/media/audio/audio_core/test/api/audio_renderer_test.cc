@@ -724,6 +724,76 @@ TEST_F(AudioRendererTest, SetUsage_AfterSetPcmStreamTypeShouldDisconnect) {
   ExpectDisconnect(audio_renderer_);
 }
 
+TEST_F(AudioRendererTest, SetPtsUnitsTooHighShouldDisconnect) {
+  audio_renderer_->SetPtsUnits(1'000'000'001, 1);
+  ExpectDisconnect(audio_renderer_);
+}
+
+TEST_F(AudioRendererTest, SetPtsUnitsTooLowShouldDisconnect) {
+  audio_renderer_->SetPtsUnits(1, 61);
+  ExpectDisconnect(audio_renderer_);
+}
+
+TEST_F(AudioRendererTest, PlayWithLargeReferenceTimeShouldDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacket(std::move(packet), AddCallback("SendPacket"));
+
+  constexpr int64_t kLargeTimestamp = std::numeric_limits<int64_t>::max() - 1;
+  audio_renderer_->Play(kLargeTimestamp, fuchsia::media::NO_TIMESTAMP,
+                        [](int64_t ref_time, int64_t media_time) {});
+  ExpectDisconnect(audio_renderer_);
+}
+
+TEST_F(AudioRendererTest, PlayWithLargeMediaTimeShouldDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Use 1 tick per 2 frames to overflow the translation from PTS -> frames.
+  audio_renderer_->SetPtsUnits(kTestStreamType.frames_per_second / 2, 1);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacket(std::move(packet), AddCallback("SendPacket"));
+
+  constexpr int64_t kLargeTimestamp = std::numeric_limits<int64_t>::max() / 2 + 1;
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, kLargeTimestamp,
+                        [](int64_t ref_time, int64_t media_time) {});
+  ExpectDisconnect(audio_renderer_);
+}
+
+TEST_F(AudioRendererTest, PlayWithLargeNegativeMediaTimeShouldDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Use 1 tick per 2 frames to overflow the translation from PTS -> frames.
+  audio_renderer_->SetPtsUnits(kTestStreamType.frames_per_second / 2, 1);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacket(std::move(packet), AddCallback("SendPacket"));
+
+  constexpr int64_t kLargeTimestamp = std::numeric_limits<int64_t>::min() + 1;
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, kLargeTimestamp,
+                        [](int64_t ref_time, int64_t media_time) {});
+  ExpectDisconnect(audio_renderer_);
+}
+
 //
 // AudioRenderer reference clock methods
 //

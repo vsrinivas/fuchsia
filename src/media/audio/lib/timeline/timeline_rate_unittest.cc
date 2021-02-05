@@ -206,6 +206,7 @@ TEST(TimelineRateTest, Scale) {
   VerifyScaleExact(1234ll << 30, 1, 2, 1234ll << 29);
   VerifyScaleExact(1234ll << 30, 2, 1, 1234ll << 31);
   VerifyScaleExact(1234ll << 30, 1 << 31, 1, TimelineRate::kOverflow);
+  VerifyScaleExact(-1 * (1234ll << 30), 1 << 31, 1, TimelineRate::kUnderflow);
 
   VerifyScaleExact(1234ll << 30, 1 << 22, 1, 1234ll << 52);
   VerifyScaleExact(1ll << 30, 1234ll << 32, 1 << 10, 1234ll << 52);
@@ -231,7 +232,7 @@ TEST(TimelineRateTest, Scale) {
   VerifyScaleExact(int64_min, 1, 2, int64_min / 2);
   VerifyScaleExact(int64_min, 3, 4, (int64_min / 4) * 3);
   VerifyScaleExact(int64_min / 2, 2, 1, int64_min);
-  VerifyScaleExact(int64_min, 1000001, 1000000, TimelineRate::kOverflow);
+  VerifyScaleExact(int64_min, 1000001, 1000000, TimelineRate::kUnderflow);
 
   VerifyScale(85'681'756'014'041, 95'999'904, 244'140'625, 33'691'403'681'379,
               RoundingMode::Truncate);

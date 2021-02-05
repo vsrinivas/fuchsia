@@ -299,6 +299,21 @@ void BaseRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
 
   pts_ticks_per_second_ = TimelineRate(tick_per_second_numerator, tick_per_second_denominator);
 
+  // Sanity checks to ensure that Scale() operations cannot overflow.
+  // Must have at most 1 tick per nanosecond. Ticks should not have higher resolution than clocks.
+  if (auto t = pts_ticks_per_second_.Scale(1); t > 1'000'000'000 || t == TimelineRate::kOverflow) {
+    FX_LOGS(ERROR) << "PTS ticks per second too high (" << tick_per_second_numerator << "/"
+                   << tick_per_second_denominator << ")";
+    return;
+  }
+  // Must have at least 1 tick per minute. This limit is somewhat arbitrary. We need *some* limit
+  // here and we expect this is way more headroom than will be needed in practice.
+  if (auto t = pts_ticks_per_second_.Scale(60); t == 0) {
+    FX_LOGS(ERROR) << "PTS ticks per second too low (" << tick_per_second_numerator << "/"
+                   << tick_per_second_denominator << ")";
+    return;
+  }
+
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
   InvalidateConfiguration();
@@ -528,6 +543,35 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     return;
   }
 
+  // Ensure we have enough headroom so that a renderer can play continuously for one year.
+  constexpr zx::duration kMaxRendererDuration = zx::hour(24) * 365;
+  const auto kMaxRendererFrames =
+      Fixed::FromRaw(format()->frames_per_ns().Scale(kMaxRendererDuration.get()));
+
+  auto over_or_underflow = [](int64_t x) {
+    return x == TimelineRate::kOverflow || x == TimelineRate::kUnderflow;
+  };
+
+  auto timeline_function_overflows = [over_or_underflow](const TimelineFunction& f, int64_t t,
+                                                         int64_t max_duration) {
+    // Check if we overflow when applying this function or its inverse.
+    auto x = f.Apply(t);
+    if (over_or_underflow(x) || over_or_underflow(f.ApplyInverse(x))) {
+      return true;
+    }
+
+    // Check if we have enough headroom for max_duration time steps.
+    if (__builtin_add_overflow(t, max_duration, &x)) {
+      return true;
+    }
+    x = f.Apply(t + max_duration);
+    if (over_or_underflow(x) || over_or_underflow(f.ApplyInverse(x))) {
+      return true;
+    }
+
+    return false;
+  };
+
   // TODO(mpuryear): What do we want to do here if we are already playing?
 
   // Did the user supply a reference time? If not, figure out a safe starting time based on the
@@ -580,14 +624,38 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     } else {
       frac_frame_media_time = Fixed::FromRaw(pts_to_frac_frames_.Apply(media_time));
     }
+    // Sanity check media_time: ensure we have enough headroom to not overflow.
+    if (over_or_underflow(frac_frame_media_time.raw_value()) ||
+        timeline_function_overflows(pts_to_frac_frames_.Inverse(),
+                                    frac_frame_media_time.raw_value(),
+                                    kMaxRendererFrames.raw_value())) {
+      FX_LOGS(ERROR) << "Overflow in Play: media_time too large: " << media_time;
+      return;
+    }
   }
 
   // Update our transformation.
   //
   // TODO(mpuryear): if we need to trigger a remix for our outputs, do it here.
   //
-  reference_clock_to_fractional_frames_->Update(TimelineFunction(
-      frac_frame_media_time.raw_value(), reference_time.get(), frac_frames_per_ref_tick_));
+  auto ref_clock_to_frac_frames = TimelineFunction(frac_frame_media_time.raw_value(),
+                                                   reference_time.get(), frac_frames_per_ref_tick_);
+  reference_clock_to_fractional_frames_->Update(ref_clock_to_frac_frames);
+
+  // Sanity check reference_time: ensure we have enough headroom to not overflow.
+  if (timeline_function_overflows(ref_clock_to_frac_frames, reference_time.get(),
+                                  kMaxRendererDuration.get())) {
+    FX_LOGS(ERROR) << "Overflow in Play: reference_time too large: " << reference_time.get();
+    return;
+  }
+
+  // Sanity check: ensure media_time is not so far in the past that it underflows reference_time.
+  if (timeline_function_overflows(ref_clock_to_frac_frames.Inverse(),
+                                  frac_frame_media_time.raw_value(),
+                                  kMaxRendererFrames.raw_value())) {
+    FX_LOGS(ERROR) << "Underflow in Play: media_time too small: " << media_time;
+    return;
+  }
 
   AUDIO_LOG(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time << ")";
   AUDIO_LOG(DEBUG) << "frac_frame_media_time:" << std::hex << frac_frame_media_time.raw_value();
