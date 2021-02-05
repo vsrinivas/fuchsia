@@ -26,7 +26,7 @@ test("block-client-unit-test") {
     "remote-block-device-test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/storage/fvm",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",

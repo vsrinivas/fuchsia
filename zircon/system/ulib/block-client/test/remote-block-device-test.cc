@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
@@ -23,6 +23,8 @@
 namespace block_client {
 namespace {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 constexpr uint16_t kGoldenVmoid = 2;
 
 class MockBlockDevice {
@@ -30,6 +32,7 @@ class MockBlockDevice {
   using Binder = fidl::Binder<MockBlockDevice>;
   zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
     dispatcher_ = dispatcher;
+    mock_node_ = std::make_unique<MockNode>(this);
     return fidl_bind(dispatcher_, channel.release(), FidlDispatch, this, nullptr);
   }
 
@@ -63,7 +66,9 @@ class MockBlockDevice {
     if (status != ZX_ERR_NOT_SUPPORTED) {
       return status;
     }
-    return fuchsia_io_Node_dispatch(this, txn, msg, NodeOps());
+    return fio::Node::TryDispatch(mock_node_.get(), msg, nullptr) == fidl::DispatchResult::kFound
+               ? ZX_OK
+               : ZX_ERR_PEER_CLOSED;
   }
 
   static const fuchsia_hardware_block_Block_ops* BlockOps() {
@@ -80,24 +85,25 @@ class MockBlockDevice {
 
   // This implementation of Node is decidedly non-standard and incomplete, but it is
   // sufficient to test the cloning behavior used below.
-  static const fuchsia_io_Node_ops* NodeOps() {
-    static const fuchsia_io_Node_ops kOps = {
-        .Clone = Binder::BindMember<&MockBlockDevice::NodeClone>,
-        .Close = nullptr,
-        .Describe = nullptr,
-        .Sync = nullptr,
-        .GetAttr = nullptr,
-        .SetAttr = nullptr,
-        .NodeGetFlags = nullptr,
-        .NodeSetFlags = nullptr,
-    };
-    return &kOps;
-  }
+  class MockNode : public fio::Node::TypedChannelInterface {
+   public:
+    explicit MockNode(MockBlockDevice* self) : self_(self) {}
 
-  zx_status_t NodeClone(uint32_t flags, zx_handle_t object) {
-    Bind(dispatcher_, zx::channel(object));
-    return ZX_OK;
-  }
+    void Clone(uint32_t flags, ::fidl::ServerEnd<::llcpp::fuchsia::io::Node> object,
+               CloneCompleter::Sync& completer) override {
+      self_->Bind(self_->dispatcher_, object.TakeChannel());
+    }
+
+    void Close(CloseCompleter::Sync& completer) override {}
+    void Describe(DescribeCompleter::Sync& completer) override {}
+    void Sync(SyncCompleter::Sync& completer) override {}
+    void GetAttr(GetAttrCompleter::Sync& completer) override {}
+    void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::wire::NodeAttributes attributes,
+                 SetAttrCompleter::Sync& completer) override {}
+
+   private:
+    MockBlockDevice* self_;
+  };
 
   zx_status_t BlockGetInfo(fidl_txn_t* txn) {
     fuchsia_hardware_block_BlockInfo info = {};
@@ -126,6 +132,7 @@ class MockBlockDevice {
 
   async_dispatcher_t* dispatcher_ = nullptr;
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
+  std::unique_ptr<MockNode> mock_node_;
 };
 
 // Tests that the RemoteBlockDevice can be created and immediately destroyed.
