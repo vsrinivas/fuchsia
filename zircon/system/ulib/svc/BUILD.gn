@@ -11,10 +11,7 @@ zx_library("svc") {
     "lib/svc/service.h",
   ]
   sources = [ "outgoing.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
-    "//sdk/lib/fdio",
-  ]
+  deps = [ "//sdk/lib/fdio" ]
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/async",

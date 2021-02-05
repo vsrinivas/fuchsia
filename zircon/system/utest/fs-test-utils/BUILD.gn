@@ -14,7 +14,6 @@ test("fs-test-utils") {
     "unittest_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
     "//src/storage/blobfs",
     "//src/storage/fvm",
