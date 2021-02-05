@@ -280,6 +280,8 @@ fn deprecated_keys() -> Vec<(String, u32)> {
 
     keys.push(("BIND_AUTOBIND".to_string(), 0x0002));
 
+    keys.push(("BIND_COMPOSITE".to_string(), 0x0003));
+
     keys.push(("BIND_PLATFORM_DEV_VID".to_string(), 0x0300));
     keys.push(("BIND_PCI_VID".to_string(), 0x0100));
 

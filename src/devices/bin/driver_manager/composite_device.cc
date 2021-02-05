@@ -31,10 +31,14 @@ zx_status_t CompositeDevice::Create(
     llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
     std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
-  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[comp_desc.props.count()],
-                                          comp_desc.props.count());
+  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[comp_desc.props.count() + 1],
+                                          comp_desc.props.count() + 1);
   memcpy(properties.data(), comp_desc.props.data(),
          comp_desc.props.count() * sizeof(comp_desc.props.data()[0]));
+
+  // Set a property unique to composite devices.
+  properties[comp_desc.props.count()].id = BIND_COMPOSITE;
+  properties[comp_desc.props.count()].value = 1;
 
   fbl::Array<std::unique_ptr<Metadata>> metadata(
       new std::unique_ptr<Metadata>[comp_desc.metadata.count()], comp_desc.metadata.count());
