@@ -64,6 +64,11 @@ import("//build/rust/toolchain.gni")
 #
 #   should_lint (optional, boolean)
 #     If set to false, the linting step is skipped.
+#
+#   experimental_api_summary (optional, boolean, default false)
+#     If set, the builder will generate FIDL API summary files.  The generated
+#     file names are "<fidl_library_name>.api_summary" (human-readable), and
+#     "<fidl_library_name>.api_summary.json" (machine-readable).
 
 template("fidl") {
   if (defined(invoker.sdk_category)) {
@@ -83,6 +88,9 @@ template("fidl") {
   }
   if (defined(invoker.host_llcpp)) {
     not_needed(invoker, [ "host_llcpp" ])
+  }
+  if (defined(invoker.experimental_api_summary)) {
+    not_needed(invoker, [ "experimental_api_summary" ])
   }
 
   # Allow generated targets visibility to their dependant generated targets

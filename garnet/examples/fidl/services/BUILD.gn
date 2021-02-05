@@ -17,6 +17,8 @@ fidl("echo") {
       protocol = "fidl.examples.echo.Echo"
     },
   ]
+
+  experimental_api_summary = true
 }
 
 group("echo2") {
