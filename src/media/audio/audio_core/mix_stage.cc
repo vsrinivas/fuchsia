@@ -373,15 +373,18 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // The dest_buffer offset is based on the distance from mix job start to packet start (measured
     // in frac_frames), converted into frames in the destination timeline. As we scale the
     // frac_frame delta into dest frames, we want to "round up" any subframes that are present; any
-    // src subframes should push our dest frame up to the next integer. To do this, we subtract a
-    // single subframe (guaranteeing that the zero-fraction src case will truncate down), then scale
-    // the src delta to dest frames (which effectively truncates any resultant fraction in the
-    // computed dest frame), then add an additional 'round-up' frame (to account for initial
-    // subtract). Because we entered this IF in the first place, we have at least some fractional
-    // src delta, thus dest_offset_64 is guaranteed to become greater than zero.
+    // src subframes should push our dest frame up to the next integer. Because we entered this IF
+    // in the first place, we have at least some fractional src delta, thus dest_offset_64 is
+    // guaranteed to become greater than zero.
+    //
+    // When a position is round-trip converted to another timeline and back again, there is no
+    // guarantee that it will result in the exact original value. To make source -> dest -> source
+    // as accurate as possible (and critically, to ensure that source position does not move
+    // backward), we "round up" when translating from source (fractional) to dest (integral).
     Fixed first_source_mix_point =
         frac_source_for_first_packet_frame - frac_source_pos_edge_first_mix_frame;
-    dest_offset_64 = dest_to_src.Inverse().Scale(first_source_mix_point.raw_value() - 1) + 1;
+    dest_offset_64 = dest_to_src.Inverse().Scale(first_source_mix_point.raw_value(),
+                                                 TimelineRate::RoundingMode::Ceiling);
     FX_DCHECK(dest_offset_64 > 0);
 
     frac_source_offset_64 += Fixed::FromRaw(dest_to_src.Scale(dest_offset_64));
@@ -453,33 +456,6 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 
     {
       int32_t raw_source_offset = frac_source_offset.raw_value();
-      // TODO(fxbug.dev/67996): remove after debugging
-      // Check if PointSampler's src_iter will overflow the source buffer.
-      if (mixer.pos_filter_width().raw_value() == Mixer::FRAC_HALF &&
-          (((raw_source_offset + Mixer::FRAC_HALF /* kPositiveFilterWidth */) >>
-            kPtsFractionalBits) *
-           2 /* SrcChanCount */) >= source_buffer.length().Ceiling()) {
-        FX_LOGS_FIRST_N(WARNING, 10)
-            << "Unexpectedly large source_offset:"
-            << " format.channels = " << format().channels()
-            << ", format.sample_format = " << static_cast<int>(format().sample_format())
-            << ", frac_source_offset = " << frac_source_offset.raw_value()
-            << ", raw_source_offset = " << raw_source_offset
-            << ", computed src_iter in PointSamplerImpl = "
-            << (((raw_source_offset + Mixer::FRAC_HALF /* kPositiveFilterWidth */) >>
-                 kPtsFractionalBits) *
-                2 /* SrcChanCount */)
-            << ", frac_source_for_first_mix_job_frame = "
-            << frac_source_for_first_mix_job_frame.raw_value()
-            << ", frac_source_for_first_packet_frame = "
-            << frac_source_for_first_packet_frame.raw_value()
-            << ", info.next_frac_source_frame = " << info.next_frac_source_frame.raw_value()
-            << ", info.dest_frames_to_frac_source_frames = {" << std::dec
-            << info.dest_frames_to_frac_source_frames.subject_time() << ", "
-            << info.dest_frames_to_frac_source_frames.reference_time() << ", "
-            << info.dest_frames_to_frac_source_frames.subject_delta() << ", "
-            << info.dest_frames_to_frac_source_frames.reference_delta() << "}";
-      }
       consumed_source = mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
                                   source_buffer.length().raw_value(), &raw_source_offset,
                                   cur_mix_job_.accumulate);
