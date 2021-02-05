@@ -13,6 +13,7 @@ import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/unification/future/images/devmgr_config.gni")
+import("//build/zbi/kernel_cmdline_verify.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
@@ -72,6 +73,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 #   output_name (optional; default: target_name.zbi)
 #     [string] The name of the final system ZBI file.
+#
+#   cmdline_golden (optional)
+#     [string] The path to the kernel cmdline golden file to comapre against.
 template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
@@ -381,7 +385,7 @@ template("assemble_system") {
     }
   }
 
-  zbi(image_name) {
+  zbi("${image_name}_zbi") {
     metadata = {
       # We insert a package barrier because the packages inside this ZBI
       # shouldn't leak to targets that depend on the ZBI. For example,
@@ -409,6 +413,7 @@ template("assemble_system") {
                              "visibility",
                            ])
 
+    # TODO(fxbug.dev/69264): Remove this line and use testonly from invoker.
     testonly = true
     deps = [
              ":${image_name}_cmdline",
@@ -423,6 +428,26 @@ template("assemble_system") {
         ":${image_name}_fvm.blk_ramdisk",
         "//src/storage/fshost:minfs_ramdisk",
       ]
+    }
+  }
+
+  if (defined(invoker.cmdline_golden)) {
+    zbi_outputs = get_target_outputs(":${image_name}_zbi")
+    kernel_cmdline_verify("${image_name}_zbi_verify") {
+      # TODO(fxbug.dev/69264): use testonly from invoker.
+      testonly = true
+      zbi = zbi_outputs[0]
+      golden = invoker.cmdline_golden
+      deps = [ ":${image_name}_zbi" ]
+    }
+  }
+
+  group(image_name) {
+    # TODO(fxbug.dev/69264): use testonly from invoker.
+    testonly = true
+    public_deps = [ ":${image_name}_zbi" ]
+    if (defined(invoker.cmdline_golden)) {
+      deps = [ ":${image_name}_zbi_verify" ]
     }
   }
 }
