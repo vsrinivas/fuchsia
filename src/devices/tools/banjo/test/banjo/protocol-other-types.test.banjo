@@ -9,7 +9,7 @@ struct ThisIsAStruct {
 };
 
 union ThisIsAUnion {
-    string s;
+    1: string s;
 };
 
 enum ThisIsAnEnum {

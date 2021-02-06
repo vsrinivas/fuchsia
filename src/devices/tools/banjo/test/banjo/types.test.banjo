@@ -9,7 +9,7 @@ struct this_is_a_struct {
 };
 
 union this_is_a_union {
-    string s;
+    1: string s;
 };
 
 protocol this_is_an_interface {
@@ -343,32 +343,32 @@ struct interfaces {
 };
 
 union union_types {
-    bool b;
-    int8 i8;
-    int16 i16;
-    int32 i32;
-    int64 i64;
-    uint8 u8;
-    uint16 u16;
-    uint32 u32;
-    uint64 u64;
-    float32 f32;
-    float64 f64;
+    1: bool b;
+    2: int8 i8;
+    3: int16 i16;
+    4: int32 i32;
+    5: int64 i64;
+    6: uint8 u8;
+    7: uint16 u16;
+    8: uint32 u32;
+    9: uint64 u64;
+    10: float32 f32;
+    11: float64 f64;
 
-    array<bool>:1 b_0;
-    array<int8>:1 i8_0;
-    array<int16>:1 i16_0;
-    array<int32>:1 i32_0;
-    array<int64>:1 i64_0;
-    array<uint8>:1 u8_0;
-    array<uint16>:1 u16_0;
-    array<uint32>:1 u32_0;
-    array<uint64>:1 u64_0;
-    array<float32>:1 f32_0;
-    array<float64>:1 f64_0;
-    array<handle>:1 handle_0;
+    12: array<bool>:1 b_0;
+    13: array<int8>:1 i8_0;
+    14: array<int16>:1 i16_0;
+    15: array<int32>:1 i32_0;
+    16: array<int64>:1 i64_0;
+    17: array<uint8>:1 u8_0;
+    18: array<uint16>:1 u16_0;
+    19: array<uint32>:1 u32_0;
+    20: array<uint64>:1 u64_0;
+    21: array<float32>:1 f32_0;
+    22: array<float64>:1 f64_0;
+    23: array<handle>:1 handle_0;
 
-    string str;
-    this_is_a_struct s;
-    this_is_a_union u;
+    24: string str;
+    25: this_is_a_struct s;
+    26: this_is_a_union u;
 };

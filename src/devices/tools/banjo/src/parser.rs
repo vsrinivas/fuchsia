@@ -37,7 +37,7 @@ struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~ constant)? }
 
 union_declaration = { attributes ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
 union_ordinal = _{ ('0'..'9')+ ~ ":" }
-union_field  = { attributes? ~ union_ordinal? ~ type_ ~ ident }
+union_field  = { attributes? ~ union_ordinal ~ type_ ~ ident }
 
 enum_declaration = { attributes ~ "enum" ~ ident ~ (":" ~ (integer_type | identifier_type))? ~ "{" ~ (enum_field ~ ";")* ~ "}" }
 enum_field  = { attributes? ~ ident ~ "=" ~ constant }

@@ -14,17 +14,17 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef union without_ordinal without_ordinal_t;
 typedef union with_ordinal with_ordinal_t;
+typedef union formerly_without_ordinal formerly_without_ordinal_t;
 
 // Declarations
-union without_ordinal {
+union with_ordinal {
     const char* one;
     int8_t two;
     uint32_t three[3];
 };
 
-union with_ordinal {
+union formerly_without_ordinal {
     const char* one;
     int8_t two;
     uint32_t three[3];

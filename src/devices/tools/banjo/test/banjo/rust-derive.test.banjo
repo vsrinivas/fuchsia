@@ -10,8 +10,8 @@ const uint32 LARGE_ARRAY_SIZE = 2048;
 // Next three data structures intended for checking that type that doesn't derive
 // PartialEq causes type depending on it to not auto-derive PartialEq
 union SomeUnion {
-    array<uint8>:8 bytes1;
-    array<uint8>:16 bytes2;
+    1: array<uint8>:8 bytes1;
+    2: array<uint8>:16 bytes2;
 };
 
 struct UnionParentStruct {

@@ -10,7 +10,7 @@ BanjoAst {
                     namespace: Some(
                         "banjo.examples.union",
                     ),
-                    name: "WithoutOrdinal",
+                    name: "FormerlyWithoutOrdinal",
                 },
                 fields: [
                     UnionField {

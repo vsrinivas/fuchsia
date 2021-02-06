@@ -18,14 +18,14 @@ struct packed_struct {
 };
 
 union none_union {
-    int32 foo;
-    int32 bar;
-    int32 baz;
+    1: int32 foo;
+    2: int32 bar;
+    3: int32 baz;
 };
 
 [Packed]
 union packed_union {
-    int32 foo;
-    int32 bar;
-    int32 baz;
+    1: int32 foo;
+    2: int32 bar;
+    3: int32 baz;
 };
