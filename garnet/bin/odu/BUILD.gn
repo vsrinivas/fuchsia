@@ -38,6 +38,16 @@ rustc_binary("bin") {
     "src/target.rs",
     "src/verifier.rs",
   ]
+  if (is_fuchsia) {
+    sources += [ "src/fuchsia_utils.rs" ]
+    deps += [
+      "//src/lib/cstr",
+      "//src/lib/trace/rust:trace",
+      "//src/lib/trace/rust:trace-provider",
+    ]
+  } else {
+    sources += [ "src/not_fuchsia_utils.rs" ]
+  }
 }
 
 package("odu") {

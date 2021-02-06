@@ -19,6 +19,12 @@ use {
     std::time::Instant,
 };
 
+#[cfg(target_os = "fuchsia")]
+use crate::fuchsia_utils::create_tracer;
+
+#[cfg(not(target_os = "fuchsia"))]
+use crate::not_fuchsia_utils::create_tracer;
+
 /// OperationStats maintains stats for an operation. In addition to maintaining total
 /// time spent in each stage of io packet's pipeline, it also maintains total
 /// number of IOs completed and total number of bytes transferred.
@@ -203,7 +209,8 @@ impl log::Log for SimpleLogger {
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
-pub fn log_init() -> Result<(), SetLoggerError> {
+pub fn log_init(log_ftrace: bool) -> Result<(), SetLoggerError> {
+    create_tracer(log_ftrace);
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info))
 }
 

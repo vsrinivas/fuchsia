@@ -14,6 +14,12 @@ mod sequential_io_generator;
 mod target;
 mod verifier;
 
+#[cfg(target_os = "fuchsia")]
+mod fuchsia_utils;
+
+#[cfg(not(target_os = "fuchsia"))]
+mod not_fuchsia_utils;
+
 use {
     crate::generator::{run_load, GeneratorArgs},
     crate::log::{log_init, Stats},
@@ -69,10 +75,9 @@ fn output_config(generator_args_vec: &Vec<GeneratorArgs>, output_config_file: &S
 }
 
 fn main() -> Result<(), Error> {
-    log_init()?;
-
     let args = args::parse()?;
 
+    log_init(args.log_ftrace)?;
     let start_instant: Instant = Instant::now();
 
     let mut thread_handles = vec![];

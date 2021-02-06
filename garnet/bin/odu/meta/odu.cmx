@@ -4,5 +4,14 @@
     ],
     "program": {
         "binary": "bin/odu"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
     }
 }

@@ -7,7 +7,7 @@ use {
     crate::target::{AvailableTargets, TargetOps},
     clap::{App, Arg},
     log::error,
-    std::ops::RangeInclusive,
+    std::{env, ffi::OsString, ops::RangeInclusive},
     thiserror::Error,
 };
 
@@ -15,6 +15,9 @@ use {
 pub enum Error {
     #[error("Operation not supported for the target.")]
     OperationNotSupported,
+
+    #[error("Block size cannot be greater than 8192 when log_ftrace is enabled")]
+    LargeBlockSizeWithLogFtrace,
 }
 
 #[derive(Debug)]
@@ -75,6 +78,9 @@ pub struct ParseArgs {
     /// a non-zero length. IOs are performed only on these targets. All threads
     /// get exclusive access to certain parts of the `target`.
     pub target: String,
+
+    /// If true, generates ftrace events on IO completion. Disabled by default.
+    pub log_ftrace: bool,
 }
 
 const KIB: u64 = 1024;
@@ -110,6 +116,8 @@ const TARGET_TYPE_DEFAULT: AvailableTargets = AvailableTargets::FileTarget;
 const SEQUENTIAL_DEFAULT: bool = true;
 
 const OUTPUT_CONFIG_FILE_DEFAULT: &str = "/tmp/output.config";
+
+const LOG_FTRACE: bool = false;
 
 fn to_string_min_max<T: std::fmt::Debug>(val: RangeInclusive<T>) -> String {
     format!("Min:{:?} Max:{:?}", val.start(), val.end())
@@ -180,7 +188,11 @@ fn target_operations_validator(
     return Ok(ops);
 }
 
-pub fn parse() -> Result<ParseArgs, Error> {
+fn parse_from<I, T>(iter: I) -> Result<ParseArgs, Error>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString> + Clone,
+{
     let queue_depth_default_str = &format!("{}", QUEUE_DEPTH_DEFAULT);
     let block_size_default_str = &format!("{}", BLOCK_SIZE_DEFAULT);
     let max_io_size_default_str = &format!("{}", MAX_IO_SIZE_DEFAULT);
@@ -193,6 +205,7 @@ pub fn parse() -> Result<ParseArgs, Error> {
         &format!("{}", AvailableTargets::value_to_friendly_name(TARGET_TYPE_DEFAULT));
     let sequential_default_str = &format!("{}", SEQUENTIAL_DEFAULT);
     let output_config_file_default_str = &format!("{}", OUTPUT_CONFIG_FILE_DEFAULT);
+    let log_ftrace_default_str = &format!("{}", LOG_FTRACE);
 
     let matches = App::new("odu")
         // TODO: We cannot get package version through `CARGO_PKG_VERSION`.
@@ -317,7 +330,16 @@ pub fn parse() -> Result<ParseArgs, Error> {
                 .help("Maximum number of outstanding IOs per thread.")
                 .takes_value(true),
         )
-        .get_matches();
+        .arg(
+            Arg::with_name("log_ftrace")
+                .short("f")
+                .long("log_ftrace")
+                .possible_values(&["true", "false"])
+                .default_value(&log_ftrace_default_str)
+                .help("If true, generates ftrace events on IO completion.")
+                .takes_value(true),
+        )
+        .get_matches_from(iter);
 
     let mut args = ParseArgs {
         queue_depth: matches.value_of("queue_depth").unwrap().parse::<usize>().unwrap(),
@@ -335,7 +357,12 @@ pub fn parse() -> Result<ParseArgs, Error> {
         sequential: matches.value_of("sequential").unwrap().parse::<bool>().unwrap(),
         output_config_file: matches.value_of("output_config_file").unwrap().to_string(),
         target: matches.value_of("target").unwrap().to_string(),
+        log_ftrace: matches.value_of("log_ftrace").unwrap().parse::<bool>().unwrap(),
     };
+
+    if args.log_ftrace && args.block_size > 8192 {
+        return Err(Error::LargeBlockSizeWithLogFtrace);
+    }
 
     args.operations = target_operations_validator(
         args.target_type,
@@ -345,9 +372,18 @@ pub fn parse() -> Result<ParseArgs, Error> {
     Ok(args)
 }
 
+pub fn parse() -> Result<ParseArgs, Error> {
+    parse_from(env::args_os())
+}
+
 #[cfg(test)]
 mod tests {
-    use {crate::args, crate::common_operations::allowed_ops, crate::target::AvailableTargets};
+    use {
+        super::{parse_from, Error},
+        crate::args,
+        crate::common_operations::allowed_ops,
+        crate::target::AvailableTargets,
+    };
 
     #[test]
     fn queue_depth_validator_test_default() {
@@ -438,5 +474,19 @@ mod tests {
         assert!(
             args::target_operations_validator(AvailableTargets::FileTarget, &vec!["open"]).is_err()
         );
+    }
+
+    #[test]
+    fn test_block_size_with_log_ftrace() {
+        let arg_vec =
+            vec!["odu", "--log_ftrace=true", "--block_size=8193", "--target=/tmp/abc.xyz"];
+        assert_eq!(parse_from(arg_vec).unwrap_err(), Error::LargeBlockSizeWithLogFtrace);
+
+        let arg_vec =
+            vec!["odu", "--log_ftrace=true", "--block_size=8192", "--target=/tmp/abc.xyz"];
+        assert!(parse_from(arg_vec).is_ok());
+
+        let arg_vec = vec!["odu", "--log_ftrace=true", "--block_size=200", "--target=/tmp/abc.xyz"];
+        assert!(parse_from(arg_vec).is_ok());
     }
 }

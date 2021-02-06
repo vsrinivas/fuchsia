@@ -15,6 +15,12 @@ use {
     },
 };
 
+#[cfg(target_os = "fuchsia")]
+use crate::fuchsia_utils::get_trace_event;
+
+#[cfg(not(target_os = "fuchsia"))]
+use crate::not_fuchsia_utils::get_trace_event;
+
 pub struct IssuerArgs {
     /// Human friendly name for this thread.
     name: String,
@@ -37,6 +43,14 @@ pub struct IssuerArgs {
     // Way for generator and verifier to notify the issuer that there are one or
     // more commands in the queue.
     active_commands: ActiveCommands,
+
+    /// When true, the `target` access (read/write) are sequential with respect
+    /// to offsets within the `target`.
+    sequential: bool,
+
+    /// If greater than 0, IOs are aligned to `alignment`. If not, a
+    /// random size is chosen to issue IOs.
+    alignment: u64,
 }
 
 impl IssuerArgs {
@@ -47,6 +61,8 @@ impl IssuerArgs {
         to_verifier: Sender<IoPacketType>,
         from_verifier: Receiver<IoPacketType>,
         active_commands: ActiveCommands,
+        sequential: bool,
+        alignment: u64,
     ) -> IssuerArgs {
         IssuerArgs {
             name: format!("{}-{}", base_name, issuer_unique_id),
@@ -56,6 +72,8 @@ impl IssuerArgs {
             from_verifier,
             stage: PipelineStages::Issue,
             active_commands,
+            sequential,
+            alignment,
         }
     }
 }
@@ -109,15 +127,19 @@ pub fn run_issuer(args: IssuerArgs) -> Result<(), Error> {
             verifying_cmd,
         );
 
-        cmd.timestamp_stage_start(args.stage);
-        cmd.do_io();
-        if !cmd.is_complete() {
-            error!("Asynchronous commands not implemented yet.");
-            process::abort();
-        }
+        {
+            let _unused_duration_event =
+                get_trace_event(args.sequential, cmd.operation_type(), args.alignment);
 
-        // Mark done timestamps.
-        cmd.timestamp_stage_end(args.stage);
+            cmd.timestamp_stage_start(args.stage);
+            cmd.do_io();
+            if !cmd.is_complete() {
+                error!("Asynchronous commands not implemented yet.");
+                process::abort();
+            }
+            // Mark done timestamps.
+            cmd.timestamp_stage_end(args.stage);
+        }
 
         // Cloning the command
         let internal_command = cmd.abort_or_exit();

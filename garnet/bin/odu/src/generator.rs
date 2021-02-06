@@ -368,6 +368,11 @@ pub fn run_load(
         iv_to_verifier,
         vi_from_verifier,
         active_commands.clone(),
+        args.sequential,
+        match args.align {
+            true => args.block_size,
+            false => 0,
+        },
     );
     thread_handles.push(spawn(move || run_issuer(issuer_args)));
 
