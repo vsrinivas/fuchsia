@@ -25,6 +25,7 @@ use {
         config::Config,
         event::{Event, EventListener},
         grid::Scroll,
+        index::{Column, Line, Point},
         term::SizeInfo,
         Term,
     },
@@ -431,6 +432,18 @@ impl ViewAssistant for TerminalViewAssistant {
             display_offset: grid.display_offset(),
         };
         self.terminal_scene.update_scroll_context(scroll_context);
+
+        // Write the grid to inspect for e2e testing. The contents will trim all whitespace
+        // from either end of the string which means that the trailing space after the prompt
+        // will not be included.
+        let bottom = grid.display_offset();
+        let top = bottom + *grid.num_lines() - 1;
+
+        let txt = term.bounds_to_string(
+            Point::new(*Line(top), Column(0)),
+            Point::new(*Line(bottom), grid.num_cols()),
+        );
+        fuchsia_inspect::component::inspector().root().record_string("grid", txt.trim());
 
         drop(grid);
 
