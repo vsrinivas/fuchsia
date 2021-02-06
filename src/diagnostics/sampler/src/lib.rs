@@ -79,9 +79,6 @@ async fn reboot_watcher(
             .send()
             .unwrap_or_else(|err| warn!("Acking the reboot register failed: {:?}", err));
     } else {
-        if 1 > 0 {
-            panic!("beep");
-        }
         // The reboot watcher channel somehow died. There's no reason to
         // clean ourselves up early, might as well just run until the component
         // manager tells us to stop.
