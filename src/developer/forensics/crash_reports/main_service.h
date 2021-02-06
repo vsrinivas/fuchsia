@@ -43,6 +43,10 @@ class MainService {
                                                 std::shared_ptr<InfoContext> info_context,
                                                 Config config);
 
+  // Place the component in a state where it expects to be stopped soon. This includes:
+  //  * Immediately persisting all future and pending crash reports without snapshots.
+  void ShutdownImminent();
+
   // FIDL protocol handlers.
   //
   // fuchsia.feedback.CrashReportingProductRegister

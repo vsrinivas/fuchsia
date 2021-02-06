@@ -104,8 +104,12 @@ executable("component_unittest_exe") {
   sources = [ "component_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/utils/component",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

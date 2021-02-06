@@ -71,12 +71,16 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
       current_archives_size_(0u),
       garbage_collected_snapshot_("garbage collected"),
       timed_out_snapshot_("timed out"),
+      shutdown_snapshot_("shutdown"),
       no_uuid_snapshot_(UuidForNoSnapshotUuid()) {
   garbage_collected_snapshot_.annotations->emplace("debug.snapshot.error", "garbage collected");
   garbage_collected_snapshot_.annotations->emplace("debug.snapshot.present", "false");
 
   timed_out_snapshot_.annotations->emplace("debug.snapshot.error", "timeout");
   timed_out_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+
+  shutdown_snapshot_.annotations->emplace("debug.snapshot.error", "system shutdown");
+  shutdown_snapshot_.annotations->emplace("debug.snapshot.present", "false");
 
   no_uuid_snapshot_.annotations->emplace("debug.snapshot.error", "missing uuid");
   no_uuid_snapshot_.annotations->emplace("debug.snapshot.present", "false");
@@ -118,6 +122,10 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
     return Snapshot(timed_out_snapshot_.annotations);
   }
 
+  if (uuid == shutdown_snapshot_.uuid) {
+    return Snapshot(shutdown_snapshot_.annotations);
+  }
+
   if (uuid == no_uuid_snapshot_.uuid) {
     return Snapshot(no_uuid_snapshot_.annotations);
   }
@@ -155,6 +163,10 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   // the call to GetSnapshotUuid times out.
   return ::fit::make_promise(
       [this, uuid, deadline](::fit::context& context) -> ::fit::result<SnapshotUuid> {
+        if (shutdown_) {
+          return ::fit::ok(shutdown_snapshot_.uuid);
+        }
+
         auto request = FindSnapshotRequest(uuid);
 
         // The request and its data were deleted before the promise executed. This should only occur
@@ -209,6 +221,25 @@ void SnapshotManager::Release(const SnapshotUuid& uuid) {
       requests_.begin(), requests_.end(),
       [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
   data_.erase(uuid);
+}
+
+void SnapshotManager::Shutdown() {
+  // Unblock all pending promises to return |shutdown_snapshot_|.
+  shutdown_ = true;
+  for (auto& request : requests_) {
+    if (!request->is_pending) {
+      continue;
+    }
+
+    for (auto& blocked_promise : request->blocked_promises) {
+      if (blocked_promise) {
+        blocked_promise.resume_task();
+      }
+    }
+    request->blocked_promises.clear();
+  }
+
+  data_provider_.Unbind();
 }
 
 SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,

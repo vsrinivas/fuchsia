@@ -47,6 +47,9 @@ class Queue {
   bool Contains(ReportId report_id) const;
   ReportId LatestReport() { return pending_reports_.back(); }
 
+  // Forces the queue to automatically put all reports in the store and stop all uploads.
+  void StopUploading();
+
  private:
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the
   // queue. Returns the number of reports successfully uploaded.
@@ -92,6 +95,8 @@ class Queue {
   // Number of upload attempts within the current instance of the component. These get reset across
   // restarts and reboots.
   std::unordered_map<ReportId, uint64_t> upload_attempts_;
+
+  bool stop_uploading_{false};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };

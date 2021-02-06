@@ -47,6 +47,13 @@ int main() {
             main_service->HandleCrashRegisterRequest(std::move(request));
           }));
 
+  component.OnStopSignal([&] {
+    FX_LOGS(INFO) << "Received stop signal; stopping upload and snapshot request, but not exiting "
+                     "to continue persisting new reports.";
+    main_service->ShutdownImminent();
+    // Don't stop the loop so incoming crash reports can be persisted.
+  });
+
   component.RunLoop();
 
   return EXIT_SUCCESS;

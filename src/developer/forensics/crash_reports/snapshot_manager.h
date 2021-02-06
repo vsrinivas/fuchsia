@@ -60,6 +60,10 @@ class SnapshotManager {
   // dropped by SnapshotManager.
   void Release(const SnapshotUuid& uuid);
 
+  // Shuts down the snapshot manager by cancelling any pending FIDL calls and provides waiting
+  // clients with a UUID for a generic "shutdown" snapshot.
+  void Shutdown();
+
   // Returns a Uuid a client can use if it doesn't have one, e.g., it was previously stored in a
   // file and the file is gone.
   static SnapshotUuid UuidForNoSnapshotUuid() { return "no uuid"; }
@@ -146,6 +150,8 @@ class SnapshotManager {
   std::vector<std::unique_ptr<SnapshotRequest>> requests_;
   std::map<SnapshotUuid, SnapshotData> data_;
 
+  bool shutdown_{false};
+
   // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,
   // time outs.
   struct SpecialCaseSnapshot {
@@ -157,6 +163,7 @@ class SnapshotManager {
 
   SpecialCaseSnapshot garbage_collected_snapshot_;
   SpecialCaseSnapshot timed_out_snapshot_;
+  SpecialCaseSnapshot shutdown_snapshot_;
   SpecialCaseSnapshot no_uuid_snapshot_;
 };
 

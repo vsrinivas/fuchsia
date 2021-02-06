@@ -51,6 +51,10 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                 std::unique_ptr<LogTags> tags, std::unique_ptr<SnapshotManager> snapshot_manager,
                 std::unique_ptr<CrashServer> crash_server);
 
+  // The crash reporter should stop uploading crash reports and persist any future and pending crash
+  // reports.
+  void PersistAllCrashReports();
+
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 

@@ -10,6 +10,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -322,6 +323,37 @@ TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
   auto snapshot = snapshot_manager_->GetSnapshot(SnapshotManager::UuidForNoSnapshotUuid());
   EXPECT_THAT(*(snapshot.LockAnnotations()), UnorderedElementsAreArray({
                                                  Pair("debug.snapshot.error", "missing uuid"),
+                                                 Pair("debug.snapshot.present", "false"),
+                                             }));
+  EXPECT_FALSE(snapshot.LockArchive());
+}
+
+TEST_F(SnapshotManagerTest, Check_Shutdown) {
+  SetUpDefaultDataProviderServer();
+
+  std::optional<std::string> uuid{std::nullopt};
+  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  snapshot_manager_->Shutdown();
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(uuid.has_value());
+  auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
+  EXPECT_THAT(*(snapshot.LockAnnotations()), IsSupersetOf({
+                                                 Pair("debug.snapshot.error", "system shutdown"),
+                                                 Pair("debug.snapshot.present", "false"),
+                                             }));
+  EXPECT_FALSE(snapshot.LockArchive());
+
+  uuid = std::nullopt;
+  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(uuid.has_value());
+  snapshot = snapshot_manager_->GetSnapshot(uuid.value());
+  EXPECT_THAT(*(snapshot.LockAnnotations()), IsSupersetOf({
+                                                 Pair("debug.snapshot.error", "system shutdown"),
                                                  Pair("debug.snapshot.present", "false"),
                                              }));
   EXPECT_FALSE(snapshot.LockArchive());

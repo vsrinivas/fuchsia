@@ -101,6 +101,8 @@ MainService::MainService(async_dispatcher_t* dispatcher,
   info_.ExposeConfig(config);
 }
 
+void MainService::ShutdownImminent() { crash_reporter_->PersistAllCrashReports(); }
+
 void MainService::HandleCrashRegisterRequest(
     ::fidl::InterfaceRequest<fuchsia::feedback::CrashReportingProductRegister> request) {
   crash_register_connections_.AddBinding(

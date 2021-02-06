@@ -59,6 +59,11 @@ bool Queue::Contains(const ReportId report_id) const {
          (hourly_report_.has_value() && hourly_report_.value() == report_id);
 }
 
+void Queue::StopUploading() {
+  stop_uploading_ = true;
+  upload_all_every_fifteen_minutes_task_.Cancel();
+}
+
 bool Queue::Add(Report report) {
   if (reporting_policy_ == ReportingPolicy::kDoNotFileAndDelete) {
     info_.MarkReportAsDeleted(0u);
@@ -66,7 +71,7 @@ bool Queue::Add(Report report) {
   }
 
   // Attempt to upload a report before putting it in the store.
-  if (reporting_policy_ == ReportingPolicy::kUpload) {
+  if (reporting_policy_ == ReportingPolicy::kUpload && !stop_uploading_) {
     if (Upload(report)) {
       return true;
     }
@@ -252,7 +257,7 @@ void Queue::WatchReportingPolicy(ReportingPolicyWatcher* watcher) {
 
 void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
   network_watcher->Register([this](const bool network_is_reachable) {
-    if (network_is_reachable) {
+    if (!stop_uploading_ && network_is_reachable) {
       // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
       if (const auto pending = Size();
           reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
@@ -272,6 +277,10 @@ void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
 }
 
 void Queue::UploadAllEveryFifteenMinutes() {
+  if (stop_uploading_) {
+    return;
+  }
+
   // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
   if (const auto pending = Size(); reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
     const auto uploaded = UploadAll();

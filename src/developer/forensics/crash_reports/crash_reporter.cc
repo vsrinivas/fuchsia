@@ -152,6 +152,11 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   }
 }
 
+void CrashReporter::PersistAllCrashReports() {
+  queue_.StopUploading();
+  snapshot_manager_->Shutdown();
+}
+
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Input report missing required program name. Won't file.";

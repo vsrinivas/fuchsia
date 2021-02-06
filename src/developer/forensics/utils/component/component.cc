@@ -5,6 +5,7 @@
 #include "src/developer/forensics/utils/component/component.h"
 
 #include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
@@ -14,30 +15,48 @@
 
 namespace forensics {
 namespace component {
+namespace {
 
 constexpr char kComponentDirectory[] = "/tmp/component";
 constexpr char kInstanceIndexPath[] = "/tmp/component/instance_index.txt";
 
+// Handles executing the passed callback when the Stop signal is received.
+class Lifecycle : public fuchsia::process::lifecycle::Lifecycle {
+ public:
+  Lifecycle(::fit::closure on_stop) : on_stop_(std::move(on_stop)) {}
+
+  // |fuchsia.process.lifecycle.Lifecycle|
+  void Stop() override { on_stop_(); }
+
+ private:
+  ::fit::closure on_stop_;
+};
+
+}  // namespace
+
 Component::Component()
     : loop_(&kAsyncLoopConfigAttachToCurrentThread),
+      dispatcher_(loop_.dispatcher()),
       context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       inspector_(context_.get()),
-      instance_index_(1u /*default if no file present*/) {
-  if (!files::IsDirectory(kComponentDirectory) && !files::CreateDirectory(kComponentDirectory)) {
-    FX_LOGS(INFO) << "Unable to create " << kComponentDirectory
-                  << ", assuming first instance of component";
-    return;
-  }
-
-  std::string starts_str;
-  if (files::ReadFileToString(kInstanceIndexPath, &starts_str)) {
-    instance_index_ = std::stoull(starts_str) + 1;
-  }
-
-  files::WriteFile(kInstanceIndexPath, std::to_string(instance_index_));
+      instance_index_(InitialInstanceIndex()),
+      lifecycle_(nullptr),
+      lifecycle_connection_(nullptr) {
+  WriteInstanceIndex();
 }
 
-async_dispatcher_t* Component::Dispatcher() { return loop_.dispatcher(); }
+Component::Component(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context)
+    : loop_(&kAsyncLoopConfigNeverAttachToThread),
+      dispatcher_(dispatcher),
+      context_(std::move(context)),
+      inspector_(context_.get()),
+      instance_index_(InitialInstanceIndex()),
+      lifecycle_(nullptr),
+      lifecycle_connection_(nullptr) {
+  WriteInstanceIndex();
+}
+
+async_dispatcher_t* Component::Dispatcher() { return dispatcher_; }
 
 std::shared_ptr<sys::ServiceDirectory> Component::Services() { return context_->svc(); }
 
@@ -46,6 +65,49 @@ inspect::Node* Component::InspectRoot() { return &(inspector_.root()); }
 bool Component::IsFirstInstance() const { return instance_index_ == 1; }
 
 zx_status_t Component::RunLoop() { return loop_.Run(); }
+void Component::ShutdownLoop() { return loop_.Shutdown(); }
+
+void Component::OnStopSignal(::fit::closure on_stop) {
+  using ProcLifecycle = fuchsia::process::lifecycle::Lifecycle;
+
+  lifecycle_ = std::make_unique<Lifecycle>([this, on_stop = std::move(on_stop)] {
+    on_stop();
+
+    // Close the channel to indicate to the client that stop procedures have completed.
+    lifecycle_connection_->Close(ZX_OK);
+  });
+  lifecycle_connection_ = std::make_unique<::fidl::Binding<ProcLifecycle>>(lifecycle_.get());
+
+  ::fidl::InterfaceRequestHandler<ProcLifecycle> handler(
+      [this](::fidl::InterfaceRequest<ProcLifecycle> request) mutable {
+        lifecycle_connection_->Bind(std::move(request), Dispatcher());
+        lifecycle_connection_->set_error_handler([](const zx_status_t status) {
+          FX_PLOGS(WARNING, status) << "Lost connection to lifecycle client";
+        });
+      });
+  FX_CHECK(AddPublicService(std::move(handler), "fuchsia.process.lifecycle.Lifecycle") == ZX_OK);
+}
+
+size_t Component::InitialInstanceIndex() const {
+  // The default is this is the first instance.
+  size_t instance_index{1};
+  if (!files::IsDirectory(kComponentDirectory) && !files::CreateDirectory(kComponentDirectory)) {
+    FX_LOGS(INFO) << "Unable to create " << kComponentDirectory
+                  << ", assuming first instance of component";
+    return instance_index;
+  }
+
+  std::string starts_str;
+  if (files::ReadFileToString(kInstanceIndexPath, &starts_str)) {
+    instance_index = std::stoull(starts_str) + 1;
+  }
+
+  return instance_index;
+}
+
+void Component::WriteInstanceIndex() const {
+  files::WriteFile(kInstanceIndexPath, std::to_string(instance_index_));
+}
 
 }  // namespace component
 }  // namespace forensics

@@ -9,8 +9,8 @@
         "features": [
             "build-info",
             "config-data",
-            "isolated-temp",
             "isolated-cache-storage",
+            "isolated-temp",
             "root-ssl-certificates"
         ],
         "services": [

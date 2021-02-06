@@ -174,6 +174,7 @@ class QueueTest : public UnitTestFixture {
     SetReportingPolicyDelete,
     SetReportingPolicyUpload,
     SetReportingPolicyUndecided,
+    StopUploading,
   };
 
   void ApplyQueueOps(const std::vector<QueueOps>& ops) {
@@ -219,6 +220,10 @@ class QueueTest : public UnitTestFixture {
         case QueueOps::SetReportingPolicyUndecided:
           reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
           reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
+          break;
+        case QueueOps::StopUploading:
+          reporting_policy_ = QueueOps::StopUploading;
+          queue_->StopUploading();
           break;
       }
     }
@@ -294,6 +299,7 @@ class QueueTest : public UnitTestFixture {
         ++next_upload_attempt_result_;
         break;
       case QueueOps::SetReportingPolicyUndecided:
+      case QueueOps::StopUploading:
         expected_queue_contents_.push_back(uuid);
         break;
       case QueueOps::SetReportingPolicyDelete:
@@ -578,24 +584,18 @@ TEST_F(QueueTest, Check_EarlyUploadThrottled) {
               }));
 }
 
-TEST_F(QueueTest, Check_ThrottledReportDropped) {
-  SetUpQueue({kUploadThrottled});
+TEST_F(QueueTest, Check_StopUploading) {
+  SetUpQueue({});
   ApplyQueueOps({
-      QueueOps::AddNewReport,
       QueueOps::SetReportingPolicyUpload,
+      QueueOps::StopUploading,
+      QueueOps::AddNewReport,
   });
   CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
+  EXPECT_EQ(queue_->Size(), 1u);
 
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::CrashState::kUploadThrottled),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
-              }));
+  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
 TEST_F(QueueTest, Check_InitializesFromStore) {
