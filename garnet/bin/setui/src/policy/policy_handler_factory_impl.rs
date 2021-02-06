@@ -7,6 +7,7 @@ use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
 use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError, PolicyType};
 use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
+use crate::service;
 use async_trait::async_trait;
 use futures::lock::Mutex;
 use std::collections::HashMap;
@@ -31,6 +32,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
     async fn generate(
         &mut self,
         policy_type: PolicyType,
+        service_messenger: service::message::Messenger,
         messenger: message::Messenger,
         setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError> {
@@ -50,6 +52,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
 
         let context = Context {
             policy_type,
+            service_messenger,
             messenger,
             setting_proxy_signature,
             storage_factory_handle: self.storage_factory.clone(),

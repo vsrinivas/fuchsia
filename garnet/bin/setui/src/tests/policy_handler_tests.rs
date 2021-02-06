@@ -15,6 +15,7 @@ use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::privacy::types::PrivacyInfo;
+use crate::service;
 use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -75,11 +76,16 @@ async fn test_write() {
     let expected_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
     let core_messenger_factory = core::message::create_hub();
     let (core_messenger, _) = core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    let messenger_factory = service::message::create_hub();
+    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
     let (_, setting_proxy_receptor) =
         core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
     let client_proxy = ClientProxy::new(
+        messenger,
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),

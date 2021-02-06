@@ -63,7 +63,7 @@ use crate::audio::policy::{
 };
 use crate::audio::types::AudioInfo;
 use crate::audio::utils::round_volume_level;
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Request as SettingRequest, Response as SettingResponse};
 use crate::internal::core::Payload;
 use crate::policy::base as policy_base;
@@ -414,10 +414,9 @@ impl AudioPolicyHandler {
             self.client_proxy.send_setting_request(SettingRequest::SetVolume(vec![stream]));
         } else if new_external_volume != previous_external_volume {
             // In some cases, such as when a max volume limit is removed, the internal volume may
-            // not change but the external volume should still be updated. We send a Changed event
-            // to the switchboard to trigger an update for external clients.
-            let external_audio_info = self.transform_internal_audio_info(audio_info);
-            self.client_proxy.send_changed_event(SettingInfo::Audio(external_audio_info));
+            // not change but the external volume should still be updated. We send a Rebroadcast
+            // request to the setting proxy, triggering an update for external clients.
+            self.client_proxy.request_rebroadcast(SettingType::Audio);
         }
 
         Ok(())

@@ -12,7 +12,7 @@ use crate::audio::types::AudioStreamType;
 use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream};
 use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::Request as SettingRequest;
+use crate::handler::base::{Payload as SettingPayload, Request as SettingRequest};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::{
     DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
@@ -25,10 +25,13 @@ use crate::policy::base::{PolicyInfo, PolicyType, Request};
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
+use crate::service;
+use crate::service::TryFromWithClient;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use crate::tests::message_utils::verify_payload;
 use fuchsia_async::Task;
 use futures::lock::Mutex;
+use futures::StreamExt;
 use matches::assert_matches;
 use std::borrow::BorrowMut;
 use std::sync::Arc;
@@ -38,6 +41,12 @@ const CONTEXT_ID: u64 = 0;
 struct TestEnvironment {
     /// Device storage handle.
     store: Arc<Mutex<DeviceStorage<State>>>,
+
+    /// Core messenger factory.
+    core_messenger_factory: core::message::Factory,
+
+    /// Service messenger factory.
+    service_messenger_factory: service::message::Factory,
 
     /// Receptor representing the setting proxy.
     setting_proxy_receptor: Arc<Mutex<Receptor>>,
@@ -86,6 +95,11 @@ async fn create_handler_test_environment() -> TestEnvironment {
         .create(MessengerType::Unbound)
         .await
         .expect("core messenger created");
+
+    let messenger_factory = service::message::create_hub();
+    let (messenger, _) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("core messenger created");
+
     let (_, setting_proxy_receptor) = core_messenger_factory
         .create(MessengerType::Unbound)
         .await
@@ -97,6 +111,7 @@ async fn create_handler_test_environment() -> TestEnvironment {
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
     let client_proxy = ClientProxy::new(
+        messenger,
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),
@@ -108,15 +123,87 @@ async fn create_handler_test_environment() -> TestEnvironment {
 
     TestEnvironment {
         store,
+        core_messenger_factory,
+        service_messenger_factory: messenger_factory,
         setting_proxy_receptor: Arc::new(Mutex::new(setting_proxy_receptor)),
         switchboard_receptor: Arc::new(Mutex::new(switchboard_receptor)),
         handler,
     }
 }
 
+/// Starts a task that continuously watches for requests to the setting handler on the service
+/// MessageHub and respond with a preset info value.
+async fn serve_audio_info(
+    core_messenger_factory: core::message::Factory,
+    messenger_factory: service::message::Factory,
+    audio_info: AudioInfo,
+) {
+    let core_messenger_factory_clone = core_messenger_factory.clone();
+    let receptor = messenger_factory
+        .create(MessengerType::Addressable(service::Address::Handler(SettingType::Audio)))
+        .await
+        .expect("should create setting messenger")
+        .1;
+
+    let receptor_fuse = receptor.fuse();
+
+    Task::spawn(async move {
+        futures::pin_mut!(receptor_fuse);
+        let mut listeners = Vec::new();
+
+        loop {
+            futures::select! {
+                event = receptor_fuse.select_next_some() => {
+                    if let Ok((SettingPayload::Request(request), client)) =
+                            SettingPayload::try_from_with_client(event) {
+                        match request {
+                            SettingRequest::Listen => {
+                                listeners.push(client);
+                            }
+                            SettingRequest::Get => {
+                                client
+                                    .reply(SettingPayload::Response(Ok(Some(
+                                        SettingInfo::Audio(audio_info.clone())))).into())
+                                    .send();
+                            }
+                            SettingRequest::Rebroadcast => {
+                                // Inform all the service message hub listeners.
+                                for listener in &listeners {
+                                    listener
+                                    .reply(SettingPayload::Response(Ok(Some(
+                                        SettingInfo::Audio(audio_info.clone())))).into())
+                                    .send();
+                                }
+
+                                // Inform the switchboard of the change
+                                core_messenger_factory_clone
+                                    .create(MessengerType::Unbound)
+                                    .await
+                                    .expect("should create setting messenger")
+                                    .0
+                                    .message(core::Payload::Event(SettingEvent::Changed(
+                                            SettingInfo::Audio(audio_info.clone()))),
+                                        core::message::Audience::Address(
+                                            core::Address::Switchboard))
+                                    .send();
+                            }
+                            _ => {
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
+    .detach();
+}
+
 /// Starts a task that continuously watches for get requests on the given receptor and replies with
 /// the given audio info.
-fn serve_audio_info(setting_proxy_receptor: Arc<Mutex<Receptor>>, audio_info: AudioInfo) {
+fn serve_audio_info_switchboard(
+    setting_proxy_receptor: Arc<Mutex<Receptor>>,
+    audio_info: AudioInfo,
+) {
     Task::spawn(async move {
         match setting_proxy_receptor.lock().await.next_payload().await {
             Ok((
@@ -149,7 +236,7 @@ async fn set_media_volume_limit(
 ) -> PolicyId {
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info(env.setting_proxy_receptor.clone(), audio_info);
+    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), audio_info);
 
     // Add the policy to the handler.
     let policy_response = env
@@ -184,7 +271,7 @@ async fn get_and_verify_media_volume(
         user_volume_level: internal_volume_level,
         user_volume_muted: false,
     });
-    serve_audio_info(env.setting_proxy_receptor.clone(), audio_info.clone());
+    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), audio_info.clone());
 
     // Send the get request to the handler.
     let request_transform = env.handler.handle_setting_request(SettingRequest::Get).await;
@@ -294,6 +381,11 @@ async fn test_handler_restore_persisted_state() {
         .create(MessengerType::Unbound)
         .await
         .expect("core messenger created");
+
+    let messenger_factory = service::message::create_hub();
+    let (messenger, _) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("core messenger created");
+
     let (_, setting_proxy_receptor) = core_messenger_factory
         .create(MessengerType::Unbound)
         .await
@@ -301,6 +393,7 @@ async fn test_handler_restore_persisted_state() {
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
     let client_proxy = ClientProxy::new(
+        messenger,
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),
@@ -311,7 +404,10 @@ async fn test_handler_restore_persisted_state() {
     store.lock().await.write(&persisted_state, false).await.expect("write failed");
 
     // Start task to provide audio info to the handler, which it requests at startup.
-    serve_audio_info(Arc::new(Mutex::new(setting_proxy_receptor)), default_audio_info());
+    serve_audio_info_switchboard(
+        Arc::new(Mutex::new(setting_proxy_receptor)),
+        default_audio_info(),
+    );
 
     let mut handler =
         AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
@@ -342,7 +438,7 @@ async fn test_handler_add_policy() {
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info(env.setting_proxy_receptor.clone(), default_audio_info());
+    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), default_audio_info());
 
     // Add a policy transform.
     let payload = env
@@ -398,7 +494,7 @@ async fn test_handler_remove_policy() {
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info(env.setting_proxy_receptor.clone(), default_audio_info());
+    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), default_audio_info());
 
     // Add a policy transform.
     let payload = env
@@ -416,7 +512,7 @@ async fn test_handler_remove_policy() {
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info(env.setting_proxy_receptor.clone(), default_audio_info());
+    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), default_audio_info());
 
     // Remove the added transform
     let payload = env
@@ -533,27 +629,26 @@ async fn test_handler_remove_policy_notifies_switchboard() {
         user_volume_muted: false,
     });
 
+    serve_audio_info(
+        env.core_messenger_factory.clone(),
+        env.service_messenger_factory.clone(),
+        starting_audio_info.clone(),
+    )
+    .await;
+
     // Set the max volume limit to 60%.
     let policy_id =
         set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone())
             .await;
 
-    // Since the max matches the starting volume, the new external volume should be 100%.
-    let mut changed_audio_info = starting_audio_info.clone();
-    changed_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 1.0,
-        user_volume_muted: false,
-    });
-
     // The internal volume didn't change but the external volume did, so the handler manually sends
-    // a changed even to the switchboard.
-    verify_media_volume_changed(&mut env, changed_audio_info.clone()).await;
+    // a changed even to the switchboard. The value will still be the original value as there is
+    // no policy proxy to intercept the message and pass it back to the handler for processing.
+    verify_media_volume_changed(&mut env, starting_audio_info.clone()).await;
 
     // Start task to provide audio info to the handler, which it requests when policies are
     // modified.
-    serve_audio_info(env.setting_proxy_receptor.clone(), starting_audio_info.clone());
+    serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), starting_audio_info.clone());
 
     // Remove the policy from the handler.
     env.handler

@@ -9,6 +9,7 @@ use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
 use crate::policy::base::response::Response;
 use crate::policy::policy_handler::PolicyHandler;
+use crate::service;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -141,6 +142,7 @@ pub type GenerateHandler<T> =
 /// settings service environment.
 pub struct Context<T: DeviceStorageFactory> {
     pub policy_type: PolicyType,
+    pub service_messenger: service::message::Messenger,
     pub messenger: message::Messenger,
     pub setting_proxy_signature: message::Signature,
     pub storage_factory_handle: Arc<Mutex<T>>,
@@ -154,6 +156,7 @@ pub trait PolicyHandlerFactory {
     async fn generate(
         &mut self,
         policy_type: PolicyType,
+        service_messenger: service::message::Messenger,
         messenger: message::Messenger,
         setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError>;

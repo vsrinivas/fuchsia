@@ -118,13 +118,22 @@ impl PolicyProxy {
             .await
             .map_err(Error::new)?;
 
-        let (handler_messenger, handler_receptor) =
+        let (switchboard_handler_messenger, switchboard_handler_receptor) =
             core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
+
+        // TODO(fxbug.dev/68489): return this receptor rather than the switchboard receptor.
+        let (handler_messenger, _) =
+            messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
 
         let policy_handler = handler_factory
             .lock()
             .await
-            .generate(policy_type, handler_messenger, setting_proxy_signature)
+            .generate(
+                policy_type,
+                handler_messenger,
+                switchboard_handler_messenger,
+                setting_proxy_signature,
+            )
             .await?;
 
         let mut proxy = Self { policy_handler };
@@ -190,7 +199,7 @@ impl PolicyProxy {
         })
         .detach();
 
-        Ok(handler_receptor.get_signature())
+        Ok(switchboard_handler_receptor.get_signature())
     }
 
     async fn process_policy_request(

@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
-use crate::handler::base::{Request, Response as SettingResponse};
+use crate::base::SettingType;
+use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
-use crate::internal::core::message::{Audience, Messenger, Receptor, Signature};
-use crate::internal::core::{Address, Payload};
+use crate::internal::core::message::{Audience as CoreAudience, Messenger, Receptor, Signature};
+use crate::internal::core::Payload;
+use crate::message::base::Audience;
 use crate::policy::base::response::{Error as PolicyError, Response};
 use crate::policy::base::{
     BoxedHandler, Context, GenerateHandlerResult, PolicyType, Request as PolicyRequest,
 };
+use crate::service;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use anyhow::Error;
 use async_trait::async_trait;
@@ -133,23 +135,21 @@ where
         let storage = context.storage_factory_handle.lock().await.get_store::<S>(context.id);
 
         let proxy = ClientProxy::<S>::new(
-            context.messenger.clone(),
+            context.service_messenger,
+            context.messenger,
             context.setting_proxy_signature,
             storage,
             context.policy_type,
         );
-        let handler_result = C::create(proxy).await;
 
-        match handler_result {
-            Err(err) => Err(err),
-            Ok(handler) => Ok(Box::new(handler) as BoxedHandler),
-        }
+        C::create(proxy).await.map(|handler| Box::new(handler) as BoxedHandler)
     })
 }
 
 /// `ClientProxy` provides common functionality, like messaging and persistence to policy handlers.
 #[derive(Clone)]
 pub struct ClientProxy<S: Storage + 'static> {
+    service_messenger: service::message::Messenger,
     messenger: Messenger,
     setting_proxy_signature: Signature,
     storage: Arc<Mutex<DeviceStorage<S>>>,
@@ -166,30 +166,31 @@ impl<S: Storage + 'static> ClientProxy<S> {
                     setting_type: self.policy_type.setting_type(),
                     data: SettingActionData::Request(request),
                 }),
-                Audience::Messenger(self.setting_proxy_signature),
+                CoreAudience::Messenger(self.setting_proxy_signature),
             )
             .send()
     }
 
-    /// Sends a changed event to the switchboard.
-    pub fn send_changed_event(&self, info: SettingInfo) -> Receptor {
-        self.messenger
+    /// Requests the setting handler to rebroadcast a settings changed event to its listeners.
+    pub fn request_rebroadcast(&self, setting_type: SettingType) {
+        self.service_messenger
             .message(
-                Payload::Event(SettingEvent::Changed(info)),
-                Audience::Address(Address::Switchboard),
+                HandlerPayload::Request(Request::Rebroadcast).into(),
+                Audience::Address(service::Address::Handler(setting_type)),
             )
-            .send()
+            .send();
     }
 }
 
 impl<S: Storage + 'static> ClientProxy<S> {
     pub fn new(
+        service_messenger: service::message::Messenger,
         messenger: Messenger,
         setting_proxy_signature: Signature,
         storage: Arc<Mutex<DeviceStorage<S>>>,
         policy_type: PolicyType,
     ) -> Self {
-        Self { messenger, setting_proxy_signature, storage, policy_type }
+        Self { service_messenger, messenger, setting_proxy_signature, storage, policy_type }
     }
 
     pub fn policy_type(&self) -> PolicyType {
@@ -218,16 +219,17 @@ impl<S: Storage + 'static> ClientProxy<S> {
 #[cfg(test)]
 mod tests {
     use super::ClientProxy;
-    use crate::base::SettingInfo;
-    use crate::handler::base::Request;
+    use crate::base::SettingType;
+    use crate::handler::base::{Payload as HandlerPayload, Request};
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::handler::device_storage::DeviceStorageFactory;
     use crate::internal::core;
-    use crate::internal::core::{Address, Payload};
+    use crate::internal::core::Payload;
     use crate::message::base::MessengerType;
     use crate::policy::base::PolicyType;
     use crate::privacy::types::PrivacyInfo;
-    use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
+    use crate::service;
+    use crate::switchboard::base::{SettingAction, SettingActionData};
     use crate::tests::message_utils::verify_payload;
 
     const CONTEXT_ID: u64 = 0;
@@ -237,6 +239,7 @@ mod tests {
         let policy_type = PolicyType::Unknown;
         let setting_request = Request::Get;
 
+        let service_messenger_factory = service::message::create_hub();
         let core_messenger_factory = core::message::create_hub();
         let (messenger, _) = core_messenger_factory
             .create(MessengerType::Unbound)
@@ -250,6 +253,11 @@ mod tests {
         let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
 
         let client_proxy = ClientProxy {
+            service_messenger: service_messenger_factory
+                .create(MessengerType::Unbound)
+                .await
+                .expect("messenger should be created")
+                .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage: store,
@@ -271,11 +279,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_client_proxy_send_changed_event() {
+    async fn test_client_proxy_request_rebroadcast() {
         let policy_type = PolicyType::Unknown;
-        let setting_info = SettingInfo::Privacy(PrivacyInfo { user_data_sharing_consent: None });
+        let setting_type = SettingType::Unknown;
 
+        let service_messenger_factory = service::message::create_hub();
         let core_messenger_factory = core::message::create_hub();
+
         let (messenger, _) = core_messenger_factory
             .create(MessengerType::Unbound)
             .await
@@ -284,27 +294,29 @@ mod tests {
             .create(MessengerType::Unbound)
             .await
             .expect("setting proxy messenger created");
-        let (_, mut switchboard_receptor) = core_messenger_factory
-            .create(MessengerType::Addressable(Address::Switchboard))
+        let (_, mut receptor) = service_messenger_factory
+            .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
-            .expect("switchboard messenger created");
-        let storage_factory = InMemoryStorageFactory::create();
-        let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
+            .expect("service receptor created");
 
         let client_proxy = ClientProxy {
+            service_messenger: service_messenger_factory
+                .create(MessengerType::Unbound)
+                .await
+                .expect("messenger should be created")
+                .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
-            storage: store,
+            storage: InMemoryStorageFactory::create()
+                .lock()
+                .await
+                .get_store::<PrivacyInfo>(CONTEXT_ID),
             policy_type,
         };
 
-        client_proxy.send_changed_event(setting_info.clone());
+        client_proxy.request_rebroadcast(setting_type);
 
-        verify_payload(
-            Payload::Event(SettingEvent::Changed(setting_info)),
-            &mut switchboard_receptor,
-            None,
-        )
-        .await
+        verify_payload(HandlerPayload::Request(Request::Rebroadcast).into(), &mut receptor, None)
+            .await
     }
 }
