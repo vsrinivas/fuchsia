@@ -1,7 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {anyhow::Error, argh::FromArgs, log::warn};
+use {
+    anyhow::{Context, Error},
+    argh::FromArgs,
+    fidl_fuchsia_hardware_power_statecontrol as reboot,
+    fuchsia_component::client::connect_to_service,
+    futures::TryStreamExt,
+    log::{info, warn},
+};
 
 pub mod config;
 mod executor;
@@ -22,10 +29,28 @@ pub async fn main(opt: Args) -> Result<(), Error> {
     match config::SamplerConfig::from_directory(opt.minimum_sample_rate_sec, "/config/data/metrics")
     {
         Ok(sampler_config) => {
+            // Create endpoint for the reboot watcher register.
+            let (reboot_watcher_client, reboot_watcher_request_stream) =
+                fidl::endpoints::create_request_stream::<reboot::RebootMethodsWatcherMarker>()?;
+
+            {
+                // Let the transient connection fall out of scope once we've passed the client
+                // end to our callback server.
+                let reboot_watcher_register =
+                    connect_to_service::<reboot::RebootMethodsWatcherRegisterMarker>()
+                        .context("Connect to Reboot watcher register")?;
+
+                reboot_watcher_register
+                    .register(reboot_watcher_client)
+                    .context("Providing the reboot register with callback channel.")?;
+            }
             let sampler_executor = executor::SamplerExecutor::new(sampler_config).await?;
 
-            sampler_executor.execute().await;
-            warn!("Diagnostics sampler is unexpectedly exiting.");
+            // Trigger the project samplers and returns a TaskCancellation struct used to trigger
+            // reboot shutdown of lapis.
+            let task_canceller = sampler_executor.execute();
+
+            reboot_watcher(reboot_watcher_request_stream, task_canceller).await;
             Ok(())
         }
         Err(e) => {
@@ -33,4 +58,35 @@ pub async fn main(opt: Args) -> Result<(), Error> {
             Ok(())
         }
     }
+}
+
+async fn reboot_watcher(
+    mut stream: reboot::RebootMethodsWatcherRequestStream,
+    task_canceller: executor::TaskCancellation,
+) {
+    if let Some(reboot::RebootMethodsWatcherRequest::OnReboot { reason: _, responder }) =
+        stream.try_next().await.unwrap_or_else(|err| {
+            // If the channel closed for some reason, we can just let Lapis keep running
+            // until component manager kills it.
+            warn!("Reboot callback channel closed: {:?}", err);
+            None
+        })
+    {
+        task_canceller.perform_reboot_cleanup().await;
+
+        // acknowledge reboot notification to unblock before timeout.
+        responder
+            .send()
+            .unwrap_or_else(|err| warn!("Acking the reboot register failed: {:?}", err));
+    } else {
+        if 1 > 0 {
+            panic!("beep");
+        }
+        // The reboot watcher channel somehow died. There's no reason to
+        // clean ourselves up early, might as well just run until the component
+        // manager tells us to stop.
+        task_canceller.run_without_cancellation().await;
+    }
+
+    info!("Lapis has been halted due to reboot. Goodbye.");
 }

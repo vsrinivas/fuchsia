@@ -4,7 +4,7 @@
 use {
     crate::config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
     anyhow::{format_err, Context, Error},
-    diagnostics_hierarchy::{ArrayContent, Property},
+    diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_cobalt::{
         CobaltEvent, CountEvent, EventPayload, HistogramBucket, LoggerFactoryMarker,
@@ -13,15 +13,163 @@ use {
     fuchsia_async::{self as fasync, futures::StreamExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
-    futures::{future::join_all, stream::FuturesUnordered},
+    futures::{channel::oneshot, future::join_all, select, stream::FuturesUnordered},
     itertools::Itertools,
-    log::{error, warn},
+    log::{error, info, warn},
     std::{
         collections::HashMap,
         convert::{TryFrom, TryInto},
         sync::Arc,
     },
 };
+
+pub struct TaskCancellation {
+    senders: Vec<oneshot::Sender<()>>,
+    execution_context: fasync::Task<Vec<ProjectSampler>>,
+}
+
+impl TaskCancellation {
+    // It's possible the reboot register goes down. If that
+    // happens, we want to continue driving execution with
+    // no consideration for cancellation. This does that.
+    pub async fn run_without_cancellation(self) {
+        self.execution_context.await;
+    }
+
+    pub async fn perform_reboot_cleanup(self) {
+        // Let every sampler know that a reboot is pending and they should exit.
+        self.senders.into_iter().for_each(|sender| {
+            sender
+                .send(())
+                .unwrap_or_else(|err| warn!("Failed to send reboot over oneshot: {:?}", err))
+        });
+
+        // Get the most recently updated project samplers from all the futures. They hold the
+        // cache with the most recent values for all the metrics we need to sample and diff!
+        let project_samplers: Vec<ProjectSampler> = self.execution_context.await;
+
+        // Maps a selector to the indices of the project_samplers vec which contain configurations
+        // that transform the property defined by the selector.
+        let mut project_map: HashMap<String, Vec<usize>> = HashMap::new();
+
+        for (index, project_sampler) in project_samplers.iter().enumerate() {
+            for selector in project_sampler.metric_transformation_map.keys() {
+                let relevant_projects = project_map.entry(selector.clone()).or_insert(Vec::new());
+                (*relevant_projects).push(index);
+            }
+        }
+
+        let mondo_selectors_set = project_map.keys().cloned();
+
+        let reboot_snapshot_reader =
+            ArchiveReader::new().retry_if_empty(false).add_selectors(mondo_selectors_set);
+
+        let mut reboot_processor = RebootSnapshotProcessor {
+            reader: reboot_snapshot_reader,
+            project_samplers,
+            project_map,
+        };
+        // Log errors encountered in final snapshot, but always swallow errors so we can gracefully
+        // notify RebootMethodsWatcherRegister that we yield our remaining time.
+        reboot_processor
+            .execute_reboot_sample()
+            .await
+            .unwrap_or_else(|e| warn!("Reboot snapshot failed! {:?}", e));
+    }
+}
+
+struct RebootSnapshotProcessor {
+    // Reader constructed from the union of selectors
+    // for every ProjectSampler config.
+    reader: ArchiveReader,
+    // Vector of mutable ProjectSamplers that will
+    // process their final samples.
+    project_samplers: Vec<ProjectSampler>,
+    // Mapping from a selector to a vector of indices into
+    // the project_samplers, where each ProjectSampler has
+    // an active config for that selector.
+    project_map: HashMap<String, Vec<usize>>,
+}
+
+impl RebootSnapshotProcessor {
+    pub async fn execute_reboot_sample(&mut self) -> Result<(), Error> {
+        let snapshot_data = self.reader.snapshot::<Inspect>().await?;
+        for data_packet in snapshot_data {
+            let moniker = data_packet.moniker;
+            match data_packet.payload {
+                None => {
+                    // TODO(66756): Shouldn't need to check for presence of errors if a payload
+                    // is None. We need to do this because empty root nodes are considered null
+                    // payloads.
+                    if data_packet.metadata.errors.is_some() {
+                        warn!(
+                            "Encountered errors snapshotting for {:?}: {:?}",
+                            moniker, data_packet.metadata.errors
+                        );
+                    }
+                }
+                Some(payload) => self.process_single_payload(payload, &moniker).await,
+            }
+        }
+        Ok(())
+    }
+
+    async fn process_single_payload(
+        &mut self,
+        hierarchy: DiagnosticsHierarchy<String>,
+        moniker: &String,
+    ) {
+        // The property iterator will visit empty nodes once,
+        // with a None property type. Skip those by filtering None props.
+        for (hierarchy_path, property) in
+            hierarchy.property_iter().filter(|(_, property)| property.is_some())
+        {
+            let new_sample = property.expect("Filtered out all None props already.");
+            let selector =
+                format!("{}:{}:{}", moniker, hierarchy_path.iter().join("/"), new_sample.key());
+
+            // Get the vector of ints mapping this selector to all project samplers
+            // that are configured to this metric.
+            match self.project_map.get(&selector) {
+                None => {
+                    warn!(
+                        concat!(
+                            "Reboot snapshot retrieved",
+                            " a property that no project samplers claim",
+                            " to need... {:?}"
+                        ),
+                        selector
+                    );
+                }
+                Some(project_sampler_indices) => {
+                    // For each ProjectSampler that is configured with this property,
+                    // use the most recent sample to do one final processing.
+                    // TODO(42067): Should we do these async?
+                    for project_sampler_index in project_sampler_indices {
+                        self.project_samplers
+                            .get_mut(*project_sampler_index)
+                            .context("Index guaranteed to be present.")
+                            .unwrap()
+                            .process_newly_sampled_property(&selector, new_sample)
+                            .await
+                            .unwrap_or_else(|e| {
+                                // If processing the final sample failed, just log the
+                                // error and proceed, everything's getting shut down soon
+                                // anyways.
+                                warn!(
+                                    concat!(
+                                        "A project sampler failed to",
+                                        " process a reboot sample: {:?}"
+                                    ),
+                                    e
+                                )
+                            });
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// Owner of the sampler execution context.
 pub struct SamplerExecutor {
@@ -39,7 +187,7 @@ impl SamplerExecutor {
 
         let minimum_sample_rate_sec = sampler_config.minimum_sample_rate_sec;
 
-        // TODO(lukenicholson): Create only one ArchiveReader for each unique poll rate so we
+        // TODO(42067): Create only one ArchiveReader for each unique poll rate so we
         // can avoid redundant snapshots.
         let project_sampler_futures =
             sampler_config.project_configs.into_iter().map(|project_config| {
@@ -61,23 +209,38 @@ impl SamplerExecutor {
 
     /// Turn each ProjectSampler plan into an fasync::Task which executes its associated plan,
     /// and process errors if any tasks exit unexpectedly.
-    pub async fn execute(self) {
-        let mut spawned_tasks = self
+    pub fn execute(self) -> TaskCancellation {
+        let (senders, mut spawned_tasks): (Vec<oneshot::Sender<()>>, FuturesUnordered<_>) = self
             .project_samplers
             .into_iter()
-            .map(|project_sampler| project_sampler.spawn())
-            .collect::<FuturesUnordered<_>>();
+            .map(|project_sampler| {
+                let (sender, receiver) = oneshot::channel::<()>();
+                (sender, project_sampler.spawn(receiver))
+            })
+            .unzip();
 
-        while let Some(sampler_result) = spawned_tasks.next().await {
-            match sampler_result {
-                Err(e) => {
-                    // TODO(lukenicholson): Consider restarting the failed sampler depending on
-                    // failure mode.
-                    warn!("A spawned sampler has failed: {:?}", e);
+        let execution_context = fasync::Task::spawn(async move {
+            let mut healthily_exited_samplers = Vec::new();
+            while let Some(sampler_result) = spawned_tasks.next().await {
+                match sampler_result {
+                    Err(e) => {
+                        // TODO(42067): Consider restarting the failed sampler depending on
+                        // failure mode.
+                        warn!("A spawned sampler has failed: {:?}", e);
+                    }
+                    Ok(ProjectSamplerTaskExit::RebootTriggered(sampler)) => {
+                        healthily_exited_samplers.push(sampler);
+                    }
+                    Ok(ProjectSamplerTaskExit::WorkCompleted) => {
+                        info!("A sampler completed its workload, and exited.")
+                    }
                 }
-                Ok(()) => {}
             }
-        }
+
+            healthily_exited_samplers
+        });
+
+        TaskCancellation { execution_context, senders }
     }
 }
 
@@ -96,6 +259,23 @@ pub struct ProjectSampler {
     poll_rate_sec: i64,
 }
 
+pub enum ProjectSamplerTaskExit {
+    // The project sampler processed a
+    // reboot signal on its oneshot and
+    // yielded to the final-snapshot.
+    RebootTriggered(ProjectSampler),
+    // The project sampler has no more
+    // work to complete; perhaps all
+    // metrics were "upload_once"?
+    WorkCompleted,
+}
+
+pub enum ProjectSamplerEvent {
+    TimerTriggered,
+    TimerDied,
+    RebootTriggered,
+    RebootChannelClosed(Error),
+}
 impl ProjectSampler {
     pub async fn new(
         config: ProjectConfig,
@@ -115,6 +295,7 @@ impl ProjectSampler {
                 minimum_sample_rate_sec,
             ));
         }
+
         let metric_transformation_map = config
             .metrics
             .into_iter()
@@ -137,101 +318,169 @@ impl ProjectSampler {
         })
     }
 
-    pub fn spawn(mut self) -> fasync::Task<Result<(), Error>> {
+    pub fn spawn(
+        mut self,
+        mut reboot_oneshot: oneshot::Receiver<()>,
+    ) -> fasync::Task<Result<ProjectSamplerTaskExit, Error>> {
         fasync::Task::spawn(async move {
             let mut periodic_timer =
                 fasync::Interval::new(zx::Duration::from_seconds(self.poll_rate_sec));
-            while let Some(()) = periodic_timer.next().await {
-                let snapshot_data = self.archive_reader.snapshot::<Inspect>().await?;
-                for data_packet in snapshot_data {
-                    let moniker = data_packet.moniker;
-                    match data_packet.payload {
-                        None => {
-                            // TODO(66756): Shouldn't need to check for presence of errors is a payload
-                            // is None. We need to do this because empty root nodes are considered null
-                            // payloads.
-                            if data_packet.metadata.errors.is_some() {
-                                warn!(
-                                    "Encountered errors snapshotting for {:?}: {:?}",
-                                    moniker, data_packet.metadata.errors
-                                );
+            loop {
+                let done = select! {
+                    opt = periodic_timer.next() => {
+                        if opt.is_some() {
+                            ProjectSamplerEvent::TimerTriggered
+                        } else {
+                            ProjectSamplerEvent::TimerDied
+                        }
+                    },
+                    oneshot_res = reboot_oneshot => {
+                        match oneshot_res {
+                            Ok(()) => {
+                                ProjectSamplerEvent::RebootTriggered
+                            },
+                            Err(e) => {
+                                ProjectSamplerEvent::RebootChannelClosed(
+                                    format_err!("Oneshot closure error: {:?}", e))
                             }
                         }
-                        Some(payload) => {
-                            for (hierarchy_path, property) in payload.property_iter() {
-                                // The property iterator will visit empty nodes once,
-                                // with a None property type. Skip those.
-                                if let Some(new_sample) = property {
-                                    let selector = format!(
-                                        "{}:{}:{}",
-                                        moniker,
-                                        hierarchy_path.iter().join("/"),
-                                        new_sample.key()
-                                    );
+                    }
+                };
 
-                                    let metric_transformation_opt =
-                                        self.metric_transformation_map.get(&selector);
-                                    match metric_transformation_opt {
-                                        None => {
-                                            error!(concat!(
-                                                "A property was returned by the",
-                                                " diagnostics snapshot, which wasn't",
-                                                " requested by the client."
-                                            ));
-                                            continue;
-                                        }
-                                        Some(metric_transformation) => {
-                                            // Rust is scared that the sample processors require mutable
-                                            // references to self, despite us using the values gathered
-                                            // before the potential mutability, after. These values
-                                            // won't change during the sample processing, but we do this to
-                                            // appease the borrow checker.
-                                            let metric_type =
-                                                metric_transformation.metric_type.clone();
-                                            let metric_id = metric_transformation.metric_id.clone();
-                                            let event_codes =
-                                                metric_transformation.event_codes.clone();
-                                            let upload_once =
-                                                metric_transformation.upload_once.clone();
+                match done {
+                    ProjectSamplerEvent::TimerDied => {
+                        return Err(format_err!(concat!(
+                            "The ProjectSampler timer died, something went wrong.",
+                        )));
+                    }
+                    ProjectSamplerEvent::RebootChannelClosed(e) => {
+                        // TODO(42067): Consider differentiating errors if
+                        // we ever want to recover a sampler after a oneshot channel death.
+                        return Err(format_err!(
+                            concat!(
+                                "The Reboot signaling oneshot died, something went wrong: {:?}",
+                            ),
+                            e
+                        ));
+                    }
+                    ProjectSamplerEvent::RebootTriggered => {
+                        // The reboot oneshot triggered, meaning it's time to perform
+                        // our final snapshot. Return self to reuse most recent cache.
+                        return Ok(ProjectSamplerTaskExit::RebootTriggered(self));
+                    }
+                    ProjectSamplerEvent::TimerTriggered => {
+                        // If the next snapshot was processed and we
+                        // returned Ok(false), we know that this sampler
+                        // no longer needs to run (perhaps all metrics were
+                        // "upload_once"?). If this is the case, we want to be
+                        // sure that it is not included in the reboot-workload.
+                        if !self.process_next_snapshot().await? {
+                            return Ok(ProjectSamplerTaskExit::WorkCompleted);
+                        }
+                    }
+                }
+            }
+        })
+    }
 
-                                            self.process_metric_transformation(
-                                                metric_type,
-                                                metric_id,
-                                                event_codes,
-                                                selector.clone(),
-                                                new_sample,
-                                            )
-                                            .await?;
+    // Ok(true) implies that the snapshot was processed and we should sample again.
+    // Ok(false) implies that the snapshot was processed and the project sampler can now stop.
+    // Err implies an error was reached while processing the sample.
+    async fn process_next_snapshot(&mut self) -> Result<bool, Error> {
+        let snapshot_data = self.archive_reader.snapshot::<Inspect>().await?;
+        for data_packet in snapshot_data {
+            let moniker = data_packet.moniker;
+            match data_packet.payload {
+                None => {
+                    // TODO(66756): Shouldn't need to check for presence of errors is a payload
+                    // is None. We need to do this because empty root nodes are considered null
+                    // payloads.
+                    if data_packet.metadata.errors.is_some() {
+                        warn!(
+                            "Encountered errors snapshotting for {:?}: {:?}",
+                            moniker, data_packet.metadata.errors
+                        );
+                    }
+                }
+                Some(payload) => {
+                    for (hierarchy_path, property) in payload.property_iter() {
+                        // The property iterator will visit empty nodes once,
+                        // with a None property type. Skip those.
+                        if let Some(new_sample) = property {
+                            let selector = format!(
+                                "{}:{}:{}",
+                                moniker,
+                                hierarchy_path.iter().join("/"),
+                                new_sample.key()
+                            );
 
-                                            if let Some(true) = upload_once {
-                                                self.metric_transformation_map.remove(&selector);
-                                                // If the entire project sampler is based on
-                                                // upload-once metrics, then there's no reason to
-                                                // keep the task alive.
-                                                if self.metric_transformation_map.is_empty() {
-                                                    return Ok(());
-                                                } else {
-                                                    // Update archive reader since we've removed
-                                                    // a selector.
-                                                    self.archive_reader = ArchiveReader::new()
-                                                        .retry_if_empty(false)
-                                                        .add_selectors(
-                                                            self.metric_transformation_map
-                                                                .keys()
-                                                                .cloned(),
-                                                        );
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                            self.process_newly_sampled_property(&selector, new_sample).await?;
+
+                            // The map is empty, break early, even if there were another
+                            // property there would be nothing to transform.
+                            if self.metric_transformation_map.is_empty() {
+                                return Ok(false);
                             }
                         }
                     }
                 }
             }
-            Ok(())
-        })
+        }
+
+        Ok(true)
+    }
+
+    // Process a single newly sampled diagnostics property, and update state accordingly.
+    async fn process_newly_sampled_property(
+        &mut self,
+        selector: &String,
+        new_sample: &Property,
+    ) -> Result<(), Error> {
+        let metric_transformation_opt = self.metric_transformation_map.get(selector);
+        match metric_transformation_opt {
+            None => {
+                warn!(concat!(
+                    "A property was returned by the",
+                    " diagnostics snapshot, which wasn't",
+                    " requested by the client."
+                ));
+            }
+            Some(metric_transformation) => {
+                // Rust is scared that the sample processors require mutable
+                // references to self, despite us using the values gathered
+                // before the potential mutability, after. These values
+                // won't change during the sample processing, but we do this to
+                // appease the borrow checker.
+                let metric_type = metric_transformation.metric_type.clone();
+                let metric_id = metric_transformation.metric_id.clone();
+                let event_codes = metric_transformation.event_codes.clone();
+                let upload_once = metric_transformation.upload_once.clone();
+
+                self.process_metric_transformation(
+                    metric_type,
+                    metric_id,
+                    event_codes,
+                    selector.clone(),
+                    new_sample,
+                )
+                .await?;
+
+                if let Some(true) = upload_once {
+                    self.metric_transformation_map.remove(selector);
+
+                    // If the metric transformation map is empty, there's no
+                    // more work to be done.
+                    if !self.metric_transformation_map.is_empty() {
+                        // Update archive reader since we've removed
+                        // a selector.
+                        self.archive_reader = ArchiveReader::new()
+                            .retry_if_empty(false)
+                            .add_selectors(self.metric_transformation_map.keys().cloned());
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn process_metric_transformation(
@@ -457,7 +706,7 @@ fn convert_inspect_histogram_to_cobalt_histogram(
             .map(|(index, bucket)| histogram_bucket_constructor(index, bucket.count))
             .collect::<Result<Vec<HistogramBucket>, Error>>(),
         _ => {
-            // TODO(lukenicholson): Does cobalt support floors or step counts that are
+            // TODO(42067): Does cobalt support floors or step counts that are
             // not ints? if so, we can support that as well with double arrays if the
             // actual counts are whole numbers.
             return Err(format_err!(
@@ -492,7 +741,7 @@ fn process_int(new_sample: &Property, selector: &String) -> Result<Option<EventP
         }
     };
 
-    // TODO(lukenicholson): With Cobalt 1.1, we can encode ints in a proper int type rather
+    // TODO(42067): With Cobalt 1.1, we can encode ints in a proper int type rather
     // than conflating event counts.
     Ok(Some(EventPayload::EventCount(CountEvent { count: sampled_int, period_duration_micros: 0 })))
 }
@@ -521,7 +770,7 @@ fn process_event_count(
         return Ok(None);
     }
 
-    // TODO(lukenicholson): If we decide to encode period duration,
+    // TODO(42067): If we decide to encode period duration,
     // use system uptime here.
     Ok(Some(EventPayload::EventCount(CountEvent { count: diff, period_duration_micros: 0 })))
 }

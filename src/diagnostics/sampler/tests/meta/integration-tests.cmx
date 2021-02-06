@@ -4,7 +4,9 @@
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister": "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/mock_reboot_register_component.cmx",
+                "fuchsia.mockrebootcontroller.MockRebootController": "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/mock_reboot_register_component.cmx"
             }
         }
     },
@@ -22,6 +24,8 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.test.LoggerQuerier",
             "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            "fuchsia.mockrebootcontroller.MockRebootController",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

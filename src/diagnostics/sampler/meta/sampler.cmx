@@ -17,6 +17,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             "fuchsia.logger.Log"
         ]
     }

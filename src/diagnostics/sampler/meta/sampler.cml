@@ -31,6 +31,10 @@
             from: "parent",
         },
         {
+            protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            from: "parent",
+        },
+        {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",

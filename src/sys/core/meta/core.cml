@@ -241,6 +241,11 @@
             ],
         },
         {
+            protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
+            from: "parent",
+            to: [ "#sampler" ],
+        },
+        {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
             from: "parent",
             to: [ "#detect" ],

@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mockrebootcontroller;
+
+enum RebootError : int32 {
+    CLIENT_ERROR = 1;
+    NO_CLIENT_SET = 2;
+};
+
+[Discoverable]
+protocol MockRebootController {
+    TriggerReboot() -> () error RebootError;
+};
