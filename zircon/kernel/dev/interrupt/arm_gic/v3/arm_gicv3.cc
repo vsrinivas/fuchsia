@@ -202,6 +202,8 @@ static zx_status_t gic_init() {
 }
 
 static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned int cpu_mask) {
+  LTRACEF("irq %u, flags %u, cpu_mask %#x\n", irq, flags, cpu_mask);
+
   if (flags != ARM_GIC_SGI_FLAG_NS) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -217,22 +219,33 @@ static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned in
   uint64_t val = 0;
   while (cpu_mask && cpu < arch_max_num_cpus()) {
     unsigned int mask = 0;
-    while (arch_cpu_num_to_cluster_id(cpu) == cluster) {
+
+    // within a single cluster (aff1) find all of the matching cpus
+    while (cpu < arch_max_num_cpus() && arch_cpu_num_to_cluster_id(cpu) == cluster) {
       if (cpu_mask & (1u << cpu)) {
-        mask |= 1u << arch_cpu_num_to_cpu_id(cpu);
         cpu_mask &= ~(1u << cpu);
+
+        auto aff0 = arch_cpu_num_to_cpu_id(cpu);
+        mask |= 1u << aff0;
       }
       cpu += 1;
     }
+
+    LTRACEF("computed mask %#x for cluster %u\n", mask, cluster);
 
     // Without the RS field set, we can only deal with the first
     // 16 cpus within a single cluster
     DEBUG_ASSERT((mask & 0xffff) == mask);
 
     val = ((irq & 0xf) << 24) | ((cluster & 0xff) << 16) | (mask & 0xffff);
+    cluster += 1;
+
+    // nothing in this cluster intersected with the cpu_mask
+    if (mask == 0) {
+      continue;
+    }
 
     gic_write_sgi1r(val);
-    cluster += 1;
     // Work around
     if (mx8_gpr_virt) {
       uint32_t regVal;

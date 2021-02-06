@@ -102,12 +102,16 @@ static inline uint arch_max_num_cpus(void) {
 static inline uint arch_cpu_num_to_cluster_id(cpu_num_t cpu) {
   extern uint arm64_cpu_cluster_ids[SMP_MAX_CPUS];
 
+  DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
+
   return arm64_cpu_cluster_ids[cpu];
 }
 
 // translate a cpu number back to the MP cpu number within a cluster (AFF0)
 static inline uint arch_cpu_num_to_cpu_id(cpu_num_t cpu) {
   extern uint arm64_cpu_cpu_ids[SMP_MAX_CPUS];
+
+  DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
 
   return arm64_cpu_cpu_ids[cpu];
 }
