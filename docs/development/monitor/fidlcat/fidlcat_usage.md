@@ -162,14 +162,14 @@ ledger.cmx <font color="#CC0000">5859666</font>:<font color="#CC0000">5859693</f
       info: <font color="#4E9A06">fuchsia.io/NodeInfo</font> = <font color="#3465A4">null</font>
     }
 
-ledger.cmx <font color="#CC0000">5859666</font>:<font color="#CC0000">5859693</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">0203b493</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">1</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">1</font>)
+ledger.cmx <font color="#CC0000">5859666</font>:<font color="#CC0000">5859693</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">0243b493</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">1</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">1</font>)
   -&gt; <font color="#4E9A06">ZX_OK</font>
     <span style="background-color:#75507B"><font color="#D3D7CF">received response</font></span> <font color="#4E9A06">fuchsia.io/Node.OnOpen</font> = {
       s: <font color="#4E9A06">int32</font> = <font color="#3465A4">0</font>
       info: <font color="#4E9A06">fuchsia.io/NodeInfo</font> = { directory: <font color="#4E9A06">fuchsia.io/DirectoryObject</font> = {} }
     }
 
-ledger.cmx <font color="#CC0000">5859666</font>:<font color="#CC0000">5859693</font> zx_channel_call(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">0203b493</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, deadline:<font color="#4E9A06">time</font>: <font color="#3465A4">ZX_TIME_INFINITE</font>, rd_num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">24</font>, rd_num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>)
+ledger.cmx <font color="#CC0000">5859666</font>:<font color="#CC0000">5859693</font> zx_channel_call(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">0243b493</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, deadline:<font color="#4E9A06">time</font>: <font color="#3465A4">ZX_TIME_INFINITE</font>, rd_num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">24</font>, rd_num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>)
   <span style="background-color:#75507B"><font color="#D3D7CF">sent request</font></span> <font color="#4E9A06">fuchsia.io/Node.Close</font> = {}
   -&gt; <font color="#4E9A06">ZX_OK</font>
     <span style="background-color:#75507B"><font color="#D3D7CF">received response</font></span> <font color="#4E9A06">fuchsia.io/Node.Close</font> = {
