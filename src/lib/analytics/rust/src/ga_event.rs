@@ -114,7 +114,7 @@ mod test {
         let args_encoded = "config+analytics+enable";
         let app_name = "ffx";
         let app_version = "1";
-        let uname = "Linux+x86_64";
+        let uname = os_and_release_desc().replace(" ", "+");
         let cid = &uuid().to_string();
         let expected = format!(
             "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
@@ -133,7 +133,7 @@ mod test {
         let labels = "labels";
         let app_name = "ffx";
         let app_version = "1";
-        let uname = "Linux+x86_64";
+        let uname = os_and_release_desc().replace(" ", "+");
         let cid = &uuid().to_string();
         let expected = format!(
             "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",

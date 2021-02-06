@@ -54,6 +54,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "analytics:tests",
     "async-utils:tests",
     "backoff:tests",
     "bootfs:tests",
