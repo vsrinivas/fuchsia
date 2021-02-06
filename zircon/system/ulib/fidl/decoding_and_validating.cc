@@ -6,7 +6,7 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
-#include <lib/fit/variant.h>
+#include <lib/stdcompat/variant.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -365,19 +365,19 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     return Status::kSuccess;
   }
 
-  bool has_handles() const { return fit::holds_alternative<const zx_handle_t*>(handles_); }
+  bool has_handles() const { return cpp17::holds_alternative<const zx_handle_t*>(handles_); }
   bool has_handle_infos() const {
-    return fit::holds_alternative<const zx_handle_info_t*>(handles_);
+    return cpp17::holds_alternative<const zx_handle_info_t*>(handles_);
   }
-  const zx_handle_t* handles() const { return fit::get<const zx_handle_t*>(handles_); }
+  const zx_handle_t* handles() const { return cpp17::get<const zx_handle_t*>(handles_); }
   const zx_handle_info_t* handle_infos() const {
-    return fit::get<const zx_handle_info_t*>(handles_);
+    return cpp17::get<const zx_handle_info_t*>(handles_);
   }
 
   // Message state passed in to the constructor.
   Byte* const bytes_;
   const uint32_t num_bytes_;
-  fit::variant<fit::monostate, const zx_handle_t*, const zx_handle_info_t*> handles_;
+  cpp17::variant<cpp17::monostate, const zx_handle_t*, const zx_handle_info_t*> handles_;
   const uint32_t num_handles_;
   uint32_t next_out_of_line_;
   const char** const out_error_msg_;

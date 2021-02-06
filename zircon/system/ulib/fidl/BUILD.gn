@@ -45,6 +45,7 @@ zx_library("fidl_base") {
     "walker.cc",
   ]
   deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fit",
     "//zircon/system/ulib/zircon",
   ]

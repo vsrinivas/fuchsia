@@ -6,7 +6,7 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
-#include <lib/fit/variant.h>
+#include <lib/stdcompat/variant.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -129,7 +129,7 @@ struct EnvelopeCheckpoint {
 struct BufferEncodeArgs {
   uint8_t* bytes;
   uint32_t num_bytes;
-  fit::variant<fit::monostate, zx_handle_t*, zx_handle_disposition_t*> handles;
+  cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles;
   uint32_t num_handles;
   uint32_t next_out_of_line;
   const char** out_error_msg;
@@ -142,7 +142,7 @@ struct IovecEncodeArgs {
   uint32_t num_iovecs;
   fidl_iovec_substitution_t* subs;
   uint32_t num_subs;
-  fit::variant<fit::monostate, zx_handle_t*, zx_handle_disposition_t*> handles;
+  cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles;
   uint32_t num_handles;
   uint32_t next_out_of_line;
   const char** out_error_msg;
@@ -417,17 +417,17 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
     *handle = ZX_HANDLE_INVALID;
   }
 
-  bool has_handles() const { return fit::holds_alternative<zx_handle_t*>(handles_); }
+  bool has_handles() const { return cpp17::holds_alternative<zx_handle_t*>(handles_); }
   bool has_handle_dispositions() const {
-    return fit::holds_alternative<zx_handle_disposition_t*>(handles_);
+    return cpp17::holds_alternative<zx_handle_disposition_t*>(handles_);
   }
   zx_handle_t* handles() const {
-    ZX_DEBUG_ASSERT(fit::get<zx_handle_t*>(handles_) != nullptr);
-    return fit::get<zx_handle_t*>(handles_);
+    ZX_DEBUG_ASSERT(cpp17::get<zx_handle_t*>(handles_) != nullptr);
+    return cpp17::get<zx_handle_t*>(handles_);
   }
   zx_handle_disposition_t* handle_dispositions() const {
-    ZX_DEBUG_ASSERT(fit::get<zx_handle_disposition_t*>(handles_) != nullptr);
-    return fit::get<zx_handle_disposition_t*>(handles_);
+    ZX_DEBUG_ASSERT(cpp17::get<zx_handle_disposition_t*>(handles_) != nullptr);
+    return cpp17::get<zx_handle_disposition_t*>(handles_);
   }
 
   Status SetPointerPresent(ObjectPointerPointer object_ptr_ptr, void* object_ptr) {
@@ -481,7 +481,7 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   // Message state initialized in the constructor.
   BufferState bs_;
   IovecState is_;
-  fit::variant<fit::monostate, zx_handle_t*, zx_handle_disposition_t*> handles_;
+  cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles_;
   const uint32_t num_handles_;
   uint32_t next_out_of_line_;
   const char** const out_error_msg_;
