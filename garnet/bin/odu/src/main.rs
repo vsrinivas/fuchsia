@@ -26,7 +26,7 @@ use {
     ::log::{debug, log_enabled, Level::Debug},
     anyhow::Error,
     std::{
-        fs::{metadata, File, OpenOptions},
+        fs::{metadata, remove_file, File, OpenOptions},
         io::prelude::*,
         process,
         sync::{Arc, Mutex},
@@ -38,14 +38,14 @@ use {
 // Magic number that gets written in block header
 static MAGIC_NUMBER: u64 = 0x4f6475346573742e;
 
-fn create_target(target_name: &String, target_length: u64) {
+fn create_target(target_name: &String, target_length: u64) -> bool {
     let metadata = metadata(&target_name);
 
     match metadata {
         Ok(stats) => {
             assert!(!stats.permissions().readonly());
             assert!(stats.len() >= target_length);
-            return;
+            return false;
         }
         _ => {}
     }
@@ -58,6 +58,11 @@ fn create_target(target_name: &String, target_length: u64) {
     // max_io_size, max_io_count, thread_count, align, etc. It may happen that
     // some portion of the target may never gets IOs.
     f.set_len(target_length).unwrap();
+    true
+}
+
+fn remove_target(target_name: &String) {
+    remove_file(target_name).unwrap();
 }
 
 fn output_config(generator_args_vec: &Vec<GeneratorArgs>, output_config_file: &String) {
@@ -83,7 +88,7 @@ fn main() -> Result<(), Error> {
     let mut thread_handles = vec![];
     let mut generator_args_vec = vec![];
 
-    create_target(&args.target, args.target_length);
+    let file_created = create_target(&args.target, args.target_length);
 
     let metadata = metadata(&args.target)?;
 
@@ -146,6 +151,11 @@ fn main() -> Result<(), Error> {
     }
     println!("===== Aggregate Stats =====");
     aggregate_stats.display_summary();
+
+    // Cleanup if we have created the target and we are asked to.
+    if file_created && args.cleanup {
+        remove_target(&args.target);
+    }
 
     Ok(())
 }

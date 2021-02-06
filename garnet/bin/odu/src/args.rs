@@ -81,6 +81,10 @@ pub struct ParseArgs {
 
     /// If true, generates ftrace events on IO completion. Disabled by default.
     pub log_ftrace: bool,
+
+    /// If false, retains all the files and directories created during run. This is useful to
+    /// analyze any bugs during the run.
+    pub cleanup: bool,
 }
 
 const KIB: u64 = 1024;
@@ -118,6 +122,8 @@ const SEQUENTIAL_DEFAULT: bool = true;
 const OUTPUT_CONFIG_FILE_DEFAULT: &str = "/tmp/output.config";
 
 const LOG_FTRACE: bool = false;
+
+const CLEANUP: bool = true;
 
 fn to_string_min_max<T: std::fmt::Debug>(val: RangeInclusive<T>) -> String {
     format!("Min:{:?} Max:{:?}", val.start(), val.end())
@@ -206,6 +212,7 @@ where
     let sequential_default_str = &format!("{}", SEQUENTIAL_DEFAULT);
     let output_config_file_default_str = &format!("{}", OUTPUT_CONFIG_FILE_DEFAULT);
     let log_ftrace_default_str = &format!("{}", LOG_FTRACE);
+    let cleanup_default_str = &format!("{}", CLEANUP);
 
     let matches = App::new("odu")
         // TODO: We cannot get package version through `CARGO_PKG_VERSION`.
@@ -339,6 +346,15 @@ where
                 .help("If true, generates ftrace events on IO completion.")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("cleanup")
+                .short("u")
+                .long("cleanup")
+                .possible_values(&["true", "false"])
+                .default_value(&cleanup_default_str)
+                .help("If true, deletes all the temporary files created during run.")
+                .takes_value(true),
+        )
         .get_matches_from(iter);
 
     let mut args = ParseArgs {
@@ -358,6 +374,7 @@ where
         output_config_file: matches.value_of("output_config_file").unwrap().to_string(),
         target: matches.value_of("target").unwrap().to_string(),
         log_ftrace: matches.value_of("log_ftrace").unwrap().parse::<bool>().unwrap(),
+        cleanup: matches.value_of("cleanup").unwrap().parse::<bool>().unwrap(),
     };
 
     if args.log_ftrace && args.block_size > 8192 {
