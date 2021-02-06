@@ -10,7 +10,7 @@ use std::convert::From as _;
 use fuchsia_async as fasync;
 
 use anyhow::Context as _;
-use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{stream, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac};
 use net_types::SpecifiedAddress;
 use netemul::{
@@ -543,13 +543,21 @@ async fn neigh_clear_entries_errors() -> Result {
         .context("failed to connect to Controller")?;
     // Clearing neighbors on loopback interface is not supported.
     assert_eq!(
-        controller.clear_entries(alice.loopback_id).await.context("clear_entries FIDL error")?,
-        Err(fuchsia_zircon::Status::NOT_SUPPORTED.into_raw())
+        controller
+            .clear_entries(alice.loopback_id, fidl_fuchsia_net::IpVersion::V4)
+            .await
+            .context("clear_entries FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_SUPPORTED)
     );
     // Clearing neighbors on non-existing interface returns the proper error.
     assert_eq!(
-        controller.clear_entries(alice.ep.id() + 100).await.context("clear_entries FIDL error")?,
-        Err(fuchsia_zircon::Status::NOT_FOUND.into_raw())
+        controller
+            .clear_entries(alice.ep.id() + 100, fidl_fuchsia_net::IpVersion::V4)
+            .await
+            .context("clear_entries FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_FOUND)
     );
     Ok(())
 }
@@ -600,20 +608,93 @@ async fn neigh_clear_entries() -> Result {
         bob.ipv6
     );
 
-    let entries =
+    let mut entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
-    assert_eq!(entries.len(), 2, "should have two entries after exchange, got: {:?}", entries);
+    // Ignore the updated at field when comparing the entries as we can't
+    // predict the exact time when neighbors are updated.
+    let () = entries.values_mut().for_each(|x| x.updated_at = None);
+    assert_eq!(
+        entries,
+        [
+            (
+                (alice.ep.id(), BOB_IP),
+                fidl_fuchsia_net_neighbor::Entry {
+                    interface: Some(alice.ep.id()),
+                    neighbor: Some(BOB_IP),
+                    state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
+                        fidl_fuchsia_net_neighbor::ReachableState {
+                            ..fidl_fuchsia_net_neighbor::ReachableState::EMPTY
+                        }
+                    )),
+                    mac: Some(BOB_MAC),
+                    updated_at: None,
+                    ..fidl_fuchsia_net_neighbor::Entry::EMPTY
+                }
+            ),
+            (
+                (alice.ep.id(), bob.ipv6),
+                fidl_fuchsia_net_neighbor::Entry {
+                    interface: Some(alice.ep.id()),
+                    neighbor: Some(bob.ipv6),
+                    state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
+                        fidl_fuchsia_net_neighbor::ReachableState {
+                            ..fidl_fuchsia_net_neighbor::ReachableState::EMPTY
+                        }
+                    )),
+                    mac: Some(BOB_MAC),
+                    updated_at: None,
+                    ..fidl_fuchsia_net_neighbor::Entry::EMPTY
+                }
+            ),
+        ]
+        // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
+        .iter()
+        .cloned()
+        .collect::<HashMap<_, _>>(),
+    );
 
     // Clear entries and verify they go away.
     let () = controller
-        .clear_entries(alice.ep.id())
+        .clear_entries(alice.ep.id(), fidl_fuchsia_net::IpVersion::V4)
+        .await
+        .context("clear_entries FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("clear_entries failed")?;
+    let mut entries =
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+    // Ignore the updated at field when comparing the entries as we can't
+    // predict the exact time when neighbors are updated.
+    let () = entries.values_mut().for_each(|x| x.updated_at = None);
+    assert_eq!(
+        entries,
+        vec![(
+            (alice.ep.id(), bob.ipv6),
+            fidl_fuchsia_net_neighbor::Entry {
+                interface: Some(alice.ep.id()),
+                neighbor: Some(bob.ipv6),
+                state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
+                    fidl_fuchsia_net_neighbor::ReachableState {
+                        ..fidl_fuchsia_net_neighbor::ReachableState::EMPTY
+                    }
+                )),
+                mac: Some(BOB_MAC),
+                updated_at: None,
+                ..fidl_fuchsia_net_neighbor::Entry::EMPTY
+            }
+        ),]
+        .into_iter()
+        .collect::<HashMap<_, _>>(),
+        "IPv4 entries should have been emptied"
+    );
+    let () = controller
+        .clear_entries(alice.ep.id(), fidl_fuchsia_net::IpVersion::V6)
         .await
         .context("clear_entries FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("clear_entries failed")?;
     let entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
-    assert!(entries.is_empty(), "entries should have been emptied, got: {:?}", entries);
+    assert_eq!(entries, HashMap::new(), "IPv6 entries should have been emptied");
 
     // Exchange datagrams again and assert that new solicitation requests were
     // sent.
@@ -809,7 +890,7 @@ async fn neigh_unreachability_config_errors() -> Result {
         .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to View")?;
     assert_eq!(
-        view.get_unreachability_config(alice.ep.id() + 100)
+        view.get_unreachability_config(alice.ep.id() + 100, fidl_fuchsia_net::IpVersion::V4)
             .await
             .context("get_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw),
@@ -824,6 +905,7 @@ async fn neigh_unreachability_config_errors() -> Result {
         controller
             .update_unreachability_config(
                 alice.ep.id() + 100,
+                fidl_fuchsia_net::IpVersion::V4,
                 fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY,
             )
             .await
@@ -835,6 +917,7 @@ async fn neigh_unreachability_config_errors() -> Result {
         controller
             .update_unreachability_config(
                 alice.loopback_id,
+                fidl_fuchsia_net::IpVersion::V4,
                 fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY,
             )
             .await
@@ -846,7 +929,11 @@ async fn neigh_unreachability_config_errors() -> Result {
     invalid_config.base_reachable_time = Some(-1);
     assert_eq!(
         controller
-            .update_unreachability_config(alice.ep.id(), invalid_config)
+            .update_unreachability_config(
+                alice.ep.id(),
+                fidl_fuchsia_net::IpVersion::V4,
+                invalid_config
+            )
             .await
             .context("update_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw),
@@ -880,40 +967,54 @@ async fn neigh_unreachability_config() -> Result {
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
-    {
-        // Get the current UnreachabilityConfig for comparison
-        let original_config = view
-            .get_unreachability_config(alice.ep.id())
+    let view = &view;
+    let alice = &alice;
+    // Get the original configs for IPv4 and IPv6 before performing any updates so we
+    // can make sure changes to one protocol do not affect the other.
+    let ip_and_original_configs =
+        stream::iter(&[fidl_fuchsia_net::IpVersion::V4, fidl_fuchsia_net::IpVersion::V6])
+            .map(Ok::<_, anyhow::Error>)
+            .and_then(|ip_version| async move {
+                let ip_version = *ip_version;
+
+                // Get the current UnreachabilityConfig for comparison
+                let original_config = view
+                    .get_unreachability_config(alice.ep.id(), ip_version)
+                    .await
+                    .context("get_unreachability_config FIDL error")?
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .context("get_unreachability_config failed")?;
+
+                Ok((ip_version, original_config))
+            })
+            .try_collect::<Vec<_>>()
             .await
-            .context("get_unreachability_config FIDL error")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("get_unreachability_config failed")?;
-        let expected =
-            fidl_fuchsia_net_neighbor::UnreachabilityConfig { ..original_config.clone() };
+            .context("error getting initial configs")?;
+
+    for (ip_version, original_config) in ip_and_original_configs.into_iter() {
+        // Make sure the configuration has not changed.
+        assert_eq!(
+            view.get_unreachability_config(alice.ep.id(), ip_version)
+                .await
+                .context("get_unreachability_config FIDL error")?
+                .map_err(fuchsia_zircon::Status::from_raw),
+            Ok(original_config.clone()),
+        );
 
         // Verify that updating with the current config doesn't change anything
         let () = controller
-            .update_unreachability_config(alice.ep.id(), original_config)
+            .update_unreachability_config(alice.ep.id(), ip_version, original_config.clone())
             .await
             .context("update_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("update_unreachability_config failed")?;
         assert_eq!(
-            view.get_unreachability_config(alice.ep.id())
+            view.get_unreachability_config(alice.ep.id(), ip_version)
                 .await
                 .context("get_unreachability_config FIDL error")?
                 .map_err(fuchsia_zircon::Status::from_raw),
-            Ok(expected),
+            Ok(original_config.clone()),
         );
-    }
-
-    {
-        let original_config = view
-            .get_unreachability_config(alice.ep.id())
-            .await
-            .context("get_unreachability_config FIDL error")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("get_unreachability_config failed")?;
 
         // Update config with some non-defaults
         let mut updates = fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY;
@@ -924,7 +1025,7 @@ async fn neigh_unreachability_config() -> Result {
         updates.base_reachable_time = updated_base_reachable_time;
         updates.retransmit_timer = updated_retransmit_timer;
         let () = controller
-            .update_unreachability_config(alice.ep.id(), updates)
+            .update_unreachability_config(alice.ep.id(), ip_version, updates)
             .await
             .context("update_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw)
@@ -932,7 +1033,7 @@ async fn neigh_unreachability_config() -> Result {
 
         // Verify that set fields are changed and unset fields remain the same
         let updated_config = view
-            .get_unreachability_config(alice.ep.id())
+            .get_unreachability_config(alice.ep.id(), ip_version)
             .await
             .context("get_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw);

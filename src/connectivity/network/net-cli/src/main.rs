@@ -583,10 +583,10 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                 .context("failed during neigh add command")?;
             info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
         }
-        NeighEnum::Clear(NeighClear { interface }) => {
+        NeighEnum::Clear(NeighClear { interface, ip_version }) => {
             let controller = connect_to_service::<neighbor::ControllerMarker>()
                 .context("failed to connect to neighbor controller")?;
-            let () = do_neigh_clear(interface, controller)
+            let () = do_neigh_clear(interface, ip_version, controller)
                 .await
                 .context("failed during neigh clear command")?;
             info!("Cleared entries for interface {}", interface);
@@ -610,15 +610,16 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                 .context("error watching for changes to the neighbor table")?;
         }
         NeighEnum::Config(NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
-            NeighConfigEnum::Get(NeighGetConfig { interface }) => {
+            NeighConfigEnum::Get(NeighGetConfig { interface, ip_version }) => {
                 let view = connect_to_service::<neighbor::ViewMarker>()
                     .context("failed to connect to neighbor view")?;
-                let () = print_neigh_config(interface, view)
+                let () = print_neigh_config(interface, ip_version, view)
                     .await
                     .context("failed during neigh config get command")?;
             }
             NeighConfigEnum::Update(NeighUpdateConfig {
                 interface,
+                ip_version,
                 base_reachable_time,
                 learn_base_reachable_time,
                 min_random_factor,
@@ -647,7 +648,7 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                 };
                 let controller = connect_to_service::<neighbor::ControllerMarker>()
                     .context("failed to connect to neighbor controller")?;
-                let () = update_neigh_config(interface, updates, controller)
+                let () = update_neigh_config(interface, ip_version, updates, controller)
                     .await
                     .context("failed during neigh config update command")?;
                 info!("Updated config for interface {}", interface);
@@ -673,10 +674,11 @@ async fn do_neigh_add(
 
 async fn do_neigh_clear(
     interface: u64,
+    ip_version: net::IpVersion,
     controller: neighbor::ControllerProxy,
 ) -> Result<(), Error> {
     controller
-        .clear_entries(interface)
+        .clear_entries(interface, ip_version)
         .await
         .context("FIDL error clearing neighbor table")?
         .map_err(zx::Status::from_raw)
@@ -717,9 +719,13 @@ async fn print_neigh_entries(watch_for_changes: bool) -> Result<(), Error> {
         .await
 }
 
-async fn print_neigh_config(interface: u64, view: neighbor::ViewProxy) -> Result<(), Error> {
+async fn print_neigh_config(
+    interface: u64,
+    version: net::IpVersion,
+    view: neighbor::ViewProxy,
+) -> Result<(), Error> {
     let config = view
-        .get_unreachability_config(interface)
+        .get_unreachability_config(interface, version)
         .await
         .context("get_unreachability_config FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
@@ -731,11 +737,12 @@ async fn print_neigh_config(interface: u64, view: neighbor::ViewProxy) -> Result
 
 async fn update_neigh_config(
     interface: u64,
+    version: net::IpVersion,
     updates: neighbor::UnreachabilityConfig,
     controller: neighbor::ControllerProxy,
 ) -> Result<(), Error> {
     controller
-        .update_unreachability_config(interface, updates)
+        .update_unreachability_config(interface, version, updates)
         .await
         .context("update_unreachability_config FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
@@ -796,6 +803,7 @@ mod tests {
     use fidl_fuchsia_net as net;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
     use futures::prelude::*;
+    use net_declare::fidl_ip;
     use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
 
     fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
@@ -1354,27 +1362,27 @@ mod tests {
         .await
     }
 
+    const INTERFACE_ID: u64 = 1;
+    const IP_ADDRESS: net::IpAddress = fidl_ip!("192.168.0.1");
+    const IP_VERSION: net::IpVersion = net::IpVersion::V4;
+    const MAC: net::MacAddress = net::MacAddress { octets: [1, 2, 3, 4, 5, 6] };
+
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_add() {
-        const WANT_INTERFACE: u64 = 1;
-        const WANT_IP: net::IpAddress =
-            net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] });
-        const WANT_MAC: net::MacAddress = net::MacAddress { octets: [1, 2, 3, 4, 5, 6] };
-
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_add(WANT_INTERFACE, WANT_IP, WANT_MAC, controller);
+        let neigh = do_neigh_add(INTERFACE_ID, IP_ADDRESS, MAC, controller);
         let neigh_succeeds = async {
-            let (got_interface, got_ip, got_mac, responder) = requests
+            let (got_interface_id, got_ip_address, got_mac, responder) = requests
                 .try_next()
                 .await
                 .expect("neigh FIDL error")
                 .expect("request stream should not have ended")
                 .into_add_entry()
                 .expect("request should be of type AddEntry");
-            assert_eq!(got_interface, WANT_INTERFACE);
-            assert_eq!(got_ip, WANT_IP);
-            assert_eq!(got_mac, WANT_MAC);
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_address, IP_ADDRESS);
+            assert_eq!(got_mac, MAC);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };
@@ -1385,20 +1393,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_clear() {
-        const WANT_INTERFACE: u64 = 1;
-
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_clear(WANT_INTERFACE, controller);
+        let neigh = do_neigh_clear(INTERFACE_ID, IP_VERSION, controller);
         let neigh_succeeds = async {
-            let (got_interface, responder) = requests
+            let (got_interface_id, got_ip_version, responder) = requests
                 .try_next()
                 .await
                 .expect("neigh FIDL error")
                 .expect("request stream should not have ended")
                 .into_clear_entries()
                 .expect("request should be of type ClearEntries");
-            assert_eq!(got_interface, WANT_INTERFACE);
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_version, IP_VERSION);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };
@@ -1409,23 +1416,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_del() {
-        const WANT_INTERFACE: u64 = 1;
-        const WANT_IP: net::IpAddress =
-            net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] });
-
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_del(WANT_INTERFACE, WANT_IP, controller);
+        let neigh = do_neigh_del(INTERFACE_ID, IP_ADDRESS, controller);
         let neigh_succeeds = async {
-            let (got_interface, got_ip, responder) = requests
+            let (got_interface_id, got_ip_address, responder) = requests
                 .try_next()
                 .await
                 .expect("neigh FIDL error")
                 .expect("request stream should not have ended")
                 .into_remove_entry()
                 .expect("request should be of type RemoveEntry");
-            assert_eq!(got_interface, WANT_INTERFACE);
-            assert_eq!(got_ip, WANT_IP);
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_address, IP_ADDRESS);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };
@@ -1436,21 +1439,20 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_config_get() {
-        const WANT_INTERFACE: u64 = 1;
-
         let (view, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ViewMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let neigh = print_neigh_config(WANT_INTERFACE, view);
+        let neigh = print_neigh_config(INTERFACE_ID, IP_VERSION, view);
         let neigh_succeeds = async {
-            let (got_interface, responder) = requests
+            let (got_interface_id, got_ip_version, responder) = requests
                 .try_next()
                 .await
                 .expect("neigh FIDL error")
                 .expect("request stream should not have ended")
                 .into_get_unreachability_config()
                 .expect("request should be of type GetUnreachabilityConfig");
-            assert_eq!(got_interface, WANT_INTERFACE);
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_version, IP_VERSION);
             let () = responder
                 .send(&mut Ok(neighbor::UnreachabilityConfig::EMPTY))
                 .expect("responder.send should succeed");
@@ -1463,24 +1465,28 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_config_update() {
-        const WANT_INTERFACE: u64 = 1;
-        const WANT_CONFIG: neighbor::UnreachabilityConfig = neighbor::UnreachabilityConfig::EMPTY;
+        const CONFIG: neighbor::UnreachabilityConfig = neighbor::UnreachabilityConfig::EMPTY;
 
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let neigh =
-            update_neigh_config(WANT_INTERFACE, neighbor::UnreachabilityConfig::EMPTY, controller);
+        let neigh = update_neigh_config(
+            INTERFACE_ID,
+            IP_VERSION,
+            neighbor::UnreachabilityConfig::EMPTY,
+            controller,
+        );
         let neigh_succeeds = async {
-            let (got_interface, got_config, responder) = requests
+            let (got_interface_id, got_ip_version, got_config, responder) = requests
                 .try_next()
                 .await
                 .expect("neigh FIDL error")
                 .expect("request stream should not have ended")
                 .into_update_unreachability_config()
                 .expect("request should be of type UpdateUnreachabilityConfig");
-            assert_eq!(got_interface, WANT_INTERFACE);
-            assert_eq!(got_config, WANT_CONFIG);
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_version, IP_VERSION);
+            assert_eq!(got_config, CONFIG);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };

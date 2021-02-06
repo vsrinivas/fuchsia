@@ -149,32 +149,33 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 	return nil
 }
 
-func (n *neighborImpl) GetUnreachabilityConfig(_ fidl.Context, interfaceID uint64) (neighbor.ViewGetUnreachabilityConfigResult, error) {
-	// TODO(https://fxbug.dev/68770): This FIDL method needs to take a protocol number.
-	for _, network := range []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber} {
-		config, err := n.stack.NUDConfigurations(tcpip.NICID(interfaceID), network)
-		if err != nil {
-			return neighbor.ViewGetUnreachabilityConfigResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
-		}
-
-		var resp neighbor.UnreachabilityConfig
-		resp.SetBaseReachableTime(config.BaseReachableTime.Nanoseconds())
-		resp.SetLearnBaseReachableTime(config.LearnBaseReachableTime)
-		resp.SetMinRandomFactor(config.MinRandomFactor)
-		resp.SetMaxRandomFactor(config.MaxRandomFactor)
-		resp.SetRetransmitTimer(config.RetransmitTimer.Nanoseconds())
-		resp.SetLearnRetransmitTimer(config.LearnRetransmitTimer)
-		resp.SetDelayFirstProbeTime(config.DelayFirstProbeTime.Nanoseconds())
-		resp.SetMaxMulticastProbes(config.MaxMulticastProbes)
-		resp.SetMaxUnicastProbes(config.MaxUnicastProbes)
-		resp.SetMaxAnycastDelayTime(config.MaxAnycastDelayTime.Nanoseconds())
-		resp.SetMaxReachabilityConfirmations(config.MaxReachabilityConfirmations)
-
-		return neighbor.ViewGetUnreachabilityConfigResultWithResponse(neighbor.ViewGetUnreachabilityConfigResponse{
-			Config: resp,
-		}), nil
+func (n *neighborImpl) GetUnreachabilityConfig(_ fidl.Context, interfaceID uint64, ipVersion net.IpVersion) (neighbor.ViewGetUnreachabilityConfigResult, error) {
+	netProto, ok := fidlconv.ToTCPNetProto(ipVersion)
+	if !ok {
+		return neighbor.ViewGetUnreachabilityConfigResultWithErr(int32(zx.ErrInvalidArgs)), nil
 	}
-	panic("unreachable")
+
+	config, err := n.stack.NUDConfigurations(tcpip.NICID(interfaceID), netProto)
+	if err != nil {
+		return neighbor.ViewGetUnreachabilityConfigResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
+	}
+
+	var resp neighbor.UnreachabilityConfig
+	resp.SetBaseReachableTime(config.BaseReachableTime.Nanoseconds())
+	resp.SetLearnBaseReachableTime(config.LearnBaseReachableTime)
+	resp.SetMinRandomFactor(config.MinRandomFactor)
+	resp.SetMaxRandomFactor(config.MaxRandomFactor)
+	resp.SetRetransmitTimer(config.RetransmitTimer.Nanoseconds())
+	resp.SetLearnRetransmitTimer(config.LearnRetransmitTimer)
+	resp.SetDelayFirstProbeTime(config.DelayFirstProbeTime.Nanoseconds())
+	resp.SetMaxMulticastProbes(config.MaxMulticastProbes)
+	resp.SetMaxUnicastProbes(config.MaxUnicastProbes)
+	resp.SetMaxAnycastDelayTime(config.MaxAnycastDelayTime.Nanoseconds())
+	resp.SetMaxReachabilityConfirmations(config.MaxReachabilityConfirmations)
+
+	return neighbor.ViewGetUnreachabilityConfigResultWithResponse(neighbor.ViewGetUnreachabilityConfigResponse{
+		Config: resp,
+	}), nil
 }
 
 var _ neighbor.ControllerWithCtx = (*neighborImpl)(nil)
@@ -202,98 +203,104 @@ func (n *neighborImpl) RemoveEntry(_ fidl.Context, interfaceID uint64, neighborI
 	return neighbor.ControllerRemoveEntryResultWithResponse(neighbor.ControllerRemoveEntryResponse{}), nil
 }
 
-func (n *neighborImpl) ClearEntries(_ fidl.Context, interfaceID uint64) (neighbor.ControllerClearEntriesResult, error) {
-	for _, network := range []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber} {
-		if err := n.stack.ClearNeighbors(tcpip.NICID(interfaceID), network); err != nil {
-			return neighbor.ControllerClearEntriesResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
-		}
+func (n *neighborImpl) ClearEntries(_ fidl.Context, interfaceID uint64, ipVersion net.IpVersion) (neighbor.ControllerClearEntriesResult, error) {
+	netProto, ok := fidlconv.ToTCPNetProto(ipVersion)
+	if !ok {
+		return neighbor.ControllerClearEntriesResultWithErr(int32(zx.ErrInvalidArgs)), nil
+	}
+
+	if err := n.stack.ClearNeighbors(tcpip.NICID(interfaceID), netProto); err != nil {
+		return neighbor.ControllerClearEntriesResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
 	return neighbor.ControllerClearEntriesResultWithResponse(neighbor.ControllerClearEntriesResponse{}), nil
 }
 
-func (n *neighborImpl) UpdateUnreachabilityConfig(_ fidl.Context, interfaceID uint64, config neighbor.UnreachabilityConfig) (neighbor.ControllerUpdateUnreachabilityConfigResult, error) {
+func (n *neighborImpl) UpdateUnreachabilityConfig(_ fidl.Context, interfaceID uint64, ipVersion net.IpVersion, config neighbor.UnreachabilityConfig) (neighbor.ControllerUpdateUnreachabilityConfigResult, error) {
 	if !n.stack.HasNIC(tcpip.NICID(interfaceID)) {
 		return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(zx.ErrNotFound)), nil
 	}
 
-	for _, network := range []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber} {
-		currentConfig, err := n.stack.NUDConfigurations(tcpip.NICID(interfaceID), network)
-		if err != nil {
-			return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
-		}
+	netProto, ok := fidlconv.ToTCPNetProto(ipVersion)
+	if !ok {
+		return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(zx.ErrInvalidArgs)), nil
+	}
 
-		invalidArgsResult := neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(zx.ErrInvalidArgs))
+	currentConfig, err := n.stack.NUDConfigurations(tcpip.NICID(interfaceID), netProto)
+	if err != nil {
+		return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
+	}
 
-		// See fuchsia.net.neighbor/UnreachabilityConfig for the list of constraints.
-		if config.HasBaseReachableTime() {
-			if v := config.GetBaseReachableTime(); v <= 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `base_reachable_time` %d: must be > 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.BaseReachableTime = time.Duration(config.GetBaseReachableTime())
-		}
-		if config.HasLearnBaseReachableTime() {
-			currentConfig.LearnBaseReachableTime = config.GetLearnBaseReachableTime()
-		}
-		if config.HasMinRandomFactor() {
-			if v := config.GetMinRandomFactor(); v <= 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `min_random_factor` %f: must be > 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.MinRandomFactor = config.GetMinRandomFactor()
-		}
-		if config.HasMaxRandomFactor() {
-			if v := config.GetMaxRandomFactor(); v < currentConfig.MinRandomFactor {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_random_factor` %f: must be >= `min_random_factor` %f", v, currentConfig.MinRandomFactor)
-				return invalidArgsResult, nil
-			}
-			currentConfig.MaxRandomFactor = config.GetMaxRandomFactor()
-		}
-		if config.HasRetransmitTimer() {
-			if v := config.GetRetransmitTimer(); v <= 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `retransmit_timer` %d: must be > 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.RetransmitTimer = time.Duration(config.GetRetransmitTimer())
-		}
-		if config.HasLearnRetransmitTimer() {
-			currentConfig.LearnRetransmitTimer = config.GetLearnRetransmitTimer()
-		}
-		if config.HasDelayFirstProbeTime() {
-			if v := config.GetDelayFirstProbeTime(); v <= 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `delay_first_probe_time` %d: must be > 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.DelayFirstProbeTime = time.Duration(config.GetDelayFirstProbeTime())
-		}
-		if config.HasMaxMulticastProbes() {
-			if v := config.GetMaxMulticastProbes(); v <= 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_multicast_probes` %d: must be > 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.MaxMulticastProbes = config.GetMaxMulticastProbes()
-		}
-		if config.HasMaxUnicastProbes() {
-			if v := config.GetMaxUnicastProbes(); v <= 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_unicast_probes` %d: must be > 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.MaxUnicastProbes = config.GetMaxUnicastProbes()
-		}
-		if config.HasMaxAnycastDelayTime() {
-			if v := config.GetMaxAnycastDelayTime(); v < 0 {
-				_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_anycast_delay_time` %d: must be >= 0", v)
-				return invalidArgsResult, nil
-			}
-			currentConfig.MaxAnycastDelayTime = time.Duration(config.GetMaxAnycastDelayTime())
-		}
-		if config.HasMaxReachabilityConfirmations() {
-			currentConfig.MaxReachabilityConfirmations = config.GetMaxReachabilityConfirmations()
-		}
+	invalidArgsResult := neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(zx.ErrInvalidArgs))
 
-		if err := n.stack.SetNUDConfigurations(tcpip.NICID(interfaceID), network, currentConfig); err != nil {
-			return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
+	// See fuchsia.net.neighbor/UnreachabilityConfig for the list of constraints.
+	if config.HasBaseReachableTime() {
+		if v := config.GetBaseReachableTime(); v <= 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `base_reachable_time` %d: must be > 0", v)
+			return invalidArgsResult, nil
 		}
+		currentConfig.BaseReachableTime = time.Duration(config.GetBaseReachableTime())
+	}
+	if config.HasLearnBaseReachableTime() {
+		currentConfig.LearnBaseReachableTime = config.GetLearnBaseReachableTime()
+	}
+	if config.HasMinRandomFactor() {
+		if v := config.GetMinRandomFactor(); v <= 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `min_random_factor` %f: must be > 0", v)
+			return invalidArgsResult, nil
+		}
+		currentConfig.MinRandomFactor = config.GetMinRandomFactor()
+	}
+	if config.HasMaxRandomFactor() {
+		if v := config.GetMaxRandomFactor(); v < currentConfig.MinRandomFactor {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_random_factor` %f: must be >= `min_random_factor` %f", v, currentConfig.MinRandomFactor)
+			return invalidArgsResult, nil
+		}
+		currentConfig.MaxRandomFactor = config.GetMaxRandomFactor()
+	}
+	if config.HasRetransmitTimer() {
+		if v := config.GetRetransmitTimer(); v <= 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `retransmit_timer` %d: must be > 0", v)
+			return invalidArgsResult, nil
+		}
+		currentConfig.RetransmitTimer = time.Duration(config.GetRetransmitTimer())
+	}
+	if config.HasLearnRetransmitTimer() {
+		currentConfig.LearnRetransmitTimer = config.GetLearnRetransmitTimer()
+	}
+	if config.HasDelayFirstProbeTime() {
+		if v := config.GetDelayFirstProbeTime(); v <= 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `delay_first_probe_time` %d: must be > 0", v)
+			return invalidArgsResult, nil
+		}
+		currentConfig.DelayFirstProbeTime = time.Duration(config.GetDelayFirstProbeTime())
+	}
+	if config.HasMaxMulticastProbes() {
+		if v := config.GetMaxMulticastProbes(); v <= 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_multicast_probes` %d: must be > 0", v)
+			return invalidArgsResult, nil
+		}
+		currentConfig.MaxMulticastProbes = config.GetMaxMulticastProbes()
+	}
+	if config.HasMaxUnicastProbes() {
+		if v := config.GetMaxUnicastProbes(); v <= 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_unicast_probes` %d: must be > 0", v)
+			return invalidArgsResult, nil
+		}
+		currentConfig.MaxUnicastProbes = config.GetMaxUnicastProbes()
+	}
+	if config.HasMaxAnycastDelayTime() {
+		if v := config.GetMaxAnycastDelayTime(); v < 0 {
+			_ = syslog.ErrorTf(neighbor.ControllerName, "UpdateUnreachabilityConfig: invalid `max_anycast_delay_time` %d: must be >= 0", v)
+			return invalidArgsResult, nil
+		}
+		currentConfig.MaxAnycastDelayTime = time.Duration(config.GetMaxAnycastDelayTime())
+	}
+	if config.HasMaxReachabilityConfirmations() {
+		currentConfig.MaxReachabilityConfirmations = config.GetMaxReachabilityConfirmations()
+	}
+
+	if err := n.stack.SetNUDConfigurations(tcpip.NICID(interfaceID), netProto, currentConfig); err != nil {
+		return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
 	return neighbor.ControllerUpdateUnreachabilityConfigResultWithResponse(neighbor.ControllerUpdateUnreachabilityConfigResponse{}), nil
 }

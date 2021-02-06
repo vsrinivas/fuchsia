@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
 use fidl_fuchsia_logger as logger;
+use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_ext as net_ext;
+
+use argh::FromArgs;
 
 fn parse_log_level_str(value: &str) -> Result<logger::LogLevelFilter, String> {
     match &value.to_lowercase()[..] {
@@ -15,6 +17,14 @@ fn parse_log_level_str(value: &str) -> Result<logger::LogLevelFilter, String> {
         "error" => Ok(logger::LogLevelFilter::Error),
         "fatal" => Ok(logger::LogLevelFilter::Fatal),
         _ => Err("invalid log level".to_string()),
+    }
+}
+
+fn parse_ip_version_str(value: &str) -> Result<net::IpVersion, String> {
+    match &value.to_lowercase()[..] {
+        "ipv4" => Ok(net::IpVersion::V4),
+        "ipv6" => Ok(net::IpVersion::V6),
+        _ => Err("invalid IP version".to_string()),
     }
 }
 
@@ -383,6 +393,9 @@ pub struct NeighAdd {
 pub struct NeighClear {
     #[argh(positional)]
     pub interface: u64,
+
+    #[argh(positional, from_str_fn(parse_ip_version_str))]
+    pub ip_version: net::IpVersion,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -426,6 +439,9 @@ pub enum NeighConfigEnum {
 pub struct NeighGetConfig {
     #[argh(positional)]
     pub interface: u64,
+
+    #[argh(positional, from_str_fn(parse_ip_version_str))]
+    pub ip_version: net::IpVersion,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -434,6 +450,9 @@ pub struct NeighGetConfig {
 pub struct NeighUpdateConfig {
     #[argh(positional)]
     pub interface: u64,
+
+    #[argh(positional, from_str_fn(parse_ip_version_str))]
+    pub ip_version: net::IpVersion,
 
     /// a base duration, in nanoseconds, for computing the random reachable
     /// time
@@ -540,19 +559,12 @@ macro_rules! route_struct {
 
         impl Into<fidl_fuchsia_netstack::RouteTableEntry2> for $ty_name {
             fn into(self) -> fidl_fuchsia_netstack::RouteTableEntry2 {
-                let Self {
-                    destination,
-                    netmask,
-                    gateway,
-                    nicid,
-                    metric,
-                } = self;
+                let Self { destination, netmask, gateway, nicid, metric } = self;
                 fidl_fuchsia_netstack::RouteTableEntry2 {
                     destination: fidl_fuchsia_net_ext::IpAddress(destination).into(),
                     netmask: fidl_fuchsia_net_ext::IpAddress(netmask).into(),
-                    gateway: gateway.map(|gateway| {
-                        Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())
-                    }),
+                    gateway: gateway
+                        .map(|gateway| Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())),
                     nicid,
                     metric,
                 }

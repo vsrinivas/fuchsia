@@ -64,11 +64,12 @@ protocol View {
     /// View the current configurations of an interface.
     ///
     /// + request `interface` interface to read configurations from.
+    /// + request `ip_version` the IP version to read configurations from.
     /// - response `config` a snapshot of the interface's configuration.
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     // TODO(fxbug.dev/59058): Reading configuration should be moved to
     // interface-scoped protocols in fuchsia.net.interfaces.
-    GetUnreachabilityConfig(fuchsia.net.interface_id interface)
+    GetUnreachabilityConfig(fuchsia.net.interface_id interface, fuchsia.net.IpVersion ip_version)
         -> (UnreachabilityConfig config) error zx.status;
 };
 
@@ -105,15 +106,18 @@ protocol Controller {
     ///
     /// + request `interface` identifier for the interface associated with the
     ///     entries to be deleted.
+    /// + request `ip_version` the IP version to clear entries from.
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    ClearEntries(fuchsia.net.interface_id interface) -> () error zx.status;
+    ClearEntries(fuchsia.net.interface_id interface, fuchsia.net.IpVersion ip_version)
+        -> () error zx.status;
 
     /// Change the configuration of the neighbor discovery algorithm for an
     /// interface.
     ///
     /// + request `interface` the interface to be configured.
+    /// + request `ip_version` the IP version to be configured.
     /// + request `config` used for updating the configuration for an interface.
     ///     Only the specified fields will be changed. All other fields will
     ///     remain the same as the original configuration.
@@ -126,6 +130,6 @@ protocol Controller {
     ///     constraints.
     // TODO(fxbug.dev/59058): Updating configuration should be moved to
     // interface-scoped protocols in fuchsia.net.interfaces.
-    UpdateUnreachabilityConfig(fuchsia.net.interface_id interface, UnreachabilityConfig config)
-        -> () error zx.status;
+    UpdateUnreachabilityConfig(fuchsia.net.interface_id interface, fuchsia.net.IpVersion ip_version,
+                               UnreachabilityConfig config) -> () error zx.status;
 };

@@ -18,6 +18,17 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
+func ToTCPNetProto(v net.IpVersion) (tcpip.NetworkProtocolNumber, bool) {
+	switch v {
+	case net.IpVersionV4:
+		return header.IPv4ProtocolNumber, true
+	case net.IpVersionV6:
+		return header.IPv6ProtocolNumber, true
+	default:
+		return 0, false
+	}
+}
+
 func ToTCPIPAddressAndProtocolNumber(addr net.IpAddress) (tcpip.Address, tcpip.NetworkProtocolNumber) {
 	switch tag := addr.Which(); tag {
 	case net.IpAddressIpv4:

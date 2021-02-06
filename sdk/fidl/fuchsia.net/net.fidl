@@ -7,6 +7,12 @@ library fuchsia.net;
 /// A unique non-zero interface identifier.
 alias interface_id = uint64;
 
+/// IpVersion is an IP version.
+enum IpVersion {
+    V4 = 1;
+    V6 = 2;
+};
+
 /// Ipv4Address is expressed in network byte order, so the most significant byte
 /// ("127" in the address "127.0.0.1") will be at index 0.
 struct Ipv4Address {

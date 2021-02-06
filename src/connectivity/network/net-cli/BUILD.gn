@@ -44,6 +44,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/connectivity/lib/net-declare" ]
+
   sources = [
     "src/main.rs",
     "src/opts.rs",
