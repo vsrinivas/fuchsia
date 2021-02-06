@@ -2,6 +2,8 @@
 
 ## Dependencies
 
+The perfcompare tool requires Python 3.
+
 There are two ways to run the perfcompare tool with the required
 dependencies (currently just the `scipy` Python library):
 
@@ -19,7 +21,7 @@ dependencies (currently just the `scipy` Python library):
   installed using APT:
 
   ```sh
-  sudo apt-get install python-scipy
+  sudo apt-get install python3-scipy
   ```
 
 ## Example: Running perf tests locally and comparing results

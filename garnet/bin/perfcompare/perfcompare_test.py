@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import StringIO
+import io
 import json
 import os
 import re
@@ -80,7 +80,7 @@ class GoldenDataOutput(object):
 
     def WriteFile(self, filename):
         with open(filename, 'w') as fh:
-            for name, data in sorted(self._cases.iteritems()):
+            for name, data in sorted(self._cases.items()):
                 fh.write('\n\n### %s\n%s' % (name, data))
 
 
@@ -174,7 +174,7 @@ def GenerateData(mean=1000,
     it = iter(TEST_VALUES)
 
     def GenerateValues(mean, stddev, count):
-        return [next(it) * stddev + mean for _ in xrange(count)]
+        return [next(it) * stddev + mean for _ in range(count)]
 
     # This reads 4**3 + 4**2 + 4 = 84 values from TEST_VALUES, so it does
     # not exceed the number of values in TEST_VALUES.
@@ -274,7 +274,7 @@ class StatisticsTest(TempDirTestCase):
     # the CIs are zero-width (as tested here).
     def test_comparing_equal_zero_width_confidence_intervals(self):
         dir_path = self.DirOfData([[[200]], [[200]]])
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['compare_perf', dir_path, dir_path], stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('comparison_no_change_zero_width_ci', output)
@@ -343,7 +343,7 @@ class PerfCompareTest(TempDirTestCase):
 
     # Returns the output of compare_perf when run on the given directories.
     def ComparePerf(self, before_dir, after_dir):
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['compare_perf', before_dir, after_dir], stdout)
         return stdout.getvalue()
 
@@ -414,7 +414,7 @@ class PerfCompareTest(TempDirTestCase):
 
     def test_display_single_dataset(self):
         dataset_dir = self.ExampleDataDir()
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['compare_perf', dataset_dir], stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('display_single_dataset', output)
@@ -423,7 +423,7 @@ class PerfCompareTest(TempDirTestCase):
         dataset_dirs = [self.ExampleDataDir(mean=1000),
                         self.ExampleDataDir(mean=2000, drop_one=True),
                         self.ExampleDataDir(mean=3000)]
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('display_three_datasets', output)
@@ -431,7 +431,7 @@ class PerfCompareTest(TempDirTestCase):
     # Test printing a table of point estimates.
     def test_display_single_boot_single_dataset(self):
         dataset_dir = self.ExampleDataDir(single_boot=True)
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['compare_perf', dataset_dir], stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('display_single_boot_single_dataset', output)
@@ -441,7 +441,7 @@ class PerfCompareTest(TempDirTestCase):
         dataset_dirs = [self.ExampleDataDir(mean=1000, single_boot=True),
                         self.ExampleDataDir(mean=2000, single_boot=True,
                                             drop_one=True)]
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('display_single_boot_two_datasets', output)
@@ -492,7 +492,7 @@ class PerfCompareTest(TempDirTestCase):
         # because the data is drawn from two very different distributions.
         results_dirs = (MakeExampleDirs(mean=100, stddev=10) +
                         MakeExampleDirs(mean=200, stddev=10))
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['validate_perfcompare', '--group_size=5']
                          + results_dirs, stdout)
         output = stdout.getvalue()
@@ -528,7 +528,7 @@ class RunLocalTest(TempDirTestCase):
                                 'unit': 'nanoseconds',
                                 'values': data.pop(0)[0]}])
 
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
         perfcompare.Main(['run_local',
                           '--boots=4',
                           '--iter_file', iter_temp_glob,
@@ -562,7 +562,7 @@ class RunLocalTest(TempDirTestCase):
     def test_errexit_error_checking_in_shell_commands(self):
         iter_temp_file = os.path.join(
             self.MakeTempDir(), 'result.fuchsiaperf.json')
-        stdout = StringIO.StringIO()
+        stdout = io.StringIO()
 
         def get_args():
             dest_dir = os.path.join(self.MakeTempDir(), 'new_dir')

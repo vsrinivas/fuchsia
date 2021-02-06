@@ -5,11 +5,13 @@
 # vpython is described here:
 # https://chromium.googlesource.com/infra/infra/+/HEAD/doc/users/vpython.md
 
+python_version: "3.8"
+
 wheel <
-  name: "infra/python/wheels/numpy/${vpython_platform}"
-  version: "version:1.12.1"
+  name: "infra/python/wheels/numpy/${platform}_cp38_cp38"
+  version: "version:1.19.2"
 >
 wheel: <
-  name: "infra/python/wheels/scipy/${vpython_platform}"
-  version: "version:0.19.0"
+  name: "infra/python/wheels/scipy/${platform}_cp38_cp38"
+  version: "version:1.6.0"
 >

@@ -488,7 +488,7 @@ def ValidatePerfCompare(args, out_fh):
                      for filename in args.results_dirs]
     boot_count = len(boot_datasets)
     group_size = args.group_size
-    group_count = boot_count / group_size
+    group_count = boot_count // group_size
 
     results_maps = [
         StatsFromBootDatasets(
@@ -512,7 +512,7 @@ def ValidatePerfCompare(args, out_fh):
     mean_relative_ci_width = Mean([
         stats.RelativeConfidenceIntervalWidth()
         for results_map in results_maps
-        for stats in results_map.itervalues()])
+        for stats in results_map.values()])
 
     out_fh.write('\n')
     mean_val = Mean(mismatch_rates)
