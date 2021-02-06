@@ -21,6 +21,11 @@
         {
             name: "console",
             url: "fuchsia-boot:///#meta/console.cm",
+
+            // Usually, console is started when console-launcher starts. But, startup eager is
+            // required because in products with console.shell=false, console-launcher exits
+            // early and does not start console; it should be started in order to get serial logs.
+            startup: "eager",
         },
         {
             name: "console-launcher",
