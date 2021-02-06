@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.array banjo file
+// Generated from the banjo.examples.protocolarray banjo file
 
 #pragma once
 
-#include <banjo/examples/protocol/array.h>
+#include <banjo/examples/protocolarray/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -17,7 +17,7 @@
 
 #include "banjo-internal.h"
 
-// DDK array-protocol support
+// DDK protocolarray-protocol support
 //
 // :: Proxies ::
 //
@@ -89,29 +89,29 @@
 //     Array2Device(zx_device_t* parent)
 //         : Array2DeviceType(parent) {}
 //
-//     void Array2Bool(const bool b[array_size], bool out_b[array_size]);
+//     void Array2Bool(const bool b[32], bool out_b[32]);
 //
-//     void Array2Int8(const int8_t i8[array_size], int8_t out_i8[array_size]);
+//     void Array2Int8(const int8_t i8[32], int8_t out_i8[32]);
 //
-//     void Array2Int16(const int16_t i16[array_size], int16_t out_i16[array_size]);
+//     void Array2Int16(const int16_t i16[32], int16_t out_i16[32]);
 //
-//     void Array2Int32(const int32_t i32[array_size], int32_t out_i32[array_size]);
+//     void Array2Int32(const int32_t i32[32], int32_t out_i32[32]);
 //
-//     void Array2Int64(const int64_t i64[array_size], int64_t out_i64[array_size]);
+//     void Array2Int64(const int64_t i64[32], int64_t out_i64[32]);
 //
-//     void Array2Uint8(const uint8_t u8[array_size], uint8_t out_u8[array_size]);
+//     void Array2Uint8(const uint8_t u8[32], uint8_t out_u8[32]);
 //
-//     void Array2Uint16(const uint16_t u16[array_size], uint16_t out_u16[array_size]);
+//     void Array2Uint16(const uint16_t u16[32], uint16_t out_u16[32]);
 //
-//     void Array2Uint32(const uint32_t u32[array_size], uint32_t out_u32[array_size]);
+//     void Array2Uint32(const uint32_t u32[32], uint32_t out_u32[32]);
 //
-//     void Array2Uint64(const uint64_t u64[array_size], uint64_t out_u64[array_size]);
+//     void Array2Uint64(const uint64_t u64[32], uint64_t out_u64[32]);
 //
-//     void Array2Float32(const float f32[array_size], float out_f32[array_size]);
+//     void Array2Float32(const float f32[32], float out_f32[32]);
 //
-//     void Array2Float64(const double u64[array_size], double out_f64[array_size]);
+//     void Array2Float64(const double u64[32], double out_f64[32]);
 //
-//     void Array2Handle(const zx::handle u64[array_size], zx::handle out_f64[array_size]);
+//     void Array2Handle(const zx::handle u64[32], zx::handle out_f64[32]);
 //
 //     ...
 // };
@@ -137,29 +137,29 @@
 //     ArrayofArraysDevice(zx_device_t* parent)
 //         : ArrayofArraysDeviceType(parent) {}
 //
-//     void ArrayofArraysBool(const bool b[array_size][4], bool out_b[array_size][4]);
+//     void ArrayofArraysBool(const bool b[32][4], bool out_b[32][4]);
 //
-//     void ArrayofArraysInt8(const int8_t i8[array_size][4], int8_t out_i8[array_size][4]);
+//     void ArrayofArraysInt8(const int8_t i8[32][4], int8_t out_i8[32][4]);
 //
-//     void ArrayofArraysInt16(const int16_t i16[array_size][4], int16_t out_i16[array_size][4]);
+//     void ArrayofArraysInt16(const int16_t i16[32][4], int16_t out_i16[32][4]);
 //
-//     void ArrayofArraysInt32(const int32_t i32[array_size][4], int32_t out_i32[array_size][4]);
+//     void ArrayofArraysInt32(const int32_t i32[32][4], int32_t out_i32[32][4]);
 //
-//     void ArrayofArraysInt64(const int64_t i64[array_size][4], int64_t out_i64[array_size][4]);
+//     void ArrayofArraysInt64(const int64_t i64[32][4], int64_t out_i64[32][4]);
 //
-//     void ArrayofArraysUint8(const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]);
+//     void ArrayofArraysUint8(const uint8_t u8[32][4], uint8_t out_u8[32][4]);
 //
-//     void ArrayofArraysUint16(const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]);
+//     void ArrayofArraysUint16(const uint16_t u16[32][4], uint16_t out_u16[32][4]);
 //
-//     void ArrayofArraysUint32(const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]);
+//     void ArrayofArraysUint32(const uint32_t u32[32][4], uint32_t out_u32[32][4]);
 //
-//     void ArrayofArraysUint64(const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]);
+//     void ArrayofArraysUint64(const uint64_t u64[32][4], uint64_t out_u64[32][4]);
 //
-//     void ArrayofArraysFloat32(const float f32[array_size][4], float out_f32[array_size][4]);
+//     void ArrayofArraysFloat32(const float f32[32][4], float out_f32[32][4]);
 //
-//     void ArrayofArraysFloat64(const double u64[array_size][4], double out_f64[array_size][4]);
+//     void ArrayofArraysFloat64(const double u64[32][4], double out_f64[32][4]);
 //
-//     void ArrayofArraysHandle(const zx::handle u64[array_size][4], zx::handle out_f64[array_size][4]);
+//     void ArrayofArraysHandle(const zx::handle u64[32][4], zx::handle out_f64[32][4]);
 //
 //     ...
 // };
@@ -390,40 +390,40 @@ protected:
     array2_protocol_ops_t array2_protocol_ops_ = {};
 
 private:
-    static void Array2Bool(void* ctx, const bool b[array_size], bool out_b[array_size]) {
+    static void Array2Bool(void* ctx, const bool b[32], bool out_b[32]) {
         static_cast<D*>(ctx)->Array2Bool(b, out_b);
     }
-    static void Array2Int8(void* ctx, const int8_t i8[array_size], int8_t out_i8[array_size]) {
+    static void Array2Int8(void* ctx, const int8_t i8[32], int8_t out_i8[32]) {
         static_cast<D*>(ctx)->Array2Int8(i8, out_i8);
     }
-    static void Array2Int16(void* ctx, const int16_t i16[array_size], int16_t out_i16[array_size]) {
+    static void Array2Int16(void* ctx, const int16_t i16[32], int16_t out_i16[32]) {
         static_cast<D*>(ctx)->Array2Int16(i16, out_i16);
     }
-    static void Array2Int32(void* ctx, const int32_t i32[array_size], int32_t out_i32[array_size]) {
+    static void Array2Int32(void* ctx, const int32_t i32[32], int32_t out_i32[32]) {
         static_cast<D*>(ctx)->Array2Int32(i32, out_i32);
     }
-    static void Array2Int64(void* ctx, const int64_t i64[array_size], int64_t out_i64[array_size]) {
+    static void Array2Int64(void* ctx, const int64_t i64[32], int64_t out_i64[32]) {
         static_cast<D*>(ctx)->Array2Int64(i64, out_i64);
     }
-    static void Array2Uint8(void* ctx, const uint8_t u8[array_size], uint8_t out_u8[array_size]) {
+    static void Array2Uint8(void* ctx, const uint8_t u8[32], uint8_t out_u8[32]) {
         static_cast<D*>(ctx)->Array2Uint8(u8, out_u8);
     }
-    static void Array2Uint16(void* ctx, const uint16_t u16[array_size], uint16_t out_u16[array_size]) {
+    static void Array2Uint16(void* ctx, const uint16_t u16[32], uint16_t out_u16[32]) {
         static_cast<D*>(ctx)->Array2Uint16(u16, out_u16);
     }
-    static void Array2Uint32(void* ctx, const uint32_t u32[array_size], uint32_t out_u32[array_size]) {
+    static void Array2Uint32(void* ctx, const uint32_t u32[32], uint32_t out_u32[32]) {
         static_cast<D*>(ctx)->Array2Uint32(u32, out_u32);
     }
-    static void Array2Uint64(void* ctx, const uint64_t u64[array_size], uint64_t out_u64[array_size]) {
+    static void Array2Uint64(void* ctx, const uint64_t u64[32], uint64_t out_u64[32]) {
         static_cast<D*>(ctx)->Array2Uint64(u64, out_u64);
     }
-    static void Array2Float32(void* ctx, const float f32[array_size], float out_f32[array_size]) {
+    static void Array2Float32(void* ctx, const float f32[32], float out_f32[32]) {
         static_cast<D*>(ctx)->Array2Float32(f32, out_f32);
     }
-    static void Array2Float64(void* ctx, const double u64[array_size], double out_f64[array_size]) {
+    static void Array2Float64(void* ctx, const double u64[32], double out_f64[32]) {
         static_cast<D*>(ctx)->Array2Float64(u64, out_f64);
     }
-    static void Array2Handle(void* ctx, const zx_handle_t u64[array_size], zx_handle_t out_f64[array_size]) {
+    static void Array2Handle(void* ctx, const zx_handle_t u64[32], zx_handle_t out_f64[32]) {
         static_cast<D*>(ctx)->Array2Handle(u64, out_f64);
     }
 };
@@ -499,51 +499,51 @@ public:
         ops_ = nullptr;
     }
 
-    void Bool(const bool b[array_size], bool out_b[array_size]) const {
+    void Bool(const bool b[32], bool out_b[32]) const {
         ops_->bool(ctx_, b, out_b);
     }
 
-    void Int8(const int8_t i8[array_size], int8_t out_i8[array_size]) const {
+    void Int8(const int8_t i8[32], int8_t out_i8[32]) const {
         ops_->int8(ctx_, i8, out_i8);
     }
 
-    void Int16(const int16_t i16[array_size], int16_t out_i16[array_size]) const {
+    void Int16(const int16_t i16[32], int16_t out_i16[32]) const {
         ops_->int16(ctx_, i16, out_i16);
     }
 
-    void Int32(const int32_t i32[array_size], int32_t out_i32[array_size]) const {
+    void Int32(const int32_t i32[32], int32_t out_i32[32]) const {
         ops_->int32(ctx_, i32, out_i32);
     }
 
-    void Int64(const int64_t i64[array_size], int64_t out_i64[array_size]) const {
+    void Int64(const int64_t i64[32], int64_t out_i64[32]) const {
         ops_->int64(ctx_, i64, out_i64);
     }
 
-    void Uint8(const uint8_t u8[array_size], uint8_t out_u8[array_size]) const {
+    void Uint8(const uint8_t u8[32], uint8_t out_u8[32]) const {
         ops_->uint8(ctx_, u8, out_u8);
     }
 
-    void Uint16(const uint16_t u16[array_size], uint16_t out_u16[array_size]) const {
+    void Uint16(const uint16_t u16[32], uint16_t out_u16[32]) const {
         ops_->uint16(ctx_, u16, out_u16);
     }
 
-    void Uint32(const uint32_t u32[array_size], uint32_t out_u32[array_size]) const {
+    void Uint32(const uint32_t u32[32], uint32_t out_u32[32]) const {
         ops_->uint32(ctx_, u32, out_u32);
     }
 
-    void Uint64(const uint64_t u64[array_size], uint64_t out_u64[array_size]) const {
+    void Uint64(const uint64_t u64[32], uint64_t out_u64[32]) const {
         ops_->uint64(ctx_, u64, out_u64);
     }
 
-    void Float32(const float f32[array_size], float out_f32[array_size]) const {
+    void Float32(const float f32[32], float out_f32[32]) const {
         ops_->float32(ctx_, f32, out_f32);
     }
 
-    void Float64(const double u64[array_size], double out_f64[array_size]) const {
+    void Float64(const double u64[32], double out_f64[32]) const {
         ops_->float64(ctx_, u64, out_f64);
     }
 
-    void Handle(const zx::handle u64[array_size], zx::handle out_f64[array_size]) const {
+    void Handle(const zx::handle u64[32], zx::handle out_f64[32]) const {
         ops_->handle(ctx_, u64, out_f64);
     }
 
@@ -583,40 +583,40 @@ protected:
     arrayof_arrays_protocol_ops_t arrayof_arrays_protocol_ops_ = {};
 
 private:
-    static void ArrayofArraysBool(void* ctx, const bool b[array_size][4], bool out_b[array_size][4]) {
+    static void ArrayofArraysBool(void* ctx, const bool b[32][4], bool out_b[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysBool(b, out_b);
     }
-    static void ArrayofArraysInt8(void* ctx, const int8_t i8[array_size][4], int8_t out_i8[array_size][4]) {
+    static void ArrayofArraysInt8(void* ctx, const int8_t i8[32][4], int8_t out_i8[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysInt8(i8, out_i8);
     }
-    static void ArrayofArraysInt16(void* ctx, const int16_t i16[array_size][4], int16_t out_i16[array_size][4]) {
+    static void ArrayofArraysInt16(void* ctx, const int16_t i16[32][4], int16_t out_i16[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysInt16(i16, out_i16);
     }
-    static void ArrayofArraysInt32(void* ctx, const int32_t i32[array_size][4], int32_t out_i32[array_size][4]) {
+    static void ArrayofArraysInt32(void* ctx, const int32_t i32[32][4], int32_t out_i32[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysInt32(i32, out_i32);
     }
-    static void ArrayofArraysInt64(void* ctx, const int64_t i64[array_size][4], int64_t out_i64[array_size][4]) {
+    static void ArrayofArraysInt64(void* ctx, const int64_t i64[32][4], int64_t out_i64[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysInt64(i64, out_i64);
     }
-    static void ArrayofArraysUint8(void* ctx, const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]) {
+    static void ArrayofArraysUint8(void* ctx, const uint8_t u8[32][4], uint8_t out_u8[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysUint8(u8, out_u8);
     }
-    static void ArrayofArraysUint16(void* ctx, const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]) {
+    static void ArrayofArraysUint16(void* ctx, const uint16_t u16[32][4], uint16_t out_u16[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysUint16(u16, out_u16);
     }
-    static void ArrayofArraysUint32(void* ctx, const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]) {
+    static void ArrayofArraysUint32(void* ctx, const uint32_t u32[32][4], uint32_t out_u32[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysUint32(u32, out_u32);
     }
-    static void ArrayofArraysUint64(void* ctx, const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]) {
+    static void ArrayofArraysUint64(void* ctx, const uint64_t u64[32][4], uint64_t out_u64[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysUint64(u64, out_u64);
     }
-    static void ArrayofArraysFloat32(void* ctx, const float f32[array_size][4], float out_f32[array_size][4]) {
+    static void ArrayofArraysFloat32(void* ctx, const float f32[32][4], float out_f32[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysFloat32(f32, out_f32);
     }
-    static void ArrayofArraysFloat64(void* ctx, const double u64[array_size][4], double out_f64[array_size][4]) {
+    static void ArrayofArraysFloat64(void* ctx, const double u64[32][4], double out_f64[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysFloat64(u64, out_f64);
     }
-    static void ArrayofArraysHandle(void* ctx, const zx_handle_t u64[array_size][4], zx_handle_t out_f64[array_size][4]) {
+    static void ArrayofArraysHandle(void* ctx, const zx_handle_t u64[32][4], zx_handle_t out_f64[32][4]) {
         static_cast<D*>(ctx)->ArrayofArraysHandle(u64, out_f64);
     }
 };
@@ -692,51 +692,51 @@ public:
         ops_ = nullptr;
     }
 
-    void Bool(const bool b[array_size][4], bool out_b[array_size][4]) const {
+    void Bool(const bool b[32][4], bool out_b[32][4]) const {
         ops_->bool(ctx_, b, out_b);
     }
 
-    void Int8(const int8_t i8[array_size][4], int8_t out_i8[array_size][4]) const {
+    void Int8(const int8_t i8[32][4], int8_t out_i8[32][4]) const {
         ops_->int8(ctx_, i8, out_i8);
     }
 
-    void Int16(const int16_t i16[array_size][4], int16_t out_i16[array_size][4]) const {
+    void Int16(const int16_t i16[32][4], int16_t out_i16[32][4]) const {
         ops_->int16(ctx_, i16, out_i16);
     }
 
-    void Int32(const int32_t i32[array_size][4], int32_t out_i32[array_size][4]) const {
+    void Int32(const int32_t i32[32][4], int32_t out_i32[32][4]) const {
         ops_->int32(ctx_, i32, out_i32);
     }
 
-    void Int64(const int64_t i64[array_size][4], int64_t out_i64[array_size][4]) const {
+    void Int64(const int64_t i64[32][4], int64_t out_i64[32][4]) const {
         ops_->int64(ctx_, i64, out_i64);
     }
 
-    void Uint8(const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]) const {
+    void Uint8(const uint8_t u8[32][4], uint8_t out_u8[32][4]) const {
         ops_->uint8(ctx_, u8, out_u8);
     }
 
-    void Uint16(const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]) const {
+    void Uint16(const uint16_t u16[32][4], uint16_t out_u16[32][4]) const {
         ops_->uint16(ctx_, u16, out_u16);
     }
 
-    void Uint32(const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]) const {
+    void Uint32(const uint32_t u32[32][4], uint32_t out_u32[32][4]) const {
         ops_->uint32(ctx_, u32, out_u32);
     }
 
-    void Uint64(const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]) const {
+    void Uint64(const uint64_t u64[32][4], uint64_t out_u64[32][4]) const {
         ops_->uint64(ctx_, u64, out_u64);
     }
 
-    void Float32(const float f32[array_size][4], float out_f32[array_size][4]) const {
+    void Float32(const float f32[32][4], float out_f32[32][4]) const {
         ops_->float32(ctx_, f32, out_f32);
     }
 
-    void Float64(const double u64[array_size][4], double out_f64[array_size][4]) const {
+    void Float64(const double u64[32][4], double out_f64[32][4]) const {
         ops_->float64(ctx_, u64, out_f64);
     }
 
-    void Handle(const zx::handle u64[array_size][4], zx::handle out_f64[array_size][4]) const {
+    void Handle(const zx::handle u64[32][4], zx::handle out_f64[32][4]) const {
         ops_->handle(ctx_, u64, out_f64);
     }
 

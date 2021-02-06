@@ -86,10 +86,20 @@ fn ident_to_c_str(ast: &ast::BanjoAst, ident: &Ident) -> Result<String, Error> {
 
 pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
     if let ast::Ty::Array { ref ty, size, .. } = ty {
+        let mut size_str = &size.0;
+        // Check if the size specification is a constant and replace the constant name by its value
+        // if that's the case.
+        // This matches FIDL's behavior of inlining constant values in array sizes.
+        let size_ident = Ident::new_raw(&size.0);
+        if let Some(size_decl) = ast.maybe_id_to_decl(&size_ident) {
+            if let Decl::Constant { value, .. } = size_decl {
+                size_str = &value.0;
+            }
+        }
         return if let Some(bounds) = array_bounds(ast, ty) {
-            Some(format!("[{}]{}", size.0, bounds))
+            Some(format!("[{}]{}", size_str, bounds))
         } else {
-            Some(format!("[{}]", size.0))
+            Some(format!("[{}]", size_str))
         };
     }
     None

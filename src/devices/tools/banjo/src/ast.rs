@@ -661,60 +661,71 @@ pub fn is_placeholder_struct(decl: &Decl) -> bool {
 
 impl BanjoAst {
     pub fn id_to_decl(&self, fq_ident: &Ident) -> Result<&Decl, ParseError> {
+        self.maybe_id_to_decl(fq_ident).ok_or(ParseError::UnknownDecl)
+    }
+
+    pub fn maybe_id_to_decl(&self, fq_ident: &Ident) -> Option<&Decl> {
         let (namespace, ident) = fq_ident.fq();
         for decl in self.namespaces[&namespace.unwrap_or(self.primary_namespace.clone())].iter() {
             match decl {
                 Decl::Protocol { name, .. } => {
                     if name.name() == ident {
-                        return Ok(decl);
+                        return Some(decl);
                     }
                 }
                 Decl::Struct { name, .. } => {
                     if name.name() == ident {
-                        return Ok(decl);
+                        return Some(decl);
                     }
                 }
                 Decl::Union { name, .. } => {
                     if name.name() == ident {
-                        return Ok(decl);
+                        return Some(decl);
                     }
                 }
                 Decl::Enum { name, .. } => {
                     if name.name() == ident {
-                        return Ok(decl);
+                        return Some(decl);
                     }
                 }
                 Decl::Alias(to, _from) => {
                     if to == fq_ident {
-                        return Ok(decl);
+                        return Some(decl);
                     }
                 }
                 Decl::Constant { name, .. } => {
                     if name.name() == ident {
-                        return Ok(decl);
+                        return Some(decl);
                     }
                 }
                 Decl::Resource { .. } => {}
             }
         }
-        return Err(ParseError::UnknownDecl);
+        None
     }
 
     pub fn id_to_type(&self, fq_ident: &Ident) -> Ty {
+        match self.maybe_id_to_type(fq_ident) {
+            Some(ty) => ty,
+            None => panic!("Unidentified {:?}", fq_ident),
+        }
+    }
+
+    pub fn maybe_id_to_type(&self, fq_ident: &Ident) -> Option<Ty> {
         let (ns, ident) = fq_ident.fq();
         match ident.as_str() {
-            "bool" => return Ty::Bool,
-            "int8" => return Ty::Int8,
-            "int16" => return Ty::Int16,
-            "int32" => return Ty::Int32,
-            "int64" => return Ty::Int64,
-            "uint8" => return Ty::UInt8,
-            "uint16" => return Ty::UInt16,
-            "uint32" => return Ty::UInt32,
-            "uint64" => return Ty::UInt64,
-            "float32" => return Ty::Float32,
-            "float64" => return Ty::Float64,
-            "voidptr" => return Ty::Voidptr,
+            "bool" => return Some(Ty::Bool),
+            "int8" => return Some(Ty::Int8),
+            "int16" => return Some(Ty::Int16),
+            "int32" => return Some(Ty::Int32),
+            "int64" => return Some(Ty::Int64),
+            "uint8" => return Some(Ty::UInt8),
+            "uint16" => return Some(Ty::UInt16),
+            "uint32" => return Some(Ty::UInt32),
+            "uint64" => return Some(Ty::UInt64),
+            "float32" => return Some(Ty::Float32),
+            "float64" => return Some(Ty::Float64),
+            "voidptr" => return Some(Ty::Voidptr),
             _ => {}
         };
 
@@ -727,43 +738,43 @@ impl BanjoAst {
             match decl {
                 Decl::Protocol { name, .. } => {
                     if name.name() == ident {
-                        return Ty::Protocol;
+                        return Some(Ty::Protocol);
                     }
                 }
                 Decl::Struct { name, .. } => {
                     if name.name() == ident {
-                        return Ty::Struct;
+                        return Some(Ty::Struct);
                     }
                 }
                 Decl::Union { name, .. } => {
                     if name.name() == ident {
-                        return Ty::Union;
+                        return Some(Ty::Union);
                     }
                 }
                 Decl::Enum { name, variants, .. } => {
                     if name.name() == ident {
-                        return Ty::Enum;
+                        return Some(Ty::Enum);
                     }
                     for variant in variants.iter() {
                         if variant.name == ident {
-                            return Ty::Identifier { id: name.clone(), reference: false };
+                            return Some(Ty::Identifier { id: name.clone(), reference: false });
                         }
                     }
                 }
                 Decl::Alias(to, from) => {
                     if to.name == ident {
-                        return self.id_to_type(from);
+                        return self.maybe_id_to_type(from);
                     }
                 }
                 Decl::Constant { name, ty, .. } => {
                     if name.name() == ident {
-                        return (*ty).clone();
+                        return Some((*ty).clone());
                     }
                 }
                 Decl::Resource { .. } => {}
             }
         }
-        panic!("Unidentified {:?}", fq_ident);
+        None
     }
 
     pub fn id_to_attributes(&self, fq_ident: &Ident) -> Option<&Attrs> {

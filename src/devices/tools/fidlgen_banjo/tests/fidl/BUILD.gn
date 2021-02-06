@@ -11,6 +11,7 @@ foreach(test, fidlgen_tests) {
   fidl(test.target) {
     name = test.library_name
     sources = test.sources
+    public_deps = test.deps
   }
   fidl_library_deps += [ test.dep ]
 }

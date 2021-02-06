@@ -9,7 +9,7 @@
 
 #include <tuple>
 
-#include <banjo/examples/protocol/handle.h>
+#include <banjo/examples/protocol/handle/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
 namespace ddk {

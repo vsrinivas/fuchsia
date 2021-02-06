@@ -1,14 +1,14 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.protocol.other.types",
+    primary_namespace: "banjo.examples.protocolothertypes",
     namespaces: {
-        "banjo.examples.protocol.other.types": [
+        "banjo.examples.protocolothertypes": [
             Struct {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "ThisIsAStruct",
                 },
@@ -35,7 +35,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "ThisIsAUnion",
                 },
@@ -61,7 +61,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "ThisIsAnEnum",
                 },
@@ -84,7 +84,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "strings_size",
                 },
@@ -178,7 +178,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "OtherTypes",
                 },
@@ -194,7 +194,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -211,7 +211,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -234,7 +234,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -251,7 +251,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -274,7 +274,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAnEnum",
                                     },
@@ -291,7 +291,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAnEnum",
                                     },
@@ -552,7 +552,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "OtherTypesAsync",
                 },
@@ -573,7 +573,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -590,7 +590,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -618,7 +618,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -635,7 +635,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -663,7 +663,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAnEnum",
                                     },
@@ -680,7 +680,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAnEnum",
                                     },
@@ -944,7 +944,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "OtherTypesReference",
                 },
@@ -960,7 +960,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -977,7 +977,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -1000,7 +1000,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -1017,7 +1017,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -1257,7 +1257,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "OtherTypesAsyncReference",
                 },
@@ -1278,7 +1278,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -1295,7 +1295,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAStruct",
                                     },
@@ -1323,7 +1323,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -1340,7 +1340,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "ThisIsAUnion",
                                     },
@@ -1583,7 +1583,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types",
+                        "banjo.examples.protocolothertypes",
                     ),
                     name: "Interface",
                 },
@@ -1599,7 +1599,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1616,7 +1616,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1639,7 +1639,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1656,7 +1656,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1684,7 +1684,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1701,7 +1701,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1729,7 +1729,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },
@@ -1746,7 +1746,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types",
+                                            "banjo.examples.protocolothertypes",
                                         ),
                                         name: "OtherTypes",
                                     },

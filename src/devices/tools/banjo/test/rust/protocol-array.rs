@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.array banjo file
+// Generated from the banjo.examples.protocolarray banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 

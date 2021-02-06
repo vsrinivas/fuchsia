@@ -24,7 +24,7 @@ codegen_test!(example_9, AstBackend, ["banjo/example-9.test.banjo"], "ast/exampl
 codegen_test!(
     fidl_handle,
     AstBackend,
-    ["banjo/fidl_handle.test.banjo"],
+    [zx!(), "banjo/fidl_handle.test.banjo"],
     "ast/fidl_handle.test.ast"
 );
 codegen_test!(

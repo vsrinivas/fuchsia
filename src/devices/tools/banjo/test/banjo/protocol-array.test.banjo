@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.protocol.array;
+library banjo.examples.protocolarray;
 
 // TODO(surajmalhotra): Async for arrays.
 // TODO(surajmalhotra): Reference for arrays.
@@ -56,4 +56,3 @@ protocol ArrayofArrays {
     Float64(array<array<float64>:4>:array_size u64) -> (array<array<float64>:4>:array_size f64);
     Handle(array<array<handle>:4>:array_size u64) -> (array<array<handle>:4>:array_size f64);
 };
-

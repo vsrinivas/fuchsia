@@ -44,7 +44,7 @@ do
 
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
     || [ "$filename" = "protocol-base" ] || [ "$filename" = "api" ] \
-    || [ "$filename" = "pass-callback" ]; then
+    || [ "$filename" = "pass-callback" ] || [ "$filename" = "fidl_handle" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 
@@ -62,7 +62,7 @@ do
 
   if [ "$filename" = "pass-callback" ] || [ "$filename" = "protocol-array" ] \
     || [ "$filename" = "protocol-base" ] || [ "$filename" = "protocol-handle" ] \
-    || [ "$filename" = "protocol-other-types" ] || [ "$filename" = "primitive" ] \
+    || [ "$filename" = "protocol-other-types" ] || [ "$filename" = "protocol-primitive" ] \
     || [ "$filename" = "protocol-vector" ]; then
     with_cpp_mock=true
   fi

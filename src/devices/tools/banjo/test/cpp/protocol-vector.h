@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.vector banjo file
+// Generated from the banjo.examples.protocolvector banjo file
 
 #pragma once
 
-#include <banjo/examples/protocol/vector.h>
+#include <banjo/examples/protocolvector/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -17,7 +17,7 @@
 
 #include "banjo-internal.h"
 
-// DDK vector-protocol support
+// DDK protocolvector-protocol support
 //
 // :: Proxies ::
 //

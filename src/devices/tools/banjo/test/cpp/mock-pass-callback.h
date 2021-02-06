@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.pass.callback banjo file
+// Generated from the banjo.examples.passcallback banjo file
 
 #pragma once
 
 #include <tuple>
 
-#include <banjo/examples/pass/callback.h>
+#include <banjo/examples/passcallback/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
 namespace ddk {

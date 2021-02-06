@@ -10,7 +10,46 @@ import("//build/fidl/toolchain.gni")
 # Single-file libraries.
 _simple_libraries = [
   {
+    name = "alias"
+    backends = [ "c" ]
+  },
+  {
+    name = "alignment"
+    backends = [ "c" ]
+  },
+  {
+    name = "api"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+    disabled = true  # contains voidptr
+  },
+  {
+    name = "attributes"
+    backends = [ "c" ]
+    disabled = true  # union missing ordinals
+  },
+
+  # Note: badtypes verifies that the banjo parser correctly fails/
+  {
+    name = "binary"
+    backends = [ "c" ]
+  },
+  {
+    name = "buffer"
+    backends = [ "c" ]
+    disabled = true  # contains voidptr
+  },
+  {
+    name = "callback"
+    backends = [ "c" ]
+    disabled = true  # contains handle<foo>
+  },
+  {
     name = "constants"
+    backends = [ "c" ]
+  },
+  {
+    name = "empty"
     backends = [ "c" ]
   },
   {
@@ -50,8 +89,98 @@ _simple_libraries = [
     backends = [ "c" ]
   },
   {
+    name = "example9"
+    backends = [ "c" ]
+    disabled = true  # contains handle<foo>
+  },
+  {
+    name = "fidlhandle"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+  },
+  {
+    name = "interface"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+    disabled = true  # declaration ordering issues
+  },
+
+  # Note: libraryparts is omitted as FIDL supports libraries across multiple files.
+  {
     name = "order"
     backends = [ "c" ]
+  },
+
+  # Note: parameterattributes is an AST-only test, the tested feature is supported by FIDL.
+  {
+    name = "passcallback"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+    disabled = true  # declaration ordering issues
+  },
+  {
+    name = "point"
+    backends = [ "c" ]
+  },
+  {
+    name = "preservenames"
+    backends = [ "c" ]
+  },
+  {
+    name = "protocolarray"
+    backends = [ "c" ]
+  },
+  {
+    name = "protocolbase"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+    disabled = true  # declaration ordering issues
+  },
+  {
+    name = "protocolhandle"
+    backends = [ "c" ]
+    disabled = true  # contains handle<foo>
+  },
+  {
+    name = "protocolothertypes"
+    backends = [ "c" ]
+    disabled = true  # union missing ordinals
+  },
+  {
+    name = "protocolprimitive"
+    backends = [ "c" ]
+  },
+  {
+    name = "protocolvector"
+    backends = [ "c" ]
+  },
+  {
+    name = "references"
+    backends = [ "c" ]
+  },
+  {
+    name = "rustderive"
+    backends = []
+    disabled = true  # union missing ordinals
+  },
+  {
+    name = "simple"
+    backends = [ "c" ]
+    disabled = true  # contains handle<foo>
+  },
+  {
+    name = "tables"
+    backends = [ "c" ]
+  },
+  {
+    name = "types"
+    backends = [ "c" ]
+    disabled = true  # union missing ordinals
+  },
+  {
+    name = "view"
+    backends = [ "c" ]
+    deps = [ ":point" ]
   },
 ]
 
@@ -61,7 +190,14 @@ _fidl_gen_dir =
     get_label_info("$_fidl_label:something($fidl_toolchain)", "target_gen_dir")
 
 fidlgen_tests = []
+
+_enabled_libraries = []
 foreach(lib, _simple_libraries) {
+  if (!defined(lib.disabled) || !lib.disabled) {
+    _enabled_libraries += [ lib ]
+  }
+}
+foreach(lib, _enabled_libraries) {
   _name = lib.name
   fidlgen_tests += [
     {
@@ -79,6 +215,12 @@ foreach(lib, _simple_libraries) {
 
       # List of source files.
       sources = [ "$_name.test.fidl" ]
+
+      # List of library dependencies.
+      deps = []
+      if (defined(lib.deps)) {
+        deps += lib.deps
+      }
 
       # Path to the generated IR in the output directory.
       ir = "$_fidl_gen_dir/$_name.fidl.json"

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.pass.callback banjo file
+// Generated from the banjo.examples.passcallback banjo file
 
 #pragma once
 
-#include <banjo/examples/pass/callback.h>
+#include <banjo/examples/passcallback/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -17,7 +17,7 @@
 
 #include "banjo-internal.h"
 
-// DDK callback-protocol support
+// DDK passcallback-protocol support
 //
 // :: Proxies ::
 //

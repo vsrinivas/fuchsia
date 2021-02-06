@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.array banjo file
+// Generated from the banjo.examples.protocolarray banjo file
 
 #pragma once
 
 #include <tuple>
 
-#include <banjo/examples/protocol/array.h>
+#include <banjo/examples/protocolarray/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
 namespace ddk {
@@ -305,62 +305,62 @@ public:
         mock_handle_.VerifyAndClear();
     }
 
-    virtual void Array2Bool(const bool b[array_size], bool out_b[array_size]) {
+    virtual void Array2Bool(const bool b[32], bool out_b[32]) {
         std::tuple<bool> ret = mock_bool_.Call(b);
         *out_b = std::get<0>(ret);
     }
 
-    virtual void Array2Int8(const int8_t i8[array_size], int8_t out_i8[array_size]) {
+    virtual void Array2Int8(const int8_t i8[32], int8_t out_i8[32]) {
         std::tuple<int8_t> ret = mock_int8_.Call(i8);
         *out_i8 = std::get<0>(ret);
     }
 
-    virtual void Array2Int16(const int16_t i16[array_size], int16_t out_i16[array_size]) {
+    virtual void Array2Int16(const int16_t i16[32], int16_t out_i16[32]) {
         std::tuple<int16_t> ret = mock_int16_.Call(i16);
         *out_i16 = std::get<0>(ret);
     }
 
-    virtual void Array2Int32(const int32_t i32[array_size], int32_t out_i32[array_size]) {
+    virtual void Array2Int32(const int32_t i32[32], int32_t out_i32[32]) {
         std::tuple<int32_t> ret = mock_int32_.Call(i32);
         *out_i32 = std::get<0>(ret);
     }
 
-    virtual void Array2Int64(const int64_t i64[array_size], int64_t out_i64[array_size]) {
+    virtual void Array2Int64(const int64_t i64[32], int64_t out_i64[32]) {
         std::tuple<int64_t> ret = mock_int64_.Call(i64);
         *out_i64 = std::get<0>(ret);
     }
 
-    virtual void Array2Uint8(const uint8_t u8[array_size], uint8_t out_u8[array_size]) {
+    virtual void Array2Uint8(const uint8_t u8[32], uint8_t out_u8[32]) {
         std::tuple<uint8_t> ret = mock_uint8_.Call(u8);
         *out_u8 = std::get<0>(ret);
     }
 
-    virtual void Array2Uint16(const uint16_t u16[array_size], uint16_t out_u16[array_size]) {
+    virtual void Array2Uint16(const uint16_t u16[32], uint16_t out_u16[32]) {
         std::tuple<uint16_t> ret = mock_uint16_.Call(u16);
         *out_u16 = std::get<0>(ret);
     }
 
-    virtual void Array2Uint32(const uint32_t u32[array_size], uint32_t out_u32[array_size]) {
+    virtual void Array2Uint32(const uint32_t u32[32], uint32_t out_u32[32]) {
         std::tuple<uint32_t> ret = mock_uint32_.Call(u32);
         *out_u32 = std::get<0>(ret);
     }
 
-    virtual void Array2Uint64(const uint64_t u64[array_size], uint64_t out_u64[array_size]) {
+    virtual void Array2Uint64(const uint64_t u64[32], uint64_t out_u64[32]) {
         std::tuple<uint64_t> ret = mock_uint64_.Call(u64);
         *out_u64 = std::get<0>(ret);
     }
 
-    virtual void Array2Float32(const float f32[array_size], float out_f32[array_size]) {
+    virtual void Array2Float32(const float f32[32], float out_f32[32]) {
         std::tuple<float> ret = mock_float32_.Call(f32);
         *out_f32 = std::get<0>(ret);
     }
 
-    virtual void Array2Float64(const double u64[array_size], double out_f64[array_size]) {
+    virtual void Array2Float64(const double u64[32], double out_f64[32]) {
         std::tuple<double> ret = mock_float64_.Call(u64);
         *out_f64 = std::get<0>(ret);
     }
 
-    virtual void Array2Handle(const zx::handle u64[array_size], zx::handle out_f64[array_size]) {
+    virtual void Array2Handle(const zx::handle u64[32], zx::handle out_f64[32]) {
         std::tuple<zx::handle> ret = mock_handle_.Call(u64);
         *out_f64 = std::get<0>(ret);
     }
@@ -496,62 +496,62 @@ public:
         mock_handle_.VerifyAndClear();
     }
 
-    virtual void ArrayofArraysBool(const bool b[array_size][4], bool out_b[array_size][4]) {
+    virtual void ArrayofArraysBool(const bool b[32][4], bool out_b[32][4]) {
         std::tuple<bool> ret = mock_bool_.Call(b);
         *out_b = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysInt8(const int8_t i8[array_size][4], int8_t out_i8[array_size][4]) {
+    virtual void ArrayofArraysInt8(const int8_t i8[32][4], int8_t out_i8[32][4]) {
         std::tuple<int8_t> ret = mock_int8_.Call(i8);
         *out_i8 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysInt16(const int16_t i16[array_size][4], int16_t out_i16[array_size][4]) {
+    virtual void ArrayofArraysInt16(const int16_t i16[32][4], int16_t out_i16[32][4]) {
         std::tuple<int16_t> ret = mock_int16_.Call(i16);
         *out_i16 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysInt32(const int32_t i32[array_size][4], int32_t out_i32[array_size][4]) {
+    virtual void ArrayofArraysInt32(const int32_t i32[32][4], int32_t out_i32[32][4]) {
         std::tuple<int32_t> ret = mock_int32_.Call(i32);
         *out_i32 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysInt64(const int64_t i64[array_size][4], int64_t out_i64[array_size][4]) {
+    virtual void ArrayofArraysInt64(const int64_t i64[32][4], int64_t out_i64[32][4]) {
         std::tuple<int64_t> ret = mock_int64_.Call(i64);
         *out_i64 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysUint8(const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]) {
+    virtual void ArrayofArraysUint8(const uint8_t u8[32][4], uint8_t out_u8[32][4]) {
         std::tuple<uint8_t> ret = mock_uint8_.Call(u8);
         *out_u8 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysUint16(const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]) {
+    virtual void ArrayofArraysUint16(const uint16_t u16[32][4], uint16_t out_u16[32][4]) {
         std::tuple<uint16_t> ret = mock_uint16_.Call(u16);
         *out_u16 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysUint32(const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]) {
+    virtual void ArrayofArraysUint32(const uint32_t u32[32][4], uint32_t out_u32[32][4]) {
         std::tuple<uint32_t> ret = mock_uint32_.Call(u32);
         *out_u32 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysUint64(const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]) {
+    virtual void ArrayofArraysUint64(const uint64_t u64[32][4], uint64_t out_u64[32][4]) {
         std::tuple<uint64_t> ret = mock_uint64_.Call(u64);
         *out_u64 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysFloat32(const float f32[array_size][4], float out_f32[array_size][4]) {
+    virtual void ArrayofArraysFloat32(const float f32[32][4], float out_f32[32][4]) {
         std::tuple<float> ret = mock_float32_.Call(f32);
         *out_f32 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysFloat64(const double u64[array_size][4], double out_f64[array_size][4]) {
+    virtual void ArrayofArraysFloat64(const double u64[32][4], double out_f64[32][4]) {
         std::tuple<double> ret = mock_float64_.Call(u64);
         *out_f64 = std::get<0>(ret);
     }
 
-    virtual void ArrayofArraysHandle(const zx::handle u64[array_size][4], zx::handle out_f64[array_size][4]) {
+    virtual void ArrayofArraysHandle(const zx::handle u64[32][4], zx::handle out_f64[32][4]) {
         std::tuple<zx::handle> ret = mock_handle_.Call(u64);
         *out_f64 = std::get<0>(ret);
     }

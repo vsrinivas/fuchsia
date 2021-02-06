@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.base banjo file
+// Generated from the banjo.examples.protocolbase banjo file
 
 #pragma once
 
-#include <banjo/examples/protocol/base.h>
+#include <banjo/examples/protocolbase/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -17,7 +17,7 @@
 
 #include "banjo-internal.h"
 
-// DDK base-protocol support
+// DDK protocolbase-protocol support
 //
 // :: Proxies ::
 //

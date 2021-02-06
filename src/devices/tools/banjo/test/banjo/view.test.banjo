@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.libraryb;
+library banjo.examples.view;
 
-using banjo.examples.librarya;
+using banjo.examples.point;
 
 [BanjoLayout = "ddk-protocol"]
 protocol View {
-    MoveTo(banjo.examples.librarya.Point p) -> ();
+    MoveTo(banjo.examples.point.Point p) -> ();
 };

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.array banjo file
+// Generated from the banjo.examples.protocolarray banjo file
 
 #pragma once
 
@@ -102,180 +102,180 @@ constexpr void CheckArrayProtocolSubclass() {
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_bool, Array2Bool,
-        void (C::*)(const bool b[array_size], bool out_b[array_size]));
+        void (C::*)(const bool b[32], bool out_b[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int8, Array2Int8,
-        void (C::*)(const int8_t i8[array_size], int8_t out_i8[array_size]));
+        void (C::*)(const int8_t i8[32], int8_t out_i8[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int16, Array2Int16,
-        void (C::*)(const int16_t i16[array_size], int16_t out_i16[array_size]));
+        void (C::*)(const int16_t i16[32], int16_t out_i16[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int32, Array2Int32,
-        void (C::*)(const int32_t i32[array_size], int32_t out_i32[array_size]));
+        void (C::*)(const int32_t i32[32], int32_t out_i32[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int64, Array2Int64,
-        void (C::*)(const int64_t i64[array_size], int64_t out_i64[array_size]));
+        void (C::*)(const int64_t i64[32], int64_t out_i64[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint8, Array2Uint8,
-        void (C::*)(const uint8_t u8[array_size], uint8_t out_u8[array_size]));
+        void (C::*)(const uint8_t u8[32], uint8_t out_u8[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint16, Array2Uint16,
-        void (C::*)(const uint16_t u16[array_size], uint16_t out_u16[array_size]));
+        void (C::*)(const uint16_t u16[32], uint16_t out_u16[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint32, Array2Uint32,
-        void (C::*)(const uint32_t u32[array_size], uint32_t out_u32[array_size]));
+        void (C::*)(const uint32_t u32[32], uint32_t out_u32[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint64, Array2Uint64,
-        void (C::*)(const uint64_t u64[array_size], uint64_t out_u64[array_size]));
+        void (C::*)(const uint64_t u64[32], uint64_t out_u64[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_float32, Array2Float32,
-        void (C::*)(const float f32[array_size], float out_f32[array_size]));
+        void (C::*)(const float f32[32], float out_f32[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_float64, Array2Float64,
-        void (C::*)(const double u64[array_size], double out_f64[array_size]));
+        void (C::*)(const double u64[32], double out_f64[32]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_handle, Array2Handle,
-        void (C::*)(const zx::handle u64[array_size], zx::handle out_f64[array_size]));
+        void (C::*)(const zx::handle u64[32], zx::handle out_f64[32]));
 
 
 template <typename D>
 constexpr void CheckArray2ProtocolSubclass() {
     static_assert(internal::has_array2_protocol_bool<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Bool(const bool b[array_size], bool out_b[array_size]);");
+        "void Array2Bool(const bool b[32], bool out_b[32]);");
 
     static_assert(internal::has_array2_protocol_int8<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Int8(const int8_t i8[array_size], int8_t out_i8[array_size]);");
+        "void Array2Int8(const int8_t i8[32], int8_t out_i8[32]);");
 
     static_assert(internal::has_array2_protocol_int16<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Int16(const int16_t i16[array_size], int16_t out_i16[array_size]);");
+        "void Array2Int16(const int16_t i16[32], int16_t out_i16[32]);");
 
     static_assert(internal::has_array2_protocol_int32<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Int32(const int32_t i32[array_size], int32_t out_i32[array_size]);");
+        "void Array2Int32(const int32_t i32[32], int32_t out_i32[32]);");
 
     static_assert(internal::has_array2_protocol_int64<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Int64(const int64_t i64[array_size], int64_t out_i64[array_size]);");
+        "void Array2Int64(const int64_t i64[32], int64_t out_i64[32]);");
 
     static_assert(internal::has_array2_protocol_uint8<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Uint8(const uint8_t u8[array_size], uint8_t out_u8[array_size]);");
+        "void Array2Uint8(const uint8_t u8[32], uint8_t out_u8[32]);");
 
     static_assert(internal::has_array2_protocol_uint16<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Uint16(const uint16_t u16[array_size], uint16_t out_u16[array_size]);");
+        "void Array2Uint16(const uint16_t u16[32], uint16_t out_u16[32]);");
 
     static_assert(internal::has_array2_protocol_uint32<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Uint32(const uint32_t u32[array_size], uint32_t out_u32[array_size]);");
+        "void Array2Uint32(const uint32_t u32[32], uint32_t out_u32[32]);");
 
     static_assert(internal::has_array2_protocol_uint64<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Uint64(const uint64_t u64[array_size], uint64_t out_u64[array_size]);");
+        "void Array2Uint64(const uint64_t u64[32], uint64_t out_u64[32]);");
 
     static_assert(internal::has_array2_protocol_float32<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Float32(const float f32[array_size], float out_f32[array_size]);");
+        "void Array2Float32(const float f32[32], float out_f32[32]);");
 
     static_assert(internal::has_array2_protocol_float64<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Float64(const double u64[array_size], double out_f64[array_size]);");
+        "void Array2Float64(const double u64[32], double out_f64[32]);");
 
     static_assert(internal::has_array2_protocol_handle<D>::value,
         "Array2Protocol subclasses must implement "
-        "void Array2Handle(const zx::handle u64[array_size], zx::handle out_f64[array_size]);");
+        "void Array2Handle(const zx::handle u64[32], zx::handle out_f64[32]);");
 
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_bool, ArrayofArraysBool,
-        void (C::*)(const bool b[array_size][4], bool out_b[array_size][4]));
+        void (C::*)(const bool b[32][4], bool out_b[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int8, ArrayofArraysInt8,
-        void (C::*)(const int8_t i8[array_size][4], int8_t out_i8[array_size][4]));
+        void (C::*)(const int8_t i8[32][4], int8_t out_i8[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int16, ArrayofArraysInt16,
-        void (C::*)(const int16_t i16[array_size][4], int16_t out_i16[array_size][4]));
+        void (C::*)(const int16_t i16[32][4], int16_t out_i16[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int32, ArrayofArraysInt32,
-        void (C::*)(const int32_t i32[array_size][4], int32_t out_i32[array_size][4]));
+        void (C::*)(const int32_t i32[32][4], int32_t out_i32[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int64, ArrayofArraysInt64,
-        void (C::*)(const int64_t i64[array_size][4], int64_t out_i64[array_size][4]));
+        void (C::*)(const int64_t i64[32][4], int64_t out_i64[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint8, ArrayofArraysUint8,
-        void (C::*)(const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]));
+        void (C::*)(const uint8_t u8[32][4], uint8_t out_u8[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint16, ArrayofArraysUint16,
-        void (C::*)(const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]));
+        void (C::*)(const uint16_t u16[32][4], uint16_t out_u16[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint32, ArrayofArraysUint32,
-        void (C::*)(const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]));
+        void (C::*)(const uint32_t u32[32][4], uint32_t out_u32[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint64, ArrayofArraysUint64,
-        void (C::*)(const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]));
+        void (C::*)(const uint64_t u64[32][4], uint64_t out_u64[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_float32, ArrayofArraysFloat32,
-        void (C::*)(const float f32[array_size][4], float out_f32[array_size][4]));
+        void (C::*)(const float f32[32][4], float out_f32[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_float64, ArrayofArraysFloat64,
-        void (C::*)(const double u64[array_size][4], double out_f64[array_size][4]));
+        void (C::*)(const double u64[32][4], double out_f64[32][4]));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_handle, ArrayofArraysHandle,
-        void (C::*)(const zx::handle u64[array_size][4], zx::handle out_f64[array_size][4]));
+        void (C::*)(const zx::handle u64[32][4], zx::handle out_f64[32][4]));
 
 
 template <typename D>
 constexpr void CheckArrayofArraysProtocolSubclass() {
     static_assert(internal::has_arrayof_arrays_protocol_bool<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysBool(const bool b[array_size][4], bool out_b[array_size][4]);");
+        "void ArrayofArraysBool(const bool b[32][4], bool out_b[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_int8<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysInt8(const int8_t i8[array_size][4], int8_t out_i8[array_size][4]);");
+        "void ArrayofArraysInt8(const int8_t i8[32][4], int8_t out_i8[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_int16<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysInt16(const int16_t i16[array_size][4], int16_t out_i16[array_size][4]);");
+        "void ArrayofArraysInt16(const int16_t i16[32][4], int16_t out_i16[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_int32<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysInt32(const int32_t i32[array_size][4], int32_t out_i32[array_size][4]);");
+        "void ArrayofArraysInt32(const int32_t i32[32][4], int32_t out_i32[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_int64<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysInt64(const int64_t i64[array_size][4], int64_t out_i64[array_size][4]);");
+        "void ArrayofArraysInt64(const int64_t i64[32][4], int64_t out_i64[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_uint8<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysUint8(const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]);");
+        "void ArrayofArraysUint8(const uint8_t u8[32][4], uint8_t out_u8[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_uint16<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysUint16(const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]);");
+        "void ArrayofArraysUint16(const uint16_t u16[32][4], uint16_t out_u16[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_uint32<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysUint32(const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]);");
+        "void ArrayofArraysUint32(const uint32_t u32[32][4], uint32_t out_u32[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_uint64<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysUint64(const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]);");
+        "void ArrayofArraysUint64(const uint64_t u64[32][4], uint64_t out_u64[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_float32<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysFloat32(const float f32[array_size][4], float out_f32[array_size][4]);");
+        "void ArrayofArraysFloat32(const float f32[32][4], float out_f32[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_float64<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysFloat64(const double u64[array_size][4], double out_f64[array_size][4]);");
+        "void ArrayofArraysFloat64(const double u64[32][4], double out_f64[32][4]);");
 
     static_assert(internal::has_arrayof_arrays_protocol_handle<D>::value,
         "ArrayofArraysProtocol subclasses must implement "
-        "void ArrayofArraysHandle(const zx::handle u64[array_size][4], zx::handle out_f64[array_size][4]);");
+        "void ArrayofArraysHandle(const zx::handle u64[32][4], zx::handle out_f64[32][4]);");
 
 }
 

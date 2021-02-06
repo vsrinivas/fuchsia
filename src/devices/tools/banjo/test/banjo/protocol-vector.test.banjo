@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.protocol.vector;
+library banjo.examples.protocolvector;
 
 // TODO(surajmalhotra): Reference for vectors.
 
@@ -55,4 +55,3 @@ protocol VectorOfVectors {
     Float64(vector<vector<float64>:4>:vector_size u64) -> (vector<vector<float64>:4>:vector_size f64);
     Handle(vector<vector<handle>:4>:vector_size u64) -> (vector<vector<handle>:4>:vector_size f64);
 };
-

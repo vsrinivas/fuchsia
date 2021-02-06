@@ -1,7 +1,7 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.protocol.vector",
+    primary_namespace: "banjo.examples.protocolvector",
     namespaces: {
-        "banjo.examples.protocol.vector": [
+        "banjo.examples.protocolvector": [
             Struct {
                 attributes: Attrs(
                     [],
@@ -159,7 +159,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "Vector",
                 },
@@ -768,7 +768,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "vector_size",
                 },
@@ -934,7 +934,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "Vector2",
                 },
@@ -1694,7 +1694,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "VectorOfVectors",
                 },

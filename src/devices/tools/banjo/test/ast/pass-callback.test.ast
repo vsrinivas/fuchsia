@@ -1,14 +1,14 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.pass.callback",
+    primary_namespace: "banjo.examples.passcallback",
     namespaces: {
-        "banjo.examples.pass.callback": [
+        "banjo.examples.passcallback": [
             Struct {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.pass.callback",
+                        "banjo.examples.passcallback",
                     ),
                     name: "Point",
                 },
@@ -43,7 +43,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.pass.callback",
+                        "banjo.examples.passcallback",
                     ),
                     name: "Direction",
                 },
@@ -93,7 +93,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.pass.callback",
+                        "banjo.examples.passcallback",
                     ),
                     name: "Action",
                 },
@@ -144,7 +144,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.pass.callback",
+                        "banjo.examples.passcallback",
                     ),
                     name: "ActionNotify",
                 },
@@ -160,7 +160,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.pass.callback",
+                                            "banjo.examples.passcallback",
                                         ),
                                         name: "Point",
                                     },
@@ -175,7 +175,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.pass.callback",
+                                            "banjo.examples.passcallback",
                                         ),
                                         name: "Direction",
                                     },
@@ -238,7 +238,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.pass.callback",
+                        "banjo.examples.passcallback",
                     ),
                     name: "ActionProtocol",
                 },
@@ -261,7 +261,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.pass.callback",
+                                            "banjo.examples.passcallback",
                                         ),
                                         name: "ActionNotify",
                                     },
@@ -325,7 +325,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.pass.callback",
+                                            "banjo.examples.passcallback",
                                         ),
                                         name: "ActionNotify",
                                     },

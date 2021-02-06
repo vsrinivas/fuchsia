@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.primitive banjo file
+// Generated from the banjo.examples.protocolprimitive banjo file
 
 #pragma once
 
 #include <tuple>
 
-#include <banjo/examples/protocol/primitive.h>
+#include <banjo/examples/protocolprimitive/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
 namespace ddk {

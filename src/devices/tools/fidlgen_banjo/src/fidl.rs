@@ -372,6 +372,7 @@ pub struct MethodParameter {
     pub name: Identifier,
     pub location: Option<Location>,
     pub field_shape_v1: FieldShape,
+    pub experimental_maybe_from_type_alias: Option<TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -551,7 +552,24 @@ impl CompoundIdentifier {
 
 impl FidlIr {
     pub fn get_declaration(&self, identifier: &CompoundIdentifier) -> Option<&Declaration> {
-        self.declarations.0.get(identifier)
+        self.declarations.0.get(identifier).or_else(|| {
+            self.library_dependencies
+                .iter()
+                .filter_map(|library| library.declarations.0.get(identifier))
+                .next()
+                .map(|decl| match decl {
+                    ExternalDeclaration::Bits => &Declaration::Bits,
+                    ExternalDeclaration::Const => &Declaration::Const,
+                    ExternalDeclaration::Enum => &Declaration::Enum,
+                    ExternalDeclaration::Interface => &Declaration::Interface,
+                    ExternalDeclaration::Service => &Declaration::Service,
+                    ExternalDeclaration::ExperimentalResource => &Declaration::ExperimentalResource,
+                    ExternalDeclaration::Struct { .. } => &Declaration::Struct,
+                    ExternalDeclaration::Table { .. } => &Declaration::Table,
+                    ExternalDeclaration::Union { .. } => &Declaration::Union,
+                    ExternalDeclaration::TypeAlias => &Declaration::TypeAlias,
+                })
+        })
     }
 
     pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {

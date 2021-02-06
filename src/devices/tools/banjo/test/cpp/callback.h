@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <banjo/examples/callback.h>
+#include <banjo/examples/callback/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>

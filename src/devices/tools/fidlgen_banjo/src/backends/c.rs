@@ -27,6 +27,7 @@ enum Decl<'a> {
     Enum { data: &'a fidl::Enum },
     Interface { data: &'a fidl::Interface },
     Struct { data: &'a fidl::Struct },
+    TypeAlias { data: &'a fidl::TypeAlias },
 }
 
 fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String {
@@ -88,12 +89,24 @@ fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
         Type::Vector { ref element_type, .. } => type_to_c_str(element_type, ir),
         Type::Str { .. } => Ok(String::from("char*")),
         Type::Primitive { ref subtype } => primitive_type_to_c_str(subtype),
-        Type::Identifier { identifier, .. } => match ir.get_declaration(identifier).unwrap() {
+        Type::Identifier { identifier, .. } => match ir
+            .get_declaration(identifier)
+            .expect(&format!("Could not find declaration for {:?}", identifier))
+        {
             Declaration::Struct | Declaration::Union | Declaration::Enum => {
                 Ok(format!("{}_t", to_c_name(&identifier.get_name())))
             }
+            Declaration::Interface => {
+                let c_name = to_c_name(&identifier.get_name());
+                if not_callback(identifier, ir)? {
+                    return Ok(format!("{}_protocol_t", c_name));
+                } else {
+                    return Ok(format!("{}_t", c_name));
+                }
+            }
             _ => Err(anyhow!("Identifier type not handled: {:?}", identifier)),
         },
+        Type::Handle { .. } => Ok(String::from("zx_handle_t")),
         _ => Err(anyhow!("Type not handled: {:?}", ty)),
     }
 }
@@ -212,27 +225,76 @@ fn field_to_c_str(
 ) -> Result<String, Error> {
     let mut accum = String::new();
     accum.push_str(get_doc_comment(maybe_attributes, 1).as_str());
-    let _prefix = if has_attribute(maybe_attributes, "Mutable") { "" } else { "const " };
+    let prefix = if has_attribute(maybe_attributes, "Mutable") { "" } else { "const " };
     let c_name = if preserve_names { String::from(&ident.0) } else { to_c_name(&ident.0) };
+    let ty_name = type_to_c_str(&ty, ir)?;
     match ty {
-        _ => {
+        Type::Str { maybe_element_count, .. } => {
+            if let Some(count) = maybe_element_count {
+                accum.push_str(
+                    format!(
+                        "{indent}char {c_name}[{size}];",
+                        indent = indent,
+                        c_name = c_name,
+                        size = count.0,
+                    )
+                    .as_str(),
+                );
+            } else {
+                accum.push_str(
+                    format!(
+                        "{indent}{prefix}{ty} {c_name};",
+                        indent = indent,
+                        c_name = c_name,
+                        prefix = prefix,
+                        ty = ty_name
+                    )
+                    .as_str(),
+                );
+            }
+        }
+        Type::Vector { .. } => {
+            let ptr = if has_attribute(&maybe_attributes, "OutOfLineContents") { "*" } else { "" };
             accum.push_str(
                 format!(
-                    "{indent}{ty} {c_name};",
+                    "{indent}{prefix}{ty}{ptr}* {c_name}_{buffer};\n\
+                     {indent}size_t {c_name}_{size};",
                     indent = indent,
+                    buffer = name_buffer(&maybe_attributes),
+                    size = name_size(&maybe_attributes),
                     c_name = c_name,
-                    ty = type_to_c_str(&ty, ir)?
+                    prefix = prefix,
+                    ty = ty_name,
+                    ptr = ptr,
                 )
                 .as_str(),
+            );
+        }
+        _ => {
+            accum.push_str(
+                format!("{indent}{ty} {c_name};", indent = indent, c_name = c_name, ty = ty_name)
+                    .as_str(),
             );
         }
     }
     Ok(accum)
 }
 
+fn get_base_arg_type(param: &MethodParameter) -> Option<String> {
+    if let Some(from_type_alias) = &param.experimental_maybe_from_type_alias {
+        if from_type_alias.name.starts_with("zx/") {
+            return Some(format!("zx_{}_t", &from_type_alias.name[3..]));
+        }
+    }
+    None
+}
+
 fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error> {
     if let Some(response) = &method.maybe_response {
         if let Some(param) = response.get(0) {
+            if let Some(arg_type) = get_base_arg_type(param) {
+                return Ok((true, arg_type));
+            }
             if param._type.is_primitive(ir)? {
                 return Ok((true, type_to_c_str(&param._type, ir)?));
             }
@@ -251,6 +313,9 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
         .iter()
         .map(|param| {
             let c_name = to_c_name(&param.name.0);
+            if let Some(arg_type) = get_base_arg_type(param) {
+                return Ok(format!("{} {}", arg_type, c_name));
+            }
             let ty_name = type_to_c_str(&param._type, ir)?;
             match &param._type {
                 Type::Identifier { identifier, .. } => {
@@ -748,6 +813,14 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         })
     }
 
+    fn codegen_alias_decl(&self, data: &TypeAlias, _ir: &FidlIr) -> Result<String, Error> {
+        Ok(format!(
+            "typedef {from}_t {to}_t;",
+            to = to_c_name(&data.name.get_name()),
+            from = to_c_name(&CompoundIdentifier(data.partial_type_ctor.name.clone()).get_name()),
+        ))
+    }
+
     fn codegen_includes(&self, ir: &FidlIr) -> Result<String, Error> {
         Ok(ir
             .library_dependencies
@@ -777,6 +850,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 Declaration::Struct => Some(Decl::Struct {
                     data: ir.struct_declarations.iter().filter(|e| e.name == *ident).next()?,
                 }),
+                Declaration::TypeAlias => Some(Decl::TypeAlias {
+                    data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
+                }),
                 _ => None,
             })
             .collect())
@@ -800,6 +876,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Enum { data } => Some(self.codegen_enum_decl(data)),
                 Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
+                Decl::TypeAlias { data } => Some(self.codegen_alias_decl(data, &ir)),
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");

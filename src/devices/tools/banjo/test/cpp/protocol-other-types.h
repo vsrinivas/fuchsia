@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.other.types banjo file
+// Generated from the banjo.examples.protocolothertypes banjo file
 
 #pragma once
 
-#include <banjo/examples/protocol/other/types.h>
+#include <banjo/examples/protocolothertypes/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -17,7 +17,7 @@
 
 #include "banjo-internal.h"
 
-// DDK types-protocol support
+// DDK protocolothertypes-protocol support
 //
 // :: Proxies ::
 //

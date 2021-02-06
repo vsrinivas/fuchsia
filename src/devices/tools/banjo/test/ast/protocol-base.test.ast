@@ -1,7 +1,7 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.protocol.base",
+    primary_namespace: "banjo.examples.protocolbase",
     namespaces: {
-        "banjo.examples.protocol.base": [
+        "banjo.examples.protocolbase": [
             Struct {
                 attributes: Attrs(
                     [],
@@ -123,7 +123,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.base",
+                        "banjo.examples.protocolbase",
                     ),
                     name: "SynchronousBase",
                 },
@@ -829,7 +829,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.base",
+                        "banjo.examples.protocolbase",
                     ),
                     name: "AsyncBase",
                 },

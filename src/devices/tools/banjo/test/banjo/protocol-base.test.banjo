@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.protocol.base;
+library banjo.examples.protocolbase;
+
+using zx;
 
 [BanjoLayout = "ddk-protocol"]
 protocol SynchronousBase {
@@ -38,4 +40,3 @@ protocol AsyncBase {
     [Async]
     Off(zx.off off) -> (zx.off off, zx.off off_2);
 };
-

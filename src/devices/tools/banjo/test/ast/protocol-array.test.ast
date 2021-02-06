@@ -1,7 +1,7 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.protocol.array",
+    primary_namespace: "banjo.examples.protocolarray",
     namespaces: {
-        "banjo.examples.protocol.array": [
+        "banjo.examples.protocolarray": [
             Struct {
                 attributes: Attrs(
                     [],
@@ -159,7 +159,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "Array",
                 },
@@ -696,7 +696,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "array_size",
                 },
@@ -862,7 +862,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "Array2",
                 },
@@ -1550,7 +1550,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "ArrayofArrays",
                 },

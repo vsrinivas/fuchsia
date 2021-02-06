@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.other.types banjo file
+// Generated from the banjo.examples.protocolothertypes banjo file
 
 #pragma once
 
@@ -12,7 +12,7 @@
 #include <string>
 #include <tuple>
 
-#include <banjo/examples/protocol/other/types.h>
+#include <banjo/examples/protocolothertypes/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
 namespace ddk {

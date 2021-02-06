@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.protocol.primitive;
+library banjo.examples.protocolprimitive;
 
 [BanjoLayout = "ddk-protocol"]
 protocol SynchronousPrimitive {

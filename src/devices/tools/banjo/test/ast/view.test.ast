@@ -1,14 +1,14 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.libraryb",
+    primary_namespace: "banjo.examples.view",
     namespaces: {
-        "banjo.examples.librarya": [
+        "banjo.examples.point": [
             Struct {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.librarya",
+                        "banjo.examples.point",
                     ),
                     name: "Point",
                 },
@@ -38,7 +38,7 @@ BanjoAst {
                 ],
             },
         ],
-        "banjo.examples.libraryb": [
+        "banjo.examples.view": [
             Struct {
                 attributes: Attrs(
                     [],
@@ -64,7 +64,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.libraryb",
+                        "banjo.examples.view",
                     ),
                     name: "View",
                 },
@@ -80,7 +80,7 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.librarya",
+                                            "banjo.examples.point",
                                         ),
                                         name: "Point",
                                     },

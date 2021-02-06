@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.libraryb banjo file
+// Generated from the banjo.examples.view banjo file
 
 #pragma once
 
-#include <banjo/examples/librarya.h>
-#include <banjo/examples/libraryb.h>
+#include <banjo/examples/point/c/banjo.h>
+#include <banjo/examples/view/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -18,7 +18,7 @@
 
 #include "banjo-internal.h"
 
-// DDK libraryb-protocol support
+// DDK view-protocol support
 //
 // :: Proxies ::
 //

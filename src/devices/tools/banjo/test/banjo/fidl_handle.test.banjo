@@ -4,6 +4,8 @@
 
 library banjo.examples.fidlhandle;
 
-struct SomeStruct {
+using zx;
+
+resource struct SomeStruct {
   zx.handle:VMO vmo;
 };

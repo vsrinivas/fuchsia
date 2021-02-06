@@ -1,14 +1,14 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.librarya",
+    primary_namespace: "banjo.examples.point",
     namespaces: {
-        "banjo.examples.librarya": [
+        "banjo.examples.point": [
             Struct {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.librarya",
+                        "banjo.examples.point",
                     ),
                     name: "Point",
                 },

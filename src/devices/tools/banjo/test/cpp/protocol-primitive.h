@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.primitive banjo file
+// Generated from the banjo.examples.protocolprimitive banjo file
 
 #pragma once
 
-#include <banjo/examples/protocol/primitive.h>
+#include <banjo/examples/protocolprimitive/c/banjo.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -17,7 +17,7 @@
 
 #include "banjo-internal.h"
 
-// DDK primitive-protocol support
+// DDK protocolprimitive-protocol support
 //
 // :: Proxies ::
 //
