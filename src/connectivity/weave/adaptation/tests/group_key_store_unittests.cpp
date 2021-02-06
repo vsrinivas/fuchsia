@@ -8,9 +8,11 @@
 // clang-format on
 
 #include <lib/gtest/test_loop_fixture.h>
-#include "src/lib/files/file.h"
+
 #include <gtest/gtest.h>
+
 #include "environment_config.h"
+#include "src/lib/files/file.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {

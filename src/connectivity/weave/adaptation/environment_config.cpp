@@ -6,8 +6,8 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include "environment_config.h"
 // clang-format on
-#include "weave_config_manager.h"
 #include "src/lib/files/file.h"
+#include "weave_config_manager.h"
 
 namespace nl {
 namespace Weave {

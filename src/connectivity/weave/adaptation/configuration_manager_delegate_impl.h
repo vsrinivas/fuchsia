@@ -51,7 +51,7 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len) override;
   WEAVE_ERROR GetPrimaryWiFiMACAddress(uint8_t* mac_address) override;
   zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) override;
-    // Reads the list of applets from the config file and populates |out| with the same.
+  // Reads the list of applets from the config file and populates |out| with the same.
   zx_status_t GetAppletPathList(std::vector<std::string>& out) override;
 
  protected:

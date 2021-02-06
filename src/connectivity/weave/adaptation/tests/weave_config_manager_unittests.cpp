@@ -404,7 +404,8 @@ TEST_F(WeaveConfigManagerTest, ReadArray) {
   std::vector<std::string> write_value = {"applet1", "applet2", "applet3"};
   std::vector<std::string> read_value;
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValueArray(kTestKeyArray, write_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager_.WriteConfigValueArray(kTestKeyArray, write_value),
+            WEAVE_NO_ERROR);
   EXPECT_EQ(weave_config_manager_.ReadConfigValueArray(kTestKeyArray, read_value), WEAVE_NO_ERROR);
 
   EXPECT_EQ(write_value.size(), read_value.size());
@@ -423,7 +424,8 @@ TEST_F(WeaveConfigManagerTest, ReadInvalidArray) {
                                strlen(kTestConfigStoreContents)));
 
   WeaveConfigManager weave_config_manager(kWeaveConfigStoreAltTestPath);
-  EXPECT_EQ(weave_config_manager.ReadConfigValueArray(kTestKeyApplets, read_value), WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
+  EXPECT_EQ(weave_config_manager.ReadConfigValueArray(kTestKeyApplets, read_value),
+            WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
   EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreAltTestPath, false));
 }
 

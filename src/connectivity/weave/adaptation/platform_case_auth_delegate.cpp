@@ -115,7 +115,7 @@ WEAVE_ERROR PlatformCASEAuthDelegate::GenerateNodeSignature(const BeginSessionCo
   status = ConfigurationMgrImpl().GetPrivateKeyForSigning(&signing_key);
   if (status == ZX_OK) {
     status = GenerateAndEncodeWeaveECDSASignature(writer, tag, msg_hash, msg_hash_len,
-                                                signing_key.data(), signing_key.size());
+                                                  signing_key.data(), signing_key.size());
     secure_memset(signing_key.data(), 0, signing_key.size());
     signing_key.clear();
     return status;

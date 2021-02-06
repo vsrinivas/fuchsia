@@ -89,9 +89,7 @@ const std::string& ThreadStackManagerImpl::GetInterfaceName() const {
   return delegate_->GetInterfaceName();
 }
 
-bool ThreadStackManagerImpl::IsThreadSupported() const {
-  return delegate_->IsThreadSupported();
-}
+bool ThreadStackManagerImpl::IsThreadSupported() const { return delegate_->IsThreadSupported(); }
 
 WEAVE_ERROR ThreadStackManagerImpl::SetThreadJoinable(bool value) {
   return delegate_->SetThreadJoinable(value);

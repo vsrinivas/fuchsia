@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <vector>
+
 #include <Weave/Support/NLDLLUtil.h>
 
 #include "rapidjson/schema.h"
@@ -15,8 +17,6 @@
 #include "src/lib/json_parser/json_parser.h"
 #include "third_party/modp_b64/modp_b64.h"
 #include "weave_device_platform_error.h"
-
-#include <vector>
 
 namespace nl {
 namespace Weave {
@@ -133,7 +133,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8
   return WEAVE_NO_ERROR;
 }
 
-WEAVE_ERROR WeaveConfigManager::ReadConfigValueArray(const std::string &key, std::vector<std::string>& out) const {
+WEAVE_ERROR WeaveConfigManager::ReadConfigValueArray(const std::string& key,
+                                                     std::vector<std::string>& out) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
@@ -180,14 +181,15 @@ WEAVE_ERROR WeaveConfigManager::WriteConfigValueBin(const std::string& key, cons
   return WriteConfigValueStr(key, encoded_string.c_str(), encoded_string.size());
 }
 
-WEAVE_ERROR WeaveConfigManager::WriteConfigValueArray(const std::string& key, std::vector<std::string>& value) {
+WEAVE_ERROR WeaveConfigManager::WriteConfigValueArray(const std::string& key,
+                                                      std::vector<std::string>& value) {
   rapidjson::Value array_value(rapidjson::kArrayType);
   {
     const std::lock_guard<std::mutex> write_lock(config_mutex_);
     for (size_t i = 0; i < value.size(); i++) {
-     rapidjson::Value string_value;
-     string_value.SetString(value[i].c_str(), value[i].size(), config_.GetAllocator());
-     array_value.PushBack(string_value, config_.GetAllocator());
+      rapidjson::Value string_value;
+      string_value.SetString(value[i].c_str(), value[i].size(), config_.GetAllocator());
+      array_value.PushBack(string_value, config_.GetAllocator());
     }
   }
   return WriteKVPair(key, array_value.Move());

@@ -19,11 +19,11 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <filesystem>
+
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
-
-#include <filesystem>
 
 namespace nl {
 namespace Weave {
@@ -66,7 +66,7 @@ const std::string kDataPath = "/data/";
 constexpr size_t kWiFiMacAddressBufSize =
     sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::PrimaryWiFiMACAddress);
 // Fake MAC address returned by GetPrimaryWiFiMACAddress
-constexpr uint8_t kFakeMacAddress[kWiFiMacAddressBufSize] = { 0xFF };
+constexpr uint8_t kFakeMacAddress[kWiFiMacAddressBufSize] = {0xFF};
 
 }  // unnamed namespace
 
@@ -347,7 +347,8 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreMfrDeviceCert() {
   return impl_->StoreManufacturerDeviceCertificate(reinterpret_cast<uint8_t*>(mfr_cert), out_size);
 }
 
-zx_status_t ConfigurationManagerDelegateImpl::GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) {
+zx_status_t ConfigurationManagerDelegateImpl::GetPrivateKeyForSigning(
+    std::vector<uint8_t>* signing_key) {
   char path[PATH_MAX] = {'\0'};
   std::filesystem::path full_path(kDataPath);
   WEAVE_ERROR err;

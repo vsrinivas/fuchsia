@@ -15,8 +15,8 @@
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 // clang-format on
 
-#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl {
@@ -259,14 +259,10 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
 class OverridableThreadConfigurationManagerDelegate : public ConfigurationManagerDelegateImpl {
  private:
   bool is_thread_enabled_ = true;
-  bool IsThreadEnabled() override {
-    return is_thread_enabled_;
-  }
+  bool IsThreadEnabled() override { return is_thread_enabled_; }
 
  public:
-  void SetThreadEnabled(bool value) {
-    is_thread_enabled_ = value;
-  }
+  void SetThreadEnabled(bool value) { is_thread_enabled_ = value; }
 };
 
 class ThreadStackManagerTest : public WeaveTestFixture {
@@ -486,22 +482,28 @@ TEST_F(ThreadStackManagerTest, GetThreadDeviceType) {
   ASSERT_EQ(fake_lookup_.device().role(), Role::DETACHED);
 
   // Test various roles and associated device type.
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_NotSupported);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(),
+            ThreadDeviceType::kThreadDeviceType_NotSupported);
 
   fake_lookup_.device().set_role(Role::LEADER);
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(),
+            ThreadDeviceType::kThreadDeviceType_Router);
 
   fake_lookup_.device().set_role(Role::END_DEVICE);
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_FullEndDevice);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(),
+            ThreadDeviceType::kThreadDeviceType_FullEndDevice);
 
   fake_lookup_.device().set_role(Role::SLEEPY_ROUTER);
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(),
+            ThreadDeviceType::kThreadDeviceType_Router);
 
   fake_lookup_.device().set_role(Role::SLEEPY_END_DEVICE);
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_SleepyEndDevice);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(),
+            ThreadDeviceType::kThreadDeviceType_SleepyEndDevice);
 
   fake_lookup_.device().set_role(Role::ROUTER);
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(),
+            ThreadDeviceType::kThreadDeviceType_Router);
 }
 
 TEST_F(ThreadStackManagerTest, ClearProvisionWithDeviceNotBound) {
@@ -529,7 +531,8 @@ TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
   EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(true), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
 
   uint8_t buf[k802154MacAddressBufSize] = {};
-  EXPECT_EQ(ThreadStackMgr().GetPrimary802154MACAddress(buf), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+  EXPECT_EQ(ThreadStackMgr().GetPrimary802154MACAddress(buf),
+            WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
 
   // Set up provisioning info, confirm Get/SetThreadProvision unsupported.
   constexpr uint32_t kFakePANId = 12345;
@@ -551,12 +554,14 @@ TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
   std::memcpy(net_info.ThreadNetworkKey, kFakeMasterKey.data(),
               std::min<size_t>(kFakeMasterKey.size(), DeviceNetworkInfo::kThreadNetworkKeyLength));
   net_info.FieldPresent.ThreadNetworkKey = true;
-  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
-  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info),
+            WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false),
+            WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
 }
 
 TEST_F(ThreadStackManagerTest, GetPrimary802154MacAddress) {
-  constexpr uint8_t expected[k802154MacAddressBufSize] = { 0xFF };
+  constexpr uint8_t expected[k802154MacAddressBufSize] = {0xFF};
   uint8_t mac_addr[k802154MacAddressBufSize];
 
   EXPECT_EQ(ThreadStackMgr().GetPrimary802154MACAddress(mac_addr), WEAVE_NO_ERROR);

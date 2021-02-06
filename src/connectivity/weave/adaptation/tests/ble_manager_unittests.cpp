@@ -8,12 +8,13 @@
 #include "src/connectivity/weave/adaptation/ble_manager_impl.h"
 // clang-format on
 
-#include <gtest/gtest.h>
 #include <fuchsia/bluetooth/gatt/cpp/fidl_test_base.h>
 #include <fuchsia/bluetooth/le/cpp/fidl_test_base.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <gtest/gtest.h>
 
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"

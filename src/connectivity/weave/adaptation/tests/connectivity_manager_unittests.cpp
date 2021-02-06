@@ -10,16 +10,17 @@
 #include <Warm/Warm.h>
 // clang-format on
 
-#include <deque>
+#include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
+
+#include <deque>
 
 #include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
-#include "src/connectivity/weave/adaptation/connectivity_manager_impl.h"
 #include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/connectivity_manager_impl.h"
 #include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 

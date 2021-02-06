@@ -17,18 +17,17 @@
 #include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
-
-#include <lib/syslog/cpp/macros.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/vmo_file.h>
 #include <net/ethernet.h>
 
+#include "configuration_manager_delegate_impl.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "configuration_manager_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
@@ -85,9 +84,7 @@ class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
     };
   }
 
-  void DisableSerialNum() {
-    disable_serial = true;
-  }
+  void DisableSerialNum() { disable_serial = true; }
 
  private:
   fidl::Binding<fuchsia::hwinfo::Device> binding_{this};
@@ -195,13 +192,9 @@ class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegate
 // Configuration manager delegate used to test IsFullyProvisioned
 class CfgMgrProvisionStatusDelegate : public ConfigurationManagerTestDelegateImpl {
  public:
-  bool IsPairedToAccount() override {
-    return is_paired_to_account_;
-  }
+  bool IsPairedToAccount() override { return is_paired_to_account_; }
 
-  bool IsMemberOfFabric() override {
-    return is_member_of_fabric_;
-  }
+  bool IsMemberOfFabric() override { return is_member_of_fabric_; }
 
   CfgMgrProvisionStatusDelegate& SetPairedToAccount(bool value) {
     is_paired_to_account_ = value;
@@ -212,6 +205,7 @@ class CfgMgrProvisionStatusDelegate : public ConfigurationManagerTestDelegateImp
     is_member_of_fabric_ = value;
     return *this;
   }
+
  private:
   bool is_paired_to_account_;
   bool is_member_of_fabric_;
@@ -226,13 +220,9 @@ class ThreadStackManagerTestDelegateImpl : public ThreadStackManagerDelegateImpl
   }
 
  private:
-  bool IsThreadProvisioned() override {
-    return is_thread_provisioned_;
-  }
+  bool IsThreadProvisioned() override { return is_thread_provisioned_; }
 
-  bool IsThreadSupported() const override {
-    return true;
-  }
+  bool IsThreadSupported() const override { return true; }
 
   bool is_thread_provisioned_;
 };
@@ -283,9 +273,7 @@ class ConfigurationManagerTest : public WeaveTestFixture {
     return result;
   }
 
-  void DisableHwInfoSerialNum() {
-    fake_hwinfo_.DisableSerialNum();
-  }
+  void DisableHwInfoSerialNum() { fake_hwinfo_.DisableSerialNum(); }
 
  protected:
   FakeHwinfo fake_hwinfo_;
@@ -342,8 +330,8 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber) {
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
-  constexpr uint8_t expected_wifi_mac[kWiFiMacAddressBufSize] = { 0xFF };
-  constexpr uint8_t expected_802154_mac[k802154MacAddressBufSize] = { 0xFF };
+  constexpr uint8_t expected_wifi_mac[kWiFiMacAddressBufSize] = {0xFF};
+  constexpr uint8_t expected_802154_mac[k802154MacAddressBufSize] = {0xFF};
 
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
   EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
@@ -351,8 +339,11 @@ TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
   EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
   EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
-  EXPECT_EQ(std::memcmp(expected_wifi_mac, device_desc.PrimaryWiFiMACAddress, kWiFiMacAddressBufSize), 0);
-  EXPECT_EQ(std::memcmp(expected_802154_mac, device_desc.Primary802154MACAddress, k802154MacAddressBufSize), 0);
+  EXPECT_EQ(
+      std::memcmp(expected_wifi_mac, device_desc.PrimaryWiFiMACAddress, kWiFiMacAddressBufSize), 0);
+  EXPECT_EQ(std::memcmp(expected_802154_mac, device_desc.Primary802154MACAddress,
+                        k802154MacAddressBufSize),
+            0);
 }
 
 TEST_F(ConfigurationManagerTest, GetPairingCode) {
@@ -440,7 +431,9 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
 
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
 
-  EXPECT_EQ(EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_MfrDeviceCertAllowLocal, false), WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValue(
+                EnvironmentConfig::kConfigKey_MfrDeviceCertAllowLocal, false),
+            WEAVE_NO_ERROR);
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_mfr_cert_file, test_mfr_cert_data));
   fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
@@ -574,7 +567,7 @@ TEST_F(ConfigurationManagerTest, GetPrivateKey) {
 
 TEST_F(ConfigurationManagerTest, GetTestCert) {
   std::string testdata("FAKECERT\n");
-  uint8_t mfr_cert_buf[testdata.size()+1];
+  uint8_t mfr_cert_buf[testdata.size() + 1];
   size_t cert_len;
 
   memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
@@ -583,7 +576,8 @@ TEST_F(ConfigurationManagerTest, GetTestCert) {
   CopyFileFromPkgToData(filename);
 
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
-                                                                cert_len), WEAVE_NO_ERROR);
+                                                                cert_len),
+            WEAVE_NO_ERROR);
   EXPECT_EQ(cert_len, testdata.size());
   EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
                          testdata.begin(), testdata.end()));
@@ -597,12 +591,11 @@ TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   // Create a new context and set a new delegate so that
   // the disablehwinwoserialnum takes effect.
   sys::testing::ComponentContextProvider context_provider;
+  context_provider.service_directory_provider()->AddService(fake_hwinfo_.GetHandler(dispatcher()));
   context_provider.service_directory_provider()->AddService(
-        fake_hwinfo_.GetHandler(dispatcher()));
+      fake_weave_factory_data_manager_.GetHandler(dispatcher()));
   context_provider.service_directory_provider()->AddService(
-        fake_weave_factory_data_manager_.GetHandler(dispatcher()));
-  context_provider.service_directory_provider()->AddService(
-        fake_weave_factory_store_provider_.GetHandler(dispatcher()));
+      fake_weave_factory_store_provider_.GetHandler(dispatcher()));
   PlatformMgrImpl().SetComponentContextForProcess(context_provider.TakeContext());
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
@@ -621,13 +614,13 @@ TEST_F(ConfigurationManagerTest, GetAppletsPathList) {
   std::vector<std::string> expected_applet_paths;
   EXPECT_EQ(ConfigurationMgrImpl().GetAppletPathList(expected_applet_paths), WEAVE_NO_ERROR);
   EXPECT_TRUE(expected_applet_paths.size() == applet_paths.size());
-  for (size_t i=0; i < expected_applet_paths.size(); i++) {
+  for (size_t i = 0; i < expected_applet_paths.size(); i++) {
     EXPECT_EQ(expected_applet_paths[i], applet_paths[i]);
   }
 }
 
 TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
-  constexpr uint8_t expected[kWiFiMacAddressBufSize] = { 0xFF };
+  constexpr uint8_t expected[kWiFiMacAddressBufSize] = {0xFF};
   uint8_t mac_addr[kWiFiMacAddressBufSize];
 
   EXPECT_EQ(ConfigurationMgr().GetPrimaryWiFiMACAddress(mac_addr), WEAVE_NO_ERROR);

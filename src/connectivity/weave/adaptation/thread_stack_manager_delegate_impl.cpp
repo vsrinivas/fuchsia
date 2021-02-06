@@ -43,7 +43,7 @@ constexpr uint16_t kMaxThreadChannel = 26;
 constexpr size_t k802154MacAddressBufSize =
     sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
 // Fake MAC address returned by GetPrimary802154MACAddress
-constexpr uint8_t kFakeMacAddress[k802154MacAddressBufSize] = { 0xFF };
+constexpr uint8_t kFakeMacAddress[k802154MacAddressBufSize] = {0xFF};
 }  // namespace
 
 // Note: Since the functions within this class are intended to function
@@ -494,9 +494,7 @@ const std::string& ThreadStackManagerDelegateImpl::GetInterfaceName() const {
   return interface_name_;
 }
 
-bool ThreadStackManagerDelegateImpl::IsThreadSupported() const {
-  return is_thread_supported_;
-}
+bool ThreadStackManagerDelegateImpl::IsThreadSupported() const { return is_thread_supported_; }
 
 }  // namespace DeviceLayer
 }  // namespace Weave
