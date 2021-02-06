@@ -101,7 +101,8 @@ const char* const kFromHelp = R"(  --from=<source>
       Source can be:
       --from=device This is the default input. The input comes from the live monitoring of one or
                     several processes.
-                    At least one of '--remote-pid', '--remote-name', 'run' must be specified.
+                    At least one of '--remote-pid', '--remote-name', '--remote-job-id',
+                    '--remote-job-name, 'run' must be specified.
       --from=<path> The input comes from a previously recorded session (protobuf format). Path gives
                     the name of the file to read. If path is '-' then the standard input is used.)";
 
@@ -222,14 +223,17 @@ const char* const kLogFileHelp = R"(  --log-file=<pathspec>
 const char* const kRemotePidHelp = R"(  --remote-pid
       The koid of the remote process. Can be passed multiple times.)";
 
-const char* const kRemoteNameHelp = R"(  --remote-name=<regexp>
-  -f <regexp>
-      Adds a filter to the default job that will cause fidlcat to attach
-      to existing or future processes whose names match this regexp.
+const char* const kRemoteNameHelp = R"(  --remote-name=<name>
+  -f <name>
+      The name of a process. Fidlcat will monitor all existing and future
+      processes whose names includes <name> (<name> is a substring of the
+      process name).
+      Can be provided multiple times for multiple names.
+      When used with --remote-job-id or --remote-job-name, only the processes
+      from the selected jobs are taken into account.
       For example:
           --remote-name echo_client.*.cmx
-          --remote-name echo_client
-      Multiple filters can be specified to match more than one process.)";
+          --remote-name echo_client)";
 
 const char* const kExtraNameHelp = R"(  --extra-name=<regexp>
       Like --remote-name, it monitors some processes. However, for these
@@ -238,6 +242,17 @@ const char* const kExtraNameHelp = R"(  --extra-name=<regexp>
       process stops (even if some "--extra-name" processes are still
       monitored). You must specify at least one filter with --remote-name if
       you use this option (without --remote-name, nothing would be displayed).)";
+
+const char* const kRemoteJobIdHelp = R"(  --remote-job-id
+      The koid of a remote job for which we want to monitor all the processes.
+      Can be provided multiple times for multiple jobs.
+      Only jobs created before fidlcat is launched are monitored.)";
+
+const char* const kRemoteJobNameHelp = R"(  The name of a remote job for which
+      we want to monitor all the processes. All the jobs which contain <name> in
+      their name are used.
+      Can be provided multiple times for multiple jobs.
+      Only jobs created before fidlcat is launched are monitored.)";
 
 const char* const kHelpHelp = R"(  --help
   -h
@@ -356,6 +371,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp, &CommandLineOptions::remote_pid);
   parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
   parser.AddSwitch("extra-name", 0, kExtraNameHelp, &CommandLineOptions::extra_name);
+  parser.AddSwitch("remote-job-id", 0, kRemoteJobIdHelp, &CommandLineOptions::remote_job_id);
+  parser.AddSwitch("remote-job-name", 0, kRemoteJobNameHelp, &CommandLineOptions::remote_job_name);
 
   parser.AddSwitch("version", 0, kVersionHelp, &CommandLineOptions::requested_version);
 
@@ -411,6 +428,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   bool device = options->from.empty() || (options->from == "device");
   bool watch = !options->remote_name.empty() || !options->remote_pid.empty() ||
+               !options->remote_job_name.empty() || !options->remote_job_id.empty() ||
                (std::find(params->begin(), params->end(), "run") != params->end());
 
   if (requested_help || (device && !watch) ||

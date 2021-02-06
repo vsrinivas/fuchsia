@@ -32,6 +32,7 @@
 ##                   [--dump-messages]
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>] [--stay-alive]
 ##                   [--remote-pid=<pid>] [--remote-name=<name>] [--extra-name=<name>]
+##                   [--remote-job-id=<koid>] [--remote-job-name=<name>]
 ##                   [run <component specification>]
 ##
 ## System options:
@@ -52,8 +53,9 @@
 ##                       Source can be:
 ##                       --from=device This is the default input. The input comes from the live
 ##                                     monitoring of one or several processes.
-##                                     At least one of '--remote-pid', '--remote-name', 'run' must
-##                                     be specified.
+##                                     At least one of '--remote-pid', '--remote-name',
+##                                     '--remote-job-id', --'remote-job-name', 'run' must be
+##                                     specified.
 ##                       --from=<path> The input comes from a previously recorded session (protobuf
 ##                                     format). Path gives the name of the file to read. If path is
 ##                                     '-' then the standard input is used.
@@ -143,14 +145,27 @@
 ##
 ## Monitoring options:
 ##    --remote-pid=<pid>    The koid of the remote process to trace.
-##    --remote-name=<name>  A set of comma-separated regexes. Fidlcat will monitor all existing
-##                          and future processes whose names match one of the regexes.
-##                          Can be provided multiple times for multiple regexes.
+##    --remote-name=<name>  The name of a process. Fidlcat will monitor all existing and future
+##                          processes whose names includes <name> (<name> is a substring of the
+##                          process name).
+##                          Can be provided multiple times for multiple names.
+##                          When used with --remote-job-id or --remote-job-name, only the processes
+##                          from the selected jobs are taken into account.
 ##    --extra-name=<name>   Like --remote-name, it monitors some processes. However, for these
 ##                          processes, monitoring starts only when one of of the "--remote-name"
 ##                          process is launched. Also, fidlcat stops when the last "--remote-name"
 ##                          process stops (even if some "--extra-name" processes are still
 ##                          monitored).
+##
+##    --remote-job-id=<koid>   The koid of a remote job for which we want to monitor all the
+##                             processes.
+##                             Can be provided multiple times for multiple jobs.
+##                             Only jobs created before fidlcat is launched are monitored.
+##    --remote-job-name=<name> The name of a remote job for which we want to monitor all the
+##                             processes. All the jobs which contain <name> in their name are used.
+##                             Can be provided multiple times for multiple jobs.
+##                             Only jobs created before fidlcat is launched are monitored.
+##
 ##    run <component spec>  A token indicating that you want to invoke and trace the following
 ##                          component. The component is specified with either a bash regex that
 ##                          matches a component URL known to the build, or a full component URL not
@@ -284,6 +299,10 @@ while [[ $# -gt 0 ]]; do
   elif equal_argument $1 "--remote-name" "<name>"; then
     arguments+=("$1")
   elif equal_argument $1 "--extra-name" "<name>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--remote-job-id" "<koid>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--remote-job-name" "<name>"; then
     arguments+=("$1")
   elif [[ $1 == "run" ]]; then
     action="$1"

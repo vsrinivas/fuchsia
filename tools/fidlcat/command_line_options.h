@@ -58,6 +58,8 @@ struct CommandLineOptions {
   std::vector<std::string> remote_pid;
   std::vector<std::string> remote_name;
   std::vector<std::string> extra_name;
+  std::vector<std::uint64_t> remote_job_id;
+  std::vector<std::string> remote_job_name;
 
   // Analytics options:
   AnalyticsMode analytics = AnalyticsMode::kUnspecified;

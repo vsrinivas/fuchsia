@@ -327,6 +327,50 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
   }
 }
 
+void InterceptionWorkflow::AttachToJobs(const debug_ipc::ProcessTreeRecord& record,
+                                        const std::vector<std::uint64_t>& remote_job_id,
+                                        const std::vector<std::string>& remote_job_name,
+                                        const std::vector<std::string>& remote_name,
+                                        const std::vector<std::string>& extra_name) {
+  if (record.type == debug_ipc::ProcessTreeRecord::Type::kJob) {
+    bool attach_to_processes = false;
+    for (auto koid : remote_job_id) {
+      if (record.koid == koid) {
+        attach_to_processes = true;
+        break;
+      }
+    }
+    for (auto name : remote_job_name) {
+      if (record.name.find(name) != std::string::npos) {
+        attach_to_processes = true;
+        break;
+      }
+    }
+    if (attach_to_processes) {
+      zxdb::Job* job = session_->system().CreateNewJob();
+      job->Attach(record.koid, [this, &remote_name, &extra_name](fxl::WeakPtr<zxdb::Job> weak_job,
+                                                                 const zxdb::Err& err) {
+        zxdb::Job* job = weak_job.get();
+        if (err.ok() && (job != nullptr)) {
+          if (remote_name.empty()) {
+            filters_.push_back(
+                ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = true});
+            filters_.back().filter->SetJob(job);
+            filters_.back().filter->SetPattern(zxdb::Filter::kAllProcessesPattern);
+          } else {
+            Filter(remote_name, /*main_filter=*/true, job);
+            Filter(extra_name, /*main_filter=*/false, job);
+          }
+        }
+      });
+      return;
+    }
+  }
+  for (const auto& child : record.children) {
+    AttachToJobs(child, remote_job_id, remote_job_name, remote_name, extra_name);
+  }
+}
+
 void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
   if (configured_processes_.find(koid) == configured_processes_.end()) {
     return;
@@ -367,31 +411,24 @@ void InterceptionWorkflow::Detach() {
   }
 }
 
-void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool main_filter) {
+void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool main_filter,
+                                  zxdb::Job* job) {
   if (filter.empty()) {
     return;
   }
 
-  std::set<std::string> filter_set(filter.begin(), filter.end());
-  // Only add filters not already added.
-  for (auto it = filters_.begin(); it != filters_.end(); ++it) {
-    if (filter_set.find(it->filter->pattern()) != filter_set.end()) {
-      filter_set.erase(it->filter->pattern());
-    }
-  }
-
-  zxdb::Job* default_job = session_->system().GetJobs()[0];
-
-  if (!filter_set.empty() && !main_filter) {
+  if (!main_filter) {
     // We have an extra filter => wait for a main process to be started to start decoding events.
     decode_events_ = false;
   }
 
-  for (const auto& pattern : filter_set) {
+  for (const auto& pattern : filter) {
     filters_.push_back(
         ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = main_filter});
+    if (job != nullptr) {
+      filters_.back().filter->SetJob(job);
+    }
     filters_.back().filter->SetPattern(pattern);
-    filters_.back().filter->SetJob(default_job);
   }
 }
 

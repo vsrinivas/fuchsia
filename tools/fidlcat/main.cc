@@ -119,8 +119,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
     exit(1);
   }
 
-  auto attach = [workflow, process_koids, remote_name = options.remote_name,
-                 extra_name = options.extra_name, params](const zxdb::Err& err) {
+  auto attach = [workflow, process_koids, &options, params](const zxdb::Err& err) {
     if (!err.ok()) {
       fprintf(stderr, "Unable to connect: %s", err.msg().c_str());
       exit(2);
@@ -129,7 +128,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
     if (!process_koids.empty()) {
       workflow->Attach(process_koids);
     }
-    if (remote_name.empty() && extra_name.empty()) {
+    if (options.remote_name.empty() && options.extra_name.empty()) {
       if (std::find(params.begin(), params.end(), "run") != params.end()) {
         zxdb::Target* target = workflow->GetNewTarget();
         workflow->Launch(target, params);
@@ -139,8 +138,17 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
       if (std::find(params.begin(), params.end(), "run") != params.end()) {
         workflow->Launch(target, params);
       }
-      workflow->Filter(remote_name, /*main_filter=*/true);
-      workflow->Filter(extra_name, /*main_filter=*/false);
+      if (options.remote_job_id.empty() && options.remote_job_name.empty()) {
+        workflow->Filter(options.remote_name, /*main_filter=*/true, nullptr);
+        workflow->Filter(options.extra_name, /*main_filter=*/false, nullptr);
+      }
+    }
+    if (!options.remote_job_id.empty() || !options.remote_job_name.empty()) {
+      workflow->session()->system().GetProcessTree(
+          [workflow, &options](const zxdb::Err& err, debug_ipc::ProcessTreeReply reply) {
+            workflow->AttachToJobs(reply.root, options.remote_job_id, options.remote_job_name,
+                                   options.remote_name, options.extra_name);
+          });
     }
   };
 
