@@ -526,41 +526,46 @@ class variant
   ::cpp17::internal::storage_type<Ts...> storage_;
 
   // Friend for cpp17::get.
-  template <size_t, typename... Args>
-  friend constexpr auto& get(variant<Args...>& value);
+  template <size_t Index, typename... Args>
+  friend constexpr cpp17::variant_alternative_t<Index, variant<Args...>>& get(
+      variant<Args...>& value);
 
-  template <size_t, typename... Args>
-  friend constexpr const auto& get(const variant<Args...>& value);
+  template <size_t Index, typename... Args>
+  friend constexpr const cpp17::variant_alternative_t<Index, variant<Args...>>& get(
+      const variant<Args...>& value);
 
-  template <size_t, typename... Args>
-  friend constexpr auto&& get(variant<Args...>&& value);
+  template <size_t Index, typename... Args>
+  friend constexpr cpp17::variant_alternative_t<Index, variant<Args...>>&& get(
+      variant<Args...>&& value);
 
-  template <size_t, typename... Args>
-  friend constexpr const auto&& get(const variant<Args...>&& value);
-
-  template <typename T, typename... Args>
-  friend constexpr auto& get(variant<Args...>& value);
-
-  template <typename T, typename... Args>
-  friend constexpr const auto& get(const variant<Args...>& value);
+  template <size_t Index, typename... Args>
+  friend constexpr const cpp17::variant_alternative_t<Index, variant<Args...>>&& get(
+      const variant<Args...>&& value);
 
   template <typename T, typename... Args>
-  friend constexpr auto&& get(variant<Args...>&& value);
+  friend constexpr T& get(variant<Args...>& value);
 
   template <typename T, typename... Args>
-  friend constexpr const auto&& get(const variant<Args...>&& value);
+  friend constexpr const T& get(const variant<Args...>& value);
+
+  template <typename T, typename... Args>
+  friend constexpr T&& get(variant<Args...>&& value);
+
+  template <typename T, typename... Args>
+  friend constexpr const T&& get(const variant<Args...>&& value);
 };
 
 // Swaps variants.
-template <typename... Ts, ::cpp17::internal::requires_conditions<std::is_move_constructible<Ts>...,
-                                                                 ::cpp17::internal::is_swappable<Ts>...> = true>
+template <typename... Ts,
+          ::cpp17::internal::requires_conditions<std::is_move_constructible<Ts>...,
+                                                 ::cpp17::internal::is_swappable<Ts>...> = true>
 void swap(variant<Ts...>& a, variant<Ts...>& b) {
   a.swap(b);
 }
 
 // Accesses the variant by zero-based index.
 template <size_t Index, typename... Ts>
-constexpr auto& get(variant<Ts...>& value) {
+constexpr cpp17::variant_alternative_t<Index, variant<Ts...>>& get(variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
     return value.storage_.get(::cpp17::internal::index_tag<Index>{});
   }
@@ -568,21 +573,23 @@ constexpr auto& get(variant<Ts...>& value) {
 }
 
 template <size_t Index, typename... Ts>
-constexpr auto&& get(variant<Ts...>&& value) {
+constexpr cpp17::variant_alternative_t<Index, variant<Ts...>>&& get(variant<Ts...>&& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
     return value.storage_.get(::cpp17::internal::index_tag<Index>{});
   }
   value.exception_invalid_index();
 }
 template <size_t Index, typename... Ts>
-constexpr const auto& get(const variant<Ts...>& value) {
+constexpr const cpp17::variant_alternative_t<Index, variant<Ts...>>& get(
+    const variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
     return value.storage_.get(::cpp17::internal::index_tag<Index>{});
   }
   value.exception_invalid_index();
 }
 template <size_t Index, typename... Ts>
-constexpr const auto&& get(const variant<Ts...>&& value) {
+constexpr const cpp17::variant_alternative_t<Index, variant<Ts...>>&& get(
+    const variant<Ts...>&& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
     return value.storage_.get(::cpp17::internal::index_tag<Index>{});
   }
@@ -591,28 +598,28 @@ constexpr const auto&& get(const variant<Ts...>&& value) {
 
 // Accesses the variant by unique type. See note above about ADL.
 template <typename T, typename... Ts>
-constexpr auto& get(variant<Ts...>& value) {
+constexpr T& get(variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
     return value.storage_.get(::cpp17::internal::type_tag<T>{});
   }
   value.exception_invalid_type();
 }
 template <typename T, typename... Ts>
-constexpr auto&& get(variant<Ts...>&& value) {
+constexpr T&& get(variant<Ts...>&& value) {
   if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
     return value.storage_.get(::cpp17::internal::type_tag<T>{});
   }
   value.exception_invalid_type();
 }
 template <typename T, typename... Ts>
-constexpr const auto& get(const variant<Ts...>& value) {
+constexpr const T& get(const variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
     return value.storage_.get(::cpp17::internal::type_tag<T>{});
   }
   value.exception_invalid_type();
 }
 template <typename T, typename... Ts>
-constexpr const auto&& get(const variant<Ts...>&& value) {
+constexpr const T&& get(const variant<Ts...>&& value) {
   if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
     return value.storage_.get(::cpp17::internal::type_tag<T>{});
   }

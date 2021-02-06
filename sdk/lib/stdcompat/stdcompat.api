@@ -11,6 +11,6 @@
   "pkg/stdcompat/include/lib/stdcompat/string_view.h": "59119e48e390667040f87249819e2ddb",
   "pkg/stdcompat/include/lib/stdcompat/type_traits.h": "fb4df3d778bff8e650aae64ebafe6184",
   "pkg/stdcompat/include/lib/stdcompat/utility.h": "a70481792b0b4e8f416c79ca5e58338a",
-  "pkg/stdcompat/include/lib/stdcompat/variant.h": "6526d5935004fdd00776d2b8e38eb164",
+  "pkg/stdcompat/include/lib/stdcompat/variant.h": "cd2bbb7b3999f7505ae18805e06adb71",
   "pkg/stdcompat/include/lib/stdcompat/version.h": "e02ce77f60567050524391ce889311ba"
 }
