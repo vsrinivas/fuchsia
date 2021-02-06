@@ -138,6 +138,7 @@ TEST_F(WeaveConfigManagerTest, ReadFailOnNegativeValues) {
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint64, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+  EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreAltTestPath, false));
 }
 
 TEST_F(WeaveConfigManagerTest, ReadWriteString) {
@@ -411,6 +412,19 @@ TEST_F(WeaveConfigManagerTest, ReadArray) {
   for (size_t i = 0; i < read_value.size(); i++) {
     EXPECT_EQ(write_value[i], read_value[i]);
   }
+}
+
+TEST_F(WeaveConfigManagerTest, ReadInvalidArray) {
+  constexpr char kTestKeyApplets[] = "applets";
+  constexpr char kTestConfigStoreContents[] = "{\"applets\":[1234567]}";
+  std::vector<std::string> read_value;
+  EXPECT_FALSE(files::IsFile(kWeaveConfigStoreAltTestPath));
+  EXPECT_TRUE(files::WriteFile(kWeaveConfigStoreAltTestPath, kTestConfigStoreContents,
+                               strlen(kTestConfigStoreContents)));
+
+  WeaveConfigManager weave_config_manager(kWeaveConfigStoreAltTestPath);
+  EXPECT_EQ(weave_config_manager.ReadConfigValueArray(kTestKeyApplets, read_value), WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
+  EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreAltTestPath, false));
 }
 
 }  // namespace testing

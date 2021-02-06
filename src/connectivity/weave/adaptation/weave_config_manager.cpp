@@ -143,6 +143,9 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueArray(const std::string &key, std
   }
 
   for (rapidjson::SizeType i = 0; i < config_value.Size(); i++) {
+    if (!config_value[i].IsString()) {
+      return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
+    }
     out.push_back(config_value[i].GetString());
   }
   return WEAVE_NO_ERROR;
