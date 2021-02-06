@@ -24,6 +24,7 @@ use {
     std::{
         collections::HashSet,
         io::{self, Read},
+        net::{IpAddr, Ipv4Addr, Ipv6Addr},
         path::Path,
         sync::Arc,
     },
@@ -793,14 +794,12 @@ async fn dedup_concurrent_content_blob_fetches() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn https_endpoint() {
+async fn test_https_endpoint(pkg_name: &str, bind_addr: impl Into<IpAddr>) {
     let env = TestEnvBuilder::new().build().await;
 
-    let s = "https_endpoints";
-    let pkg = PackageBuilder::new(s)
-        .add_resource_at(format!("bin/{}", s), &test_package_bin(s)[..])
-        .add_resource_at(format!("meta/{}.cmx", s), &test_package_cmx(s)[..])
+    let pkg = PackageBuilder::new(pkg_name)
+        .add_resource_at(format!("bin/{}", pkg_name), &test_package_bin(pkg_name)[..])
+        .add_resource_at(format!("meta/{}.cmx", pkg_name), &test_package_cmx(pkg_name)[..])
         .build()
         .await
         .unwrap();
@@ -811,17 +810,27 @@ async fn https_endpoint() {
             .await
             .unwrap(),
     );
-    let served_repository = repo.server().use_https(true).start().unwrap();
+    let served_repository = repo.server().use_https(true).bind_to_addr(bind_addr).start().unwrap();
 
     env.register_repo(&served_repository).await;
 
     let package = env
-        .resolve_package(format!("fuchsia-pkg://test/{}", s).as_str())
+        .resolve_package(format!("fuchsia-pkg://test/{}", pkg_name).as_str())
         .await
         .expect("package to resolve without error");
     pkg.verify_contents(&package).await.unwrap();
 
     env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn https_endpoint_ipv6_only() {
+    test_https_endpoint("https_endpoint_ipv6", Ipv6Addr::LOCALHOST).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn https_endpoint_ipv4_only() {
+    test_https_endpoint("https_endpoint_ipv4", Ipv4Addr::LOCALHOST).await
 }
 
 #[fasync::run_singlethreaded(test)]

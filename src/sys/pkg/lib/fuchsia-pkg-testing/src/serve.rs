@@ -9,13 +9,10 @@ use {
     anyhow::{format_err, Context as _, Error},
     chrono::Utc,
     fidl_fuchsia_pkg_ext::{MirrorConfig, MirrorConfigBuilder, RepositoryConfig},
-    fuchsia_async::{self as fasync, net::TcpListener},
+    fuchsia_async::{self as fasync, net::TcpListener, Task},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
-    futures::{
-        future::{BoxFuture, RemoteHandle},
-        prelude::*,
-    },
+    futures::{future::BoxFuture, prelude::*},
     http::Uri,
     http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{
@@ -27,7 +24,7 @@ use {
     std::{
         convert::Infallible,
         io::Cursor,
-        net::{Ipv6Addr, SocketAddr},
+        net::{IpAddr, Ipv6Addr, SocketAddr},
         path::{Path, PathBuf},
         pin::Pin,
         sync::{
@@ -47,6 +44,7 @@ pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
     uri_path_override_handlers: Vec<Arc<dyn UriPathHandler>>,
     use_https: bool,
+    bind_addr: IpAddr,
 }
 
 /// Override how a `ServedRepository` responds to GET requests on valid URI paths.
@@ -58,7 +56,12 @@ pub trait UriPathHandler: 'static + Send + Sync {
 
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
-        ServedRepositoryBuilder { repo, uri_path_override_handlers: vec![], use_https: false }
+        ServedRepositoryBuilder {
+            repo,
+            uri_path_override_handlers: vec![],
+            use_https: false,
+            bind_addr: Ipv6Addr::UNSPECIFIED.into(),
+        }
     }
 
     /// Override how the `ServedRepositoryBuilder` responds to some URI paths.
@@ -77,10 +80,17 @@ impl ServedRepositoryBuilder {
         self
     }
 
+    /// Bind the tcp listener to the provided ip address. Binds to Ipv6Addr::UNSPECIFIED by
+    /// default.
+    pub fn bind_to_addr(mut self, addr: impl Into<IpAddr>) -> Self {
+        self.bind_addr = addr.into();
+        self
+    }
+
     /// Spawn the server on the current executor, returning a handle to manage the server.
     pub fn start(self) -> Result<ServedRepository, Error> {
         let (listener, addr) = {
-            let addr = SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), 0);
+            let addr = SocketAddr::new(self.bind_addr, 0);
             let listener = TcpListener::bind(&addr).context("bind")?;
             let local_addr = listener.local_addr().context("local_addr")?;
             (listener, local_addr)
@@ -163,21 +173,20 @@ impl ServedRepositoryBuilder {
 
         let (stop, rx_stop) = futures::channel::oneshot::channel();
 
-        let (server, wait_stop) = Server::builder(from_stream(connections))
+        let server = Server::builder(from_stream(connections))
             .executor(fuchsia_hyper::Executor)
             .serve(make_svc)
             .with_graceful_shutdown(
                 rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
             )
-            .unwrap_or_else(|e| panic!("error serving repo over http: {}", e))
-            .remote_handle();
+            .unwrap_or_else(|e| panic!("error serving repo over http: {}", e));
 
-        fasync::Task::spawn(server).detach();
+        let server = Task::spawn(server);
 
         Ok(ServedRepository {
             repo: self.repo,
             stop,
-            wait_stop,
+            server,
             addr,
             use_https: self.use_https,
             auto_event_sender,
@@ -201,7 +210,7 @@ fn parse_private_key(mut bytes: &[u8]) -> rustls::PrivateKey {
 pub struct ServedRepository {
     repo: Arc<Repository>,
     stop: futures::channel::oneshot::Sender<()>,
-    wait_stop: RemoteHandle<()>,
+    server: Task<()>,
     addr: SocketAddr,
     use_https: bool,
     auto_event_sender: EventSender,
@@ -290,9 +299,9 @@ impl ServedRepository {
     }
 
     /// Gracefully signal the server to stop and returns a future that resolves when it terminates.
-    pub fn stop(self) -> RemoteHandle<()> {
+    pub fn stop(self) -> impl Future<Output = ()> {
         self.stop.send(()).expect("remote end to still be open");
-        self.wait_stop
+        self.server
     }
 
     /// Number of connection attempts.
