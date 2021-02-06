@@ -26,13 +26,12 @@ class AutobindTest : public MultipleDeviceTestCase {
     drv->libname = "<always_match.so>";
     // Borrow a DSO VMO from another driver, because we need an executable VMO (or else duplicating
     // it to send to the driver host will fail)
-    fprintf(stderr, "libname: %s", coordinator()->fragment_driver()->libname.c_str());
-    ASSERT_OK(
-        coordinator()->LibnameToVmo(coordinator()->fragment_driver()->libname, &drv->dso_vmo));
+    fprintf(stderr, "libname: %s", coordinator().fragment_driver()->libname.c_str());
+    ASSERT_OK(coordinator().LibnameToVmo(coordinator().fragment_driver()->libname, &drv->dso_vmo));
 
-    coordinator()->DriverAdded(drv.release(), "0.1");
+    coordinator().DriverAdded(drv.release(), "0.1");
     coordinator_loop()->RunUntilIdle();
-    coordinator()->root_device()->proxy()->DetachFromParent();
+    coordinator().root_device()->proxy()->DetachFromParent();
   }
 };
 

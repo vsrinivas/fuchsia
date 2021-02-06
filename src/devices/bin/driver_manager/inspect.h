@@ -74,26 +74,26 @@ class InspectManager {
 
   fbl::RefPtr<fs::PseudoDir> driver_host_dir() { return driver_host_dir_; }
 
-  inspect::Node& root_node() { return inspect_.GetRoot(); }
+  inspect::Node& root_node() { return inspector_.GetRoot(); }
 
   inspect::Node& devices() { return devices_; }
 
   inspect::UintProperty& device_count() { return device_count_; }
 
   // Public method for test purpose
-  inspect::Inspector& inspector() { return inspect_; }
+  inspect::Inspector& inspector() { return inspector_; }
 
   std::optional<InspectDevfs>& devfs() { return devfs_; }
 
  private:
+  inspect::Inspector inspector_;
+  zx::vmo inspect_vmo_;
+
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
   fbl::RefPtr<fs::PseudoDir> driver_host_dir_;
 
   zx::channel diagnostics_client_;
-
-  inspect::Inspector inspect_;
-  zx::vmo inspect_vmo_;
 
   inspect::UintProperty device_count_;
   inspect::Node devices_;

@@ -95,11 +95,12 @@ constexpr char kAsanEnvironment[] =
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
-Coordinator::Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatcher)
+Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manager,
+                         async_dispatcher_t* dispatcher)
     : config_(std::move(config)),
       dispatcher_(dispatcher),
       suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
-      inspect_manager_(dispatcher) {
+      inspect_manager_(inspect_manager) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
@@ -207,8 +208,8 @@ const Driver* Coordinator::LibnameToDriver(const fbl::StringPiece& libname) cons
 
 static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
   int fd = -1;
-  zx_status_t r = fdio_open_fd(
-      libname.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
+  zx_status_t r =
+      fdio_open_fd(libname.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
   if (r != ZX_OK) {
     LOGF(ERROR, "Cannot open driver '%s'", libname.data());
     return ZX_ERR_IO;

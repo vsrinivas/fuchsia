@@ -49,12 +49,12 @@ class LoadDriverPackageTestCase : public MultipleDeviceTestCase {
 };
 
 TEST_F(LoadDriverPackageTestCase, LoadRegisteredDriver) {
-  auto& drivers = coordinator()->drivers();
+  auto& drivers = coordinator().drivers();
   size_t num_drivers = drivers.size_slow();
 
   // Borrow a valid driver vmo that can be duplicated as executable.
   zx::vmo driver_vmo;
-  ASSERT_OK(coordinator()->LibnameToVmo(coordinator()->fragment_driver()->libname, &driver_vmo));
+  ASSERT_OK(coordinator().LibnameToVmo(coordinator().fragment_driver()->libname, &driver_vmo));
 
   std::string package_url("test_driver_url");
   std::string libname("test_driver_libname");
@@ -62,7 +62,7 @@ TEST_F(LoadDriverPackageTestCase, LoadRegisteredDriver) {
   FakePackageResolver resolver;
   resolver.Register(package_url, libname, std::move(driver_vmo));
 
-  ASSERT_OK(coordinator()->LoadEphemeralDriver(&resolver, package_url.c_str()));
+  ASSERT_OK(coordinator().LoadEphemeralDriver(&resolver, package_url.c_str()));
   coordinator_loop()->RunUntilIdle();
 
   // A new driver should be added.
@@ -71,16 +71,16 @@ TEST_F(LoadDriverPackageTestCase, LoadRegisteredDriver) {
 
   // Attempting to bind the fragment driver will create a proxy device, which we need to detach
   // from its parent to avoid a memory leak.
-  coordinator()->root_device()->proxy()->DetachFromParent();
+  coordinator().root_device()->proxy()->DetachFromParent();
 }
 
 TEST_F(LoadDriverPackageTestCase, LoadUnregisteredDriver) {
-  auto& drivers = coordinator()->drivers();
+  auto& drivers = coordinator().drivers();
   size_t num_drivers = drivers.size_slow();
 
   FakePackageResolver resolver;
   std::string package_url("test_driver_url");
-  ASSERT_NOT_OK(coordinator()->LoadEphemeralDriver(&resolver, package_url));
+  ASSERT_NOT_OK(coordinator().LoadEphemeralDriver(&resolver, package_url));
 
   coordinator_loop()->RunUntilIdle();
   // No new driver should be added.
@@ -97,6 +97,6 @@ TEST_F(EphemeralDisabledTestCase, LoadingDriverFails) {
   ASSERT_DEATH([&] {
     FakePackageResolver resolver;
     std::string package_url("test_driver_url");
-    coordinator()->LoadEphemeralDriver(&resolver, package_url);
+    coordinator().LoadEphemeralDriver(&resolver, package_url);
   });
 }
