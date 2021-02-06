@@ -22,7 +22,7 @@ TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
   zx_txid_t txid;
@@ -66,7 +66,7 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   // Don't reply to the suspend yet.
   ASSERT_NO_FATAL_FAILURES(
       CheckSuspendReceived(device(child_index)->controller_remote, flags, &txid));
-  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
   // Check that the child device has not yet started unbinding.
@@ -146,13 +146,13 @@ TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  coordinator().sys_device()->set_state(Device::State::kSuspended);
-  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
   device(parent_index)->device->set_state(Device::State::kSuspended);
   device(child_index)->device->set_state(Device::State::kSuspended);
 
-  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
   // The child should be unbound first.
   zx_txid_t txid;
@@ -193,8 +193,8 @@ TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  coordinator().sys_device()->set_state(Device::State::kSuspended);
-  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
   device(parent_index)->device->set_state(Device::State::kSuspended);
   device(child_index)->device->set_state(Device::State::kSuspended);
@@ -211,7 +211,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
   // Don't reply to the resume yet.
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(parent_index)->controller_remote,
                                                SystemPowerState::FULLY_ON, &txid));
-  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
   // Check that the child device has not yet started unbinding.
@@ -282,8 +282,8 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  coordinator().sys_device()->set_state(Device::State::kSuspended);
-  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
   device(parent_index)->device->set_state(Device::State::kSuspended);
   device(child_index)->device->set_state(Device::State::kSuspended);
@@ -326,8 +326,8 @@ TEST_F(MultipleDeviceTestCase, DISABLED_ResumeTimeout) {
   async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
 
-  coordinator().sys_device()->set_state(Device::State::kSuspended);
-  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
 
   bool resume_callback_executed = false;
@@ -390,7 +390,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
     event.signal(0, ZX_USER_SIGNAL_0);
   };
   ASSERT_OK(devmgr::ComponentLifecycleServer::Create(
-      coordinator_loop()->dispatcher(), &coordinator(), std::move(component_lifecycle_server),
+      coordinator_loop()->dispatcher(), coordinator(), std::move(component_lifecycle_server),
       std::move(suspend_callback)));
   llcpp::fuchsia::process::lifecycle::Lifecycle::SyncClient client(
       std::move(component_lifecycle_client));
@@ -409,9 +409,9 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
       zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
 
   std::unique_ptr<SystemStateManager> state_mgr;
-  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
+  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), coordinator(),
                                        std::move(system_state_transition_server), &state_mgr));
-  coordinator().set_system_state_manager(std::move(state_mgr));
+  coordinator()->set_system_state_manager(std::move(state_mgr));
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
           zx::unowned_channel(system_state_transition_client.get()),
@@ -423,7 +423,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
     call_status = response->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(coordinator().shutdown_system_state(),
+  ASSERT_EQ(coordinator()->shutdown_system_state(),
             llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::POWEROFF);
 }
 
@@ -435,7 +435,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   ASSERT_OK(zx::channel::create(0, &services, &services_remote));
 
   svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
-  ASSERT_OK(coordinator().InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
   ASSERT_OK(outgoing.Serve(std::move(services_remote)));
 
   zx::channel channel, channel_remote;
@@ -454,7 +454,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
     call_status = response->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(coordinator().shutdown_system_state(),
+  ASSERT_EQ(coordinator()->shutdown_system_state(),
             llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
 }
 
@@ -467,9 +467,9 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
       zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
 
   std::unique_ptr<SystemStateManager> state_mgr;
-  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
+  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), coordinator(),
                                        std::move(system_state_transition_server), &state_mgr));
-  coordinator().set_system_state_manager(std::move(state_mgr));
+  coordinator()->set_system_state_manager(std::move(state_mgr));
 
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
@@ -483,7 +483,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   }
   ASSERT_EQ(call_status, ZX_ERR_INVALID_ARGS);
   // Default shutdown_system_state in test is MEXEC.
-  ASSERT_EQ(coordinator().shutdown_system_state(),
+  ASSERT_EQ(coordinator()->shutdown_system_state(),
             llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
 }
 
@@ -496,9 +496,9 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
       zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
 
   std::unique_ptr<SystemStateManager> state_mgr;
-  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
+  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), coordinator(),
                                        std::move(system_state_transition_server), &state_mgr));
-  coordinator().set_system_state_manager(std::move(state_mgr));
+  coordinator()->set_system_state_manager(std::move(state_mgr));
 
   MockPowerManager mock_power_manager;
   zx::channel mock_power_manager_client, mock_power_manager_server;
@@ -507,14 +507,14 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
   ASSERT_OK(zx::channel::create(0, &mock_power_manager_client, &mock_power_manager_server));
   ASSERT_OK(fidl::BindSingleInFlightOnly(
       coordinator_loop()->dispatcher(), std::move(mock_power_manager_server), &mock_power_manager));
-  ASSERT_OK(coordinator().RegisterWithPowerManager(std::move(mock_power_manager_client),
-                                                   std::move(system_state_transition_client),
-                                                   std::move(dev_local)));
+  ASSERT_OK(coordinator()->RegisterWithPowerManager(std::move(mock_power_manager_client),
+                                                    std::move(system_state_transition_client),
+                                                    std::move(dev_local)));
   mock_power_manager.wait_until_register_called();
 }
 
 TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
-  Devnode *root_node = coordinator().root_device()->self;
+  Devnode *root_node = coordinator()->root_device()->self;
   ASSERT_FALSE(devfs_has_watchers(root_node));
 
   // Create the watcher and make sure it's been registered.

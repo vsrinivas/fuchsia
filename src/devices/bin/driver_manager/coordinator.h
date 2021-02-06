@@ -158,8 +158,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   Coordinator(Coordinator&&) = delete;
   Coordinator& operator=(Coordinator&&) = delete;
 
-  Coordinator(CoordinatorConfig config, InspectManager* inspect_manager,
-              async_dispatcher_t* dispatcher);
+  Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatcher);
   ~Coordinator();
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
@@ -307,7 +306,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
 
   const Driver* fragment_driver() const { return fragment_driver_; }
 
-  InspectManager& inspect_manager() { return *inspect_manager_; }
+  InspectManager& inspect_manager() { return inspect_manager_; }
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
@@ -367,7 +366,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   SuspendHandler suspend_handler_;
   ResumeContext resume_context_;
 
-  InspectManager* const inspect_manager_;
+  InspectManager inspect_manager_;
   std::unique_ptr<SystemStateManager> system_state_manager_;
   power_fidl::statecontrol::SystemPowerState shutdown_system_state_;
 

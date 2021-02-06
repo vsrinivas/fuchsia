@@ -12,13 +12,16 @@
 
 class InspectManagerTestCase : public zxtest::Test {
  public:
-  InspectManagerTestCase() { loop_.StartThread("inspect_test_thread"); }
+  InspectManagerTestCase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("inspect_test_thread");
+    inspect_manager_ = std::make_unique<InspectManager>(loop_.dispatcher());
+  }
 
-  InspectManager& inspect_manager() { return inspect_manager_; }
+  InspectManager& inspect_manager() { return *inspect_manager_; }
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  InspectManager inspect_manager_{loop_.dispatcher()};
+  std::unique_ptr<InspectManager> inspect_manager_;
+  async::Loop loop_;
 };
 
 TEST_F(InspectManagerTestCase, DirectoryEntries) {
@@ -62,7 +65,7 @@ TEST_F(DeviceInspectTestCase, DeviceProperties) {
   ASSERT_NO_FATAL_FAILURES(
       AddDevice(platform_bus(), "test-device", 99 /* protocol id */, "", &test_index));
 
-  ReadInspect(coordinator().inspect_manager().inspector());
+  ReadInspect(coordinator()->inspect_manager().inspector());
 
   // Check properties of test-device
   auto* test_device = hierarchy().GetByPath({"devices", "test-device"});
@@ -101,7 +104,7 @@ TEST_F(DeviceInspectTestCase, DeviceProperties) {
 
 TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
   // Get the initial device count is incremented
-  ReadInspect(coordinator().inspect_manager().inspector());
+  ReadInspect(coordinator()->inspect_manager().inspector());
   const auto* device_count =
       hierarchy().node().get_property<inspect::UintPropertyValue>("device_count");
   ASSERT_TRUE(device_count);
@@ -113,7 +116,7 @@ TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
       AddDevice(platform_bus(), "test-device", 99 /* protocol id */, "", &test_index));
 
   // Check count incremented and device is listed
-  ReadInspect(coordinator().inspect_manager().inspector());
+  ReadInspect(coordinator()->inspect_manager().inspector());
   const auto* current_count =
       hierarchy().node().get_property<inspect::UintPropertyValue>("device_count");
   ASSERT_TRUE(current_count);
@@ -126,7 +129,7 @@ TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
   RemoveDevice(test_index);
 
   // Check count decremented and device is not listed
-  ReadInspect(coordinator().inspect_manager().inspector());
+  ReadInspect(coordinator()->inspect_manager().inspector());
   current_count = hierarchy().node().get_property<inspect::UintPropertyValue>("device_count");
   ASSERT_TRUE(current_count);
   EXPECT_EQ(initial_count, current_count->value());
@@ -140,7 +143,7 @@ TEST_F(DeviceInspectTestCase, PropertyChange) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "test-device", 0, "", &test_index));
 
   // Check that change in state gets reflected in inspect
-  ReadInspect(coordinator().inspect_manager().inspector());
+  ReadInspect(coordinator()->inspect_manager().inspector());
   auto* test_device = hierarchy().GetByPath({"devices", "test-device"});
   ASSERT_TRUE(test_device);
 
@@ -151,7 +154,7 @@ TEST_F(DeviceInspectTestCase, PropertyChange) {
   device(test_index)->device->set_state(Device::State::kResumed);
 
   // state: kResumed
-  ReadInspect(coordinator().inspect_manager().inspector());
+  ReadInspect(coordinator()->inspect_manager().inspector());
   test_device = hierarchy().GetByPath({"devices", "test-device"});
   ASSERT_TRUE(test_device);
   CheckProperty<inspect::StringPropertyValue>(test_device->node(), "state",
@@ -178,7 +181,7 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
   size_t length;
   {
     auto [dir, seqcount] =
-        coordinator().inspect_manager().devfs()->GetProtoDir(test_device_protocol);
+        coordinator()->inspect_manager().devfs()->GetProtoDir(test_device_protocol);
     ASSERT_NE(dir, nullptr);
     ASSERT_NE(seqcount, nullptr);
     ASSERT_EQ(*seqcount, 1);
@@ -198,7 +201,7 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
   // Check that protocol directory is removed and hence the inspect vmo is unlisted
   {
     auto [dir, seqcount] =
-        coordinator().inspect_manager().devfs()->GetProtoDir(test_device_protocol);
+        coordinator()->inspect_manager().devfs()->GetProtoDir(test_device_protocol);
     ASSERT_EQ(dir, nullptr);
   }
 }
@@ -221,7 +224,7 @@ TEST_F(InspectDevfsTestCase, NoPubProtocolVisibleInClassDirectory) {
   size_t length;
   {
     auto [dir, seqcount] =
-        coordinator().inspect_manager().devfs()->GetProtoDir(test_device_protocol);
+        coordinator()->inspect_manager().devfs()->GetProtoDir(test_device_protocol);
     ASSERT_NE(dir, nullptr);
     ASSERT_NE(seqcount, nullptr);
     ASSERT_EQ(*seqcount, 1);

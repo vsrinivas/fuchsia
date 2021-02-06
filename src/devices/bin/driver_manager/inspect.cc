@@ -154,8 +154,9 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
   return zx::ok();
 }
 
-InspectManager::InspectManager(async_dispatcher_t* dispatcher)
-    : inspect_vmo_(inspector_.DuplicateVmo()) {
+InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
+  inspect_vmo_ = inspect_.DuplicateVmo();
+
   diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   auto driver_manager_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   diagnostics_dir_->AddEntry("driver_manager", driver_manager_dir);

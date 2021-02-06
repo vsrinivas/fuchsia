@@ -102,13 +102,13 @@ void MultipleDeviceTestCase::CheckSuspendReceivedAndReply(const zx::channel& rem
 }
 
 void MultipleDeviceTestCase::SetUp() {
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator()));
+  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
 
   {
     zx::channel local;
     zx_status_t status = zx::channel::create(0, &local, &driver_host_remote_);
     ASSERT_OK(status);
-    driver_host_ = fbl::MakeRefCounted<DriverHost>(&coordinator(), std::move(local), zx::channel{},
+    driver_host_ = fbl::MakeRefCounted<DriverHost>(&coordinator_, std::move(local), zx::channel{},
                                                    zx::process{});
   }
 
@@ -116,7 +116,7 @@ void MultipleDeviceTestCase::SetUp() {
   ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
 
   // Set up the sys device proxy, inside of the driver_host
-  ASSERT_OK(coordinator().PrepareProxy(coordinator().sys_device(), driver_host_));
+  ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), driver_host_));
   coordinator_loop_.RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(driver_host_remote_, kSystemDriverPath,
                                                      &sys_proxy_coordinator_remote_,
@@ -133,8 +133,8 @@ void MultipleDeviceTestCase::SetUp() {
     status = zx::channel::create(0, &local2, &platform_bus_.coordinator_remote);
     ASSERT_OK(status);
 
-    status = coordinator().AddDevice(
-        coordinator().sys_device()->proxy(), std::move(local), std::move(local2),
+    status = coordinator_.AddDevice(
+        coordinator_.sys_device()->proxy(), std::move(local), std::move(local2),
         /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ {},
         /* args */ {}, /* invisible */ false, /* skip_autobind */ false, /* has_init */ false,
         /* always_init */ true,
@@ -146,8 +146,8 @@ void MultipleDeviceTestCase::SetUp() {
     coordinator_loop()->RunUntilIdle();
   }
 
-  coordinator().suspend_handler().set_fshost_admin_client(
-      admin_server().CreateClient(coordinator_loop_.dispatcher()));
+  coordinator_.set_fshost_admin_client(
+      coordinator_.admin_server_.CreateClient(coordinator_loop_.dispatcher()));
 }
 
 void MultipleDeviceTestCase::TearDown() {
@@ -166,14 +166,14 @@ void MultipleDeviceTestCase::TearDown() {
     coordinator_loop_.RunUntilIdle();
   }
 
-  coordinator().RemoveDevice(std::move(platform_bus_.device), /* forced */ false);
+  coordinator_.RemoveDevice(std::move(platform_bus_.device), /* forced */ false);
   coordinator_loop_.RunUntilIdle();
 
   // We need to explicitly remove this proxy device, because it holds a reference to devhost_.
   // Other devices will be removed via the DeviceState dtor.
-  fbl::RefPtr<Device> sys_proxy = coordinator().sys_device()->proxy();
+  fbl::RefPtr<Device> sys_proxy = coordinator_.sys_device()->proxy();
   if (sys_proxy) {
-    coordinator().RemoveDevice(std::move(sys_proxy), /* forced */ false);
+    coordinator_.RemoveDevice(std::move(sys_proxy), /* forced */ false);
     coordinator_loop_.RunUntilIdle();
   }
 
@@ -197,7 +197,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   status = zx::channel::create(0, &local2, &state.coordinator_remote);
   ASSERT_OK(status);
 
-  status = coordinator().AddDevice(
+  status = coordinator_.AddDevice(
       parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
       name, /* driver_path */ protocol_id, driver.data(), /* args */ {}, invisible,
       /* skip_autobind */ false, has_init, always_init, std::move(inspect),
@@ -233,7 +233,7 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
   status = zx::channel::create(0, &local2, &state.coordinator_remote);
   ASSERT_OK(status);
 
-  status = coordinator().AddDevice(
+  status = coordinator_.AddDevice(
       parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
       name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {}, /* invisible */ false,
       /* skip_autobind */ true, /* has_init */ false, /* always_init */ true,
@@ -251,7 +251,7 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
 
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
   auto& state = devices_[device_index];
-  ASSERT_OK(coordinator().RemoveDevice(state.device, false));
+  ASSERT_OK(coordinator_.RemoveDevice(state.device, false));
   state.device.reset();
   state.controller_remote.reset();
   state.coordinator_remote.reset();
@@ -272,17 +272,17 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
   if (!coordinator_loop_thread_running()) {
     coordinator_loop()->RunUntilIdle();
   }
-  ASSERT_EQ(vfs_exit_expected, admin_server().has_been_shutdown_);
+  ASSERT_EQ(vfs_exit_expected, coordinator_.admin_server_.has_been_shutdown_);
 }
 
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
-  DoSuspend(flags, [this](uint32_t flags) { coordinator().Suspend(flags); });
+  DoSuspend(flags, [this](uint32_t flags) { coordinator()->Suspend(flags); });
 }
 
 void MultipleDeviceTestCase::DoSuspendWithCallback(
     uint32_t flags, fit::function<void(zx_status_t status)> suspend_complete_cb) {
   DoSuspend(flags, [this, suspend_cb = std::move(suspend_complete_cb)](uint32_t flags) mutable {
-    coordinator().Suspend(flags, std::move(suspend_cb));
+    coordinator()->Suspend(flags, std::move(suspend_cb));
   });
 }
 
@@ -444,7 +444,7 @@ void MultipleDeviceTestCase::DoResume(
 
 void MultipleDeviceTestCase::DoResume(SystemPowerState target_state, ResumeCallback callback) {
   DoResume(target_state, [this, callback = std::move(callback)](SystemPowerState target_state) {
-    coordinator().Resume(target_state, callback);
+    coordinator()->Resume(target_state, callback);
   });
 }
 // Reads the request from |remote| and verifies whether it matches the expected Init request.

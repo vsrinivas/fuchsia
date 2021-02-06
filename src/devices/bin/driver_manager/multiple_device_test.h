@@ -45,17 +45,16 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
   bool has_been_shutdown_;
 };
 
-class CoordinatorForTest {
+class CoordinatorForTest : public Coordinator {
  public:
   CoordinatorForTest(CoordinatorConfig config, async_dispatcher_t* dispatcher)
-      : inspect_manager_(dispatcher),
-        coordinator_(std::move(config), &inspect_manager_, dispatcher) {}
+      : Coordinator(std::move(config), dispatcher) {}
 
-  Coordinator& coordinator() { return coordinator_; }
+  void set_fshost_admin_client(fidl::Client<llcpp::fuchsia::fshost::Admin> client) {
+    suspend_handler().set_fshost_admin_client(std::move(client));
+  }
 
- private:
-  InspectManager inspect_manager_;
-  Coordinator coordinator_;
+  MockFshostAdminServer admin_server_;
 };
 
 struct DeviceState {
@@ -97,17 +96,16 @@ class MultipleDeviceTestCase : public zxtest::Test {
   }
 
   explicit MultipleDeviceTestCase(bool enable_ephemeral = false)
-      : coordinator_for_test_(CreateConfig(mock_server_loop_.dispatcher(), &boot_args_,
-                                           &args_client_, enable_ephemeral),
-                              coordinator_loop_.dispatcher()) {}
+      : coordinator_(CreateConfig(mock_server_loop_.dispatcher(), &boot_args_, &args_client_,
+                                  enable_ephemeral),
+                     coordinator_loop_.dispatcher()) {}
 
   ~MultipleDeviceTestCase() override = default;
 
   async::Loop* coordinator_loop() { return &coordinator_loop_; }
   bool coordinator_loop_thread_running() { return coordinator_loop_thread_running_; }
   void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
-  Coordinator& coordinator() { return coordinator_for_test_.coordinator(); }
-  MockFshostAdminServer& admin_server() { return admin_server_; }
+  CoordinatorForTest* coordinator() { return &coordinator_; }
 
   const fbl::RefPtr<DriverHost>& driver_host() { return driver_host_; }
   const zx::channel& driver_host_remote() { return driver_host_remote_; }
@@ -182,8 +180,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   // for itself to respond to its requests.
   async::Loop mock_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  CoordinatorForTest coordinator_for_test_;
-  MockFshostAdminServer admin_server_;
+  CoordinatorForTest coordinator_;
 
   // The fake driver_host that the platform bus is put into
   fbl::RefPtr<DriverHost> driver_host_;
