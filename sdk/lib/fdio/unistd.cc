@@ -29,6 +29,7 @@
 
 #include <cstdarg>
 #include <ctime>
+#include <thread>
 
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -2014,8 +2015,14 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
 __EXPORT
 int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __restrict efds,
            struct timeval* __restrict tv) {
-  if (n > FD_SETSIZE || n < 1) {
+  if (n > FD_SETSIZE || n < 0) {
     return ERRNO(EINVAL);
+  }
+
+  if (n == 0) {
+    std::this_thread::sleep_for(std::chrono::microseconds(tv->tv_usec) +
+                                std::chrono::seconds(tv->tv_sec));
+    return 0;
   }
 
   fdio_t* ios[n];
