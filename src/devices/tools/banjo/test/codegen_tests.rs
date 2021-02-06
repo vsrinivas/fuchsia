@@ -38,6 +38,7 @@ mod c {
     codegen_test!(references, CBackend, ["banjo/references.test.banjo"], "c/references.h");
     codegen_test!(simple, CBackend, [zx!(), "banjo/simple.test.banjo"], "c/simple.h");
     codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");
+    codegen_test!(union, CBackend, ["banjo/union.test.banjo"], "c/union.h");
     codegen_test!(types, CBackend, ["banjo/types.test.banjo"], "c/types.h");
     codegen_test!(
         protocol_primitive,

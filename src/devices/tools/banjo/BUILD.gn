@@ -177,6 +177,8 @@ if (host_toolchain == current_toolchain) {
     ]
 
     inputs = [
+      "test/banjo/union.test.banjo",
+      "test/c/union.h",
       "test/banjo/binary.test.banjo",
       "test/c/binary.h",
       "test/banjo/buffer.test.banjo",
