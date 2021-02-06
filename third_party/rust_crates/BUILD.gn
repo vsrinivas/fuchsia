@@ -300,6 +300,10 @@ group("memchr") {
   deps = [ ":memchr-v2_3_3" ]
 }
 
+group("mockall") {
+  deps = [ ":mockall-v0_9_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("nix") {
     deps = [ ":nix-v0_18_0" ]
@@ -2650,6 +2654,29 @@ rust_library("difference-v2_0_0") {
   ]
 }
 
+rust_library("downcast-v0_10_0") {
+  crate_name = "downcast"
+  crate_root = "//third_party/rust_crates/vendor/downcast/src/lib.rs"
+  output_name = "downcast-417417cb956aacf6"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=417417cb956aacf6",
+    "-Cextra-filename=-417417cb956aacf6",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_library("either-v1_5_0") {
   crate_name = "either"
   crate_root = "//third_party/rust_crates/vendor/either/src/lib.rs"
@@ -2908,6 +2935,31 @@ rust_library("flate2-v1_0_14") {
   ]
 }
 
+rust_library("float-cmp-v0_8_0") {
+  crate_name = "float_cmp"
+  crate_root = "//third_party/rust_crates/vendor/float-cmp/src/lib.rs"
+  output_name = "float_cmp-25495b83f43346cf"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":num-traits-v0_2_11" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=25495b83f43346cf",
+    "-Cextra-filename=-25495b83f43346cf",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"num-traits\"",
+    "--cfg=feature=\"ratio\"",
+  ]
+}
+
 rust_library("fnv-v1_0_6") {
   crate_name = "fnv"
   crate_root = "//third_party/rust_crates/vendor/fnv/lib.rs"
@@ -2926,6 +2978,27 @@ rust_library("fnv-v1_0_6") {
     "--edition=2015",
     "-Cmetadata=aea2659b6e57ee72",
     "-Cextra-filename=-aea2659b6e57ee72",
+  ]
+}
+
+rust_library("fragile-v1_0_0") {
+  crate_name = "fragile"
+  crate_root = "//third_party/rust_crates/vendor/fragile/src/lib.rs"
+  output_name = "fragile-4fff0e17f0e7f677"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=4fff0e17f0e7f677",
+    "-Cextra-filename=-4fff0e17f0e7f677",
   ]
 }
 
@@ -4499,6 +4572,59 @@ rust_library("miow-v0_3_5") {
   ]
 }
 
+rust_library("mockall-v0_9_0") {
+  crate_name = "mockall"
+  crate_root = "//third_party/rust_crates/vendor/mockall/src/lib.rs"
+  output_name = "mockall-101dad7ffbea75df"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":downcast-v0_10_0" ]
+  deps += [ ":fragile-v1_0_0" ]
+  deps += [ ":lazy_static-v1_4_0" ]
+  deps += [ ":mockall_derive-v0_9_0($host_toolchain)" ]
+  deps += [ ":predicates-v1_0_7" ]
+  deps += [ ":predicates-tree-v1_0_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=101dad7ffbea75df",
+    "-Cextra-filename=-101dad7ffbea75df",
+  ]
+}
+
+rust_proc_macro("mockall_derive-v0_9_0") {
+  crate_name = "mockall_derive"
+  crate_root = "//third_party/rust_crates/vendor/mockall_derive/src/lib.rs"
+  output_name = "mockall_derive-6535f5e9d7922162"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":proc-macro2-v1_0_24" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_58" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=6535f5e9d7922162",
+    "-Cextra-filename=-6535f5e9d7922162",
+  ]
+}
+
 rust_library("multipart-v0_15_4") {
   crate_name = "multipart"
   crate_root = "//third_party/rust_crates/vendor/multipart/src/lib.rs"
@@ -4614,6 +4740,28 @@ rust_library("nom_locate-v2_0_0") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("normalize-line-endings-v0_3_0") {
+  crate_name = "normalize_line_endings"
+  crate_root =
+      "//third_party/rust_crates/vendor/normalize-line-endings/src/lib.rs"
+  output_name = "normalize_line_endings-4054253ee9a0f431"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=4054253ee9a0f431",
+    "-Cextra-filename=-4054253ee9a0f431",
   ]
 }
 
@@ -5599,6 +5747,81 @@ rust_library("ppv-lite86-v0_2_6") {
     "-Cextra-filename=-4f2afd05532d6926",
     "--cfg=feature=\"simd\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("predicates-v1_0_7") {
+  crate_name = "predicates"
+  crate_root = "//third_party/rust_crates/vendor/predicates/src/lib.rs"
+  output_name = "predicates-18699c217c61a73d"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":difference-v2_0_0" ]
+  deps += [ ":float-cmp-v0_8_0" ]
+  deps += [ ":normalize-line-endings-v0_3_0" ]
+  deps += [ ":predicates-core-v1_0_2" ]
+  deps += [ ":regex-v1_3_5" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=18699c217c61a73d",
+    "-Cextra-filename=-18699c217c61a73d",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"difference\"",
+    "--cfg=feature=\"float-cmp\"",
+    "--cfg=feature=\"normalize-line-endings\"",
+    "--cfg=feature=\"regex\"",
+  ]
+}
+
+rust_library("predicates-core-v1_0_2") {
+  crate_name = "predicates_core"
+  crate_root = "//third_party/rust_crates/vendor/predicates-core/src/lib.rs"
+  output_name = "predicates_core-9278ecd8b23c9da2"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=9278ecd8b23c9da2",
+    "-Cextra-filename=-9278ecd8b23c9da2",
+  ]
+}
+
+rust_library("predicates-tree-v1_0_2") {
+  crate_name = "predicates_tree"
+  crate_root = "//third_party/rust_crates/vendor/predicates-tree/src/lib.rs"
+  output_name = "predicates_tree-2fdd83d7979f6648"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":predicates-core-v1_0_2" ]
+  deps += [ ":treeline-v0_1_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2fdd83d7979f6648",
+    "-Cextra-filename=-2fdd83d7979f6648",
   ]
 }
 
@@ -9133,6 +9356,27 @@ rust_library("tracing-subscriber-v0_2_7") {
     "--cfg=feature=\"registry\"",
     "--cfg=feature=\"sharded-slab\"",
     "--cfg=feature=\"tracing-log\"",
+  ]
+}
+
+rust_library("treeline-v0_1_0") {
+  crate_name = "treeline"
+  crate_root = "//third_party/rust_crates/vendor/treeline/src/lib.rs"
+  output_name = "treeline-73b2c02cee81d97b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=73b2c02cee81d97b",
+    "-Cextra-filename=-73b2c02cee81d97b",
   ]
 }
 

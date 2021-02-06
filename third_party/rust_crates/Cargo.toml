@@ -76,6 +76,8 @@ maplit = "1.0"
 matches = "0.1.8"
 maybe-owned = "0.3.2"
 memchr = "2.0"
+# TODO(fxbug.dev/66092) limit to tests
+mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 num-derive = "0.2.4"
