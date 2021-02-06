@@ -501,7 +501,7 @@ if (is_kernel) {
   copy("gdb_extension") {
     visibility = [ ":*" ]
     sources = [ "scripts/zircon.elf-gdb.py" ]
-    outputs = [ "$target_out_dir/zircon.elf-gdb.py" ]
+    outputs = [ "$root_out_dir/zircon.elf-gdb.py" ]
   }
 
   # This needs to be in a config() rather than directly in the executable()
