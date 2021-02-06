@@ -7,6 +7,7 @@
 
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <functional>
 #include <map>
@@ -31,15 +32,30 @@ namespace block_client {
 // This class is not movable or copyable.
 class FakeBlockDevice : public BlockDevice {
  public:
-  using Hook = std::function<zx_status_t(const block_fifo_request_t&, const zx::vmo*)>;
-
-  FakeBlockDevice(uint64_t block_count, uint32_t block_size);
+  struct Config {
+    uint64_t block_count = 0;
+    uint64_t block_size = 0;
+    bool supports_trim = false;
+  };
+  explicit FakeBlockDevice(const Config&);
+  FakeBlockDevice(uint64_t block_count, uint32_t block_size)
+      : FakeBlockDevice({block_count, block_size, false}) {}
   FakeBlockDevice(const FakeBlockDevice&) = delete;
   FakeBlockDevice& operator=(const FakeBlockDevice&) = delete;
   FakeBlockDevice(FakeBlockDevice&& other) = delete;
   FakeBlockDevice& operator=(FakeBlockDevice&& other) = delete;
 
   virtual ~FakeBlockDevice() = default;
+
+  // Sets a callback which will be invoked for each FIFO request that is received by the block
+  // device. (If the FIFO request targets a VMO, |vmo| will be set as well.)
+  // Note that if any request in a FIFO transaction fails, the transaction is immediately aborted.
+  // In that case, the failing request will still be sent into the callback, but the other requests
+  // in the transaction may or may not also be sent into the callback. (In practice, requests are
+  // processed in order, so all requests after the first failing request wouldn't be processed.)
+  // Not thread safe.  Should be called only when the device is not active.
+  using Hook = std::function<zx_status_t(const block_fifo_request_t& request, const zx::vmo* vmo)>;
+  void set_hook(Hook hook) { hook_ = std::move(hook); }
 
   // When paused, this device will make FIFO operations block until Resume() is called. The device
   // is in the Resume() state by default.
@@ -63,6 +79,11 @@ class FakeBlockDevice : public BlockDevice {
   bool IsRegistered(vmoid_t vmoid) const;
 
   void GetStats(bool clear, fuchsia_hardware_block_BlockStats* out_stats);
+
+  // Wipes the device to a zeroed state.
+  void Wipe();
+
+  // BlockDevice interface
 
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const override {
     return ZX_ERR_NOT_SUPPORTED;
@@ -91,12 +112,6 @@ class FakeBlockDevice : public BlockDevice {
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
 
-  // Not thread safe.  Should be called only when the device is not active.
-  void set_hook(Hook hook) { hook_ = hook; }
-
-  // Wipes the device to a zeroed state.
-  void Wipe();
-
  protected:
   // Resizes the block device to be at least |new_size| bytes.
   void ResizeDeviceToAtLeast(uint64_t new_size);
@@ -121,8 +136,7 @@ class FakeBlockDevice : public BlockDevice {
   std::optional<uint64_t> write_block_limit_ __TA_GUARDED(lock_) = std::nullopt;
   uint64_t write_block_count_ __TA_GUARDED(lock_) = 0;
 
-  uint64_t block_count_ __TA_GUARDED(lock_) = 0;
-  uint32_t block_size_ __TA_GUARDED(lock_) = 0;
+  Config config_ __TA_GUARDED(lock_);
   uint32_t block_info_flags_ __TA_GUARDED(lock_) = 0;
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(lock_);
   zx::vmo block_device_ __TA_GUARDED(lock_);

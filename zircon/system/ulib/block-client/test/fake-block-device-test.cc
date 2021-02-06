@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/errors.h>
+
 #include <array>
 #include <iterator>
 
@@ -485,6 +487,34 @@ TEST(FakeBlockDeviceTest, WipeZeroesDevice) {
 
   EXPECT_EQ(vmo.read(&v, kBlockSizeDefault, 1), ZX_OK);
   EXPECT_EQ(v, 0);
+}
+
+TEST(FakeBlockDeviceTest, TrimFailsIfUnsupported) {
+  FakeBlockDevice device(
+      {.block_count = kBlockCountDefault, .block_size = kBlockSizeDefault, .supports_trim = false});
+
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_TRIM,
+      .vmoid = BLOCK_VMOID_INVALID,
+      .length = 1,
+      .vmo_offset = 0,
+      .dev_offset = 700,
+  };
+  EXPECT_EQ(device.FifoTransaction(&request, 1), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST(FakeBlockDeviceTest, TrimSucceedsIfSupported) {
+  FakeBlockDevice device(
+      {.block_count = kBlockCountDefault, .block_size = kBlockSizeDefault, .supports_trim = true});
+
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_TRIM,
+      .vmoid = BLOCK_VMOID_INVALID,
+      .length = 1,
+      .vmo_offset = 0,
+      .dev_offset = 700,
+  };
+  EXPECT_EQ(device.FifoTransaction(&request, 1), ZX_OK);
 }
 
 TEST(FakeFVMBlockDeviceTest, QueryVolume) {

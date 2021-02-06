@@ -14,9 +14,9 @@
 
 namespace block_client {
 
-FakeBlockDevice::FakeBlockDevice(uint64_t block_count, uint32_t block_size)
-    : block_count_(block_count), block_size_(block_size) {
-  ASSERT_OK(zx::vmo::create(block_count * block_size, ZX_VMO_RESIZABLE, &block_device_));
+FakeBlockDevice::FakeBlockDevice(const FakeBlockDevice::Config& config) : config_(config) {
+  ASSERT_OK(
+      zx::vmo::create(config_.block_count * config_.block_size, ZX_VMO_RESIZABLE, &block_device_));
 }
 
 void FakeBlockDevice::Pause() {
@@ -57,14 +57,14 @@ void FakeBlockDevice::SetInfoFlags(uint32_t flags) {
 
 void FakeBlockDevice::SetBlockCount(uint64_t block_count) {
   fbl::AutoLock lock(&lock_);
-  block_count_ = block_count;
-  AdjustBlockDeviceSizeLocked(block_count_ * block_size_);
+  config_.block_count = block_count;
+  AdjustBlockDeviceSizeLocked(config_.block_count * config_.block_size);
 }
 
 void FakeBlockDevice::SetBlockSize(uint32_t block_size) {
   fbl::AutoLock lock(&lock_);
-  block_size_ = block_size;
-  AdjustBlockDeviceSizeLocked(block_count_ * block_size_);
+  config_.block_size = block_size;
+  AdjustBlockDeviceSizeLocked(config_.block_count * config_.block_size);
 }
 
 bool FakeBlockDevice::IsRegistered(vmoid_t vmoid) const {
@@ -96,7 +96,7 @@ void FakeBlockDevice::AdjustBlockDeviceSizeLocked(uint64_t new_size) {
 
 void FakeBlockDevice::UpdateStats(bool success, zx::ticks start_tick,
                                   const block_fifo_request_t& op) {
-  stats_.UpdateStats(success, start_tick, op.opcode, block_size_ * op.length);
+  stats_.UpdateStats(success, start_tick, op.opcode, config_.block_size * op.length);
 }
 
 void FakeBlockDevice::WaitOnPaused() const __TA_REQUIRES(lock_) {
@@ -115,7 +115,7 @@ zx_status_t FakeBlockDevice::ReadBlock(uint64_t block_num, uint64_t fs_block_siz
 
 zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   fbl::AutoLock lock(&lock_);
-  const uint32_t block_size = block_size_;
+  const uint32_t block_size = config_.block_size;
   for (size_t i = 0; i < count; i++) {
     // Allow pauses to take effect between each issued operation. This will potentially allow other
     // threads to issue transactions since it releases the lock, just as the actual implementation
@@ -184,7 +184,13 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
       }
       case BLOCKIO_TRIM:
         UpdateStats(false, start_tick, requests[i]);
-        return ZX_ERR_NOT_SUPPORTED;
+        if (!config_.supports_trim) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (requests[i].vmoid != BLOCK_VMOID_INVALID) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+        break;
       case BLOCKIO_FLUSH:
         UpdateStats(true, start_tick, requests[i]);
         continue;
@@ -201,16 +207,16 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
 
 zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
   fbl::AutoLock lock(&lock_);
-  out_info->block_count = block_count_;
-  out_info->block_size = block_size_;
+  out_info->block_count = config_.block_count;
+  out_info->block_size = config_.block_size;
   out_info->flags = block_info_flags_;
   return ZX_OK;
 }
 
 void FakeBlockDevice::Wipe() {
   fbl::AutoLock lock(&lock_);
-  ZX_ASSERT(block_device_.op_range(ZX_VMO_OP_ZERO, 0, block_count_ * block_size_, nullptr, 0) ==
-            ZX_OK);
+  ZX_ASSERT(block_device_.op_range(ZX_VMO_OP_ZERO, 0, config_.block_count * config_.block_size,
+                                   nullptr, 0) == ZX_OK);
 }
 
 zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
