@@ -16,8 +16,8 @@ assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
 # main target is a source_set() for libc proper and the "unittests" target is a
 # libc_test() suitable for inclusion in libc-unittests and Zircon's core-tests.
 libc_components = [
-  "//zircon/third_party/scudo",
   "ctype",
+  "scudo",
 ]
 
 group("components") {

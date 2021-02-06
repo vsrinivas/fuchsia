@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_ULIB_C_SCUDO_GWP_ASAN_PLATFORM_TLS_SLOT_H_
+#define ZIRCON_SYSTEM_ULIB_C_SCUDO_GWP_ASAN_PLATFORM_TLS_SLOT_H_
+
 #include "threads_impl.h"
 
 // GWP_ASAN_PLATFORM_TLS_HEADER tells the gwp_asan sources to include this file
@@ -27,3 +30,5 @@ inline ThreadLocalPackedVariables* getThreadLocals() {
 }
 
 }  // namespace gwp_asan
+
+#endif  // ZIRCON_SYSTEM_ULIB_C_SCUDO_GWP_ASAN_PLATFORM_TLS_SLOT_H_

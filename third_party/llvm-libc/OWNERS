@@ -1,0 +1,3 @@
+include /zircon/system/ulib/c/OWNERS
+
+# COMPONENT: Zircon>ulib

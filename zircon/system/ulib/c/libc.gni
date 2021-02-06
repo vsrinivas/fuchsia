@@ -6,7 +6,7 @@
 libc = "//zircon/system/ulib/c"
 
 # Root source directory for llvm-libc.
-llvm_libc = "//zircon/third_party/llvm-libc"
+llvm_libc = "//third_party/llvm-libc/src"
 
 libc_configs = [
   # These configs are needed for the expectations of the source code,
@@ -45,6 +45,18 @@ libc_configs += [
 #     - Type: list(config)
 #     - Default: []
 #
+#   * non_test_deps
+#     - Optional: Extra deps to append for the main target but
+#     not the testonly target.
+#     - Type: list(label)
+#     - Default: []
+#
+#   * testonly_deps
+#     - Optional: Extra deps to append for the testonly target
+#     but not the main target.
+#     - Type: list(label)
+#     - Default: []
+#
 #   * dir
 #     - Optional: Directory prefix for $sources file names.
 #     - Type: dir
@@ -78,7 +90,9 @@ template("libc_source_set") {
                            [
                              "configs",
                              "dir",
+                             "non_test_deps",
                              "sources",
+                             "testonly_deps",
                              "public",
                              "visibility",
                            ])
@@ -116,13 +130,21 @@ template("libc_source_set") {
 
   source_set(target_name) {
     configs += libc_configs + set_configs
+    deps = []
     forward_variables_from(set_vars, "*")
+    if (defined(invoker.non_test_deps)) {
+      deps += invoker.non_test_deps
+    }
   }
 
   source_set("$target_name.testonly") {
     testonly = true
     configs += libc_testonly_configs + set_configs
+    deps = []
     forward_variables_from(set_vars, "*")
+    if (defined(invoker.testonly_deps)) {
+      deps += invoker.testonly_deps
+    }
   }
 }
 

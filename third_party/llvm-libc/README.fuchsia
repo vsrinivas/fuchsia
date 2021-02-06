@@ -1,0 +1,8 @@
+Name: llvm-libc
+URL: https://llvm.org/docs/Proposals/LLVMLibC.html
+License: Apache License, Version 2.0, with LLVM Exceptions
+License File: src/LICENSE.txt
+Upstream Git: https://github.com/llvm/llvm-project
+Description:
+
+llvm-libc is a retargetable implementation of the C standard library.
