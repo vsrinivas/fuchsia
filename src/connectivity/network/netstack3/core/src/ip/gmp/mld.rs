@@ -570,7 +570,7 @@ mod tests {
     ) {
         let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
         let mut buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
-            group_addr.into_addr(),
+            group_addr.get(),
             resp_time.try_into().unwrap(),
         )
         .into_serializer()
@@ -660,8 +660,8 @@ mod tests {
         // Ensure there is a RouterAlert HopByHopOption in our sent frame
         assert_eq!(&frame[40..48], &[58, 0, 5, 2, 0, 0, 1, 0]);
         ensure_ttl(&frame[..]);
-        ensure_dst_addr(&frame[..], dst.into_addr());
-        ensure_multicast_addr(&frame[..], multicast.into_addr());
+        ensure_dst_addr(&frame[..], dst.get());
+        ensure_multicast_addr(&frame[..], multicast.get());
     }
 
     #[test]

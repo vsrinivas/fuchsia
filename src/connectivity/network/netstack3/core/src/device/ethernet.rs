@@ -1720,7 +1720,7 @@ mod tests {
             Ipv6::MINIMUM_LINK_MTU.into(),
         )
         .build::<DummyInstant>();
-        let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.into_addr());
+        let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.get());
         state.add_pending_frame(ip, Buf::new(vec![1], ..));
         state.add_pending_frame(ip, Buf::new(vec![2], ..));
         state.add_pending_frame(ip, Buf::new(vec![3], ..));

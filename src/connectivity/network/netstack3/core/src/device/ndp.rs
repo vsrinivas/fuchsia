@@ -2658,7 +2658,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // Set the link address and mark the neighbor entry as stale
                     // if we either create it, or updated an existing one, as
                     // per RFC 4861 section 6.2.6.
-                    ndp_state.neighbors.set_link_address(src_ip.into_addr(), link_addr, false);
+                    ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
                 }
 
                 if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
@@ -2909,7 +2909,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         // Set the link address and mark it as stale if we
                         // either created the neighbor entry, or updated an
                         // existing one.
-                        ndp_state.neighbors.set_link_address(src_ip.into_addr(), link_addr, false);
+                        ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
                     }
                     NdpOption::MTU(mtu) => {
                         trace!("receive_ndp_packet_inner: mtu option with mtu = {:?}", mtu);
@@ -3341,7 +3341,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // create the neighbor entry, or updated an existing one, as
                     // per RFC 4861 section 7.2.3.
                     ctx.get_state_mut_with(device_id).neighbors.set_link_address(
-                        src_ip.into_addr(),
+                        src_ip.get(),
                         ll,
                         false,
                     );
@@ -3354,13 +3354,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                 // Finally we ought to reply to the Neighbor Solicitation with a
                 // Neighbor Advertisement.
-                send_neighbor_advertisement(
-                    ctx,
-                    device_id,
-                    true,
-                    *target_address,
-                    src_ip.into_addr(),
-                );
+                send_neighbor_advertisement(ctx, device_id, true, *target_address, src_ip.get());
             } else {
                 trace!(
                     "receive_ndp_packet_inner: Received NDP NS: sending NA to all nodes multicast"
@@ -3407,7 +3401,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             let ndp_state = ctx.get_state_mut_with(device_id);
 
             let neighbor_state = if let Some(state) =
-                ndp_state.neighbors.get_neighbor_state_mut(&src_ip.into_addr())
+                ndp_state.neighbors.get_neighbor_state_mut(&src_ip.get())
             {
                 state
             } else {
@@ -3450,20 +3444,19 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         address
                     );
                     ndp_state.neighbors.set_link_address(
-                        src_ip.into_addr(),
+                        src_ip.get(),
                         address,
                         message.solicited_flag(),
                     );
 
                     // Cancel the resolution timeout.
                     ctx.cancel_timer(
-                        NdpTimerId::new_link_address_resolution(device_id, src_ip.into_addr())
-                            .into(),
+                        NdpTimerId::new_link_address_resolution(device_id, src_ip.get()).into(),
                     );
 
                     // Send any packets queued for the neighbor awaiting address
                     // resolution.
-                    ctx.address_resolved(device_id, &src_ip.into_addr(), address);
+                    ctx.address_resolved(device_id, &src_ip.get(), address);
                 } else {
                     trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
                     return;

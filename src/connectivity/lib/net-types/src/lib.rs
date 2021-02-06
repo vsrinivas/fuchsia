@@ -46,13 +46,19 @@ pub trait Witness<A>: AsRef<A> + Sized + sealed::Sealed {
         Self::new(addr.into_addr())
     }
 
-    /// Get a clone of the address.
+    // In a previous version of this code, we did `fn get(self) -> A where Self:
+    // Copy` (taking `self` by value and using `where Self: Copy`). That felt
+    // marginally cleaner, but it turns out that there are cases in which the
+    // user only has access to a reference and still wants to be able to call
+    // `get` without having to do the ugly `(*addr).get()`.
+
+    /// Gets a copy of the address.
     #[inline]
     fn get(&self) -> A
     where
-        A: Clone,
+        A: Copy,
     {
-        self.as_ref().clone()
+        *self.as_ref()
     }
 
     /// Consumes this witness and returns the contained `A`.

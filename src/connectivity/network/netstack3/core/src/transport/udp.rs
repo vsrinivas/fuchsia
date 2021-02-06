@@ -718,8 +718,8 @@ pub fn send_udp_conn<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx.send_frame(
         IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
-            local_ip.into_addr(),
-            remote_ip.into_addr(),
+            local_ip.get(),
+            remote_ip.get(),
             Some(local_port),
             remote_port,
         )),
@@ -791,8 +791,8 @@ pub fn send_udp_listener<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx.send_frame(
         IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
-            local_ip.into_addr(),
-            remote_ip.into_addr(),
+            local_ip.get(),
+            remote_ip.get(),
             Some(local_port),
             remote_port,
         )),
@@ -1115,7 +1115,7 @@ mod tests {
 
     impl<I: TestIpExt> TransportIpContext<I> for DummyContext<I> {
         fn is_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
-            local_ip::<I>().into_addr() == addr || self.get_ref().extra_local_addrs.contains(&addr)
+            local_ip::<I>().get() == addr || self.get_ref().extra_local_addrs.contains(&addr)
         }
 
         fn local_address_for_remote(
@@ -1255,8 +1255,8 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
-            remote_ip.into_addr(),
-            local_ip.into_addr(),
+            remote_ip.get(),
+            local_ip.get(),
             NonZeroU16::new(200).unwrap(),
             NonZeroU16::new(100).unwrap(),
             &body[..],
@@ -1266,8 +1266,8 @@ mod tests {
         assert_eq!(listen_data.len(), 1);
         let pkt = &listen_data[0];
         assert_eq!(pkt.listener, listener);
-        assert_eq!(pkt.src_ip, remote_ip.into_addr());
-        assert_eq!(pkt.dst_ip, local_ip.into_addr());
+        assert_eq!(pkt.src_ip, remote_ip.get());
+        assert_eq!(pkt.dst_ip, local_ip.get());
         assert_eq!(pkt.src_port.unwrap().get(), 200);
         assert_eq!(pkt.body, &body[..]);
 
@@ -1298,11 +1298,9 @@ mod tests {
             assert_eq!(meta.dst_ip, remote_ip);
             assert_eq!(meta.proto, IpProto::Udp);
             let mut buf = &frame_body[..];
-            let packet = UdpPacket::parse(
-                &mut buf,
-                UdpParseArgs::new(meta.src_ip.into_addr(), meta.dst_ip.into_addr()),
-            )
-            .expect("Parsed sent UDP packet");
+            let packet =
+                UdpPacket::parse(&mut buf, UdpParseArgs::new(meta.src_ip.get(), meta.dst_ip.get()))
+                    .expect("Parsed sent UDP packet");
             assert_eq!(packet.src_port().unwrap().get(), 100);
             assert_eq!(packet.dst_port().get(), 200);
             assert_eq!(packet.body(), &body[..]);
@@ -1325,8 +1323,8 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
-            remote_ip.into_addr(),
-            local_ip.into_addr(),
+            remote_ip.get(),
+            local_ip.get(),
             NonZeroU16::new(200).unwrap(),
             NonZeroU16::new(100).unwrap(),
             &body[..],
@@ -1359,8 +1357,8 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
-            remote_ip.into_addr(),
-            local_ip.into_addr(),
+            remote_ip.get(),
+            local_ip.get(),
             NonZeroU16::new(200).unwrap(),
             NonZeroU16::new(100).unwrap(),
             &body[..],
@@ -1385,11 +1383,9 @@ mod tests {
         assert_eq!(meta.dst_ip, remote_ip);
         assert_eq!(meta.proto, IpProto::Udp);
         let mut buf = &frame_body[..];
-        let packet = UdpPacket::parse(
-            &mut buf,
-            UdpParseArgs::new(meta.src_ip.into_addr(), meta.dst_ip.into_addr()),
-        )
-        .expect("Parsed sent UDP packet");
+        let packet =
+            UdpPacket::parse(&mut buf, UdpParseArgs::new(meta.src_ip.get(), meta.dst_ip.get()))
+                .expect("Parsed sent UDP packet");
         assert_eq!(packet.src_port().unwrap().get(), 100);
         assert_eq!(packet.dst_port().get(), 200);
         assert_eq!(packet.body(), &body[..]);
@@ -1559,11 +1555,9 @@ mod tests {
         assert_eq!(meta.dst_ip, remote_ip);
         assert_eq!(meta.proto, IpProto::Udp);
         let mut buf = &frame_body[..];
-        let packet = UdpPacket::parse(
-            &mut buf,
-            UdpParseArgs::new(meta.src_ip.into_addr(), meta.dst_ip.into_addr()),
-        )
-        .expect("Parsed sent UDP packet");
+        let packet =
+            UdpPacket::parse(&mut buf, UdpParseArgs::new(meta.src_ip.get(), meta.dst_ip.get()))
+                .expect("Parsed sent UDP packet");
         assert_eq!(packet.src_port().unwrap().get(), 100);
         assert_eq!(packet.dst_port().get(), 200);
         assert_eq!(packet.body(), &body[..]);
@@ -1724,8 +1718,8 @@ mod tests {
         let body_conn1 = [1, 1, 1, 1];
         receive_udp_packet(
             &mut ctx,
-            remote_ip_a.into_addr(),
-            local_ip.into_addr(),
+            remote_ip_a.get(),
+            local_ip.get(),
             remote_port_a,
             local_port_d,
             &body_conn1[..],
@@ -1733,8 +1727,8 @@ mod tests {
         let body_conn2 = [2, 2, 2, 2];
         receive_udp_packet(
             &mut ctx,
-            remote_ip_b.into_addr(),
-            local_ip.into_addr(),
+            remote_ip_b.get(),
+            local_ip.get(),
             remote_port_a,
             local_port_d,
             &body_conn2[..],
@@ -1742,8 +1736,8 @@ mod tests {
         let body_list1 = [3, 3, 3, 3];
         receive_udp_packet(
             &mut ctx,
-            remote_ip_a.into_addr(),
-            local_ip.into_addr(),
+            remote_ip_a.get(),
+            local_ip.get(),
             remote_port_a,
             local_port_a,
             &body_list1[..],
@@ -1751,8 +1745,8 @@ mod tests {
         let body_list2 = [4, 4, 4, 4];
         receive_udp_packet(
             &mut ctx,
-            remote_ip_a.into_addr(),
-            local_ip.into_addr(),
+            remote_ip_a.get(),
+            local_ip.get(),
             remote_port_a,
             local_port_b,
             &body_list2[..],
@@ -1760,8 +1754,8 @@ mod tests {
         let body_wildcard_list = [5, 5, 5, 5];
         receive_udp_packet(
             &mut ctx,
-            remote_ip_a.into_addr(),
-            local_ip.into_addr(),
+            remote_ip_a.get(),
+            local_ip.get(),
             remote_port_a,
             local_port_c,
             &body_wildcard_list[..],
@@ -1780,22 +1774,22 @@ mod tests {
         assert_eq!(list_packets.len(), 3);
         let pkt = &list_packets[0];
         assert_eq!(pkt.listener, list1);
-        assert_eq!(pkt.src_ip, remote_ip_a.into_addr());
-        assert_eq!(pkt.dst_ip, local_ip.into_addr());
+        assert_eq!(pkt.src_ip, remote_ip_a.get());
+        assert_eq!(pkt.dst_ip, local_ip.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port_a);
         assert_eq!(pkt.body, &body_list1[..]);
 
         let pkt = &list_packets[1];
         assert_eq!(pkt.listener, list2);
-        assert_eq!(pkt.src_ip, remote_ip_a.into_addr());
-        assert_eq!(pkt.dst_ip, local_ip.into_addr());
+        assert_eq!(pkt.src_ip, remote_ip_a.get());
+        assert_eq!(pkt.dst_ip, local_ip.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port_a);
         assert_eq!(pkt.body, &body_list2[..]);
 
         let pkt = &list_packets[2];
         assert_eq!(pkt.listener, wildcard_list);
-        assert_eq!(pkt.src_ip, remote_ip_a.into_addr());
-        assert_eq!(pkt.dst_ip, local_ip.into_addr());
+        assert_eq!(pkt.src_ip, remote_ip_a.get());
+        assert_eq!(pkt.dst_ip, local_ip.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port_a);
         assert_eq!(pkt.body, &body_wildcard_list[..]);
     }
@@ -1818,8 +1812,8 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
-            remote_ip_a.into_addr(),
-            local_ip_a.into_addr(),
+            remote_ip_a.get(),
+            local_ip_a.get(),
             remote_port,
             listener_port,
             &body[..],
@@ -1827,8 +1821,8 @@ mod tests {
         // Receive into a different local IP.
         receive_udp_packet(
             &mut ctx,
-            remote_ip_b.into_addr(),
-            local_ip_b.into_addr(),
+            remote_ip_b.get(),
+            local_ip_b.get(),
             remote_port,
             listener_port,
             &body[..],
@@ -1839,14 +1833,14 @@ mod tests {
         assert_eq!(listen_packets.len(), 2);
         let pkt = &listen_packets[0];
         assert_eq!(pkt.listener, listener);
-        assert_eq!(pkt.src_ip, remote_ip_a.into_addr());
-        assert_eq!(pkt.dst_ip, local_ip_a.into_addr());
+        assert_eq!(pkt.src_ip, remote_ip_a.get());
+        assert_eq!(pkt.dst_ip, local_ip_a.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port);
         assert_eq!(pkt.body, &body[..]);
         let pkt = &listen_packets[1];
         assert_eq!(pkt.listener, listener);
-        assert_eq!(pkt.src_ip, remote_ip_b.into_addr());
-        assert_eq!(pkt.dst_ip, local_ip_b.into_addr());
+        assert_eq!(pkt.src_ip, remote_ip_b.get());
+        assert_eq!(pkt.dst_ip, local_ip_b.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port);
         assert_eq!(pkt.body, &body[..]);
     }

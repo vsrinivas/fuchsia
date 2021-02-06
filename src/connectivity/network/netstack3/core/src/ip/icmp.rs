@@ -1045,7 +1045,7 @@ impl<
         );
 
         let packet = match buffer
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.into_addr(), dst_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), dst_ip))
         {
             Ok(packet) => packet,
             Err(_) => return Ok(()), // TODO(joshlf): Do something else here?
@@ -1087,7 +1087,7 @@ impl<
                 if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                     let id = echo_reply.message().id();
                     let seq = echo_reply.message().seq();
-                    receive_icmp_echo_reply(ctx, src_ip.into_addr(), dst_ip, id, seq, buffer);
+                    receive_icmp_echo_reply(ctx, src_ip.get(), dst_ip, id, seq, buffer);
                 }
             }
             Icmpv6Packet::Ndp(packet) => ctx.receive_ndp_packet(
@@ -1111,7 +1111,7 @@ impl<
                     // per IPv6 RFC 8200, must not happen).
                     ctx.update_pmtu_if_less(
                         dst_ip.get(),
-                        src_ip.into_addr(),
+                        src_ip.get(),
                         packet_too_big.message().mtu(),
                     );
                 }
@@ -2143,7 +2143,7 @@ mod tests {
         let buffer = Buf::new(body, ..)
             .encapsulate(<I as IpExt>::PacketBuilder::new(
                 *I::DUMMY_CONFIG.remote_ip,
-                dst_ip.into_addr(),
+                dst_ip.get(),
                 ttl,
                 proto,
             ))
@@ -3314,7 +3314,7 @@ mod tests {
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>::receive_ip_packet(
                 &mut ctx,
                 Some(DummyDeviceId),
-                DUMMY_CONFIG_V6.remote_ip.into_addr().try_into().unwrap(),
+                DUMMY_CONFIG_V6.remote_ip.get().try_into().unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
                 Buf::new(original_packet, ..)
                     .encapsulate(IcmpPacketBuilder::new(
