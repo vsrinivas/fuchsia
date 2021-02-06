@@ -39,10 +39,10 @@ enum SdmmcTiming : uint8 {
 
 union SdmmcBuffer {
     /// The ID of a VMO that was previously registered.
-    uint32 vmo_id;
+    1: uint32 vmo_id;
     /// An unregistered VMO of which the protocol implementation does not take ownership. The VMO is
     /// pinned upon entering Request and is unpinned before returning.
-    handle<vmo> vmo;
+    2: handle<vmo> vmo;
 };
 
 enum SdmmcBufferType : uint32 {

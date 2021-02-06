@@ -34,8 +34,8 @@ struct Ieee80211HtCapabilitiesSupportedMcsSetFields {
 
 [Packed]
 union Ieee80211HtCapabilitiesSupportedMcsSet {
-    array<uint8>:16 bytes;
-    Ieee80211HtCapabilitiesSupportedMcsSetFields fields;
+    1: array<uint8>:16 bytes;
+    2: Ieee80211HtCapabilitiesSupportedMcsSetFields fields;
 };
 
 /// The HT capabilities element, as defined in 9.4.2.56.

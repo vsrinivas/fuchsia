@@ -664,8 +664,8 @@ struct WlanifApMlmeStats {
 };
 
 union StatsUnion {
-    WlanifClientMlmeStats client_mlme_stats;
-    WlanifApMlmeStats ap_mlme_stats;
+    1: WlanifClientMlmeStats client_mlme_stats;
+    2: WlanifApMlmeStats ap_mlme_stats;
 };
 
 struct WlanifMlmeStats {

@@ -38,8 +38,8 @@ union WlanphyCountry {
     /// ISO Alpha-2 takes two octet alphabet characters.
     /// This needs to be expanded if at least one WLAN device driver or firmware
     /// requires more than two octets.
-    array<uint8>:WLANPHY_ALPHA2_LEN alpha2;
-    uint16 val;
+    1: array<uint8>:WLANPHY_ALPHA2_LEN alpha2;
+    2: uint16 val;
 };
 
 [BanjoLayout = "ddk-protocol"]

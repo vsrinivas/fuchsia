@@ -180,11 +180,11 @@ struct BlockTrim {
 
 union BlockOp {
     /// All Commands
-    uint32 command;
+    1: uint32 command;
 
     /// Read and Write ops use rw for parameters.
-    BlockReadWrite rw;
-    BlockTrim trim;
+    2: BlockReadWrite rw;
+    3: BlockTrim trim;
 };
 
 /// Performs a regular data read or write from the device. The operation may

@@ -64,9 +64,9 @@ struct CursorInfo {
 
 union Panel {
     /// The bus_id to use to read this display's edid from the device's i2c protocol.
-    uint32 i2c_bus_id;
+    1: uint32 i2c_bus_id;
     /// The display's parameters if an edid is not present.
-    DisplayParams params;
+    2: DisplayParams params;
 };
 
 /// A structure containing information a connected display.
@@ -231,9 +231,9 @@ enum LayerType : uint32 {
 };
 
 union LayerConfig {
-    PrimaryLayer primary;
-    CursorLayer cursor;
-    ColorLayer color;
+    1: PrimaryLayer primary;
+    2: CursorLayer cursor;
+    3: ColorLayer color;
 };
 
 struct Layer {

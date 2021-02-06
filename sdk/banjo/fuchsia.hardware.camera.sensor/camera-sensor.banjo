@@ -11,12 +11,12 @@ const uint32 EXTENSION_VALUE_ARRAY_LEN = 32;
 
 /// A type used to distinguish extension parameters.
 union ExtensionValueDataType {
-    int32 int_value;
-    uint32 uint_value;
-    array<uint8>:EXTENSION_VALUE_ARRAY_LEN byte_array_value;
-    fuchsia.hardware.camera.Dimensions dimension_value;
-    fuchsia.hardware.camera.MinMaxConstraints constraints_value;
-    array<FrameRateInfo>:EXTENSION_VALUE_ARRAY_LEN frame_rate_info_value;
+    1: int32 int_value;
+    2: uint32 uint_value;
+    3: array<uint8>:EXTENSION_VALUE_ARRAY_LEN byte_array_value;
+    4: fuchsia.hardware.camera.Dimensions dimension_value;
+    5: fuchsia.hardware.camera.MinMaxConstraints constraints_value;
+    6: array<FrameRateInfo>:EXTENSION_VALUE_ARRAY_LEN frame_rate_info_value;
 };
 
 enum PixelType : uint8 {

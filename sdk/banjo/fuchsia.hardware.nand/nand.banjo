@@ -96,13 +96,13 @@ struct NandErase {
 
 union NandOperation {
     /// All Commands.
-    NandOp command;
+    1: NandOp command;
 
     /// NAND_OP_READ, NAND_OP_WRITE.
-    NandReadWrite rw;
+    2: NandReadWrite rw;
 
     /// NAND_OP_ERASE.
-    NandErase erase;
+    3: NandErase erase;
 };
 
 [BanjoLayout = "ddk-protocol"]

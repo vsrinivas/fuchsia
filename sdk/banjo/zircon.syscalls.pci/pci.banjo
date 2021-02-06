@@ -5,8 +5,8 @@
 library zircon.syscalls.pci;
 
 union PciField {
-    uint64 addr;
-    handle<vmo> @handle;
+    1: uint64 addr;
+    2: handle<vmo> @handle;
 };
 
 struct ZxPciBar {

@@ -58,8 +58,8 @@ struct Usb3Payload {
 
 [Packed]
 union UsbHubDescriptorPayload {
-  Usb2Payload hs;
-  Usb3Payload ss;
+  1: Usb2Payload hs;
+  2: Usb3Payload ss;
 };
 
 [Packed, PreserveCNames]

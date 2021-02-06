@@ -128,7 +128,7 @@ struct NoInfo {
 /// Extra frame sidecar metadata stored in [`fuchsia.hardware.network.device/BufferMetadata`].
 union FrameInfo {
   /// No extra frame metadata.
-  NoInfo no_info;
+  1: NoInfo no_info;
 };
 
 /// Metadata associated with a [`fuchsia.hardware.network.device/TxBuffer`] or
