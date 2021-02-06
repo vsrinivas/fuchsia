@@ -78,6 +78,36 @@ impl Thread {
         )
         .map(|_| info)
     }
+
+    pub fn read_state_general_regs(&self) -> Result<sys::zx_thread_state_general_regs_t, Status> {
+        let mut state = sys::zx_thread_state_general_regs_t::default();
+        let thread_raw = self.raw_handle();
+        let status = unsafe {
+            sys::zx_thread_read_state(
+                thread_raw,
+                sys::ZX_THREAD_STATE_GENERAL_REGS,
+                &mut state as *mut _ as *mut u8,
+                std::mem::size_of_val(&state),
+            )
+        };
+        ok(status).map(|_| state)
+    }
+
+    pub fn write_state_general_regs(
+        &self,
+        state: sys::zx_thread_state_general_regs_t,
+    ) -> Result<(), Status> {
+        let thread_raw = self.raw_handle();
+        let status = unsafe {
+            sys::zx_thread_write_state(
+                thread_raw,
+                sys::ZX_THREAD_STATE_GENERAL_REGS,
+                &state as *const _ as *const u8,
+                std::mem::size_of_val(&state),
+            )
+        };
+        ok(status)
+    }
 }
 
 #[cfg(test)]

@@ -32,6 +32,7 @@ pub type zx_ticks_t = i64;
 pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_vm_option_t = u32;
+pub type zx_thread_state_topic_t = u32;
 
 // TODO: magically coerce this to &`static str somehow?
 #[repr(C)]
@@ -362,6 +363,20 @@ multiconst!(u32, [
 
     // How an exception should be handled.
     ZX_PROP_EXCEPTION_STRATEGY        = 18;
+]);
+
+// Value for ZX_THREAD_STATE_SINGLE_STEP. The value can be 0 (not single-stepping), or 1
+// (single-stepping). Other values will give ZX_ERR_INVALID_ARGS.
+pub type zx_thread_state_single_step_t = u32;
+
+// Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
+multiconst!(zx_thread_state_topic_t, [
+    ZX_THREAD_STATE_GENERAL_REGS       = 0;
+    ZX_THREAD_STATE_FP_REGS            = 1;
+    ZX_THREAD_STATE_VECTOR_REGS        = 2;
+    // No 3 at the moment.
+    ZX_THREAD_STATE_DEBUG_REGS         = 4;
+    ZX_THREAD_STATE_SINGLE_STEP        = 5;
 ]);
 
 multiconst!(zx_rsrc_kind_t, [
@@ -808,6 +823,44 @@ multiconst!(zx_exception_state_t, [
     ZX_EXCEPTION_STRATEGY_FIRST_CHANCE   = 0;
     ZX_EXCEPTION_STRATEGY_SECOND_CHANCE  = 1;
 ]);
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_thread_state_general_regs_t {
+    pub rax: u64,
+    pub rbx: u64,
+    pub rcx: u64,
+    pub rdx: u64,
+    pub rsi: u64,
+    pub rdi: u64,
+    pub rbp: u64,
+    pub rsp: u64,
+    pub r8: u64,
+    pub r9: u64,
+    pub r10: u64,
+    pub r11: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
+    pub rip: u64,
+    pub rflags: u64,
+    pub fs_base: u64,
+    pub gs_base: u64,
+}
+
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_thread_state_general_regs_t {
+    pub r: [u64; 30],
+    pub lr: u64,
+    pub sp: u64,
+    pub pc: u64,
+    pub cpsr: u64,
+    pub tpidr: u64,
+}
 
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
