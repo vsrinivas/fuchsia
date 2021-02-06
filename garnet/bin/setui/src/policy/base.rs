@@ -7,6 +7,7 @@ use crate::audio::policy::State;
 use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
+use crate::policy::base::response::Response;
 use crate::policy::policy_handler::PolicyHandler;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -69,6 +70,24 @@ impl PolicyInfo {
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[cfg(test)]
 pub struct UnknownInfo(pub bool);
+
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+pub enum Address {
+    Policy(PolicyType),
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum Payload {
+    Request(Request),
+    Response(Response),
+}
+
+/// `Role` defines grouping for responsibilities on the policy message hub.
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+pub enum Role {
+    /// This role indicates that the messenger handles and enacts policy requests.
+    PolicyHandler,
+}
 
 /// `Request` defines the request space for all policies handled by
 /// the Setting Service. Note that the actions that can be taken upon each

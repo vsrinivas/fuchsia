@@ -8,11 +8,10 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
 use crate::internal::core;
 use crate::internal::policy;
-use crate::internal::policy::Address;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base as policy_base;
 use crate::policy::base::{
-    BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
+    Address, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
 };
 use crate::policy::policy_handler::{
     EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
@@ -316,7 +315,7 @@ async fn test_policy_messages_passed_to_handler() {
     // Send a policy request to the policy proxy.
     let mut policy_send_receptor = policy_messenger
         .message(
-            policy::Payload::Request(policy_request),
+            policy_base::Payload::Request(policy_request),
             Audience::Address(Address::Policy(POLICY_TYPE)),
         )
         .send();
@@ -326,7 +325,7 @@ async fn test_policy_messages_passed_to_handler() {
         policy_send_receptor.next_payload().await.expect("policy response received");
 
     // Policy handler returned its response through the policy proxy, back to the client.
-    assert_eq!(policy_response, policy::Payload::Response(Ok(policy_payload)));
+    assert_eq!(policy_response, policy_base::Payload::Response(Ok(policy_payload)));
 }
 
 /// Verify that when the policy handler doesn't take any action on a setting request, it will
@@ -1053,14 +1052,14 @@ async fn test_multiple_messages() {
         // Send a policy request.
         let mut policy_send_receptor = policy_messenger
             .message(
-                policy::Payload::Request(policy_request.clone()),
+                policy_base::Payload::Request(policy_request.clone()),
                 Audience::Address(Address::Policy(POLICY_TYPE)),
             )
             .send();
 
         // Verify a policy response is returned each time.
         verify_payload(
-            policy::Payload::Response(Ok(policy_payload.clone())),
+            policy_base::Payload::Response(Ok(policy_payload.clone())),
             &mut policy_send_receptor,
             None,
         )
@@ -1140,14 +1139,14 @@ async fn test_multiple_messages_switchboard() {
         // Send a policy request.
         let mut policy_send_receptor = policy_messenger
             .message(
-                policy::Payload::Request(policy_request.clone()),
+                policy_base::Payload::Request(policy_request.clone()),
                 Audience::Address(Address::Policy(POLICY_TYPE)),
             )
             .send();
 
         // Verify a policy response is returned each time.
         verify_payload(
-            policy::Payload::Response(Ok(policy_payload.clone())),
+            policy_base::Payload::Response(Ok(policy_payload.clone())),
             &mut policy_send_receptor,
             None,
         )

@@ -5,9 +5,8 @@
 use fidl::endpoints::{Request, ServiceMarker};
 
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
-use crate::internal::policy::{Address, Payload, Role};
 use crate::message::base::{self, Audience};
-use crate::policy::base::PolicyType;
+use crate::policy::base::{Address, Payload, PolicyType, Role};
 use crate::ExitSender;
 use fuchsia_syslog::fx_log_err;
 

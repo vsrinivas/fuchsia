@@ -21,8 +21,7 @@ use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
 use crate::handler::base::Error;
 use crate::hanging_get_handler::Sender;
-use crate::internal::policy::{Address, Payload, Role};
-use crate::policy::base::{response, PolicyInfo, PolicyType, Request};
+use crate::policy::base::{response, Address, Payload, PolicyInfo, PolicyType, Request, Role};
 use crate::shutdown_responder_with_error;
 use crate::switchboard::base::FidlResponseErrorLogger;
 

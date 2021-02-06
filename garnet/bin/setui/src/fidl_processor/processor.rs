@@ -20,6 +20,7 @@ use crate::internal::switchboard;
 use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::{Address, Payload, Role};
 use crate::message::messenger::MessengerClient;
+use crate::policy::base as policy_base;
 use crate::ExitSender;
 use std::hash::Hash;
 
@@ -181,7 +182,8 @@ pub struct PolicyFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    base_processor: BaseFidlProcessor<S, policy::Payload, policy::Address, policy::Role>,
+    base_processor:
+        BaseFidlProcessor<S, policy_base::Payload, policy_base::Address, policy_base::Role>,
 }
 
 impl<S> PolicyFidlProcessor<S>
@@ -195,7 +197,12 @@ where
     /// Registers a fidl processing unit for policy requests.
     pub async fn register(
         &mut self,
-        callback: PolicyRequestCallback<S, policy::Payload, policy::Address, policy::Role>,
+        callback: PolicyRequestCallback<
+            S,
+            policy_base::Payload,
+            policy_base::Address,
+            policy_base::Role,
+        >,
     ) {
         let processing_unit = Box::new(PolicyProcessingUnit::<S>::new(callback));
         self.base_processor.processing_units.push(processing_unit);

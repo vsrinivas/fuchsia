@@ -24,6 +24,8 @@ use crate::base::SettingType;
 use crate::handler::base as handler;
 use crate::handler::setting_handler as controller;
 use crate::message_hub_definition;
+use crate::policy::base as policy;
+use crate::policy::base::PolicyType;
 
 message_hub_definition!(Payload, Address, Role);
 
@@ -35,6 +37,7 @@ message_hub_definition!(Payload, Address, Role);
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Handler(SettingType),
+    PolicyHandler(PolicyType),
 }
 
 /// The types of data that can be sent through the service [`MessageHub`]. This
@@ -49,6 +52,10 @@ pub enum Payload {
     /// The communication to and from a controller to handle requests and
     /// lifetime.
     Controller(controller::Payload),
+    /// Policy payloads contain communication to and from policy handlers, including general
+    /// requests and responses served by any policy as well as domain-specific requests and
+    /// responses defined for individual policies.
+    Policy(policy::Payload),
 }
 
 /// A trait implemented by payloads for extracting the payload and associated

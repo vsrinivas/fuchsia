@@ -10,9 +10,11 @@ use crate::base::SettingType;
 use crate::handler::base::{Error as HandlerError, Payload, Request, Response};
 use crate::internal::core;
 use crate::internal::policy;
-use crate::internal::policy::{Address, Role};
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
-use crate::policy::base::{PolicyHandlerFactory, PolicyType, Request as PolicyRequest};
+use crate::policy::base as policy_base;
+use crate::policy::base::{
+    Address, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
+};
 use crate::policy::policy_handler::{
     EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
 };
@@ -138,7 +140,7 @@ impl PolicyProxy {
                     // Handle policy messages.
                     policy_event = policy_fuse.select_next_some() => {
                         if let MessageEvent::Message(
-                            policy::Payload::Request(request),
+                            policy_base::Payload::Request(request),
                             message_client,
                         ) = policy_event
                         {
@@ -197,7 +199,7 @@ impl PolicyProxy {
         message_client: policy::message::MessageClient,
     ) {
         let response = self.policy_handler.handle_policy_request(request).await;
-        message_client.reply(policy::Payload::Response(response)).send();
+        message_client.reply(policy_base::Payload::Response(response)).send();
     }
 
     async fn process_settings_event(&mut self, event: service::message::MessageEvent) {
