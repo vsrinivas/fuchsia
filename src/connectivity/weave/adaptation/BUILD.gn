@@ -66,10 +66,6 @@ openweave_adaptation_layer("adaptation") {
 
   # TODO(66826): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  # TODO(66404): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs = [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 config("adaptation_config") {

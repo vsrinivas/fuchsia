@@ -276,7 +276,7 @@ zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id, std::vector<HostPor
 // Watcher class definitions ---------------------------------------------------
 
 StackImpl::PairingStateWatcherImpl::PairingStateWatcherImpl(StackImpl* stack)
-    : stack_(stack), first_call_(true) {}
+    : stack_(stack), dirty_(false), first_call_(true) {}
 
 void StackImpl::PairingStateWatcherImpl::WatchPairingState(WatchPairingStateCallback callback) {
   // Check to make sure there isn't a waiting callback already.
@@ -332,7 +332,7 @@ zx_status_t StackImpl::PairingStateWatcherImpl::DoCallback() {
 }
 
 StackImpl::SvcDirectoryWatcherImpl::SvcDirectoryWatcherImpl(StackImpl* stack, uint64_t endpoint_id)
-    : stack_(stack), first_call_(true), endpoint_id_(endpoint_id) {}
+    : stack_(stack), dirty_(false), first_call_(true), endpoint_id_(endpoint_id) {}
 
 void StackImpl::SvcDirectoryWatcherImpl::WatchServiceDirectory(
     WatchServiceDirectoryCallback callback) {
