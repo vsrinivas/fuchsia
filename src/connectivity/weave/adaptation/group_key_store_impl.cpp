@@ -89,6 +89,11 @@ WEAVE_ERROR GroupKeyStoreImpl::StoreGroupKey(const WeaveGroupKey& key) {
   uint8_t key_data[WeaveGroupKey::MaxKeySize];
   uint32_t key_data_len = key.KeyLen;
   char formed_key_name[kGroupKeyNameMaxSize + 1];
+
+  if (key.KeyLen > sizeof(key_data)) {
+    return WEAVE_ERROR_INVALID_ARGUMENT;
+  }
+
   FormKeyName(key.KeyId, formed_key_name, sizeof(formed_key_name));
 
   memset(key_data, 0, sizeof(key_data));

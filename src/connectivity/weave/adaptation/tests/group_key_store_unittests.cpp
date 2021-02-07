@@ -108,6 +108,11 @@ TEST_F(GroupKeyStoreTest, StoreAndRetrieveKey) {
   VerifyGroupKey(retrieved_key, test_key);
 }
 
+TEST_F(GroupKeyStoreTest, StoreInvalidKey) {
+  const WeaveGroupKey test_key{.KeyLen = WeaveGroupKey::MaxKeySize + 1};
+  EXPECT_EQ(group_key_store_.StoreGroupKey(test_key), WEAVE_ERROR_INVALID_ARGUMENT);
+}
+
 TEST_F(GroupKeyStoreTest, StoreAndRetrieveFabricSecretKey) {
   const WeaveGroupKey test_key =
       CreateGroupKey(WeaveKeyId::kFabricSecret, 0, kWeaveAppGroupKeySize);
