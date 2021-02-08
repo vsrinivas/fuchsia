@@ -12,5 +12,5 @@ using zx;
 protocol Thermal {
     /// Pass a channel handle to the thermal driver to connect to its
     /// FIDL interface.
-    Connect(handle<channel> chan) -> (zx.status status);
+    Connect(zx.handle:CHANNEL chan) -> (zx.status status);
 };

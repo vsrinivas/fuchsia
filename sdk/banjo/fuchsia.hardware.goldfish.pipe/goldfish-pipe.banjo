@@ -68,7 +68,7 @@ protocol GoldfishPipe {
     /// Create a new pipe connection. The |id| identifies the pipe and must be
     /// used for all subsequent commands. The memory that will be used as
     /// command structure is returned in |vmo|.
-    Create() -> (zx.status s, int32 id, handle<vmo> vmo);
+    Create() -> (zx.status s, int32 id, zx.handle:VMO vmo);
 
     /// Destroy a previously created pipe connection.
     Destroy(int32 id);
@@ -80,7 +80,7 @@ protocol GoldfishPipe {
     /// Return error states from `zx_object_wait_one` and `zx_object_signal`
     /// if existing events on `pipe_event` cannot be transferred to the call.
     /// Otherwise returns `ZX_OK`.
-    SetEvent(int32 id, handle<event> pipe_event) -> (zx.status s);
+    SetEvent(int32 id, zx.handle:EVENT pipe_event) -> (zx.status s);
 
     /// Open pipe connection. This must be called before any other
     /// commands are issued and will cause the physical address of the
@@ -93,11 +93,11 @@ protocol GoldfishPipe {
     Exec(int32 id);
 
     /// Get BTI that can be used create IO buffers for read/write commands.
-    GetBti() -> (zx.status s, handle<bti> bti);
+    GetBti() -> (zx.status s, zx.handle:BTI bti);
 
     /// Create a sysmem connection - used to implement fuchsia.hardware.sysmem.
-    ConnectSysmem(handle<channel> connection) -> (zx.status s);
+    ConnectSysmem(zx.handle:CHANNEL connection) -> (zx.status s);
 
     /// Register a sysmem heap.
-    RegisterSysmemHeap(uint64 heap, handle<channel> connection) -> (zx.status s);
+    RegisterSysmemHeap(uint64 heap, zx.handle:CHANNEL connection) -> (zx.status s);
 };

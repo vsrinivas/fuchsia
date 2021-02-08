@@ -42,7 +42,7 @@ union SdmmcBuffer {
     1: uint32 vmo_id;
     /// An unregistered VMO of which the protocol implementation does not take ownership. The VMO is
     /// pinned upon entering Request and is unpinned before returning.
-    2: handle<vmo> vmo;
+    2: zx.handle:VMO vmo;
 };
 
 enum SdmmcBufferType : uint32 {
@@ -93,12 +93,12 @@ struct SdmmcReq {
     uint16 blocksize;
     bool use_dma;
     /// Used if use_dma is true
-    handle<vmo> dma_vmo;
+    zx.handle:VMO dma_vmo;
     /// Used if use_dma is false
     [Mutable] vector<voidptr> virt;
     /// offset into dma_vmo or virt
     uint64 buf_offset;
-    handle pmt;
+    zx.handle pmt;
     bool probe_tuning_cmd;
 
     /// response data
@@ -179,10 +179,10 @@ protocol Sdmmc {
     /// unregistered. client_id may be in [0, SDMMC_MAX_CLIENT_ID] and identifies the ID space for
     /// this VMO to be registered in (that is, two different VMOs may use the same ID if they are
     /// registered for different clients).
-    RegisterVmo(uint32 vmo_id, uint8 client_id, handle<vmo> vmo, uint64 offset,
+    RegisterVmo(uint32 vmo_id, uint8 client_id, zx.handle:VMO vmo, uint64 offset,
                 uint64 size, uint32 vmo_rights) -> (zx.status status);
     /// The callee unmaps/unpins the VMO and returns ownership to the caller.
-    UnregisterVmo(uint32 vmo_id, uint8 client_id) -> (zx.status status, handle<vmo> vmo);
+    UnregisterVmo(uint32 vmo_id, uint8 client_id) -> (zx.status status, zx.handle:VMO vmo);
 
     /// Perform the request. The protocol implementation chooses whether or not to use DMA depending
     /// on the properties of the request and the capabilities of the controller.

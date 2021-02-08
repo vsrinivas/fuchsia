@@ -30,5 +30,5 @@ protocol I2c {
     Transact(vector<I2cOp> op) -> (zx.status status, vector<I2cOp> op);
     /// Returns the maximum transfer size for read and write operations on the channel.
     GetMaxTransferSize() -> (zx.status s, uint64 size);
-    GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
+    GetInterrupt(uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
 };

@@ -138,5 +138,5 @@ protocol EthernetImpl {
     /// Get the BTI handle (needed to pin DMA memory) for this device.
     /// This method is only valid on devices that advertise ETHERNET_FEATURE_DMA
     /// The caller takes ownership of the BTI handle.
-    GetBti() -> (handle<bti> bti);
+    GetBti() -> (zx.handle:BTI bti);
 };

@@ -19,9 +19,9 @@ protocol SpiImpl {
     /// Regardless, both vectors must have the same length.
     Exchange(uint32 chip_select, vector<uint8> txdata) -> (zx.status status, vector<uint8> rxdata);
 
-    RegisterVmo(uint32 chip_select, uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size)
+    RegisterVmo(uint32 chip_select, uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size)
             -> (zx.status status);
-    UnregisterVmo(uint32 chip_select, uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
+    UnregisterVmo(uint32 chip_select, uint32 vmo_id) -> (zx.status status, zx.handle:VMO vmo);
 
     TransmitVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)
             -> (zx.status status);

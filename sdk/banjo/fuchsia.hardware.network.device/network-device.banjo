@@ -371,7 +371,7 @@ protocol NetworkDeviceImpl {
   /// Informs device that a new VMO is being used to store frame data.
   /// Implementers must store the VMO handle referenced by `vmo_id` until
   /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.ReleaseVmo`] is called with the same `vmo_id`.
-  PrepareVmo(uint8 vmo_id, handle<vmo> vmo);
+  PrepareVmo(uint8 vmo_id, zx.handle:VMO vmo);
   /// Device may dispose of all references to the VMO referenced by vmo_id, no more buffers will
   /// be sent with this identifier.
   /// `ReleaseVmo` is guaranteed to only be called when the implementation holds no buffers

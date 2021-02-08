@@ -37,12 +37,12 @@ enum SdhciQuirk : uint64 {
 [BanjoLayout = "ddk-protocol"]
 protocol Sdhci {
     // TODO: should be replaced with a generic busdev mechanism
-    GetInterrupt() -> (zx.status s, handle<interrupt> irq);
+    GetInterrupt() -> (zx.status s, zx.handle:INTERRUPT irq);
     /// mmio size minus offset must be at least 512 bytes as per the SDHCI specification.
-    GetMmio() -> (zx.status s, handle<vmo> mmio, zx.off offset);
+    GetMmio() -> (zx.status s, zx.handle:VMO mmio, zx.off offset);
     /// Gets a handle to the bus transaction initiator for the device. The caller
     /// receives ownership of the handle.
-    GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
+    GetBti(uint32 index) -> (zx.status s, zx.handle:BTI bti);
 
     GetBaseClock() -> (uint32 clock);
 

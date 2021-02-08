@@ -11,17 +11,17 @@ struct AcpiMmio {
     zx.off offset;
     /// Size of mmio region.
     uint64 size;
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 };
 
 [BanjoLayout = "ddk-protocol"]
 protocol Acpi {
-    GetPio(uint32 index) -> (zx.status s, handle<resource> pio);
+    GetPio(uint32 index) -> (zx.status s, zx.handle:RESOURCE pio);
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
-    MapInterrupt(int64 index) -> (zx.status s, handle<interrupt> @handle);
-    GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
-    ConnectSysmem(handle<channel> connection) -> (zx.status s);
-    RegisterSysmemHeap(uint64 heap, handle<channel> connection) -> (zx.status s);
+    MapInterrupt(int64 index) -> (zx.status s, zx.handle:INTERRUPT @handle);
+    GetBti(uint32 bdf, uint32 index) -> (zx.status s, zx.handle:BTI bti);
+    ConnectSysmem(zx.handle:CHANNEL connection) -> (zx.status s);
+    RegisterSysmemHeap(uint64 heap, zx.handle:CHANNEL connection) -> (zx.status s);
 };
 
 /// A generic ACPI device. This will allow devices to query information directly

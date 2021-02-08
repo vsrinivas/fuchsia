@@ -43,7 +43,7 @@ struct UsbRequest {
     zircon.hw.usb.UsbSetup setup;
 
     /// VMO handle for payload.
-    handle<vmo> vmo_handle;
+    zx.handle:VMO vmo_handle;
     uint64 size;
     /// Offset of the start of data from first page address of the vmo.
     zx.off offset;
@@ -51,7 +51,7 @@ struct UsbRequest {
     /// Add offset to get actual data.
     uint64 virt;
 
-    handle pmt;
+    zx.handle pmt;
     /// Phys addresses of the payload.
     [Mutable] vector<zx.paddr> phys;
 

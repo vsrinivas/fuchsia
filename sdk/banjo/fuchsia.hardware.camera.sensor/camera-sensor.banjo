@@ -152,7 +152,7 @@ protocol CameraSensor2 {
     GetOtpSize() -> (zx.status s, uint32 size);
     /// Retrieve the specified amount of OTP data at the offset and write them to
     /// the provided vmo.
-    GetOtpData(uint32 byte_count, uint32 offset) -> (zx.status s, handle<vmo> otp_data);
+    GetOtpData(uint32 byte_count, uint32 offset) -> (zx.status s, zx.handle:VMO otp_data);
 
     // Test Controls
 

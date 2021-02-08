@@ -121,7 +121,7 @@ protocol Pci {
     GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
     EnableBusMaster(bool enable) -> (zx.status s);
     ResetDevice() -> (zx.status s);
-    MapInterrupt(uint32 which_irq) -> (zx.status s, handle<interrupt> @handle);
+    MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT @handle);
     QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
     SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
     ConfigureIrqMode(uint32 requested_irq_count) -> (zx.status s);
@@ -136,5 +136,5 @@ protocol Pci {
     GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
     GetFirstExtendedCapability(uint16 id) -> (zx.status s, uint16 offset);
     GetNextExtendedCapability(uint16 id, uint16 offset) -> (zx.status s, uint16 offset);
-    GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
+    GetBti(uint32 index) -> (zx.status s, zx.handle:BTI bti);
 };

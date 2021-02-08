@@ -20,13 +20,13 @@ protocol TestFunc {
 [BanjoLayout = "ddk-protocol"]
 protocol Test {
     /// Sets test output socket.
-    SetOutputSocket(handle<socket> @handle) -> ();
+    SetOutputSocket(zx.handle:SOCKET @handle) -> ();
 
     /// Gets test output socket.
-    GetOutputSocket() -> (handle<socket> h);
+    GetOutputSocket() -> (zx.handle:SOCKET h);
 
     /// Gets test channel.  This has per-test meaning.
-    GetChannel() -> (handle<channel> h);
+    GetChannel() -> (zx.handle:CHANNEL h);
 
     /// Sets test function.
     SetTestFunc(TestFunc func) -> ();

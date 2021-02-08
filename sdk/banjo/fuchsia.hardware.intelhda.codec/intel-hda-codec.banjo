@@ -9,5 +9,5 @@ using zx;
 [BanjoLayout = "ddk-protocol"]
 protocol IhdaCodec {
     /// Fetch a zx_handle_t to a channel which can be used to communicate with the codec device.
-    GetDriverChannel() -> (zx.status s, handle<channel> channel);
+    GetDriverChannel() -> (zx.status s, zx.handle:CHANNEL channel);
 };

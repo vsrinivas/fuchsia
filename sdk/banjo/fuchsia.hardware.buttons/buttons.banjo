@@ -11,5 +11,5 @@ protocol Buttons {
     /// Gets a channel for FIDL protocol.
     /// |chan| : Channel for FIDL protocol.
     /// @Returns: |status| : ZX_OK if succeeds.
-    GetChannel(handle<channel> chan) -> (zx.status status);
+    GetChannel(zx.handle:CHANNEL chan) -> (zx.status status);
 };

@@ -154,7 +154,7 @@ struct BlockReadWrite {
     uint32 extra;
 
     /// VMO of data to read or write.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 
     /// Transfer length in blocks (0 is invalid).
     uint32 length;

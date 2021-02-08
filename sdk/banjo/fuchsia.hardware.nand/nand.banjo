@@ -58,10 +58,10 @@ struct NandReadWrite {
     NandOp command;
 
     /// vmo of data to read or write.
-    handle<vmo> data_vmo;
+    zx.handle:VMO data_vmo;
 
     /// vmo of OOB data to read or write.
-    handle<vmo> oob_vmo;
+    zx.handle:VMO oob_vmo;
 
     /// Number of pages to access.
     /// (0 is invalid).

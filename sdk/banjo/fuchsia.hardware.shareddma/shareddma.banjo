@@ -29,7 +29,7 @@ protocol SharedDma {
     /// DMA (biderectional DMAs are not supported yet).  Transfer sizes and alignment are
     /// managed within the shared DMA driver.
     InitializeAndGetBuffer(uint32 channel_id, DmaType type, uint32 size) ->
-        (zx.status s, handle<vmo> vmo);
+        (zx.status s, zx.handle:VMO vmo);
 
     /// Start DMA
     Start(uint32 channel_id);

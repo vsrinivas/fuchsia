@@ -25,6 +25,6 @@ protocol Tee {
     /// requests that'll result in filesystem requests from the TEE.  If not ZX_HANDLE_INVALID, the
     /// service provider will be used in serving filesystem requests from the TEE.
     ConnectToApplication(Uuid application_uuid,
-                         handle<channel> tee_app_request,
-                         handle<channel> service_provider) -> (zx.status s);
+                         zx.handle:CHANNEL tee_app_request,
+                         zx.handle:CHANNEL service_provider) -> (zx.status s);
 };

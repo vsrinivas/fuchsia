@@ -8,5 +8,5 @@ using zx;
 
 [BanjoLayout = "ddk-protocol"]
 protocol GoldfishSync {
-    CreateTimeline(handle<channel> timeline_req) -> (zx.status s);
+    CreateTimeline(zx.handle:CHANNEL timeline_req) -> (zx.status s);
 };

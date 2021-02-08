@@ -32,7 +32,7 @@ protocol Gpio {
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
     Write(uint8 value) -> (zx.status s);
     /// Gets an interrupt object pertaining to a particular GPIO pin.
-    GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
+    GetInterrupt(uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
     /// Release the interrupt.
     ReleaseInterrupt()-> (zx.status s);
     /// Set GPIO polarity.

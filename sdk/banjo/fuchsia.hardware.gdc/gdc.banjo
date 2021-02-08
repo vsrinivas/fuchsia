@@ -8,7 +8,7 @@ using fuchsia.hardware.camerahwaccel;
 using fuchsia.sysmem;
 
 struct GdcConfigInfo {
-    handle<vmo> config_vmo;
+    zx.handle:VMO config_vmo;
     uint32 size;
 };
 

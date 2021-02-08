@@ -36,15 +36,15 @@ struct PdevMmio {
     zx.off offset;
     /// Size of mmio region.
     uint64 size;
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 };
 
 [BanjoLayout = "ddk-protocol"]
 protocol PDev {
     GetMmio(uint32 index) -> (zx.status s, PdevMmio mmio);
-    GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, handle<interrupt> irq);
-    GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
-    GetSmc(uint32 index) -> (zx.status s, handle<resource> smc);
+    GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
+    GetBti(uint32 index) -> (zx.status s, zx.handle:BTI bti);
+    GetSmc(uint32 index) -> (zx.status s, zx.handle:RESOURCE smc);
     GetDeviceInfo() -> (zx.status s, PdevDeviceInfo info);
     GetBoardInfo() -> (zx.status s, PdevBoardInfo info);
 };

@@ -7,5 +7,5 @@ library fuchsia.hardware.rpmb;
 protocol Rpmb {
   /// Tells the RPMB driver to start listening for fuchsia.hardware.rpmb messages on server.
   /// See sdk/fidl/fuchsia.hardware.rpmb/rpmb.fidl.
-  ConnectServer(handle<channel> server) -> ();
+  ConnectServer(zx.handle:CHANNEL server) -> ();
 };

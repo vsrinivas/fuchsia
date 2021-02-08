@@ -15,5 +15,5 @@ protocol Dsi {
     ///
     /// The protocol only accepts one client at a time.
     /// Returns ZX_OK upon successful connection.
-    Connect(handle<channel> server) -> (zx.status status);
+    Connect(zx.handle:CHANNEL server) -> (zx.status status);
 };

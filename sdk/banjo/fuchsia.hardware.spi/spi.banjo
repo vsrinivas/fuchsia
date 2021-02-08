@@ -20,5 +20,5 @@ protocol Spi {
 
     /// Tells the SPI driver to start listening for fuchsia.hardware.spi messages on server.
     /// See sdk/fidl/fuchsia.hardware.spi/spi.fidl.
-    ConnectServer(handle<channel> server) -> ();
+    ConnectServer(zx.handle:CHANNEL server) -> ();
 };

@@ -16,6 +16,6 @@ enum AddressSpaceChildDriverType : uint32 {
 ///
 [BanjoLayout = "ddk-protocol"]
 protocol GoldfishAddressSpace {
-    OpenChildDriver(AddressSpaceChildDriverType type, handle<channel> req)
+    OpenChildDriver(AddressSpaceChildDriverType type, zx.handle:CHANNEL req)
         -> (zx.status status);
 };

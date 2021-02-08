@@ -34,7 +34,7 @@ struct PciIrqRoutingEntry {
 /// The vector is supplied because interrupt objects cannot be inspected with
 /// zx_get_object_info.
 struct PciLegacyIrq {
-    handle<interrupt> interrupt;
+    zx.handle:INTERRUPT interrupt;
     uint32 vector;
 };
 
@@ -48,7 +48,7 @@ struct PciPlatformInfo {
     uint8 start_bus_num;
     uint8 end_bus_num;
     uint16 segment_group;
-    handle<vmo> ecam_vmo;
+    zx.handle:VMO ecam_vmo;
     vector<PciLegacyIrq> legacy_irqs;
     vector<PciIrqRoutingEntry> irq_routing;
 };
@@ -62,8 +62,8 @@ enum PciAddressSpace : uint8 {
 protocol Pciroot {
     /// Legacy methods
     /// Create a sysmem connection - used to implement fuchsia.hardware.sysmem.
-    ConnectSysmem(handle<channel> connection) -> (zx.status s);
-    GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
+    ConnectSysmem(zx.handle:CHANNEL connection) -> (zx.status s);
+    GetBti(uint32 bdf, uint32 index) -> (zx.status s, zx.handle:BTI bti);
     /// Get the platform information structure from the pciroot protocol to be used for bus init.
     GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
 
@@ -94,7 +94,7 @@ protocol Pciroot {
     /// An error will be returned if |size| cannot be fulfilled, |low| is set with |in_base|+|size|
     /// being >=4GB, or if a requested |in_base| cannot be provided.
     GetAddressSpace(zx.paddr in_base, uint64 size, PciAddressSpace type, bool low)
-        -> (zx.status s, zx.paddr base, handle<resource> resource, handle<eventpair> token);
+        -> (zx.status s, zx.paddr base, zx.handle:RESOURCE resource, zx.handle:EVENTPAIR token);
     /// Allocate |msi_count| MSIs and return a handle to the backing MsiAllocation.
-    AllocateMsi(uint32 msi_count, bool can_target_64bit) -> (zx.status s, handle<msi> allocation);
+    AllocateMsi(uint32 msi_count, bool can_target_64bit) -> (zx.status s, zx.handle:MSI_ALLOCATION allocation);
 };

@@ -11,16 +11,16 @@ protocol Sysmem {
     /// Takes the server end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Allocator.  If the connection fails, the channel will
     /// close.
-    Connect(handle<channel> allocator_request) -> (zx.status s);
+    Connect(zx.handle:CHANNEL allocator_request) -> (zx.status s);
 
     /// Takes the client end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Heap.
-    RegisterHeap(uint64 heap, handle<channel> heap_connection) -> (zx.status s);
+    RegisterHeap(uint64 heap, zx.handle:CHANNEL heap_connection) -> (zx.status s);
 
     /// Takes the client end of a FIDL connection that'll serve
     /// fuchsia.sysmem.SecureMem, which is a protocol that's specific to
     /// sysmem<->securemem concerns.
-    RegisterSecureMem(handle<channel> secure_mem_connection) -> (zx.status s);
+    RegisterSecureMem(zx.handle:CHANNEL secure_mem_connection) -> (zx.status s);
 
     /// Informs sysmem that the channel previously passed to RegisterSecureMem()
     /// will be closing soon, and that this channel closure should not be

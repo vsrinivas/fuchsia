@@ -8,5 +8,5 @@ using zx;
 
 [BanjoLayout = "ddk-protocol"]
 protocol Iommu {
-    GetBti(uint32 iommu_index, uint32 bti_id) -> (zx.status s, handle<bti> @handle);
+    GetBti(uint32 iommu_index, uint32 bti_id) -> (zx.status s, zx.handle:BTI @handle);
 };

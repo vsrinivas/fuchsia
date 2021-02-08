@@ -8,5 +8,5 @@ library fuchsia.hardware.registers;
 protocol Registers {
     /// Gets a channel for FIDL protocol.
     /// |chan| : Channel for FIDL protocol.
-    Connect(handle<channel> chan) -> ();
+    Connect(zx.handle:CHANNEL chan) -> ();
 };

@@ -260,7 +260,7 @@ protocol Wlanmac {
 
     /// Start wlanmac running with ifc_virt
     /// Callbacks on ifc may be invoked from now until stop() is called
-    Start(WlanmacIfc ifc) -> (zx.status status, handle<channel> sme_channel);
+    Start(WlanmacIfc ifc) -> (zx.status status, zx.handle:CHANNEL sme_channel);
 
     /// Shut down a running wlanmac
     /// Safe to call if the wlanmac is already stopped.
