@@ -203,6 +203,10 @@ template("_fidl_cpp_library_impl") {
       ]
     }
 
+    # TODO(fxbug.dev/56257): Remove this line when `-Wextra-semi` is on
+    # for all of Fuchsia by default.
+    cflags_cc = [ "-Wextra-semi" ]
+
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
 

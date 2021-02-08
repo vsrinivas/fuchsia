@@ -201,7 +201,7 @@ class MyFlexibleEnum final {
   constexpr MyFlexibleEnum() : value_(0) {}
   constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
   constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
-  constexpr operator uint32_t() const { return value_; };
+  constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
