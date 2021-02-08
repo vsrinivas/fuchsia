@@ -22,6 +22,8 @@ enum DaemonError {
     TARGET_AMBIGUOUS = 6;
     /// When querying for a target, no matches were found.
     TARGET_NOT_FOUND = 7;
+    /// When attempting to connect to RCS on a Fastboot device.
+    TARGET_IN_FASTBOOT = 8;
 };
 
 [Discoverable]

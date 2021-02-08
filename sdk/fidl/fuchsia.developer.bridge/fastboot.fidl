@@ -9,6 +9,7 @@ enum FastbootError {
     COMMUNICATION_ERROR = 2;
     REDISCOVERED_ERROR = 3;
     TARGET_ERROR = 4;
+    NON_FASTBOOT_DEVICE = 5;
 };
 
 /// Callback event listener for when the device reboots to the

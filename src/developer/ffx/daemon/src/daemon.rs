@@ -390,6 +390,14 @@ impl Daemon {
                         return Ok(());
                     }
                 };
+                if matches!(target.get_connection_state().await, ConnectionState::Fastboot(_)) {
+                    let nodename = target.nodename().await.unwrap_or("<No Nodename>".to_string());
+                    log::warn!("Attempting to connect to RCS on a fastboot target: {}", nodename);
+                    responder
+                        .send(&mut Err(DaemonError::TargetInFastboot))
+                        .context("sending error response")?;
+                    return Ok(());
+                }
 
                 // Ensure auto-connect has at least started.
                 target.run_host_pipe().await;
@@ -429,6 +437,15 @@ impl Daemon {
                         return Ok(());
                     }
                 };
+                // TODO(fxb/69285): reboot device into fastboot
+                if !matches!(target.get_connection_state().await, ConnectionState::Fastboot(_)) {
+                    let nodename = target.nodename().await.unwrap_or("<No Nodename>".to_string());
+                    log::warn!("Attempting to run fastboot on a non-fastboot target: {}", nodename);
+                    responder
+                        .send(&mut Err(FastbootError::NonFastbootDevice))
+                        .context("sending error response")?;
+                    return Ok(());
+                }
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::spawn(async move {
@@ -606,9 +623,10 @@ impl Daemon {
 mod test {
     use {
         super::*,
+        anyhow::bail,
         async_std::future::timeout,
         fidl_fuchsia_developer_bridge as bridge,
-        fidl_fuchsia_developer_bridge::DaemonMarker,
+        fidl_fuchsia_developer_bridge::{DaemonMarker, FastbootMarker},
         fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
         fidl_fuchsia_net as fidl_net,
@@ -617,6 +635,11 @@ mod test {
         fuchsia_async::Task,
         std::net::{SocketAddr, SocketAddrV6},
     };
+
+    struct TestHookFakeFastboot {
+        tc: Weak<TargetCollection>,
+        ascendd: Arc<Ascendd>,
+    }
 
     struct TestHookFakeRcs {
         tc: Weak<TargetCollection>,
@@ -656,6 +679,51 @@ mod test {
                 .await
                 .unwrap();
         }
+
+        pub async fn send_fastboot_discovery_event(&mut self, t: Target) {
+            let nodename =
+                t.nodename().await.expect("Should not send fastboot discovery for unnamed node.");
+            let serial =
+                t.serial().await.expect("Should not send fastboot discovery for unnamed node.");
+            let nodename_clone = nodename.clone();
+            self.event_queue
+                .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
+                    nodename: nodename.clone(),
+                    serial: Some(serial.clone()),
+                    ..Default::default()
+                })))
+                .await
+                .unwrap();
+            self.event_queue
+                .wait_for(None, move |e| e == DaemonEvent::NewTarget(Some(nodename_clone.clone())))
+                .await
+                .unwrap();
+        }
+    }
+
+    #[async_trait]
+    impl EventHandler<DaemonEvent> for TestHookFakeFastboot {
+        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
+            let tc = match self.tc.upgrade() {
+                Some(t) => t,
+                None => return Ok(true),
+            };
+            match event {
+                DaemonEvent::WireTraffic(WireTrafficType::Fastboot(t)) => {
+                    tc.merge_insert(Target::from_target_info(self.ascendd.clone(), t.into()))
+                        .then(|target| async move {
+                            target
+                                .update_connection_state(|_| ConnectionState::Fastboot(Utc::now()))
+                                .await;
+                        })
+                        .await;
+                }
+                DaemonEvent::NewTarget(_) => {}
+                _ => panic!("unexpected event"),
+            }
+
+            Ok(false)
+        }
     }
 
     #[async_trait]
@@ -682,6 +750,29 @@ mod test {
 
             Ok(false)
         }
+    }
+
+    async fn spawn_daemon_server_with_target_ctrl_for_fastboot(
+        stream: DaemonRequestStream,
+    ) -> TargetControl {
+        let d = Daemon::new_for_test().await;
+        d.event_queue
+            .add_handler(TestHookFakeFastboot {
+                ascendd: d.ascendd.clone(),
+                tc: Arc::downgrade(&d.target_collection),
+            })
+            .await;
+        let event_clone = d.event_queue.clone();
+        let res = TargetControl {
+            event_queue: event_clone,
+            tc: d.target_collection.clone(),
+            _task: Task::spawn(async move {
+                d.handle_requests_from_stream(stream)
+                    .await
+                    .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
+            }),
+        };
+        res
     }
 
     async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
@@ -718,6 +809,17 @@ mod test {
             )
             .await;
         res.send_mdns_discovery_event(fake_target).await;
+        (res, ascendd)
+    }
+
+    async fn spawn_daemon_server_with_fake_fastboot_target(
+        nodename: &str,
+        stream: DaemonRequestStream,
+    ) -> (TargetControl, Arc<Ascendd>) {
+        let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let fake_target = Target::new_with_serial(ascendd.clone(), nodename, "florp");
+        res.send_fastboot_discovery_event(fake_target).await;
         (res, ascendd)
     }
 
@@ -1017,5 +1119,31 @@ mod test {
         d.target_collection.merge_insert(t.clone()).await;
         d.target_collection.merge_insert(t2.clone()).await;
         assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_default_target(None).await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fastboot_on_rcs_error_msg() -> Result<()> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, fastboot_server_end) = fidl::endpoints::create_proxy::<FastbootMarker>()?;
+        let _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let got = daemon_proxy.get_fastboot(None, fastboot_server_end).await?;
+        match got {
+            Err(FastbootError::NonFastbootDevice) => Ok(()),
+            _ => bail!("Expecting non fastboot device error message."),
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_rcs_on_fastboot_error_msg() -> Result<()> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        let _ctrl = spawn_daemon_server_with_fake_fastboot_target("foobar", stream).await;
+        let got = daemon_proxy.get_remote_control(None, remote_server_end).await?;
+        match got {
+            Err(DaemonError::TargetInFastboot) => Ok(()),
+            _ => bail!("Expecting target in fastboot error message."),
+        }
     }
 }

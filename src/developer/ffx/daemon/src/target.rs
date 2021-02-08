@@ -574,6 +574,15 @@ impl Target {
         self.inner.diagnostics_info.clone()
     }
 
+    pub async fn serial(&self) -> Option<String> {
+        self.inner.serial.read().await.clone()
+    }
+
+    pub async fn get_connection_state(&self) -> ConnectionState {
+        let state = self.inner.state.lock().await;
+        state.connection_state.clone()
+    }
+
     /// Allows a client to atomically update the connection state based on what
     /// is returned from the predicate.
     ///

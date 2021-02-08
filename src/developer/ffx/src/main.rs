@@ -10,7 +10,9 @@ use {
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
+    fidl_fuchsia_developer_bridge::{
+        DaemonError, DaemonProxy, FastbootError, FastbootMarker, FastbootProxy,
+    },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
     futures::Future,
@@ -45,6 +47,15 @@ for a particular command, or use `ffx target default set \"my-nodename\"` if
 you always want to use a particular target.";
 
 const CURRENT_EXE_HASH: &str = "current.hash";
+
+const NON_FASTBOOT_MSG: &str = "\
+This command needs to be run against a target in the Fastboot state.
+Try rebooting the device into Fastboot with the command `ffx target reboot --bootloader` and try 
+re-running this command.";
+
+const TARGET_IN_FASTBOOT: &str = "\
+This command cannot be run against a target in the Fastboot state.  Try rebooting the device or
+flashing the device into a running state.";
 
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.
@@ -122,15 +133,20 @@ async fn get_fastboot_proxy() -> Result<FastbootProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
     let app: Ffx = argh::from_env();
-    timeout(
+    let result = timeout(
         proxy_timeout().await?,
         daemon_proxy
             .get_fastboot(app.target().await?.as_ref().map(|s| s.as_str()), fastboot_server_end),
     )
     .await
     .context("timeout")?
-    .context("connecting to Fastboot")
-    .map(|_| fastboot_proxy)
+    .context("connecting to Fastboot")?;
+
+    match result {
+        Ok(_) => Ok(fastboot_proxy),
+        Err(FastbootError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
+        Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
+    }
 }
 
 async fn get_remote_proxy() -> Result<RemoteControlProxy> {
@@ -152,6 +168,7 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     match result {
         Ok(_) => Ok(remote_proxy),
         Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
+        Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
         Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
     }
 }
