@@ -104,6 +104,9 @@ inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
 
 }  // namespace
 
+VmCowPages::DiscardableList VmCowPages::discardable_reclaim_candidates_ = {};
+VmCowPages::DiscardableList VmCowPages::discardable_non_reclaim_candidates_ = {};
+
 // Helper class for collecting pages to performed batched Removes from the page queue to not incur
 // its spinlock overhead for every single page. Pages that it removes from the page queue get placed
 // into a provided list. Note that pages are not moved into the list until *after* Flush has been
@@ -213,6 +216,8 @@ VmCowPages::~VmCowPages() {
     // And so each serialized deletion breaks of a discrete two VMO chain that can be safely
     // finalized with one recursive step.
   }
+
+  RemoveFromDiscardableListLocked();
 
   // Cleanup page lists and page sources.
   list_node_t list;
@@ -3011,14 +3016,21 @@ zx_status_t VmCowPages::LockRangeLocked(uint64_t offset, uint64_t len,
   lock_state_out->offset = offset;
   lock_state_out->size = len;
 
-  if (discarded_) {
+  if (discardable_state_ == DiscardableState::kDiscarded) {
+    DEBUG_ASSERT(lock_count_ == 0);
     lock_state_out->discarded_offset = 0;
     lock_state_out->discarded_size = size_locked();
   } else {
     lock_state_out->discarded_offset = 0;
     lock_state_out->discarded_size = 0;
   }
+
+  if (lock_count_ == 0) {
+    // Lock count transition from 0 -> 1. Change state to unreclaimable.
+    UpdateDiscardableStateLocked(DiscardableState::kUnreclaimable);
+  }
   ++lock_count_;
+
   return ZX_OK;
 }
 
@@ -3030,10 +3042,16 @@ zx_status_t VmCowPages::TryLockRangeLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (discarded_) {
+  if (discardable_state_ == DiscardableState::kDiscarded) {
     return ZX_ERR_UNAVAILABLE;
   }
+
+  if (lock_count_ == 0) {
+    // Lock count transition from 0 -> 1. Change state to unreclaimable.
+    UpdateDiscardableStateLocked(DiscardableState::kUnreclaimable);
+  }
   ++lock_count_;
+
   return ZX_OK;
 }
 
@@ -3048,6 +3066,179 @@ zx_status_t VmCowPages::UnlockRangeLocked(uint64_t offset, uint64_t len) {
   if (lock_count_ == 0) {
     return ZX_ERR_BAD_STATE;
   }
+
+  if (lock_count_ == 1) {
+    // Lock count transition from 1 -> 0. Change state to reclaimable.
+    UpdateDiscardableStateLocked(DiscardableState::kReclaimable);
+  }
   --lock_count_;
+
   return ZX_OK;
+}
+
+void VmCowPages::UpdateDiscardableStateLocked(DiscardableState state) {
+  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+
+  DEBUG_ASSERT(state != DiscardableState::kUnset);
+
+  if (state == discardable_state_) {
+    return;
+  }
+
+  switch (state) {
+    case DiscardableState::kReclaimable:
+      // The only valid transition into reclaimable is from unreclaimable (lock count 1 -> 0).
+      DEBUG_ASSERT(discardable_state_ == DiscardableState::kUnreclaimable);
+      DEBUG_ASSERT(lock_count_ == 1);
+
+      // Move to reclaim candidates list.
+      MoveToReclaimCandidatesListLocked();
+
+      break;
+    case DiscardableState::kUnreclaimable:
+      // The vmo could be reclaimable OR discarded OR not on any list yet. In any case, the lock
+      // count should be 0.
+      DEBUG_ASSERT(lock_count_ == 0);
+      DEBUG_ASSERT(discardable_state_ != DiscardableState::kUnreclaimable);
+
+      if (discardable_state_ == DiscardableState::kDiscarded) {
+        // Should already be on the non reclaim candidates list.
+        DEBUG_ASSERT(discardable_non_reclaim_candidates_.find_if([this](auto& cow) -> bool {
+          return &cow == this;
+        }) != discardable_non_reclaim_candidates_.end());
+      } else {
+        // Move to non reclaim candidates list.
+        MoveToNonReclaimCandidatesListLocked(discardable_state_ == DiscardableState::kUnset);
+      }
+
+      break;
+    case DiscardableState::kDiscarded:
+      // The only valid transition into discarded is from reclaimable (lock count is 0).
+      DEBUG_ASSERT(discardable_state_ == DiscardableState::kReclaimable);
+      DEBUG_ASSERT(lock_count_ == 0);
+
+      // Move from reclaim candidates to non reclaim candidates list.
+      MoveToNonReclaimCandidatesListLocked();
+
+      break;
+    default:
+      break;
+  }
+
+  // Update the state.
+  discardable_state_ = state;
+}
+
+void VmCowPages::RemoveFromDiscardableListLocked() {
+  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+  if (discardable_state_ == DiscardableState::kUnset) {
+    return;
+  }
+
+  DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+  if (discardable_state_ == DiscardableState::kReclaimable) {
+    discardable_reclaim_candidates_.erase(*this);
+  } else {
+    discardable_non_reclaim_candidates_.erase(*this);
+  }
+
+  discardable_state_ = DiscardableState::kUnset;
+}
+
+void VmCowPages::MoveToReclaimCandidatesListLocked() {
+  DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+  discardable_non_reclaim_candidates_.erase(*this);
+
+  discardable_reclaim_candidates_.push_back(this);
+}
+
+void VmCowPages::MoveToNonReclaimCandidatesListLocked(bool new_candidate) {
+  if (new_candidate) {
+    DEBUG_ASSERT(!fbl::InContainer<internal::DiscardableListTag>(*this));
+  } else {
+    DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+    discardable_reclaim_candidates_.erase(*this);
+  }
+
+  discardable_non_reclaim_candidates_.push_back(this);
+}
+
+bool VmCowPages::DebugIsInDiscardableListLocked(bool reclaim_candidate) const {
+  AssertHeld(lock_);
+  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+
+  // Not on any list yet. Nothing else to verify.
+  if (discardable_state_ == DiscardableState::kUnset) {
+    return false;
+  }
+
+  DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+
+  auto iter_c =
+      discardable_reclaim_candidates_.find_if([this](auto& cow) -> bool { return &cow == this; });
+  auto iter_nc = discardable_non_reclaim_candidates_.find_if(
+      [this](auto& cow) -> bool { return &cow == this; });
+
+  if (reclaim_candidate) {
+    // Verify that the vmo is in the |discardable_reclaim_candidates_| list and NOT in the
+    // |discardable_non_reclaim_candidates_| list.
+    if (iter_c != discardable_reclaim_candidates_.end() &&
+        iter_nc == discardable_non_reclaim_candidates_.end()) {
+      return true;
+    }
+  } else {
+    // Verify that the vmo is in the |discardable_non_reclaim_candidates_| list and NOT in the
+    // |discardable_reclaim_candidates_| list.
+    if (iter_nc != discardable_non_reclaim_candidates_.end() &&
+        iter_c == discardable_reclaim_candidates_.end()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool VmCowPages::DebugIsReclaimable() const {
+  Guard<Mutex> guard{&lock_};
+  if (discardable_state_ != DiscardableState::kReclaimable) {
+    return false;
+  }
+  return DebugIsInDiscardableListLocked(/*reclaim_candidate=*/true);
+}
+
+bool VmCowPages::DebugIsUnreclaimable() const {
+  Guard<Mutex> guard{&lock_};
+  if (discardable_state_ != DiscardableState::kUnreclaimable) {
+    return false;
+  }
+  return DebugIsInDiscardableListLocked(/*reclaim_candidate=*/false);
+}
+
+bool VmCowPages::DebugIsDiscarded() const {
+  Guard<Mutex> guard{&lock_};
+  if (discardable_state_ != DiscardableState::kDiscarded) {
+    return false;
+  }
+  return DebugIsInDiscardableListLocked(/*reclaim_candidate=*/false);
+}
+
+uint64_t VmCowPages::DiscardPages() {
+  canary_.Assert();
+
+  Guard<Mutex> guard{&lock_};
+
+  // Either this vmo is not discardable, or we've raced with a lock operation. Bail without doing
+  // anything. If this was a discardable vmo, the lock operation will have already moved it to the
+  // unreclaimable list.
+  if (discardable_state_ != DiscardableState::kReclaimable) {
+    return 0;
+  }
+
+  // We've verified that the state is |kReclaimable|, so the lock count should be zero.
+  DEBUG_ASSERT(lock_count_ == 0);
+
+  // Update state to discarded.
+  UpdateDiscardableStateLocked(DiscardableState::kDiscarded);
+  // TODO: Actually discard pages here.
+  return size_ / PAGE_SIZE;
 }

@@ -1544,6 +1544,92 @@ static bool vmo_lock_count_test() {
   END_TEST;
 }
 
+// Tests the state transitions for a discardable VMO. Verifies that a discardable VMO is discarded
+// only when unlocked, and can be locked / unlocked again after the discard.
+static bool vmo_discardable_states_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  constexpr uint64_t kSize = 3 * PAGE_SIZE;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kDiscardable, kSize, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // A newly created discardable vmo is not on any list yet.
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+
+  // Lock and commit all pages.
+  EXPECT_EQ(ZX_OK, vmo->TryLockRange(0, kSize));
+  EXPECT_EQ(ZX_OK, vmo->CommitRange(0, kSize));
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+
+  // Cannot discard when locked.
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages());
+
+  // Unlock.
+  EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+
+  // Should be able to discard now.
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+
+  // Try lock should fail after discard.
+  EXPECT_EQ(ZX_ERR_UNAVAILABLE, vmo->TryLockRange(0, kSize));
+
+  // Lock should succeed.
+  zx_vmo_lock_state_t lock_state = {};
+  EXPECT_EQ(ZX_OK, vmo->LockRange(0, kSize, &lock_state));
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+
+  // Verify the lock state returned.
+  EXPECT_EQ(0u, lock_state.offset);
+  EXPECT_EQ(kSize, lock_state.size);
+  EXPECT_EQ(0u, lock_state.discarded_offset);
+  EXPECT_EQ(kSize, lock_state.discarded_size);
+
+  EXPECT_EQ(ZX_OK, vmo->CommitRange(0, kSize));
+
+  // Unlock.
+  EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+
+  // Lock again and verify the lock state returned without a discard.
+  EXPECT_EQ(ZX_OK, vmo->LockRange(0, kSize, &lock_state));
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+
+  EXPECT_EQ(0u, lock_state.offset);
+  EXPECT_EQ(kSize, lock_state.size);
+  EXPECT_EQ(0u, lock_state.discarded_offset);
+  EXPECT_EQ(0u, lock_state.discarded_size);
+
+  // Unlock and discard again.
+  EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsDiscarded());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -1577,6 +1663,7 @@ VM_UNITTEST(vmo_attribution_evict_test)
 VM_UNITTEST(vmo_attribution_dedup_test)
 VM_UNITTEST(vmo_parent_merge_test)
 VM_UNITTEST(vmo_lock_count_test)
+VM_UNITTEST(vmo_discardable_states_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest
