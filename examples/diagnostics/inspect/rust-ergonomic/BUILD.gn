@@ -1,5 +1,5 @@
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("ergonomic_inspect_tests") {
   name = "ergonomic_inspect_tests"
@@ -15,16 +15,8 @@ rustc_test("ergonomic_inspect_tests") {
   sources = [ "src/main.rs" ]
 }
 
-test_package("ergonomic-inspect-tests") {
+fuchsia_unittest_package("ergonomic-inspect-tests") {
   deps = [ ":ergonomic_inspect_tests" ]
-
-  tests = [
-    {
-      name = "ergonomic_inspect_tests"
-      dest = "ergonomic-inspect-tests"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("rust-ergonomic") {

@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "inspect_vmo_example"
@@ -25,33 +24,16 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("inspect_vmo_example") {
+fuchsia_package_with_single_component("inspect_vmo_example") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "inspect_vmo_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/inspect_vmo_example.cmx")
-      dest = "inspect_vmo_example.cmx"
-    },
-  ]
+  manifest = "meta/inspect_vmo_example.cmx"
 }
 
-test_package("inspect_vmo_example_tests") {
+fuchsia_unittest_package("inspect_vmo_example_tests") {
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "inspect_vmo_example_bin_test"
-      dest = "inspect_vmo_example_tests"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 group("rust-vmo") {
