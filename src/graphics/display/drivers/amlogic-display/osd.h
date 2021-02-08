@@ -165,9 +165,10 @@ struct RdmaChannelContainer {
 
 class Osd {
  public:
-  Osd(uint32_t fb_width, uint32_t fb_height, uint32_t display_width, uint32_t display_height,
-      inspect::Node* parent_node)
-      : fb_width_(fb_width),
+  Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t display_width,
+      uint32_t display_height, inspect::Node* parent_node)
+      : supports_afbc_(supports_afbc),
+        fb_width_(fb_width),
         fb_height_(fb_height),
         display_width_(display_width),
         display_height_(display_height),
@@ -253,6 +254,8 @@ class Osd {
   zx_handle_t afbc_rdma_pmt_;
   zx_paddr_t afbc_rdma_phys_;
   uint8_t* afbc_rdma_vbuf_;
+
+  const bool supports_afbc_;
 
   // Framebuffer dimension
   uint32_t fb_width_;

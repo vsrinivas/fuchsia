@@ -164,7 +164,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
   return ZX_OK;
 }
 
-zx_status_t AmlDsiHost::Init() {
+zx_status_t AmlDsiHost::Init(uint32_t bitrate) {
   if (initialized_) {
     return ZX_OK;
   }
@@ -187,6 +187,7 @@ zx_status_t AmlDsiHost::Init() {
     return status;
   }
 
+  bitrate_ = bitrate;
   initialized_ = true;
   return ZX_OK;
 }

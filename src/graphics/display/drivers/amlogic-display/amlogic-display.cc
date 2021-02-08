@@ -43,22 +43,6 @@ namespace sysmem = llcpp::fuchsia::sysmem;
 namespace amlogic_display {
 
 namespace {
-
-// List of supported pixel formats
-zx_pixel_format_t kSupportedPixelFormats[4] = {ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888,
-                                               ZX_PIXEL_FORMAT_ABGR_8888, ZX_PIXEL_FORMAT_BGR_888x};
-
-bool is_format_supported(zx_pixel_format_t format) {
-  for (auto f : kSupportedPixelFormats) {
-    if (f == format) {
-      return true;
-    }
-  }
-  return false;
-}
-
-constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
-
 constexpr uint32_t kCanvasLittleEndian64Bit = 7;
 constexpr uint32_t kBufferAlignment = 64;
 }  // namespace
@@ -71,80 +55,14 @@ zx_status_t AmlogicDisplay::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb
   return ZX_ERR_INTERNAL;
 }
 
-// This function copies the display settings into our internal structure
-void AmlogicDisplay::CopyDisplaySettings() {
-  ZX_DEBUG_ASSERT(init_disp_table_);
-
-  disp_setting_.h_active = init_disp_table_->h_active;
-  disp_setting_.v_active = init_disp_table_->v_active;
-  disp_setting_.h_period = init_disp_table_->h_period;
-  disp_setting_.v_period = init_disp_table_->v_period;
-  disp_setting_.hsync_width = init_disp_table_->hsync_width;
-  disp_setting_.hsync_bp = init_disp_table_->hsync_bp;
-  disp_setting_.hsync_pol = init_disp_table_->hsync_pol;
-  disp_setting_.vsync_width = init_disp_table_->vsync_width;
-  disp_setting_.vsync_bp = init_disp_table_->vsync_bp;
-  disp_setting_.vsync_pol = init_disp_table_->vsync_pol;
-  disp_setting_.lcd_clock = init_disp_table_->lcd_clock;
-  disp_setting_.clock_factor = init_disp_table_->clock_factor;
-  disp_setting_.lane_num = init_disp_table_->lane_num;
-  disp_setting_.bit_rate_max = init_disp_table_->bit_rate_max;
-}
-
-void AmlogicDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
-  args->display_id = kDisplayId;
-  args->edid_present = false;
-  args->panel.params.height = height_;
-  args->panel.params.width = width_;
-  args->panel.params.refresh_rate_e2 = 6000;  // Just guess that it's 60fps
-  args->pixel_format_list = kSupportedPixelFormats;
-  args->pixel_format_count = countof(kSupportedPixelFormats);
-  args->cursor_info_count = 0;
-}
-
 zx_status_t AmlogicDisplay::RestartDisplay() {
-  zx_status_t status;
-  fbl::AllocChecker ac;
   vpu_->PowerOff();
   vpu_->PowerOn();
   vpu_->VppInit();
   // Need to call this function since VPU/VPP registers were reset
   vpu_->SetFirstTimeDriverLoad();
-  clock_ = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  status = clock_->Init(pdev_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not initialize Clock object\n");
-    return status;
-  }
 
-  // Enable all display related clocks
-  status = clock_->Enable(disp_setting_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not enable display clocks!\n");
-    return status;
-  }
-
-  // Program and Enable DSI Host Interface
-  dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
-      &ac, parent_, clock_->GetBitrate(), panel_type_);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  status = dsi_host_->Init();
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not initialize DSI Host\n");
-    return status;
-  }
-
-  status = dsi_host_->HostOn(disp_setting_);
-  if (status != ZX_OK) {
-    DISP_ERROR("DSI Host On failed! %d\n", status);
-    return status;
-  }
-  return ZX_OK;
+  return vout_->RestartDisplay(parent_);
 }
 
 zx_status_t AmlogicDisplay::DisplayInit() {
@@ -170,26 +88,6 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     DISP_INFO("Display driver reloaded. Initialize display system\n");
   }
 
-  // Detect panel type
-  if (panel_type_ == PANEL_TV070WSM_FT) {
-    init_disp_table_ = &kDisplaySettingTV070WSM_FT;
-  } else if (panel_type_ == PANEL_P070ACB_FT) {
-    init_disp_table_ = &kDisplaySettingP070ACB_FT;
-  } else if (panel_type_ == PANEL_TV101WXM_FT) {
-    init_disp_table_ = &kDisplaySettingTV101WXM_FT;
-  } else if (panel_type_ == PANEL_G101B158_FT) {
-    init_disp_table_ = &kDisplaySettingG101B158_FT;
-  } else if (panel_type_ == PANEL_TV080WXM_FT) {
-    init_disp_table_ = &kDisplaySettingTV080WXM_FT;
-  } else {
-    DISP_ERROR("Unsupported panel detected!\n");
-    status = ZX_ERR_NOT_SUPPORTED;
-    return status;
-  }
-
-  // Populated internal structures based on predefined tables
-  CopyDisplaySettings();
-
   if (skip_disp_init) {
     // Make sure AFBC engine is on. Since bootloader does not use AFBC, it might not have powered
     // on AFBC engine.
@@ -199,7 +97,8 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   }
 
   osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
-      &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active, &inspector_.GetRoot());
+      &ac, vout_->supports_afbc(), vout_->fb_width(), vout_->fb_height(), vout_->display_width(),
+      vout_->display_height(), &inspector_.GetRoot());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -222,7 +121,7 @@ void AmlogicDisplay::DisplayControllerImplSetDisplayControllerInterface(
   fbl::AutoLock lock(&display_lock_);
   dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
   added_display_args_t args;
-  PopulateAddedDisplayArgs(&args);
+  vout_->PopulateAddedDisplayArgs(&args, display_id_);
   dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
@@ -242,7 +141,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (image->type != IMAGE_TYPE_SIMPLE || !is_format_supported(image->pixel_format)) {
+  if (image->type != IMAGE_TYPE_SIMPLE || !vout_->IsFormatSupported(image->pixel_format)) {
     status = ZX_ERR_INVALID_ARGS;
     return status;
   }
@@ -348,7 +247,7 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
     ZX_DEBUG_ASSERT(display_count == 0);
     return CONFIG_DISPLAY_OK;
   }
-  ZX_DEBUG_ASSERT(display_configs[0]->display_id == PANEL_DISPLAY_ID);
+  ZX_DEBUG_ASSERT(display_configs[0]->display_id == display_id_);
 
   fbl::AutoLock lock(&display_lock_);
 
@@ -385,13 +284,15 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
   }
 
   if (success) {
+    const uint32_t width = display_configs[0]->mode.h_addressable;
+    const uint32_t height = display_configs[0]->mode.v_addressable;
     // Make sure ther layer configuration is supported
     const primary_layer_t& layer = display_configs[0]->layer_list[0]->cfg.primary;
     frame_t frame = {
         .x_pos = 0,
         .y_pos = 0,
-        .width = width_,
-        .height = height_,
+        .width = width,
+        .height = height,
     };
 
     if (layer.alpha_mode == ALPHA_PREMULTIPLIED) {
@@ -399,8 +300,8 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
       layer_cfg_results[0][0] |= CLIENT_ALPHA;
     }
     success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
-              layer.transform_mode == FRAME_TRANSFORM_IDENTITY && layer.image.width == width_ &&
-              layer.image.height == height_ &&
+              layer.transform_mode == FRAME_TRANSFORM_IDENTITY && layer.image.width == width &&
+              layer.image.height == height &&
               memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
               memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0;
   }
@@ -457,7 +358,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
   if (!full_init_done_) {
     if (dc_intf_.is_valid()) {
       if (display_count == 0 || display_configs[0]->layer_count == 0) {
-        dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), nullptr, 0);
+        dc_intf_.OnDisplayVsync(display_id_, zx_clock_get_monotonic(), nullptr, 0);
       }
     }
   }
@@ -514,6 +415,9 @@ zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol
       proto->ops = &display_controller_impl_protocol_ops_;
       return ZX_OK;
     case ZX_PROTOCOL_DISPLAY_CAPTURE_IMPL:
+      if (!vout_->supports_capture()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
       proto->ops = &display_capture_impl_protocol_ops_;
       return ZX_OK;
     case ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL:
@@ -531,7 +435,7 @@ zx_status_t AmlogicDisplay::SetupDisplayInterface() {
 
   if (dc_intf_.is_valid()) {
     added_display_args_t args;
-    PopulateAddedDisplayArgs(&args);
+    vout_->PopulateAddedDisplayArgs(&args, display_id_);
     dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
   }
 
@@ -578,15 +482,15 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
       ZX_DEBUG_ASSERT(i == 0);
       image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
       image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
-      image_constraints.min_coded_width = disp_setting_.h_active;
-      image_constraints.max_coded_width = disp_setting_.h_active;
-      image_constraints.min_coded_height = disp_setting_.v_active;
-      image_constraints.max_coded_height = disp_setting_.v_active;
+      image_constraints.min_coded_width = vout_->display_width();
+      image_constraints.max_coded_width = vout_->display_width();
+      image_constraints.min_coded_height = vout_->display_height();
+      image_constraints.max_coded_height = vout_->display_height();
       image_constraints.min_bytes_per_row =
-          ZX_ALIGN(disp_setting_.h_active * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888),
+          ZX_ALIGN(vout_->display_width() * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888),
                    kBufferAlignment);
       image_constraints.max_coded_width_times_coded_height =
-          disp_setting_.h_active * disp_setting_.v_active;
+          vout_->display_width() * vout_->display_height();
       buffer_name = "Display capture";
     } else {
       // The beginning of ARM linear TE memory is a regular linear image, so we can support it by
@@ -806,7 +710,7 @@ int AmlogicDisplay::VSyncThread() {
     }
     bool current_image_valid = live != 0;
     if (dc_intf_.is_valid()) {
-      dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), &live, current_image_valid);
+      dc_intf_.OnDisplayVsync(display_id_, timestamp.get(), &live, current_image_valid);
     }
   }
 
@@ -815,6 +719,12 @@ int AmlogicDisplay::VSyncThread() {
 
 // TODO(payamm): make sure unbind/release are called if we return error
 zx_status_t AmlogicDisplay::Bind() {
+  fbl::AllocChecker ac;
+  vout_ = fbl::make_unique_checked<amlogic_display::Vout>(&ac);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
   display_panel_t display_info;
   size_t actual;
   zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
@@ -828,20 +738,17 @@ zx_status_t AmlogicDisplay::Bind() {
             display_info.height, display_info.panel_type);
   {
     fbl::AutoLock lock(&display_lock_);
-    panel_type_ = display_info.panel_type;
+    status =
+        vout_->InitDsi(parent_, display_info.panel_type, display_info.width, display_info.height);
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not initialize DSI Vout device! %d\n", status);
+      return status;
+    }
   }
-  width_ = display_info.width;
-  height_ = display_info.height;
 
   status = ddk::PDev::FromFragment(parent_, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
-    return status;
-  }
-
-  status = ddk::DsiImplProtocolClient::CreateFromDevice(parent_, "dsi", &dsiimpl_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get DSI_IMPL protocol\n");
     return status;
   }
 
@@ -884,13 +791,6 @@ zx_status_t AmlogicDisplay::Bind() {
     return status;
   }
 
-  // Map VD1_WR Interrupt (used for capture)
-  status = pdev_.GetInterrupt(IRQ_VD1_WR, 0, &vd1_wr_irq_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not map vd1 wr interrupt\n");
-    return status;
-  }
-
   auto start_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->VSyncThread(); };
   status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
   if (status != ZX_OK) {
@@ -898,11 +798,20 @@ zx_status_t AmlogicDisplay::Bind() {
     return status;
   }
 
-  auto vd_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->CaptureThread(); };
-  status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not create capture_thread\n");
-    return status;
+  if (vout_->supports_capture()) {
+    // Map VD1_WR Interrupt (used for capture)
+    status = pdev_.GetInterrupt(IRQ_VD1_WR, 0, &vd1_wr_irq_);
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not map vd1 wr interrupt\n");
+      return status;
+    }
+
+    auto vd_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->CaptureThread(); };
+    status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not create capture_thread\n");
+      return status;
+    }
   }
 
   // Set profile for vsync thread.
@@ -941,26 +850,6 @@ zx_status_t AmlogicDisplay::Bind() {
   cleanup.cancel();
 
   return ZX_OK;
-}
-
-void AmlogicDisplay::Dump() {
-  DISP_INFO("#############################\n");
-  DISP_INFO("Dumping disp_setting structure:\n");
-  DISP_INFO("#############################\n");
-  DISP_INFO("h_active = 0x%x (%u)\n", disp_setting_.h_active, disp_setting_.h_active);
-  DISP_INFO("v_active = 0x%x (%u)\n", disp_setting_.v_active, disp_setting_.v_active);
-  DISP_INFO("h_period = 0x%x (%u)\n", disp_setting_.h_period, disp_setting_.h_period);
-  DISP_INFO("v_period = 0x%x (%u)\n", disp_setting_.v_period, disp_setting_.v_period);
-  DISP_INFO("hsync_width = 0x%x (%u)\n", disp_setting_.hsync_width, disp_setting_.hsync_width);
-  DISP_INFO("hsync_bp = 0x%x (%u)\n", disp_setting_.hsync_bp, disp_setting_.hsync_bp);
-  DISP_INFO("hsync_pol = 0x%x (%u)\n", disp_setting_.hsync_pol, disp_setting_.hsync_pol);
-  DISP_INFO("vsync_width = 0x%x (%u)\n", disp_setting_.vsync_width, disp_setting_.vsync_width);
-  DISP_INFO("vsync_bp = 0x%x (%u)\n", disp_setting_.vsync_bp, disp_setting_.vsync_bp);
-  DISP_INFO("vsync_pol = 0x%x (%u)\n", disp_setting_.vsync_pol, disp_setting_.vsync_pol);
-  DISP_INFO("lcd_clock = 0x%x (%u)\n", disp_setting_.lcd_clock, disp_setting_.lcd_clock);
-  DISP_INFO("lane_num = 0x%x (%u)\n", disp_setting_.lane_num, disp_setting_.lane_num);
-  DISP_INFO("bit_rate_max = 0x%x (%u)\n", disp_setting_.bit_rate_max, disp_setting_.bit_rate_max);
-  DISP_INFO("clock_factor = 0x%x (%u)\n", disp_setting_.clock_factor, disp_setting_.clock_factor);
 }
 
 // main bind function called from dev manager

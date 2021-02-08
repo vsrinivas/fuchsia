@@ -9,10 +9,8 @@
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
-#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
-#include <lib/device-protocol/display-panel.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -32,10 +30,9 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
-#include "aml-dsi-host.h"
-#include "amlogic-clock.h"
 #include "common.h"
 #include "osd.h"
+#include "vout.h"
 #include "vpu.h"
 #include "zircon/errors.h"
 
@@ -122,14 +119,12 @@ class AmlogicDisplay
     dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient();
   }
 
-  void Dump();
+  void Dump() { vout_->Dump(); }
 
  private:
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
   int CaptureThread();
-  void CopyDisplaySettings();
-  void PopulateAddedDisplayArgs(added_display_args_t* args);
   void PopulatePanelType() TA_REQ(display_lock_);
 
   // This function enables the display hardware. This function is disruptive and causes
@@ -171,20 +166,9 @@ class AmlogicDisplay
   uint64_t current_image_ TA_GUARDED(display_lock_) = 0;
   bool current_image_valid_ TA_GUARDED(display_lock_) = false;
 
-  // display dimensions and format
-  uint32_t width_ = 0;
-  uint32_t height_ = 0;
-  zx_pixel_format_t format_ = 0;
-
-  const display_setting_t* init_disp_table_ = nullptr;
+  zx_pixel_format_t format_ = 0;  // Format for output buffers
 
   bool full_init_done_ = false;
-
-  // board revision and panel type detected by the display driver
-  uint32_t panel_type_ TA_GUARDED(display_lock_) = PANEL_UNKNOWN;
-
-  // Display structure used by various layers of display controller
-  display_setting_t disp_setting_;
 
   // Display controller related data
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
@@ -199,17 +183,15 @@ class AmlogicDisplay
   fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
   fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_captures_ TA_GUARDED(capture_lock_);
 
-  // DSIIMPL Protocol
-  ddk::DsiImplProtocolClient dsiimpl_ = {};
-
   // Objects
   std::unique_ptr<amlogic_display::Vpu> vpu_;
   std::unique_ptr<amlogic_display::Osd> osd_;
-  std::unique_ptr<amlogic_display::AmlogicDisplayClock> clock_;
-  std::unique_ptr<amlogic_display::AmlDsiHost> dsi_host_;
+  std::unique_ptr<amlogic_display::Vout> vout_;
 
   // Monitoring
   inspect::Inspector inspector_;
+
+  uint64_t display_id_ = PANEL_DISPLAY_ID;
 };
 
 }  // namespace amlogic_display

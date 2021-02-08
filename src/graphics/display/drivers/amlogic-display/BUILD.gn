@@ -27,6 +27,7 @@ source_set("common_srcs") {
     "amlogic-display.cc",
     "lcd.cc",
     "osd.cc",
+    "vout.cc",
     "vpu.cc",
   ]
   public_deps = [
@@ -37,7 +38,6 @@ source_set("common_srcs") {
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.dsiimpl",
     "//sdk/banjo/fuchsia.hardware.gpio",
-    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",

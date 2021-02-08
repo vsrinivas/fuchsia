@@ -299,7 +299,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   auto cfg_w0 = Osd1Blk0CfgW0Reg::Get().FromValue(0);
   cfg_w0.set_blk_mode(VpuViuOsd1BlkCfgOsdBlkMode32Bit)
       .set_color_matrix(VpuViuOsd1BlkCfgColorMatrixArgb);
-  if (info->is_afbc) {
+  if (supports_afbc_ && info->is_afbc) {
     // AFBC: Enable sourcing from mali + configure as big endian
     cfg_w0.set_mali_src_en(1).set_little_endian(0);
   } else {
@@ -353,13 +353,15 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   }
 
   // Use linear address for AFBC, Canvas otherwise
-  osd_ctrl_stat_val.set_osd_mem_mode(info->is_afbc ? 1 : 0);
+  osd_ctrl_stat_val.set_osd_mem_mode((supports_afbc_ && info->is_afbc) ? 1 : 0);
   osd_ctrl_stat2_val.set_pending_status_cleanup(1);
 
   SetRdmaTableValue(next_table_idx, IDX_CTRL_STAT, osd_ctrl_stat_val.reg_value());
   SetRdmaTableValue(next_table_idx, IDX_CTRL_STAT2, osd_ctrl_stat2_val.reg_value());
 
-  if (info->is_afbc) {
+  // Complain if doesn't support AFBC, but trying to display with AFBC
+  ZX_DEBUG_ASSERT(!(!supports_afbc_ && info->is_afbc));
+  if (supports_afbc_ && info->is_afbc) {
     // Line Stride calculation based on vendor code
     auto a = fbl::round_up(fbl::round_up(info->image_width * 4, 16u) / 16, 2u);
     auto r = Osd1Blk2CfgW4Reg::Get().FromValue(0).set_linear_stride(a).reg_value();
@@ -480,7 +482,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
                     (config[0].layer_list[0]->cfg.primary.image.handle & 0xFFFFFFFF));
 
   FlushRdmaTable(next_table_idx);
-  if (info->is_afbc) {
+  if (supports_afbc_ && info->is_afbc) {
     FlushAfbcRdmaTable();
     // Write the start and end address of the table.  End address is the last address that the
     // RDMA engine reads from.
@@ -520,7 +522,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
   rdma_usage_table_[next_table_idx] = config[0].layer_list[0]->cfg.primary.image.handle;
   rdma_active_ = true;
-  if (info->is_afbc) {
+  if (supports_afbc_ && info->is_afbc) {
     // Enable Auto mode: Non-Increment, VSync Interrupt Driven, Write
     RdmaAccessAuto2Reg::Get().FromValue(0).set_chn7_auto_write(1).WriteTo(&(*vpu_mmio_));
     RdmaAccessAuto3Reg::Get().FromValue(0).set_chn7_intr(1).WriteTo(&(*vpu_mmio_));
@@ -1048,8 +1050,10 @@ void Osd::HwInit() {
   WRITE32_REG(VPU, VPU_VPP_OSD1_BLD_V_SCOPE, display_height_ - 1);
   WRITE32_REG(VPU, VPU_VPP_OUT_H_V_SIZE, display_width_ << 16 | display_height_);
 
-  // Configure AFBC Engine's one-time programmable fields, so it's ready
-  ConfigAfbc();
+  if (supports_afbc_) {
+    // Configure AFBC Engine's one-time programmable fields, so it's ready
+    ConfigAfbc();
+  }
 }
 
 #define REG_OFFSET (0x20 << 2)

@@ -27,18 +27,17 @@ namespace amlogic_display {
 
 class AmlDsiHost {
  public:
-  AmlDsiHost(zx_device_t* parent, uint32_t bitrate, uint32_t panel_type)
+  AmlDsiHost(zx_device_t* parent, uint32_t panel_type)
       : pdev_(ddk::PDev::FromFragment(parent)),
         dsiimpl_(parent, "dsi"),
         lcd_gpio_(parent, "gpio"),
-        bitrate_(bitrate),
         panel_type_(panel_type) {}
 
   // This function sets up mipi dsi interface. It includes both DWC and AmLogic blocks
   // The DesignWare setup could technically be moved to the dw_mipi_dsi driver. However,
   // given the highly configurable nature of this block, we'd have to provide a lot of
   // information to the generic driver. Therefore, it's just simpler to configure it here
-  zx_status_t Init();
+  zx_status_t Init(uint32_t bitrate);
   zx_status_t HostOn(const display_setting_t& disp_setting);
   // This function will turn off DSI Host. It is a "best-effort" function. We will attempt
   // to shutdown whatever we can. Error during shutdown path is ignored and function proceeds
