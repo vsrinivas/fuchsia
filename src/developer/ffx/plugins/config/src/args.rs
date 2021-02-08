@@ -61,6 +61,7 @@ pub enum MappingMode {
     SubstituteAndFlatten,
 }
 
+//TODO(fxb/68931): Remove after references are removed from fconfig
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum OutputType {
     HumanReadable,
@@ -98,9 +99,9 @@ pub struct GetCommand {
     /// configs
     pub build_dir: Option<String>,
 
-    #[argh(option, from_str_fn(parse_output), default = "OutputType::HumanReadable", short = 'o')]
-    /// how to show results. Possible values are "h" or "human" or "human_readable" for human
-    /// readable output, "j" or "json" for valid JSON that contains only the value.
+    //TODO(fxb/68931): Remove after references are removed from fconfig
+    #[argh(option, from_str_fn(parse_output), default = "OutputType::Json", short = 'o')]
+    /// [DEPRECATED] The output type will always be JSON.
     pub output: OutputType,
 }
 
@@ -347,7 +348,7 @@ mod tests {
                         select: SelectMode::First,
                         name: Some(expected_key.to_string()),
                         build_dir: expected_build_dir,
-                        output: OutputType::HumanReadable,
+                        output: OutputType::Json,
                     })
                 })
             )

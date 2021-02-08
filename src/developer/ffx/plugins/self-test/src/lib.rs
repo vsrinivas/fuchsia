@@ -27,7 +27,7 @@ async fn test_isolated() -> Result<()> {
     let isolate = Isolate::new("isolated")?;
 
     let out = isolate.ffx(&["config", "get", "test.is-isolated"]).output()?;
-    assert_eq!(String::from_utf8(out.stdout)?, "test.is-isolated: true\n");
+    assert_eq!(String::from_utf8(out.stdout)?, "true\n");
 
     Ok(())
 }
