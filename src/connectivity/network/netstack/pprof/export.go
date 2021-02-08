@@ -37,26 +37,32 @@ func Setup(path string) (component.Node, func() error, error) {
 			defer t.Stop()
 
 			for {
-				mapDir.mu.Lock()
-				// Prune all but the most recent profiles. The number retained is
-				// chosen arbitrarily.
-				if maxProfiles := 3; len(mapDir.mu.m) > maxProfiles {
-					filenames := make([]string, 0, len(mapDir.mu.m))
-					for filename := range mapDir.mu.m {
-						filenames = append(filenames, filename)
-					}
-					sort.Strings(filenames)
-					for _, filename := range filenames[:len(filenames)-maxProfiles] {
-						if err := mapDir.mu.m[filename].File.(*sliceFile).Close(); err != nil {
-							return err
+				if err := func() error {
+					mapDir.mu.Lock()
+					defer mapDir.mu.Unlock()
+					// Prune all but the most recent profiles. The number retained is
+					// chosen arbitrarily.
+					if maxProfiles := 3; len(mapDir.mu.m) > maxProfiles {
+						filenames := make([]string, 0, len(mapDir.mu.m))
+						for filename := range mapDir.mu.m {
+							filenames = append(filenames, filename)
 						}
-						delete(mapDir.mu.m, filename)
-						if err := os.Remove(filepath.Join(path, filename)); err != nil {
-							syslog.Warnf("failed to remove %s: %s", filename, err)
+						sort.Strings(filenames)
+						for _, filename := range filenames[:len(filenames)-maxProfiles] {
+							if err := mapDir.mu.m[filename].File.(*sliceFile).Close(); err != nil {
+								return err
+							}
+							delete(mapDir.mu.m, filename)
+							if err := os.Remove(filepath.Join(path, filename)); err != nil {
+								_ = syslog.Warnf("failed to remove %s: %s", filename, err)
+							}
 						}
 					}
+					return nil
+				}(); err != nil {
+					return err
 				}
-				mapDir.mu.Unlock()
+
 				filename := (<-t.C).UTC().Format(time.RFC3339) + ".inspect"
 
 				b, err := getProfilesInspectVMOBytes()
