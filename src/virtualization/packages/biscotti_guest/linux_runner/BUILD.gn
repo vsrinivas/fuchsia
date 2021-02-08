@@ -198,6 +198,7 @@ test_package("linux_runner_tests") {
     {
       name = "linux_runner_unittests"
       environments = basic_envs
+      disabled = true
     },
   ]
 }
