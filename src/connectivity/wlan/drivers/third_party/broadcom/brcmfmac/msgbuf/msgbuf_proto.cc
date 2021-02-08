@@ -220,13 +220,17 @@ zx_status_t MsgbufProto::SetDcmd(int ifidx, uint cmd, void* buf, uint len, bcme_
 }
 
 zx_status_t MsgbufProto::TxQueueData(int ifidx, std::unique_ptr<Netbuf> netbuf) {
-  BRCMF_ERR("MsgbufProto::TxQueueData unimplemented");
-  netbuf->Return(ZX_ERR_NOT_SUPPORTED);
-  return ZX_ERR_NOT_SUPPORTED;
+  ring_handler_->QueueTxData(ifidx, std::move(netbuf));
+
+  // Data queuing is asynchronous, so we don't have a useful status yet.
+  return ZX_OK;
 }
 
 void MsgbufProto::ConfigureAddrMode(int ifidx, proto_addr_mode addr_mode) {
-  BRCMF_ERR("MsgbufProto::ConfigureAddrMode unimplemented");
+  const bool is_ap_mode = (addr_mode == proto_addr_mode::ADDR_DIRECT);
+
+  // To be sure we're getting clean state, we'll just create the interface over again.
+  ring_handler_->ResetInterface(ifidx, is_ap_mode);
 }
 
 void MsgbufProto::DeletePeer(int ifidx, uint8_t peer[ETH_ALEN]) {

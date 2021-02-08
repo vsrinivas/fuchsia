@@ -78,6 +78,7 @@ executable("msgbuf_ring_handler_test") {
     ":fake_msgbuf_interfaces",
     ":test_utils",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:stub_netbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",

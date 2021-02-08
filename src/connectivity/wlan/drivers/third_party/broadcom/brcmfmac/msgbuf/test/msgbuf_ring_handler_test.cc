@@ -4,6 +4,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_ring_handler.h"
 
 #include <lib/zx/time.h>
+#include <netinet/if_ether.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -25,6 +26,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/fake_msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/test_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/stub_netbuf.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -265,6 +267,196 @@ TEST(MsgbufRingHandlerTest, WlEvent) {
     EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
                                 fake_interfaces.get(), &wl_event, sizeof(wl_event)));
   }
+}
+
+// Test the MsgbufRingHandler TX flow.
+TEST(MsgbufRingHandlerTest, TxData) {
+  static constexpr int kTxIterations = 1024;
+
+  std::unique_ptr<FakeMsgbufInterfaces> fake_interfaces;
+  std::unique_ptr<DmaPool> rx_buffer_pool;
+  std::unique_ptr<DmaPool> tx_buffer_pool;
+  StubEventHandler event_handler;
+  std::unique_ptr<MsgbufRingHandler> ring_handler;
+
+  ASSERT_EQ(ZX_OK, FakeMsgbufInterfaces::Create(&fake_interfaces));
+  CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &rx_buffer_pool);
+  CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &tx_buffer_pool);
+  ASSERT_EQ(ZX_OK, MsgbufRingHandler::Create(fake_interfaces.get(), fake_interfaces.get(),
+                                             std::move(rx_buffer_pool), std::move(tx_buffer_pool),
+                                             &event_handler, &ring_handler));
+
+  // Expectations for unicast TX: a flow ring is created, then the unicast data in transmitted.
+  static constexpr ethhdr kUnicastHeader = {
+      {0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5}, {0x00, 0x01, 0x02, 0x03, 0x04, 0x05}, 0};
+  static constexpr int kUnicastInterface = 1;
+  static constexpr bool kUnicastApMode = false;
+  uint16_t unicast_flow_ring_id = 0;
+  sync_completion_t unicast_tx_complete;
+  fake_interfaces->AddControlSubmitRingCallback([&](const void* buffer, size_t size) {
+    const MsgbufFlowRingCreateRequest* const create_request =
+        GetMsgStruct<MsgbufFlowRingCreateRequest>(buffer, size);
+    if (create_request == nullptr) {
+      return;
+    }
+    EXPECT_EQ(
+        0, std::memcmp(kUnicastHeader.h_dest, create_request->da, sizeof(kUnicastHeader.h_dest)));
+    unicast_flow_ring_id = create_request->flow_ring_id;
+
+    for (int i = 0; i < kTxIterations; ++i) {
+      // Every time a TX request comes over the flow ring, respond with a TX response on the TX
+      // complete ring.
+      fake_interfaces->AddFlowRingCallback(
+          create_request->flow_ring_id - fake_interfaces->GetDmaConfig().flow_ring_offset,
+          [&, i](const void* buffer, size_t size) {
+            const MsgbufTxRequest* const tx_request = GetMsgStruct<MsgbufTxRequest>(buffer, size);
+            if (tx_request == nullptr) {
+              return;
+            }
+            EXPECT_EQ(0, std::memcmp(&kUnicastHeader, tx_request->txhdr, sizeof(kUnicastHeader)));
+
+            MsgbufTxResponse tx_response = {};
+            tx_response.msg.msgtype = MsgbufTxResponse::kMsgType;
+            tx_response.msg.ifidx = tx_request->msg.ifidx;
+            tx_response.msg.request_id = tx_request->msg.request_id;
+            EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddTxCompleteRingEntry,
+                                        fake_interfaces.get(), &tx_response, sizeof(tx_response)));
+
+            if (i == kTxIterations - 1) {
+              sync_completion_signal(&unicast_tx_complete);
+            }
+          });
+    }
+
+    MsgbufFlowRingCreateResponse response = {};
+    response.msg.msgtype = MsgbufFlowRingCreateResponse::kMsgType;
+    response.msg.ifidx = create_request->msg.ifidx;
+    response.compl_hdr.flow_ring_id = create_request->flow_ring_id;
+
+    EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
+                                fake_interfaces.get(), &response, sizeof(response)));
+  });
+
+  // Without an interface, TX fails.
+  ring_handler->QueueTxData(
+      kUnicastInterface,
+      std::make_unique<StubNetbuf>(&kUnicastHeader, sizeof(kUnicastHeader), ZX_ERR_NOT_FOUND));
+
+  // Create an interface, transmit, and wait.
+  ring_handler->ResetInterface(kUnicastInterface, kUnicastApMode);
+  for (int i = 0; i < kTxIterations; ++i) {
+    ring_handler->QueueTxData(
+        kUnicastInterface,
+        std::make_unique<StubNetbuf>(&kUnicastHeader, sizeof(kUnicastHeader), ZX_OK));
+  }
+  sync_completion_wait(&unicast_tx_complete, kTestTimeout.get());
+
+  // Now do the same for multicast TX in AP mode: note in particular that the created flow ring is
+  // mapped to destination address FF:FF:FF:FF:FF:FF, common to all multicast destinations in AP
+  // mode.
+  static constexpr ethhdr kMulticastHeader = {
+      {0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6}, {0x00, 0x01, 0x02, 0x03, 0x04, 0x05}, 0};
+  static constexpr int kMulticastInterface = 2;
+  static constexpr bool kMulticastApMode = true;
+  uint16_t multicast_flow_ring_id = 0;
+  sync_completion_t multicast_tx_complete;
+  fake_interfaces->AddControlSubmitRingCallback([&](const void* buffer, size_t size) {
+    const MsgbufFlowRingCreateRequest* const create_request =
+        GetMsgStruct<MsgbufFlowRingCreateRequest>(buffer, size);
+    if (create_request == nullptr) {
+      return;
+    }
+    static constexpr uint8_t kAllFF[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    EXPECT_EQ(0, std::memcmp(kAllFF, create_request->da, sizeof(kAllFF)));
+    multicast_flow_ring_id = create_request->flow_ring_id;
+
+    for (int i = 0; i < kTxIterations; ++i) {
+      // Every time a TX request comes over the flow ring, respond with a TX response on the TX
+      // complete ring.
+      fake_interfaces->AddFlowRingCallback(
+          create_request->flow_ring_id - fake_interfaces->GetDmaConfig().flow_ring_offset,
+          [&, i](const void* buffer, size_t size) {
+            const MsgbufTxRequest* const tx_request = GetMsgStruct<MsgbufTxRequest>(buffer, size);
+            if (tx_request == nullptr) {
+              return;
+            }
+            EXPECT_EQ(0,
+                      std::memcmp(&kMulticastHeader, tx_request->txhdr, sizeof(kMulticastHeader)));
+
+            MsgbufTxResponse tx_response = {};
+            tx_response.msg.msgtype = MsgbufTxResponse::kMsgType;
+            tx_response.msg.ifidx = tx_request->msg.ifidx;
+            tx_response.msg.request_id = tx_request->msg.request_id;
+            EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddTxCompleteRingEntry,
+                                        fake_interfaces.get(), &tx_response, sizeof(tx_response)));
+
+            if (i == kTxIterations - 1) {
+              sync_completion_signal(&multicast_tx_complete);
+            }
+          });
+    }
+
+    MsgbufFlowRingCreateResponse response = {};
+    response.msg.msgtype = MsgbufFlowRingCreateResponse::kMsgType;
+    response.msg.ifidx = create_request->msg.ifidx;
+    response.compl_hdr.flow_ring_id = create_request->flow_ring_id;
+
+    EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
+                                fake_interfaces.get(), &response, sizeof(response)));
+  });
+
+  // Without an interface, TX fails.
+  ring_handler->QueueTxData(
+      kMulticastInterface,
+      std::make_unique<StubNetbuf>(&kMulticastHeader, sizeof(kMulticastHeader), ZX_ERR_NOT_FOUND));
+
+  // Create an interface, transmit, and wait.
+  ring_handler->ResetInterface(kMulticastInterface, kMulticastApMode);
+  for (int i = 0; i < kTxIterations; ++i) {
+    ring_handler->QueueTxData(
+        kMulticastInterface,
+        std::make_unique<StubNetbuf>(&kMulticastHeader, sizeof(kMulticastHeader), ZX_OK));
+  }
+  sync_completion_wait(&multicast_tx_complete, kTestTimeout.get());
+
+  // Make sure we get the ring deletion messages now.
+  sync_completion_t unicast_delete_complete;
+  sync_completion_t multicast_delete_complete;
+  auto delete_callback = [&](const void* buffer, size_t size) {
+    const MsgbufFlowRingDeleteRequest* const delete_request =
+        GetMsgStruct<MsgbufFlowRingDeleteRequest>(buffer, size);
+    if (delete_request == nullptr) {
+      return;
+    }
+    sync_completion_t* completion = nullptr;
+    if (delete_request->flow_ring_id == unicast_flow_ring_id) {
+      completion = &unicast_delete_complete;
+      unicast_flow_ring_id = 0;
+    } else if (delete_request->flow_ring_id == multicast_flow_ring_id) {
+      completion = &multicast_delete_complete;
+      multicast_flow_ring_id = 0;
+    } else {
+      EXPECT_TRUE(delete_request->flow_ring_id == unicast_flow_ring_id ||
+                  delete_request->flow_ring_id == multicast_flow_ring_id);
+      return;
+    }
+
+    MsgbufFlowRingDeleteResponse response = {};
+    response.msg.msgtype = MsgbufFlowRingDeleteResponse::kMsgType;
+    response.msg.ifidx = delete_request->msg.ifidx;
+    response.compl_hdr.flow_ring_id = delete_request->flow_ring_id;
+
+    EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
+                                fake_interfaces.get(), &response, sizeof(response)));
+
+    sync_completion_signal(completion);
+  };
+  fake_interfaces->AddControlSubmitRingCallback(delete_callback);
+  fake_interfaces->AddControlSubmitRingCallback(delete_callback);
+  ring_handler->ResetInterface(kUnicastInterface, kUnicastApMode);
+  ring_handler->ResetInterface(kMulticastInterface, kMulticastApMode);
+  sync_completion_wait(&unicast_delete_complete, kTestTimeout.get());
+  sync_completion_wait(&multicast_delete_complete, kTestTimeout.get());
 }
 
 }  // namespace

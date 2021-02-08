@@ -18,8 +18,10 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_pool.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_ring.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/flow_ring_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/task_queue.h"
 
 namespace wlan {
@@ -60,6 +62,13 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   zx_status_t Ioctl(uint8_t interface_index, uint32_t command, DmaPool::Buffer tx_data,
                     size_t tx_data_size, DmaPool::Buffer* rx_data, size_t* rx_data_size,
                     bcme_status_t* firmware_error, zx::duration timeout = zx::duration::infinite());
+
+  // Queue TX data for transmission.  As this is an asynchronous operation, no status is immediately
+  // returned.
+  void QueueTxData(int interface_index, std::unique_ptr<Netbuf> netbuf);
+
+  // Reset an interface.
+  void ResetInterface(int interface_index, bool is_ap_mode);
 
   // InterruptHandler implementation.
   uint32_t HandleInterrupt(uint32_t mailboxint) override;
@@ -112,9 +121,19 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   //
 
   // Create a callback for each of the relevant types of MSGBUF messages.
+  WorkQueue::value_type CreateMsgbufFlowRingCreateResponseCallback(
+      const MsgbufFlowRingCreateResponse& flow_ring_create_response)
+      __TA_REQUIRES(interrupt_handler_mutex_);
+  WorkQueue::value_type CreateMsgbufFlowRingDeleteResponseCallback(
+      const MsgbufFlowRingDeleteResponse& flow_ring_delete_response)
+      __TA_REQUIRES(interrupt_handler_mutex_);
   WorkQueue::value_type CreateMsgbufIoctlResponseCallback(const MsgbufIoctlResponse& ioctl_response)
       __TA_REQUIRES(interrupt_handler_mutex_);
   WorkQueue::value_type CreateMsgbufWlEventCallback(const MsgbufWlEvent& wl_event)
+      __TA_REQUIRES(interrupt_handler_mutex_);
+
+  // Handle each of the MSGBUF message types which do not require a callback.
+  void HandleMsgbufTxResponse(const MsgbufTxResponse& tx_response)
       __TA_REQUIRES(interrupt_handler_mutex_);
 
   // Create a list of callbacks to process events on each DMA completion ring.
@@ -173,6 +192,7 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   int required_rx_buffers_ __TA_GUARDED(worker_thread_mutex_) = 0;
 
   EventHandler* event_handler_ __TA_GUARDED(worker_thread_mutex_) = nullptr;
+  std::unique_ptr<FlowRingHandler> flow_ring_handler_ __TA_GUARDED(worker_thread_mutex_);
   IoctlState* ioctl_state_ __TA_GUARDED(worker_thread_mutex_) = nullptr;
   uint16_t ioctl_transaction_id_ __TA_GUARDED(worker_thread_mutex_) = 0;
 

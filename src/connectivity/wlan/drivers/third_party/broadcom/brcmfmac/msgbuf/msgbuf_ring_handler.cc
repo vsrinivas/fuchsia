@@ -21,6 +21,8 @@ namespace {
 
 union ControlSubmitRingEntry {
   MsgbufCommonHeader common_header;
+  MsgbufFlowRingCreateRequest flow_ring_create_request;
+  MsgbufFlowRingDeleteRequest flow_ring_delete_request;
   MsgbufIoctlRequest ioctl_request;
   MsgbufIoctlOrEventBufferPost ioctl_or_event_buffer_post;
 };
@@ -32,12 +34,15 @@ union RxBufferSubmitRingEntry {
 
 union ControlCompleteRingEntry {
   MsgbufCommonHeader common_header;
+  MsgbufFlowRingCreateResponse flow_ring_create_response;
+  MsgbufFlowRingDeleteResponse flow_ring_delete_response;
   MsgbufIoctlResponse ioctl_response;
   MsgbufWlEvent wl_event;
 };
 
 union TxCompleteRingEntry {
   MsgbufCommonHeader common_header;
+  MsgbufTxResponse tx_response;
 };
 
 union RxCompleteRingEntry {
@@ -180,7 +185,16 @@ zx_status_t MsgbufRingHandler::Create(DmaRingProviderInterface* dma_ring_provide
       return status;
     }
 
+    std::unique_ptr<FlowRingHandler> flow_ring_handler;
+    if ((status = FlowRingHandler::Create(dma_ring_provider, handler->control_submit_ring_,
+                                          handler->tx_buffer_pool_.get(), &flow_ring_handler)) !=
+        ZX_OK) {
+      BRCMF_ERR("Failed to create flow ring handler: %s", zx_status_get_string(status));
+      return status;
+    }
+
     handler->event_handler_ = event_handler;
+    handler->flow_ring_handler_ = std::move(flow_ring_handler);
     handler->worker_thread_ = std::thread(&MsgbufRingHandler::WorkerThreadFunction, handler.get());
   }
 
@@ -290,6 +304,44 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
   return ZX_OK;
 }
 
+void MsgbufRingHandler::QueueTxData(int interface_index, std::unique_ptr<Netbuf> netbuf) {
+  work_queue_.emplace([this, interface_index, netbuf = std::move(netbuf)]() mutable {
+    zx_status_t status = ZX_OK;
+    AssertIsWorkerThread();
+    const ethhdr* const ethernet_header = reinterpret_cast<const ethhdr*>(netbuf->data());
+    const wlan::common::MacAddr source(ethernet_header->h_source);
+    const wlan::common::MacAddr destination(ethernet_header->h_dest);
+    static constexpr int kFixedPriority = 0;  // ToS field not supported at this time.
+    FlowRingHandler::RingIndex ring_index = {};
+    if ((status = flow_ring_handler_->GetOrAddFlowRing(
+             FlowRingHandler::InterfaceIndex{interface_index}, source, destination, kFixedPriority,
+             &ring_index)) != ZX_OK) {
+      BRCMF_ERR("Failed to get flow ring for interface %d dest %s: %s", interface_index,
+                destination.ToString().c_str(), zx_status_get_string(status));
+      netbuf->Return(status);
+      return;
+    }
+
+    if ((status = flow_ring_handler_->Queue(ring_index, std::move(netbuf))) != ZX_OK) {
+      BRCMF_ERR("Failed to queue interface %d flow ring %d dest %s: %s", interface_index,
+                ring_index.value, destination.ToString().c_str(), zx_status_get_string(status));
+      return;
+    }
+  });
+}
+
+void MsgbufRingHandler::ResetInterface(int interface_index, bool is_ap_mode) {
+  work_queue_.emplace([this, interface_index, is_ap_mode]() {
+    zx_status_t status = ZX_OK;
+    AssertIsWorkerThread();
+    flow_ring_handler_->RemoveInterface({interface_index});
+    if ((status = flow_ring_handler_->AddInterface({interface_index}, is_ap_mode)) != ZX_OK) {
+      BRCMF_ERR("Failed to add interface %d, is_ap_mode %d: %s", interface_index,
+                static_cast<int>(is_ap_mode), zx_status_get_string(status));
+    }
+  });
+}
+
 uint32_t MsgbufRingHandler::HandleInterrupt(uint32_t mailboxint) {
   constexpr uint32_t kInterruptMask = BRCMF_PCIE_MB_INT_D2H_DB;
   if ((mailboxint & kInterruptMask) == 0) {
@@ -308,6 +360,26 @@ uint32_t MsgbufRingHandler::HandleInterrupt(uint32_t mailboxint) {
   work_queue_.splice(std::move(work_list));
 
   return kInterruptMask;
+}
+
+MsgbufRingHandler::WorkQueue::value_type
+MsgbufRingHandler::CreateMsgbufFlowRingCreateResponseCallback(
+    const MsgbufFlowRingCreateResponse& flow_ring_create_response) {
+  return [this, flow_ring_id = flow_ring_create_response.compl_hdr.flow_ring_id,
+          status = flow_ring_create_response.compl_hdr.status] {
+    AssertIsWorkerThread();
+    flow_ring_handler_->NotifyFlowRingCreated(flow_ring_id, status);
+  };
+}
+
+MsgbufRingHandler::WorkQueue::value_type
+MsgbufRingHandler::CreateMsgbufFlowRingDeleteResponseCallback(
+    const MsgbufFlowRingDeleteResponse& flow_ring_delete_response) {
+  return [this, flow_ring_id = flow_ring_delete_response.compl_hdr.flow_ring_id,
+          status = flow_ring_delete_response.compl_hdr.status] {
+    AssertIsWorkerThread();
+    flow_ring_handler_->NotifyFlowRingDestroyed(flow_ring_id, status);
+  };
 }
 
 MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufIoctlResponseCallback(
@@ -334,7 +406,7 @@ MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufIoctlRes
 
       DmaPool::Buffer buffer;
       if ((status = rx_buffer_pool_->Acquire(request_id, &buffer)) != ZX_OK) {
-        BRCMF_ERR("Failed to acquire rx buffer %d", request_id);
+        BRCMF_ERR("Failed to acquire rx buffer %d: %s", request_id, zx_status_get_string(status));
         return status;
       }
       // We have consumed one RX buffer for this ioctl response.
@@ -366,7 +438,7 @@ MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufWlEventC
 
     DmaPool::Buffer buffer;
     if ((status = rx_buffer_pool_->Acquire(request_id, &buffer)) != ZX_OK) {
-      BRCMF_ERR("Failed to acquire rx buffer %d", request_id);
+      BRCMF_ERR("Failed to acquire rx buffer %d: %s", request_id, zx_status_get_string(status));
       return;
     }
     // We have consumed one RX buffer for this ioctl response.
@@ -384,7 +456,7 @@ MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufWlEventC
     }
     const void* data = nullptr;
     if ((status = buffer.MapRead(event_size_with_offset, &data)) != ZX_OK) {
-      BRCMF_ERR("Failed to map rx buffer %d", buffer.index());
+      BRCMF_ERR("Failed to map rx buffer %d: %s", buffer.index(), zx_status_get_string(status));
       return;
     }
 
@@ -392,6 +464,29 @@ MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufWlEventC
         reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(data) + rx_data_offset_);
     event_handler_->HandleWlEvent(event_data, event_size);
   };
+}
+
+void MsgbufRingHandler::HandleMsgbufTxResponse(const MsgbufTxResponse& tx_response) {
+  zx_status_t status = ZX_OK;
+
+  // Buffers are released to the hardware when they are transmitted.  These buffers are still marked
+  // as being in use by `tx_buffer_pool_`; once they are returned through a MsgbufTxResponse, we
+  // re-acquire them here so that the DmaPool::Buffer destructor can properly free them in the
+  // `tx_buffer_pool_`.
+  DmaPool::Buffer buffer;
+  if ((status = tx_buffer_pool_->Acquire(tx_response.msg.request_id, &buffer)) != ZX_OK) {
+    BRCMF_ERR("Failed to acquire tx buffer %d: %s", tx_response.msg.request_id,
+              zx_status_get_string(status));
+    return;
+  }
+
+  if (tx_response.compl_hdr.status != 0) {
+    // Note: tx_response.compl_hdr.flow_ring_id is flow ring index offset by the count of other
+    // submission rings.
+    BRCMF_ERR("Failed to complete tx: ifidx %d ring %d buffer %d status %d tx_status %d",
+              tx_response.msg.ifidx, tx_response.compl_hdr.flow_ring_id, tx_response.msg.request_id,
+              tx_response.compl_hdr.status, tx_response.tx_status);
+  }
 }
 
 MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessControlCompleteRing() {
@@ -414,6 +509,18 @@ MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessControlCo
               reinterpret_cast<const char*>(buffer) +
               entry_index * control_complete_ring_->item_size());
       switch (entry->common_header.msgtype) {
+        case MsgbufCommonHeader::MsgType::kFlowRingCreateResponse: {
+          work_list.emplace_back(
+              CreateMsgbufFlowRingCreateResponseCallback(entry->flow_ring_create_response));
+          break;
+        }
+
+        case MsgbufCommonHeader::MsgType::kFlowRingDeleteResponse: {
+          work_list.emplace_back(
+              CreateMsgbufFlowRingDeleteResponseCallback(entry->flow_ring_delete_response));
+          break;
+        }
+
         case MsgbufCommonHeader::MsgType::kIoctlAck: {
           // Nothing to do, really.
           break;
@@ -450,6 +557,7 @@ MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessTxComplet
   // unreliable and/or security-compromised.  Program defensively!
 
   uint16_t entry_count = 0;
+  bool tx_completed = false;
   while ((entry_count = tx_complete_ring_->GetAvailableReads()) > 0) {
     if ((status = tx_complete_ring_->MapRead(entry_count, &buffer)) != ZX_OK) {
       BRCMF_ERR("Failed to map tx complete ring: %s", zx_status_get_string(status));
@@ -459,6 +567,12 @@ MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessTxComplet
       const TxCompleteRingEntry* const entry = reinterpret_cast<const TxCompleteRingEntry*>(
           reinterpret_cast<const char*>(buffer) + entry_index * tx_complete_ring_->item_size());
       switch (entry->common_header.msgtype) {
+        case MsgbufCommonHeader::MsgType::kTxResponse: {
+          HandleMsgbufTxResponse(entry->tx_response);
+          tx_completed = true;
+          break;
+        }
+
         default: {
           BRCMF_ERR("Invalid msgtype %d", static_cast<int>(entry->common_header.msgtype));
           break;
@@ -468,6 +582,11 @@ MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessTxComplet
     tx_complete_ring_->CommitRead(entry_count);
   }
 
+  if (tx_completed) {
+    // We really only have to do one thing, which is to poke the worker thread to tell the
+    // FlowRingHandler that there may be TX buffers available now.
+    work_list.emplace_back([]() {});
+  }
   return work_list;
 }
 
@@ -515,6 +634,7 @@ void MsgbufRingHandler::WorkerThreadFunction() {
     if ((status = QueueRxBuffers()) != ZX_OK) {
       BRCMF_ERR("Failed to queue rx buffers: %s", zx_status_get_string(status));
     }
+    flow_ring_handler_->SubmitToFlowRings();
   }
 }
 
