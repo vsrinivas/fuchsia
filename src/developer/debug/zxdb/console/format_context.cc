@@ -21,6 +21,8 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+#include "src/developer/debug/zxdb/expr/keywords.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -39,23 +41,119 @@ namespace {
 using LineInfo = std::pair<int, std::string>;  // Line #, Line contents.
 using LineVector = std::vector<LineInfo>;
 
-// Formats the given line, highlighting from the column to the end of the line.
-// The column is 1-based but we also accept 0.
-OutputBuffer HighlightLine(std::string str, int column) {
-  // Convert to 0-based with clamping (since the offsets come from symbols,
-  // they could be invalid).
-  int str_size = static_cast<int>(str.size());
-  int col_index = std::min(std::max(0, column - 1), str_size);
+OutputBuffer FormatSourceLineNoSyntax(const FormatSourceOpts& opts, bool is_highlight_line,
+                                      const std::string& line) {
+  if (!is_highlight_line) {
+    // Non-highlighted lines just get output in either regular or dim.
+    Syntax syntax = opts.dim_others ? Syntax::kComment : Syntax::kNormal;
+    return OutputBuffer(syntax, line);
+  }
+
+  // Highlighted lines may need part of the line highligted or all of it. Convert the colum to
+  // 0-based with clamping (since the offsets come from symbols, they could be invalid).
+  int line_size = static_cast<int>(line.size());
+  int col_index = std::min(std::max(0, opts.highlight_column - 1), line_size);
 
   OutputBuffer result;
   if (col_index == 0) {
-    result.Append(Syntax::kHeading, std::move(str));
+    result.Append(Syntax::kHeading, line);
   } else {
-    result.Append(Syntax::kNormal, str.substr(0, col_index));
-    if (col_index < str_size)
-      result.Append(Syntax::kHeading, str.substr(col_index));
+    result.Append(Syntax::kNormal, line.substr(0, col_index));
+    if (col_index < line_size)
+      result.Append(Syntax::kHeading, line.substr(col_index));
   }
   return result;
+}
+
+struct SyntaxVariants {
+  SyntaxVariants(Syntax normal_in, Syntax dim_in, Syntax bold_in)
+      : normal(normal_in), dim(dim_in), bold(bold_in) {}
+  Syntax normal;
+  Syntax dim;
+  Syntax bold;
+};
+
+SyntaxVariants SyntaxForTokenType(ExprTokenType type) {
+  // Normal names and such.
+  if (type == ExprTokenType::kInvalid || type == ExprTokenType::kName)
+    return SyntaxVariants(Syntax::kNormal, Syntax::kComment, Syntax::kHeading);
+
+  // Numbers. Treat true and false as numbers as well.
+  if (type == ExprTokenType::kFloat || type == ExprTokenType::kInteger ||
+      type == ExprTokenType::kTrue || type == ExprTokenType::kFalse)
+    return SyntaxVariants(Syntax::kNumberNormal, Syntax::kNumberDim, Syntax::kNumberBold);
+
+  // Strings.
+  if (type == ExprTokenType::kStringLiteral)
+    return SyntaxVariants(Syntax::kStringNormal, Syntax::kStringDim, Syntax::kStringBold);
+
+  // Assume everything that's an alphanumeric token is a keyword.
+  const ExprTokenRecord& record = RecordForTokenType(type);
+  if (record.is_alphanum)
+    return SyntaxVariants(Syntax::kKeywordNormal, Syntax::kKeywordDim, Syntax::kKeywordBold);
+
+  // Everything else is an operator.
+  return SyntaxVariants(Syntax::kOperatorNormal, Syntax::kOperatorDim, Syntax::kOperatorBold);
+}
+
+// Assumes a valid nonempty token list.
+OutputBuffer FormatSourceLineWithTokens(const FormatSourceOpts& opts, bool is_highlight_line,
+                                        const std::string& line,
+                                        const std::vector<ExprToken>& tokens) {
+  FX_DCHECK(!tokens.empty());
+  FX_DCHECK(opts.language);
+
+  // The code here always uses the text from the source file. We always want to show the literal
+  // source rather than what the tokenizer interpreted it as (though normally these will be the
+  // same).
+  OutputBuffer out;
+
+  // Construct a list of ranges indicating the syntax type. The last item will reference the end of
+  // the list to make end conditions easier to handle.
+  using OffsetType = std::pair<size_t, ExprTokenType>;
+  std::vector<OffsetType> spans;
+  if (tokens[0].byte_offset() > 0)  // Stuff before first token (normally whitespace).
+    spans.emplace_back(0, ExprTokenType::kInvalid);
+
+  const std::set<std::string>& keywords = AllKeywordsForLanguage(*opts.language, true);
+  for (const auto& token : tokens) {
+    // The tokenizer doesn't kave tokens for all keywords. Check the name to see if it's a common
+    // builtin to annotate accordingly.
+    if (token.type() == ExprTokenType::kName && keywords.find(token.value()) != keywords.end()) {
+      // Keyword or quasi-built-in. Since there's no general "keyword" token type, assign these all
+      // to the "if" token which will trigger the keyword formatting.
+      spans.emplace_back(token.byte_offset(), ExprTokenType::kIf);
+    } else {
+      spans.emplace_back(token.byte_offset(), token.type());
+    }
+  }
+  spans.emplace_back(line.size(), ExprTokenType::kInvalid);  // End boundary.
+
+  // Convert spans to formatted text. Skip the last once since that's the dummy span at the end.
+  for (size_t i = 0; i < spans.size() - 1; i++) {
+    // Since we added a dummy span at the end not covered by the loop, there will always be a next
+    // span.
+    size_t begin_offset = spans[i].first;
+    size_t end_offset = spans[i + 1].first;
+    if (begin_offset == end_offset)
+      continue;
+
+    SyntaxVariants variants = SyntaxForTokenType(spans[i].second);
+    Syntax syntax = variants.normal;
+    if (!is_highlight_line) {
+      // Non-highlighted lines just get output in either regular or dim.
+      if (opts.dim_others)
+        syntax = variants.dim;
+    } else {
+      // Highlighted line, Anything past the (1-based) colum gets bolded, everything else is normal.
+      if (static_cast<int>(begin_offset) >= opts.highlight_column - 1)
+        syntax = variants.bold;
+    }
+
+    out.Append(syntax, line.substr(begin_offset, end_offset - begin_offset));
+  }
+
+  return out;
 }
 
 // Retrieves the proper MOduleSymbols (or null) for the given location as a weak pointer. This is
@@ -151,6 +249,9 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
     source_opts.last_line = source_opts.active_line + 2;
     source_opts.dim_others = true;
     source_opts.module_for_time_warning = GetWeakModuleForLocation(process, location);
+
+    if (const Symbol* sym = location.symbol().Get())
+      source_opts.language = DwarfLangToExprLanguage(sym->GetLanguage());
 
     OutputBuffer out;
     Err err = FormatSourceFileContext(location.file_line(), *file_provider, source_opts, &out);
@@ -272,7 +373,6 @@ Err FormatSourceContext(const std::string& file_name_for_display, const std::str
   std::vector<std::vector<OutputBuffer>> rows;
   for (size_t i = 0; i < context.size(); i++) {
     int line_number = first_line + i;
-    std::string& line_text = context[i];  // Moved out of.
 
     rows.emplace_back();
     std::vector<OutputBuffer>& row = rows.back();
@@ -310,12 +410,12 @@ Err FormatSourceContext(const std::string& file_name_for_display, const std::str
     if (line_number == opts.highlight_line) {
       // This is the line to mark.
       row.emplace_back(Syntax::kHeading, std::move(number));
-      row.push_back(HighlightLine(std::move(line_text), opts.highlight_column));
+      row.push_back(FormatSourceLine(opts, true, context[i]));
     } else {
       // Normal context line.
       Syntax syntax = opts.dim_others ? Syntax::kComment : Syntax::kNormal;
       row.emplace_back(syntax, std::move(number));
-      row.emplace_back(syntax, std::move(line_text));
+      row.push_back(FormatSourceLine(opts, false, context[i]));
     }
   }
 
@@ -450,6 +550,16 @@ Err FormatBreakpointContext(const Location& location, const SourceFileProvider& 
   opts.highlight_line = line;
   opts.bp_lines[line] = enabled;
   return FormatSourceFileContext(location.file_line(), file_provider, opts, out);
+}
+
+OutputBuffer FormatSourceLine(const FormatSourceOpts& opts, bool is_highlight_line,
+                              const std::string& line) {
+  if (opts.language) {
+    ExprTokenizer tokenizer(line, *opts.language);
+    if (tokenizer.Tokenize() && !tokenizer.tokens().empty())
+      return FormatSourceLineWithTokens(opts, is_highlight_line, line, tokenizer.tokens());
+  }
+  return FormatSourceLineNoSyntax(opts, is_highlight_line, line);
 }
 
 }  // namespace zxdb

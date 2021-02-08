@@ -218,8 +218,8 @@ bool ExprTokenizer::CurrentMatchesTokenRecord(const ExprTokenRecord& record) con
     return false;  // Doesn't match the token static value.
 
   if (record.is_alphanum) {
-    if (cur_ + size < input_.size() && isalnum(input_[cur_ + size]))
-      return false;  // Alphanumeric character follows so won't match.
+    if (cur_ + size < input_.size() && IsNameContinuingChar(input_[cur_ + size]))
+      return false;  // Name character immediately follows so won't match.
   }
 
   return true;

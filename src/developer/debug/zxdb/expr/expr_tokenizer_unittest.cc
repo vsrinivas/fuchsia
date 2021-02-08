@@ -330,6 +330,31 @@ TEST(ExprTokenizer, OtherLiterals) {
   EXPECT_EQ(43u, tokens[8].byte_offset());
 }
 
+// Keywords
+TEST(ExprTokenizer, Keywords) {
+  // There must be punctuation separating alphanumeric keywords.
+  ExprTokenizer t("truefalse.as_ref as true", ExprLanguage::kRust);
+  EXPECT_TRUE(t.Tokenize());
+  EXPECT_FALSE(t.err().has_error()) << t.err().msg();
+  const auto& tokens = t.tokens();
+  ASSERT_EQ(5u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kName, tokens[0].type());
+  EXPECT_EQ("truefalse", tokens[0].value());
+
+  EXPECT_EQ(ExprTokenType::kDot, tokens[1].type());
+  EXPECT_EQ(".", tokens[1].value());
+
+  EXPECT_EQ(ExprTokenType::kName, tokens[2].type());
+  EXPECT_EQ("as_ref", tokens[2].value());
+
+  EXPECT_EQ(ExprTokenType::kAs, tokens[3].type());
+  EXPECT_EQ("as", tokens[3].value());
+
+  EXPECT_EQ(ExprTokenType::kTrue, tokens[4].type());
+  EXPECT_EQ("true", tokens[4].value());
+}
+
 TEST(ExprTokenizer, Names) {
   // Char offsets: 0123456789012345678901
   // Token #'s:     0   12    3 4       5

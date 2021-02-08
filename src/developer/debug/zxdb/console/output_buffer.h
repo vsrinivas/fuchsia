@@ -24,7 +24,23 @@ enum class Syntax {
   kSpecial,
   kReversed,
   kVariable,  // Use for variable names.
-  kFileName
+  kFileName,
+
+  kKeywordBold,
+  kKeywordNormal,
+  kKeywordDim,
+
+  kOperatorBold,
+  kOperatorNormal,
+  kOperatorDim,
+
+  kNumberBold,
+  kNumberNormal,
+  kNumberDim,
+
+  kStringBold,
+  kStringNormal,
+  kStringDim,
 };
 
 const char* SyntaxToString(Syntax);

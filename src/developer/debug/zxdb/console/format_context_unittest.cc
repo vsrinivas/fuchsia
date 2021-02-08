@@ -285,4 +285,124 @@ TEST(FormatContext, FormatSourceFileContext_Stale) {
   EXPECT_EQ(expected_code, out.AsString());
 }
 
+// Tests line formatting with no syntax highlighting.
+TEST(FormatContext, FormatSourceLineNoLang) {
+  // Empty line.
+  OutputBuffer out = FormatSourceLine(FormatSourceOpts(), false, std::string());
+  EXPECT_EQ("kNormal \"\"", out.GetDebugString());
+
+  // Whitespace only.
+  out = FormatSourceLine(FormatSourceOpts(), false, "    ");
+  EXPECT_EQ("kNormal \"    \"", out.GetDebugString());
+
+  const char kLine[] = "  for (int i = 0; i < a.size(); i++) {";
+
+  // Dim.
+  FormatSourceOpts opts;
+  opts.dim_others = true;
+  out = FormatSourceLine(opts, false, kLine);
+  EXPECT_EQ("kComment \"  for (int i = 0; i < a.size(); i++) {\"", out.GetDebugString());
+
+  // Regular.
+  opts.dim_others = false;
+  out = FormatSourceLine(opts, false, kLine);
+  EXPECT_EQ("kNormal \"  for (int i = 0; i < a.size(); i++) {\"", out.GetDebugString());
+
+  // Bold whole line.
+  out = FormatSourceLine(opts, true, kLine);
+  EXPECT_EQ("kHeading \"  for (int i = 0; i < a.size(); i++) {\"", out.GetDebugString());
+
+  // Bold just part of it.
+  opts.highlight_column = 19;  // Bold from "i < a.size()..."
+  out = FormatSourceLine(opts, true, kLine);
+  EXPECT_EQ("kNormal \"  for (int i = 0; \", kHeading \"i < a.size(); i++) {\"",
+            out.GetDebugString());
+}
+
+// Tests line formatting with C syntax highlighting.
+TEST(FormatContext, FormatSourceLineC) {
+  FormatSourceOpts opts;
+  opts.language = ExprLanguage::kC;
+
+  // Empty line.
+  OutputBuffer out = FormatSourceLine(opts, false, std::string());
+  EXPECT_EQ("kNormal \"\"", out.GetDebugString());
+
+  // Whitespace only.
+  out = FormatSourceLine(opts, false, "    ");
+  EXPECT_EQ("kNormal \"    \"", out.GetDebugString());
+
+  // Tokenization error should fall back to unformatted.
+  out = FormatSourceLine(opts, false, " hello 'world");
+  EXPECT_EQ("kNormal \" hello 'world\"", out.GetDebugString());
+
+  const char kLine[] = "  for (int i = 0; i < a.size(); i++) {";
+
+  // Dim.
+  opts.dim_others = true;
+  out = FormatSourceLine(opts, false, kLine);
+  EXPECT_EQ(
+      "kComment \"  \", kKeywordDim \"for \", kOperatorDim \"(\", kKeywordDim \"int \", "
+      "kComment \"i \", kOperatorDim \"= \", kNumberDim \"0\", kOperatorDim \"; \", "
+      "kComment \"i \", kOperatorDim \"< \", kComment \"a\", kOperatorDim \".\", "
+      "kComment \"size\", kOperatorDim \"(); \", kComment \"i\", kOperatorDim \"++) {\"",
+      out.GetDebugString());
+
+  // Regular.
+  opts.dim_others = false;
+  out = FormatSourceLine(opts, false, kLine);
+  EXPECT_EQ(
+      "kNormal \"  \", kKeywordNormal \"for \", kOperatorNormal \"(\", kKeywordNormal \"int \", "
+      "kNormal \"i \", kOperatorNormal \"= \", kNumberNormal \"0\", kOperatorNormal \"; \", "
+      "kNormal \"i \", kOperatorNormal \"< \", kNormal \"a\", kOperatorNormal \".\", "
+      "kNormal \"size\", kOperatorNormal \"(); \", kNormal \"i\", kOperatorNormal \"++) {\"",
+      out.GetDebugString());
+
+  // Bold whole line.
+  out = FormatSourceLine(opts, true, kLine);
+  EXPECT_EQ(
+      "kHeading \"  \", kKeywordBold \"for \", kOperatorBold \"(\", kKeywordBold \"int \", "
+      "kHeading \"i \", kOperatorBold \"= \", kNumberBold \"0\", kOperatorBold \"; \", "
+      "kHeading \"i \", kOperatorBold \"< \", kHeading \"a\", kOperatorBold \".\", "
+      "kHeading \"size\", kOperatorBold \"(); \", kHeading \"i\", kOperatorBold \"++) {\"",
+      out.GetDebugString());
+
+  // Bold just part of it.
+  opts.highlight_column = 19;  // Bold from "i < a.size()..."
+  out = FormatSourceLine(opts, true, kLine);
+  EXPECT_EQ(
+      "kNormal \"  \", kKeywordNormal \"for \", kOperatorNormal \"(\", kKeywordNormal \"int \", "
+      "kNormal \"i \", kOperatorNormal \"= \", kNumberNormal \"0\", kOperatorNormal \"; \", "
+      "kHeading \"i \", kOperatorBold \"< \", kHeading \"a\", kOperatorBold \".\", "
+      "kHeading \"size\", kOperatorBold \"(); \", kHeading \"i\", kOperatorBold \"++) {\"",
+      out.GetDebugString());
+}
+
+TEST(FormatContext, FormatSourceLineRust) {
+  FormatSourceOpts opts;
+  opts.language = ExprLanguage::kRust;
+
+  // Empty line.
+  OutputBuffer out = FormatSourceLine(opts, false, std::string());
+  EXPECT_EQ("kNormal \"\"", out.GetDebugString());
+
+  // Whitespace only.
+  out = FormatSourceLine(opts, false, "    ");
+  EXPECT_EQ("kNormal \"    \"", out.GetDebugString());
+
+  // Tokenization error should fall back to unformatted.
+  out = FormatSourceLine(opts, false, " hello \"world");
+  EXPECT_EQ("kNormal \" hello \"world\"", out.GetDebugString());
+
+  const char kLine[] = "let temp_dir = TempDir::new_in(\"cache\")";
+
+  // Regular.
+  out = FormatSourceLine(opts, false, kLine);
+  EXPECT_EQ(
+      "kKeywordNormal \"let \", kNormal \"temp_dir \", kOperatorNormal \"= \", "
+      "kNormal \"TempDir\", kOperatorNormal \"::\", kNormal \"new_in\", kOperatorNormal \"(\", "
+      "kStringNormal \"\"cache\"\", kOperatorNormal \")\"",
+      out.GetDebugString());
+}
+
 }  // namespace zxdb

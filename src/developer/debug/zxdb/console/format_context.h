@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
@@ -38,6 +39,9 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
                         const Location& location, SourceAffinity source_affinity);
 
 struct FormatSourceOpts {
+  // If set, syntax highlights source code according to the given language.
+  std::optional<ExprLanguage> language;
+
   // Show the full file path before printing source code. Useful for debugging symbol issues.
   //
   // This could be enhanced to be an enum to show a short name or the name from the symbol file.
@@ -145,6 +149,12 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
 // Build_dir_prefs is used to find relative files by FormatSourceFileContext().
 Err FormatBreakpointContext(const Location& location, const SourceFileProvider& file_provider,
                             bool enabled, OutputBuffer* out);
+
+// Syntax highlights the given source line according to the language's rules. The is_highlight_line
+// flag indicates whether to apply opts.highlight_line and opts.highlight_column to the current
+// line.
+OutputBuffer FormatSourceLine(const FormatSourceOpts& opts, bool is_highlight_line,
+                              const std::string& line);
 
 }  // namespace zxdb
 

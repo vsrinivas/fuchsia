@@ -189,13 +189,21 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
+  FormatSourceOpts opts;
+
   // Decode the location. With no argument it uses the frame, with an argument no frame is required.
   FileLine file_line;
   if (cmd.args().empty()) {
     if (!cmd.frame()) {
       return Err(ErrType::kInput, "There isn't a current frame to take the location from.");
     }
-    file_line = cmd.frame()->GetLocation().file_line();
+    const Location& loc = cmd.frame()->GetLocation();
+    file_line = loc.file_line();
+
+    // Extract the language of the current symbol for highlighting.
+    if (const Symbol* sym = loc.symbol().Get())
+      opts.language = DwarfLangToExprLanguage(sym->GetLanguage());
+
   } else if (cmd.args().size() == 1) {
     // Look up some location, depending on the type of input, a running process may or may not be
     // required.
@@ -213,7 +221,6 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
                "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>");
   }
 
-  FormatSourceOpts opts;
   opts.show_file_name =
       cmd.HasSwitch(kListFilePaths) ||
       cmd.target()->session()->system().settings().GetBool(ClientSettings::System::kShowFilePaths);

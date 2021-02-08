@@ -34,6 +34,19 @@ static const SyntaxColorMap& GetSyntaxColorMap() {
       {Syntax::kReversed, "\x1b[7m"},   // "[7m" = Reverse video.
       {Syntax::kVariable, "\x1b[36m"},  // "[36m" = Cyan.
       {Syntax::kFileName, "\x1b[95m"},  // "[35m" = Bright Magenta.
+
+      {Syntax::kKeywordBold, "\x1b[1;33m"},   // "[93m" = Bright yellow.
+      {Syntax::kKeywordNormal, "\x1b[33m"},   //
+      {Syntax::kKeywordDim, "\x1b[2;33m"},    //
+      {Syntax::kOperatorBold, "\x1b[1;33m"},  // "[93m" = Bright yellow
+      {Syntax::kOperatorNormal, "\x1b[33m"},  //
+      {Syntax::kOperatorDim, "\x1b[2;33m"},   //
+      {Syntax::kNumberBold, "\x1b[1;95m"},    // "[95m" = Magenta
+      {Syntax::kNumberNormal, "\x1b[95m"},    //
+      {Syntax::kNumberDim, "\x1b[2;95m"},     //
+      {Syntax::kStringBold, "\x1b[1;95m"},    // "[95m" = Magenta
+      {Syntax::kStringNormal, "\x1b[95m"},    //
+      {Syntax::kStringDim, "\x1b[2;95m"},     //
   };
 
   return syntax_color_map;
@@ -119,6 +132,30 @@ const char* SyntaxToString(Syntax syntax) {
       return "kVariable";
     case Syntax::kFileName:
       return "kFileName";
+    case Syntax::kKeywordBold:
+      return "kKeywordBold";
+    case Syntax::kKeywordNormal:
+      return "kKeywordNormal";
+    case Syntax::kKeywordDim:
+      return "kKeywordDim";
+    case Syntax::kOperatorBold:
+      return "kOperatorBold";
+    case Syntax::kOperatorNormal:
+      return "kOperatorNormal";
+    case Syntax::kOperatorDim:
+      return "kOperatorDim";
+    case Syntax::kNumberBold:
+      return "kNumberBold";
+    case Syntax::kNumberNormal:
+      return "kNumberNormal";
+    case Syntax::kNumberDim:
+      return "kNumberDim";
+    case Syntax::kStringBold:
+      return "kStringBold";
+    case Syntax::kStringNormal:
+      return "kStringNormal";
+    case Syntax::kStringDim:
+      return "kStringDim";
   }
   return nullptr;
 }
