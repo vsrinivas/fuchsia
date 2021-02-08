@@ -1,16 +1,12 @@
 {
-    "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
-    ],
     "program": {
-        "binary": "test/audio-realtime-unittests"
+        "binary": "test/audio_testing_unittests"
     },
     "sandbox": {
         "features": [
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.process.Launcher",
             "fuchsia.scheduler.ProfileProvider"
         ]

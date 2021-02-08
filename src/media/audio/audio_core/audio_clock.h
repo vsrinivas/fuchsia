@@ -73,6 +73,8 @@ class AudioClock {
                                                    AudioClock& source_clock,
                                                    AudioClock& dest_clock);
 
+  virtual ~AudioClock() = default;
+
   // No copy
   AudioClock(const AudioClock&) = delete;
   AudioClock& operator=(const AudioClock&) = delete;
@@ -92,12 +94,14 @@ class AudioClock {
   uint32_t domain() const { return domain_; }
 
   // Return a transform based on a snapshot of the underlying zx::clock
-  TimelineFunction ref_clock_to_clock_mono() const;
-  zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
-  zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
+  virtual TimelineFunction ref_clock_to_clock_mono() const;
+  virtual zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
+  virtual zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
 
-  zx::clock DuplicateClock() const;
-  zx::time Read() const;
+  fit::result<zx::clock, zx_status_t> DuplicateClock(
+      zx_rights_t rights = ZX_RIGHT_SAME_RIGHTS) const;
+  fit::result<zx::clock, zx_status_t> DuplicateClockReadOnly() const;
+  virtual zx::time Read() const;
 
   // We synchronize audio clocks so that positions (not just rates) align, reconciling differences
   // using feedback controls. Given position error at monotonic_time, we tune source_pos_error to 0.
@@ -114,11 +118,17 @@ class AudioClock {
   // Directly incorporate a position error when recovering a device clock.
   int32_t TuneForError(zx::time monotonic_time, zx::duration source_pos_error);
 
+ protected:
+  enum class Source { Client, Device };
+
+  AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t domain = kInvalidDomain);
+
+  virtual void UpdateClockRate(int32_t rate_adjust_ppm);
+
  private:
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
   friend class AudioClockTest;
 
-  enum class Source { Client, Device };
   enum class SyncMode {
     // If two clocks are identical or in the same clock domain, no synchronization is needed.
     None = 0,
@@ -140,10 +150,6 @@ class AudioClock {
   static std::string SyncModeToString(SyncMode mode);
 
   static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
-
-  AudioClock(zx::clock clock, Source source, bool adjustable)
-      : AudioClock(std::move(clock), source, adjustable, kInvalidDomain) {}
-  AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t domain);
 
   int32_t ClampPpm(int32_t parts_per_million);
   void AdjustClock(int32_t rate_adjust_ppm);

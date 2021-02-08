@@ -738,15 +738,19 @@ void AudioDriverV2::SetUpClocks() {
   // provided by the audio driver, which correlate DMA position with CLOCK_MONOTONIC time.
   // TODO(fxbug.dev/60027): Recovered clocks should be per-domain not per-driver.
   auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
-  auto read_only_clock = audio::clock::DuplicateClock(adjustable_clock).take_value();
-
   recovered_clock_ =
       owner_->clock_manager()->CreateDeviceAdjustable(std::move(adjustable_clock), clock_domain_);
 
+  auto read_only_clock_result = recovered_clock_->DuplicateClockReadOnly();
+  if (read_only_clock_result.is_error()) {
+    FX_LOGS(ERROR) << "DuplicateClockReadOnly failed, will not recover a device clock!";
+    return;
+  }
+
   // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
   // be DeviceAdjustable, not DeviceFixed, to articulate that it has hardware controls.
-  auto clone =
-      owner_->clock_manager()->CreateDeviceFixed(std::move(read_only_clock), clock_domain_);
+  auto clone = owner_->clock_manager()->CreateDeviceFixed(read_only_clock_result.take_value(),
+                                                          clock_domain_);
 
   audio_clock_ = std::move(clone);
 }

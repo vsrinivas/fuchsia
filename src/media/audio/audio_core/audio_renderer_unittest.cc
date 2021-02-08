@@ -210,9 +210,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   // Send another set of packets after lead time + padding to ensure these packets cannot be played
   // continuously with the last set of packets. Now we use FLAG_DISCONTINUITY which means they
   // will not be continuous with the previous packets.
-  //
-  // TODO(fxbug.dev/57377): Use a fake clock for unittests.
-  zx::nanosleep(zx::deadline_after(stream->GetPresentationDelay() + zx::msec(30)));
+  context().clock_manager()->AdvanceMonoTimeBy(stream->GetPresentationDelay() + zx::msec(30));
   packet.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
@@ -336,27 +334,25 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
 
 TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->raw_clock().is_valid());
-
   clock::testing::VerifyAdvances(fidl_clock);
-  clock::testing::VerifyAdvances(renderer_->raw_clock());
+  clock::testing::VerifyAdvances(
+      audio_clock_helper::get_underlying_zx_clock(renderer_->reference_clock()));
 }
 
 TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->raw_clock().is_valid());
-
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
   // Within audio_core, the default clock is rate-adjustable.
-  clock::testing::VerifyCanBeRateAdjusted(renderer_->raw_clock());
+  clock::testing::VerifyCanBeRateAdjusted(
+      audio_clock_helper::get_underlying_zx_clock(renderer_->reference_clock()));
 }
 
 TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
-
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  clock::testing::VerifyIsSystemMonotonic(renderer_->raw_clock());
+  clock::testing::VerifyIsSystemMonotonic(
+      audio_clock_helper::get_underlying_zx_clock(renderer_->reference_clock()));
 }
 
 // The renderer clock is valid, before and after devices are routed.

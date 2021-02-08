@@ -5,7 +5,6 @@
 #include <fbl/string_printf.h>
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/audio_clock_helper.h"
@@ -131,8 +130,6 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
   std::unique_ptr<AudioClock> client_clock_;
   std::unique_ptr<AudioClock> device_clock_;
 
-  bool wait_for_mixes_;  // Does this sync mode require MONOTONIC time to pass between mixes.
-
   int32_t total_mix_count_;
   int32_t limit_mix_count_settled_;
   int32_t limit_mix_count_one_usec_err_;
@@ -162,8 +159,6 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
   }
 
   void SetRateLimits(int32_t rate_adjust_ppm) override {
-    wait_for_mixes_ = false;  // no zx::clock rate_adjust usage: runs faster than real-time
-
     primary_err_ppm_multiplier_ = kMicroSrcPrimaryErrPpmMultiplier;
     secondary_err_ppm_multiplier_ = kMicroSrcSecondaryErrPpmMultiplier;
 
@@ -182,28 +177,24 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
   // depending on which synchronization mode is being tested.
   void SetClocks(ClockMode clock_mode, int32_t rate_adjust_ppm) override {
     device_ref_to_fixed_ = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-        0, zx::clock::get_monotonic().get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
-        zx::sec(1).to_nsecs()));
+        0, context().clock_manager()->mono_time().get(),
+        Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
     device_clock_ = context().clock_manager()->CreateDeviceFixed(clock::CloneOfMonotonic(),
                                                                  AudioClock::kMonotonicDomain);
     audio_clock_helper::VerifyAdvances(*device_clock_);
 
-    zx::time source_start = zx::clock::get_monotonic();
-    clock::testing::ClockProperties clock_props;
+    zx::time source_start = context().clock_manager()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
       source_start += kClockOffset;
-      clock_props = {.start_val = source_start};
-    } else if (clock_mode == ClockMode::RATE_ADJUST) {
-      clock_props = {.rate_adjust_ppm = rate_adjust_ppm};
     }
 
     client_ref_to_fixed_ = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, source_start.get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
 
-    auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
-    client_clock_ = context().clock_manager()->CreateClientFixed(std::move(raw_clock));
+    client_clock_ = context().clock_manager()->CreateClientFixed(
+        source_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0);
     audio_clock_helper::VerifyAdvances(*client_clock_);
   }
 };
@@ -222,8 +213,6 @@ class AdjustableClockTest : public MixStageClockTest,
   }
 
   void SetRateLimits(int32_t rate_adjust_ppm) override {
-    wait_for_mixes_ = true;  // zx::clock rate_adjust can only be used in real time
-
     primary_err_ppm_multiplier_ = kAdjustablePrimaryErrPpmMultiplier;
     secondary_err_ppm_multiplier_ = kAdjustableSecondaryErrPpmMultiplier;
 
@@ -242,29 +231,26 @@ class AdjustableClockTest : public MixStageClockTest,
   // depending on which synchronization mode is being tested.
   void SetClocks(ClockMode clock_mode, int32_t rate_adjust_ppm) override {
     client_ref_to_fixed_ = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-        0, zx::clock::get_monotonic().get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
-        zx::sec(1).to_nsecs()));
+        0, context().clock_manager()->mono_time().get(),
+        Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
     client_clock_ =
         context().clock_manager()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic());
     audio_clock_helper::VerifyAdvances(*client_clock_);
 
-    auto device_start = zx::clock::get_monotonic();
-    clock::testing::ClockProperties clock_props;
+    auto device_start = context().clock_manager()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
       device_start += kClockOffset;
-      clock_props = {.start_val = device_start};
-    } else if (clock_mode == ClockMode::RATE_ADJUST) {
-      clock_props = {.rate_adjust_ppm = rate_adjust_ppm};
     }
 
     device_ref_to_fixed_ = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, device_start.get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
 
-    auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
-    device_clock_ =
-        context().clock_manager()->CreateDeviceFixed(std::move(raw_clock), kNonMonotonicDomain);
+    device_clock_ = context().clock_manager()->CreateDeviceFixed(
+        device_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0,
+        kNonMonotonicDomain);
+
     audio_clock_helper::VerifyAdvances(*device_clock_);
   }
 };
@@ -351,11 +337,12 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
   int32_t actual_mix_count_one_percent_err = -1, actual_mix_count_one_usec_err = -1;
   int32_t actual_mix_count_settled = -1;
 
-  auto mono_start = zx::clock::get_monotonic();
   for (auto mix_count = 0; mix_count < total_mix_count_; ++mix_count) {
-    if (wait_for_mixes_) {
-      zx::nanosleep(mono_start + kClockSyncMixDuration * mix_count);
+    // Advance time by kClockSyncMixDuration after the first mix.
+    if (mix_count) {
+      context().clock_manager()->AdvanceMonoTimeBy(kClockSyncMixDuration);
     }
+
     mix_stage_->ReadLock(Fixed(kFramesToMix * mix_count), kFramesToMix);
     ASSERT_EQ(mix_info.next_dest_frame, kFramesToMix * (mix_count + 1));
 

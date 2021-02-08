@@ -62,7 +62,7 @@ class BaseRenderer : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
-  zx::clock& raw_clock() { return raw_clock_; }
+  AudioClock& reference_clock() { return *clock_; }
 
  protected:
   BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -142,7 +142,7 @@ class BaseRenderer : public AudioObject,
   WavWriter<kEnableRendererWavWriters> wav_writer_;
   Reporter::Container<Reporter::Renderer, Reporter::kObjectsToCache>::Ptr reporter_;
 
-  zx::clock raw_clock_;
+  std::unique_ptr<AudioClock> clock_;
   bool client_allows_clock_adjustment_ = true;
   bool adjustable_clock_is_allocated_ = false;
 };

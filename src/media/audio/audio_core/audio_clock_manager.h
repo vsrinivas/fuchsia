@@ -21,18 +21,58 @@ namespace media::audio {
 
 class AudioClockManager {
  public:
-  std::unique_ptr<AudioClock> CreateClientAdjustable(zx::clock clock) {
+  virtual ~AudioClockManager() = default;
+
+  virtual std::unique_ptr<AudioClock> CreateClientAdjustable(zx::clock clock) {
     return std::make_unique<AudioClock>(AudioClock::ClientAdjustable(std::move(clock)));
   }
-  std::unique_ptr<AudioClock> CreateClientFixed(zx::clock clock) {
+
+  virtual std::unique_ptr<AudioClock> CreateClientFixed(zx::clock clock) {
     return std::make_unique<AudioClock>(AudioClock::ClientFixed(std::move(clock)));
   }
-  std::unique_ptr<AudioClock> CreateDeviceAdjustable(zx::clock clock, uint32_t domain) {
+
+  virtual std::unique_ptr<AudioClock> CreateDeviceAdjustable(zx::clock clock, uint32_t domain) {
     return std::make_unique<AudioClock>(AudioClock::DeviceAdjustable(std::move(clock), domain));
   }
-  std::unique_ptr<AudioClock> CreateDeviceFixed(zx::clock clock, uint32_t domain) {
+
+  virtual std::unique_ptr<AudioClock> CreateDeviceFixed(zx::clock clock, uint32_t domain) {
     return std::make_unique<AudioClock>(AudioClock::DeviceFixed(std::move(clock), domain));
   }
+
+  //
+  // The following are intended to be test-only and overridden in FakeClockManager.
+  //
+
+  virtual std::unique_ptr<AudioClock> CreateClientAdjustable(zx::time start_time,
+                                                             int32_t rate_adjust_ppm) {
+    FX_CHECK(false) << "Custom CreateClientAdjustable not available for real clocks.";
+    return nullptr;
+  }
+
+  virtual std::unique_ptr<AudioClock> CreateClientFixed(zx::time start_time,
+                                                        int32_t rate_adjust_ppm) {
+    FX_CHECK(false) << "Custom CreateClientFixed not available for real clocks.";
+    return nullptr;
+  }
+
+  virtual std::unique_ptr<AudioClock> CreateDeviceAdjustable(zx::time start_time,
+                                                             int32_t rate_adjust_ppm,
+                                                             uint32_t domain) {
+    FX_CHECK(false) << "Custom CreateDeviceAdjustable not available for real clocks.";
+    return nullptr;
+  }
+
+  virtual std::unique_ptr<AudioClock> CreateDeviceFixed(zx::time start_time,
+                                                        int32_t rate_adjust_ppm, uint32_t domain) {
+    FX_CHECK(false) << "Custom CreateDeviceFixed not available for real clocks.";
+    return nullptr;
+  }
+
+  virtual void AdvanceMonoTimeBy(zx::duration duration) {
+    FX_CHECK(false) << "AdvanceMonoTimeBy is not available for real clocks.";
+  }
+
+  virtual zx::time mono_time() const { return zx::clock::get_monotonic(); }
 };
 
 }  // namespace media::audio

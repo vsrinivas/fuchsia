@@ -805,8 +805,14 @@ void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
-  callback(reference_clock().DuplicateClock());
+  // Regardless of whether clock_ is writable, this strips off the WRITE right.
+  auto clock_result = reference_clock().DuplicateClockReadOnly();
+  if (clock_result.is_error()) {
+    FX_LOGS(ERROR) << "DuplicateClockReadOnly failed, will not return a reference clock!";
+    return;
+  }
 
+  callback(clock_result.take_value());
   cleanup.cancel();
 }
 

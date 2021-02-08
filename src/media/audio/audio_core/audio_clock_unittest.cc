@@ -112,7 +112,10 @@ TEST_F(AudioClockTest, EqualsOperator) {
   auto clock2 = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
   EXPECT_FALSE(clock1 == clock2);
 
-  auto clock3 = AudioClock::ClientFixed(clock1.DuplicateClock());
+  auto result = clock1.DuplicateClock();
+  ASSERT_TRUE(result.is_ok());
+
+  auto clock3 = AudioClock::ClientFixed(result.take_value());
   EXPECT_TRUE(clock1 == clock3);
 }
 
@@ -162,10 +165,11 @@ TEST_F(AudioClockTest, ClockMonoToRefClock) {
 TEST_F(AudioClockTest, DuplicateClock) {
   auto audio_clock = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
-  auto dupe_raw_clock = audio_clock.DuplicateClock();
-  EXPECT_TRUE(dupe_raw_clock.is_valid());
+  auto dupe_raw_clock_result = audio_clock.DuplicateClock();
+  ASSERT_TRUE(dupe_raw_clock_result.is_ok());
+  EXPECT_TRUE(dupe_raw_clock_result.value().is_valid());
 
-  auto dupe_audio_clock = AudioClock::ClientFixed(std::move(dupe_raw_clock));
+  auto dupe_audio_clock = AudioClock::ClientFixed(dupe_raw_clock_result.take_value());
 
   auto time1 = dupe_audio_clock.Read().get();
   auto time2 = dupe_audio_clock.Read().get();

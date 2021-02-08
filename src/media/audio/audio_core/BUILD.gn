@@ -235,6 +235,7 @@ executable("unittest_bin") {
     "audio_clock_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_device_unittest.cc",
+    "audio_driver_clock_unittest.cc",
     "audio_driver_unittest.cc",
     "audio_input_unittest.cc",
     "audio_output_unittest.cc",
@@ -246,6 +247,7 @@ executable("unittest_bin") {
     "effects_stage_unittest.cc",
     "link_matrix_unittest.cc",
     "loudness_transform_unittest.cc",
+    "mix_stage_clock_unittest.cc",
     "mix_stage_unittest.cc",
     "output_pipeline_unittest.cc",
     "packet_queue_unittest.cc",
@@ -286,11 +288,13 @@ executable("unittest_bin") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:null_renderer_capturer",
+    "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
@@ -321,38 +325,6 @@ test_package("audio_core_unittests") {
   ]
 }
 
-executable("realtime_unittest_bin") {
-  visibility = [ ":*" ]
-  testonly = true
-  output_name = "audio-realtime-unittests"
-
-  sources = [
-    "audio_driver_clock_unittest.cc",
-    "mix_stage_clock_unittest.cc",
-  ]
-
-  deps = [
-    ":audio_core_lib",
-    "testing",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/media/audio/lib/clock/testing",
-    "//third_party/googletest:gmock",
-  ]
-}
-
-# This must run on real hardware because it has hard real-time restraints. Emulators are too slow.
-test_package("audio-realtime-unittests") {
-  deps = [ ":realtime_unittest_bin" ]
-
-  tests = [
-    {
-      name = "audio-realtime-unittests"
-      environments = hardware_envs
-    },
-  ]
-}
-
 fuzzer("audio_core_fuzzer") {
   sources = [ "policy_loader_fuzzer.cc" ]
   deps = [ ":audio_core_lib" ]
@@ -365,13 +337,9 @@ group("tests") {
     ":audio_core_unittests",
     "mixer:tests",
     "test",
+    "testing:tests",
 
     # include this explicitly, in case product includes a custom audio_core package by other name
     "//src/media/audio/audio_core",
   ]
-
-  # This test must run on non-debug builds because it has hard real-time restraints.
-  if (!is_debug) {
-    deps += [ ":audio-realtime-unittests" ]
-  }
 }

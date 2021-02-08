@@ -6,7 +6,6 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/testing/audio_clock_helper.h"
@@ -170,9 +169,7 @@ std::unique_ptr<AudioClock> OutputPipelineTest::SetPacketFactoryWithOffsetAudioC
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  auto custom_audio_clock = context().clock_manager()->CreateClientFixed(std::move(custom_clock));
-
-  return custom_audio_clock;
+  return context().clock_manager()->CreateClientFixed(std::move(custom_clock));
 }
 
 void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
@@ -319,8 +316,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   pipeline->AddInput(CreateFakeStream(stream_usage), stream_usage);
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
-  auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
-  auto ref_start = device_clock_->Read() + scheduling_delay;
+  auto ref_start = device_clock_->Read();
   auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
@@ -333,9 +329,8 @@ TEST_F(OutputPipelineTest, Loopback) {
   ASSERT_EQ(buf->length().Floor(), 48u);
   CheckBuffer(buf->payload(), 2.0, 96);
 
-  // Sleep to advance our safe_read_frame past the above mix, which includes 1ms of output
-  // and is presented at most scheduling_delay from now. TODO(fxbug.dev/57377): Remove this sleep
-  usleep((scheduling_delay + zx::msec(1)).to_usecs());
+  // Advance time to our safe_read_frame past the above mix, which includes 1ms of output.
+  context().clock_manager()->AdvanceMonoTimeBy(zx::msec(1));
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
@@ -414,8 +409,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   pipeline->AddInput(CreateFakeStream(stream_usage), stream_usage);
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
-  auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
-  auto ref_start = device_clock_->Read() + scheduling_delay;
+  auto ref_start = device_clock_->Read();
   auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
@@ -428,10 +422,8 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   ASSERT_EQ(buf->length().Floor(), 96u);
   CheckBuffer(buf->payload(), 2.0, 192);
 
-  // Sleep to advance our safe_read_frame past the above mix, which includes 1ms of output
-  // and is presented at most scheduling_delay from now. TODO(fxbug.dev/57377): Remove this sleep
-  usleep((scheduling_delay + zx::msec(1)).to_usecs());
-
+  // Advance time to our safe_read_frame past the above mix, which includes 1ms of output.
+  context().clock_manager()->AdvanceMonoTimeBy(zx::msec(1));
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
   auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
@@ -841,13 +833,6 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   };
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-
-  zx::clock writable_clock = clock::CloneOfMonotonic();
-  auto result = audio::clock::DuplicateClock(writable_clock);
-  ASSERT_TRUE(result.is_ok());
-  zx::clock readonly_clock = result.take_value();
-  clock::testing::VerifyReadOnlyRights(readonly_clock);
-
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, *device_clock_);
 

@@ -9,7 +9,6 @@
 #include <fbl/string_printf.h>
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -704,7 +703,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   //
   // If denominator is not changing, src_pos_modulo will be unchanged.
   bookkeeping.src_pos_modulo = 4;
-  zx_nanosleep(zx_deadline_after(kMixDuration.get()));
+  context().clock_manager()->AdvanceMonoTimeBy(kMixDuration);
   mix_stage_->ReadLock(Fixed(dest_frames_per_mix), dest_frames_per_mix);
 
   // Long-running source position advances normally, no change to src_pos_modulo.
@@ -717,7 +716,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   info.next_src_pos_modulo = 2;
   bookkeeping.src_pos_modulo = 4;
   bookkeeping.denominator = 2;
-  zx_nanosleep(zx_deadline_after(kMixDuration.get()));
+  context().clock_manager()->AdvanceMonoTimeBy(kMixDuration);
   mix_stage_->ReadLock(Fixed(dest_frames_per_mix * 2), dest_frames_per_mix);
 
   // Denominator changes from 2 to 1, so src_pos_modulo is scaled from 4 to 2. next_src_pos_modulo
