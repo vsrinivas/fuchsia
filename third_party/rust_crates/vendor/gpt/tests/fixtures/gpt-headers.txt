@@ -1,0 +1,36 @@
+sudo dd if=gpt/tests/fixtures/gpt-linux-disk-01.img bs=512 count=1 skip=1 > lba.1
+Primary Header of gpt-linux-disk-01.img
+------------------------------------------
+Signature:              0x4546492050415254
+Revision:                       0x00000100
+HeaderSize:                             92
+HeaderCRC32:                    0x3e9607da
+HeaderCRC32 (calculated):       0x3e9607da
+Reserved:                       0x00000000
+MyLBA:                                   1
+AlternateLBA:                           95
+FirstUsableLBA:                         34
+LastUsableLBA:                          62
+PartitionEntryLBA:                       2
+NumberOfPartitionEntries:              128
+SizeOfPartitionEntry:                  128
+PartitionEntryArrayCRC32:        0x90e9ba6
+
+==========================================
+sudo dd if=gpt/tests/fixtures/gpt-linux-disk-01.img bs=512 count=1 skip=95 > lba.last
+Backup Header
+------------------------------------------
+Signature:              0x4546492050415254
+Revision:                       0x00000100
+HeaderSize:                             92
+HeaderCRC32:                    0xeacc533e
+HeaderCRC32 (calculated):       0xeacc533e
+Reserved:                       0x00000000
+MyLBA:                                  95
+AlternateLBA:                            1
+FirstUsableLBA:                         34
+LastUsableLBA:                          62
+PartitionEntryLBA:                      63
+NumberOfPartitionEntries:              128
+SizeOfPartitionEntry:                  128
+PartitionEntryArrayCRC32:        0x90e9ba6

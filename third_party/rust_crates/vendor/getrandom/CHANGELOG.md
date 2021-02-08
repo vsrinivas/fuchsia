@@ -4,6 +4,92 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2021-01-19
+### Changed
+- Forward `rustc-dep-of-std` to dependencies. [#198]
+- Highlight feature-dependend functionality in documentation using the `doc_cfg` feature. [#200]
+
+[#198]: https://github.com/rust-random/getrandom/pull/198
+[#200]: https://github.com/rust-random/getrandom/pull/200
+
+## [0.2.1] - 2021-01-03
+### Changed
+- Update `cfg-if` to v1.0. [#166]
+- Update `wasi` to v0.10. [#167]
+
+### Fixed
+- Multithreaded WASM support. [#165]
+
+### Removed
+- Windows XP support. [#177]
+- Direct `stdweb` support. [#178]
+- CloudABI support. [#184]
+
+[#165]: https://github.com/rust-random/getrandom/pull/165
+[#166]: https://github.com/rust-random/getrandom/pull/166
+[#167]: https://github.com/rust-random/getrandom/pull/167
+[#177]: https://github.com/rust-random/getrandom/pull/177
+[#178]: https://github.com/rust-random/getrandom/pull/178
+[#184]: https://github.com/rust-random/getrandom/pull/184
+
+## [0.2.0] - 2020-09-10
+### Features for using getrandom on unsupported targets
+
+The following (off by default) Cargo features have been added:
+- `"rdrand"` - use the RDRAND instruction on `no_std` `x86`/`x86_64` targets [#133]
+- `"js"` - use JavaScript calls on `wasm32-unknown-unknown` [#149]
+  - Replaces the `stdweb` and `wasm-bindgen` features (which are removed)
+- `"custom"` - allows a user to specify a custom implementation [#109]
+
+### Breaking Changes
+- Unsupported targets no longer compile [#107]
+- Change/Add `Error` constants [#120]
+- Only impl `std` traits when the `"std"` Cargo feature is specified [#106]
+- Remove offical support for Hermit, L4Re, and UEFI [#133]
+- Remove optional `"log"` dependancy [#131]
+- Update minimum supported Linux kernel to 2.6.32 [#153]
+- Update MSRV to 1.34 [#159]
+
+[#106]: https://github.com/rust-random/getrandom/pull/106
+[#107]: https://github.com/rust-random/getrandom/pull/107
+[#109]: https://github.com/rust-random/getrandom/pull/109
+[#120]: https://github.com/rust-random/getrandom/pull/120
+[#131]: https://github.com/rust-random/getrandom/pull/131
+[#133]: https://github.com/rust-random/getrandom/pull/133
+[#149]: https://github.com/rust-random/getrandom/pull/149
+[#153]: https://github.com/rust-random/getrandom/pull/153
+[#159]: https://github.com/rust-random/getrandom/pull/159
+
+## [0.1.16] - 2020-12-31
+### Changed
+- Update `cfg-if` to v1.0. [#173]
+- Implement `std::error::Error` for the `Error` type on additional targets. [#169]
+
+### Fixed
+- Multithreaded WASM support. [#171]
+
+[#173]: https://github.com/rust-random/getrandom/pull/173
+[#171]: https://github.com/rust-random/getrandom/pull/171
+[#169]: https://github.com/rust-random/getrandom/pull/169
+
+## [0.1.15] - 2020-09-10
+### Changed
+- Added support for Internet Explorer 11 [#139]
+- Fix Webpack require warning with `wasm-bindgen` [#137]
+
+[#137]: https://github.com/rust-random/getrandom/pull/137
+[#139]: https://github.com/rust-random/getrandom/pull/139
+
+## [0.1.14] - 2020-01-07
+### Changed
+- Remove use of spin-locks in the `use_file` module. [#125]
+- Update `wasi` to v0.9. [#126]
+- Do not read errno value on DragonFlyBSD to fix compilation failure. [#129]
+
+[#125]: https://github.com/rust-random/getrandom/pull/125
+[#126]: https://github.com/rust-random/getrandom/pull/126
+[#129]: https://github.com/rust-random/getrandom/pull/129
+
 ## [0.1.13] - 2019-08-25
 ### Added
 - VxWorks targets support. [#86]

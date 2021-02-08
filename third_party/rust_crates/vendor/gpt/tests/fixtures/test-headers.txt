@@ -1,0 +1,36 @@
+sudo dd if=gpt/tests/fixtures/test.img bs=512 count=1 skip=1 > lba.1
+Primary Header of test.img
+------------------------------------------
+Signature:              0x4546492050415254
+Revision:                       0x00000100
+HeaderSize:                             92
+HeaderCRC32:                    0x24929e70
+HeaderCRC32 (calculated):       0x24929e70
+Reserved:                       0x00000000
+MyLBA:                                   1
+AlternateLBA:                        20479
+FirstUsableLBA:                       2048
+LastUsableLBA:                       20446
+PartitionEntryLBA:                       2
+NumberOfPartitionEntries:              128
+SizeOfPartitionEntry:                  128
+PartitionEntryArrayCRC32:       0xd9c4150d
+
+==========================================
+sudo dd if=gpt/tests/fixtures/test.img bs=512 count=1 skip=20479 > lba.last
+Backup Header
+------------------------------------------
+Signature:              0x4546492050415254
+Revision:                       0x00000100
+HeaderSize:                             92
+HeaderCRC32:                    0x9e29fd39
+HeaderCRC32 (calculated):       0x9e29fd39
+Reserved:                       0x00000000
+MyLBA:                               20479
+AlternateLBA:                            1
+FirstUsableLBA:                       2048
+LastUsableLBA:                       20446
+PartitionEntryLBA:                   20447
+NumberOfPartitionEntries:              128
+SizeOfPartitionEntry:                  128
+PartitionEntryArrayCRC32:       0xd9c4150d

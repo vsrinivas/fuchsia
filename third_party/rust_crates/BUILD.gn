@@ -200,6 +200,10 @@ group("glob") {
   deps = [ ":glob-v0_3_0" ]
 }
 
+group("gpt") {
+  deps = [ ":gpt-v2_0_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("handlebars") {
     deps = [ ":handlebars-v2_0_0-beta_2" ]
@@ -3390,7 +3394,7 @@ rust_library("getopts-v0_2_18") {
 
 rust_library("getrandom-v0_1_13") {
   crate_name = "getrandom"
-  crate_root = "//third_party/rust_crates/vendor/getrandom/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/getrandom-0.1.13/src/lib.rs"
   output_name = "getrandom-37dd2a246b257ac6"
   configs -= [
     "//build/config:rust_edition_2018",
@@ -3417,6 +3421,34 @@ rust_library("getrandom-v0_1_13") {
   ]
 }
 
+rust_library("getrandom-v0_2_2") {
+  crate_name = "getrandom"
+  crate_root = "//third_party/rust_crates/vendor/getrandom/src/lib.rs"
+  output_name = "getrandom-a3378427d5ef87b9"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  if (false) {
+    deps += [ ":wasi-v0_10_1+wasi-snapshot-preview1" ]
+  }
+  if (true) {
+    deps += [ ":libc-v0_2_84" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=a3378427d5ef87b9",
+    "-Cextra-filename=-a3378427d5ef87b9",
+  ]
+}
+
 rust_library("glob-v0_3_0") {
   crate_name = "glob"
   crate_root = "//third_party/rust_crates/vendor/glob/src/lib.rs"
@@ -3435,6 +3467,31 @@ rust_library("glob-v0_3_0") {
     "--edition=2015",
     "-Cmetadata=aa5b2e2c44f5f401",
     "-Cextra-filename=-aa5b2e2c44f5f401",
+  ]
+}
+
+rust_library("gpt-v2_0_0") {
+  crate_name = "gpt"
+  crate_root = "//third_party/rust_crates/vendor/gpt/src/lib.rs"
+  output_name = "gpt-92cda70d62a05801"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":crc-v1_8_1" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":uuid-v0_8_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=92cda70d62a05801",
+    "-Cextra-filename=-92cda70d62a05801",
   ]
 }
 
@@ -10012,7 +10069,7 @@ rust_library("utf8parse-v0_1_1") {
 
 rust_library("uuid-v0_7_2") {
   crate_name = "uuid"
-  crate_root = "//third_party/rust_crates/vendor/uuid/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/uuid-0.7.2/src/lib.rs"
   output_name = "uuid-9a6c95af1cabc2e6"
   configs -= [
     "//build/config:rust_edition_2018",
@@ -10033,6 +10090,32 @@ rust_library("uuid-v0_7_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"serde\"",
+    "--cfg=feature=\"std\"",
+    "--cfg=feature=\"v4\"",
+  ]
+}
+
+rust_library("uuid-v0_8_2") {
+  crate_name = "uuid"
+  crate_root = "//third_party/rust_crates/vendor/uuid/src/lib.rs"
+  output_name = "uuid-919b1371cee9e3ba"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":getrandom-v0_2_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=919b1371cee9e3ba",
+    "-Cextra-filename=-919b1371cee9e3ba",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"getrandom\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"v4\"",
   ]
@@ -10226,9 +10309,32 @@ rust_library("want-v0_3_0") {
   ]
 }
 
-rust_library("wasi-v0_7_0") {
+rust_library("wasi-v0_10_1+wasi-snapshot-preview1") {
   crate_name = "wasi"
   crate_root = "//third_party/rust_crates/vendor/wasi/src/lib.rs"
+  output_name = "wasi-7728795b1b2960eb"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=7728795b1b2960eb",
+    "-Cextra-filename=-7728795b1b2960eb",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("wasi-v0_7_0") {
+  crate_name = "wasi"
+  crate_root = "//third_party/rust_crates/vendor/wasi-0.7.0/src/lib.rs"
   output_name = "wasi-db34952771d0e0f1"
   configs -= [
     "//build/config:rust_edition_2018",
