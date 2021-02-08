@@ -411,31 +411,37 @@ impl<'a> ValidationContext<'a> {
             return Err(Error::validate("\"as\" field cannot be used with \"storage\""));
         }
 
-        if let Some(event_stream) = use_.event_stream.as_ref() {
-            if use_.path.is_none() {
-                return Err(Error::validate("\"path\" should be present with \"event_stream\""));
-            }
-            let event_names = event_stream
-                .iter()
-                .map(|subscription| subscription.event.to_vec())
-                .flatten()
-                .collect::<Vec<&Name>>();
+        match (use_.event_stream.as_ref(), use_.subscriptions.as_ref()) {
+            (Some(_), Some(subscriptions)) => {
+                let event_names = subscriptions
+                    .iter()
+                    .map(|subscription| subscription.event.to_vec())
+                    .flatten()
+                    .collect::<Vec<&Name>>();
 
-            let mut unique_event_names = HashSet::new();
-            for event_name in event_names {
-                if !unique_event_names.insert(event_name) {
-                    return Err(Error::validate(format!(
-                        "Event \"{}\" is duplicated in event stream subscriptions.",
-                        event_name,
-                    )));
-                }
-                if !self.all_event_names.contains(event_name) {
-                    return Err(Error::validate(format!(
-                        "Event \"{}\" in event stream not found in any \"use\" declaration.",
-                        event_name
-                    )));
+                let mut unique_event_names = HashSet::new();
+                for event_name in event_names {
+                    if !unique_event_names.insert(event_name) {
+                        return Err(Error::validate(format!(
+                            "Event \"{}\" is duplicated in event stream subscriptions.",
+                            event_name,
+                        )));
+                    }
+                    if !self.all_event_names.contains(event_name) {
+                        return Err(Error::validate(format!(
+                            "Event \"{}\" in event stream not found in any \"use\" declaration.",
+                            event_name
+                        )));
+                    }
                 }
             }
+            (None, Some(_)) => {
+                return Err(Error::validate("\"event_stream\" must be named."));
+            }
+            (Some(_), None) => {
+                return Err(Error::validate("\"event_stream\" must have subscriptions."));
+            }
+            (None, None) => {}
         }
 
         // Disallow multiple capability ids of the same name.
@@ -1395,7 +1401,8 @@ mod tests {
                     }
                   },
                   {
-                    "event_stream": [
+                    "event_stream": "my_stream",
+                    "subscriptions": [
                         {
                            "event": "started",
                            "mode": "async",
@@ -1407,8 +1414,7 @@ mod tests {
                         {
                             "event": "launched",
                             "mode": "async",
-                        }],
-                    "path": "/svc/my_stream"
+                        }]
                   },
                 ],
                 "capabilities": [
@@ -1552,7 +1558,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`"
         ),
 
         test_cml_use_disallows_nested_dirs(
@@ -1632,13 +1638,13 @@ mod tests {
             json!({
                 "use": [
                     {
-                        "event_stream": [
+                        "event_stream": "stream",
+                        "subscriptions": [
                             {
                                 "event": "destroyed",
                                 "mode": "async"
                             }
                         ],
-                        "path": "/svc/stream",
                     },
                 ]
             }),
@@ -1652,7 +1658,8 @@ mod tests {
                         "from": "parent",
                     },
                     {
-                        "event_stream": [
+                        "event_stream": "stream",
+                        "subscriptions": [
                             {
                                 "event": "destroyed",
                                 "mode": "async",
@@ -1662,13 +1669,12 @@ mod tests {
                                 "mode": "sync",
                             }
                         ],
-                        "path": "/svc/stream",
                     },
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Event \"destroyed\" is duplicated in event stream subscriptions."
         ),
-        test_cml_use_event_stream_missing_path(
+        test_cml_use_event_stream_missing_subscriptions(
             json!({
                 "use": [
                     {
@@ -1676,16 +1682,25 @@ mod tests {
                         "from": "parent",
                     },
                     {
-                        "event_stream": [
-                            {
-                                "event": "destroyed",
-                                "mode": "async",
-                            }
-                        ],
+                        "event_stream": "test",
                     },
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" should be present with \"event_stream\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"event_stream\" must have subscriptions."
+        ),
+        test_cml_use_event_stream_missing_name(
+            json!({
+                "use": [
+                    {
+                        "event": [ "destroyed" ],
+                        "from": "parent",
+                    },
+                    {
+                        "event_stream": "test",
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"event_stream\" must have subscriptions."
         ),
         test_cml_use_bad_filter_in_event(
             json!({

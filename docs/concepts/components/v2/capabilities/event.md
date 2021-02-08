@@ -45,13 +45,13 @@ syntax of a static event stream.
     from: "framework",
 },
 {
-    event_stream: [
+    event_stream: "StartComponentTree",
+    subscriptions: [
         {
             event: "resolved",
             mode: "sync",
         }
     ],
-    path: "/svc/StartComponentTree",
 },
 ```
 
@@ -59,7 +59,7 @@ In the syntax above, the component synchronously listens for `resolved` events o
 components. This blocks children from starting, giving components an opportunity to set
 up dynamic event streams prior to starting child components so that no events are missed.
 
-`/svc/StartComponentTree` is the conventional path to use for blocking child components and used
+`StartComponentTree` is the conventional name to use for blocking child components and used
 by client libraries via a `start_component_tree` API.
 
 ## Offering events {#offering-events}

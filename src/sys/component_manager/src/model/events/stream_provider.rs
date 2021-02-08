@@ -30,9 +30,8 @@ use {
 };
 
 pub struct EventStreamAttachment {
-    /// The target path in which to connect to the event stream in a component's
-    /// outgoing directory.
-    target_path: String,
+    /// The name of this event stream.
+    name: String,
     /// The server end of a component's event stream.
     server_end: ServerEnd<fsys::EventStreamMarker>,
 }
@@ -64,19 +63,18 @@ impl EventStreamProvider {
         )]
     }
 
-    /// Returns the server end of the event stream at the provided `target_path` associated with
+    /// Returns the server end of the event stream with provided `name` associated with
     /// the component with the provided `target_moniker`. This method returns None if such a stream
     /// does not exist or the channel has already been taken.
     pub async fn take_static_event_stream(
         &self,
         target_moniker: &ExtendedMoniker,
-        target_path: String,
+        stream_name: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
         let mut streams = self.streams.lock().await;
         if let Some(event_streams) = streams.get_mut(&target_moniker) {
-            if let Some(pos) = event_streams
-                .iter()
-                .position(|event_stream| event_stream.target_path == target_path)
+            if let Some(pos) =
+                event_streams.iter().position(|event_stream| event_stream.name == stream_name)
             {
                 let event_stream = event_streams.remove(pos);
                 return Some(event_stream.server_end);
@@ -90,8 +88,8 @@ impl EventStreamProvider {
     pub async fn create_static_event_stream(
         self: &Arc<Self>,
         target_moniker: &ExtendedMoniker,
-        target_path: String,
-        events: Vec<EventSubscription>,
+        stream_name: String,
+        subscriptions: Vec<EventSubscription>,
     ) -> Result<fasync::Task<()>, ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         let subscription_type = match target_moniker {
@@ -101,11 +99,11 @@ impl EventStreamProvider {
             }
         };
         let options = SubscriptionOptions::new(subscription_type, self.execution_mode.clone());
-        let event_stream = registry.subscribe(&options, events).await?;
+        let event_stream = registry.subscribe(&options, subscriptions).await?;
         let mut streams = self.streams.lock().await;
         let event_streams = streams.entry(target_moniker.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
-        event_streams.push(EventStreamAttachment { target_path, server_end });
+        event_streams.push(EventStreamAttachment { name: stream_name, server_end });
         Ok(fasync::Task::spawn(async move {
             if let Err(e) = serve_event_stream(event_stream, client_end).await {
                 warn!("{}", e);
@@ -118,6 +116,7 @@ impl EventStreamProvider {
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut streams = self.streams.lock().await;
+        // Remove all event streams associated with the `target_moniker` component.
         streams.remove(&ExtendedMoniker::ComponentInstance(target_moniker.clone()));
         Ok(())
     }
@@ -129,11 +128,11 @@ impl EventStreamProvider {
     ) -> Result<(), ModelError> {
         for use_decl in &decl.uses {
             match use_decl {
-                UseDecl::EventStream(UseEventStreamDecl { target_path, events }) => {
+                UseDecl::EventStream(UseEventStreamDecl { name, subscriptions }) => {
                     self.create_static_event_stream(
                         &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
-                        target_path.to_string(),
-                        events
+                        name.to_string(),
+                        subscriptions
                             .iter()
                             .map(|subscription| EventSubscription {
                                 event_name: CapabilityName::from(subscription.event_name.clone()),

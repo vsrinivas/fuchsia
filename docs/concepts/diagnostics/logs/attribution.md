@@ -60,8 +60,13 @@ it also `use`s an event from the framework, binding it to a service in its names
     filter: { name: "fuchsia.logger.LogSink" },
 },
 {
-    event_stream: [ "capability_requested" ],
-    path: "/svc/fuchsia.sys2.EventStream",
+    event_stream: "EventStream",
+    subscriptions: [
+        {
+            event: "capability_requested",
+            mode: "async",
+        }
+    ],
 },
 ```
 

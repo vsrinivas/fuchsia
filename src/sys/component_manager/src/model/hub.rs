@@ -599,10 +599,10 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityPath, ComponentDecl, DirectoryDecl, EventMode, EventSubscription,
-            ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
-            ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
-            UseProtocolDecl, UseSource,
+            self, CapabilityName, CapabilityPath, ComponentDecl, DirectoryDecl, EventMode,
+            EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource,
+            ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
+            UseEventStreamDecl, UseProtocolDecl, UseSource,
         },
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
@@ -989,9 +989,8 @@ mod tests {
                         mode: cm_rust::EventMode::Async,
                     }))
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
-                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.EventStream")
-                            .unwrap(),
-                        events: vec![EventSubscription {
+                        name: CapabilityName::try_from("EventStream").unwrap(),
+                        subscriptions: vec![EventSubscription {
                             event_name: "started".to_string(),
                             mode: EventMode::Async,
                         }],

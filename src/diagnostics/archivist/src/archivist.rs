@@ -401,7 +401,7 @@ impl ArchivistBuilder {
             });
         debug!("fuchsia.sys.EventStream connection");
         let event_source = connect_to_service::<EventSourceMarker>().unwrap();
-        match event_source.take_static_event_stream("/svc/fuchsia.sys2.EventStream").await {
+        match event_source.take_static_event_stream("EventStream").await {
             Ok(Ok(event_stream)) => {
                 let event_stream = event_stream.into_stream().unwrap();
                 self.event_source_registry

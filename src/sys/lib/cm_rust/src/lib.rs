@@ -487,8 +487,8 @@ impl FidlIntoNative<EventMode> for fsys::EventMode {
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseEventStreamDecl")]
 pub struct UseEventStreamDecl {
-    pub target_path: CapabilityPath,
-    pub events: Vec<EventSubscription>,
+    pub name: CapabilityName,
+    pub subscriptions: Vec<EventSubscription>,
 }
 
 #[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
@@ -871,8 +871,7 @@ impl UseDecl {
             UseDecl::Protocol(d) => Some(&d.target_path),
             UseDecl::Directory(d) => Some(&d.target_path),
             UseDecl::Storage(d) => Some(&d.target_path),
-            UseDecl::EventStream(e) => Some(&e.target_path),
-            UseDecl::Runner(_) | UseDecl::Event(_) => None,
+            UseDecl::Runner(_) | UseDecl::Event(_) | UseDecl::EventStream(_) => None,
         }
     }
 
@@ -881,10 +880,8 @@ impl UseDecl {
             UseDecl::Event(event_decl) => Some(&event_decl.source_name),
             UseDecl::Runner(runner_decl) => Some(&runner_decl.source_name),
             UseDecl::Storage(storage_decl) => Some(&storage_decl.source_name),
-            UseDecl::Service(_)
-            | UseDecl::Protocol(_)
-            | UseDecl::Directory(_)
-            | UseDecl::EventStream(_) => None,
+            UseDecl::EventStream(event_stream_decl) => Some(&event_stream_decl.name),
+            UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) => None,
         }
     }
 }

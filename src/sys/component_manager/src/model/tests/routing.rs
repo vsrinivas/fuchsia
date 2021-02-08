@@ -322,8 +322,8 @@ async fn capability_requested_event_at_parent() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -2848,8 +2848,8 @@ async fn use_event_from_framework() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -2923,8 +2923,8 @@ async fn can_offer_capability_requested_event() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -2999,8 +2999,8 @@ async fn use_event_from_parent() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -3130,8 +3130,8 @@ async fn use_event_from_grandparent() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -3225,8 +3225,8 @@ async fn event_filter_routing() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -3300,8 +3300,8 @@ async fn event_filter_routing() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -3333,8 +3333,8 @@ async fn event_filter_routing() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -3542,8 +3542,8 @@ async fn event_mode_routing_success() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],
@@ -4257,8 +4257,8 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
-                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
-                    events: vec![cm_rust::EventSubscription {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
                         mode: cm_rust::EventMode::Sync,
                     }],

@@ -201,15 +201,18 @@ impl EventRegistry {
     pub async fn subscribe(
         &self,
         options: &SubscriptionOptions,
-        requests: Vec<EventSubscription>,
+        subscriptions: Vec<EventSubscription>,
     ) -> Result<EventStream, ModelError> {
         // Register event capabilities if any. It identifies the sources of these events (might be
         // the parent or this component itself). It consturcts an "allow-list tree" of events and
         // component instances.
         let mut event_names = HashMap::new();
-        for request in requests {
-            if event_names.insert(request.event_name.clone(), request.mode.clone()).is_some() {
-                return Err(EventsError::duplicate_event(request.event_name).into());
+        for subscription in subscriptions {
+            if event_names
+                .insert(subscription.event_name.clone(), subscription.mode.clone())
+                .is_some()
+            {
+                return Err(EventsError::duplicate_event(subscription.event_name).into());
             }
         }
         let events = match &options.subscription_type {

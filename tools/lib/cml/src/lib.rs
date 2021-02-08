@@ -30,7 +30,7 @@ pub use cm_types::{
 };
 
 lazy_static! {
-    static ref DEFAULT_EVENT_STREAM_PATH: Path = "/svc/fuchsia.sys2.EventStream".parse().unwrap();
+    static ref DEFAULT_EVENT_STREAM_NAME: Name = "EventStream".parse().unwrap();
 }
 
 /// A name/identity of a capability exposed/offered to another component.
@@ -58,7 +58,7 @@ pub enum CapabilityId {
     Runner(Name),
     Resolver(Name),
     Event(Name),
-    EventStream(Path),
+    EventStream(Name),
 }
 
 impl CapabilityId {
@@ -237,11 +237,8 @@ impl CapabilityId {
                     .map(|event: &Name| CapabilityId::Event(event.clone()))
                     .collect()),
             };
-        } else if let Some(_) = clause.event_stream().as_ref() {
-            return Ok(vec![CapabilityId::EventStream(alias_or_path(
-                path,
-                &DEFAULT_EVENT_STREAM_PATH,
-            ))]);
+        } else if let Some(name) = clause.event_stream().as_ref() {
+            return Ok(vec![CapabilityId::EventStream(name.clone())]);
         }
 
         // Unknown capability type.
@@ -1019,9 +1016,10 @@ pub struct Use {
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
-    pub event_stream: Option<EventSubscriptions>,
+    pub event_stream: Option<Name>,
     pub filter: Option<Map<String, Value>>,
     pub modes: Option<EventModes>,
+    pub subscriptions: Option<EventSubscriptions>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -1102,7 +1100,7 @@ pub trait CapabilityClause {
     fn runner(&self) -> &Option<Name>;
     fn resolver(&self) -> &Option<Name>;
     fn event(&self) -> &Option<OneOrMany<Name>>;
-    fn event_stream(&self) -> &Option<EventSubscriptions>;
+    fn event_stream(&self) -> &Option<Name>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -1130,14 +1128,8 @@ pub trait CapabilityClause {
         if let Some(event_names) = self.event().as_ref() {
             res.extend(event_names.clone());
         }
-        if let Some(event_subscriptions) = self.event_stream() {
-            res.extend(
-                event_subscriptions
-                    .iter()
-                    .map(|subscription| subscription.event.to_vec())
-                    .flatten()
-                    .map(|name| name.clone()),
-            );
+        if let Some(name) = self.event_stream() {
+            res.push(name.clone());
         }
         res
     }
@@ -1157,6 +1149,10 @@ pub trait FilterClause {
 
 pub trait EventModesClause {
     fn event_modes(&self) -> Option<&EventModes>;
+}
+
+pub trait EventSubscriptionsClause {
+    fn event_subscriptions(&self) -> Option<&EventSubscriptions>;
 }
 
 pub trait RightsClause {
@@ -1188,7 +1184,7 @@ impl CapabilityClause for Capability {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
-    fn event_stream(&self) -> &Option<EventSubscriptions> {
+    fn event_stream(&self) -> &Option<Name> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1265,7 +1261,7 @@ impl CapabilityClause for DebugRegistration {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
-    fn event_stream(&self) -> &Option<EventSubscriptions> {
+    fn event_stream(&self) -> &Option<Name> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1323,7 +1319,7 @@ impl CapabilityClause for Use {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &self.event
     }
-    fn event_stream(&self) -> &Option<EventSubscriptions> {
+    fn event_stream(&self) -> &Option<Name> {
         &self.event_stream
     }
     fn capability_name(&self) -> &'static str {
@@ -1389,6 +1385,12 @@ impl EventModesClause for Use {
     }
 }
 
+impl EventSubscriptionsClause for Use {
+    fn event_subscriptions(&self) -> Option<&EventSubscriptions> {
+        self.subscriptions.as_ref()
+    }
+}
+
 impl CapabilityClause for Expose {
     fn service(&self) -> &Option<Name> {
         &self.service
@@ -1413,7 +1415,7 @@ impl CapabilityClause for Expose {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
-    fn event_stream(&self) -> &Option<EventSubscriptions> {
+    fn event_stream(&self) -> &Option<Name> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1497,7 +1499,7 @@ impl CapabilityClause for Offer {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &self.event
     }
-    fn event_stream(&self) -> &Option<EventSubscriptions> {
+    fn event_stream(&self) -> &Option<Name> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1806,6 +1808,7 @@ mod tests {
             event_stream: None,
             filter: None,
             modes: None,
+            subscriptions: None,
         }
     }
 

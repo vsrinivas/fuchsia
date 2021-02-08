@@ -685,27 +685,18 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_event_stream(&mut self, event_stream: &'a fsys::UseEventStreamDecl) {
-        check_path(
-            event_stream.target_path.as_ref(),
-            "UseEventStreamDecl",
-            "target_path",
-            &mut self.errors,
-        );
-        if let Some(target_path) = event_stream.target_path.as_ref() {
-            if !self.all_event_streams.insert(target_path) {
-                self.errors.push(Error::duplicate_field(
-                    "UseEventStreamDecl",
-                    "target_path",
-                    target_path,
-                ));
+        check_name(event_stream.name.as_ref(), "UseEventStreamDecl", "name", &mut self.errors);
+        if let Some(name) = event_stream.name.as_ref() {
+            if !self.all_event_streams.insert(name) {
+                self.errors.push(Error::duplicate_field("UseEventStreamDecl", "name", name));
             }
         }
-        match event_stream.events.as_ref() {
+        match event_stream.subscriptions.as_ref() {
             None => {
-                self.errors.push(Error::missing_field("UseEventStreamDecl", "events"));
+                self.errors.push(Error::missing_field("UseEventStreamDecl", "subscriptions"));
             }
-            Some(events) if events.is_empty() => {
-                self.errors.push(Error::empty_field("UseEventStreamDecl", "events"));
+            Some(subscriptions) if subscriptions.is_empty() => {
+                self.errors.push(Error::empty_field("UseEventStreamDecl", "subscriptions"));
             }
             Some(subscriptions) => {
                 for subscription in subscriptions {
@@ -2465,8 +2456,8 @@ mod tests {
                         ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
-                        target_path: None,
-                        events: None,
+                        name: None,
+                        subscriptions: None,
                         ..UseEventStreamDecl::EMPTY
                     }),
                 ]);
@@ -2491,8 +2482,8 @@ mod tests {
                 Error::missing_field("UseEventDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "target_name"),
                 Error::missing_field("UseEventDecl", "mode"),
-                Error::missing_field("UseEventStreamDecl", "target_path"),
-                Error::missing_field("UseEventStreamDecl", "events"),
+                Error::missing_field("UseEventStreamDecl", "name"),
+                Error::missing_field("UseEventStreamDecl", "subscriptions"),
             ])),
         },
         test_validate_uses_invalid_identifiers_service => {
@@ -2572,8 +2563,8 @@ mod tests {
                         ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
-                        target_path: Some("/bar".to_string()),
-                        events: Some(vec!["/a".to_string(), "/b".to_string()].into_iter().map(|name| fsys::EventSubscription {
+                        name: Some("bar".to_string()),
+                        subscriptions: Some(vec!["a".to_string(), "b".to_string()].into_iter().map(|name| fsys::EventSubscription {
                             event_name: Some(name),
                             mode: Some(fsys::EventMode::Async),
                             ..fsys::EventSubscription::EMPTY
@@ -2581,8 +2572,8 @@ mod tests {
                         ..UseEventStreamDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
-                        target_path: Some("/bleep".to_string()),
-                        events: Some(vec![fsys::EventSubscription {
+                        name: Some("bleep".to_string()),
+                        subscriptions: Some(vec![fsys::EventSubscription {
                             event_name: Some("started".to_string()),
                             mode: Some(fsys::EventMode::Sync),
                             ..fsys::EventSubscription::EMPTY
@@ -2603,10 +2594,8 @@ mod tests {
                 Error::invalid_field("UseEventDecl", "source"),
                 Error::invalid_field("UseEventDecl", "source_name"),
                 Error::invalid_field("UseEventDecl", "target_name"),
-                Error::invalid_field("UseEventStreamDecl", "event_name"),
-                Error::event_stream_event_not_found("UseEventStreamDecl", "events", "/a".to_string()),
-                Error::invalid_field("UseEventStreamDecl", "event_name"),
-                Error::event_stream_event_not_found("UseEventStreamDecl", "events", "/b".to_string()),
+                Error::event_stream_event_not_found("UseEventStreamDecl", "events", "a".to_string()),
+                Error::event_stream_event_not_found("UseEventStreamDecl", "events", "b".to_string()),
                 Error::event_stream_unsupported_mode("UseEventStreamDecl", "events", "started".to_string(), "Sync".to_string()),
             ])),
         },
@@ -2635,21 +2624,21 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::EventStream(UseEventStreamDecl {
-                        target_path: Some("/bar".to_string()),
-                        events: None,
+                        name: Some("bar".to_string()),
+                        subscriptions: None,
                         ..UseEventStreamDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
-                        target_path: Some("/barbar".to_string()),
-                        events: Some(vec![]),
+                        name: Some("barbar".to_string()),
+                        subscriptions: Some(vec![]),
                         ..UseEventStreamDecl::EMPTY
                     }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("UseEventStreamDecl", "events"),
-                Error::empty_field("UseEventStreamDecl", "events"),
+                Error::missing_field("UseEventStreamDecl", "subscriptions"),
+                Error::empty_field("UseEventStreamDecl", "subscriptions"),
             ])),
         },
         test_validate_uses_multiple_runners => {

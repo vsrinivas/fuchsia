@@ -76,7 +76,8 @@
             filter: { path: "diagnostics" },
         },
         {
-            event_stream: [
+            event_stream: "my_stream",
+            subscriptions: [
                 {
                     event: "began",
                     mode: "async",
@@ -90,7 +91,6 @@
                     mode: "sync",
                 },
             ],
-            path: "/svc/my_stream",
         },
     ],
     offer: [

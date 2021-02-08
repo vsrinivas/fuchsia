@@ -43,31 +43,31 @@
             modes: [ "async" ],
         },
         {
-            event_stream: [
+            event_stream: "EventStream",
+            subscriptions: [
                 {
                     event: "capability_requested",
                     mode: "async",
                 },
             ],
-            path: "/svc/fuchsia.sys2.EventStream",
         },
         {
-            event_stream: [
+            event_stream: "second_stream",
+            subscriptions: [
                 {
                     event: "capability_requested",
                     mode: "async",
                 },
             ],
-            path: "/svc/second_stream",
         },
         {
-            event_stream: [
+            event_stream: "resolved_stream",
+            subscriptions: [
                 {
                     event: "resolved",
                     mode: "sync",
                 },
             ],
-            path: "/svc/resolved_stream",
         },
     ],
     expose: [

@@ -100,14 +100,13 @@ async fn main() {
     let tx3 = tx.clone();
     let event_source = EventSource::new().unwrap();
 
-    let event_stream =
-        event_source.take_static_event_stream("/svc/fuchsia.sys2.EventStream").await.unwrap();
+    let event_stream = event_source.take_static_event_stream("EventStream").await.unwrap();
     run_main_event_stream(event_stream, capability.clone(), tx1.clone());
 
-    let event_stream = event_source.take_static_event_stream("/svc/second_stream").await.unwrap();
+    let event_stream = event_source.take_static_event_stream("second_stream").await.unwrap();
     run_second_event_stream(event_stream, tx2.clone());
 
-    let event_stream = event_source.take_static_event_stream("/svc/resolved_stream").await.unwrap();
+    let event_stream = event_source.take_static_event_stream("resolved_stream").await.unwrap();
     run_resolved_event_stream(event_stream, tx3.clone());
 
     start_trigger_server(receiver, rx).await.expect("failed running trigger_server");

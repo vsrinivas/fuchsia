@@ -18,7 +18,7 @@ use {
 lazy_static! {
     /// The path of the static event stream that, by convention, synchronously listens for
     /// Resolved events.
-    pub static ref START_COMPONENT_TREE_STREAM: String = "/svc/StartComponentTree".into();
+    pub static ref START_COMPONENT_TREE_STREAM: String = "StartComponentTree".into();
 }
 
 /// Returns the string name for the given `event_type`
@@ -122,18 +122,18 @@ impl EventSource {
         self.drop_event_stream(&START_COMPONENT_TREE_STREAM).await
     }
 
-    pub async fn take_static_event_stream(&self, target_path: &str) -> Result<EventStream, Error> {
+    pub async fn take_static_event_stream(&self, name: &str) -> Result<EventStream, Error> {
         let server_end = self
             .proxy
-            .take_static_event_stream(target_path)
+            .take_static_event_stream(name)
             .await?
             .map_err(|error| format_err!("Error: {:?}", error))?;
         Ok(EventStream::new(server_end.into_stream()?))
     }
 
-    pub async fn drop_event_stream(&self, target_path: &str) {
+    pub async fn drop_event_stream(&self, name: &str) {
         // Take the event stream and immediately drop it.
-        let _ = self.take_static_event_stream(target_path).await;
+        let _ = self.take_static_event_stream(name).await;
     }
 }
 

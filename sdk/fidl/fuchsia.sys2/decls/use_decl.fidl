@@ -124,12 +124,10 @@ table UseEventDecl {
 
 /// Declares a static EventStream used by a component.
 table UseEventStreamDecl {
-    /// The path where the EventStream protocol will be served.
-    ///
-    /// Must be an absolute path starting with /.
-    1: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name of the event stream.
+    1: fuchsia.component.name name;
 
     /// The set of events to which this EventStream is subscribed.
     /// Note: This vector must be non-empty.
-    2: vector<EventSubscription>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events;
+    2: vector<EventSubscription>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED subscriptions;
 };

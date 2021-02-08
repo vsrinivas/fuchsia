@@ -49,13 +49,13 @@
             modes: [ "async" ],
         },
         {
-            event_stream: [
+            event_stream: "EventStream",
+            subscriptions: [
                 {
                     event: "log_sink_requested",
                     mode: "async",
                 },
             ],
-            path: "/svc/fuchsia.sys2.EventStream",
         },
     ],
     expose: [

@@ -22,7 +22,7 @@ async fn main() {
         .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
         .await
         .unwrap();
-    event_source.drop_event_stream("/svc/StartComponentTree").await;
+    event_source.start_component_tree().await;
 
     let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 

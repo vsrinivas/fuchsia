@@ -1067,7 +1067,7 @@ pub mod capability_util {
             .await?
             .map_err(|error| format_err!("Unable to subscribe to event stream: {:?}", error))?;
         event_source_proxy
-            .take_static_event_stream("/svc/StartComponentTree")
+            .take_static_event_stream("StartComponentTree")
             .await?
             .map_err(|error| format_err!("Unable to take static event stream: {:?}", error))?;
         Ok(stream)

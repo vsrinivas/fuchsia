@@ -6,13 +6,13 @@
             modes: [ "sync" ],
         },
         {
-            event_stream: [
+            event_stream: "StartComponentTree",
+            subscriptions: [
                 {
                     event: "resolved",
                     mode: "sync",
                 },
             ],
-            path: "/svc/StartComponentTree",
         },
     ],
 }

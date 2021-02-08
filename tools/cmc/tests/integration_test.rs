@@ -96,8 +96,8 @@ fn main() {
                 ..UseEventDecl::EMPTY
             }),
             UseDecl::EventStream(UseEventStreamDecl {
-                target_path: Some("/svc/my_stream".to_string()),
-                events: Some(vec![
+                name: Some("my_stream".to_string()),
+                subscriptions: Some(vec![
                     EventSubscription {
                         event_name: Some("began".to_string()),
                         mode: Some(EventMode::Async),

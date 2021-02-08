@@ -10,6 +10,7 @@ use crate::util::write_depfile;
 use crate::validate;
 use cm_types as cm;
 use cml::EventModesClause;
+use cml::EventSubscriptionsClause;
 use fidl::encoding::encode_persistent;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;
@@ -292,11 +293,11 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                     ..fsys::UseEventDecl::EMPTY
                 }));
             }
-        } else if let Some(subscriptions) = use_.event_stream() {
-            let target_path = one_target_use_path(use_, use_)?;
+        } else if let Some(name) = use_.event_stream() {
+            let opt_subscriptions = use_.event_subscriptions();
             out_uses.push(fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
-                target_path: Some(target_path.into()),
-                events: Some(
+                name: Some(name.to_string()),
+                subscriptions: opt_subscriptions.map(|subscriptions| {
                     subscriptions
                         .iter()
                         .map(|subscription| fsys::EventSubscription {
@@ -307,8 +308,8 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                             }),
                             ..fsys::EventSubscription::EMPTY
                         })
-                        .collect(),
-                ),
+                        .collect()
+                }),
                 ..fsys::UseEventStreamDecl::EMPTY
             }));
         } else {
