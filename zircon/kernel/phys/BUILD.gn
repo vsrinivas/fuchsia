@@ -219,6 +219,18 @@ if (toolchain.environment == "kernel.phys" ||
       "//zircon/system/ulib/fbl",
     ]
   }
+
+  source_set("boot-zbi") {
+    public = [ "boot-zbi.h" ]
+    sources = [ "boot-zbi.cc" ]
+    deps = [ "//zircon/kernel/lib/arch" ]
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zbitl",
+      "//zircon/system/ulib/zxc",
+    ]
+  }
 }
 
 group("tests") {

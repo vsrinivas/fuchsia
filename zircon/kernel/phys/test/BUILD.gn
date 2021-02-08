@@ -69,6 +69,7 @@ if (current_toolchain != default_toolchain) {
                                "tags",
                                "testonly",
                                "target_name",
+                               "timeout",
                              ])
       deps += qemu_deps + [ ":qemu-test-main" ]
     }
@@ -128,7 +129,13 @@ if (current_toolchain != default_toolchain) {
         visibility = [ ":*" ]
         testonly = true
         deps = []
-        forward_variables_from(invoker, "*", [ "target_name" ])
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "target_name",
+                                 "test_deps",
+                                 "timeout",
+                               ])
         deps += [ ":zbi-test-main" ]
       }
     }
@@ -143,8 +150,14 @@ if (current_toolchain != default_toolchain) {
         "QEMU",
       ]
 
-      # Set a short timeout since the tests don't reliably reboot the machine.
-      timeout = qemu_short_timeout
+      if (defined(invoker.timeout)) {
+        if (invoker.timeout != false) {
+          timeout = invoker.timeout
+        }
+      } else {
+        # Set a short timeout since the tests don't reliably reboot the machine.
+        timeout = qemu_short_timeout
+      }
     }
   }
 
@@ -252,6 +265,59 @@ if (current_toolchain != default_toolchain) {
     data_deps = [ ":decompress-test-data" ]
   }
 
+  zbi_executable("chain-load-test") {
+    visibility = [ ":*" ]
+    testonly = true
+    sources = [ "chain-load-test.cc" ]
+    deps = [
+      ":zbi-test-main",
+      "..:allocation",
+      "..:boot-zbi",
+      "..:zbi-memory",
+      "..:zbitl-allocation",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zbitl",
+      "//zircon/system/ulib/zxc",
+    ]
+  }
+
+  phys_zbi_test("zbi-chain-load-hello-world-test") {
+    test_deps = [
+      ":chain-load-hello-world-test-data",
+      ":chain-load-test",
+    ]
+  }
+
+  zbi_input("chain-load-hello-world-test-data") {
+    visibility = [ ":*" ]
+    testonly = true
+    type = "ramdisk"
+    args = [ "--compressed=zstd.max" ]
+    deps = [ ":zbi-hello-world-test.executable" ]
+    sources = get_target_outputs(deps[0])
+  }
+
+  phys_zbi_test("zbi-chain-load-core-tests") {
+    test_deps = [
+      ":chain-load-core-tests-data",
+      ":chain-load-test",
+    ]
+
+    # Once it chain-loads Zircon, it will shut down by itself, but not
+    # necessarily really quickly since the tests take a little while to run.
+    timeout = false
+  }
+
+  zbi_input("chain-load-core-tests-data") {
+    visibility = [ ":*" ]
+    testonly = true
+    type = "ramdisk"
+    args = [ "--compressed=zstd.max" ]
+    deps = [ "//zircon/system/utest/core:core-tests.zbi($default_toolchain)" ]
+    sources = [ get_label_info(deps[0], "target_out_dir") + "/core-tests.zbi" ]
+  }
+
   group("test") {
     testonly = true
     deps = [
@@ -262,6 +328,12 @@ if (current_toolchain != default_toolchain) {
       ":zbi-memory-test",
       "code-patching",
     ]
+    if (current_cpu == "arm64") {
+      deps += [
+        ":zbi-chain-load-core-tests",
+        ":zbi-chain-load-hello-world-test",
+      ]
+    }
   }
 } else {  # current_toolchain == default_toolchain
   import("//src/bringup/lib/mexec/testing/zbi_test.gni")
