@@ -84,7 +84,7 @@ contains the URL of the session component.
 
 Component URLs follow the format:
 
-<pre><code>fuchsia-pkg://fuchsia.com/<var><PACKAGE_NAME></var>#<var><PATH_TO_CM_FILE></var></code></pre>
+<pre><code>fuchsia-pkg://fuchsia.com/<var>package_name</var>#meta/<var>your_session.cm</var></code></pre>
 
 Notice that the path points to a `.cm` file. `.cm` files are compiled versions
 of `.cml` files that are generated when `fx build` is run. So, in this case, the
@@ -198,7 +198,7 @@ To build the session `fx set` must first be used to configure the build so that
 `session_manager`, your session component, and the session config are included
 in the base image. This is done with the `--with-base` command.
 
-<pre class="prettyprint"><code class="devsite-terminal">fx set <var><PRODUCT></var>.<var><BOARD></var> --with-base=//src/session,<var><PATH_TO_YOUR_SESSION></var>,<var><PATH_TO_YOUR_SESSION_CONFIG></var></code></pre>
+<pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session,<var>//path/to/your/session</var>,<var>//path/to/your/session:your_session_config</var></code></pre>
 
 This project is in the session/examples directory so the `fx set` for it would
 be:

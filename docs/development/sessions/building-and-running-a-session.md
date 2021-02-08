@@ -13,7 +13,7 @@ To boot into a session, do the following:
 session component URL.
 
    <pre><code>{
-       "session_url": "fuchsia-pkg://fuchsia.com/your_package#meta/<var>your_session.cm</var>"
+       "session_url": "fuchsia-pkg://fuchsia.com/<var>your_package</var>#meta/<var>your_session.cm</var>"
    }</code></pre>
 
 1.  In the `BUILD.gn` file, include the configuration file for the session
@@ -30,7 +30,7 @@ component
 1. Run the following command to include the `session_manager`, `your_session`,
    and `:your_session_config` in your base image:
 
-   <pre class="prettyprint"><code class="devsite-terminal">fx set <var><PRODUCT></var>.<var><BOARD></var> --with-base=//src/session,<var>//path/to/your/session</var>,<var>//path/to/your/session:your_session_config</var></code></pre>
+   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session,<var>//path/to/your/session</var>,<var>//path/to/your/session:your_session_config</var></code></pre>
 
    Note: Selecting a product that already has a session_config will result
    in a build error because the configurations will conflict. The `core`
@@ -66,7 +66,7 @@ To launch a session from the command line, do the following:
 `session_manager` configuration file, `session_manager.config`, in the base
 image while also including your session in the build.
 
-   <pre class="prettyprint"><code class="devsite-terminal">fx set <var><PRODUCT></var>.<var><BOARD></var> --with-base=//src/session,//src/session/bin/session_manager:session_manager.config --with=<var>//path/to/your/session</var></code></pre>
+   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session,//src/session/bin/session_manager:session_manager.config --with=<var>//path/to/your/session</var></code></pre>
 
    `fx list-products` and `fx list-boards` will show lists of the products and
    boards available to be used in the `fx set` command. For more information on
