@@ -181,7 +181,8 @@ class VmCowPages final
   // see VmObjectPaged::AttributedPagesInRange
   size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
 
-  // See VmObject::ScanForZeroPages
+  // Scans this cow pages range for zero pages and frees them if |reclaim| is set to true. Returns
+  // the number of pages freed or scanned.
   uint32_t ScanForZeroPagesLocked(bool reclaim) TA_REQ(lock_);
 
   // Asks the VMO to attempt to evict the specified page. This returns true if the page was
@@ -235,9 +236,9 @@ class VmCowPages final
   bool DebugIsUnreclaimable() const;
   bool DebugIsDiscarded() const;
 
-  // Discard all the pages, internally resizing to zero. Only supported for discardable vmos that
-  // are unlocked. If successful, the |discardable_state_| is set to |kDiscarded|, and the vmo is
-  // moved from the reclaim candidates list. Returns the number of pages freed.
+  // Discard all the pages from a discardable vmo in the |kReclaimable| state. If successful, the
+  // |discardable_state_| is set to |kDiscarded|, and the vmo is moved from the reclaim candidates
+  // list. Returns the number of pages freed.
   uint64_t DiscardPages() TA_EXCL(DiscardableVmosLock::Get()) TA_EXCL(lock_);
 
  private:
@@ -269,7 +270,9 @@ class VmCowPages final
   // parent.
   // |offset| must be page aligned. |len| must be less than or equal to |size_ - offset|. If |len|
   // is less than |size_ - offset| it must be page aligned.
-  zx_status_t UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+  // Optionally returns the number of pages freed if |pages_freed_out| is not null.
+  zx_status_t UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
+                                        uint64_t* pages_freed_out = nullptr) TA_REQ(lock_);
 
   // internal check if any pages in a range are pinned
   bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);

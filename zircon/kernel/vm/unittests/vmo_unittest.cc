@@ -1630,6 +1630,188 @@ static bool vmo_discardable_states_test() {
   END_TEST;
 }
 
+// Test that an unlocked discardable VMO can be discarded as expected.
+static bool vmo_discard_test() {
+  BEGIN_TEST;
+
+  // Create a resizable discardable vmo.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  constexpr uint64_t kSize = 3 * PAGE_SIZE;
+  zx_status_t status = VmObjectPaged::Create(
+      PMM_ALLOC_FLAG_ANY, VmObjectPaged::kDiscardable | VmObjectPaged::kResizable, kSize, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(kSize, vmo->size());
+
+  // Lock and commit all pages. Verify the size.
+  EXPECT_EQ(ZX_OK, vmo->TryLockRange(0, kSize));
+  EXPECT_EQ(ZX_OK, vmo->CommitRange(0, kSize));
+  EXPECT_EQ(kSize, vmo->size());
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
+
+  // Cannot discard when locked.
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
+
+  // Unlock.
+  EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
+  EXPECT_EQ(kSize, vmo->size());
+
+  // Should be able to discard now.
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  // Verify that the size is not affected.
+  EXPECT_EQ(kSize, vmo->size());
+
+  // Resize the discarded vmo.
+  constexpr uint64_t kNewSize = 5 * PAGE_SIZE;
+  EXPECT_EQ(ZX_OK, vmo->Resize(kNewSize));
+  EXPECT_EQ(kNewSize, vmo->size());
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Lock the vmo.
+  zx_vmo_lock_state_t lock_state = {};
+  EXPECT_EQ(ZX_OK, vmo->LockRange(0, kNewSize, &lock_state));
+  EXPECT_EQ(kNewSize, vmo->size());
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Commit and pin some pages, then unlock.
+  EXPECT_EQ(ZX_OK, vmo->CommitRangePinned(0, kSize));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
+  EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kNewSize));
+
+  // Cannot discard a vmo with pinned pages.
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_EQ(kNewSize, vmo->size());
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
+
+  // Unpin the pages. Should be able to discard now.
+  vmo->Unpin(0, kSize);
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_EQ(kNewSize, vmo->size());
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Cannot discard a non-discardable vmo.
+  vmo.reset();
+  status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, kSize, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(0u, vmo->DebugGetCowPages()->DebugGetLockCount());
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages());
+
+  END_TEST;
+}
+
+// Test operations on a discarded VMO and verify expected failures.
+static bool vmo_discard_failure_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  constexpr uint64_t kSize = 5 * PAGE_SIZE;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kDiscardable, kSize, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  fbl::AllocChecker ac;
+  fbl::Vector<uint8_t> buf;
+  buf.reserve(kSize, &ac);
+  ASSERT_TRUE(ac.check());
+
+  fbl::Vector<uint8_t> fill;
+  fill.reserve(kSize, &ac);
+  ASSERT_TRUE(ac.check());
+  fill_region(0x77, fill.data(), kSize);
+
+  // Lock and commit all pages, write something and read it back to verify.
+  EXPECT_EQ(ZX_OK, vmo->TryLockRange(0, kSize));
+  EXPECT_EQ(ZX_OK, vmo->Write(fill.data(), 0, kSize));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
+  EXPECT_EQ(ZX_OK, vmo->Read(buf.data(), 0, kSize));
+  EXPECT_EQ(0, memcmp(fill.data(), buf.data(), kSize));
+
+  // Create a test user aspace to map the vmo.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+  ASSERT_NONNULL(aspace);
+
+  VmAspace* old_aspace = Thread::Current::Get()->aspace();
+  auto cleanup_aspace = fbl::MakeAutoCall([&]() {
+    vmm_set_active_aspace(old_aspace);
+    ASSERT(aspace->Destroy() == ZX_OK);
+  });
+  vmm_set_active_aspace(aspace.get());
+
+  // Map the vmo.
+  fbl::RefPtr<VmMapping> mapping;
+  constexpr uint64_t kMapSize = 3 * PAGE_SIZE;
+  static constexpr const uint kArchFlags = kArchRwFlags | ARCH_MMU_FLAG_PERM_USER;
+  status = aspace->RootVmar()->CreateVmMapping(0, kMapSize, 0, 0, vmo, kSize - kMapSize, kArchFlags,
+                                               "test", &mapping);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Fill with a known pattern through the mapping, and verify the contents.
+  auto uptr = make_user_inout_ptr(reinterpret_cast<void*>(mapping->base()));
+  fill_region_user(0x88, uptr, kMapSize);
+  EXPECT_TRUE(test_region_user(0x88, uptr, kMapSize));
+
+  // Unlock and discard.
+  EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages());
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_EQ(kSize, vmo->size());
+
+  // Reads, writes, commits and pins should fail now.
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->Read(buf.data(), 0, kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->Write(buf.data(), 0, kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->CommitRange(0, kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->CommitRangePinned(0, kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Decommit and ZeroRange should trivially succeed.
+  EXPECT_EQ(ZX_OK, vmo->DecommitRange(0, kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_EQ(ZX_OK, vmo->ZeroRange(0, kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Creating a mapping succeeds.
+  fbl::RefPtr<VmMapping> mapping2;
+  status = aspace->RootVmar()->CreateVmMapping(0, kMapSize, 0, 0, vmo, kSize - kMapSize, kArchFlags,
+                                               "test2", &mapping2);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Lock the vmo again.
+  zx_vmo_lock_state_t lock_state = {};
+  EXPECT_EQ(ZX_OK, vmo->LockRange(0, kSize, &lock_state));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_EQ(kSize, vmo->size());
+
+  // Should be able to read now. Verify that previous contents are lost and zeros are read.
+  EXPECT_EQ(ZX_OK, vmo->Read(buf.data(), 0, kSize));
+  memset(fill.data(), 0, kSize);
+  EXPECT_EQ(0, memcmp(fill.data(), buf.data(), kSize));
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Write should succeed as well.
+  fill_region(0x99, fill.data(), kSize);
+  EXPECT_EQ(ZX_OK, vmo->Write(fill.data(), 0, kSize));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
+
+  // Verify contents via the mapping.
+  fill_region_user(0xaa, uptr, kMapSize);
+  EXPECT_TRUE(test_region_user(0xaa, uptr, kMapSize));
+
+  // Verify contents via the second mapping created when discarded.
+  uptr = make_user_inout_ptr(reinterpret_cast<void*>(mapping2->base()));
+  EXPECT_TRUE(test_region_user(0xaa, uptr, kMapSize));
+
+  // The unmapped pages should still be intact after the Write() above.
+  EXPECT_EQ(ZX_OK, vmo->Read(buf.data(), 0, kSize - kMapSize));
+  EXPECT_EQ(0, memcmp(fill.data(), buf.data(), kSize - kMapSize));
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -1664,6 +1846,8 @@ VM_UNITTEST(vmo_attribution_dedup_test)
 VM_UNITTEST(vmo_parent_merge_test)
 VM_UNITTEST(vmo_lock_count_test)
 VM_UNITTEST(vmo_discardable_states_test)
+VM_UNITTEST(vmo_discard_test)
+VM_UNITTEST(vmo_discard_failure_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

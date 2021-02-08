@@ -911,7 +911,6 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
   if (status != ZX_OK) {
     return status;
   }
-  IncrementHierarchyGenerationCountLocked();
   return ZX_OK;
 }
 

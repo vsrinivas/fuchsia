@@ -1504,6 +1504,11 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  // This vmo was discarded and has not been locked yet after the discard. Do not return any pages.
+  if (discardable_state_ == DiscardableState::kDiscarded) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
   offset = ROUNDDOWN(offset, PAGE_SIZE);
 
   if (is_slice_locked()) {
@@ -1902,7 +1907,8 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   return UnmapAndRemovePagesLocked(offset, new_len);
 }
 
-zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len) {
+zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
+                                                  uint64_t* pages_freed_out) {
   // TODO(teisenbe): Allow decommitting of pages pinned by
   // CommitRangeContiguous
   if (AnyPagesPinnedLocked(offset, len)) {
@@ -1933,6 +1939,11 @@ zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len)
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + len);
   page_remover.Flush();
+
+  if (pages_freed_out) {
+    *pages_freed_out = list_length(&freed_list);
+  }
+
   pmm_free(&freed_list);
 
   return ZX_OK;
@@ -2564,6 +2575,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   page_remover.Flush();
   pmm_free(&freed_list);
 
+  IncrementHierarchyGenerationCountLocked();
   return ZX_OK;
 }
 
@@ -2773,7 +2785,7 @@ void VmCowPages::DetachSourceLocked() {
   page_source_->Detach();
 
   // Remove committed pages so that all future page faults on this VMO and its clones can fail.
-  UnmapAndRemovePagesLocked(0, size_locked());
+  UnmapAndRemovePagesLocked(0, size_);
 
   IncrementHierarchyGenerationCountLocked();
 }
@@ -3237,8 +3249,19 @@ uint64_t VmCowPages::DiscardPages() {
   // We've verified that the state is |kReclaimable|, so the lock count should be zero.
   DEBUG_ASSERT(lock_count_ == 0);
 
+  // Free all pages.
+  uint64_t pages_freed = 0;
+  zx_status_t status = UnmapAndRemovePagesLocked(0, size_, &pages_freed);
+
+  if (status != ZX_OK) {
+    printf("Failed to remove pages from discardable vmo %p: %d\n", this, status);
+    return pages_freed;
+  }
+
+  IncrementHierarchyGenerationCountLocked();
+
   // Update state to discarded.
   UpdateDiscardableStateLocked(DiscardableState::kDiscarded);
-  // TODO: Actually discard pages here.
-  return size_ / PAGE_SIZE;
+
+  return pages_freed;
 }
