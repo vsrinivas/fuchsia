@@ -21,7 +21,13 @@ using chunked_compression::ChunkedCompressor;
 using chunked_compression::CompressionParams;
 
 void usage(const char* fname) {
-  fprintf(stderr, "Usage: %s source_file destination_file\n", fname);
+  fprintf(stderr, "Usage: %s <source_file> [destination_file]\n\n", fname);
+  fprintf(stderr, "Params:\n");
+  fprintf(stderr, "  %-20s%s\n", "source_file", "the file to be compressed.");
+  fprintf(stderr,
+          "  %-20s%s\n",
+          "destination_file",
+          "(optional) the compressed file.");
 }
 
 // Opens |file|, truncates to |write_size|, and mmaps the file for writing.
@@ -93,10 +99,11 @@ int OpenAndMapForReading(const char* file, fbl::unique_fd* out_fd, const uint8_t
 }  // namespace
 
 int main(int argc, char* const* argv) {
-  if (argc < 3) {
+  if (argc < 2 || argc > 3) {
     usage(argv[0]);
     return 1;
   }
+  const bool has_dst_file = (argc == 3);
 
   fbl::unique_fd src_fd;
   const uint8_t* src_data;
@@ -107,18 +114,24 @@ int main(int argc, char* const* argv) {
 
   CompressionParams params = blobfs_compress::ComputeDefaultBlobfsCompressionParams(src_size);
 
+  uint8_t* dest_write_buf = nullptr;
   fbl::unique_fd dst_fd;
-  uint8_t* dest_write_buf;
-  if (OpenAndMapForWriting(argv[2] /*destination file*/, params.ComputeOutputSizeLimit(src_size),
-                           &dest_write_buf, &dst_fd)) {
+  if (has_dst_file && OpenAndMapForWriting(argv[2] /*destination file*/,
+                                           params.ComputeOutputSizeLimit(
+                                               src_size),
+                                           &dest_write_buf,
+                                           &dst_fd)) {
     return 1;
   }
 
   size_t compressed_size;
-  if (blobfs_compress::BlobfsCompress(src_data, src_size, dest_write_buf /*destination buffer*/,
+  if (blobfs_compress::BlobfsCompress(src_data, src_size, dest_write_buf,
                                       &compressed_size, params)) {
     return 1;
   }
-  ftruncate(dst_fd.get(), compressed_size);
+
+  if (has_dst_file) {
+    ftruncate(dst_fd.get(), compressed_size);
+  }
   return 0;
 }

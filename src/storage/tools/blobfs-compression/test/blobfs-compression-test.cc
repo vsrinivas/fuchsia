@@ -68,4 +68,21 @@ TEST(BlobfsCompressionTest, CompressBufferlarge) {
   ASSERT_GE(compressed_data.size(), compressed_len);
 }
 
+TEST(BlobfsCompressionTest, CompressNoDestBuffer) {
+  size_t len = 1000ul;
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  memset(data.get(), 0x00, len);
+  BufferFill(data.get(), len, 0);
+
+  size_t compressed_len, compressed_len_no_dest;
+  chunked_compression::CompressionParams params = ComputeDefaultBlobfsCompressionParams(len);
+  size_t compressed_limit = params.ComputeOutputSizeLimit(len);
+
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  ASSERT_EQ(BlobfsCompress(data.get(), len, compressed_data.get(), &compressed_len, params), ZX_OK);
+  ASSERT_EQ(BlobfsCompress(data.get(), len, nullptr, &compressed_len_no_dest, params), ZX_OK);
+  ASSERT_GT(compressed_len_no_dest, (size_t) 0);
+  ASSERT_EQ(compressed_len_no_dest, compressed_len);
+}
+
 }  // namespace blobfs_compress

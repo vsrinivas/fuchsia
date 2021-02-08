@@ -5,8 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <fbl/unique_fd.h>
+#include <vector>
 
 #include "blobfs-compression.h"
 #include "src/lib/chunked-compression/chunked-compressor.h"
@@ -16,6 +15,7 @@ namespace blobfs_compress {
 namespace {
 using chunked_compression::ChunkedCompressor;
 using chunked_compression::CompressionParams;
+using chunked_compression::ToZxStatus;
 
 constexpr const char kAnsiUpLine[] = "\33[A";
 constexpr const char kAnsiClearLine[] = "\33[2K\r";
@@ -66,48 +66,77 @@ class ProgressWriter {
   int refresh_hz_;
 };
 
-chunked_compression::CompressionParams ComputeDefaultBlobfsCompressionParams(size_t sz) {
-  chunked_compression::CompressionParams params;
+// Returns the exact same Blobfs compression parameters used in Fuchsia.
+CompressionParams ComputeDefaultBlobfsCompressionParams(size_t sz) {
+  CompressionParams params;
 
   // Use default param values, which are opaque to sdk users.
-  // This allows us to fine tune these and keep them in sync with blobfs chunked compression
-  // algoriithm.
+  // This allows us to fine tune these and keep them in sync with blobfs chunked
+  // compression algorithm.
   params.frame_checksum = false;
   params.compression_level = kDefaultBlobfsCompressionLevel;
   params.chunk_size =
-      chunked_compression::CompressionParams::ChunkSizeForInputSize(sz, kTargetFrameSize);
+      CompressionParams::ChunkSizeForInputSize(sz, kTargetFrameSize);
   return params;
 }
 
-// Reads |sz| bytes from |src| and compresses it, writing the output to |dst_file|.
-int BlobfsCompress(const uint8_t* src, size_t src_sz, uint8_t* dest_write_buf,
-                   size_t* out_compressed_size, CompressionParams params) {
+// Returns 0 if the compression runs successfully; otherwise non-zero values.
+// This method reads |src_sz| from |src|, compresses it using the compression
+// |params|, and then writes the compressed bytes to |dest_write_buf| and the
+// compressed size to |out_compressed_size|.
+//
+// |dest_write_buf| can be nullptr if wanting the final compressed size only.
+// However, even if |dest_write_buf| is set to nullptr, there will still be
+// temporary RAM consumption for storing compressed data due to current internal
+// compression API design.
+zx_status_t BlobfsCompress(const uint8_t* src,
+                   const size_t src_sz,
+                   uint8_t* dest_write_buf,
+                   size_t* out_compressed_size,
+                   CompressionParams params) {
   ChunkedCompressor compressor(params);
 
   ProgressWriter progress;
-  compressor.SetProgressCallback([&](size_t bytes_read, size_t bytes_total, size_t bytes_written) {
+  compressor.SetProgressCallback([&](size_t bytes_read,
+                                     size_t bytes_total,
+                                     size_t bytes_written) {
     progress.Update("%2.0f%% (%lu bytes written)\n",
-                    static_cast<double>(bytes_read) / static_cast<double>(bytes_total) * 100,
+                    static_cast<double>(bytes_read)
+                        / static_cast<double>(bytes_total) * 100,
                     bytes_written);
   });
 
   size_t compressed_size;
   size_t output_limit = params.ComputeOutputSizeLimit(src_sz);
+  std::vector<uint8_t> output_buffer;
 
-  if (compressor.Compress(src, src_sz, dest_write_buf, output_limit, &compressed_size) !=
-      chunked_compression::kStatusOk) {
-    return 1;
+  // The caller does not need the compressed data. However, the compressor
+  // still requires a write buffer to store the compressed output.
+  if (dest_write_buf == nullptr) {
+    output_buffer.resize(output_limit);
+    dest_write_buf = output_buffer.data();
   }
 
-  double compression_percent = static_cast<double>(src_sz) - static_cast<double>(compressed_size);
+  const auto compression_status = compressor.Compress(src,
+                                                      src_sz,
+                                                      dest_write_buf,
+                                                      output_limit,
+                                                      &compressed_size);
+  if (compression_status != chunked_compression::kStatusOk) {
+    return ToZxStatus(compression_status);
+  }
+
+  double saving_ratio = static_cast<double>(src_sz - compressed_size);
   if (src_sz) {
-    compression_percent = compression_percent / static_cast<double>(src_sz) * 100;
+    saving_ratio /= static_cast<double>(src_sz);
   } else {
-    compression_percent = 0;
+    saving_ratio = 0;
   }
-  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size, compression_percent);
+  progress.Final("Wrote %lu bytes (%.2f%% space saved).\n",
+                 compressed_size,
+                 saving_ratio * 100);
 
   *out_compressed_size = compressed_size;
-  return 0;
+  return ZX_OK;
 }
 }  // namespace blobfs_compress
