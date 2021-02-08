@@ -41,6 +41,7 @@ test("devicetree-tests") {
 dtb_sources = [
   "data/complex_no_properties.dtb",
   "data/empty.dtb",
+  "data/memory_reservations.dtb",
   "data/simple_with_properties.dtb",
 ]
 

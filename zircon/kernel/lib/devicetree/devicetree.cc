@@ -8,6 +8,7 @@
 #include <lib/zircon-internal/align.h>
 #include <zircon/assert.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -60,6 +61,20 @@ inline ReadBigEndianUint32Result ReadBigEndianUint32(ByteView bytes) {
   };
 }
 
+struct ReadBigEndianUint64Result {
+  uint64_t value;
+  ByteView tail;
+};
+
+ReadBigEndianUint64Result ReadBigEndianUint64(ByteView bytes) {
+  auto [high, tail] = ReadBigEndianUint32(bytes);
+  auto [low, rest] = ReadBigEndianUint32(tail);
+  return {
+      (static_cast<uint64_t>(high) << 32) | static_cast<uint64_t>(low),
+      rest,
+  };
+}
+
 struct PropertyBlockContents {
   // The underlying property value.
   ByteView value;
@@ -85,9 +100,7 @@ uint32_t PropertyValue::AsUint32() const {
 
 uint64_t PropertyValue::AsUint64() const {
   ZX_ASSERT(bytes_.size() == sizeof(uint64_t));
-  auto [high, tail] = ReadBigEndianUint32(bytes_);
-  const uint32_t low = ReadBigEndianUint32(tail).value;
-  return (static_cast<uint64_t>(high) << 32) | static_cast<uint64_t>(low);
+  return ReadBigEndianUint64(bytes_).value;
 }
 
 Property Properties::iterator::operator*() const {
@@ -155,9 +168,16 @@ Devicetree::Devicetree(ByteView blob) {
   std::string_view string_block(reinterpret_cast<const char*>(string_block_base),
                                 string_block_size);
 
+  const uint32_t mem_rsvmap_offset =
+      ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, off_mem_rsvmap))).value;
+  ZX_ASSERT(mem_rsvmap_offset <= fdt.size());
+  const uint8_t* mem_rsvmap_base = fdt.data() + mem_rsvmap_offset;
+  ByteView mem_rsvmap{mem_rsvmap_base, fdt.size() - mem_rsvmap_offset};
+
   fdt_ = fdt;
   struct_block_ = struct_block;
   string_block_ = string_block;
+  mem_rsvmap_ = mem_rsvmap;
 }
 
 ByteView Devicetree::EndOfPropertyBlock(ByteView prop) { return ReadPropertyBlock(prop).tail; }
@@ -256,6 +276,35 @@ ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, WalkerCallbac
 
   path->pop_back();
   return unprocessed;
+}
+
+MemoryReservations::iterator MemoryReservations::begin() const {
+  iterator it;
+  it.mem_rsvmap_ = mem_rsvmap_;
+  it.Normalize();
+  return it;
+}
+
+using RawRsvMapEntry = std::array<uint64_t, 2>;
+
+void MemoryReservations::iterator::Normalize() {
+  constexpr RawRsvMapEntry kEnd{};
+  if (mem_rsvmap_.size() < sizeof(RawRsvMapEntry) ||
+      *reinterpret_cast<const RawRsvMapEntry*>(mem_rsvmap_.data()) == kEnd) {
+    *this = {};
+  }
+}
+
+MemoryReservations::iterator& MemoryReservations::iterator::operator++() {
+  mem_rsvmap_.remove_prefix(sizeof(RawRsvMapEntry));
+  Normalize();
+  return *this;
+}
+
+MemoryReservations::value_type MemoryReservations::iterator::operator*() const {
+  auto [start, tail] = ReadBigEndianUint64(mem_rsvmap_);
+  auto [size, rest] = ReadBigEndianUint64(tail);
+  return {start, size};
 }
 
 }  // namespace devicetree

@@ -328,4 +328,36 @@ TEST(DevicetreeTest, PropertiesAreTranslated) {
   EXPECT_EQ(5, seen);
 }
 
+TEST(DevicetreeTest, MemoryReservations) {
+  uint8_t fdt[kMaxSize];
+  ReadTestData("memory_reservations.dtb", fdt);
+  const devicetree::Devicetree dt({fdt, kMaxSize});
+
+  unsigned int i = 0;
+  for (auto [start, size] : dt.memory_reservations()) {
+    switch (i++) {
+      case 0:
+        EXPECT_EQ(start, 0x12340000);
+        EXPECT_EQ(size, 0x2000);
+        break;
+      case 1:
+        EXPECT_EQ(start, 0x56780000);
+        EXPECT_EQ(size, 0x3000);
+        break;
+      case 2:
+        EXPECT_EQ(start, 0x7fffffff12340000);
+        EXPECT_EQ(size, 0x400000000);
+        break;
+      case 3:
+        EXPECT_EQ(start, 0x00ffffff56780000);
+        EXPECT_EQ(size, 0x500000000);
+        break;
+      default:
+        EXPECT_LT(i, 4, "too many entries");
+        break;
+    }
+  }
+  EXPECT_EQ(i, 4, "wrong number of entries");
+}
+
 }  // namespace

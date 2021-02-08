@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/dts-v1/;
+
+/memreserve/ 0x12340000 0x2000;
+/memreserve/ 0x56780000 0x3000;
+/memreserve/ 0x7fffffff12340000 0x400000000;
+/memreserve/ 0x00ffffff56780000 0x500000000;
+
+/ {
+};

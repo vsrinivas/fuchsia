@@ -164,6 +164,52 @@ class Properties {
   const std::string_view string_block_;
 };
 
+class MemoryReservations {
+ public:
+  struct value_type {
+    uint64_t start, size;
+  };
+
+  class iterator {
+   public:
+    iterator() = default;
+    iterator(const iterator&) = default;
+    iterator& operator=(const iterator&) = default;
+
+    bool operator==(const iterator& other) const {
+      return mem_rsvmap_.size() == other.mem_rsvmap_.size();
+    }
+    bool operator!=(const iterator& other) const { return !(*this == other); }
+
+    iterator& operator++();  // prefix
+
+    iterator operator++(int) {  // postfix
+      iterator old = *this;
+      ++*this;
+      return old;
+    }
+
+    value_type operator*() const;
+
+   private:
+    friend MemoryReservations;
+
+    void Normalize();
+
+    ByteView mem_rsvmap_;
+  };
+  using const_iterator = iterator;
+
+  iterator begin() const;
+
+  iterator end() const { return iterator{}; }
+
+ private:
+  friend class Devicetree;
+
+  ByteView mem_rsvmap_;
+};
+
 // Represents a devicetree. This class does not dynamically allocate
 // memory and is appropriate for use in all low-level environments.
 class Devicetree {
@@ -213,6 +259,12 @@ class Devicetree {
     }
   }
 
+  MemoryReservations memory_reservations() const {
+    MemoryReservations result;
+    result.mem_rsvmap_ = mem_rsvmap_;
+    return result;
+  }
+
  private:
   using WalkerCallback = bool(void*, const NodePath&, Properties);
 
@@ -242,6 +294,8 @@ class Devicetree {
   ByteView struct_block_;
   // https://devicetree-specification.readthedocs.io/en/v0.3/flattened-format.html#strings-block
   std::string_view string_block_;
+  // https://devicetree-specification.readthedocs.io/en/v0.3/flattened-format.html#memory-reservation-block
+  ByteView mem_rsvmap_;
 };
 
 }  // namespace devicetree
