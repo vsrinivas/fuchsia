@@ -19,7 +19,7 @@
 #define _MM_MALLOC_H_INCLUDED
 #endif
 
-#include <emmintrin.h>
+#include <immintrin.h>
 #include <x86intrin.h>
 
 #ifdef __cplusplus

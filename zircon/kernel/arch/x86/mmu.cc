@@ -7,6 +7,8 @@
 
 #include <align.h>
 #include <assert.h>
+#include <lib/arch/sysreg.h>
+#include <lib/arch/x86/system.h>
 #include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <lib/zircon-internal/macros.h>
@@ -142,23 +144,25 @@ bool x86_mmu_check_paddr(paddr_t paddr) {
 }
 
 /**
+ * @brief  invalidate all TLB entries, excluding global entries
+ */
+static void x86_tlb_nonglobal_invalidate() {
+  // Read CR3 and immediately write it back.
+  arch::X86Cr3::Modify([](auto& cr3) {});
+}
+
+/**
  * @brief  invalidate all TLB entries, including global entries
  */
 static void x86_tlb_global_invalidate() {
   /* See Intel 3A section 4.10.4.1 */
-  ulong cr4 = x86_get_cr4();
-  if (likely(cr4 & X86_CR4_PGE)) {
-    x86_set_cr4(cr4 & ~X86_CR4_PGE);
-    x86_set_cr4(cr4);
+  auto cr4 = arch::X86Cr4::Read();
+  if (likely(cr4.pge())) {
+    arch::X86Cr4::Write(cr4.set_pge(false));
   } else {
-    x86_set_cr3(x86_get_cr3());
+    x86_tlb_nonglobal_invalidate();
   }
 }
-
-/**
- * @brief  invalidate all TLB entries, excluding global entries
- */
-static void x86_tlb_nonglobal_invalidate() { x86_set_cr3(x86_get_cr3()); }
 
 /* Task used for invalidating a TLB entry on each CPU */
 struct TlbInvalidatePage_context {
@@ -171,8 +175,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
 
   kcounter_add(tlb_invalidations_received, 1);
 
-  ulong cr3 = x86_get_cr3();
-  if (context->target_cr3 != cr3 && !context->pending->contains_global) {
+  if (context->target_cr3 != arch::X86Cr3::Read().base() && !context->pending->contains_global) {
     /* This invalidation doesn't apply to this CPU, ignore it */
     return;
   }
@@ -245,8 +248,7 @@ bool x86_enable_pcid() {
     return false;
   }
 
-  ulong cr4 = x86_get_cr4();
-  x86_set_cr4(cr4 | X86_CR4_PCIDE);
+  arch::X86Cr4::Modify([](auto& cr4) { cr4.set_pcide(true); });
   return true;
 }
 
@@ -487,7 +489,9 @@ uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level)
   return mmu_flags;
 }
 
-static void disable_global_pages() { x86_set_cr4(x86_get_cr4() & ~X86_CR4_PGE); }
+static void disable_global_pages() {
+  arch::X86Cr4::Modify([](auto& cr4) { cr4.set_pge(false); });
+}
 
 void x86_mmu_early_init() {
   x86_mmu_percpu_init();
@@ -683,15 +687,14 @@ void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace
     aspace->canary_.Assert();
     paddr_t phys = aspace->pt_phys();
     LTRACEF_LEVEL(3, "switching to aspace %p, pt %#" PRIXPTR "\n", aspace, phys);
-    x86_set_cr3(phys);
-
+    arch::X86Cr3::Write(phys);
     if (old_aspace != nullptr) {
       old_aspace->active_cpus_.fetch_and(~cpu_bit);
     }
     aspace->active_cpus_.fetch_or(cpu_bit);
   } else {
     LTRACEF_LEVEL(3, "switching to kernel aspace, pt %#" PRIxPTR "\n", kernel_pt_phys);
-    x86_set_cr3(kernel_pt_phys);
+    arch::X86Cr3::Write(kernel_pt_phys);
     if (old_aspace != nullptr) {
       old_aspace->active_cpus_.fetch_and(~cpu_bit);
     }
@@ -730,20 +733,21 @@ zx_status_t X86ArchVmAspace::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t co
 }
 
 void x86_mmu_percpu_init(void) {
-  ulong cr0 = x86_get_cr0();
-  /* Set write protect bit in CR0*/
-  cr0 |= X86_CR0_WP;
-  // Clear Cache disable/not write-through bits
-  cr0 &= ~(X86_CR0_NW | X86_CR0_CD);
-  x86_set_cr0(cr0);
+  arch::X86Cr0::Modify([](auto& cr0) {
+    cr0.set_wp(true)     // Set write protect.
+        .set_nw(false)   // Clear not-write-through.
+        .set_cd(false);  // Clear cache-disable.
+  });
 
-  /* Setting the SMEP & SMAP bit in CR4 */
-  ulong cr4 = x86_get_cr4();
-  if (x86_feature_test(X86_FEATURE_SMEP))
-    cr4 |= X86_CR4_SMEP;
-  if (g_x86_feature_has_smap)
-    cr4 |= X86_CR4_SMAP;
-  x86_set_cr4(cr4);
+  // Set the SMEP & SMAP bits in CR4.
+  arch::X86Cr4::Modify([](auto& cr4) {
+    if (x86_feature_test(X86_FEATURE_SMEP)) {
+      cr4.set_smep(true);
+    }
+    if (g_x86_feature_has_smap) {
+      cr4.set_smap(true);
+    }
+  });
 
   // Set NXE bit in X86_MSR_IA32_EFER.
   uint64_t efer_msr = read_msr(X86_MSR_IA32_EFER);
