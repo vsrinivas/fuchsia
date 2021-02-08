@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.rust.derive banjo file
+// Generated from the banjo.examples.rustderive banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 
@@ -45,7 +45,7 @@ pub struct SmallArrayStruct {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct BigArrayStruct {
-    pub big_array: [u8; BIG_ARRAY_SIZE as usize],
+    pub big_array: [u8; LARGE_ARRAY_SIZE as usize],
 }
 
 #[repr(C)]

@@ -42,7 +42,7 @@ mod c {
     codegen_test!(alias, CBackend, "c/alias.h");
     codegen_test!(alignment, CBackend, "c/alignment.h");
     // codegen_test!(api, CBackend, "c/api.h");
-    // codegen_test!(attributes, CBackend, "c/attributes.h");
+    codegen_test!(attributes, CBackend, "c/attributes.h");
     codegen_test!(binary, CBackend, "c/binary.h");
     // codegen_test!(buffer, CBackend, "c/buffer.h");
     // codegen_test!(callback, CBackend, "c/callback.h");
@@ -74,5 +74,6 @@ mod c {
     // codegen_test!(simple, CBackend, "c/simple.h");
     codegen_test!(tables, CBackend, "c/tables.h");
     // codegen_test!(types, CBackend, "c/types.h");
+    codegen_test!(union, CBackend, "c/union.h");
     codegen_test!(view, CBackend, "c/view.h");
 }

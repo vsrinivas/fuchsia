@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.rust.derive;
+library banjo.examples.rustderive;
 
 const uint32 SMALL_ARRAY_SIZE = 8;
 const uint32 LARGE_ARRAY_SIZE = 2048;
@@ -43,7 +43,7 @@ struct SmallArrayStruct {
 
 // Big array should not auto-derive Debug/PartialEq
 struct BigArrayStruct {
-    array<uint8>:BIG_ARRAY_SIZE big_array;
+    array<uint8>:LARGE_ARRAY_SIZE big_array;
 };
 
 // Next three data structures have circular reference. Should still be able to derive

@@ -1,14 +1,14 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.rust.derive",
+    primary_namespace: "banjo.examples.rustderive",
     namespaces: {
-        "banjo.examples.rust.derive": [
+        "banjo.examples.rustderive": [
             Constant {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "SMALL_ARRAY_SIZE",
                 },
@@ -23,7 +23,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "LARGE_ARRAY_SIZE",
                 },
@@ -38,7 +38,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "SomeUnion",
                 },
@@ -81,7 +81,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "UnionParentStruct",
                 },
@@ -93,7 +93,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "SomeUnion",
                             },
@@ -113,7 +113,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "UnionGrandParentStruct",
                 },
@@ -125,7 +125,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "UnionParentStruct",
                             },
@@ -145,7 +145,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "SomeEnum",
                 },
@@ -177,7 +177,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "EnumParentStruct",
                 },
@@ -189,7 +189,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "SomeEnum",
                             },
@@ -209,7 +209,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "EnumGrandParentStruct",
                 },
@@ -221,7 +221,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "EnumParentStruct",
                             },
@@ -241,7 +241,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "SmallArrayStruct",
                 },
@@ -270,7 +270,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "BigArrayStruct",
                 },
@@ -282,7 +282,7 @@ BanjoAst {
                         ty: Array {
                             ty: UInt8,
                             size: Constant(
-                                "BIG_ARRAY_SIZE",
+                                "LARGE_ARRAY_SIZE",
                             ),
                         },
                         ident: Ident {
@@ -299,7 +299,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "Foo",
                 },
@@ -311,7 +311,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Bar",
                             },
@@ -331,7 +331,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "Bar",
                 },
@@ -343,7 +343,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Foo",
                             },
@@ -362,7 +362,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Baz",
                             },
@@ -382,7 +382,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "Baz",
                 },
@@ -394,7 +394,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Foo",
                             },
@@ -413,7 +413,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Bar",
                             },
@@ -432,7 +432,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Baz",
                             },
@@ -452,7 +452,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "Foo2",
                 },
@@ -464,7 +464,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Bar2",
                             },
@@ -484,7 +484,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "Bar2",
                 },
@@ -496,7 +496,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Foo2",
                             },
@@ -515,7 +515,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Baz2",
                             },
@@ -535,7 +535,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.rust.derive",
+                        "banjo.examples.rustderive",
                     ),
                     name: "Baz2",
                 },
@@ -547,7 +547,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Foo2",
                             },
@@ -566,7 +566,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Bar2",
                             },
@@ -585,7 +585,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "Baz2",
                             },
@@ -604,7 +604,7 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.rust.derive",
+                                    "banjo.examples.rustderive",
                                 ),
                                 name: "SomeUnion",
                             },

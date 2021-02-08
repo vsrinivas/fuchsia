@@ -28,6 +28,7 @@ enum Decl<'a> {
     Interface { data: &'a fidl::Interface },
     Struct { data: &'a fidl::Struct },
     TypeAlias { data: &'a fidl::TypeAlias },
+    Union { data: &'a fidl::Union },
 }
 
 fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String {
@@ -266,6 +267,19 @@ fn field_to_c_str(
                     prefix = prefix,
                     ty = ty_name,
                     ptr = ptr,
+                )
+                .as_str(),
+            );
+        }
+        Type::Array { .. } => {
+            let bounds = array_bounds(&ty).unwrap();
+            accum.push_str(
+                format!(
+                    "{indent}{ty} {c_name}{bounds};",
+                    indent = indent,
+                    c_name = c_name,
+                    bounds = bounds,
+                    ty = ty_name,
                 )
                 .as_str(),
             );
@@ -584,6 +598,51 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(accum)
     }
 
+    fn codegen_union_decl(&self, data: &Union) -> Result<String, Error> {
+        Ok(format!("typedef union {c_name} {c_name}_t;", c_name = to_c_name(&data.name.get_name())))
+    }
+
+    fn codegen_union_def(&self, data: &Union, ir: &FidlIr) -> Result<String, Error> {
+        let attrs = struct_attrs_to_c_str(&data.maybe_attributes);
+        let members = data
+            .members
+            .iter()
+            .filter_map(|f| {
+                if let Some(ty) = &f._type {
+                    match ty {
+                        Type::Vector { .. } => {
+                            Some(Err(anyhow!("unsupported for UnionField: {:?}", f)))
+                        }
+                        _ => Some(field_to_c_str(
+                            &f.maybe_attributes,
+                            &ty,
+                            &f.name.as_ref().unwrap(),
+                            "    ",
+                            false,
+                            ir,
+                        )),
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+        let mut accum = String::new();
+        accum.push_str(get_doc_comment(&data.maybe_attributes, 0).as_str());
+        accum.push_str(
+            format!(
+                include_str!("templates/c/struct.h"),
+                c_name = to_c_name(&data.name.get_name()),
+                decl = "union",
+                attrs = if attrs.is_empty() { "".to_string() } else { format!(" {}", attrs) },
+                members = members
+            )
+            .as_str(),
+        );
+        Ok(accum)
+    }
+
     fn codegen_struct_decl(&self, data: &Struct) -> Result<String, Error> {
         Ok(format!(
             "typedef struct {c_name} {c_name}_t;",
@@ -853,6 +912,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 Declaration::TypeAlias => Some(Decl::TypeAlias {
                     data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
                 }),
+                Declaration::Union => Some(Decl::Union {
+                    data: ir.union_declarations.iter().filter(|e| e.name == *ident).next()?,
+                }),
                 _ => None,
             })
             .collect())
@@ -877,6 +939,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
                 Decl::TypeAlias { data } => Some(self.codegen_alias_decl(data, &ir)),
+                Decl::Union { data } => Some(self.codegen_union_decl(data)),
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
@@ -886,6 +949,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .filter_map(|decl| match decl {
                 Decl::Interface { data } => Some(self.codegen_protocol_def(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_def(data, &ir)),
+                Decl::Union { data } => Some(self.codegen_union_def(data, &ir)),
                 _ => None,
             })
             .collect::<Result<Vec<_>, Error>>()?

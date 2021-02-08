@@ -26,7 +26,6 @@ _simple_libraries = [
   {
     name = "attributes"
     backends = [ "c" ]
-    disabled = true  # union missing ordinals
   },
 
   # Note: badtypes verifies that the banjo parser correctly fails/
@@ -144,7 +143,7 @@ _simple_libraries = [
   {
     name = "protocolothertypes"
     backends = [ "c" ]
-    disabled = true  # union missing ordinals
+    disabled = true  # declaration ordering issues
   },
   {
     name = "protocolprimitive"
@@ -161,7 +160,6 @@ _simple_libraries = [
   {
     name = "rustderive"
     backends = []
-    disabled = true  # union missing ordinals
   },
   {
     name = "simple"
@@ -175,7 +173,11 @@ _simple_libraries = [
   {
     name = "types"
     backends = [ "c" ]
-    disabled = true  # union missing ordinals
+    disabled = true  # contains handle<foo>
+  },
+  {
+    name = "union"
+    backends = [ "c" ]
   },
   {
     name = "view"
