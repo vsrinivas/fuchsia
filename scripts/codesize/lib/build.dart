@@ -53,12 +53,6 @@ class Build {
     }
   }
 
-  /// Returns the sibling zircon build output directory.
-  Directory zirconBuildDirectory() {
-    final buildDirName = path.split(dir.path).last;
-    return dir.parent / Directory('$buildDirName.zircon');
-  }
-
   /// Returns the blob manifest listing.
   File blobManifestFile() =>
       openDirectory('obj/build/images') / File('blob.manifest');

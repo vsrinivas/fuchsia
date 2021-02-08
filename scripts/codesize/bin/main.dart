@@ -324,8 +324,6 @@ class CodeSize {
 
   Future<void> addBuildIdFromSymbolSources() async {
     final fuchsiaBuildDir = build.openDirectory('.build-id');
-    final Directory zirconBuildDir =
-        build.zirconBuildDirectory() / Directory('.build-id');
     final sourceTree = Directory(Platform.environment['FUCHSIA_DIR']).absolute;
     final home = Directory(Platform.environment['HOME']);
     final maybeCipdBuildIdDirs = ([
@@ -337,8 +335,8 @@ class CodeSize {
               home / Directory(_fxSymbolCache),
             ])
         .where((e) => e.existsSync());
-    await _addBuildId(Stream.fromIterable(
-        [fuchsiaBuildDir, zirconBuildDir, ...maybeCipdBuildIdDirs]));
+    await _addBuildId(
+        Stream.fromIterable([fuchsiaBuildDir, ...maybeCipdBuildIdDirs]));
   }
 
   Future<void> _addBuildId(Stream<Directory> dirs) async {
