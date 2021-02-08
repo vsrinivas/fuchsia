@@ -88,6 +88,19 @@ fn serve_mock_reboot_controller(
                         }
                     }
                 }
+                controller::MockRebootControllerRequest::CrashRebootChannel { responder } => {
+                    let client_proxy = state.lock().unwrap().reboot_client.take();
+                    match client_proxy {
+                        Some(proxy) => {
+                            drop(proxy);
+                            responder.send(&mut Ok(())).unwrap();
+                        }
+                        None => {
+                            responder.send(&mut Err(controller::RebootError::NoClientSet)).unwrap();
+                            continue;
+                        }
+                    }
+                }
             }
         }
     })

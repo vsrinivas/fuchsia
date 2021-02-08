@@ -12,4 +12,5 @@ enum RebootError : int32 {
 [Discoverable]
 protocol MockRebootController {
     TriggerReboot() -> () error RebootError;
+    CrashRebootChannel() -> () error RebootError;
 };
