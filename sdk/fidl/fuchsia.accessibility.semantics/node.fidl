@@ -67,6 +67,62 @@ enum Role {
 
     /// Role used to represent toggle switch.
     TOGGLE_SWITCH = 14;
+
+    /// Role used to represent a table of elements.
+    TABLE = 15;
+
+    /// Role used to represent a grid. For example, an element with the
+    /// aria-grid role.
+    GRID = 16;
+
+    /// Role used to represent the row of a table.
+    TABLE_ROW = 17;
+
+    /// Role used to represent the cell of a table or grid.
+    CELL = 18;
+
+    /// Role used to represent a column header. For example, an element with
+    /// the html tag <th>.
+    COLUMN_HEADER = 19;
+
+    /// Role used to represent an aria-rowgroup-like element.
+    ROW_GROUP = 20;
+
+    /// Role used to represent a paragraph of text.
+    PARAGRAPH = 21;
+};
+
+/// The possible origins of a label.
+enum LabelOrigin {
+    /// The node does not have a label yet.
+    UNITIALIZED = 1;
+    /// An attribute of this element in the runtime UI explicitly sets its
+    /// label. For example, an element with aria-label.
+    ATTRIBUTE = 2;
+    /// An attribute of this element in the runtime UI explicitly sets its
+    /// label to be empty.
+    ATTRIBUTE_EMPTY = 3;
+    /// This label serves as the caption for a table-like element. Because some
+    /// assistive technology have special modes to deal with tables, a runtime
+    /// should mark its label with this type of origin so that users know what
+    /// the table is about when they navigate in the table mode. For example,
+    /// a <caption> html tag sets the label.
+    CAPTION = 4;
+    /// This node receives its label from the contents present in the
+    /// application. For example, text from a web page becomes the label of
+    /// this node.
+    CONTENTS = 5;
+    /// An element that can receive user entered value and has a suggested
+    /// input. For example, the placeholder attribute on an html input field.
+    PLACEHOLDER = 6;
+    /// Another element provides the label for this element. For example, via
+    /// aria-labeledby.
+    RELATED_ELEMENT = 7;
+    /// This element's label is represented by a visual tooltip. For example,
+    /// as if from a <title> html tag.
+    TITLE = 8;
+    /// The label comes from an user-entered value.
+    VALUE = 9;
 };
 
 /// Slider / range control attributes.
@@ -90,6 +146,14 @@ table SetAttributes {
     2: uint32 index;
     /// Node ids of other elements in this set.
     3: vector<uint32>:MAX_SET_ELEMENTS set_element_ids;
+};
+
+/// Attributes that control how a cell inside of a table behaves.
+table TableAttributes {
+    /// The number of columns this table cell spans.
+    1: uint32 column_span;
+    /// The number of rows this table cell spans.
+    2: uint32 row_span;
 };
 
 /// An attribute is an essential property to describe an element. Unlike states, attributes do not
@@ -122,6 +186,16 @@ table Attributes {
 
     /// The list element attributes are filled iff the node is a child of a list node.
     7: SetAttributes list_element_attributes;
+
+    /// The hierarchical level of an element. For example, a header can be of
+    /// level 1 to 6 in html or markdown.
+    8: uint32 hierarchical_level;
+
+    /// The table attributes are filled when the element is a cell.
+    9: TableAttributes table_attributes;
+
+    /// The origin of the label of this element.
+    10: LabelOrigin label_origin;
 };
 
 /// Represents the state of a UI checkbox.
@@ -183,6 +257,10 @@ table States {
     /// This field must only be set if the element is a toggle switch element
     /// and is mutually exclusive with CheckedState.
     8: ToggledState toggled_state;
+
+    /// Whether this element is focusable in the UI. Note that this is not the
+    /// a11y focus, but the application focus.
+    9: bool focusable;
 };
 
 /// The Node represents a semantic element on an interface. This may
