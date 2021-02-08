@@ -503,8 +503,8 @@ impl Router {
         config.set_initial_max_stream_data_bidi_local(1_000_000);
         config.set_initial_max_stream_data_bidi_remote(1_000_000);
         config.set_initial_max_stream_data_uni(1_000_000);
-        config.set_initial_max_streams_bidi(100);
-        config.set_initial_max_streams_uni(100);
+        config.set_initial_max_streams_bidi(1u64 << 60);
+        config.set_initial_max_streams_uni(1u64 << 60);
         config.verify_peer(false);
         Ok(config)
     }
