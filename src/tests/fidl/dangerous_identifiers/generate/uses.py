@@ -6,7 +6,7 @@ __all__ = ['USES']
 
 from typing import List
 
-from generate.types import *
+from common import *
 
 # Define places that identifiers may appear in a FIDL library:
 USES: List[Use] = []
@@ -51,9 +51,9 @@ def enums(f, idents: List[ScopedIdentifier]):
 
     # enum with every dangerous field name
     f.write('enum DangerousMembers {\n')
-    for ident in idents:
+    for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f'  {ident} = {ident.tag - 1};\n')
+        f.write(f'  {ident} = {i};\n')
     f.write('};\n')
 
 
@@ -67,10 +67,10 @@ def struct_types(f, idents: List[ScopedIdentifier]):
 
     # a struct with every dangerous name as the field type
     f.write('struct DangerousMembers {\n')
-    for ident in idents:
+    for i, ident in enumerate(idents):
         # dangerous field type
         f.write(ident.decl_attributes)
-        f.write(f'  {ident} f{ident.tag - 1};\n')
+        f.write(f'  {ident} f{i};\n')
     f.write('};\n')
 
 
@@ -91,26 +91,21 @@ def struct_names(f, idents: List[ScopedIdentifier]):
 #   # unions with every dangerous name
 #   f.write('alias membertype = uint32;\n')
 #   for ident in idents:
-#     # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
-#     # aliased causes a cycle.
-#     if ident == "uint32":
-#       continue
-#     f.write('union %s { membertype member; };\n' % ident)
-#
+#     f.write(f'union {ident} {{ 1: membertype member; }};\n')
+
 #   # a union with every dangerous name as the field type
 #   f.write('union DangerousMembers {\n')
 #   for i, ident in enumerate(idents):
 #     # dangerous field type
-#     f.write('  %s f%d;\n' % (ident, i))
+#     f.write(f'  {i+1}: {ident} f{i};\n')
 #   f.write('};\n')
-#
-#
+
 # @use
 # def union_types(f, idents):
 #   # a union with every dangerous name as the field name
 #   f.write('union DangerousMembers {\n')
 #   for i, ident in enumerate(idents):
-#     f.write('  uint32 %s;\n' % (ident))
+#     f.write(f'  {i+1}: uint32 f{i};\n')
 #   f.write('};\n')
 
 
@@ -123,15 +118,10 @@ def table_names(f, idents: List[ScopedIdentifier]):
         f.write(f'table {ident} {{ 1: membertype member; }};\n')
     # a table with every dangerous name as the field type
     f.write('table DangerousMembers {\n')
-    next_tag = 1
-    for ident in sorted(idents, key=lambda ident: ident.tag):
+    for i, ident in enumerate(idents):
         # dangerous field type
-        while ident.tag > next_tag:
-            f.write(f'  {next_tag}: reserved;\n')
-            next_tag = next_tag + 1
         f.write(ident.decl_attributes)
-        f.write(f'  {ident.tag}: {ident} f{ident.tag-1};\n')
-        next_tag = ident.tag + 1
+        f.write(f'  {i+1}: {ident} f{i};\n')
     f.write('};\n')
 
 
@@ -139,14 +129,9 @@ def table_names(f, idents: List[ScopedIdentifier]):
 def table_fields(f, idents: List[ScopedIdentifier]):
     # a table with every dangerous name as the field name
     f.write('table DangerousMembers {\n')
-    next_tag = 1
-    for ident in sorted(idents, key=lambda ident: ident.tag):
-        while ident.tag > next_tag:
-            f.write(f'  {next_tag}: reserved;\n')
-            next_tag = next_tag + 1
+    for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f'  {ident.tag}: uint32 {ident};\n')
-        next_tag = ident.tag + 1
+        f.write(f'  {i+1}: uint32 {ident};\n')
     f.write('};\n')
 
 
@@ -183,9 +168,9 @@ def method_request_arguments(f, idents: List[ScopedIdentifier]):
     # a protocol with every dangerous name as a request argument
     f.write('alias argtype = uint32;\n')
     f.write('protocol DangerousRequestArguments {\n')
-    for ident in idents:
+    for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f'  Method{ident.tag - 1}(argtype {ident});\n')
+        f.write(f'  Method{i}(argtype {ident});\n')
     f.write('};\n')
 
 
@@ -194,9 +179,9 @@ def method_response_arguments(f, idents: List[ScopedIdentifier]):
     # a protocol with every dangerous name as a response argument
     f.write('alias argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
-    for ident in idents:
+    for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f'  Method{ident.tag - 1}() -> (argtype {ident});\n')
+        f.write(f'  Method{i}() -> (argtype {ident});\n')
     f.write('};\n')
 
 
@@ -205,7 +190,7 @@ def method_event_arguments(f, idents: List[ScopedIdentifier]):
     # a protocol with every dangerous name as a event argument
     f.write('alias argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
-    for ident in idents:
+    for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f'  -> Event{ident.tag - 1}(argtype {ident});\n')
+        f.write(f'  -> Event{i}(argtype {ident});\n')
     f.write('};\n')

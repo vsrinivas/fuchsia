@@ -24,7 +24,6 @@ class Deny:
 @dataclass
 class Identifier:
     name: str
-    tag: int
     deny: List[Deny] = field(default_factory=list)
 
     @property
@@ -40,7 +39,7 @@ class Identifier:
         ]
 
         return ScopedIdentifier(
-            style(self.parts), self.tag, style, use,
+            style(self.parts), style, use,
             any(d.bindings == [] for d in denies),
             ','.join(sorted(set(bindings_denylist))))
 
@@ -48,7 +47,6 @@ class Identifier:
 @dataclass
 class ScopedIdentifier:
     name: str
-    tag: int
     style: 'Style'
     use: 'Use'
     denied: bool

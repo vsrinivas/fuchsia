@@ -2,10 +2,179 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
+
+# List of contexts where dangerous identifiers can be used
+uses = [
+  "constants",
+  "using",
+  "enums",
+  "struct.types",
+  "struct.names",
+  "table.names",
+  "table.fields",
+  "protocol.names",
+  "method.names",
+  "event.names",
+  "method.request.arguments",
+  "method.response.arguments",
+  "method.event.arguments",
+]
+
+# TODO(fxbug.dev/8081)
+# uses += [
+#   "union.types",
+#   "union.names",
+# ]
+
+# List of identifiers styles to test
+styles = [
+  "lower",
+  "upper",
+  "camel",
+]
+
+# How to shard identifiers
+shards = [
+  "1",
+  "2",
+  "3",
+  "4",
+]
+
+# Prefix for generated FIDL libraries
+fidl_library_prefix = "fidl.test.dangerous"
+
+# Generate the list of tests. Each test is a scope containing:
+#  use: the use name
+#  style: the style name
+#  fidl_library: the fidl library name
+#  fidl_target: the target for the FIDL library
+#  hlcpp_target: the target for the HLCPP test binary
+#  rust_target: the target for the Rust test binary
+dangerous_tests = []
+foreach(use, uses) {
+  foreach(style, styles) {
+    foreach(shard, shards) {
+      dangerous_tests += [
+        {
+          use = use
+          style = style
+          shard = shard
+          fidl_library = "${fidl_library_prefix}.${use}.${style}${shard}"
+          fidl_target = fidl_library
+          hlcpp_target = "hlcpp_${use}_${style}_${shard}"
+
+          # Deny list of libraries we can compile in Rust.
+          # [BindingsDenyList] on struct members doesn't work in Rust.
+          if (use != "struct.names" && use != "struct.types") {
+            rust_target = "rust_${use}_${style}_${shard}"
+          }
+        },
+      ]
+    }
+  }
+}
+
+# Generate FIDL files
+template("generate_dangerous_fidl") {
+  assert(defined(invoker.use))
+  assert(defined(invoker.style))
+  assert(defined(invoker.fidl_library))
+  assert(defined(invoker.output))
+
+  output = rebase_path(invoker.output)
+
+  action(target_name) {
+    script = "generate/generate.py"
+    sources = [
+      "generate/common.py",
+      "generate/generate.py",
+      "generate/identifiers.py",
+      "generate/styles.py",
+      "generate/uses.py",
+    ]
+    outputs = [ invoker.output ]
+    args = [
+      "--use=${invoker.use}",
+      "--style=${invoker.style}",
+      "--shards=" + string_join(",", shards),
+      "--shard=${invoker.shard}",
+      "--fidl-library=${invoker.fidl_library}",
+      "--out=${output}",
+    ]
+  }
+}
+
+# Build the FIDL library
+template("dangerous_fidl") {
+  generate_target = "${target_name}_generate"
+  generated_file = "${target_gen_dir}/${invoker.fidl_library}.test.fidl"
+  generate_dangerous_fidl(generate_target) {
+    forward_variables_from(invoker,
+                           [
+                             "use",
+                             "style",
+                             "shard",
+                             "fidl_library",
+                           ])
+    output = generated_file
+  }
+  fidl(target_name) {
+    name = invoker.fidl_library
+    sources = [ generated_file ]
+    non_fidl_deps = [ ":${generate_target}" ]
+  }
+}
+
+# Define all FIDL targets
+fidl_targets = []
+foreach(test, dangerous_tests) {
+  dangerous_fidl(test.fidl_target) {
+    forward_variables_from(test,
+                           [
+                             "use",
+                             "style",
+                             "shard",
+                             "fidl_library",
+                           ])
+  }
+  fidl_targets += [ ":${test.fidl_target}" ]
+}
+
+# Define all HLCPP targets
+hlcpp_targets = []
+foreach(test, dangerous_tests) {
+  executable(test.hlcpp_target) {
+    output_dir = target_out_dir
+    sources = [ "main.cc" ]
+    header_path = string_replace(test.fidl_library, ".", "/") + "/cpp/fidl.h"
+    cflags_cc = [
+      "-include",
+      header_path,
+    ]
+    deps = [ ":${test.fidl_target}" ]
+  }
+  hlcpp_targets += [ ":${test.hlcpp_target}" ]
+}
+
+# Define all Rust targets
+rust_targets = []
+foreach(test, dangerous_tests) {
+  if (defined(test.rust_target)) {
+    group(test.rust_target) {
+      deps = [ ":${test.fidl_target}-rustc" ]
+    }
+    rust_targets += [ ":${test.rust_target}" ]
+  }
+}
+
 group("tests") {
   testonly = true
-  deps = [
-    "cpp",
-    "rust",
-  ]
+  deps = fidl_targets + hlcpp_targets + rust_targets
+}
+
+# TODO(ianloic): Remove this once Dart FIDL support is moved into fuchsia.git
+group("fidl") {
+  deps = fidl_targets
 }

@@ -119,9 +119,6 @@ template("fidl_dart") {
       dart_package_label.zircon,
     ]
 
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
     if (defined(invoker.public_deps)) {
       deps += invoker.public_deps
     }
@@ -131,6 +128,11 @@ template("fidl_dart") {
       ":$copy_pubspec_target_name",
       ":$generation_target_name",
     ]
+
+    # invoker.deps are the non_fidl_deps passed in to the fidl() rule
+    if (defined(invoker.deps)) {
+      non_dart_deps += invoker.deps
+    }
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {

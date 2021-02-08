@@ -986,6 +986,11 @@ func formatLibraryPath(library fidl.LibraryIdentifier) string {
 
 type libraryNamespaceFunc func(fidl.LibraryIdentifier) Namespace
 
+func codingTableName(ident fidl.EncodedCompoundIdentifier) string {
+	ci := fidl.ParseCompoundIdentifier(ident)
+	return formatLibrary(ci.Library, "_", keepPartIfReserved) + "_" + string(ci.Name) + string(ci.Member)
+}
+
 type compiler struct {
 	symbolPrefix     string
 	decls            fidl.DeclInfoMap
@@ -1372,8 +1377,11 @@ func (m Method) buildLLContextProps(context LLContext) LLContextProps {
 
 func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 	protocolName := c.compileDeclName(val.Name)
-	tableBase := protocolName.PrependName(c.symbolPrefix + "_").
-		MapNatural(func(d DeclVariant) DeclVariant { return d.AppendNamespace("_internal") })
+	tableName := codingTableName(val.Name)
+	tableBase := DeclName{
+		Wire:    NewDeclVariant(tableName, protocolName.Wire.Namespace()),
+		Natural: NewDeclVariant(tableName, protocolName.Natural.Namespace().Append("_internal")),
+	}
 	methods := []Method{}
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name, "")
