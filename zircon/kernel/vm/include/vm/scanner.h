@@ -42,20 +42,20 @@ uint64_t scanner_do_zero_scan(uint64_t limit);
 // least |min_free_target| has been reclaimed. Reclamation will happen asynchronously and this
 // function returns immediately. Once the target is reached, or there is no more memory that can be
 // reclaimed, this process will stop and the free memory target will be cleared. The eviction_level
-// is a rough control on how hard to try and evict. Multiple calls to scanner_trigger_evict will
-// cause all the targets to get merged by adding together |min_free_target|, taking the max of
-// |free_mem_target| and the highest or most aggressive of any eviction_level.
-void scanner_trigger_evict(
+// is a rough control on how hard to try and evict. Multiple calls to
+// scanner_trigger_asynchronous_evict will cause all the targets to get merged by adding together
+// |min_free_target|, taking the max of |free_mem_target| and the highest or most aggressive of any
+// eviction_level.
+void scanner_trigger_asynchronous_evict(
     uint64_t min_free_target, uint64_t free_mem_target,
     scanner::EvictionLevel eviction_level = scanner::EvictionLevel::OnlyOldest,
     scanner::Output output = scanner::Output::NoPrint);
 
-// Performs a synchronous request to evict the requested number of pages. Evicted pages are placed
-// in the passed |free_list| and become owned by the caller, with the return value being the number
-// of free pages. The |eviction_level| is a rough control that maps to how old a page needs to be
-// for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
-uint64_t scanner_evict_pager_backed(uint64_t max_pages, scanner::EvictionLevel eviction_level,
-                                    list_node_t *free_list);
+// Performs a synchronous request to evict the requested number of pages. The return value is the
+// number of pages evicted. The |eviction_level| is a rough control that maps to how old a page
+// needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
+uint64_t scanner_synchronous_evict(uint64_t max_pages, scanner::EvictionLevel eviction_level,
+                                   scanner::Output output);
 
 // AutoVmScannerDisable is an RAII helper for disabling scanning using the
 // scanner_push_disable_count()/scanner_pop_disable_count(). Disabling the scanner is useful in test

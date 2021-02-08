@@ -236,10 +236,13 @@ class VmCowPages final
   bool DebugIsUnreclaimable() const;
   bool DebugIsDiscarded() const;
 
-  // Discard all the pages from a discardable vmo in the |kReclaimable| state. If successful, the
-  // |discardable_state_| is set to |kDiscarded|, and the vmo is moved from the reclaim candidates
-  // list. Returns the number of pages freed.
-  uint64_t DiscardPages() TA_EXCL(DiscardableVmosLock::Get()) TA_EXCL(lock_);
+  // Discard all the pages from a discardable vmo in the |kReclaimable| state. For this call to
+  // succeed, the vmo should have been in the reclaimable state for at least
+  // |min_duration_since_reclaimable|. If successful, the |discardable_state_| is set to
+  // |kDiscarded|, and the vmo is moved from the reclaim candidates list. Returns the number of
+  // pages freed.
+  uint64_t DiscardPages(zx_duration_t min_duration_since_reclaimable)
+      TA_EXCL(DiscardableVmosLock::Get()) TA_EXCL(lock_);
 
   struct DiscardablePageCounts {
     uint64_t locked;
@@ -251,6 +254,15 @@ class VmCowPages final
   // |DiscardableVmosLock| is dropped after processing each vmo on the global discardable lists.
   // That is fine since these numbers are only used for accounting.
   static DiscardablePageCounts DebugDiscardablePageCounts() TA_EXCL(DiscardableVmosLock::Get());
+
+  // Walks through the LRU reclaimable list of discardable vmos and discards pages from each, until
+  // |target_pages| have been freed, or the list of candidates is exhausted. Only vmos that have
+  // become reclaimable more than |min_duration_since_reclaimable| in the past will be discarded;
+  // this prevents discarding reclaimable vmos that were recently accessed. Returns the total number
+  // of pages freed.
+  static uint64_t ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
+                                                  zx_duration_t min_duration_since_reclaimable)
+      TA_EXCL(DiscardableVmosLock::Get());
 
  private:
   // private constructor (use Create())
@@ -618,6 +630,10 @@ class VmCowPages final
   // decommitting or resizing, since those are explicit actions driven by the user, not by the
   // kernel directly.
   uint64_t lock_count_ TA_GUARDED(lock_) = 0;
+
+  // Timestamp of the last unlock operation that changed a discardable vmo's state to
+  // |kReclaimable|. Used to determine whether the vmo was accessed too recently to be discarded.
+  zx_time_t last_unlock_timestamp_ TA_GUARDED(lock_) = ZX_TIME_INFINITE;
 
   // The current state of a discardable vmo, depending on the lock count and whether it has been
   // discarded.

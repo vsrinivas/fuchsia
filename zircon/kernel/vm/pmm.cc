@@ -276,9 +276,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     // classified as evictable, and then evict anything that is already considered.
     printf("Disabling VM scanner\n");
     scanner_push_disable_count();
-    list_node evict_list = LIST_INITIAL_VALUE(evict_list);
-    uint64_t pages_evicted =
-        scanner_evict_pager_backed(UINT64_MAX, scanner::EvictionLevel::IncludeNewest, &evict_list);
+    uint64_t pages_evicted = scanner_synchronous_evict(
+        UINT64_MAX, scanner::EvictionLevel::IncludeNewest, scanner::Output::NoPrint);
     if (pages_evicted > 0) {
       printf("Leaked %" PRIu64 " pages from eviction\n", pages_evicted);
     }
