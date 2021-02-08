@@ -1,7 +1,7 @@
 # Overview
 
-> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
-> the [Session Framework](/docs/concepts/session/introduction.md).
+Note: The Modular framework is being deprecated in favor of
+the [Session Framework](/docs/concepts/session/introduction.md).
 
 Modular manages user experiences by composing UI, data, and users from a
 diverse set of components into logical and visual containers called Stories.

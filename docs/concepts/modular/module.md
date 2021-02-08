@@ -1,7 +1,7 @@
 # Modules
 
-> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
-> the [Session Framework](/docs/concepts/session/introduction.md).
+Note: The Modular framework is being deprecated in favor of
+the [Session Framework](/docs/concepts/session/introduction.md).
 
 A `Module` is a component that displays UI in a Modular session. Modules are
 added to a story (a container for Modules). Multiple modules can be added to a

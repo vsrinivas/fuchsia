@@ -1,7 +1,7 @@
 # Agents
 
-> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
-> the [Session Framework](/docs/concepts/session/introduction.md).
+Note: The Modular framework is being deprecated in favor of
+the [Session Framework](/docs/concepts/session/introduction.md).
 
 An `Agent` is a singleton-per-session component without any graphical UI.
 

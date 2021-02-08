@@ -1,7 +1,7 @@
 # How-To: Write an Agent in C++
 
-> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
-> the [Session Framework](/docs/concepts/session/introduction.md).
+Note: The Modular framework is being deprecated in favor of
+the [Session Framework](/docs/concepts/session/introduction.md).
 
 ## Overview
 
