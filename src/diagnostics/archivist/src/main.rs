@@ -106,7 +106,10 @@ fn main() -> Result<(), Error> {
     let mut archivist = archivist::ArchivistBuilder::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    executor.run_singlethreaded(archivist.install_log_services());
+    executor
+        .run_singlethreaded(archivist.install_log_services(archivist::LogOpts {
+            ingest_v2_logs: !opt.disable_event_source,
+        }));
     executor
         .run_singlethreaded(async {
             if !opt.disable_component_event_provider {

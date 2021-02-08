@@ -52,6 +52,12 @@ use {
     tracing::{debug, error, info, warn},
 };
 
+/// Options for ingesting logs.
+pub struct LogOpts {
+    /// Whether or not logs coming from v2 components should be ingested.
+    pub ingest_v2_logs: bool,
+}
+
 /// Responsible for initializing an `Archivist` instance. Supports multiple configurations by
 /// either calling or not calling methods on the builder like `install_controller_service`.
 pub struct ArchivistBuilder {
@@ -371,7 +377,7 @@ impl ArchivistBuilder {
     /// Installs `LogSink` and `Log` services. Panics if called twice.
     /// # Arguments:
     /// * `log_connector` - If provided, install log connector.
-    pub async fn install_log_services(&mut self) -> &mut Self {
+    pub async fn install_log_services(&mut self, opts: LogOpts) -> &mut Self {
         let data_repo_1 = self.data_repo().clone();
         let listen_sender = self.listen_sender.clone();
 
@@ -399,22 +405,23 @@ impl ArchivistBuilder {
                 })
                 .detach();
             });
-        debug!("fuchsia.sys.EventStream connection");
-        let event_source = connect_to_service::<EventSourceMarker>().unwrap();
-        match event_source.take_static_event_stream("EventStream").await {
-            Ok(Ok(event_stream)) => {
-                let event_stream = event_stream.into_stream().unwrap();
-                self.event_source_registry
-                    .add_source(
-                        "v2_static_event_stream",
-                        Box::new(StaticEventStream::new(event_stream)),
-                    )
-                    .await;
+        if opts.ingest_v2_logs {
+            debug!("fuchsia.sys.EventStream connection");
+            let event_source = connect_to_service::<EventSourceMarker>().unwrap();
+            match event_source.take_static_event_stream("EventStream").await {
+                Ok(Ok(event_stream)) => {
+                    let event_stream = event_stream.into_stream().unwrap();
+                    self.event_source_registry
+                        .add_source(
+                            "v2_static_event_stream",
+                            Box::new(StaticEventStream::new(event_stream)),
+                        )
+                        .await;
+                }
+                Ok(Err(err)) => debug!(?err, "Failed to open event stream"),
+                Err(err) => debug!(?err, "Failed to send request to take event stream"),
             }
-            Ok(Err(err)) => debug!(?err, "Failed to open event stream"),
-            Err(err) => debug!(?err, "Failed to send request to take event stream"),
         }
-
         debug!("Log services initialized.");
         self
     }
@@ -833,7 +840,10 @@ mod tests {
     async fn run_archivist_and_signal_on_exit() -> (DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut archivist = init_archivist();
-        archivist.install_log_services().await.install_controller_service();
+        archivist
+            .install_log_services(LogOpts { ingest_v2_logs: false })
+            .await
+            .install_controller_service();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
@@ -847,7 +857,7 @@ mod tests {
     async fn run_archivist() -> DirectoryProxy {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut archivist = init_archivist();
-        archivist.install_log_services().await;
+        archivist.install_log_services(LogOpts { ingest_v2_logs: false }).await;
         fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
         })
