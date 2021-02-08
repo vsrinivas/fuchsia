@@ -86,6 +86,8 @@ mod test {
     use super::*;
 
     #[test]
+    // TODO fxb/69321 isolate the env test from CI env
+    #[ignore]
     // Rust tests are run in parallel in threads, which means that this test is
     // disruptive to other tests. There's little ROI to doing some kind of fork
     // dance here, so the test is included, but not run by default.
@@ -108,6 +110,8 @@ mod test {
     }
 
     #[test]
+    // TODO fxb/69321 isolate the env test from CI env
+    #[ignore]
     pub fn test_is_bot_env() {
         std::env::set_var(&"BUILD_ID", "1");
         assert_eq!(true, is_running_in_ci_bot_env());
