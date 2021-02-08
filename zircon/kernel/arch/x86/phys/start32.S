@@ -83,11 +83,11 @@
 
   push %eax  // Adjust down to maintain stack alignment after argument pushes.
   .cfi_adjust_cfa_offset 4
-  push %esi  // First argument (1st word): void* (Multiboot or boot_params)
+  push %ebx  // Second argument (3rd word): arch::EarlyTicks (high order)
   .cfi_adjust_cfa_offset 4
   push %edx  // Second argument (2nd word): arch::EarlyTicks (low order)
   .cfi_adjust_cfa_offset 4
-  push %ebx  // Second argument (3rd word): arch::EarlyTicks (high order)
+  push %esi  // First argument (1st word): void* (Multiboot or boot_params)
   .cfi_adjust_cfa_offset 4
 
   // Initialize cpuid data.  This could be done earlier, but nothing needs it

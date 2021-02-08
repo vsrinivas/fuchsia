@@ -5,9 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/zbitl/items/mem_config.h>
-#include <lib/zbitl/view.h>
-#include <lib/zx/status.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -66,9 +63,12 @@ size_t AllocateAndOverwriteFreeMemory() {
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
+  printf("Initializing memory...\n");
+
   // Initialize memory for allocation/free.
   InitMemory(zbi_ptr);
 
+  printf("Testing memory allocation...\n");
   size_t bytes_allocated = AllocateAndOverwriteFreeMemory();
   if (bytes_allocated == 0) {
     printf("FAIL: Could not allocate any memory.\n");

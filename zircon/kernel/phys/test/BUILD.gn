@@ -224,16 +224,13 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  phys_zbi_test("zbi-memory-test") {
+  common_test("memory-test") {
     sources = [ "phys-memory-test.cc" ]
     deps = [
       ":test-main",
       "..:allocation",
-      "..:zbi-memory",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
-      "//zircon/kernel/phys/lib/memalloc",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -333,6 +330,9 @@ if (current_toolchain != default_toolchain) {
         ":zbi-chain-load-core-tests",
         ":zbi-chain-load-hello-world-test",
       ]
+    }
+    if (current_cpu == "x64") {
+      deps += [ ":qemu-memory-test" ]
     }
   }
 } else {  # current_toolchain == default_toolchain

@@ -132,6 +132,7 @@ if (toolchain.environment == "kernel.phys" ||
     ]
     deps = [
       ":main",
+      ":zbi-memory",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/system/ulib/uart",
@@ -202,7 +203,10 @@ if (toolchain.environment == "kernel.phys" ||
     ]
   }
 
-  source_set("zbi-memory") {
+  # This is a little library instead of a source_set() so it can be included
+  # implicitly by zbi_executable() without adding bloat to the tiny tests that
+  # don't use it.
+  static_library("zbi-memory") {
     sources = [ "zbi-memory.cc" ]
     deps = [
       ":allocation",

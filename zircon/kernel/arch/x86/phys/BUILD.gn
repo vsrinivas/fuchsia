@@ -163,11 +163,30 @@ if (current_toolchain == default_toolchain) {
         "multiboot-start.S",
       ]
       deps = [
+        ":multiboot-info",
         ":phys32",
         "//zircon/kernel/lib/arch",
       ]
 
       public_configs = [ ":load-1mb" ]
+    }
+
+    # This is a little library instead of a source_set() so it can be included
+    # implicitly by phys_executable() without adding bloat to the tiny tests
+    # that don't use it.
+    static_library("multiboot-info") {
+      public = [ "multiboot-info.h" ]
+      sources = [ "multiboot-info.cc" ]
+      deps = [
+        "//zircon/kernel/lib/arch",
+        "//zircon/kernel/phys:allocation",
+        "//zircon/kernel/phys:main",
+        "//zircon/kernel/phys/lib/memalloc",
+      ]
+      public_deps = [
+        "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/lib/libc",
+      ]
     }
 
     # TODO(mcgrathr): Linux zero-page support parallel to multiboot

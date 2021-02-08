@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <zircon/assert.h>
+#include <zircon/boot/image.h>
 
 #include "../frame-pointer.h"
 #include "../symbolize.h"
@@ -42,7 +43,7 @@ namespace {
 }  // namespace
 
 int TestMain(void* zbi, arch::EarlyTicks) {
-  if (zbi) {
+  if (zbi && static_cast<zbi_header_t*>(zbi)->type == ZBI_TYPE_CONTAINER) {
     ZX_ASSERT(Foo() == 4);  // _start -> PhysMain -> ZbiMain -> TestMain -> Foo
   } else {
     ZX_ASSERT(Foo() == 3);  // _start -> PhysMain -> TestMain -> Foo...

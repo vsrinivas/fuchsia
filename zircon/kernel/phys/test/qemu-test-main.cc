@@ -13,7 +13,7 @@
 
 FILE FILE::stdout_;
 
-void PhysMain(void* zbi, arch::EarlyTicks ticks) {
+void PhysMain(void* bootloader_data, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();
 
@@ -25,10 +25,7 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   printf("\n\n");
 
   // Run the test.
-  //
-  // The qemu-phys tests don't use the argument at all.  Pass nullptr to easily
-  // distinguish qemu-phys tests from proper ZBI tests in the shared test code.
-  int status = TestMain(nullptr, ticks);
+  int status = TestMain(bootloader_data, ticks);
   if (status == 0) {
     printf("\n*** Test succeeded ***\n%s\n\n", ZBI_TEST_SUCCESS_STRING);
   } else {
