@@ -854,7 +854,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/kcounter/*",
     "//zircon/system/ulib/kernel-debug/*",
     "//zircon/system/ulib/keysafe/*",
-    "//zircon/system/ulib/kms-stateless/*",
     "//zircon/system/ulib/ktrace/*",
     "//zircon/system/ulib/launchpad/*",
     "//zircon/system/ulib/lazy_init/*",
