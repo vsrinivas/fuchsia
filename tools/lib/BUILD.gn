@@ -12,6 +12,7 @@ group("tests") {
     "//tools/lib/color:color_tests",
     "//tools/lib/environment:environment_tests",
     "//tools/lib/flagmisc:tests",
+    "//tools/lib/hostplatform:tests",
     "//tools/lib/iomisc:tests",
     "//tools/lib/jsonutil:tests",
     "//tools/lib/logger:logger_tests",

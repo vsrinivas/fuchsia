@@ -11,11 +11,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
 	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
@@ -24,7 +24,7 @@ import (
 // Set runs `gn gen` given a static and context spec. It's intended to be
 // consumed as a library function.
 func Set(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Context) (*fintpb.SetArtifacts, error) {
-	platform, err := getPlatform()
+	platform, err := hostplatform.Name()
 	if err != nil {
 		return nil, err
 	}
@@ -113,26 +113,6 @@ func runGen(
 		return stdoutBuf.String(), fmt.Errorf("error running gn gen: %w", err)
 	}
 	return stdoutBuf.String(), nil
-}
-
-func getPlatform() (string, error) {
-	os, ok := map[string]string{
-		"windows": "win",
-		"darwin":  "mac",
-		"linux":   "linux",
-	}[runtime.GOOS]
-	if !ok {
-		return "", fmt.Errorf("unsupported GOOS %q", runtime.GOOS)
-	}
-
-	arch, ok := map[string]string{
-		"amd64": "x64",
-		"arm64": "arm64",
-	}[runtime.GOARCH]
-	if !ok {
-		return "", fmt.Errorf("unsupported GOARCH %q", runtime.GOARCH)
-	}
-	return fmt.Sprintf("%s-%s", os, arch), nil
 }
 
 func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform string) ([]string, error) {
