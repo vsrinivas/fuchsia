@@ -46,128 +46,114 @@ namespace union_ {
 namespace wire {
 class Union;
 }  // namespace wire
-using Union = wire::Union;
+using Union = ::llcpp::fidl::test::union_::wire::Union;
 namespace wire {
-
 struct StructWithNullableXUnion;
 }  // namespace wire
-using StructWithNullableXUnion = wire::StructWithNullableXUnion;
+using StructWithNullableXUnion =
+    ::llcpp::fidl::test::union_::wire::StructWithNullableXUnion;
 namespace wire {
-
 class StrictUnion;
 }  // namespace wire
-using StrictUnion = wire::StrictUnion;
+using StrictUnion = ::llcpp::fidl::test::union_::wire::StrictUnion;
 namespace wire {
-
 class StrictSimpleXUnion;
 }  // namespace wire
-using StrictSimpleXUnion = wire::StrictSimpleXUnion;
+using StrictSimpleXUnion =
+    ::llcpp::fidl::test::union_::wire::StrictSimpleXUnion;
 namespace wire {
-
 class StrictFoo;
 }  // namespace wire
-using StrictFoo = wire::StrictFoo;
+using StrictFoo = ::llcpp::fidl::test::union_::wire::StrictFoo;
 namespace wire {
-
 class StrictBoundedXUnion;
 }  // namespace wire
-using StrictBoundedXUnion = wire::StrictBoundedXUnion;
+using StrictBoundedXUnion =
+    ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion;
 namespace wire {
-
 class ReverseOrdinalUnion;
 }  // namespace wire
-using ReverseOrdinalUnion = wire::ReverseOrdinalUnion;
+using ReverseOrdinalUnion =
+    ::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion;
 namespace wire {
-
 struct Pizza;
 }  // namespace wire
-using Pizza = wire::Pizza;
+using Pizza = ::llcpp::fidl::test::union_::wire::Pizza;
 namespace wire {
-
 struct Pasta;
 }  // namespace wire
-using Pasta = wire::Pasta;
+using Pasta = ::llcpp::fidl::test::union_::wire::Pasta;
 namespace wire {
-
 class StrictPizzaOrPasta;
 }  // namespace wire
-using StrictPizzaOrPasta = wire::StrictPizzaOrPasta;
+using StrictPizzaOrPasta =
+    ::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta;
 namespace wire {
-
 class PizzaOrPasta;
 }  // namespace wire
-using PizzaOrPasta = wire::PizzaOrPasta;
+using PizzaOrPasta = ::llcpp::fidl::test::union_::wire::PizzaOrPasta;
 namespace wire {
-
 class FlexiblePizzaOrPasta;
 }  // namespace wire
-using FlexiblePizzaOrPasta = wire::FlexiblePizzaOrPasta;
+using FlexiblePizzaOrPasta =
+    ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta;
 namespace wire {
-
 class ExplicitPizzaOrPasta;
 }  // namespace wire
-using ExplicitPizzaOrPasta = wire::ExplicitPizzaOrPasta;
+using ExplicitPizzaOrPasta =
+    ::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta;
 namespace wire {
-
 class OlderSimpleUnion;
 }  // namespace wire
-using OlderSimpleUnion = wire::OlderSimpleUnion;
-namespace wire {}  // namespace wire
+using OlderSimpleUnion = ::llcpp::fidl::test::union_::wire::OlderSimpleUnion;
+
 class TestProtocol;
 namespace wire {
 struct NullableUnionStruct;
 }  // namespace wire
-using NullableUnionStruct = wire::NullableUnionStruct;
+using NullableUnionStruct =
+    ::llcpp::fidl::test::union_::wire::NullableUnionStruct;
 namespace wire {
-
 class NewerSimpleUnion;
 }  // namespace wire
-using NewerSimpleUnion = wire::NewerSimpleUnion;
+using NewerSimpleUnion = ::llcpp::fidl::test::union_::wire::NewerSimpleUnion;
 namespace wire {
-
 class FlexibleUnion;
 }  // namespace wire
-using FlexibleUnion = wire::FlexibleUnion;
+using FlexibleUnion = ::llcpp::fidl::test::union_::wire::FlexibleUnion;
 namespace wire {
-
 class FlexibleFoo;
 }  // namespace wire
-using FlexibleFoo = wire::FlexibleFoo;
+using FlexibleFoo = ::llcpp::fidl::test::union_::wire::FlexibleFoo;
 namespace wire {
-
 class FieldCollision;
 }  // namespace wire
-using FieldCollision = wire::FieldCollision;
+using FieldCollision = ::llcpp::fidl::test::union_::wire::FieldCollision;
 namespace wire {
-
 class ExplicitXUnion;
 }  // namespace wire
-using ExplicitXUnion = wire::ExplicitXUnion;
+using ExplicitXUnion = ::llcpp::fidl::test::union_::wire::ExplicitXUnion;
 namespace wire {
-
 class ExplicitUnion;
 }  // namespace wire
-using ExplicitUnion = wire::ExplicitUnion;
+using ExplicitUnion = ::llcpp::fidl::test::union_::wire::ExplicitUnion;
 namespace wire {
-
 class ExplicitStrictFoo;
 }  // namespace wire
-using ExplicitStrictFoo = wire::ExplicitStrictFoo;
+using ExplicitStrictFoo = ::llcpp::fidl::test::union_::wire::ExplicitStrictFoo;
 namespace wire {
-
 class ExplicitFoo;
 }  // namespace wire
-using ExplicitFoo = wire::ExplicitFoo;
+using ExplicitFoo = ::llcpp::fidl::test::union_::wire::ExplicitFoo;
 namespace wire {
-
 struct Empty;
 }  // namespace wire
-using Empty = wire::Empty;
+using Empty = ::llcpp::fidl::test::union_::wire::Empty;
 namespace wire {
-
 class XUnionContainingEmptyStruct;
 }  // namespace wire
-using XUnionContainingEmptyStruct = wire::XUnionContainingEmptyStruct;
+using XUnionContainingEmptyStruct =
+    ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_union_UnionTable;

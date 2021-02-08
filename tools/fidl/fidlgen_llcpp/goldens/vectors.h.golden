@@ -45,7 +45,8 @@ namespace vectors {
 namespace wire {
 struct ExampleUseOfVectors;
 }  // namespace wire
-using ExampleUseOfVectors = wire::ExampleUseOfVectors;
+using ExampleUseOfVectors =
+    ::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;

@@ -412,9 +412,8 @@ class SimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   SimpleTable::Frame frame_;
 };
-
 }  // namespace wire
-using SimpleTable = wire::SimpleTable;
+using SimpleTable = ::llcpp::fidl::test::table::wire::SimpleTable;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_ReverseOrdinalTableTable;
@@ -857,9 +856,9 @@ class ReverseOrdinalTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   ReverseOrdinalTable::Frame frame_;
 };
-
 }  // namespace wire
-using ReverseOrdinalTable = wire::ReverseOrdinalTable;
+using ReverseOrdinalTable =
+    ::llcpp::fidl::test::table::wire::ReverseOrdinalTable;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_OlderSimpleTableTable;
@@ -1142,9 +1141,8 @@ class OlderSimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   OlderSimpleTable::Frame frame_;
 };
-
 }  // namespace wire
-using OlderSimpleTable = wire::OlderSimpleTable;
+using OlderSimpleTable = ::llcpp::fidl::test::table::wire::OlderSimpleTable;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_NewerSimpleTableTable;
@@ -1588,9 +1586,8 @@ class NewerSimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   NewerSimpleTable::Frame frame_;
 };
-
 }  // namespace wire
-using NewerSimpleTable = wire::NewerSimpleTable;
+using NewerSimpleTable = ::llcpp::fidl::test::table::wire::NewerSimpleTable;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_EmptyTableTable;
@@ -1785,10 +1782,9 @@ class EmptyTable::UnownedBuilder final {
  private:
   uint64_t max_ordinal_ = 0;
 };
-
 }  // namespace wire
-using EmptyTable = wire::EmptyTable;
-namespace wire {}  // namespace wire
+using EmptyTable = ::llcpp::fidl::test::table::wire::EmptyTable;
+
 }  // namespace table
 }  // namespace test
 }  // namespace fidl

@@ -111,9 +111,8 @@ constexpr inline void {{ .Decl.Wire.Name }}::operator^=(
   this->value_ ^= other.value_;
 }
 
-}  // namespace wire
-using {{ .Decl.Wire.Name }} = wire::{{ .Decl.Wire.Name }};
-namespace wire {
+{{- EnsureNamespace .WireAlias }}
+using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
 {{ end }}
 
 {{- define "BitsTraits" }}

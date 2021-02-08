@@ -26,6 +26,16 @@ func (ns Namespace) Append(part string) Namespace {
 	return Namespace(new)
 }
 
+// DropLastComponent returns a new namespace with the final component removed.
+func (ns Namespace) DropLastComponent() Namespace {
+	if len(ns) == 0 {
+		panic("Can't drop the end of an empty namespace")
+	}
+	new := make([]string, len(ns)-1)
+	copy(new, ns)
+	return Namespace(new)
+}
+
 // DeclVariant represents the name of a C++ declaration within a namespace.
 type DeclVariant struct {
 	name      string
@@ -74,6 +84,15 @@ func (d DeclVariant) AppendNamespace(part string) DeclVariant {
 	return DeclVariant{
 		name:      d.name,
 		namespace: d.namespace.Append(part),
+	}
+}
+
+// DropLastNamespaceComponent returns a new DeclVariant with the same name but with the final
+// component of the namespace removed.
+func (d DeclVariant) DropLastNamespaceComponent() DeclVariant {
+	return DeclVariant{
+		name:      d.name,
+		namespace: d.namespace.DropLastComponent(),
 	}
 }
 

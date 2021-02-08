@@ -51,21 +51,21 @@ enum class obj_type : uint32_t {
 
   VMO = 3u,
 };
-
 }  // namespace wire
-using obj_type = wire::obj_type;
-namespace wire {
+using obj_type = ::llcpp::fidl::test::handlesintypes::wire::obj_type;
 
+namespace wire {
 class UnionWithHandle;
 }  // namespace wire
-using UnionWithHandle = wire::UnionWithHandle;
+using UnionWithHandle =
+    ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle;
 namespace wire {
-
 class TableWithHandle;
 
 struct HandlesInTypes;
 }  // namespace wire
-using HandlesInTypes = wire::HandlesInTypes;
+using HandlesInTypes =
+    ::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes;
 namespace wire {
 
 #ifdef __Fuchsia__
@@ -466,9 +466,9 @@ class TableWithHandle::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableWithHandle::Frame frame_;
 };
-
 }  // namespace wire
-using TableWithHandle = wire::TableWithHandle;
+using TableWithHandle =
+    ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle;
 namespace wire {
 #endif  // __Fuchsia__
 

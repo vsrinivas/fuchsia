@@ -46,13 +46,13 @@ namespace error {
 namespace wire {
 struct Example_foo_Response;
 }  // namespace wire
-using Example_foo_Response = wire::Example_foo_Response;
+using Example_foo_Response =
+    ::llcpp::fidl::test::error::wire::Example_foo_Response;
 namespace wire {
-
 class Example_foo_Result;
 }  // namespace wire
-using Example_foo_Result = wire::Example_foo_Result;
-namespace wire {}  // namespace wire
+using Example_foo_Result = ::llcpp::fidl::test::error::wire::Example_foo_Result;
+
 class Example;
 namespace wire {
 

@@ -48,48 +48,48 @@ namespace nullable {
 namespace wire {
 struct StructWithNullableVector;
 }  // namespace wire
-using StructWithNullableVector = wire::StructWithNullableVector;
+using StructWithNullableVector =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableVector;
 namespace wire {
-
 struct StructWithNullableUnion;
 }  // namespace wire
-using StructWithNullableUnion = wire::StructWithNullableUnion;
+using StructWithNullableUnion =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableUnion;
 namespace wire {
-
 struct StructWithNullableStruct;
 }  // namespace wire
-using StructWithNullableStruct = wire::StructWithNullableStruct;
+using StructWithNullableStruct =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableStruct;
 namespace wire {
-
 struct StructWithNullableString;
 }  // namespace wire
-using StructWithNullableString = wire::StructWithNullableString;
+using StructWithNullableString =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableString;
 namespace wire {
-
 struct StructWithNullableRequest;
 }  // namespace wire
-using StructWithNullableRequest = wire::StructWithNullableRequest;
+using StructWithNullableRequest =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableRequest;
 namespace wire {
-
 struct StructWithNullableProtocol;
 }  // namespace wire
-using StructWithNullableProtocol = wire::StructWithNullableProtocol;
+using StructWithNullableProtocol =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableProtocol;
 namespace wire {
-
 struct StructWithNullableHandle;
 }  // namespace wire
-using StructWithNullableHandle = wire::StructWithNullableHandle;
-namespace wire {}  // namespace wire
+using StructWithNullableHandle =
+    ::llcpp::fidl::test::nullable::wire::StructWithNullableHandle;
+
 class SimpleProtocol;
 namespace wire {
 class SimpleUnion;
 }  // namespace wire
-using SimpleUnion = wire::SimpleUnion;
+using SimpleUnion = ::llcpp::fidl::test::nullable::wire::SimpleUnion;
 namespace wire {
-
 struct Int32Wrapper;
 }  // namespace wire
-using Int32Wrapper = wire::Int32Wrapper;
+using Int32Wrapper = ::llcpp::fidl::test::nullable::wire::Int32Wrapper;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_nullable_SimpleUnionTable;

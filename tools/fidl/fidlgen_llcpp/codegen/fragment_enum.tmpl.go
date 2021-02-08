@@ -64,9 +64,8 @@ constexpr const {{ $.Decl.Wire }} {{ $.Decl.Wire.Name }}::{{ $member.Name }} =
 {{- end }}
 {{ end }}
 
-}  // namespace wire
-using {{ .Decl.Wire.Name }} = wire::{{ .Decl.Wire.Name }};
-namespace wire {
+{{- EnsureNamespace .WireAlias }}
+using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
 
 {{ end }}
 

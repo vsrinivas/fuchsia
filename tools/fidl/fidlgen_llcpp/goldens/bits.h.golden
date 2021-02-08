@@ -144,11 +144,10 @@ constexpr inline void StrictBits::operator^=(
     const ::llcpp::fidl::test::bits::wire::StrictBits& other) {
   this->value_ ^= other.value_;
 }
-
 }  // namespace wire
-using StrictBits = wire::StrictBits;
-namespace wire {
+using StrictBits = ::llcpp::fidl::test::bits::wire::StrictBits;
 
+namespace wire {
 // |MyBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -249,11 +248,10 @@ constexpr inline void MyBits::operator^=(
     const ::llcpp::fidl::test::bits::wire::MyBits& other) {
   this->value_ ^= other.value_;
 }
-
 }  // namespace wire
-using MyBits = wire::MyBits;
-namespace wire {
+using MyBits = ::llcpp::fidl::test::bits::wire::MyBits;
 
+namespace wire {
 // |FlexibleBits| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class FlexibleBits final {
@@ -361,10 +359,9 @@ constexpr inline void FlexibleBits::operator^=(
     const ::llcpp::fidl::test::bits::wire::FlexibleBits& other) {
   this->value_ ^= other.value_;
 }
-
 }  // namespace wire
-using FlexibleBits = wire::FlexibleBits;
-namespace wire {}  // namespace wire
+using FlexibleBits = ::llcpp::fidl::test::bits::wire::FlexibleBits;
+
 }  // namespace bits
 }  // namespace test
 }  // namespace fidl

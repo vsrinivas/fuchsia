@@ -159,11 +159,12 @@ func (d *Const) Name() string {
 
 type Bits struct {
 	fidl.Bits
-	Type     TypeName
-	Decl     DeclName
-	Mask     string
-	MaskName DeclName
-	Members  []BitsMember
+	Type      TypeName
+	Decl      DeclName
+	Mask      string
+	MaskName  DeclName
+	Members   []BitsMember
+	WireAlias DeclVariant
 
 	// Kind should be default initialized.
 	Kind bitsKind
@@ -181,9 +182,10 @@ type BitsMember struct {
 
 type Enum struct {
 	fidl.Enum
-	Type    TypeName
-	Decl    DeclName
-	Members []EnumMember
+	Type      TypeName
+	Decl      DeclName
+	Members   []EnumMember
+	WireAlias DeclVariant
 
 	// Kind should be default initialized.
 	Kind enumKind
@@ -209,6 +211,7 @@ type Union struct {
 	MaxOutOfLine int
 	Result       *Result
 	HasPointer   bool
+	WireAlias    DeclVariant
 
 	// Kind should be default initialized.
 	Kind unionKind
@@ -246,6 +249,7 @@ type Table struct {
 	MaxOutOfLine   int
 	MaxSentSize    int
 	HasPointer     bool
+	WireAlias      DeclVariant
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
@@ -287,6 +291,7 @@ type Struct struct {
 	IsResultValue bool
 	HasPointer    bool
 	Result        *Result
+	WireAlias     DeclVariant
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
@@ -1263,12 +1268,14 @@ func (c *compiler) compileType(val fidl.Type) Type {
 }
 
 func (c *compiler) compileBits(val fidl.Bits) Bits {
+	name := c.compileDeclName(val.Name)
 	r := Bits{
-		Bits:     val,
-		Type:     c.compileType(val.Type).Name,
-		Decl:     c.compileDeclName(val.Name),
-		Mask:     val.Mask,
-		MaskName: c.compileDeclName(val.Name).AppendName("Mask"),
+		Bits:      val,
+		Type:      c.compileType(val.Type).Name,
+		Decl:      c.compileDeclName(val.Name),
+		Mask:      val.Mask,
+		MaskName:  c.compileDeclName(val.Name).AppendName("Mask"),
+		WireAlias: name.Wire.DropLastNamespaceComponent(),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
@@ -1306,10 +1313,12 @@ func (c *compiler) compileConst(val fidl.Const) Const {
 }
 
 func (c *compiler) compileEnum(val fidl.Enum) Enum {
+	name := c.compileDeclName(val.Name)
 	r := Enum{
-		Enum: val,
-		Type: TypeNameForPrimitive(val.Type),
-		Decl: c.compileDeclName(val.Name),
+		Enum:      val,
+		Type:      TypeNameForPrimitive(val.Type),
+		Decl:      c.compileDeclName(val.Name),
+		WireAlias: name.Wire.DropLastNamespaceComponent(),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
@@ -1494,6 +1503,7 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 		MaxSentSize:  val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPadding:   val.TypeShapeV1.HasPadding,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
+		WireAlias:    name.Wire.DropLastNamespaceComponent(),
 	}
 
 	for _, v := range val.Members {
@@ -1587,6 +1597,7 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
 		MaxSentSize:    val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:     val.TypeShapeV1.Depth > 0,
+		WireAlias:      name.Wire.DropLastNamespaceComponent(),
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {
@@ -1630,6 +1641,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
+		WireAlias:    name.Wire.DropLastNamespaceComponent(),
 	}
 
 	for _, v := range val.Members {

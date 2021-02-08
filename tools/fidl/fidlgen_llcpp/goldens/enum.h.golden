@@ -50,9 +50,9 @@ enum class MyStrictEnum : uint32_t {
 
   BAR = 2u,
 };
-
 }  // namespace wire
-using MyStrictEnum = wire::MyStrictEnum;
+using MyStrictEnum = ::llcpp::fidl::test::enum_::wire::MyStrictEnum;
+
 namespace wire {
 
 class MyFlexibleEnumWithCustomUnknown final {
@@ -100,9 +100,10 @@ constexpr const ::llcpp::fidl::test::enum_::wire::
         MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
             ::llcpp::fidl::test::enum_::wire::MyFlexibleEnumWithCustomUnknown(
                 3u);
-
 }  // namespace wire
-using MyFlexibleEnumWithCustomUnknown = wire::MyFlexibleEnumWithCustomUnknown;
+using MyFlexibleEnumWithCustomUnknown =
+    ::llcpp::fidl::test::enum_::wire::MyFlexibleEnumWithCustomUnknown;
+
 namespace wire {
 
 class MyFlexibleEnum final {
@@ -139,10 +140,9 @@ constexpr const ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum
     MyFlexibleEnum::FOO = ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum(1u);
 constexpr const ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum
     MyFlexibleEnum::BAR = ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum(2u);
-
 }  // namespace wire
-using MyFlexibleEnum = wire::MyFlexibleEnum;
-namespace wire {}  // namespace wire
+using MyFlexibleEnum = ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum;
+
 }  // namespace enum_
 }  // namespace test
 }  // namespace fidl

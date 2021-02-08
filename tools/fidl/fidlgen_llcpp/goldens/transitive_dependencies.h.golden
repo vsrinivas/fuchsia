@@ -46,7 +46,7 @@ namespace transitivedependencies {
 namespace wire {
 struct Baz;
 }  // namespace wire
-using Baz = wire::Baz;
+using Baz = ::llcpp::fidl::test::transitivedependencies::wire::Baz;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;

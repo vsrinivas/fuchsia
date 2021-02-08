@@ -52,14 +52,14 @@ enum class obj_type : uint32_t {
 
   CHANNEL = 4u,
 };
-
 }  // namespace wire
-using obj_type = wire::obj_type;
-namespace wire {
+using obj_type = ::llcpp::fidl::test::typealiases::wire::obj_type;
 
+namespace wire {
 struct ExampleOfUseOfAliases;
 }  // namespace wire
-using ExampleOfUseOfAliases = wire::ExampleOfUseOfAliases;
+using ExampleOfUseOfAliases =
+    ::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases;
 namespace wire {
 
 #ifdef __Fuchsia__

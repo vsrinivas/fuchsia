@@ -48,13 +48,12 @@ class Table;
 
 struct Struct;
 }  // namespace wire
-using Struct = wire::Struct;
+using Struct = ::llcpp::fidl::test::doccomments::wire::Struct;
 namespace wire {
-
 class StrictUnion;
 }  // namespace wire
-using StrictUnion = wire::StrictUnion;
-namespace wire {}  // namespace wire
+using StrictUnion = ::llcpp::fidl::test::doccomments::wire::StrictUnion;
+
 class Interface;
 
 class Service;
@@ -75,11 +74,10 @@ enum class MyStrictEnum : uint32_t {
   // BAR member comment #3
   BAR = 2u,
 };
-
 }  // namespace wire
-using MyStrictEnum = wire::MyStrictEnum;
-namespace wire {
+using MyStrictEnum = ::llcpp::fidl::test::doccomments::wire::MyStrictEnum;
 
+namespace wire {
 // strict bits comment #1
 //
 // strict bits comment #2
@@ -186,9 +184,9 @@ constexpr inline void MyStrictBits::operator^=(
     const ::llcpp::fidl::test::doccomments::wire::MyStrictBits& other) {
   this->value_ ^= other.value_;
 }
-
 }  // namespace wire
-using MyStrictBits = wire::MyStrictBits;
+using MyStrictBits = ::llcpp::fidl::test::doccomments::wire::MyStrictBits;
+
 namespace wire {
 
 // flexible enum comment #1.
@@ -236,11 +234,10 @@ constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum
 constexpr const ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum
     MyFlexibleEnum::BAR =
         ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum(2u);
-
 }  // namespace wire
-using MyFlexibleEnum = wire::MyFlexibleEnum;
-namespace wire {
+using MyFlexibleEnum = ::llcpp::fidl::test::doccomments::wire::MyFlexibleEnum;
 
+namespace wire {
 // flexible bits comment #1
 //
 // flexible bits comment #2
@@ -353,14 +350,13 @@ constexpr inline void MyFlexibleBits::operator^=(
     const ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits& other) {
   this->value_ ^= other.value_;
 }
-
 }  // namespace wire
-using MyFlexibleBits = wire::MyFlexibleBits;
-namespace wire {
+using MyFlexibleBits = ::llcpp::fidl::test::doccomments::wire::MyFlexibleBits;
 
+namespace wire {
 class FlexibleUnion;
 }  // namespace wire
-using FlexibleUnion = wire::FlexibleUnion;
+using FlexibleUnion = ::llcpp::fidl::test::doccomments::wire::FlexibleUnion;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_doccomments_TableTable;
@@ -649,9 +645,8 @@ class Table::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   Table::Frame frame_;
 };
-
 }  // namespace wire
-using Table = wire::Table;
+using Table = ::llcpp::fidl::test::doccomments::wire::Table;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;

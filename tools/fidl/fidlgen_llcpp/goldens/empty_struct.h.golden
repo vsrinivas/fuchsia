@@ -46,8 +46,8 @@ namespace emptystruct {
 namespace wire {
 struct Empty;
 }  // namespace wire
-using Empty = wire::Empty;
-namespace wire {}  // namespace wire
+using Empty = ::llcpp::fidl::test::emptystruct::wire::Empty;
+
 class EmptyProtocol;
 namespace wire {
 

@@ -45,7 +45,8 @@ namespace escaping {
 namespace wire {
 struct DocCommentWithQuotes;
 }  // namespace wire
-using DocCommentWithQuotes = wire::DocCommentWithQuotes;
+using DocCommentWithQuotes =
+    ::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;

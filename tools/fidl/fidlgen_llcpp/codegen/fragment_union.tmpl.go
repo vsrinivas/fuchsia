@@ -8,9 +8,8 @@ const fragmentUnionTmpl = `
 {{- define "UnionForwardDeclaration" }}
 {{ EnsureNamespace .Decl.Wire }}
 class {{ .Decl.Wire.Name }};
-}  // namespace wire
-using {{ .Decl.Wire.Name }} = wire::{{ .Decl.Wire.Name }};
-namespace wire {
+{{- EnsureNamespace .WireAlias }}
+using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
 {{- end }}
 
 {{- define "UnionMemberCloseHandles" }}

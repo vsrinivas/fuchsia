@@ -8,9 +8,8 @@ const fragmentStructTmpl = `
 {{- define "StructForwardDeclaration" }}
 {{ EnsureNamespace .Decl.Wire }}
 struct {{ .Decl.Wire.Name }};
-}  // namespace wire
-using {{ .Decl.Wire.Name }} = wire::{{ .Decl.Wire.Name }};
-namespace wire {
+{{- EnsureNamespace .WireAlias }}
+using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
 {{- end }}
 
 {{- define "StructMemberCloseHandles" }}

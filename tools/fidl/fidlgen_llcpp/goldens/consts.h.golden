@@ -50,11 +50,10 @@ enum class EnumType : int32_t {
 
   true_ = 2u,
 };
-
 }  // namespace wire
-using EnumType = wire::EnumType;
-namespace wire {
+using EnumType = ::llcpp::fidl::test::consts::wire::EnumType;
 
+namespace wire {
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -155,10 +154,8 @@ constexpr inline void BitsType::operator^=(
     const ::llcpp::fidl::test::consts::wire::BitsType& other) {
   this->value_ ^= other.value_;
 }
-
 }  // namespace wire
-using BitsType = wire::BitsType;
-namespace wire {}  // namespace wire
+using BitsType = ::llcpp::fidl::test::consts::wire::BitsType;
 
 extern const char* USERNAME;
 
