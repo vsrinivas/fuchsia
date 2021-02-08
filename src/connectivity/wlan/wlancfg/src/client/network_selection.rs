@@ -1785,6 +1785,13 @@ mod tests {
         let mut updater = network_selector.generate_scan_result_updater();
         exec.run_singlethreaded(updater.update_scan_results(&mixed_scan_results));
 
+        // Set the scan cache's "updated_at" field to the future so that a scan won't be triggered.
+        {
+            let mut cache_guard =
+                exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+            cache_guard.updated_at = zx::Time::INFINITE;
+        }
+
         // Check that we choose the config saved as WPA
         let ignore_list = Vec::new();
         let network_selection_fut = network_selector
@@ -1860,7 +1867,7 @@ mod tests {
         {
             let mut cache_guard =
                 exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-            cache_guard.updated_at = zx::Time::get_monotonic() + zx::Duration::from_seconds(100);
+            cache_guard.updated_at = zx::Time::INFINITE;
         }
 
         // Check that we match the config saved as WPA and select the WPA3 network to connect to.
