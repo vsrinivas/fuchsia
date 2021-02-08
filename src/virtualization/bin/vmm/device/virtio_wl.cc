@@ -606,10 +606,10 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
     case DRM_FORMAT_ABGR8888:
     case DRM_FORMAT_XRGB8888:
     case DRM_FORMAT_XBGR8888: {
-      // Alignment that is sufficient for all known devices.
+      // Alignment expected for linear images on Intel GPUs.
       // TODO(fxbug.dev/12587): Use sysmem for allocation instead of making
       // alignment assumptions here.
-      stride = align(request->dmabuf.width * 4, 64);
+      stride = request->dmabuf.width * 4;
       total_size = stride * align(request->dmabuf.height, 4);
     } break;
     default:
