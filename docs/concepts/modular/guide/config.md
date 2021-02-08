@@ -14,14 +14,36 @@ modular_config() target in the product's base packages.
 The file may contain (non-standard JSON) C-style comments
 (`/* block */` and `// inline`).
 
+## Reading configuration
+
+The configuration provided to `basemgr` is available through
+the [component inspection][docs-inspect] of the `basemgr` component.
+
+Use [`iquery`][docs-iquery] or `fx iquery` to query the configuration
+of a running `basemgr`:
+
+```
+iquery show basemgr.cmx:root:config
+```
+
+When using a session launcher component, the launcher provides a different
+configuration to `sessionmgr` that is used for the launched session.
+For the launched session, you can query a running `sessionmgr` to get
+this configuration:
+
+```
+iquery show sessionmgr.cmx:root:config
+```
+
 ## Example
 
 The fields used in the startup configuration depend on whether a session launcher
 component is specified in the `basemgr.session_launcher` field.
 
 If `basemgr.session` is present, all other fields except for
-`basemgr.enable_cobalt` are ignored, and the session launcher component is responsible
-for instructing `basemgr` to launch a session with a complete configuration file.
+`basemgr.enable_cobalt` are ignored, and the session launcher component is
+responsible for instructing `basemgr` to launch a session with a complete
+configuration file.
 
 ### Session launcher component
 
@@ -185,3 +207,6 @@ for instructing `basemgr` to launch a session with a complete configuration file
   - When set to true, disables any automatic restarts of agents listed in
     `session_agents` if they crash.
   - **default**: `false`
+
+[docs-inspect]: /docs/development/diagnostics/inspect/README.md
+[docs-iquery]: /docs/reference/diagnostics/consumers/iquery.md

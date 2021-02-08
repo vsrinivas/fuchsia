@@ -10,6 +10,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
@@ -22,6 +23,7 @@
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 // Command-line command to delete the persistent configuration.
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
@@ -51,6 +53,14 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
         component_context->outgoing()->debug_dir()->RemoveEntry(modular_config::kBasemgrConfigName);
         loop->Quit();
       });
+}
+
+inspect::StringProperty AddConfigToInspect(const modular::ModularConfigReader& config_reader,
+                                           sys::ComponentInspector* inspector) {
+  FX_DCHECK(inspector);
+  auto config_json = modular::ConfigToJsonString(config_reader.GetConfig());
+  inspect::Node& inspect_root = inspector->root();
+  return inspect_root.CreateString(modular_config::kInspectConfig, config_json);
 }
 
 std::string GetUsage() {
@@ -97,6 +107,9 @@ int main(int argc, const char** argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::CreateAndServeOutgoingDirectory());
+
+  auto inspector = std::make_unique<sys::ComponentInspector>(component_context.get());
+  auto config_property = AddConfigToInspect(config_reader, inspector.get());
 
   auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
                                         component_context.get(), &loop);

@@ -31,6 +31,14 @@ fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
   return modular::InitializeCobalt(dispatcher, component_context);
 }
 
+inspect::StringProperty AddConfigToInspect(const modular::ModularConfigReader& config_reader,
+                                           sys::ComponentInspector* inspector) {
+  FX_DCHECK(inspector);
+  auto config_json = modular::ConfigToJsonString(config_reader.GetConfig());
+  inspect::Node& inspect_root = inspector->root();
+  return inspect_root.CreateString(modular_config::kInspectConfig, config_json);
+}
+
 int main(int argc, const char** argv) {
   syslog::SetTags({"sessionmgr"});
 
@@ -55,6 +63,7 @@ int main(int argc, const char** argv) {
 
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto inspector = std::make_unique<sys::ComponentInspector>(component_context.get());
+  auto config_property = AddConfigToInspect(config_reader, inspector.get());
   inspect::Node& inspect_root = inspector->root();
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
