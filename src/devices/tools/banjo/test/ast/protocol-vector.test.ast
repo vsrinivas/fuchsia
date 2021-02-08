@@ -614,7 +614,7 @@ BanjoAst {
                                 "u64",
                                 Vector {
                                     ty: Handle {
-                                        ty: Handle,
+                                        ty: None,
                                         reference: false,
                                     },
                                     size: Some(
@@ -634,7 +634,7 @@ BanjoAst {
                                 "f64",
                                 Vector {
                                     ty: Handle {
-                                        ty: Handle,
+                                        ty: None,
                                         reference: false,
                                     },
                                     size: Some(
@@ -1389,7 +1389,7 @@ BanjoAst {
                                 "u64",
                                 Vector {
                                     ty: Handle {
-                                        ty: Handle,
+                                        ty: None,
                                         reference: false,
                                     },
                                     size: Some(
@@ -1409,7 +1409,7 @@ BanjoAst {
                                 "f64",
                                 Vector {
                                     ty: Handle {
-                                        ty: Handle,
+                                        ty: None,
                                         reference: false,
                                     },
                                     size: Some(
@@ -2326,7 +2326,7 @@ BanjoAst {
                                 Vector {
                                     ty: Vector {
                                         ty: Handle {
-                                            ty: Handle,
+                                            ty: None,
                                             reference: false,
                                         },
                                         size: Some(
@@ -2354,7 +2354,7 @@ BanjoAst {
                                 Vector {
                                     ty: Vector {
                                         ty: Handle {
-                                            ty: Handle,
+                                            ty: None,
                                             reference: false,
                                         },
                                         size: Some(
@@ -2489,6 +2489,176 @@ BanjoAst {
                     },
                 ],
             },
+        ],
+        "zx": [
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "status",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "time",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "duration",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "ticks",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "koid",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "vaddr",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "paddr",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "paddr32",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "gpaddr",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "off",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "procarg",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
         ],
     },
 }

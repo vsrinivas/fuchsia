@@ -171,7 +171,7 @@ impl std::fmt::Display for Constant {
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub enum HandleTy {
-    Handle,
+    None,
     Process,
     Thread,
     Vmo,
@@ -179,6 +179,7 @@ pub enum HandleTy {
     Event,
     Port,
     Interrupt,
+    PciDevice,
     Log,
     Socket,
     Resource,
@@ -187,25 +188,19 @@ pub enum HandleTy {
     Vmar,
     Fifo,
     Guest,
+    VCpu,
     Timer,
+    IoMmu,
     Bti,
     Profile,
-    DebugLog,
-    VCpu,
-    IoMmu,
-    Pager,
     Pmt,
-    Clock,
-    Msi,
+    SuspendToken,
+    Pager,
     Exception,
+    Clock,
+    Stream,
     MsiAllocation,
     MsiInterrupt,
-    Stream,
-    SuspendToken,
-    Iommu,
-    Vcpu,
-    None,
-    PciDevice,
 }
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
@@ -293,62 +288,11 @@ impl Ty {
                 _e => Err(ParseError::UnrecognizedType(pair.as_str().to_string())),
             },
             Rule::handle_type => {
-                let mut ty = HandleTy::Handle;
+                let mut ty = HandleTy::None;
                 let mut reference = false;
                 for inner_pair in pair.clone().into_inner() {
                     match inner_pair.as_rule() {
                         Rule::handle_subtype => {
-                            ty = match inner_pair.as_str() {
-                                "process" => HandleTy::Process,
-                                "thread" => HandleTy::Thread,
-                                "vmo" => HandleTy::Vmo,
-                                "channel" => HandleTy::Channel,
-                                "event" => HandleTy::Event,
-                                "port" => HandleTy::Port,
-                                "interrupt" => HandleTy::Interrupt,
-                                "log" => HandleTy::Log,
-                                "socket" => HandleTy::Socket,
-                                "resource" => HandleTy::Resource,
-                                "eventpair" => HandleTy::EventPair,
-                                "job" => HandleTy::Job,
-                                "vmar" => HandleTy::Vmar,
-                                "fifo" => HandleTy::Fifo,
-                                "guest" => HandleTy::Guest,
-                                "timer" => HandleTy::Timer,
-                                "bti" => HandleTy::Bti,
-                                "profile" => HandleTy::Profile,
-                                "debuglog" => HandleTy::DebugLog,
-                                "vcpu" => HandleTy::VCpu,
-                                "iommu" => HandleTy::IoMmu,
-                                "pager" => HandleTy::Pager,
-                                "pmt" => HandleTy::Pmt,
-                                "clock" => HandleTy::Clock,
-                                "msi" => HandleTy::Msi,
-                                _e => {
-                                    return Err(ParseError::UnrecognizedType(
-                                        inner_pair.as_str().to_string(),
-                                    ));
-                                }
-                            }
-                        }
-                        Rule::reference => {
-                            reference = true;
-                        }
-                        _e => {
-                            return Err(ParseError::UnrecognizedType(
-                                inner_pair.as_str().to_string(),
-                            ));
-                        }
-                    }
-                }
-                Ok(Ty::Handle { ty, reference })
-            }
-            Rule::fidl_handle_type => {
-                let mut ty = HandleTy::Handle;
-                let mut reference = false;
-                for inner_pair in pair.clone().into_inner() {
-                    match inner_pair.as_rule() {
-                        Rule::fidl_handle_subtype => {
                             ty = match inner_pair.as_str() {
                                 "NONE" => HandleTy::None,
                                 "PROCESS" => HandleTy::Process,
@@ -367,9 +311,9 @@ impl Ty {
                                 "VMAR" => HandleTy::Vmar,
                                 "FIFO" => HandleTy::Fifo,
                                 "GUEST" => HandleTy::Guest,
-                                "VCPU" => HandleTy::Vcpu,
+                                "VCPU" => HandleTy::VCpu,
                                 "TIMER" => HandleTy::Timer,
-                                "IOMMU" => HandleTy::Iommu,
+                                "IOMMU" => HandleTy::IoMmu,
                                 "BTI" => HandleTy::Bti,
                                 "PROFILE" => HandleTy::Profile,
                                 "PMT" => HandleTy::Pmt,

@@ -4,6 +4,8 @@
 
 library banjo.examples.tables;
 
+using zx;
+
 struct A {
     B? foo;
 };
@@ -13,7 +15,7 @@ struct B {
 };
 
 resource struct C {
-    handle baz;
+    zx.handle baz;
 };
 
 resource struct D {

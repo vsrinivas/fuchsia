@@ -6,6 +6,8 @@ library banjo.examples.protocolvector;
 
 // TODO(surajmalhotra): Reference for vectors.
 
+using zx;
+
 [BanjoLayout = "ddk-protocol"]
 protocol Vector {
     Bool(vector<bool>:1 b) -> (vector<bool>:1 b);
@@ -19,7 +21,7 @@ protocol Vector {
     Uint64(vector<uint64>:1 u64) -> (vector<uint64>:1 u64);
     Float32(vector<float32>:1 f32) -> (vector<float32>:1 f32);
     Float64(vector<float64>:1 u64) -> (vector<float64>:1 f64);
-    Handle(vector<handle>:1 u64) -> (vector<handle>:1 f64);
+    Handle(vector<zx.handle>:1 u64) -> (vector<zx.handle>:1 f64);
 };
 
 const uint32 vector_size = 32;
@@ -37,7 +39,7 @@ protocol Vector2 {
     Uint64(vector<uint64>:vector_size u64) -> (vector<uint64>:vector_size u64);
     Float32(vector<float32>:vector_size f32) -> (vector<float32>:vector_size f32);
     Float64(vector<float64>:vector_size u64) -> (vector<float64>:vector_size f64);
-    Handle(vector<handle>:vector_size u64) -> (vector<handle>:vector_size f64);
+    Handle(vector<zx.handle>:vector_size u64) -> (vector<zx.handle>:vector_size f64);
 };
 
 [BanjoLayout = "ddk-protocol"]
@@ -53,5 +55,5 @@ protocol VectorOfVectors {
     Uint64(vector<vector<uint64>:4>:vector_size u64) -> (vector<vector<uint64>:4>:vector_size u64);
     Float32(vector<vector<float32>:4>:vector_size f32) -> (vector<vector<float32>:4>:vector_size f32);
     Float64(vector<vector<float64>:4>:vector_size u64) -> (vector<vector<float64>:4>:vector_size f64);
-    Handle(vector<vector<handle>:4>:vector_size u64) -> (vector<vector<handle>:4>:vector_size f64);
+    Handle(vector<vector<zx.handle>:4>:vector_size u64) -> (vector<vector<zx.handle>:4>:vector_size f64);
 };

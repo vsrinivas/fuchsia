@@ -41,7 +41,7 @@ codegen_test!(
     "ast/parameter-attributes.test.ast"
 );
 codegen_test!(point, AstBackend, ["banjo/point.test.banjo"], "ast/point.test.ast");
-codegen_test!(tables, AstBackend, ["banjo/tables.test.banjo"], "ast/tables.test.ast");
+codegen_test!(tables, AstBackend, [zx!(), "banjo/tables.test.banjo"], "ast/tables.test.ast");
 codegen_test!(simple, AstBackend, [zx!(), "banjo/simple.test.banjo"], "ast/simple.test.ast");
 codegen_test!(
     view,
@@ -70,13 +70,13 @@ codegen_test!(
 codegen_test!(
     protocol_array,
     AstBackend,
-    ["banjo/protocol-array.test.banjo"],
+    [zx!(), "banjo/protocol-array.test.banjo"],
     "ast/protocol-array.test.ast"
 );
 codegen_test!(
     protocol_vector,
     AstBackend,
-    ["banjo/protocol-vector.test.banjo"],
+    [zx!(), "banjo/protocol-vector.test.banjo"],
     "ast/protocol-vector.test.ast"
 );
 codegen_test!(

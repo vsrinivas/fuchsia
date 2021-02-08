@@ -12,7 +12,6 @@
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/fifo.h>
@@ -74,8 +73,6 @@
 //     void SynchronousHandlePort(zx::port h, zx::port* out_h, zx::port* out_h2);
 //
 //     void SynchronousHandleInterrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2);
-//
-//     void SynchronousHandleDebugLog(zx::debuglog h, zx::debuglog* out_h, zx::debuglog* out_h2);
 //
 //     void SynchronousHandleSocket(zx::socket h, zx::socket* out_h, zx::socket* out_h2);
 //
@@ -161,8 +158,6 @@
 //
 //     void AsyncHandleInterrupt(zx::interrupt h, async_handle_interrupt_callback callback, void* cookie);
 //
-//     void AsyncHandleDebugLog(zx::debuglog h, async_handle_debug_log_callback callback, void* cookie);
-//
 //     void AsyncHandleSocket(zx::socket h, async_handle_socket_callback callback, void* cookie);
 //
 //     void AsyncHandleResource(zx::resource h, async_handle_resource_callback callback, void* cookie);
@@ -199,7 +194,6 @@ public:
         synchronous_handle_protocol_ops_.event = SynchronousHandleEvent;
         synchronous_handle_protocol_ops_.port = SynchronousHandlePort;
         synchronous_handle_protocol_ops_.interrupt = SynchronousHandleInterrupt;
-        synchronous_handle_protocol_ops_.debug_log = SynchronousHandleDebugLog;
         synchronous_handle_protocol_ops_.socket = SynchronousHandleSocket;
         synchronous_handle_protocol_ops_.resource = SynchronousHandleResource;
         synchronous_handle_protocol_ops_.event_pair = SynchronousHandleEventPair;
@@ -276,13 +270,6 @@ private:
         zx::interrupt out_h2;
         zx::interrupt out_h22;
         static_cast<D*>(ctx)->SynchronousHandleInterrupt(zx::interrupt(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleDebugLog(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::debuglog out_h2;
-        zx::debuglog out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleDebugLog(zx::debuglog(h), &out_h2, &out_h22);
         *out_h = out_h2.release();
         *out_h2 = out_h22.release();
     }
@@ -454,10 +441,6 @@ public:
         ops_->interrupt(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
     }
 
-    void DebugLog(zx::debuglog h, zx::debuglog* out_h, zx::debuglog* out_h2) const {
-        ops_->debug_log(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
     void Socket(zx::socket h, zx::socket* out_h, zx::socket* out_h2) const {
         ops_->socket(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
     }
@@ -621,7 +604,6 @@ public:
         async_handle_protocol_ops_.event = AsyncHandleEvent;
         async_handle_protocol_ops_.port = AsyncHandlePort;
         async_handle_protocol_ops_.interrupt = AsyncHandleInterrupt;
-        async_handle_protocol_ops_.debug_log = AsyncHandleDebugLog;
         async_handle_protocol_ops_.socket = AsyncHandleSocket;
         async_handle_protocol_ops_.resource = AsyncHandleResource;
         async_handle_protocol_ops_.event_pair = AsyncHandleEventPair;
@@ -668,9 +650,6 @@ private:
     }
     static void AsyncHandleInterrupt(void* ctx, zx_handle_t h, async_handle_interrupt_callback callback, void* cookie) {
         static_cast<D*>(ctx)->AsyncHandleInterrupt(zx::interrupt(h), callback, cookie);
-    }
-    static void AsyncHandleDebugLog(void* ctx, zx_handle_t h, async_handle_debug_log_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->AsyncHandleDebugLog(zx::debuglog(h), callback, cookie);
     }
     static void AsyncHandleSocket(void* ctx, zx_handle_t h, async_handle_socket_callback callback, void* cookie) {
         static_cast<D*>(ctx)->AsyncHandleSocket(zx::socket(h), callback, cookie);
@@ -802,10 +781,6 @@ public:
 
     void Interrupt(zx::interrupt h, async_handle_interrupt_callback callback, void* cookie) const {
         ops_->interrupt(ctx_, h.release(), callback, cookie);
-    }
-
-    void DebugLog(zx::debuglog h, async_handle_debug_log_callback callback, void* cookie) const {
-        ops_->debug_log(ctx_, h.release(), callback, cookie);
     }
 
     void Socket(zx::socket h, async_handle_socket_callback callback, void* cookie) const {

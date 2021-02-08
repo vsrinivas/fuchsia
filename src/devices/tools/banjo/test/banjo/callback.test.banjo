@@ -27,7 +27,7 @@ protocol Draw {
 protocol Drawing {
     RegisterCallback() -> ();
     DeregisterCallback() -> ();
-    DrawLots(handle<vmo> commands) -> (int32 result, Point p);
+    DrawLots(zx.handle:VMO commands) -> (int32 result, Point p);
     DrawArray(array<Point>:4 points) -> (zx.status rv);
     Describe(string:64 one) -> (string:128 two);
 };

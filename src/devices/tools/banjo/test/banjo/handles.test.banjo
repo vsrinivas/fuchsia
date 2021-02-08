@@ -8,10 +8,10 @@ using zx;
 
 resource struct Container {
   zx.handle:CHANNEL a_handle;
-  handle<channel> another_handle;
+  zx.handle:CHANNEL another_handle;
 };
 
 protocol Doer {
   DoSomething(zx.handle:CHANNEL the_handle) -> ();
-  DoSomethingElse(handle<channel> the_handle_too) -> ();
+  DoSomethingElse(zx.handle:CHANNEL the_handle_too) -> ();
 };

@@ -372,7 +372,6 @@ struct handles {
     zx_handle_t event_handle;
     zx_handle_t port_handle;
     zx_handle_t interrupt_handle;
-    zx_handle_t debuglog_handle;
     zx_handle_t socket_handle;
     zx_handle_t resource_handle;
     zx_handle_t eventpair_handle;
@@ -387,7 +386,6 @@ struct handles {
     zx_handle_t pager_handle;
     zx_handle_t pmt_handle;
     zx_handle_t clock_handle;
-    zx_handle_t msi_handle;
     zx_handle_t nullable_handle_handle;
     zx_handle_t nullable_process_handle;
     zx_handle_t nullable_thread_handle;
@@ -396,7 +394,6 @@ struct handles {
     zx_handle_t nullable_event_handle;
     zx_handle_t nullable_port_handle;
     zx_handle_t nullable_interrupt_handle;
-    zx_handle_t nullable_debuglog_handle;
     zx_handle_t nullable_socket_handle;
     zx_handle_t nullable_resource_handle;
     zx_handle_t nullable_eventpair_handle;
@@ -411,7 +408,6 @@ struct handles {
     zx_handle_t nullable_pager_handle;
     zx_handle_t nullable_pmt_handle;
     zx_handle_t nullable_clock_handle;
-    zx_handle_t nullable_msi_handle;
 };
 
 struct default_values {

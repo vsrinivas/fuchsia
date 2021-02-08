@@ -19,8 +19,8 @@ protocol Echo {
     Echo32(uint32 uint32) -> (uint32 response);
     Echo64(uint64 uint64) -> (uint64 response);
     EchoEnum(EchoMe req) -> (EchoMe response);
-    EchoHandle(handle req) -> (handle response);
-    EchoChannel(handle<channel> req) -> (handle<channel> response);
+    EchoHandle(zx.handle req) -> (zx.handle response);
+    EchoChannel(zx.handle:CHANNEL req) -> (zx.handle:CHANNEL response);
     EchoStruct(EchoMore req) -> (EchoMore response);
 };
 

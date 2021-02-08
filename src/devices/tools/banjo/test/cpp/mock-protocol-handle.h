@@ -79,11 +79,6 @@ public:
         return *this;
     }
 
-    virtual MockSynchronousHandle& ExpectDebugLog(const zx::debuglog& h, zx::debuglog out_h, zx::debuglog out_h2) {
-        mock_debug_log_.ExpectCall({std::move(out_h), std::move(out_h2)}, h.get());
-        return *this;
-    }
-
     virtual MockSynchronousHandle& ExpectSocket(const zx::socket& h, zx::socket out_h, zx::socket out_h2) {
         mock_socket_.ExpectCall({std::move(out_h), std::move(out_h2)}, h.get());
         return *this;
@@ -138,7 +133,6 @@ public:
         mock_event_.VerifyAndClear();
         mock_port_.VerifyAndClear();
         mock_interrupt_.VerifyAndClear();
-        mock_debug_log_.VerifyAndClear();
         mock_socket_.VerifyAndClear();
         mock_resource_.VerifyAndClear();
         mock_event_pair_.VerifyAndClear();
@@ -194,12 +188,6 @@ public:
 
     virtual void SynchronousHandleInterrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2) {
         std::tuple<zx::interrupt, zx::interrupt> ret = mock_interrupt_.Call(std::move(h));
-        *out_h = std::move(std::get<0>(ret));
-        *out_h2 = std::move(std::get<1>(ret));
-    }
-
-    virtual void SynchronousHandleDebugLog(zx::debuglog h, zx::debuglog* out_h, zx::debuglog* out_h2) {
-        std::tuple<zx::debuglog, zx::debuglog> ret = mock_debug_log_.Call(std::move(h));
         *out_h = std::move(std::get<0>(ret));
         *out_h2 = std::move(std::get<1>(ret));
     }
@@ -266,7 +254,6 @@ public:
     mock_function::MockFunction<std::tuple<zx::event, zx::event>, zx::event>& mock_event() { return mock_event_; }
     mock_function::MockFunction<std::tuple<zx::port, zx::port>, zx::port>& mock_port() { return mock_port_; }
     mock_function::MockFunction<std::tuple<zx::interrupt, zx::interrupt>, zx::interrupt>& mock_interrupt() { return mock_interrupt_; }
-    mock_function::MockFunction<std::tuple<zx::debuglog, zx::debuglog>, zx::debuglog>& mock_debug_log() { return mock_debug_log_; }
     mock_function::MockFunction<std::tuple<zx::socket, zx::socket>, zx::socket>& mock_socket() { return mock_socket_; }
     mock_function::MockFunction<std::tuple<zx::resource, zx::resource>, zx::resource>& mock_resource() { return mock_resource_; }
     mock_function::MockFunction<std::tuple<zx::eventpair, zx::eventpair>, zx::eventpair>& mock_event_pair() { return mock_event_pair_; }
@@ -286,7 +273,6 @@ protected:
     mock_function::MockFunction<std::tuple<zx::event, zx::event>, zx::event> mock_event_;
     mock_function::MockFunction<std::tuple<zx::port, zx::port>, zx::port> mock_port_;
     mock_function::MockFunction<std::tuple<zx::interrupt, zx::interrupt>, zx::interrupt> mock_interrupt_;
-    mock_function::MockFunction<std::tuple<zx::debuglog, zx::debuglog>, zx::debuglog> mock_debug_log_;
     mock_function::MockFunction<std::tuple<zx::socket, zx::socket>, zx::socket> mock_socket_;
     mock_function::MockFunction<std::tuple<zx::resource, zx::resource>, zx::resource> mock_resource_;
     mock_function::MockFunction<std::tuple<zx::eventpair, zx::eventpair>, zx::eventpair> mock_event_pair_;
@@ -415,11 +401,6 @@ public:
         return *this;
     }
 
-    virtual MockAsyncHandle& ExpectDebugLog(const zx::debuglog& h, zx::debuglog out_h, zx::debuglog out_h2) {
-        mock_debug_log_.ExpectCall({std::move(out_h), std::move(out_h2)}, h.get());
-        return *this;
-    }
-
     virtual MockAsyncHandle& ExpectSocket(const zx::socket& h, zx::socket out_h, zx::socket out_h2) {
         mock_socket_.ExpectCall({std::move(out_h), std::move(out_h2)}, h.get());
         return *this;
@@ -474,7 +455,6 @@ public:
         mock_event_.VerifyAndClear();
         mock_port_.VerifyAndClear();
         mock_interrupt_.VerifyAndClear();
-        mock_debug_log_.VerifyAndClear();
         mock_socket_.VerifyAndClear();
         mock_resource_.VerifyAndClear();
         mock_event_pair_.VerifyAndClear();
@@ -523,11 +503,6 @@ public:
 
     virtual void AsyncHandleInterrupt(zx::interrupt h, async_handle_interrupt_callback callback, void* cookie) {
         std::tuple<zx::interrupt, zx::interrupt> ret = mock_interrupt_.Call(std::move(h));
-        callback(cookie, std::move(std::get<0>(ret)), std::move(std::get<1>(ret)));
-    }
-
-    virtual void AsyncHandleDebugLog(zx::debuglog h, async_handle_debug_log_callback callback, void* cookie) {
-        std::tuple<zx::debuglog, zx::debuglog> ret = mock_debug_log_.Call(std::move(h));
         callback(cookie, std::move(std::get<0>(ret)), std::move(std::get<1>(ret)));
     }
 
@@ -584,7 +559,6 @@ public:
     mock_function::MockFunction<std::tuple<zx::event, zx::event>, zx::event>& mock_event() { return mock_event_; }
     mock_function::MockFunction<std::tuple<zx::port, zx::port>, zx::port>& mock_port() { return mock_port_; }
     mock_function::MockFunction<std::tuple<zx::interrupt, zx::interrupt>, zx::interrupt>& mock_interrupt() { return mock_interrupt_; }
-    mock_function::MockFunction<std::tuple<zx::debuglog, zx::debuglog>, zx::debuglog>& mock_debug_log() { return mock_debug_log_; }
     mock_function::MockFunction<std::tuple<zx::socket, zx::socket>, zx::socket>& mock_socket() { return mock_socket_; }
     mock_function::MockFunction<std::tuple<zx::resource, zx::resource>, zx::resource>& mock_resource() { return mock_resource_; }
     mock_function::MockFunction<std::tuple<zx::eventpair, zx::eventpair>, zx::eventpair>& mock_event_pair() { return mock_event_pair_; }
@@ -604,7 +578,6 @@ protected:
     mock_function::MockFunction<std::tuple<zx::event, zx::event>, zx::event> mock_event_;
     mock_function::MockFunction<std::tuple<zx::port, zx::port>, zx::port> mock_port_;
     mock_function::MockFunction<std::tuple<zx::interrupt, zx::interrupt>, zx::interrupt> mock_interrupt_;
-    mock_function::MockFunction<std::tuple<zx::debuglog, zx::debuglog>, zx::debuglog> mock_debug_log_;
     mock_function::MockFunction<std::tuple<zx::socket, zx::socket>, zx::socket> mock_socket_;
     mock_function::MockFunction<std::tuple<zx::resource, zx::resource>, zx::resource> mock_resource_;
     mock_function::MockFunction<std::tuple<zx::eventpair, zx::eventpair>, zx::eventpair> mock_event_pair_;

@@ -256,7 +256,7 @@ BanjoAst {
                             (
                                 "req",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -268,7 +268,7 @@ BanjoAst {
                             (
                                 "response",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(

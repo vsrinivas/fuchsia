@@ -206,18 +206,6 @@ BanjoAst {
                 },
                 fields: [],
             },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "placeholder",
-                    ),
-                    name: "SomeLongAnonymousPrefix17",
-                },
-                fields: [],
-            },
             Protocol {
                 attributes: Attrs(
                     [
@@ -245,7 +233,7 @@ BanjoAst {
                             (
                                 "h",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -257,7 +245,7 @@ BanjoAst {
                             (
                                 "h",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -267,7 +255,7 @@ BanjoAst {
                             (
                                 "h2",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -548,46 +536,6 @@ BanjoAst {
                                 "h2",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                    },
-                    Method {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        name: "DebugLog",
-                        in_params: [
-                            (
-                                "h",
-                                Handle {
-                                    ty: DebugLog,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                        out_params: [
-                            (
-                                "h",
-                                Handle {
-                                    ty: DebugLog,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "h2",
-                                Handle {
-                                    ty: DebugLog,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1111,15 +1059,6 @@ BanjoAst {
                         },
                         reference: false,
                     },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "placeholder",
-                            ),
-                            name: "SomeLongAnonymousPrefix17",
-                        },
-                        reference: false,
-                    },
                 ],
             },
             Struct {
@@ -1130,7 +1069,7 @@ BanjoAst {
                     namespace: Some(
                         "placeholder",
                     ),
-                    name: "SomeLongAnonymousPrefix18",
+                    name: "SomeLongAnonymousPrefix17",
                 },
                 fields: [],
             },
@@ -1161,7 +1100,7 @@ BanjoAst {
                             (
                                 "h",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1173,7 +1112,7 @@ BanjoAst {
                             (
                                 "@h",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1183,7 +1122,7 @@ BanjoAst {
                             (
                                 "@h2",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1199,11 +1138,23 @@ BanjoAst {
                             namespace: Some(
                                 "placeholder",
                             ),
-                            name: "SomeLongAnonymousPrefix18",
+                            name: "SomeLongAnonymousPrefix17",
                         },
                         reference: false,
                     },
                 ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix18",
+                },
+                fields: [],
             },
             Struct {
                 attributes: Attrs(
@@ -1397,30 +1348,6 @@ BanjoAst {
                 },
                 fields: [],
             },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "placeholder",
-                    ),
-                    name: "SomeLongAnonymousPrefix35",
-                },
-                fields: [],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "placeholder",
-                    ),
-                    name: "SomeLongAnonymousPrefix36",
-                },
-                fields: [],
-            },
             Protocol {
                 attributes: Attrs(
                     [
@@ -1453,7 +1380,7 @@ BanjoAst {
                             (
                                 "h",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1465,7 +1392,7 @@ BanjoAst {
                             (
                                 "h",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1475,7 +1402,7 @@ BanjoAst {
                             (
                                 "h2",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1791,51 +1718,6 @@ BanjoAst {
                                 "h2",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                    },
-                    Method {
-                        attributes: Attrs(
-                            [
-                                Attr {
-                                    key: "Async",
-                                    val: None,
-                                },
-                            ],
-                        ),
-                        name: "DebugLog",
-                        in_params: [
-                            (
-                                "h",
-                                Handle {
-                                    ty: DebugLog,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                        out_params: [
-                            (
-                                "h",
-                                Handle {
-                                    ty: DebugLog,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "h2",
-                                Handle {
-                                    ty: DebugLog,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2256,6 +2138,15 @@ BanjoAst {
                             namespace: Some(
                                 "placeholder",
                             ),
+                            name: "SomeLongAnonymousPrefix18",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
                             name: "SomeLongAnonymousPrefix19",
                         },
                         reference: false,
@@ -2392,24 +2283,6 @@ BanjoAst {
                                 "placeholder",
                             ),
                             name: "SomeLongAnonymousPrefix34",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "placeholder",
-                            ),
-                            name: "SomeLongAnonymousPrefix35",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "placeholder",
-                            ),
-                            name: "SomeLongAnonymousPrefix36",
                         },
                         reference: false,
                     },

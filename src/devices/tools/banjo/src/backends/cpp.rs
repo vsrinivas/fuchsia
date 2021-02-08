@@ -38,7 +38,7 @@ fn to_cpp_name(name: &str) -> &str {
 
 fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<String, Error> {
     match ty {
-        ast::HandleTy::Handle => Ok(String::from("zx::handle")),
+        ast::HandleTy::None => Ok(String::from("zx::handle")),
         ast::HandleTy::Process => Ok(String::from("zx::process")),
         ast::HandleTy::Thread => Ok(String::from("zx::thread")),
         ast::HandleTy::Vmo => Ok(String::from("zx::vmo")),
@@ -46,6 +46,7 @@ fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<Stri
         ast::HandleTy::Event => Ok(String::from("zx::event")),
         ast::HandleTy::Port => Ok(String::from("zx::port")),
         ast::HandleTy::Interrupt => Ok(String::from("zx::interrupt")),
+        ast::HandleTy::PciDevice => Ok(String::from("zx::handle")),
         ast::HandleTy::Log => Ok(String::from("zx::log")),
         ast::HandleTy::Socket => Ok(String::from("zx::socket")),
         ast::HandleTy::Resource => Ok(String::from("zx::resource")),
@@ -54,19 +55,20 @@ fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<Stri
         ast::HandleTy::Vmar => Ok(String::from("zx::vmar")),
         ast::HandleTy::Fifo => Ok(String::from("zx::fifo")),
         ast::HandleTy::Guest => Ok(String::from("zx::guest")),
+        ast::HandleTy::VCpu => Ok(String::from("zx::vcpu")),
         ast::HandleTy::Timer => Ok(String::from("zx::timer")),
+        ast::HandleTy::IoMmu => Ok(String::from("zx::iommu")),
         ast::HandleTy::Bti => Ok(String::from("zx::bti")),
         ast::HandleTy::Profile => Ok(String::from("zx::profile")),
-        ast::HandleTy::DebugLog => Ok(String::from("zx::debuglog")),
-        ast::HandleTy::VCpu => Ok(String::from("zx::vcpu")),
-        ast::HandleTy::IoMmu => Ok(String::from("zx::iommu")),
-        ast::HandleTy::Pager => Ok(String::from("zx::pager")),
         ast::HandleTy::Pmt => Ok(String::from("zx::pmt")),
+        ast::HandleTy::SuspendToken => Ok(String::from("zx::handle")),
+        ast::HandleTy::Pager => Ok(String::from("zx::pager")),
+        ast::HandleTy::Exception => Ok(String::from("zx::handle")),
         ast::HandleTy::Clock => Ok(String::from("zx::clock")),
-        ast::HandleTy::Msi => Ok(String::from("zx::msi")),
+        ast::HandleTy::Stream => Ok(String::from("zx::handle")),
         // This mapping supports the MSI --> MSI_ALLOCATION transition.
         ast::HandleTy::MsiAllocation => Ok(String::from("zx::msi")),
-        _ => Ok(String::from("zx::handle")),
+        ast::HandleTy::MsiInterrupt => Ok(String::from("zx::handle")),
     }
 }
 

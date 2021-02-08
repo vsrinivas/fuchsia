@@ -8,68 +8,64 @@ library banjo.examples.protocol.handle;
 
 [BanjoLayout = "ddk-protocol"]
 protocol SynchronousHandle {
-    Handle(handle h) -> (handle h, handle h2);
-    Process(handle<process> h) -> (handle<process> h, handle<process> h2);
-    Thread(handle<thread> h) -> (handle<thread> h, handle<thread> h2);
-    Vmo(handle<vmo> h) -> (handle<vmo> h, handle<vmo> h2);
-    Channel(handle<channel> h) -> (handle<channel> h, handle<channel> h2);
-    Event(handle<event> h) -> (handle<event> h, handle<event> h2);
-    Port(handle<port> h) -> (handle<port> h, handle<port> h2);
-    Interrupt(handle<interrupt> h) -> (handle<interrupt> h, handle<interrupt> h2);
-    DebugLog(handle<debuglog> h) -> (handle<debuglog> h, handle<debuglog> h2);
-    Socket(handle<socket> h) -> (handle<socket> h, handle<socket> h2);
-    Resource(handle<resource> h) -> (handle<resource> h, handle<resource> h2);
-    EventPair(handle<eventpair> h) -> (handle<eventpair> h, handle<eventpair> h2);
-    Job(handle<job> h) -> (handle<job> h, handle<job> h2);
-    Vmar(handle<vmar> h) -> (handle<vmar> h, handle<vmar> h2);
-    Fifo(handle<fifo> h) -> (handle<fifo> h, handle<fifo> h2);
-    Guest(handle<guest> h) -> (handle<guest> h, handle<guest> h2);
-    Timer(handle<timer> h) -> (handle<timer> h, handle<timer> h2);
-    Profile(handle<profile> h) -> (handle<profile> h, handle<profile> h2);
+    Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
+    Process(zx.handle:PROCESS h) -> (zx.handle:PROCESS h, zx.handle:PROCESS h2);
+    Thread(zx.handle:THREAD h) -> (zx.handle:THREAD h, zx.handle:THREAD h2);
+    Vmo(zx.handle:VMO h) -> (zx.handle:VMO h, zx.handle:VMO h2);
+    Channel(zx.handle:CHANNEL h) -> (zx.handle:CHANNEL h, zx.handle:CHANNEL h2);
+    Event(zx.handle:EVENT h) -> (zx.handle:EVENT h, zx.handle:EVENT h2);
+    Port(zx.handle:PORT h) -> (zx.handle:PORT h, zx.handle:PORT h2);
+    Interrupt(zx.handle:INTERRUPT h) -> (zx.handle:INTERRUPT h, zx.handle:INTERRUPT h2);
+    Socket(zx.handle:SOCKET h) -> (zx.handle:SOCKET h, zx.handle:SOCKET h2);
+    Resource(zx.handle:RESOURCE h) -> (zx.handle:RESOURCE h, zx.handle:RESOURCE h2);
+    EventPair(zx.handle:EVENTPAIR h) -> (zx.handle:EVENTPAIR h, zx.handle:EVENTPAIR h2);
+    Job(zx.handle:JOB h) -> (zx.handle:JOB h, zx.handle:JOB h2);
+    Vmar(zx.handle:VMAR h) -> (zx.handle:VMAR h, zx.handle:VMAR h2);
+    Fifo(zx.handle:FIFO h) -> (zx.handle:FIFO h, zx.handle:FIFO h2);
+    Guest(zx.handle:GUEST h) -> (zx.handle:GUEST h, zx.handle:GUEST h2);
+    Timer(zx.handle:TIMER h) -> (zx.handle:TIMER h, zx.handle:TIMER h2);
+    Profile(zx.handle:PROFILE h) -> (zx.handle:PROFILE h, zx.handle:PROFILE h2);
 };
 
 [BanjoLayout = "ddk-protocol"]
 protocol AnotherSynchronousHandle {
-    Handle(handle h) -> (handle @h, handle @h2);
+    Handle(zx.handle h) -> (zx.handle @h, zx.handle @h2);
 };
 
 [BanjoLayout = "ddk-protocol"]
 protocol AsyncHandle {
     [Async]
-    Handle(handle h) -> (handle h, handle h2);
+    Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
     [Async]
-    Process(handle<process> h) -> (handle<process> h, handle<process> h2);
+    Process(zx.handle:PROCESS h) -> (zx.handle:PROCESS h, zx.handle:PROCESS h2);
     [Async]
-    Thread(handle<thread> h) -> (handle<thread> h, handle<thread> h2);
+    Thread(zx.handle:THREAD h) -> (zx.handle:THREAD h, zx.handle:THREAD h2);
     [Async]
-    Vmo(handle<vmo> h) -> (handle<vmo> h, handle<vmo> h2);
+    Vmo(zx.handle:VMO h) -> (zx.handle:VMO h, zx.handle:VMO h2);
     [Async]
-    Channel(handle<channel> h) -> (handle<channel> h, handle<channel> h2);
+    Channel(zx.handle:CHANNEL h) -> (zx.handle:CHANNEL h, zx.handle:CHANNEL h2);
     [Async]
-    Event(handle<event> h) -> (handle<event> h, handle<event> h2);
+    Event(zx.handle:EVENT h) -> (zx.handle:EVENT h, zx.handle:EVENT h2);
     [Async]
-    Port(handle<port> h) -> (handle<port> h, handle<port> h2);
+    Port(zx.handle:PORT h) -> (zx.handle:PORT h, zx.handle:PORT h2);
     [Async]
-    Interrupt(handle<interrupt> h) -> (handle<interrupt> h, handle<interrupt> h2);
+    Interrupt(zx.handle:INTERRUPT h) -> (zx.handle:INTERRUPT h, zx.handle:INTERRUPT h2);
     [Async]
-    DebugLog(handle<debuglog> h) -> (handle<debuglog> h, handle<debuglog> h2);
+    Socket(zx.handle:SOCKET h) -> (zx.handle:SOCKET h, zx.handle:SOCKET h2);
     [Async]
-    Socket(handle<socket> h) -> (handle<socket> h, handle<socket> h2);
+    Resource(zx.handle:RESOURCE h) -> (zx.handle:RESOURCE h, zx.handle:RESOURCE h2);
     [Async]
-    Resource(handle<resource> h) -> (handle<resource> h, handle<resource> h2);
+    EventPair(zx.handle:EVENTPAIR h) -> (zx.handle:EVENTPAIR h, zx.handle:EVENTPAIR h2);
     [Async]
-    EventPair(handle<eventpair> h) -> (handle<eventpair> h, handle<eventpair> h2);
+    Job(zx.handle:JOB h) -> (zx.handle:JOB h, zx.handle:JOB h2);
     [Async]
-    Job(handle<job> h) -> (handle<job> h, handle<job> h2);
+    Vmar(zx.handle:VMAR h) -> (zx.handle:VMAR h, zx.handle:VMAR h2);
     [Async]
-    Vmar(handle<vmar> h) -> (handle<vmar> h, handle<vmar> h2);
+    Fifo(zx.handle:FIFO h) -> (zx.handle:FIFO h, zx.handle:FIFO h2);
     [Async]
-    Fifo(handle<fifo> h) -> (handle<fifo> h, handle<fifo> h2);
+    Guest(zx.handle:GUEST h) -> (zx.handle:GUEST h, zx.handle:GUEST h2);
     [Async]
-    Guest(handle<guest> h) -> (handle<guest> h, handle<guest> h2);
+    Timer(zx.handle:TIMER h) -> (zx.handle:TIMER h, zx.handle:TIMER h2);
     [Async]
-    Timer(handle<timer> h) -> (handle<timer> h, handle<timer> h2);
-    [Async]
-    Profile(handle<profile> h) -> (handle<profile> h, handle<profile> h2);
+    Profile(zx.handle:PROFILE h) -> (zx.handle:PROFILE h, zx.handle:PROFILE h2);
 };
-

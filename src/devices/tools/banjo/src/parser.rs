@@ -57,7 +57,7 @@ protocol_declaration = { attributes ~ "protocol" ~ ident ~ ( ":" ~ super_protoco
 
 alias_declaration = { attributes ~ "alias" ~ ident ~ "=" ~ ident }
 
-type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | fidl_handle_type | identifier_type }
+type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | identifier_type }
 
 identifier_type = { compound_ident ~ reference? }
 array_type = { "array" ~ "<" ~ type_ ~ ">" ~ ":" ~ constant }
@@ -70,21 +70,13 @@ primitive_type = { integer_type | "voidptr" | "bool" | "float32" | "float64" }
 integer_type = { "int8" | "int16" | "int32" | "int64" |
                "uint8" | "uint16" | "uint32" | "uint64" }
 
-handle_type = { "handle" ~ ( "<" ~ handle_subtype ~ ">" )? ~ reference? }
+handle_type = { "zx.handle" ~ ( ":" ~ handle_subtype )? ~ reference? }
 
-handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "port" |
-                 "interrupt" | "log" | "socket" | "resource" | "event" |
-                 "job" | "vmar" | "fifo" | "guest" | "timer" | "bti" | "profile" |
-                 "debuglog" | "vcpu" | "iommu" | "pager" | "pmt" | "clock" |
-                 "msi" }
-
-fidl_handle_type = { "zx.handle:" ~ fidl_handle_subtype ~ reference? }
-
-fidl_handle_subtype = { "NONE" | "PROCESS" | "THREAD" | "VMO" | "CHANNEL" | "EVENTPAIR" | "PORT" |
-                      "INTERRUPT" | "PCI_DEVICE" | "LOG" | "SOCKET" | "RESOURCE" | "EVENT" |
-                      "JOB" | "VMAR" | "FIFO" | "GUEST" | "VCPU" | "TIMER" | "IOMMU" | "BTI" |
-                      "PROFILE" | "PMT" | "SUSPEND_TOKEN" | "PAGER" | "EXCEPTION" | "CLOCK" |
-                      "STREAM" | "MSI_ALLOCATION" | "MSI_INTERRUPT" | "MSI" }
+handle_subtype = { "NONE" | "PROCESS" | "THREAD" | "VMO" | "CHANNEL" | "EVENTPAIR" | "PORT" |
+                   "INTERRUPT" | "PCI_DEVICE" | "LOG" | "SOCKET" | "RESOURCE" | "EVENT" |
+                   "JOB" | "VMAR" | "FIFO" | "GUEST" | "VCPU" | "TIMER" | "IOMMU" | "BTI" |
+                   "PROFILE" | "PMT" | "SUSPEND_TOKEN" | "PAGER" | "EXCEPTION" | "CLOCK" |
+                   "STREAM" | "MSI_ALLOCATION" | "MSI_INTERRUPT" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
 ident = @{ ("@")? ~ (alpha | digit | "_")+ }

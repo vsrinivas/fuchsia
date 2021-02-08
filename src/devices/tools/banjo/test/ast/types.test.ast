@@ -713,7 +713,7 @@ BanjoAst {
                         ),
                         ty: Array {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Constant(
@@ -908,7 +908,7 @@ BanjoAst {
                         ),
                         ty: Array {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Constant(
@@ -1159,7 +1159,7 @@ BanjoAst {
                         ty: Array {
                             ty: Array {
                                 ty: Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 size: Constant(
@@ -1375,7 +1375,7 @@ BanjoAst {
                         ),
                         ty: Vector {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: None,
@@ -1647,7 +1647,7 @@ BanjoAst {
                         ty: Vector {
                             ty: Vector {
                                 ty: Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 size: Some(
@@ -1881,7 +1881,7 @@ BanjoAst {
                         ),
                         ty: Vector {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Some(
@@ -2112,7 +2112,7 @@ BanjoAst {
                         ),
                         ty: Vector {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Some(
@@ -2432,7 +2432,7 @@ BanjoAst {
                         ty: Vector {
                             ty: Vector {
                                 ty: Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 size: Some(
@@ -2670,7 +2670,7 @@ BanjoAst {
                         ),
                         ty: Vector {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Some(
@@ -2946,7 +2946,7 @@ BanjoAst {
                         ty: Vector {
                             ty: Vector {
                                 ty: Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 size: Some(
@@ -3180,7 +3180,7 @@ BanjoAst {
                         ),
                         ty: Vector {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Some(
@@ -3411,7 +3411,7 @@ BanjoAst {
                         ),
                         ty: Vector {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Some(
@@ -3731,7 +3731,7 @@ BanjoAst {
                         ty: Vector {
                             ty: Vector {
                                 ty: Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 size: Some(
@@ -3777,7 +3777,7 @@ BanjoAst {
                             [],
                         ),
                         ty: Handle {
-                            ty: Handle,
+                            ty: None,
                             reference: false,
                         },
                         ident: Ident {
@@ -3881,20 +3881,6 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "interrupt_handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: DebugLog,
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "debuglog_handle",
                         },
                         val: None,
                     },
@@ -4099,21 +4085,7 @@ BanjoAst {
                             [],
                         ),
                         ty: Handle {
-                            ty: Msi,
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "msi_handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: Handle,
+                            ty: None,
                             reference: true,
                         },
                         ident: Ident {
@@ -4217,20 +4189,6 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "nullable_interrupt_handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: DebugLog,
-                            reference: true,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "nullable_debuglog_handle",
                         },
                         val: None,
                     },
@@ -4427,20 +4385,6 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "nullable_clock_handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: Msi,
-                            reference: true,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "nullable_msi_handle",
                         },
                         val: None,
                     },
@@ -5226,7 +5170,7 @@ BanjoAst {
                         ),
                         ty: Array {
                             ty: Handle {
-                                ty: Handle,
+                                ty: None,
                                 reference: false,
                             },
                             size: Constant(

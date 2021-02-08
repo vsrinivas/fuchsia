@@ -22,7 +22,6 @@ typedef void (*async_handle_channel_callback)(void* ctx, zx_handle_t h, zx_handl
 typedef void (*async_handle_event_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_port_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_interrupt_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
-typedef void (*async_handle_debug_log_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_socket_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_resource_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_event_pair_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
@@ -46,7 +45,6 @@ typedef struct async_handle_protocol_ops {
     void (*event)(void* ctx, zx_handle_t h, async_handle_event_callback callback, void* cookie);
     void (*port)(void* ctx, zx_handle_t h, async_handle_port_callback callback, void* cookie);
     void (*interrupt)(void* ctx, zx_handle_t h, async_handle_interrupt_callback callback, void* cookie);
-    void (*debug_log)(void* ctx, zx_handle_t h, async_handle_debug_log_callback callback, void* cookie);
     void (*socket)(void* ctx, zx_handle_t h, async_handle_socket_callback callback, void* cookie);
     void (*resource)(void* ctx, zx_handle_t h, async_handle_resource_callback callback, void* cookie);
     void (*event_pair)(void* ctx, zx_handle_t h, async_handle_event_pair_callback callback, void* cookie);
@@ -94,10 +92,6 @@ static inline void async_handle_port(const async_handle_protocol_t* proto, zx_ha
 
 static inline void async_handle_interrupt(const async_handle_protocol_t* proto, zx_handle_t h, async_handle_interrupt_callback callback, void* cookie) {
     proto->ops->interrupt(proto->ctx, h, callback, cookie);
-}
-
-static inline void async_handle_debug_log(const async_handle_protocol_t* proto, zx_handle_t h, async_handle_debug_log_callback callback, void* cookie) {
-    proto->ops->debug_log(proto->ctx, h, callback, cookie);
 }
 
 static inline void async_handle_socket(const async_handle_protocol_t* proto, zx_handle_t h, async_handle_socket_callback callback, void* cookie) {
@@ -161,7 +155,6 @@ typedef struct synchronous_handle_protocol_ops {
     void (*event)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
     void (*port)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
     void (*interrupt)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
-    void (*debug_log)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
     void (*socket)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
     void (*resource)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
     void (*event_pair)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
@@ -209,10 +202,6 @@ static inline void synchronous_handle_port(const synchronous_handle_protocol_t* 
 
 static inline void synchronous_handle_interrupt(const synchronous_handle_protocol_t* proto, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
     proto->ops->interrupt(proto->ctx, h, out_h, out_h2);
-}
-
-static inline void synchronous_handle_debug_log(const synchronous_handle_protocol_t* proto, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-    proto->ops->debug_log(proto->ctx, h, out_h, out_h2);
 }
 
 static inline void synchronous_handle_socket(const synchronous_handle_protocol_t* proto, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {

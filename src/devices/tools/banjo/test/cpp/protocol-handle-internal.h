@@ -36,9 +36,6 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_handle_proto
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_handle_protocol_interrupt, SynchronousHandleInterrupt,
         void (C::*)(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2));
 
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_handle_protocol_debug_log, SynchronousHandleDebugLog,
-        void (C::*)(zx::debuglog h, zx::debuglog* out_h, zx::debuglog* out_h2));
-
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_handle_protocol_socket, SynchronousHandleSocket,
         void (C::*)(zx::socket h, zx::socket* out_h, zx::socket* out_h2));
 
@@ -100,10 +97,6 @@ constexpr void CheckSynchronousHandleProtocolSubclass() {
     static_assert(internal::has_synchronous_handle_protocol_interrupt<D>::value,
         "SynchronousHandleProtocol subclasses must implement "
         "void SynchronousHandleInterrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2);");
-
-    static_assert(internal::has_synchronous_handle_protocol_debug_log<D>::value,
-        "SynchronousHandleProtocol subclasses must implement "
-        "void SynchronousHandleDebugLog(zx::debuglog h, zx::debuglog* out_h, zx::debuglog* out_h2);");
 
     static_assert(internal::has_synchronous_handle_protocol_socket<D>::value,
         "SynchronousHandleProtocol subclasses must implement "
@@ -179,9 +172,6 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_handle_protocol_po
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_handle_protocol_interrupt, AsyncHandleInterrupt,
         void (C::*)(zx::interrupt h, async_handle_interrupt_callback callback, void* cookie));
 
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_handle_protocol_debug_log, AsyncHandleDebugLog,
-        void (C::*)(zx::debuglog h, async_handle_debug_log_callback callback, void* cookie));
-
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_handle_protocol_socket, AsyncHandleSocket,
         void (C::*)(zx::socket h, async_handle_socket_callback callback, void* cookie));
 
@@ -243,10 +233,6 @@ constexpr void CheckAsyncHandleProtocolSubclass() {
     static_assert(internal::has_async_handle_protocol_interrupt<D>::value,
         "AsyncHandleProtocol subclasses must implement "
         "void AsyncHandleInterrupt(zx::interrupt h, async_handle_interrupt_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_handle_protocol_debug_log<D>::value,
-        "AsyncHandleProtocol subclasses must implement "
-        "void AsyncHandleDebugLog(zx::debuglog h, async_handle_debug_log_callback callback, void* cookie);");
 
     static_assert(internal::has_async_handle_protocol_socket<D>::value,
         "AsyncHandleProtocol subclasses must implement "

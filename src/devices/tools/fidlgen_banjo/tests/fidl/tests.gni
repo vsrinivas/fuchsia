@@ -128,6 +128,7 @@ _simple_libraries = [
   {
     name = "protocolarray"
     backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "protocolbase"
@@ -152,6 +153,7 @@ _simple_libraries = [
   {
     name = "protocolvector"
     backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "references"
@@ -164,11 +166,13 @@ _simple_libraries = [
   {
     name = "simple"
     backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
     disabled = true  # contains handle<foo>
   },
   {
     name = "tables"
     backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "types"

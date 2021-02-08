@@ -7,6 +7,8 @@ library banjo.examples.protocolarray;
 // TODO(surajmalhotra): Async for arrays.
 // TODO(surajmalhotra): Reference for arrays.
 
+using zx;
+
 [BanjoLayout = "ddk-protocol"]
 protocol Array {
     Bool(array<bool>:1 b) -> (array<bool>:1 b);
@@ -20,7 +22,7 @@ protocol Array {
     Uint64(array<uint64>:1 u64) -> (array<uint64>:1 u64);
     Float32(array<float32>:1 f32) -> (array<float32>:1 f32);
     Float64(array<float64>:1 u64) -> (array<float64>:1 f64);
-    Handle(array<handle>:1 u64) -> (array<handle>:1 f64);
+    Handle(array<zx.handle>:1 u64) -> (array<zx.handle>:1 f64);
 };
 
 const uint32 array_size = 32;
@@ -38,7 +40,7 @@ protocol Array2 {
     Uint64(array<uint64>:array_size u64) -> (array<uint64>:array_size u64);
     Float32(array<float32>:array_size f32) -> (array<float32>:array_size f32);
     Float64(array<float64>:array_size u64) -> (array<float64>:array_size f64);
-    Handle(array<handle>:array_size u64) -> (array<handle>:array_size f64);
+    Handle(array<zx.handle>:array_size u64) -> (array<zx.handle>:array_size f64);
 };
 
 [BanjoLayout = "ddk-protocol"]
@@ -54,5 +56,5 @@ protocol ArrayofArrays {
     Uint64(array<array<uint64>:4>:array_size u64) -> (array<array<uint64>:4>:array_size u64);
     Float32(array<array<float32>:4>:array_size f32) -> (array<array<float32>:4>:array_size f32);
     Float64(array<array<float64>:4>:array_size u64) -> (array<array<float64>:4>:array_size f64);
-    Handle(array<array<handle>:4>:array_size u64) -> (array<array<handle>:4>:array_size f64);
+    Handle(array<array<zx.handle>:4>:array_size u64) -> (array<array<zx.handle>:4>:array_size f64);
 };

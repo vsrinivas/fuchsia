@@ -45,7 +45,8 @@ do
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
     || [ "$filename" = "protocol-base" ] || [ "$filename" = "api" ] \
     || [ "$filename" = "pass-callback" ] || [ "$filename" = "fidl_handle" ] \
-    || [ "$filename" = "handles" ]; then
+    || [ "$filename" = "handles" ] || [ "$filename" = "protocol-array" ] \
+    || [ "$filename" = "protocol-vector" ] || [ "$filename" = "tables" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 

@@ -235,7 +235,6 @@ pub struct handles {
     pub event_handle: zircon::sys::zx_handle_t,
     pub port_handle: zircon::sys::zx_handle_t,
     pub interrupt_handle: zircon::sys::zx_handle_t,
-    pub debuglog_handle: zircon::sys::zx_handle_t,
     pub socket_handle: zircon::sys::zx_handle_t,
     pub resource_handle: zircon::sys::zx_handle_t,
     pub eventpair_handle: zircon::sys::zx_handle_t,
@@ -250,7 +249,6 @@ pub struct handles {
     pub pager_handle: zircon::sys::zx_handle_t,
     pub pmt_handle: zircon::sys::zx_handle_t,
     pub clock_handle: zircon::sys::zx_handle_t,
-    pub msi_handle: zircon::sys::zx_handle_t,
     pub nullable_handle_handle: zircon::sys::zx_handle_t,
     pub nullable_process_handle: zircon::sys::zx_handle_t,
     pub nullable_thread_handle: zircon::sys::zx_handle_t,
@@ -259,7 +257,6 @@ pub struct handles {
     pub nullable_event_handle: zircon::sys::zx_handle_t,
     pub nullable_port_handle: zircon::sys::zx_handle_t,
     pub nullable_interrupt_handle: zircon::sys::zx_handle_t,
-    pub nullable_debuglog_handle: zircon::sys::zx_handle_t,
     pub nullable_socket_handle: zircon::sys::zx_handle_t,
     pub nullable_resource_handle: zircon::sys::zx_handle_t,
     pub nullable_eventpair_handle: zircon::sys::zx_handle_t,
@@ -274,7 +271,6 @@ pub struct handles {
     pub nullable_pager_handle: zircon::sys::zx_handle_t,
     pub nullable_pmt_handle: zircon::sys::zx_handle_t,
     pub nullable_clock_handle: zircon::sys::zx_handle_t,
-    pub nullable_msi_handle: zircon::sys::zx_handle_t,
 }
 
 #[repr(C)]

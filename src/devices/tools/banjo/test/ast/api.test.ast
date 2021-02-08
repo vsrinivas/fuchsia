@@ -526,7 +526,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -568,7 +568,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -610,7 +610,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -652,7 +652,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -694,7 +694,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -736,7 +736,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -778,7 +778,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -820,7 +820,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -862,7 +862,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -904,7 +904,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -946,7 +946,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -988,7 +988,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1038,7 +1038,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1088,7 +1088,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1138,7 +1138,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1188,7 +1188,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1238,7 +1238,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1288,7 +1288,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1342,7 +1342,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1384,7 +1384,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1426,7 +1426,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1468,7 +1468,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1510,7 +1510,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1552,7 +1552,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1594,7 +1594,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1636,7 +1636,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1678,7 +1678,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1720,7 +1720,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1762,7 +1762,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1804,7 +1804,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1854,7 +1854,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1904,7 +1904,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -1954,7 +1954,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2004,7 +2004,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2054,7 +2054,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2104,7 +2104,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2165,7 +2165,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2184,7 +2184,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2219,7 +2219,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2254,7 +2254,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2289,7 +2289,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(
@@ -2316,7 +2316,7 @@ BanjoAst {
                             (
                                 "handle",
                                 Handle {
-                                    ty: Handle,
+                                    ty: None,
                                     reference: false,
                                 },
                                 Attrs(

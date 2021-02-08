@@ -35,7 +35,7 @@ mod c {
         ["banjo/preserve_names.test.banjo"],
         "c/preserve_names.h"
     );
-    codegen_test!(table, CBackend, ["banjo/tables.test.banjo"], "c/tables.h");
+    codegen_test!(table, CBackend, [zx!(), "banjo/tables.test.banjo"], "c/tables.h");
     codegen_test!(references, CBackend, ["banjo/references.test.banjo"], "c/references.h");
     codegen_test!(simple, CBackend, [zx!(), "banjo/simple.test.banjo"], "c/simple.h");
     codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");
@@ -99,7 +99,7 @@ mod rust {
     codegen_test!(example_8, RustBackend, ["banjo/example-8.test.banjo"], "rust/example-8.rs");
     codegen_test!(example_9, RustBackend, ["banjo/example-9.test.banjo"], "rust/example-9.rs");
     codegen_test!(point, RustBackend, ["banjo/point.test.banjo"], "rust/point.rs");
-    codegen_test!(table, RustBackend, ["banjo/tables.test.banjo"], "rust/tables.rs");
+    codegen_test!(table, RustBackend, [zx!(), "banjo/tables.test.banjo"], "rust/tables.rs");
     codegen_test!(simple, RustBackend, [zx!(), "banjo/simple.test.banjo"], "rust/simple.rs");
     codegen_test!(
         view,
