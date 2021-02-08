@@ -18,6 +18,7 @@ zx_library("arm64") {
     "lib/arch/asm.h",
     "lib/arch/intrin.h",
     "lib/arch/ticks.h",
+    "lib/arch/zbi-boot.h",
   ]
   sdk_migrated = true
 }
