@@ -286,14 +286,6 @@
 
         // From v2 components
         {
-            protocol: "fuchsia.power.BatteryManager",
-            path: "/svc_for_sys/fuchsia.power.BatteryManager",
-        },
-        {
-            protocol: "fuchsia.power.test.BatterySimulator",
-            path: "/svc_for_sys/fuchsia.power.test.BatterySimulator",
-        },
-        {
             protocol: "fuchsia.fonts.Provider",
             path: "/svc_for_sys/fuchsia.fonts.Provider",
         },

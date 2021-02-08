@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.power.BatteryManager": "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/battery_manager_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.power.BatteryManager"
+        ]
+    }
+}
