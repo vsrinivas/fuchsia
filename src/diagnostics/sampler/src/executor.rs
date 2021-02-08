@@ -518,7 +518,7 @@ impl ProjectSampler {
         selector: String,
     ) {
         match data_type {
-            DataType::EventCount | DataType::IntHistogram => {
+            DataType::Occurrence | DataType::IntHistogram => {
                 self.metric_cache.insert(selector.clone(), new_sample.clone());
             }
             DataType::Integer => (),
@@ -533,7 +533,7 @@ fn process_sample_for_data_type(
     data_type: &DataType,
 ) -> Option<EventPayload> {
     let event_payload_res = match data_type {
-        DataType::EventCount => process_event_count(new_sample, previous_sample_opt, selector),
+        DataType::Occurrence => process_occurence(new_sample, previous_sample_opt, selector),
         DataType::IntHistogram => process_int_histogram(new_sample, previous_sample_opt, selector),
         DataType::Integer => {
             // If we previously cached a metric with an int-type, log a warning and ignore it.
@@ -746,7 +746,7 @@ fn process_int(new_sample: &Property, selector: &String) -> Result<Option<EventP
     Ok(Some(EventPayload::EventCount(CountEvent { count: sampled_int, period_duration_micros: 0 })))
 }
 
-fn process_event_count(
+fn process_occurence(
     new_sample: &Property,
     prev_sample_opt: Option<&Property>,
     selector: &String,
@@ -844,9 +844,9 @@ mod tests {
         timespan: i64,
     }
 
-    fn process_event_count_tester(params: EventCountTesterParams) {
+    fn process_occurence_tester(params: EventCountTesterParams) {
         let selector: String = "test:root:count".to_string();
-        let event_res = process_event_count(&params.new_val, params.old_val.as_ref(), &selector);
+        let event_res = process_occurence(&params.new_val, params.old_val.as_ref(), &selector);
 
         if !params.process_ok {
             assert!(event_res.is_err());
@@ -874,8 +874,8 @@ mod tests {
     }
 
     #[test]
-    fn test_normal_process_event_count() {
-        process_event_count_tester(EventCountTesterParams {
+    fn test_normal_process_occurence() {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 1),
             old_val: None,
             process_ok: true,
@@ -884,7 +884,7 @@ mod tests {
             timespan: 0,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 1),
             old_val: Some(Property::Int("count".to_string(), 1)),
             process_ok: true,
@@ -893,7 +893,7 @@ mod tests {
             timespan: -1,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 3),
             old_val: Some(Property::Int("count".to_string(), 1)),
             process_ok: true,
@@ -904,8 +904,8 @@ mod tests {
     }
 
     #[test]
-    fn test_data_type_changing_process_event_count() {
-        process_event_count_tester(EventCountTesterParams {
+    fn test_data_type_changing_process_occurence() {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 1),
             old_val: None,
             process_ok: true,
@@ -914,7 +914,7 @@ mod tests {
             timespan: 0,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Uint("count".to_string(), 1),
             old_val: None,
             process_ok: true,
@@ -923,7 +923,7 @@ mod tests {
             timespan: 0,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Uint("count".to_string(), 3),
             old_val: Some(Property::Int("count".to_string(), 1)),
             process_ok: true,
@@ -932,7 +932,7 @@ mod tests {
             timespan: 0,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::String("count".to_string(), "big_oof".to_string()),
             old_val: Some(Property::Int("count".to_string(), 1)),
             process_ok: false,
@@ -944,7 +944,7 @@ mod tests {
 
     #[test]
     fn test_event_count_negatives_and_overflows() {
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), -11),
             old_val: None,
             process_ok: false,
@@ -953,7 +953,7 @@ mod tests {
             timespan: -1,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 9),
             old_val: Some(Property::Int("count".to_string(), 10)),
             process_ok: false,
@@ -962,7 +962,7 @@ mod tests {
             timespan: -1,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Uint("count".to_string(), std::u64::MAX),
             old_val: None,
             process_ok: false,
@@ -973,7 +973,7 @@ mod tests {
 
         let i64_max_in_u64: u64 = std::i64::MAX.try_into().unwrap();
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 1),
             old_val: Some(Property::Uint("count".to_string(), 1)),
             process_ok: true,
@@ -982,7 +982,7 @@ mod tests {
             timespan: 0,
         });
 
-        process_event_count_tester(EventCountTesterParams {
+        process_occurence_tester(EventCountTesterParams {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 2),
             old_val: Some(Property::Uint("count".to_string(), 1)),
             process_ok: false,

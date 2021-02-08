@@ -50,7 +50,7 @@ pub enum DataType {
     // Maps cached diffs from Uint or Int inspect types.
     // NOTE: This does not use duration tracking. Durations
     //       are always set to 0.
-    EventCount,
+    Occurrence,
     // Maps raw Int inspect types.
     Integer,
     // Maps cached diffs from IntHistogram inspect type.
@@ -139,7 +139,7 @@ mod tests {
       // Test comment for json5 portability.
       "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
       "metric_id": 1,
-      "metric_type": "EventCount",
+      "metric_type": "Occurrence",
       "event_codes": [0, 0]
     }
   ]
@@ -155,7 +155,7 @@ mod tests {
     {
       "selector": "single_counter_test_component.cmx:root:counter",
       "metric_id": 1,
-      "metric_type": "EventCount",
+      "metric_type": "Occurrence",
       "event_codes": [0, 0]
     }
   ]
@@ -182,7 +182,7 @@ mod tests {
       // Test comment for json5 portability.
       "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
       "metric_id": 1,
-      "metric_type": "EventCount",
+      "metric_type": "Occurrence",
       "event_codes": [0, 0]
     }
   ]
@@ -217,7 +217,7 @@ mod tests {
       // Test comment for json5 portability.
       "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
       "metric_id": 1,
-      "metric_type": "EventCount",
+      "metric_type": "Occurrence",
       "event_codes": [0, 0],
       "upload_once": true,
     }
@@ -234,7 +234,7 @@ mod tests {
       // Test comment for json5 portability.
       "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
       "metric_id": 1,
-      "metric_type": "EventCount",
+      "metric_type": "Occurrence",
       "event_codes": [0, 0],
       "upload_once": false,
     }
