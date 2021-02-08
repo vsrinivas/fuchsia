@@ -115,8 +115,8 @@ struct IndividualTestOutput {
 /// Describes whether a test was run or skipped.
 ///
 /// Refer to [`TestSuiteOutput`] documentation for schema details.
-#[serde(rename_all = "UPPERCASE")]
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
 enum IndividualTestOutputStatus {
     Run,
     NotRun,
