@@ -66,6 +66,7 @@ class Guest : public vm_tools::StartupListener::Service,
   fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
   void StartGuest();
   void MountExtrasPartition();
+  void MountVmTools();
   void ConfigureNetwork();
   void StartTermina();
   void LaunchContainerShell();

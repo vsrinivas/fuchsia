@@ -16,10 +16,17 @@ declare_args() {
   # Defaults to the disk image from CIPD, but can be overridden to use a
   # custom disk for development purposes.
   termina_disk = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_rootfs.img"
+
+  # The termina tools disk image.
+  #
+  # Defaults to the disk image from CIPD, but can be overridden to use a
+  # custom disk for development purposes.
+  termina_tools = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_tools.img"
 }
 
 _kernel_artifact_path = "${target_out_dir}/vm_kernel"
 _rootfs_artifact_path = "${target_out_dir}/vm_rootfs"
+_tools_artifact_path = "${target_out_dir}/vm_tools"
 
 guest_prebuilt("kernel") {
   source = termina_kernel
@@ -31,20 +38,34 @@ guest_prebuilt("rootfs") {
   output = _rootfs_artifact_path
 }
 
+guest_prebuilt("tools") {
+  source = termina_tools
+  output = _tools_artifact_path
+}
+
 guest_package("termina_guest") {
   deps = [
     ":kernel",
     ":rootfs",
+    ":tools",
   ]
   cmdline = "console=hvc0 root=/dev/vda rw"
   linux = _kernel_artifact_path
 
   rootfs_name = "rootfs.img"
+  tools_name = "vm_tools.img"
   resources = [
     {
       path = _rootfs_artifact_path
       dest = "${rootfs_name}"
     },
+    {
+      path = _tools_artifact_path
+      dest = "${tools_name}"
+    },
   ]
-  block_devices = [ "data/${rootfs_name},ro" ]
+  block_devices = [
+    "data/${rootfs_name},ro",
+    "data/${tools_name},ro",
+  ]
 }

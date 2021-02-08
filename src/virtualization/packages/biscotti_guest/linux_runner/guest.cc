@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/vector.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netinet/in.h>
+#include <sys/mount.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -210,6 +211,30 @@ void Guest::StartGuest() {
                              });
 }
 
+void Guest::MountVmTools() {
+  TRACE_DURATION("linux_runner", "Guest::MountVmTools");
+  FX_CHECK(maitred_) << "Called MountVmTools without a maitre'd connection";
+  FX_LOGS(INFO) << "Mounting vm_tools";
+
+  grpc::ClientContext context;
+  vm_tools::MountRequest request;
+  vm_tools::MountResponse response;
+
+  request.mutable_source()->assign("/dev/vdb");
+  request.mutable_target()->assign("/opt/google/cros-containers");
+  request.mutable_fstype()->assign("ext4");
+  request.mutable_options()->assign("");
+  request.set_mountflags(MS_RDONLY);
+
+  {
+    TRACE_DURATION("linux_runner", "MountRPC");
+    auto grpc_status = maitred_->Mount(&context, request, &response);
+    FX_CHECK(grpc_status.ok()) << "Failed to mount vm_tools partition: "
+                               << grpc_status.error_message();
+  }
+  FX_LOGS(INFO) << "Mounted Filesystem: " << response.error();
+}
+
 void Guest::MountExtrasPartition() {
   TRACE_DURATION("linux_runner", "Guest::MountExtrasPartition");
   FX_CHECK(maitred_) << "Called MountExtrasPartition without a maitre'd connection";
@@ -219,7 +244,7 @@ void Guest::MountExtrasPartition() {
   vm_tools::MountRequest request;
   vm_tools::MountResponse response;
 
-  request.mutable_source()->assign("/dev/vdc");
+  request.mutable_source()->assign("/dev/vdd");
   request.mutable_target()->assign("/mnt/shared");
   request.mutable_fstype()->assign("romfs");
   request.mutable_options()->assign("");
@@ -283,6 +308,7 @@ void Guest::StartTermina() {
   vm_tools::StartTerminaResponse response;
   std::string lxd_subnet = "100.115.92.1/24";
   request.mutable_lxd_ipv4_subnet()->swap(lxd_subnet);
+  request.set_stateful_device("/dev/vdc");
 
   {
     TRACE_DURATION("linux_runner", "StartTerminaRPC");
@@ -444,6 +470,7 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyM
                                 result) mutable {
                  if (result.is_ok()) {
                    this->maitred_ = std::move(result.value());
+                   MountVmTools();
                    MountExtrasPartition();
                    ConfigureNetwork();
                    StartTermina();
