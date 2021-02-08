@@ -5,7 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 go_binary("bin") {
   output_name = "fidl_echo_go_server"
@@ -23,19 +23,9 @@ go_library("lib") {
   sources = [ "main.go" ]
 }
 
-package("server") {
+fuchsia_package_with_single_component("server") {
   package_name = "echo-go-server"
-  binaries = [
-    {
-      name = "fidl_echo_go_server"
-      dest = "fidl_echo_go_server"
-    },
-  ]
-  meta = [
-    {
-      path = "server.cmx"
-      dest = "echo-server.cmx"
-    },
-  ]
+  component_name = "echo-server"
+  manifest = "server.cmx"
   deps = [ ":bin" ]
 }
