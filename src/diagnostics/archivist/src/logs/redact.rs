@@ -13,12 +13,18 @@ pub use serialize::{Redacted, RedactedItem};
 pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     Email: alice@website.tld, \
     IPv4: 8.8.8.8, \
+    IPv461: ::ffff:12.34.56.78, \
+    IPv462: ::ffff:ab12:cd34, \
     IPv6: 2001:503:eEa3:0:0:0:0:30, \
+    IPv6C: fec8::7d84:c1dc:ab34:656a, \
+    IPv6LL: fe80::7d84:c1dc:ab34:656a, \
     UUID: ddd0fA34-1016-11eb-adc1-0242ac120002, \
     MAC: de:ad:BE:EF:42:5a";
 
 pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
-    Email: <REDACTED-EMAIL>, IPv4: <REDACTED-IPV4>, IPv6: <REDACTED-IPV6>, UUID: <REDACTED-UUID>, MAC: <REDACTED-MAC>";
+    Email: <REDACTED-EMAIL>, IPv4: <REDACTED-IPV4>, IPv461: ::ffff:<REDACTED-IPV4>, IPv462: ::ffff:<REDACTED-IPV4>, \
+    IPv6: <REDACTED-IPV6>, IPv6C: <REDACTED-IPV6>, IPv6LL: fe80::<REDACTED-IPV6-LL>, \
+    UUID: <REDACTED-UUID>, MAC: <REDACTED-MAC>";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -65,10 +71,25 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
         matcher: r"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])",
         replacement: "<REDACTED-IPV4>",
     },
-    // IPv6
+    // Link local IPv6
+    RedactionPattern {
+        matcher: r"fe80::(?:[a-fA-F0-9]{1,4}:){0,4}[a-fA-F0-9]{1,4}",
+        replacement: "fe80::<REDACTED-IPV6-LL>",
+    },
+    // IPv6 without ::
     RedactionPattern {
         matcher: r"(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}",
         replacement: "<REDACTED-IPV6>",
+    },
+    // IPv6 with ::
+    RedactionPattern {
+        matcher: r"(?:[a-fA-F0-9]{1,4}:)+:(?:[a-fA-F0-9]{1,4}:)*[a-fA-F0-9]{1,4}",
+        replacement: "<REDACTED-IPV6>",
+    },
+    // IPv6 starting with :: for ipv4
+    RedactionPattern {
+        matcher: r"::ffff:[a-fA-F0-9]{1,4}:[a-fA-F0-9]{1,4}",
+        replacement: "::ffff:<REDACTED-IPV4>",
     },
     // uuid
     RedactionPattern {
@@ -213,7 +234,11 @@ mod test {
     test_redaction! {
         email: "Email: alice@website.tld" => "Email: <REDACTED-EMAIL>",
         ipv4: "IPv4: 8.8.8.8" => "IPv4: <REDACTED-IPV4>",
+        ipv4_in_6: "IPv46: ::ffff:12.34.56.78" => "IPv46: ::ffff:<REDACTED-IPV4>",
+        ipv4_in_6_hex: "IPv46h: ::ffff:ab12:34cd" => "IPv46h: ::ffff:<REDACTED-IPV4>",
         ipv6: "IPv6: 2001:503:eEa3:0:0:0:0:30" => "IPv6: <REDACTED-IPV6>",
+        ipv6_colon: "IPv6C: [::/0 via fe82::7d84:c1dc:ab34:656a nic 4]" => "IPv6C: [::/0 via <REDACTED-IPV6> nic 4]",
+        ipv6_ll: "IPv6LL: fe80::7d84:c1dc:ab34:656a" => "IPv6LL: fe80::<REDACTED-IPV6-LL>",
         uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED-UUID>",
         mac_address: "MAC address: 00:0a:95:9F:68:16" => "MAC address: <REDACTED-MAC>",
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
