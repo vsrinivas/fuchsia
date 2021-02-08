@@ -54,12 +54,14 @@ pub fn write_depfile(
             fs::remove_file(depfile)?;
         }
     } else if let Some(output_path) = output {
-        let depfile_contents = format!("{}:", output_path.display())
-            + &includes
+        let depfile_contents = format!(
+            "{}:{}\n",
+            output_path.display(),
+            &includes
                 .iter()
                 .map(|i| format!(" {}", includepath.join(i).display()))
                 .collect::<String>()
-            + "\n";
+        );
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)

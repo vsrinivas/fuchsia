@@ -179,27 +179,90 @@ mod tests {
     use std::io::{LineWriter, Read};
     use tempfile::TempDir;
 
-    fn tmp_file(tmp_dir: &TempDir, name: &str, contents: impl Display) -> PathBuf {
-        let path = tmp_dir.path().join(name);
-        File::create(tmp_dir.path().join(name))
-            .unwrap()
-            .write_all(format!("{:#}", contents).as_bytes())
-            .unwrap();
-        return path;
+    struct TestContext {
+        tmpdir_path: PathBuf,
+        depfile: PathBuf,
+        stamp: PathBuf,
+        fromfile: PathBuf,
+        output: PathBuf,
+        _tmpdir: TempDir,
     }
 
-    fn assert_eq_file(file: PathBuf, contents: impl Display) {
-        let mut out = String::new();
-        File::open(file).unwrap().read_to_string(&mut out).unwrap();
-        assert_eq!(out, format!("{:#}", contents));
+    impl TestContext {
+        fn new() -> Self {
+            let tmpdir = TempDir::new().unwrap();
+            let tmpdir_path = tmpdir.path();
+            Self {
+                depfile: tmpdir_path.join("depfile"),
+                stamp: tmpdir_path.join("stamp"),
+                fromfile: tmpdir_path.join("fromfile"),
+                output: tmpdir_path.join("out"),
+                tmpdir_path: tmpdir_path.to_path_buf(),
+                _tmpdir: tmpdir,
+            }
+        }
+
+        fn new_path(&self, name: &str) -> PathBuf {
+            self.tmpdir_path.join(name)
+        }
+
+        fn new_file(&self, name: &str, contents: impl Display) -> PathBuf {
+            let path = self.new_path(name);
+            File::create(&path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
+            path
+        }
+
+        fn merge_includes(&self, file: &PathBuf) -> Result<(), Error> {
+            super::merge_includes(file, Some(&self.output), Some(&self.depfile), &self.tmpdir_path)
+        }
+
+        fn check_includes(
+            &self,
+            file: &PathBuf,
+            expected_includes: Vec<String>,
+        ) -> Result<(), Error> {
+            let fromfile = if self.fromfile.exists() { Some(&self.fromfile) } else { None };
+            super::check_includes(
+                file,
+                expected_includes,
+                fromfile,
+                Some(&self.depfile),
+                Some(&self.stamp),
+                &self.tmpdir_path,
+            )
+        }
+
+        fn assert_output_eq(&self, contents: impl Display) {
+            let mut actual = String::new();
+            File::open(&self.output).unwrap().read_to_string(&mut actual).unwrap();
+            assert_eq!(
+                actual,
+                format!("{:#}", contents),
+                "Unexpected contents of {:?}",
+                &self.output
+            );
+        }
+
+        fn assert_depfile_eq(&self, out: &PathBuf, ins: &[&PathBuf]) {
+            let mut actual = String::new();
+            File::open(&self.depfile).unwrap().read_to_string(&mut actual).unwrap();
+            let expected = format!(
+                "{}:{}\n",
+                out.display(),
+                &ins.iter().map(|i| format!(" {}", i.display())).collect::<String>()
+            );
+            assert_eq!(actual, expected, "Unexpected contents of {:?}", &self.depfile);
+        }
+
+        fn assert_no_depfile(&self) {
+            assert!(!self.depfile.exists());
+        }
     }
 
     #[test]
     fn test_include_cmx() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": ["shard.cmx"],
@@ -208,8 +271,7 @@ mod tests {
                 }
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        let shard_path = ctx.new_file(
             "shard.cmx",
             json!({
                 "sandbox": {
@@ -217,72 +279,44 @@ mod tests {
                 }
             }),
         );
+        ctx.merge_includes(&cmx_path).unwrap();
 
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
-        merge_includes(&cmx_path, Some(&out_cmx_path), Some(&cmx_depfile_path), &include_path)
-            .unwrap();
-
-        assert_eq_file(
-            out_cmx_path,
-            json!({
-                "program": {
-                    "binary": "bin/hello_world"
-                },
-                "sandbox": {
-                    "services": ["fuchsia.foo.Bar"]
-                }
-            }),
-        );
-        let mut deps = String::new();
-        File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(
-            deps,
-            format!("{tmp}/out.cmx: {tmp}/shard.cmx\n", tmp = tmp_dir.path().display())
-        );
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "sandbox": {
+                "services": ["fuchsia.foo.Bar"]
+            }
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard_path]);
     }
 
     #[test]
     fn test_include_cml() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cml_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cml_path = ctx.new_file(
             "some.cml",
             "{include: [\"shard.cml\"], program: {binary: \"bin/hello_world\"}}",
         );
-        tmp_file(&tmp_dir, "shard.cml", "{use: [{ protocol: [\"fuchsia.foo.Bar\"]}]}");
+        let shard_path = ctx.new_file("shard.cml", "{use: [{ protocol: [\"fuchsia.foo.Bar\"]}]}");
+        ctx.merge_includes(&cml_path).unwrap();
 
-        let out_cml_path = tmp_dir.path().join("out.cml");
-        let cml_depfile_path = tmp_dir.path().join("cml.d");
-        merge_includes(&cml_path, Some(&out_cml_path), Some(&cml_depfile_path), &include_path)
-            .unwrap();
-
-        assert_eq_file(
-            out_cml_path,
-            json!({
-                "program": {
-                    "binary": "bin/hello_world"
-                },
-                "use": [{
-                    "protocol": ["fuchsia.foo.Bar"]
-                }]
-            }),
-        );
-        let mut deps = String::new();
-        File::open(&cml_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(
-            deps,
-            format!("{tmp}/out.cml: {tmp}/shard.cml\n", tmp = tmp_dir.path().display())
-        );
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "use": [{
+                "protocol": ["fuchsia.foo.Bar"]
+            }]
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard_path]);
     }
 
     #[test]
     fn test_include_multiple_shards() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": ["shard1.cmx", "shard2.cmx"],
@@ -291,8 +325,7 @@ mod tests {
                 }
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        let shard1_path = ctx.new_file(
             "shard1.cmx",
             json!({
                 "sandbox": {
@@ -300,8 +333,7 @@ mod tests {
                 }
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        let shard2_path = ctx.new_file(
             "shard2.cmx",
             json!({
                 "sandbox": {
@@ -309,40 +341,23 @@ mod tests {
                 }
             }),
         );
+        ctx.merge_includes(&cmx_path).unwrap();
 
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
-        merge_includes(&cmx_path, Some(&out_cmx_path), Some(&cmx_depfile_path), &include_path)
-            .unwrap();
-
-        assert_eq_file(
-            out_cmx_path,
-            json!({
-                "program": {
-                    "binary": "bin/hello_world"
-                },
-                "sandbox": {
-                    "services": ["fuchsia.foo.Bar", "fuchsia.foo.Qux"]
-                }
-            }),
-        );
-        let mut deps = String::new();
-        File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(
-            deps,
-            format!(
-                "{tmp}/out.cmx: {tmp}/shard1.cmx {tmp}/shard2.cmx\n",
-                tmp = tmp_dir.path().display()
-            )
-        );
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "sandbox": {
+                "services": ["fuchsia.foo.Bar", "fuchsia.foo.Qux"]
+            }
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard1_path, &shard2_path]);
     }
 
     #[test]
     fn test_include_recursively() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": ["shard1.cmx"],
@@ -351,8 +366,7 @@ mod tests {
                 }
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        let shard1_path = ctx.new_file(
             "shard1.cmx",
             json!({
                 "include": ["shard2.cmx"],
@@ -361,8 +375,7 @@ mod tests {
                 }
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        let shard2_path = ctx.new_file(
             "shard2.cmx",
             json!({
                 "sandbox": {
@@ -370,40 +383,23 @@ mod tests {
                 }
             }),
         );
+        ctx.merge_includes(&cmx_path).unwrap();
 
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
-        merge_includes(&cmx_path, Some(&out_cmx_path), Some(&cmx_depfile_path), &include_path)
-            .unwrap();
-
-        assert_eq_file(
-            out_cmx_path,
-            json!({
-                "program": {
-                    "binary": "bin/hello_world"
-                },
-                "sandbox": {
-                    "services": ["fuchsia.foo.Bar", "fuchsia.foo.Qux"]
-                }
-            }),
-        );
-        let mut deps = String::new();
-        File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(
-            deps,
-            format!(
-                "{tmp}/out.cmx: {tmp}/shard1.cmx {tmp}/shard2.cmx\n",
-                tmp = tmp_dir.path().display()
-            )
-        );
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "sandbox": {
+                "services": ["fuchsia.foo.Bar", "fuchsia.foo.Qux"]
+            }
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard1_path, &shard2_path]);
     }
 
     #[test]
     fn test_include_nothing() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": [],
@@ -412,29 +408,20 @@ mod tests {
                 }
             }),
         );
+        ctx.merge_includes(&cmx_path).unwrap();
 
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
-        merge_includes(&cmx_path, Some(&out_cmx_path), Some(&cmx_depfile_path), &include_path)
-            .unwrap();
-
-        assert_eq_file(
-            out_cmx_path,
-            json!({
-                "program": {
-                    "binary": "bin/hello_world"
-                }
-            }),
-        );
-        assert_eq!(cmx_depfile_path.exists(), false);
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            }
+        }));
+        ctx.assert_no_depfile();
     }
 
     #[test]
     fn test_no_includes() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "program": {
@@ -442,29 +429,20 @@ mod tests {
                 }
             }),
         );
+        ctx.merge_includes(&cmx_path).unwrap();
 
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
-        merge_includes(&cmx_path, Some(&out_cmx_path), Some(&cmx_depfile_path), &include_path)
-            .unwrap();
-
-        assert_eq_file(
-            out_cmx_path,
-            json!({
-                "program": {
-                    "binary": "bin/hello_world"
-                }
-            }),
-        );
-        assert_eq!(cmx_depfile_path.exists(), false);
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            }
+        }));
+        ctx.assert_no_depfile();
     }
 
     #[test]
     fn test_invalid_include() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": ["doesnt_exist.cmx"],
@@ -473,11 +451,7 @@ mod tests {
                 }
             }),
         );
-
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
-        let result =
-            merge_includes(&cmx_path, Some(&out_cmx_path), Some(&cmx_depfile_path), &include_path);
+        let result = ctx.merge_includes(&cmx_path);
 
         assert_matches!(result, Err(Error::Parse { err, .. })
                         if err.starts_with("Couldn't read include ") && err.contains("doesnt_exist.cmx"));
@@ -485,71 +459,60 @@ mod tests {
 
     #[test]
     fn test_include_detect_cycle() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some1.cmx",
             json!({
                 "include": ["some2.cmx"],
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        ctx.new_file(
             "some2.cmx",
             json!({
                 "include": ["some1.cmx"],
             }),
         );
-
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let result = merge_includes(&cmx_path, Some(&out_cmx_path), None, &include_path);
+        let result = ctx.merge_includes(&cmx_path);
         assert_matches!(result, Err(Error::Parse { err, .. }) if err.contains("Includes cycle"));
     }
 
     #[test]
     fn test_include_a_diamond_is_not_a_cycle() {
+        // This is fine:
+        //
         //   A
         //  / \
         // B   C
         //  \ /
         //   D
-        // The above is fine.
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let a_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let a_path = ctx.new_file(
             "a.cmx",
             json!({
                 "include": ["b.cmx", "c.cmx"],
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        ctx.new_file(
             "b.cmx",
             json!({
                 "include": ["d.cmx"],
             }),
         );
-        tmp_file(
-            &tmp_dir,
+        ctx.new_file(
             "c.cmx",
             json!({
                 "include": ["d.cmx"],
             }),
         );
-        tmp_file(&tmp_dir, "d.cmx", json!({}));
-        let out_cmx_path = tmp_dir.path().join("out.cmx");
-        let result = merge_includes(&a_path, Some(&out_cmx_path), None, &include_path);
+        ctx.new_file("d.cmx", json!({}));
+        let result = ctx.merge_includes(&a_path);
         assert_matches!(result, Ok(()));
     }
 
     #[test]
     fn test_expect_nothing() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx1_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx1_path = ctx.new_file(
             "some1.cmx",
             json!({
                 "program": {
@@ -557,24 +520,11 @@ mod tests {
                 }
             }),
         );
-        let check_depfile_path = tmp_dir.path().join("check.d");
-        let stamp_path = tmp_dir.path().join("stamp");
-        assert_matches!(
-            check_includes(
-                &cmx1_path,
-                vec![],
-                None,
-                Some(&check_depfile_path),
-                Some(&stamp_path),
-                &include_path
-            ),
-            Ok(())
-        );
+        assert_matches!(ctx.check_includes(&cmx1_path, vec![]), Ok(()));
         // Don't generate depfile (or delete existing) if no includes found
-        assert_eq!(false, check_depfile_path.exists());
+        ctx.assert_no_depfile();
 
-        let cmx2_path = tmp_file(
-            &tmp_dir,
+        let cmx2_path = ctx.new_file(
             "some2.cmx",
             json!({
                 "include": [],
@@ -583,13 +533,9 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(
-            check_includes(&cmx2_path, vec![], None, None, None, &include_path),
-            Ok(())
-        );
+        assert_matches!(ctx.check_includes(&cmx2_path, vec![]), Ok(()));
 
-        let cmx3_path = tmp_file(
-            &tmp_dir,
+        let cmx3_path = ctx.new_file(
             "some3.cmx",
             json!({
                 "include": [ "foo.cmx" ],
@@ -598,18 +544,13 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(
-            check_includes(&cmx3_path, vec![], None, None, None, &include_path),
-            Ok(())
-        );
+        assert_matches!(ctx.check_includes(&cmx3_path, vec![]), Ok(()));
     }
 
     #[test]
     fn test_expect_something_present() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": [ "foo.cmx", "bar.cmx" ],
@@ -618,35 +559,18 @@ mod tests {
                 }
             }),
         );
-        tmp_file(&tmp_dir, "foo.cmx", json!({}));
-        tmp_file(&tmp_dir, "bar.cmx", json!({}));
-        let check_depfile_path = tmp_dir.path().join("check.d");
-        let stamp_path = tmp_dir.path().join("stamp");
-        assert_matches!(
-            check_includes(
-                &cmx_path,
-                vec!["bar.cmx".into()],
-                None,
-                Some(&check_depfile_path),
-                Some(&stamp_path),
-                &include_path
-            ),
-            Ok(())
-        );
-        let mut deps = String::new();
-        File::open(&check_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(
-            deps,
-            format!("{tmp}/stamp: {tmp}/bar.cmx {tmp}/foo.cmx\n", tmp = tmp_dir.path().display())
-        );
+        let foo_path = ctx.new_file("foo.cmx", json!({}));
+        let bar_path = ctx.new_file("bar.cmx", json!({}));
+        assert_matches!(ctx.check_includes(&cmx_path, vec!["bar.cmx".into()]), Ok(()));
+        // Note that inputs are sorted to keep depfile contents stable,
+        // so bar.cmx comes before foo.cmx.
+        ctx.assert_depfile_eq(&ctx.stamp, &[&bar_path, &foo_path]);
     }
 
     #[test]
     fn test_expect_something_missing() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx1_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx1_path = ctx.new_file(
             "some1.cmx",
             json!({
                 "include": [ "foo.cmx", "bar.cmx" ],
@@ -655,13 +579,12 @@ mod tests {
                 }
             }),
         );
-        tmp_file(&tmp_dir, "foo.cmx", json!({}));
-        tmp_file(&tmp_dir, "bar.cmx", json!({}));
-        assert_matches!(check_includes(&cmx1_path, vec!["qux.cmx".into()], None, None, None, &include_path),
+        ctx.new_file("foo.cmx", json!({}));
+        ctx.new_file("bar.cmx", json!({}));
+        assert_matches!(ctx.check_includes(&cmx1_path, vec!["qux.cmx".into()]),
                         Err(Error::Validate { filename, .. }) if filename == cmx1_path.to_str().map(String::from));
 
-        let cmx2_path = tmp_file(
-            &tmp_dir,
+        let cmx2_path = ctx.new_file(
             "some2.cmx",
             json!({
                 // No includes
@@ -670,16 +593,14 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(check_includes(&cmx2_path, vec!["qux.cmx".into()], None, None, None, &include_path),
+        assert_matches!(ctx.check_includes(&cmx2_path, vec!["qux.cmx".into()]),
                         Err(Error::Validate { filename, .. }) if filename == cmx2_path.to_str().map(String::from));
     }
 
     #[test]
     fn test_expect_something_transitive() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": [ "foo.cmx" ],
@@ -688,20 +609,15 @@ mod tests {
                 }
             }),
         );
-        tmp_file(&tmp_dir, "foo.cmx", json!({"include": [ "bar.cmx" ]}));
-        tmp_file(&tmp_dir, "bar.cmx", json!({}));
-        assert_matches!(
-            check_includes(&cmx_path, vec!["bar.cmx".into()], None, None, None, &include_path),
-            Ok(())
-        );
+        ctx.new_file("foo.cmx", json!({"include": [ "bar.cmx" ]}));
+        ctx.new_file("bar.cmx", json!({}));
+        assert_matches!(ctx.check_includes(&cmx_path, vec!["bar.cmx".into()]), Ok(()));
     }
 
     #[test]
     fn test_expect_fromfile() {
-        let tmp_dir = TempDir::new().unwrap();
-        let include_path = tmp_dir.path().to_path_buf();
-        let cmx_path = tmp_file(
-            &tmp_dir,
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
             "some.cmx",
             json!({
                 "include": [ "foo.cmx", "bar.cmx" ],
@@ -710,21 +626,17 @@ mod tests {
                 }
             }),
         );
-        tmp_file(&tmp_dir, "foo.cmx", json!({}));
-        tmp_file(&tmp_dir, "bar.cmx", json!({}));
+        ctx.new_file("foo.cmx", json!({}));
+        ctx.new_file("bar.cmx", json!({}));
 
-        let fromfile_path = tmp_dir.path().join("fromfile");
-        let mut fromfile = LineWriter::new(File::create(fromfile_path.clone()).unwrap());
+        let mut fromfile = LineWriter::new(File::create(ctx.fromfile.clone()).unwrap());
         writeln!(fromfile, "foo.cmx").unwrap();
         writeln!(fromfile, "bar.cmx").unwrap();
-        assert_matches!(
-            check_includes(&cmx_path, vec![], Some(&fromfile_path), None, None, &include_path),
-            Ok(())
-        );
+        assert_matches!(ctx.check_includes(&cmx_path, vec![]), Ok(()));
 
         // Add another include that's missing
         writeln!(fromfile, "qux.cmx").unwrap();
-        assert_matches!(check_includes(&cmx_path, vec![], Some(&fromfile_path), None, None, &include_path),
+        assert_matches!(ctx.check_includes(&cmx_path, vec![]),
                         Err(Error::Validate { filename, .. }) if filename == cmx_path.to_str().map(String::from));
     }
 }
