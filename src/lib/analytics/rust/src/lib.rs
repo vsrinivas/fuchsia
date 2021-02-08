@@ -49,7 +49,14 @@ pub async fn add_custom_event(
         return Ok(());
     }
 
-    let body = make_body_with_hash(&app_name, app_version, category, action, label);
+    let body = make_body_with_hash(
+        &app_name,
+        app_version,
+        category,
+        action,
+        label,
+        &(uuid as UuidBuilder),
+    );
     let client = new_https_client();
     let req = Request::builder().method(Method::POST).uri(GA_URL).body(Body::from(body))?;
     let mut res = client.request(req).await;

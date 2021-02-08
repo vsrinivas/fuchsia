@@ -43,14 +43,17 @@ const GA_APP_VERSION_DEFAULT: &str = "unknown";
 
 const GA_CUSTOM_DIMENSION_1_KEY: &str = "cd1";
 
+pub type UuidBuilder = fn() -> String;
+
 pub fn make_body_with_hash(
     app_name: &str,
     app_version: Option<&str>,
     category: Option<&str>,
     action: Option<&str>,
     labels: Option<&str>,
+    uuid_builder: &UuidBuilder,
 ) -> String {
-    let uuid_pre = &uuid();
+    let uuid_pre = &(uuid_builder)();
     let uname = os_and_release_desc();
 
     let mut params = BTreeMap::new();
@@ -108,21 +111,32 @@ fn to_kv_post_body(params: &BTreeMap<&str, &str>) -> String {
 mod test {
     use super::*;
 
+    fn test_uuid() -> String {
+        "test_cid".to_string()
+    }
+
     #[test]
     fn make_post_body() {
         let args = "config analytics enable";
         let args_encoded = "config+analytics+enable";
         let app_name = "ffx";
         let app_version = "1";
-        let uname = "Linux+x86_64";
-        let cid = &uuid().to_string();
+        let uname = os_and_release_desc().replace(" ", "+");
+        let cid = test_uuid();
         let expected = format!(
             "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
             &app_name, &app_version, &uname, &cid, &args_encoded, &args_encoded
         );
         assert_eq!(
             expected,
-            make_body_with_hash(app_name, Some(app_version), None, Some(args), Some(args))
+            make_body_with_hash(
+                app_name,
+                Some(app_version),
+                None,
+                Some(args),
+                Some(args),
+                &(test_uuid as UuidBuilder)
+            )
         );
     }
 
@@ -133,15 +147,22 @@ mod test {
         let labels = "labels";
         let app_name = "ffx";
         let app_version = "1";
-        let uname = "Linux+x86_64";
-        let cid = &uuid().to_string();
+        let uname = os_and_release_desc().replace(" ", "+");
+        let cid = test_uuid();
         let expected = format!(
             "an={}&av={}&cd1={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
             &app_name, &app_version, &uname, &cid, &args_encoded, &labels
         );
         assert_eq!(
             expected,
-            make_body_with_hash(app_name, Some(app_version), None, Some(args), Some(labels))
+            make_body_with_hash(
+                app_name,
+                Some(app_version),
+                None,
+                Some(args),
+                Some(labels),
+                &(test_uuid as UuidBuilder)
+            )
         );
     }
 
