@@ -5,17 +5,32 @@
 package osmisc
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
+// IsDir determines whether a given path exists *and* is a directory. It will
+// return false (with no error) if the path does not exist. It will return true
+// if the path exists, even if the user doesn't have permission to enter and
+// read files in the directory.
+func IsDir(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return info.IsDir(), nil
+}
+
 // DirIsEmpty returns whether a given directory is empty.
 // By convention, we say that a directory is empty if it does not exist.
 func DirIsEmpty(dir string) (bool, error) {
 	entries, err := ioutil.ReadDir(dir)
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return true, nil
 	} else if err != nil {
 		return false, err

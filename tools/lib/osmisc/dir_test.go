@@ -12,6 +12,53 @@ import (
 	"testing"
 )
 
+func TestIsDir(t *testing.T) {
+	t.Run("returns false if path does not exist", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "does-not-exist")
+		isDir, err := IsDir(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isDir {
+			t.Fatalf("Expected IsDir to return false for a non-existent directory")
+		}
+	})
+
+	t.Run("returns false if path is a regular file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "foo.txt")
+		f, err := os.Create(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		isDir, err := IsDir(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isDir {
+			t.Fatalf("Expected IsDir to return false for a regular file")
+		}
+	})
+
+	t.Run("returns true if path is a directory", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "foo")
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+
+		isDir, err := IsDir(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !isDir {
+			t.Fatalf("Expected IsDir to return true for a directory that exists")
+		}
+	})
+}
+
 func TestDirIsEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
 
