@@ -117,6 +117,20 @@ macro_rules! payload_convert {
                 }
             }
 
+            impl TryFrom<service::message::MessageEvent> for $payload_type {
+                type Error = String;
+
+                fn try_from(value: service::message::MessageEvent) -> Result<Self, Self::Error> {
+                    paste::paste! {
+                        if let service::message::MessageEvent::Message(payload, _) = value {
+                            Payload::try_from(payload)
+                        } else {
+                            Err(String::from("wrong message type"))
+                        }
+                    }
+                }
+            }
+
             impl TryFromWithClient<service::message::MessageEvent> for $payload_type {
                 type Error = String;
 

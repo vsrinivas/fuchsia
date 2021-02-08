@@ -14,7 +14,7 @@ use crate::handler::base::Error;
 /// - The responder type for the `HangingGetHandler`.
 /// - A type of a key for change functions if custom change functions are used.
 ///     - If change functions aren't used, the [`change_func_key`] is ingnored,
-///       so can be anything.  
+///       so can be anything.
 ///       TODO(fxb/68167): Restructure this code to avoid needing to specify
 ///       unneeded parameters.
 /// - The handler function for requests.
@@ -34,12 +34,14 @@ macro_rules! fidl_process_full {
             use super::*;
             use $crate::fidl_processor::processor::SettingsFidlProcessor;
             use $crate::internal::switchboard;
+            use $crate::service;
             use $crate::message::base::MessengerType;
             use ::fuchsia_async as fasync;
             use ::futures::FutureExt;
 
             pub fn spawn (
                 switchboard_messenger_factory: switchboard::message::Factory,
+                service_messenger_factory: service::message::Factory,
                 stream: paste::paste!{[<$interface RequestStream>]}
             ) {
                 fasync::Task::local(async move {
@@ -51,9 +53,14 @@ macro_rules! fidl_process_full {
                         return;
                     };
 
+                    let service_messenger = service_messenger_factory
+                        .create(MessengerType::Unbound)
+                        .await.expect("service messenger should be created")
+                        .0;
+
                     let mut processor =
                         SettingsFidlProcessor::<paste::paste!{[<$interface Marker>]}>::new(
-                            stream, messenger,
+                            stream, service_messenger, messenger,
                         )
                         .await;
                     $(
@@ -97,9 +104,11 @@ macro_rules! fidl_process_policy {
             use crate::fidl_processor::processor::PolicyFidlProcessor;
             use crate::internal::policy;
             use crate::message::base::MessengerType;
+            use crate::service;
             use fuchsia_async as fasync;
 
             pub fn spawn(
+                messenger_factory: service::message::Factory,
                 policy_messenger_factory: policy::message::Factory,
                 stream: paste::paste! {[<$interface RequestStream>]},
             ) {
@@ -112,9 +121,17 @@ macro_rules! fidl_process_policy {
                         return;
                     };
 
+                    let service_messenger = messenger_factory
+                        .create(MessengerType::Unbound)
+                        .await
+                        .expect("service messenger should be created")
+                        .0;
+
                     let mut processor =
                         PolicyFidlProcessor::<paste::paste! {[<$interface Marker>]}>::new(
-                            stream, messenger,
+                            stream,
+                            service_messenger,
+                            messenger,
                         )
                         .await;
                     processor

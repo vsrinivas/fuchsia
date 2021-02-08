@@ -8,6 +8,7 @@ use crate::message::base;
 use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::MessengerType;
 use crate::message::messenger::MessengerClient;
+use crate::service;
 use crate::{internal, ExitSender};
 use anyhow::format_err;
 use fidl::endpoints::{Request, ServiceMarker};
@@ -72,9 +73,14 @@ async fn create_processor(
 ) -> PrivacyProxy {
     let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PrivacyMarker>().unwrap();
 
+    let service_messenger_factory = service::message::create_hub();
     let switchboard_messenger_factory = internal::switchboard::message::create_hub();
     let (switchboard_messenger, _) =
         switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (service_messenger, _) = service_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("should create messenger");
 
     let fidl_processor = BaseFidlProcessor::<
         PrivacyMarker,
@@ -82,7 +88,7 @@ async fn create_processor(
         switchboard::Address,
         DefaultRole,
     >::with_processing_units(
-        stream, switchboard_messenger, processing_units
+        stream, service_messenger, switchboard_messenger, processing_units
     );
 
     // Start processing.

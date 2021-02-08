@@ -4,16 +4,16 @@
 
 use {
     crate::base::{SettingInfo, SettingType},
-    crate::handler::base::{Error, Request},
-    crate::internal::switchboard,
+    crate::handler::base::{Error, Payload, Request},
     crate::message::base::Audience,
-    crate::message::receptor::extract_payload,
+    crate::service,
+    crate::service::TryFromWithClient,
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,
     futures::lock::Mutex,
     futures::stream::StreamExt,
-    futures::FutureExt,
     std::collections::HashMap,
+    std::convert::TryFrom,
     std::hash::Hash,
     std::marker::PhantomData,
     std::sync::Arc,
@@ -124,7 +124,7 @@ where
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    switchboard_messenger: switchboard::message::Messenger,
+    messenger: service::message::Messenger,
     listen_exit_tx: Option<UnboundedSender<()>>,
     data_type: PhantomData<T>,
     setting_type: SettingType,
@@ -148,13 +148,6 @@ enum ListenCommand {
     Exit,
 }
 
-// Generates a pattern that pulls a response out of a SwitchBoardAction.
-macro_rules! switchboard_action_response {
-    ($action:pat) => {
-        Ok((switchboard::Payload::Action(switchboard::Action::Response($action)), _))
-    };
-}
-
 impl<T, ST, K> Drop for HangingGetHandler<T, ST, K>
 where
     T: From<SettingInfo> + Send + Sync + 'static,
@@ -173,13 +166,13 @@ where
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
     pub async fn create(
-        switchboard_messenger: switchboard::message::Messenger,
+        messenger: service::message::Messenger,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST, K>>> {
         let (on_command_sender, mut on_command_receiver) =
             futures::channel::mpsc::unbounded::<ListenCommand>();
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST, K> {
-            switchboard_messenger,
+            messenger: messenger,
             listen_exit_tx: None,
             data_type: PhantomData,
             setting_type,
@@ -252,11 +245,11 @@ where
 
         if self.listen_exit_tx.is_none() {
             let command_tx_clone = self.command_tx.clone();
-            let mut receptor = self
-                .switchboard_messenger
+            let receptor = self
+                .messenger
                 .message(
-                    switchboard::Payload::Listen(switchboard::Listen::Request(self.setting_type)),
-                    Audience::Address(switchboard::Address::Switchboard),
+                    Payload::Request(Request::Listen).into(),
+                    Audience::Address(service::Address::Handler(self.setting_type)),
                 )
                 .send();
 
@@ -264,14 +257,16 @@ where
             self.listen_exit_tx = Some(exit_tx);
 
             fasync::Task::spawn(async move {
-                loop {
-                    let receptor_fuse = receptor.next().fuse();
-                    futures::pin_mut!(receptor_fuse);
+                let receptor_fuse = receptor.fuse();
+                futures::pin_mut!(receptor_fuse);
 
+                loop {
                     futures::select! {
-                        update = receptor_fuse => {
-                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting_info))) = extract_payload(update) {
-                                command_tx_clone.unbounded_send(ListenCommand::Change(setting_info)).ok();
+                        update = receptor_fuse.select_next_some() => {
+                            if let Ok((Payload::Response(Ok(Some(setting_info))), _)) =
+                                Payload::try_from_with_client(update) {
+                                    command_tx_clone.unbounded_send(
+                                        ListenCommand::Change(setting_info)).ok();
                             }
                         }
                         _ = exit_rx.next() => {
@@ -279,7 +274,8 @@ where
                         }
                     }
                 }
-            }).detach();
+            })
+            .detach();
         }
 
         if !controller.on_watch() {
@@ -335,20 +331,26 @@ where
 
     async fn get_response(&self) -> Result<SettingInfo, anyhow::Error> {
         let mut receptor = self
-            .switchboard_messenger
+            .messenger
             .message(
-                switchboard::Payload::Action(switchboard::Action::Request(
-                    self.setting_type,
-                    Request::Get,
-                )),
-                Audience::Address(switchboard::Address::Switchboard),
+                Payload::Request(Request::Get).into(),
+                Audience::Address(service::Address::Handler(self.setting_type)),
             )
             .send();
 
-        match receptor.next_payload().await {
-            switchboard_action_response!(Ok(Some(setting_response))) => Ok(setting_response),
-            switchboard_action_response!(Err(err)) => Err(anyhow::Error::new(err)),
-            _ => Err(anyhow::Error::new(Error::UnexpectedError("Unexpected error".into()))),
+        match Payload::try_from(
+            receptor
+                .next_payload()
+                .await
+                .map_err(|_| anyhow::Error::new(Error::UnhandledType(self.setting_type)))?
+                .0,
+        )
+        .map_err(|_| {
+            anyhow::Error::new(Error::UnexpectedError("Could not convert payload".into()))
+        })? {
+            Payload::Response(Ok(Some(setting_response))) => Ok(setting_response),
+            Payload::Response(Err(err)) => Err(anyhow::Error::new(err)),
+            _ => Err(anyhow::Error::new(Error::UnexpectedError("Unexpected payload".into()))),
         }
     }
 }
@@ -369,7 +371,6 @@ mod tests {
     const ID1: f32 = 1.0;
     const ID2: f32 = 2.0;
 
-    const SETTING_TYPE: SettingType = SettingType::Display;
     const SET_ERROR: &str = "set failure";
 
     #[derive(PartialEq, Debug, Clone)]
@@ -394,15 +395,16 @@ mod tests {
         sender: UnboundedSender<Event>,
     }
 
-    struct TestSwitchboardBuilder {
+    struct TestSettingHandlerBuilder {
         id_to_send: Option<f32>,
         always_fail: bool,
-        messenger_factory: switchboard::message::Factory,
+        messenger_factory: service::message::Factory,
+        setting_type: SettingType,
     }
 
-    impl TestSwitchboardBuilder {
-        fn new(messenger_factory: switchboard::message::Factory) -> Self {
-            Self { messenger_factory, id_to_send: None, always_fail: false }
+    impl TestSettingHandlerBuilder {
+        fn new(messenger_factory: service::message::Factory, setting_type: SettingType) -> Self {
+            Self { messenger_factory, id_to_send: None, always_fail: false, setting_type }
         }
 
         fn set_initial_id(mut self, id: f32) -> Self {
@@ -415,51 +417,48 @@ mod tests {
             self
         }
 
-        async fn build(self) -> Arc<Mutex<TestSwitchboard>> {
-            TestSwitchboard::create(self.messenger_factory, self.id_to_send, self.always_fail).await
+        async fn build(self) -> Arc<Mutex<TestSettingHandler>> {
+            TestSettingHandler::create(
+                self.messenger_factory,
+                self.id_to_send,
+                self.always_fail,
+                self.setting_type,
+            )
+            .await
         }
     }
 
-    struct TestSwitchboard {
+    struct TestSettingHandler {
         id_to_send: Option<f32>,
-        setting_type: Option<SettingType>,
-        listener: Option<switchboard::message::MessageClient>,
+        listener: Option<service::message::MessageClient>,
         always_fail: bool,
     }
 
-    impl TestSwitchboard {
+    impl TestSettingHandler {
         async fn create(
-            messenger_factory: switchboard::message::Factory,
+            messenger_factory: service::message::Factory,
             id_to_send: Option<f32>,
             always_fail: bool,
-        ) -> Arc<Mutex<TestSwitchboard>> {
-            let switchboard = Arc::new(Mutex::new(TestSwitchboard {
+            setting_type: SettingType,
+        ) -> Arc<Mutex<TestSettingHandler>> {
+            let handler = Arc::new(Mutex::new(TestSettingHandler {
                 id_to_send,
-                setting_type: None,
                 listener: None,
                 always_fail: always_fail,
             }));
 
             let (_, mut receptor) = messenger_factory
-                .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+                .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
                 .await
-                .unwrap();
+                .expect("messenger should have been created");
 
-            let switchboard_clone = switchboard.clone();
+            let handler_clone = handler.clone();
             fasync::Task::spawn(async move {
                 while let Ok((payload, client)) = receptor.next_payload().await {
-                    let mut switchboard = switchboard_clone.lock().await;
-                    match payload {
-                        switchboard::Payload::Action(switchboard::Action::Request(
-                            setting_type,
-                            request,
-                        )) => {
-                            switchboard.request(client, setting_type, request);
-                        }
-                        switchboard::Payload::Listen(switchboard::Listen::Request(
-                            setting_type,
-                        )) => {
-                            switchboard.listen(client, setting_type);
+                    let mut handler = handler_clone.lock().await;
+                    match Payload::try_from(payload) {
+                        Ok(Payload::Request(request)) => {
+                            handler.request(client, request);
                         }
                         _ => {
                             panic!("unexpected payload");
@@ -469,7 +468,7 @@ mod tests {
             })
             .detach();
 
-            switchboard
+            handler
         }
 
         fn set_id(&mut self, id: f32) {
@@ -479,56 +478,52 @@ mod tests {
         fn notify_listener(&self, value: f32) {
             if let Some(listener) = self.listener.clone() {
                 listener
-                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
-                        SettingInfo::Brightness(DisplayInfo::new(
+                    .reply(
+                        Payload::Response(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
                             false,
                             value,
                             true,
                             LowLightMode::Disable,
                             None,
-                        )),
-                    )))
+                        )))))
+                        .into(),
+                    )
                     .send();
                 return;
             }
             panic!("Missing listener to notify");
         }
 
-        fn listen(
-            &mut self,
-            listener: switchboard::message::MessageClient,
-            setting_type: SettingType,
-        ) {
-            self.setting_type = Some(setting_type);
+        fn listen(&mut self, listener: service::message::MessageClient) {
             self.listener = Some(listener);
         }
 
-        fn request(
-            &mut self,
-            requestor: switchboard::message::MessageClient,
-            setting_type: SettingType,
-            request: Request,
-        ) {
-            assert_eq!(setting_type, SETTING_TYPE);
-            assert_eq!(request, Request::Get);
+        fn request(&mut self, requestor: service::message::MessageClient, request: Request) {
+            match request {
+                Request::Listen => {
+                    self.listen(requestor);
+                }
+                Request::Get => {
+                    let mut response = None;
+                    if self.always_fail {
+                        response = Some(Err(Error::from(SET_ERROR)));
+                    } else if let Some(value) = self.id_to_send {
+                        response = Some(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
+                            false,
+                            value,
+                            true,
+                            LowLightMode::Disable,
+                            None,
+                        )))));
+                    }
 
-            let mut response = None;
-            if self.always_fail {
-                response = Some(Err(Error::from(SET_ERROR)));
-            } else if let Some(value) = self.id_to_send {
-                response = Some(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
-                    false,
-                    value,
-                    true,
-                    LowLightMode::Disable,
-                    None,
-                )))));
-            }
-
-            if let Some(response) = response.take() {
-                requestor
-                    .reply(switchboard::Payload::Action(switchboard::Action::Response(response)))
-                    .send();
+                    if let Some(response) = response.take() {
+                        requestor.reply(Payload::Response(response).into()).send();
+                    }
+                }
+                _ => {
+                    panic!("Unexpected request type");
+                }
             }
         }
     }
@@ -567,16 +562,17 @@ mod tests {
     /// Ensures errors are gracefully handed back by the hanging_get
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_error_resolution() {
-        let switchboard_messenger_factory = switchboard::message::create_hub();
-        let _ = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
+        let messenger_factory = service::message::create_hub();
+        let setting_type = SettingType::Display;
+        let _ = TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
             .set_always_fail(true)
             .build()
             .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
-                SettingType::Display,
+                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                setting_type,
             )
             .await;
 
@@ -603,17 +599,19 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_change_after_watch() {
-        let switchboard_messenger_factory = switchboard::message::create_hub();
+        let messenger_factory = service::message::create_hub();
+        let setting_type = SettingType::Display;
 
-        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
-            .set_initial_id(ID1)
-            .build()
-            .await;
+        let setting_handler_handle =
+            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
+                .set_initial_id(ID1)
+                .build()
+                .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
-                SettingType::Display,
+                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                setting_type,
             )
             .await;
 
@@ -636,25 +634,28 @@ mod tests {
             .watch(TestSender { sender: hanging_get_responder.clone() }, None)
             .await;
 
-        switchboard_handle.lock().await.set_id(ID2);
+        setting_handler_handle.lock().await.set_id(ID2);
 
-        switchboard_handle.lock().await.notify_listener(ID2);
+        setting_handler_handle.lock().await.notify_listener(ID2);
 
         verify_id(hanging_get_listener.next().await.unwrap(), ID2);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_after_change() {
-        let switchboard_messenger_factory = switchboard::message::create_hub();
-        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
-            .set_initial_id(ID1)
-            .build()
-            .await;
+        let messenger_factory = service::message::create_hub();
+        let setting_type = SettingType::Display;
+
+        let setting_handler_handle =
+            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
+                .set_initial_id(ID1)
+                .build()
+                .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
-                SettingType::Display,
+                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                setting_type,
             )
             .await;
 
@@ -670,9 +671,9 @@ mod tests {
         // First get should return immediately
         verify_id(hanging_get_listener.next().await.unwrap(), ID1);
 
-        switchboard_handle.lock().await.set_id(ID2);
+        setting_handler_handle.lock().await.set_id(ID2);
 
-        switchboard_handle.lock().await.notify_listener(ID2);
+        setting_handler_handle.lock().await.notify_listener(ID2);
 
         // Subsequent one should wait until new value is notified
         hanging_get_handler
@@ -686,16 +687,18 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_with_change_function() {
-        let switchboard_messenger_factory = switchboard::message::create_hub();
-        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
-            .set_initial_id(ID1)
-            .build()
-            .await;
+        let messenger_factory = service::message::create_hub();
+        let setting_type = SettingType::Display;
+        let setting_handler_handle =
+            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
+                .set_initial_id(ID1)
+                .build()
+                .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
-                SettingType::Display,
+                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                setting_type,
             )
             .await;
 
@@ -720,9 +723,9 @@ mod tests {
         // First get should return immediately even with change function
         verify_id(hanging_get_listener.next().await.unwrap(), ID1);
 
-        switchboard_handle.lock().await.set_id(ID2);
+        setting_handler_handle.lock().await.set_id(ID2);
 
-        switchboard_handle.lock().await.notify_listener(ID2);
+        setting_handler_handle.lock().await.notify_listener(ID2);
 
         // Subsequent watch should return ignoring change function
         hanging_get_handler
@@ -734,9 +737,9 @@ mod tests {
         verify_id(hanging_get_listener.next().await.unwrap(), ID2);
 
         // Subsequent watch with change function should only return if change is big enough
-        switchboard_handle.lock().await.set_id(ID2 + 1.0);
+        setting_handler_handle.lock().await.set_id(ID2 + 1.0);
 
-        switchboard_handle.lock().await.notify_listener(ID2 + 1.0);
+        setting_handler_handle.lock().await.notify_listener(ID2 + 1.0);
 
         hanging_get_handler
             .lock()
@@ -753,25 +756,28 @@ mod tests {
         let sleep_duration = zx::Duration::from_millis(1);
         fasync::Timer::new(sleep_duration.after_now()).await;
 
-        switchboard_handle.lock().await.set_id(ID2 + 3.0);
+        setting_handler_handle.lock().await.set_id(ID2 + 3.0);
 
-        switchboard_handle.lock().await.notify_listener(ID2 + 3.0);
+        setting_handler_handle.lock().await.notify_listener(ID2 + 3.0);
 
         verify_id(hanging_get_listener.next().await.unwrap(), ID2 + 3.0);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_with_change_function_multiple() {
-        let switchboard_messenger_factory = switchboard::message::create_hub();
-        let switchboard_handle = TestSwitchboardBuilder::new(switchboard_messenger_factory.clone())
-            .set_initial_id(ID1)
-            .build()
-            .await;
+        let messenger_factory = service::message::create_hub();
+        let setting_type = SettingType::Display;
+
+        let setting_handler_handle =
+            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
+                .set_initial_id(ID1)
+                .build()
+                .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
-                SettingType::Display,
+                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                setting_type,
             )
             .await;
 
@@ -839,8 +845,8 @@ mod tests {
             .await;
 
         // Send a value big enough to trigger the smaller change function but not the larger one.
-        switchboard_handle.lock().await.set_id(ID2);
-        switchboard_handle.lock().await.notify_listener(ID2);
+        setting_handler_handle.lock().await.set_id(ID2);
+        setting_handler_handle.lock().await.notify_listener(ID2);
 
         verify_id(hanging_get_listener2.next().await.unwrap(), ID2);
 
@@ -858,8 +864,8 @@ mod tests {
 
         // Send a value big enough to trigger both change functions.
         let big_value = ID1 + min_difference;
-        switchboard_handle.lock().await.set_id(big_value);
-        switchboard_handle.lock().await.notify_listener(big_value);
+        setting_handler_handle.lock().await.set_id(big_value);
+        setting_handler_handle.lock().await.notify_listener(big_value);
 
         // Both hanging gets got the value.
         verify_id(hanging_get_listener.next().await.unwrap(), big_value);

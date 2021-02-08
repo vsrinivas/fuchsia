@@ -15,6 +15,7 @@ use crate::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::internal::switchboard::{self, Action, Address, Payload};
 use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::{self, Audience};
+use crate::service;
 use crate::ExitSender;
 use std::hash::Hash;
 
@@ -161,16 +162,13 @@ where
 {
     pub(crate) async fn new(
         setting_type: SettingType,
-        switchboard_messenger: switchboard::message::Messenger,
+        messenger: service::message::Messenger,
+        _switchboard_messenger: switchboard::message::Messenger,
         callback: RequestCallback<S, T, ST, K, Payload, Address>,
     ) -> Self {
         Self {
             callback,
-            hanging_get_handler: HangingGetHandler::create(
-                switchboard_messenger.clone(),
-                setting_type,
-            )
-            .await,
+            hanging_get_handler: HangingGetHandler::create(messenger.clone(), setting_type).await,
         }
     }
 }
