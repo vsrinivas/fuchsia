@@ -158,17 +158,6 @@ func DefaultVirtualDevice(arch string) *fvdpb.VirtualDevice {
 	}
 }
 
-// Unpack unpacks the QEMU distribution.
-//
-// TODO(fxbug.dev/58804): Replace all call sites to UnpackFrom.
-func Unpack() (*Distribution, error) {
-	ex, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-	return UnpackFrom(filepath.Join(filepath.Dir(ex), "test_data"), DistributionParams{Emulator: Qemu})
-}
-
 // UnpackFrom unpacks the emulator distribution.
 //
 // path is the path to host_x64/test_data containing the emulator.
