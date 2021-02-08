@@ -63,17 +63,12 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
           cond = (pval != value);
           break;
         case COND_LT:
-          cond = (pval < value);
-          break;
         case COND_GT:
-          cond = (pval > value);
-          break;
         case COND_LE:
-          cond = (pval <= value);
-          break;
         case COND_GE:
-          cond = (pval >= value);
-          break;
+          LOGF(ERROR, "Driver '%s' has deprecated inequality bind instruction %#08x", ctx->name,
+               inst);
+          return false;
         default:
           // illegal instruction: abort
           LOGF(ERROR, "Driver '%s' has illegal bind instruction %#08x", ctx->name, inst);
