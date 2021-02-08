@@ -50,12 +50,12 @@ VkReadbackTest::~VkReadbackTest() {
   }
 }
 
-bool VkReadbackTest::Initialize() {
+bool VkReadbackTest::Initialize(uint32_t vk_api_verison) {
   if (is_initialized_) {
     return false;
   }
 
-  if (!InitVulkan()) {
+  if (!InitVulkan(vk_api_verison)) {
     RTN_MSG(false, "Failed to initialize Vulkan\n");
   }
 
@@ -132,7 +132,7 @@ void VkReadbackTest::VerifyExpectedImageFormats() const {
 }
 #endif  // __Fuchsia__
 
-bool VkReadbackTest::InitVulkan() {
+bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   if (vulkan_initialized_) {
     RTN_MSG(false, "InitVulkan failed.  Already initialized.\n")
   }
@@ -145,7 +145,7 @@ bool VkReadbackTest::InitVulkan() {
 
   vk::ApplicationInfo app_info;
   app_info.pApplicationName = "vkreadback";
-  app_info.apiVersion = VK_API_VERSION_1_1;
+  app_info.apiVersion = vk_api_version;
 
   vk::InstanceCreateInfo instance_info;
   instance_info.pApplicationInfo = &app_info;
@@ -159,7 +159,17 @@ bool VkReadbackTest::InitVulkan() {
   device_info.enabledExtensionCount = enabled_extension_names.size();
   device_info.ppEnabledExtensionNames = enabled_extension_names.data();
 
-  ctx_ = builder.set_instance_info(instance_info).set_device_info(device_info).Unique();
+  auto features = vk::PhysicalDeviceVulkan12Features().setTimelineSemaphore(true);
+  if (vk_api_version == VK_API_VERSION_1_2) {
+    device_info.setPNext(&features);
+  }
+
+  builder.set_instance_info(instance_info).set_device_info(device_info);
+#ifdef __linux__
+  // Validation layers not conveniently available yet in virtual Linux
+  builder.set_validation_layers_enabled(false);
+#endif
+  ctx_ = builder.Unique();
 
 #ifdef __Fuchsia__
   // Initialize Fuchsia external memory procs.
@@ -449,6 +459,25 @@ bool VkReadbackTest::Submit(vk::Fence fence, bool transition_image) {
       (transition_image ? command_buffers_[0].get() : command_buffers_[1].get());
   submit_info.pCommandBuffers = &command_buffer;
   auto rv_submit = ctx_->queue().submit(1, &submit_info, fence);
+  RTN_IF_VKH_ERR(false, rv_submit, "vk::Queue::submit()\n");
+
+  return true;
+}
+
+bool VkReadbackTest::Submit(vk::Semaphore semaphore, uint64_t signal, bool transition_image) {
+  auto timeline_info =
+      vk::TimelineSemaphoreSubmitInfo().setSignalSemaphoreValueCount(1).setPSignalSemaphoreValues(
+          &signal);
+
+  auto submit_info = vk::SubmitInfo()
+                         .setPNext(&timeline_info)
+                         .setSignalSemaphoreCount(1)
+                         .setPSignalSemaphores(&semaphore)
+                         .setCommandBufferCount(1)
+                         .setPCommandBuffers(transition_image ? &command_buffers_[0].get()
+                                                              : &command_buffers_[1].get());
+
+  auto rv_submit = ctx_->queue().submit(1, &submit_info, vk::Fence{});
   RTN_IF_VKH_ERR(false, rv_submit, "vk::Queue::submit()\n");
 
   return true;

@@ -44,7 +44,7 @@ TEST(VulkanTimerQuery, TimerQuery) {
   EXPECT_EQ(ZX_OK, result_vmo.read(&result, 0u, sizeof(result)));
 
   VkReadbackTest test;
-  ASSERT_TRUE(test.Initialize());
+  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_1));
   ASSERT_TRUE(test.Exec());
   ASSERT_TRUE(test.Readback());
 

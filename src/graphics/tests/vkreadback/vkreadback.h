@@ -43,17 +43,19 @@ class VkReadbackTest {
 
   virtual ~VkReadbackTest();
 
-  bool Initialize();
+  bool Initialize(uint32_t vk_api_verison);
   bool Exec(vk::Fence fence = {});
   bool Submit(vk::Fence fence = {}, bool transition_image = true);
+  bool Submit(vk::Semaphore semaphore, uint64_t signal, bool transition_image);
   bool Wait();
   bool Readback();
   vk::Device vulkan_device() const { return ctx_->device().get(); }
+  vk::PhysicalDevice physical_device() const { return ctx_->physical_device(); }
 
   uint32_t get_exported_memory_handle() const { return exported_memory_handle_; }
 
  private:
-  bool InitVulkan();
+  bool InitVulkan(uint32_t vk_api_version);
   bool InitImage();
   bool InitCommandBuffers();
 
