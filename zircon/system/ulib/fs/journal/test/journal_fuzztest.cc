@@ -35,9 +35,8 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   while (fuzz_utils.data_provider()->remaining_bytes() != 0) {
     [[maybe_unused]] zx_status_t status = journal.CommitTransaction(
         {.metadata_operations = fuzz_utils.FuzzOperation(ReservedVmoid::kJournalVmoid),
-         .data_promise = journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid))
-                             .and_then(journal.WriteData(
-                                 fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid)))});
+         .data_promise =
+             journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid))});
     sync_completion_t sync_completion;
     journal.schedule_task(journal.Sync().then(
         [&sync_completion](
