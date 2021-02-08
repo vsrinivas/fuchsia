@@ -264,4 +264,18 @@ fitx::result<zbitl::View<ByteView>::Error> MemRangeTable::take_error() {
   return view_.take_error();
 }
 
+// Convert a zbi_mem_range_t memory type into a human-readable string.
+std::string_view MemRangeTypeName(uint32_t type) {
+  switch (type) {
+    case ZBI_MEM_RANGE_RAM:
+      return "RAM";
+    case ZBI_MEM_RANGE_PERIPHERAL:
+      return "peripheral";
+    case ZBI_MEM_RANGE_RESERVED:
+      return "reserved";
+    default:
+      return {};
+  }
+}
+
 }  // namespace zbitl

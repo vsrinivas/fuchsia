@@ -41,7 +41,7 @@ if (current_toolchain != default_toolchain) {
 
   source_set("test-main") {
     testonly = true
-    sources = [ "test-main.h" ]
+    public = [ "test-main.h" ]
     public_deps = [
       "..:main",
       "..:phys_executable.headers",
@@ -120,19 +120,22 @@ if (current_toolchain != default_toolchain) {
 
   # Build a ZBI test that uses the physboot framework.
   template("phys_zbi_test") {
-    zbi_executable("$target_name.executable") {
-      testonly = true
-      deps = []
-      forward_variables_from(invoker, "*", [ "target_name" ])
-      deps += [ ":zbi-test-main" ]
+    if (defined(invoker.test_deps)) {
+      test_deps = invoker.test_deps
+    } else {
+      test_deps = [ ":$target_name.executable" ]
+      zbi_executable("$target_name.executable") {
+        visibility = [ ":*" ]
+        testonly = true
+        deps = []
+        forward_variables_from(invoker, "*", [ "target_name" ])
+        deps += [ ":zbi-test-main" ]
+      }
     }
 
     zbi_test(target_name) {
       args = []
-      deps = [
-        ":$target_name.executable",
-        ":dummy.txt",
-      ]
+      deps = test_deps + [ ":dummy.txt" ]
 
       # TODO(mcgrathr): enable on hardware too
       device_types = [
@@ -152,10 +155,12 @@ if (current_toolchain != default_toolchain) {
   # and "zbi-xxx" for the ZBI test.
   template("common_test") {
     phys_qemu_test("qemu-$target_name") {
+      visibility = [ ":*" ]
       forward_variables_from(invoker, "*", [ "target_name" ])
     }
 
     phys_zbi_test("zbi-$target_name") {
+      visibility = [ ":*" ]
       forward_variables_from(invoker, "*", [ "target_name" ])
     }
 
@@ -210,6 +215,8 @@ if (current_toolchain != default_toolchain) {
     sources = [ "phys-memory-test.cc" ]
     deps = [
       ":test-main",
+      "..:allocation",
+      "..:zbi-memory",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/phys/lib/memalloc",
@@ -218,6 +225,7 @@ if (current_toolchain != default_toolchain) {
   }
 
   zbi_input("decompress-test-data") {
+    visibility = [ ":*" ]
     testonly = true
     type = "ramdisk"
     args = [
@@ -233,6 +241,9 @@ if (current_toolchain != default_toolchain) {
     sources = [ "decompress-test.cc" ]
     deps = [
       ":test-main",
+      "..:allocation",
+      "..:zbi-memory",
+      "..:zbitl-allocation",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/zbitl",

@@ -648,4 +648,11 @@ TEST(MemRangeMerger, MemRangeTableIterator) {
   EXPECT_EQ(ranges[0].type, 1u);
 }
 
+TEST(MemConfig, MemRangeTypeName) {
+  EXPECT_EQ(zbitl::MemRangeTypeName(ZBI_MEM_RANGE_RAM), "RAM");
+  EXPECT_EQ(zbitl::MemRangeTypeName(ZBI_MEM_RANGE_RESERVED), "reserved");
+  EXPECT_EQ(zbitl::MemRangeTypeName(ZBI_MEM_RANGE_PERIPHERAL), "peripheral");
+  EXPECT_EQ(zbitl::MemRangeTypeName(-1), "");
+}
+
 }  // namespace

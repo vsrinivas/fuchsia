@@ -206,6 +206,10 @@ class MemRangeMerger {
   Iterator end_;
 };
 
+/// This returns the human-readable name for this zbi_mem_range_t.type value.
+/// It returns the default-constructed (empty()) string_view for unknown types.
+std::string_view MemRangeTypeName(uint32_t type);
+
 }  // namespace zbitl
 
 #endif  // LIB_ZBITL_ITEMS_MEM_CONFIG_H_

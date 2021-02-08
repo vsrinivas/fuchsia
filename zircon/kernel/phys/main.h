@@ -59,4 +59,10 @@ inline void ApplyRelocations() {
 #endif
 }
 
+// Read the boot loader data to initialize memory for "allocation.h" APIs.
+// The argument is the pointer to the ZBI, Multiboot info, Device Tree, etc.
+// depending on the particular phys environment.  This panics if no memory is
+// found for the allocator.
+void InitMemory(void* bootloader_data);
+
 #endif  // ZIRCON_KERNEL_PHYS_MAIN_H_

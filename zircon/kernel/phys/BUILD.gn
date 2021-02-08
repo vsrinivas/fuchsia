@@ -100,8 +100,10 @@ if (toolchain.environment == "kernel.phys" ||
       "symbolize.h",
     ]
 
-    # symnbolize.h includes main.h
-    public_deps = [ ":main" ]
+    public_deps = [
+      # "symbolize.h" has #include "main.h".
+      ":main",
+    ]
   }
 
   # This is used implicitly by phys_executable() targets,
@@ -125,8 +127,6 @@ if (toolchain.environment == "kernel.phys" ||
   # This is used implicitly by zbi_executable() targets.
   source_set("zbi_executable.deps") {
     sources = [
-      "decompress.cc",
-      "memory.cc",
       "zbi-header.S",
       "zbi-main.cc",
     ]
@@ -134,7 +134,6 @@ if (toolchain.environment == "kernel.phys" ||
       ":main",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
-      "//zircon/kernel/phys/lib/memalloc",
       "//zircon/system/ulib/uart",
       "//zircon/system/ulib/zbitl",
     ]
@@ -145,7 +144,7 @@ if (toolchain.environment == "kernel.phys" ||
   # Things in other directories include main.h by source-absolute path.
   # But they put this in their deps to get its transitive deps.
   source_set("main") {
-    sources = [ "main.h" ]
+    public = [ "main.h" ]
     public_deps = [
       # "main.h" has #include <lib/arch/ticks.h>.
       "//zircon/kernel/lib/arch",
@@ -154,8 +153,10 @@ if (toolchain.environment == "kernel.phys" ||
     # If the toolchain is compiling a PIE executable, include required libraries.
     if (toolchain.tags + [ "static-pie" ] - [ "static-pie" ] !=
         toolchain.tags) {
-      # "main.h" has #include <lib/static-pie/static-pie.h>
-      public_deps += [ "//zircon/system/ulib/static-pie" ]
+      public_deps += [
+        # "main.h" has #include <lib/static-pie/static-pie.h>
+        "//zircon/system/ulib/static-pie",
+      ]
     }
   }
 
@@ -164,6 +165,59 @@ if (toolchain.environment == "kernel.phys" ||
   source_set("qemu-header") {
     sources = [ "qemu-header.S" ]
     public_configs = [ "//zircon/kernel/arch/$zircon_cpu/phys:qemu.config" ]
+  }
+
+  source_set("allocation") {
+    public = [ "allocation.h" ]
+    sources = [ "allocation.cc" ]
+    deps = [
+      ":main",
+      "//zircon/kernel/phys/lib/memalloc",
+    ]
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+
+      # allocation.h has #include <fbl/alloc_checker.h>.
+      "//zircon/system/ulib/fbl",
+
+      # allocation.h has #include <lib/fitx/result.h>.
+      "//zircon/system/ulib/zxc",
+    ]
+  }
+
+  source_set("zbitl-allocation") {
+    public = [ "zbitl-allocation.h" ]
+    sources = [ "zbitl-allocation.cc" ]
+    deps = [
+      ":allocation",
+      "//zircon/system/ulib/fbl",
+    ]
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+
+      # zbitl-allocation.h has #include <lib/fitx/result.h>.
+      "//zircon/system/ulib/zxc",
+    ]
+  }
+
+  source_set("zbi-memory") {
+    sources = [ "zbi-memory.cc" ]
+    deps = [
+      ":allocation",
+      ":main",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/system/ulib/zbitl",
+    ]
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+
+      # allocation.h has #include <fbl/alloc_checker.h>.
+      "//zircon/system/ulib/fbl",
+    ]
   }
 }
 

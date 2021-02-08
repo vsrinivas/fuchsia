@@ -17,7 +17,7 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 
-#include "../memory.h"
+#include "../allocation.h"
 #include "test-main.h"
 
 const char Symbolize::kProgramName_[] = "phys-memory-test";
@@ -38,8 +38,9 @@ size_t AllocateAndOverwriteFreeMemory() {
   size_t allocation_size = kMiB;  // start with 1MiB allocations.
   while (allocation_size > 0) {
     // Allocate some memory.
-    auto* result = reinterpret_cast<uint8_t*>(AllocateMemory(allocation_size));
-    if (result == nullptr) {
+    fbl::AllocChecker ac;
+    auto result = Allocation::New(ac, allocation_size);
+    if (!ac.check()) {
       allocation_size /= 2;
       continue;
     }
@@ -52,8 +53,11 @@ size_t AllocateAndOverwriteFreeMemory() {
     // RAM to avoid the copy taking to long on systems with large amounts of RAM.
     constexpr size_t kMaxOverwrite = 64 * kMiB;
     if (bytes_allocated < kMaxOverwrite) {
-      memset(result, 0x33, allocation_size);
+      memset(result.get(), 0x33, allocation_size);
     }
+
+    // Leak this allocation.
+    (void)result.release();
   }
 
   return bytes_allocated;
@@ -63,7 +67,7 @@ size_t AllocateAndOverwriteFreeMemory() {
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   // Initialize memory for allocation/free.
-  InitMemory(static_cast<const zbi_header_t*>(zbi_ptr));
+  InitMemory(zbi_ptr);
 
   size_t bytes_allocated = AllocateAndOverwriteFreeMemory();
   if (bytes_allocated == 0) {
