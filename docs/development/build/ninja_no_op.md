@@ -197,7 +197,7 @@ supposed to produce this output, and then subsequently rerun dependent actions.
 There are also builders that trace actions' file system accesses. Diagnostics
 for stale or missing outputs look like:
 
-```
+```text
 Not all outputs of //your:label were written or touched, which can cause subsequent
 build invocations to re-execute actions due to a missing file or old timestamp.
 
@@ -213,7 +213,7 @@ Stale outputs:
 
 Diagnostics for unallowed writes to inputs look like:
 
-```
+```text
 Unexpected file accesses building //your/target:label, following the order they are accessed:
 (FileAccessType.WRITE /path/to/input-that-should-not-be-touched.txt)
 ```
