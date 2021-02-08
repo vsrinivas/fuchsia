@@ -4,8 +4,12 @@
 
 #include "fx_logger.h"
 
+#include <memory>
+#include <string>
+
 #ifndef SYSLOG_STATIC
 #include <fuchsia/logger/llcpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #endif
 
 #include <lib/syslog/logger.h>
@@ -146,6 +150,50 @@ void fx_logger::SetLogConnection(zx_handle_t handle) {
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
                                          const char* file, uint32_t line, const char* msg,
                                          va_list args, bool perform_format) {
+#ifndef SYSLOG_STATIC
+  if (syslog_backend::HasStructuredBackend() && this->socket_.is_valid()) {
+    std::unique_ptr<syslog_backend::LogBuffer> buf_ptr =
+        std::make_unique<syslog_backend::LogBuffer>();
+    syslog_backend::LogBuffer& buffer = *buf_ptr;
+    constexpr size_t kFormatStringLength = 128;
+    char fmt_string[kFormatStringLength];
+    fmt_string[kFormatStringLength - 1] = 0;
+    int n = kFormatStringLength;
+    // Format
+    // Number of bytes written not including null terminator
+    int count = 0;
+    if (!perform_format) {
+      count = snprintf(fmt_string, kFormatStringLength, "%s", msg);
+    } else {
+      count = vsnprintf(fmt_string, n, msg, args) + 1;
+      if (count < 0) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+    }
+    if (count >= n) {
+      // truncated
+      constexpr char kEllipsis[] = "...";
+      constexpr size_t kEllipsisSize = sizeof(kEllipsis);
+      snprintf(&fmt_string[0] + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
+    }
+
+    syslog_backend::BeginRecordWithSocket(&buffer, severity, file, line, fmt_string, nullptr,
+                                          this->socket_.get());
+    if (tag) {
+      syslog_backend::WriteKeyValue(&buffer, "tag", tag);
+    }
+    for (size_t i = 0; i < tags_.size(); i++) {
+      size_t len = tags_[i].length();
+      ZX_DEBUG_ASSERT(len < 128);
+      syslog_backend::WriteKeyValue(&buffer, "tag", tags_[i].data());
+    }
+    syslog_backend::EndRecord(&buffer);
+    if (!syslog_backend::FlushRecord(&buffer)) {
+      return ZX_ERR_IO;
+    }
+    return ZX_OK;
+  }
+#endif
   zx_time_t time = zx_clock_get_monotonic();
   fx_log_packet_t packet;
   memset(&packet, 0, sizeof(packet));

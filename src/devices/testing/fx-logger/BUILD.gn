@@ -23,7 +23,25 @@ fuzzers_package("fx-log-fuzzers") {
   cpp_fuzzers = [ ":fx-log-fuzzer" ]
 }
 
+fuzzer("fx-log-compat-fuzzer") {
+  sources = [ "fuzz.cc" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/syslog:syslog-compat",
+  ]
+  options = [ "max_len=1000000" ]
+}
+
+fuzzers_package("fx-log-compat-fuzzers") {
+  cpp_fuzzers = [ ":fx-log-compat-fuzzer" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":fx-log-fuzzers" ]
+  deps = [
+    ":fx-log-compat-fuzzers",
+    ":fx-log-fuzzers",
+  ]
 }

@@ -26,12 +26,18 @@
 
 namespace syslog_backend {
 
+bool HasStructuredBackend() { return true; }
+
 using log_word_t = uint64_t;
 
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
+  // We need to use _zx_object_get_info to avoid breaking the driver ABI.
+  // fake_ddk can fake out this method, which results in us deadlocking
+  // when used in certain drivers because the fake doesn't properly pass-through
+  // to the real syscall in this case.
   zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      _zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
@@ -117,6 +123,7 @@ struct RecordState {
   ::fuchsia::diagnostics::Severity severity;
   // arg_size in words
   size_t arg_size = 0;
+  zx_handle_t socket = ZX_HANDLE_INVALID;
   // key_size in bytes
   size_t current_key_size = 0;
   // Header of the current argument being encoded
@@ -309,14 +316,22 @@ class LogState {
   size_t num_tags_ = 0;
 };
 
-void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
-                 unsigned int line, const char* msg, const char* condition) {
+void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
+                         unsigned int line, const char* msg, const char* condition,
+                         zx_handle_t socket) {
   // Ensure we have log state
-  LogState::Get();
+  auto& log_state = LogState::Get();
   zx_time_t time = zx_clock_get_monotonic();
   auto* state = RecordState::CreatePtr(buffer);
   RecordState& record = *state;
+  // Invoke the constructor of RecordState to construct a valid RecordState
+  // inside the LogBuffer.
   new (state) RecordState;
+  if (socket != ZX_HANDLE_INVALID) {
+    state->socket = socket;
+  } else {
+    state->socket = cpp17::get<zx::socket>(log_state.descriptor()).get();
+  }
   state->log_severity = severity;
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -343,12 +358,24 @@ void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* fi
 
   // TODO(fxbug.dev/56051): Enable this everywhere once doing so won't spam everything.
   if (severity >= syslog::LOG_ERROR) {
-    encoder.AppendArgumentKey(record, SliceFromString(kFileFieldName));
-    encoder.AppendArgumentValue(record, SliceFromString(file_name));
-
+    if (file_name) {
+      encoder.AppendArgumentKey(record, SliceFromString(kFileFieldName));
+      encoder.AppendArgumentValue(record, SliceFromString(file_name));
+    }
     encoder.AppendArgumentKey(record, SliceFromString(kLineFieldName));
     encoder.AppendArgumentValue(record, static_cast<uint64_t>(line));
   }
+}
+
+void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
+                 unsigned int line, const char* msg, const char* condition) {
+  BeginRecordInternal(buffer, severity, file_name, line, msg, condition, ZX_HANDLE_INVALID);
+}
+
+void BeginRecordWithSocket(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
+                           unsigned int line, const char* msg, const char* condition,
+                           zx_handle_t socket) {
+  BeginRecordInternal(buffer, severity, file_name, line, msg, condition, socket);
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
@@ -398,9 +425,8 @@ bool FlushRecord(LogBuffer* buffer) {
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
-
-  auto& socket = cpp17::get<zx::socket>(GetState()->descriptor());
-  auto status = socket.write(0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
+  auto status =
+      zx_socket_write(state->socket, 0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
   if (status != ZX_OK) {
     AddDropped(state->dropped_count + 1);
   }

@@ -8,7 +8,11 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
+#include <unistd.h>
+
+#include "fx_logger.h"
 
 zx::socket connect_to_logger() {
   zx::socket invalid;
@@ -25,10 +29,16 @@ zx::socket connect_to_logger() {
   if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
     return invalid;
   }
-
-  auto result = logger_client.Connect(std::move(remote));
-  if (result.status() != ZX_OK) {
-    return invalid;
+  if (syslog_backend::HasStructuredBackend()) {
+    auto result = logger_client.ConnectStructured(std::move(remote));
+    if (result.status() != ZX_OK) {
+      return invalid;
+    }
+  } else {
+    auto result = logger_client.Connect(std::move(remote));
+    if (result.status() != ZX_OK) {
+      return invalid;
+    }
   }
   return local;
 }

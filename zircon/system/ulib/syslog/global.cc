@@ -10,6 +10,11 @@
 #include "export.h"
 #include "fx_logger.h"
 
+namespace syslog_internal {
+
+__WEAK bool HasStructuredBackend() { return false; }
+}  // namespace syslog_internal
+
 namespace {
 
 fx_logger_t* MakeDefaultLogger(bool connect) {

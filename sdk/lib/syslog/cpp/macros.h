@@ -23,6 +23,11 @@ struct LogBuffer;
 
 #define WEAK __attribute__((weak))
 
+#ifdef __Fuchsia__
+WEAK void BeginRecordWithSocket(LogBuffer* buffer, syslog::LogSeverity severity,
+                                const char* file_name, unsigned int line, const char* msg,
+                                const char* condition, zx_handle_t socket);
+#endif
 WEAK void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
                       unsigned int line, const char* msg, const char* condition);
 
@@ -37,6 +42,8 @@ WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, double value);
 WEAK void EndRecord(LogBuffer* buffer);
 
 WEAK bool FlushRecord(LogBuffer* buffer);
+
+WEAK bool HasStructuredBackend();
 
 template <typename... Args>
 constexpr size_t ArgsSize(Args... args) {
@@ -74,7 +81,7 @@ struct LogBuffer {
   // Max size of log buffer
   static constexpr auto kBufferSize = (1 << 15) / 8;
   // Additional storage for internal log state.
-  static constexpr auto kStateSize = 8;
+  static constexpr auto kStateSize = 9;
   // Record state (for keeping track of backend-specific details)
   uint64_t record_state[kStateSize];
   // Log data (used by the backend to encode the log into). The format

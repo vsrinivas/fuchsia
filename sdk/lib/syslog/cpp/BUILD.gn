@@ -37,6 +37,37 @@ sdk_source_set("cpp") {
   public_configs = [ "//sdk/config" ]
 }
 
+# Needed to export macros without relying on a specific backend
+# otherwise libraries can't include macros.h
+sdk_source_set("cpp-macros") {
+  # TODO(fxbug.dev/59937): Remove when Mac links OK against this.
+  if ((current_toolchain == "//build/toolchain:host_x64" && host_os == "mac") ||
+      (current_toolchain == "//build/toolchain:host_arm64" &&
+       host_os == "mac")) {
+    build_as_static = true
+  }
+
+  # Keep internal for now until the API stabilizes.
+  category = "internal"
+
+  sdk_name = "syslog_cpp"
+
+  include_base = "//sdk"
+
+  sources = [
+    "log_level.h",
+    "log_settings.cc",
+    "log_settings.h",
+    "logging_backend.h",
+    "macros.cc",
+    "macros.h",
+  ]
+
+  public_deps = [ "//zircon/public/lib/fit" ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
 sdk_source_set("backend_host") {
   # TODO(fxbug.dev/59937): Remove when Mac links OK against this.
   if ((current_toolchain == "//build/toolchain:host_x64" && host_os == "mac") ||
@@ -135,6 +166,35 @@ sdk_source_set("backend_fuchsia_lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
+  ]
+
+  data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
+sdk_source_set("backend_fuchsia_compat") {
+  # Keep internal for now until the API stabilizes.
+  category = "internal"
+
+  sdk_name = "syslog_cpp_backend_fuchsia_compat_lib"
+
+  include_base = "//sdk"
+
+  sources = [
+    "logging_backend_fuchsia.cc",
+    "logging_backend_fuchsia_globals.h",
+  ]
+
+  deps = [
+    ":backend_fuchsia_globals",
+    ":cpp-macros",
+    "//sdk/fidl/fuchsia.diagnostics.stream",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
+    "//sdk/lib/syslog/streams/cpp:streams-encoder",
+    "//zircon/public/lib/fit",
   ]
 
   data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]

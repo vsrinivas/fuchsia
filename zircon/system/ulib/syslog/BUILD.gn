@@ -19,6 +19,7 @@ zx_library("syslog") {
     "fdio_connect.cc",
     "fx_logger.cc",
     "global.cc",
+    "legacy.cc",
     "logger.cc",
   ]
   deps = [
@@ -26,15 +27,38 @@ zx_library("syslog") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/diagnostics/syslog:client_includes",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
   ]
   runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
+}
+
+zx_library("syslog-compat") {
+  sdk = "shared"
+  sdk_publishable = true
+  sdk_headers = syslog_headers
+  shared = true
+  sources = [
+    "compat.cc",
+    "fdio_connect.cc",
+    "fx_logger.cc",
+    "global.cc",
+    "logger.cc",
   ]
+  deps = [
+    ":helpers",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+    "//sdk/lib/diagnostics/syslog:client_includes",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+  ]
+  runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
 }
 
 # This static library should have no shared library dependencies,
@@ -57,9 +81,6 @@ zx_library("syslog-static") {
     "//zircon/public/lib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 zx_library("syslog-headers") {
