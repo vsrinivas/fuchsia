@@ -149,6 +149,12 @@ template("pm_build") {
       "-blobsfile",
       "-blobs-manifest",
     ]
+
+    # Due to the content-based nature of these outputs, timestamps of these
+    # outputs will not be freshened when their contents do not change in
+    # incremental builds, which allows for early termination of downstream
+    # build actions.
+    all_outputs_fresh = false
   }
 }
 
