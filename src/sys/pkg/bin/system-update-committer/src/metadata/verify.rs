@@ -3,19 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    super::errors::{VerifyError, VerifyFailureReason},
+    super::{
+        errors::{VerifyError, VerifyFailureReason},
+        inspect::write_to_inspect,
+    },
     anyhow::anyhow,
     fidl_fuchsia_update_verify::{BlobfsVerifierProxy, VerifyOptions},
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_inspect as finspect,
     futures::prelude::*,
-    std::time::Duration,
+    std::time::{Duration, Instant},
 };
 
 /// Dummy function to indicate where health verification will eventually go, and how to handle
 /// associated errors. This is NOT to be confused with verified execution; health verification
 /// is a different process we use to determine if we should give up on the backup slot.
-pub async fn do_health_verification() -> Result<(), VerifyError> {
-    Ok(())
+pub async fn do_health_verification(node: &finspect::Node) -> Result<(), VerifyError> {
+    let now = Instant::now();
+
+    // TODO(fxbug.dev/67381) call do_health_verification_impl. For now, we arbitrarily set to Ok
+    // so that we can integration test inspect.
+    let res = Ok(());
+
+    let () = write_to_inspect(node, &Ok(()), now.elapsed());
+    res
 }
 
 // Each health verification should time out after 1 hour.

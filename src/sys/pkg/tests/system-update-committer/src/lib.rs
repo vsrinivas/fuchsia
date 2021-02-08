@@ -4,6 +4,8 @@
 
 use {
     anyhow::anyhow,
+    diagnostics_hierarchy::DiagnosticsHierarchy,
+    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_fuchsia_paver::{Configuration, ConfigurationStatus},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async::{self as fasync, OnSignals, TimeoutExt},
@@ -11,6 +13,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
+    fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{channel::oneshot, prelude::*},
     matches::assert_matches,
@@ -69,8 +72,11 @@ impl TestEnvBuilder {
             .detach()
         });
 
+        let mut salt = [0; 4];
+        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        let nested_environment_label = format!("committer-env_{}", hex::encode(&salt));
         let env = fs
-            .create_salted_nested_environment("system_update_committer_env")
+            .create_nested_environment(&nested_environment_label)
             .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
 
@@ -83,6 +89,7 @@ impl TestEnvBuilder {
             system_update_committer,
             _paver_service: paver_service,
             _reboot_service: reboot_service,
+            nested_environment_label,
         }
     }
 }
@@ -91,6 +98,7 @@ struct TestEnv {
     system_update_committer: App,
     _paver_service: Arc<MockPaverService>,
     _reboot_service: Arc<MockRebootService>,
+    nested_environment_label: String,
 }
 
 impl TestEnv {
@@ -101,6 +109,19 @@ impl TestEnv {
     /// Opens a connection to the fuchsia.update/CommitStatusProvider FIDL service.
     fn commit_status_provider_proxy(&self) -> CommitStatusProviderProxy {
         self.system_update_committer.connect_to_service::<CommitStatusProviderMarker>().unwrap()
+    }
+
+    async fn system_update_committer_inspect_hierarchy(&self) -> DiagnosticsHierarchy {
+        let mut data = ArchiveReader::new()
+            .add_selector(ComponentSelector::new(vec![
+                self.nested_environment_label.clone(),
+                "system-update-committer.cmx".to_string(),
+            ]))
+            .snapshot::<Inspect>()
+            .await
+            .expect("got inspect data");
+        assert_eq!(data.len(), 1, "expected 1 match: {:?}", data);
+        data.pop().expect("one result").payload.expect("payload is not none")
     }
 }
 
@@ -240,9 +261,13 @@ async fn multiple_commit_status_provider_requests() {
     );
 }
 
-/// When the paver fails, we expect the system-update-committer to trigger a reboot.
+/// When the paver fails, we expect the system-update-committer to trigger a reboot. Additionally,
+/// the inspect state should reflect the system being unhealthy. We could split this up into several
+/// tests, but instead we combine them to reduce redundant lines of code. We could do helper fns,
+/// but we decided not to given guidance in
+/// https://testing.googleblog.com/2019/12/testing-on-toilet-tests-too-dry-make.html.
 #[fasync::run_singlethreaded(test)]
-async fn reboot() {
+async fn paver_failure_causes_reboot_and_inspect_health_status_unhealthy() {
     let (sender, recv) = oneshot::channel();
     let sender = Arc::new(Mutex::new(Some(sender)));
     let reboot_service = MockRebootService::new(Box::new(move |reason: RebootReason| {
@@ -250,7 +275,7 @@ async fn reboot() {
         Ok(())
     }));
 
-    let _env = TestEnv::builder()
+    let env = TestEnv::builder()
         .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(mphooks::return_error(
             |e: &PaverEvent| {
                 if e == &PaverEvent::QueryCurrentConfiguration {
@@ -264,4 +289,49 @@ async fn reboot() {
         .build();
 
     assert_eq!(recv.await, Ok(RebootReason::RetrySystemUpdate));
+
+    let hierarchy = env.system_update_committer_inspect_hierarchy().await;
+    assert_inspect_tree!(
+        hierarchy,
+        root: {
+            "verification": {},
+            "fuchsia.inspect.Health": {
+                "message": "Failed to put metadata in happy state: Policy(Build(Status { method_name: \"query_current_configuration\", status: Status(NOT_FOUND) }))",
+                "start_timestamp_nanos": AnyProperty,
+                "status": "UNHEALTHY"
+            }
+        }
+    );
+}
+
+/// Make sure the inspect data is plumbed through after successful verifications.
+#[fasync::run_singlethreaded(test)]
+async fn inspect_health_status_ok() {
+    let env = TestEnv::builder()
+        .paver_service_builder(
+            MockPaverServiceBuilder::new()
+                .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
+        )
+        .build();
+
+    // Wait for verifications to complete.
+    let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
+    assert_eq!(OnSignals::new(&p, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+
+    // Observe verification shows up in inspect.
+    let hierarchy = env.system_update_committer_inspect_hierarchy().await;
+    assert_inspect_tree!(
+        hierarchy,
+        root: {
+            "verification": {
+                "ota_verification_duration": {
+                    "success": AnyProperty,
+                }
+            },
+            "fuchsia.inspect.Health": {
+                "start_timestamp_nanos": AnyProperty,
+                "status": "OK"
+            }
+        }
+    );
 }

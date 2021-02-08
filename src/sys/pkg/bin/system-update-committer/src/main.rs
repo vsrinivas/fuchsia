@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_paver::PaverMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::{self as finspect, health::Reporter},
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{channel::oneshot, prelude::*, stream::FuturesUnordered},
@@ -52,6 +53,13 @@ pub fn main() -> Result<(), Error> {
 }
 
 async fn main_inner_async() -> Result<(), Error> {
+    let inspector = finspect::Inspector::new();
+    let verification_node = inspector.root().create_child("verification");
+    let mut health_node = finspect::health::Node::new(inspector.root());
+
+    let verification_node_ref = &verification_node;
+    let health_node_ref = &mut health_node;
+
     let config = Config::load_from_config_data_or_default();
     let reboot_timer = fasync::Timer::new(MINIMUM_REBOOT_WAIT);
 
@@ -76,33 +84,36 @@ async fn main_inner_async() -> Result<(), Error> {
 
     let (unblocker, blocker) = oneshot::channel();
 
-    // Handle putting boot metadata in happy state and rebooting on failure (if necessary).
-    futures.push(
-        async move {
-            if let Err(e) = put_metadata_in_happy_state(&boot_manager, &p_internal, unblocker).await
-            {
-                if should_reboot(&e, &config) {
-                    fx_log_warn!(
-                        "Failed to put metadata in happy state. Rebooting given error {:#} and config {:?}",
-                        anyhow!(e),
-                        config
-                    );
-                    wait_and_reboot(&reboot_proxy, reboot_timer).await;
-                } else {
-                    fx_log_warn!(
-                        "Failed to put metadata in happy state. NOT rebooting given error {:#} and config {:?}",
-                        anyhow!(e),
-                        config
-                    );
-                }
+    // Handle putting boot metadata in happy state, rebooting on failure (if necessary), and
+    // reporting health to the inspect health node.
+    futures.push(async move {
+        if let Err(e) = put_metadata_in_happy_state(&boot_manager, &p_internal, unblocker, verification_node_ref).await {
+            health_node_ref.set_unhealthy(&format!("Failed to put metadata in happy state: {:?}", e));
+            if should_reboot(&e, &config) {
+                fx_log_warn!(
+                    "Failed to put metadata in happy state. Rebooting given error {:#} and config {:?}",
+                    anyhow!(e),
+                    config
+                );
+                wait_and_reboot(&reboot_proxy, reboot_timer).await;
+            } else {
+                fx_log_warn!(
+                    "Failed to put metadata in happy state. NOT rebooting given error {:#} and config {:?}",
+                    anyhow!(e),
+                    config
+                );
             }
+        } else {
+            health_node_ref.set_ok();
         }
-        .boxed_local(),
-    );
+    }.boxed_local());
 
-    // Handle FIDL.
+    // Handle ServiceFs and inspect
     let mut fs = ServiceFs::new_local();
     fs.take_and_serve_directory_handle().context("while serving directory handle")?;
+    let () = inspector.serve(&mut fs).context("while serving inspect")?;
+
+    // Handle FIDL.
     let fidl = Arc::new(FidlServer::new(p_external, blocker));
     futures.push(FidlServer::run(fidl, fs).boxed_local());
 

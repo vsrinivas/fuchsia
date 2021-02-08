@@ -6,7 +6,7 @@
 
 use {
     commit::do_commit,
-    fidl_fuchsia_paver as paver,
+    fidl_fuchsia_paver as paver, fuchsia_inspect as finspect,
     fuchsia_zircon::{self as zx, EventPair, Peered},
     futures::channel::oneshot,
     policy::PolicyEngine,
@@ -21,6 +21,7 @@ pub(super) use errors::{BootManagerError, PolicyError, VerifyFailureReason};
 mod commit;
 mod configuration;
 mod errors;
+mod inspect;
 mod policy;
 mod verify;
 
@@ -40,6 +41,7 @@ pub async fn put_metadata_in_happy_state(
     boot_manager: &paver::BootManagerProxy,
     p_internal: &EventPair,
     unblocker: oneshot::Sender<()>,
+    node: &finspect::Node,
 ) -> Result<(), MetadataError> {
     let engine = PolicyEngine::build(boot_manager).await.map_err(MetadataError::Policy)?;
     let mut unblocker = Some(unblocker);
@@ -49,7 +51,7 @@ pub async fn put_metadata_in_happy_state(
         // At this point, the FIDL server should start responding to requests so that clients can
         // find out that the health verification is underway.
         unblocker = unblock_fidl_server(unblocker)?;
-        let () = do_health_verification().await.map_err(MetadataError::Verify)?;
+        let () = do_health_verification(node).await.map_err(MetadataError::Verify)?;
         let () = do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
     }
 
@@ -99,9 +101,14 @@ mod tests {
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
-            .await
-            .unwrap();
+        put_metadata_in_happy_state(
+            &paver.spawn_boot_manager_service(),
+            &p_internal,
+            unblocker,
+            &finspect::Node::default(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(paver.take_events(), vec![]);
         assert_eq!(
@@ -124,9 +131,14 @@ mod tests {
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
-            .await
-            .unwrap();
+        put_metadata_in_happy_state(
+            &paver.spawn_boot_manager_service(),
+            &p_internal,
+            unblocker,
+            &finspect::Node::default(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
         assert_eq!(
@@ -148,9 +160,14 @@ mod tests {
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
-            .await
-            .unwrap();
+        put_metadata_in_happy_state(
+            &paver.spawn_boot_manager_service(),
+            &p_internal,
+            unblocker,
+            &finspect::Node::default(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(
             paver.take_events(),
@@ -187,9 +204,14 @@ mod tests {
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
-            .await
-            .unwrap();
+        put_metadata_in_happy_state(
+            &paver.spawn_boot_manager_service(),
+            &p_internal,
+            unblocker,
+            &finspect::Node::default(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(
             paver.take_events(),
