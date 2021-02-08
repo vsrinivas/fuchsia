@@ -118,6 +118,12 @@ In addition, it provides the following methods for `FileMode`:
   [strict][lang-flexible] bits.
 * `func (x FileMode) HasUnknownBits() bool`: Returns whether this value contains
   any unknown bits. Always returns `false` for [strict][lang-flexible] bits.
+* `func (x FileMode) InvertBits() FileMode`: Inverts all known bits.  All
+  unknown bits are set to false.
+* `func (x FileMode) ClearBits(mask FileMode) FileMode`: Modifies the bitfield
+  such that all bits set in the mask are unset.
+* `func (x FileMode) HasBits(mask FileMode) bool`: Validates that all flipped
+  bits in the mask are set.
 
 Example usage:
 
