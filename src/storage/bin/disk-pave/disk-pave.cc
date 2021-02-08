@@ -10,6 +10,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdbool.h>
@@ -214,45 +215,73 @@ zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, ::llcpp::fuchsia::mem::Buff
   return ZX_OK;
 }
 
-zx_status_t RealMain(Flags flags) {
-  zx::channel paver_remote, paver_svc;
-  auto status = zx::channel::create(0, &paver_svc, &paver_remote);
-  if (status != ZX_OK) {
-    ERROR("Unable to create channels.\n");
-    return status;
-  }
-  const auto path = fbl::StringPrintf("/svc/%s", ::llcpp::fuchsia::paver::Paver::Name);
-  status = fdio_service_connect(path.c_str(), paver_remote.release());
-  if (status != ZX_OK) {
-    ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
-    return status;
-  }
-  ::llcpp::fuchsia::paver::Paver::SyncClient paver_client(std::move(paver_svc));
+// Protocol should be either |DataSink| or |DynamicDataSink|.
+template <typename Protocol>
+struct UseBlockDeviceError {
+  zx_status_t error;
+  fidl::ServerEnd<Protocol> unused_server;
+};
 
-  zx::channel data_sink_remote, data_sink_svc;
-  status = zx::channel::create(0, &data_sink_remote, &data_sink_svc);
-  if (status != ZX_OK) {
-    ERROR("Unable to create channels.\n");
-    return status;
+// If the block device was opened successfully, tells the paver client to
+// use that block device. Otherwise, hands back the unused data sink server-end
+// together with a status.
+template <typename Protocol>
+fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
+    llcpp::fuchsia::paver::Paver::SyncClient& paver_client, const char* block_device_path,
+    fidl::ServerEnd<Protocol> data_sink_remote) {
+  static_assert(std::is_same_v<Protocol, ::llcpp::fuchsia::paver::DataSink> ||
+                std::is_same_v<Protocol, ::llcpp::fuchsia::paver::DynamicDataSink>);
+
+  auto block_device = service::Connect<::llcpp::fuchsia::hardware::block::Block>(block_device_path);
+  if (block_device.is_ok()) {
+    paver_client.UseBlockDevice(
+        std::move(*block_device),
+        // Note: manually converting any DataSink protocol into a DynamicDataSink.
+        fidl::ServerEnd<::llcpp::fuchsia::paver::DynamicDataSink>(data_sink_remote.TakeChannel()));
+    return fitx::ok();
   }
+
+  ERROR("Unable to open block device: %s (%s)\n", block_device_path, block_device.status_string());
+  PrintUsage();
+
+  return fitx::error(UseBlockDeviceError<Protocol>{
+      block_device.status_value(),
+      std::move(data_sink_remote),
+  });
+}
+
+zx_status_t RealMain(Flags flags) {
+  auto paver_svc = service::Connect<::llcpp::fuchsia::paver::Paver>();
+  if (!paver_svc.is_ok()) {
+    ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
+    return paver_svc.error_value();
+  }
+  auto paver_client = fidl::BindSyncClient(std::move(*paver_svc));
+
   switch (flags.cmd) {
     case Command::kFvm: {
-      paver_client.FindDataSink(std::move(data_sink_remote));
-      ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_svc));
-
-      zx::channel client, server;
-      status = zx::channel::create(0, &client, &server);
-      if (status) {
-        return status;
+      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DataSink>();
+      if (data_sink.is_error()) {
+        ERROR("Unable to create channels.\n");
+        return data_sink.status_value();
       }
+      auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
+      paver_client.FindDataSink(std::move(data_sink_remote));
+
+      auto streamer_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::paver::PayloadStream>();
+      if (streamer_endpoints.is_error()) {
+        return streamer_endpoints.status_value();
+      }
+      auto [client, server] = std::move(*streamer_endpoints);
 
       // Launch thread which implements interface.
       async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
       disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
       loop.StartThread("payload-stream");
 
-      auto result = data_sink.WriteVolumes(std::move(client));
-      status = result.ok() ? result.value().status : result.status();
+      auto result =
+          fidl::BindSyncClient(std::move(data_sink_local)).WriteVolumes(std::move(client));
+      zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to write volumes: %s\n", zx_status_get_string(status));
         return status;
@@ -261,29 +290,29 @@ zx_status_t RealMain(Flags flags) {
       return ZX_OK;
     }
     case Command::kWipe: {
-      zx::channel block_device, block_device_remote;
+      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DataSink>();
+      if (data_sink.is_error()) {
+        ERROR("Unable to create channels.\n");
+        return data_sink.status_value();
+      }
+      auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
+
+      // Try to use |block_device| path if provided.
       if (flags.block_device != nullptr) {
-        status = zx::channel::create(0, &block_device, &block_device_remote);
-        if (status != ZX_OK) {
-          ERROR("Unable create channel: %s\n", zx_status_get_string(status));
-          return status;
-        }
-        status = fdio_service_connect(flags.block_device, block_device_remote.release());
-        if (status != ZX_OK) {
-          ERROR("Unable to open block device: %s\n", flags.block_device);
-          PrintUsage();
-          block_device.reset();
+        auto result = UseBlockDevice(paver_client, flags.block_device, std::move(data_sink_remote));
+        if (result.is_error()) {
+          // Fallback to |FindDataSink|.
+          data_sink_remote = std::move(result.error_value().unused_server);
         }
       }
-      if (block_device) {
-        paver_client.UseBlockDevice(std::move(block_device), std::move(data_sink_remote));
-      } else {
+
+      // If we do not have a valid block device, use |FindDataSink|.
+      if (data_sink_remote) {
         paver_client.FindDataSink(std::move(data_sink_remote));
       }
 
-      ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_svc));
-
-      auto result = data_sink.WipeVolume();
+      auto result = fidl::BindSyncClient(std::move(data_sink_local)).WipeVolume();
+      zx_status_t status;
       if (!result.ok()) {
         status = result.status();
       } else {
@@ -302,24 +331,22 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      zx::channel block_device, block_device_remote;
-      status = zx::channel::create(0, &block_device, &block_device_remote);
-      if (status != ZX_OK) {
-        ERROR("Unable create channel: %s\n", zx_status_get_string(status));
-        return status;
-      }
-      status = fdio_service_connect(flags.block_device, block_device_remote.release());
-      if (status != ZX_OK) {
-        ERROR("Unable to open block device: %s\n", flags.block_device);
-        PrintUsage();
-        block_device.reset();
-        return status;
-      }
-      paver_client.UseBlockDevice(std::move(block_device), std::move(data_sink_remote));
-      ::llcpp::fuchsia::paver::DynamicDataSink::SyncClient data_sink(std::move(data_sink_svc));
 
-      auto result = data_sink.InitializePartitionTables();
-      status = result.ok() ? result.value().status : result.status();
+      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DynamicDataSink>();
+      if (data_sink.is_error()) {
+        ERROR("Unable to create channels.\n");
+        return data_sink.status_value();
+      }
+      auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
+
+      auto block_result =
+          UseBlockDevice(paver_client, flags.block_device, std::move(data_sink_remote));
+      if (block_result.is_error()) {
+        return block_result.error_value().error;
+      }
+
+      auto result = fidl::BindSyncClient(std::move(data_sink_local)).InitializePartitionTables();
+      zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to initialize partition tables: %s\n", zx_status_get_string(status));
         return status;
@@ -333,23 +360,22 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      zx::channel block_device, block_device_remote;
-      status = zx::channel::create(0, &block_device, &block_device_remote);
-      if (status != ZX_OK) {
-        ERROR("Unable create channel: %s\n", zx_status_get_string(status));
-        return status;
-      }
-      status = fdio_service_connect(flags.block_device, block_device_remote.release());
-      if (status != ZX_OK) {
-        ERROR("Unable to open block device: %s\n", flags.block_device);
-        PrintUsage();
-        block_device.reset();
-      }
-      paver_client.UseBlockDevice(std::move(block_device), std::move(data_sink_remote));
-      ::llcpp::fuchsia::paver::DynamicDataSink::SyncClient data_sink(std::move(data_sink_svc));
 
-      auto result = data_sink.WipePartitionTables();
-      status = result.ok() ? result.value().status : result.status();
+      auto data_sink = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DynamicDataSink>();
+      if (data_sink.is_error()) {
+        ERROR("Unable to create channels.\n");
+        return data_sink.status_value();
+      }
+      auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
+
+      auto block_result =
+          UseBlockDevice(paver_client, flags.block_device, std::move(data_sink_remote));
+      if (block_result.is_error()) {
+        return block_result.error_value().error;
+      }
+
+      auto result = fidl::BindSyncClient(std::move(data_sink_local)).WipePartitionTables();
+      zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to wipe partition tables: %s\n", zx_status_get_string(status));
         return status;
@@ -362,13 +388,20 @@ zx_status_t RealMain(Flags flags) {
   }
 
   ::llcpp::fuchsia::mem::Buffer payload;
-  status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
+  zx_status_t status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
   if (status != ZX_OK) {
     return status;
   }
 
+  auto data_sink_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::paver::DataSink>();
+  if (data_sink_endpoints.is_error()) {
+    ERROR("Unable to create channels.\n");
+    return data_sink_endpoints.status_value();
+  }
+  auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
+
   paver_client.FindDataSink(std::move(data_sink_remote));
-  ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_svc));
+  auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
   switch (flags.cmd) {
     case Command::kDataFile: {
