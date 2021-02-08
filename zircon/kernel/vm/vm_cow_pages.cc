@@ -2991,3 +2991,63 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
   });
   return valid;
 }
+
+bool VmCowPages::IsLockRangeValidLocked(uint64_t offset, uint64_t len) const {
+  return offset == 0 && len == size_locked();
+}
+
+zx_status_t VmCowPages::LockRangeLocked(uint64_t offset, uint64_t len,
+                                        zx_vmo_lock_state_t* lock_state_out) {
+  canary_.Assert();
+
+  AssertHeld(lock_);
+  if (!IsLockRangeValidLocked(offset, len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (!lock_state_out) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  lock_state_out->offset = offset;
+  lock_state_out->size = len;
+
+  if (discarded_) {
+    lock_state_out->discarded_offset = 0;
+    lock_state_out->discarded_size = size_locked();
+  } else {
+    lock_state_out->discarded_offset = 0;
+    lock_state_out->discarded_size = 0;
+  }
+  ++lock_count_;
+  return ZX_OK;
+}
+
+zx_status_t VmCowPages::TryLockRangeLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  AssertHeld(lock_);
+  if (!IsLockRangeValidLocked(offset, len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (discarded_) {
+    return ZX_ERR_UNAVAILABLE;
+  }
+  ++lock_count_;
+  return ZX_OK;
+}
+
+zx_status_t VmCowPages::UnlockRangeLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  AssertHeld(lock_);
+  if (!IsLockRangeValidLocked(offset, len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (lock_count_ == 0) {
+    return ZX_ERR_BAD_STATE;
+  }
+  --lock_count_;
+  return ZX_OK;
+}

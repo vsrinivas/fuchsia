@@ -1469,6 +1469,81 @@ static bool vmo_parent_merge_test() {
   END_TEST;
 }
 
+// Test that the discardable VMO's lock count is updated as expected via lock and unlock ops.
+static bool vmo_lock_count_test() {
+  BEGIN_TEST;
+
+  // Create a vmo to lock and unlock from multiple threads.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  constexpr uint64_t kSize = 3 * PAGE_SIZE;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kDiscardable, kSize, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  constexpr int kNumThreads = 5;
+  Thread* threads[kNumThreads];
+  struct thread_state {
+    VmObjectPaged* vmo;
+    bool did_unlock;
+  } state[kNumThreads];
+
+  for (int i = 0; i < kNumThreads; i++) {
+    state[i].vmo = vmo.get();
+    state[i].did_unlock = false;
+
+    threads[i] = Thread::Create(
+        "worker",
+        [](void* arg) -> int {
+          zx_status_t status;
+          auto state = static_cast<struct thread_state*>(arg);
+
+          // Randomly decide between try-lock and lock.
+          if (rand() % 2) {
+            if ((status = state->vmo->TryLockRange(0, kSize)) != ZX_OK) {
+              return status;
+            }
+          } else {
+            zx_vmo_lock_state_t lock_state = {};
+            if ((status = state->vmo->LockRange(0, kSize, &lock_state)) != ZX_OK) {
+              return status;
+            }
+          }
+
+          // Randomly decide whether to unlock, or leave the vmo locked.
+          if (rand() % 2) {
+            if ((status = state->vmo->UnlockRange(0, kSize)) != ZX_OK) {
+              return status;
+            }
+            state->did_unlock = true;
+          }
+
+          return 0;
+        },
+        &state[i], DEFAULT_PRIORITY);
+  }
+
+  for (auto& t : threads) {
+    t->Resume();
+  }
+
+  for (auto& t : threads) {
+    int ret;
+    t->Join(&ret, ZX_TIME_INFINITE);
+    EXPECT_EQ(0, ret);
+  }
+
+  uint64_t expected_lock_count = kNumThreads;
+  for (auto& s : state) {
+    if (s.did_unlock) {
+      expected_lock_count--;
+    }
+  }
+
+  EXPECT_EQ(expected_lock_count, vmo->DebugGetCowPages()->DebugGetLockCount());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -1501,6 +1576,7 @@ VM_UNITTEST(vmo_attribution_pager_test)
 VM_UNITTEST(vmo_attribution_evict_test)
 VM_UNITTEST(vmo_attribution_dedup_test)
 VM_UNITTEST(vmo_parent_merge_test)
+VM_UNITTEST(vmo_lock_count_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

@@ -1287,34 +1287,25 @@ zx_status_t VmObjectPaged::LockRange(uint64_t offset, uint64_t len,
   if (!is_discardable()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (offset != 0 || len != size()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
 
-  lock_state_out->offset = offset;
-  lock_state_out->size = len;
-
-  return ZX_OK;
+  Guard<Mutex> guard{&lock_};
+  return cow_pages_locked()->LockRangeLocked(offset, len, lock_state_out);
 }
 
 zx_status_t VmObjectPaged::TryLockRange(uint64_t offset, uint64_t len) {
   if (!is_discardable()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (offset != 0 || len != size()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
 
-  return ZX_OK;
+  Guard<Mutex> guard{&lock_};
+  return cow_pages_locked()->TryLockRangeLocked(offset, len);
 }
 
 zx_status_t VmObjectPaged::UnlockRange(uint64_t offset, uint64_t len) {
   if (!is_discardable()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (offset != 0 || len != size()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
 
-  return ZX_OK;
+  Guard<Mutex> guard{&lock_};
+  return cow_pages_locked()->UnlockRangeLocked(offset, len);
 }

@@ -214,6 +214,16 @@ class VmCowPages final : public VmHierarchyBase,
   // pager-backed queue, so that they can be evicted first.
   void PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
+  zx_status_t LockRangeLocked(uint64_t offset, uint64_t len, zx_vmo_lock_state_t* lock_state_out);
+  zx_status_t TryLockRangeLocked(uint64_t offset, uint64_t len);
+  zx_status_t UnlockRangeLocked(uint64_t offset, uint64_t len);
+
+  // Exposed for testing.
+  uint64_t DebugGetLockCount() const {
+    Guard<Mutex> guard{&lock_};
+    return lock_count_;
+  }
+
  private:
   // private constructor (use Create())
   VmCowPages(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
@@ -436,6 +446,10 @@ class VmCowPages final : public VmHierarchyBase,
   void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len, RangeChangeList* list)
       TA_REQ(lock_);
 
+  // Helper to check whether the requested range for LockRangeLocked() / TryLockRangeLocked() /
+  // UnlockRangeLocked() is valid.
+  bool IsLockRangeValidLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
@@ -516,6 +530,16 @@ class VmCowPages final : public VmHierarchyBase,
 
   // Count eviction events so that we can report them to the user.
   uint64_t eviction_event_count_ TA_GUARDED(lock_) = 0;
+
+  // Count of outstanding lock operations. A non-zero count prevents the kernel from discarding /
+  // evicting pages from the VMO to relieve memory pressure (currently only applicable if
+  // |kDiscardable| is set). Note that this does not prevent removal of pages by other means, like
+  // decommitting or resizing, since those are explicit actions driven by the user, not by the
+  // kernel directly.
+  uint64_t lock_count_ TA_GUARDED(lock_) = 0;
+
+  // Whether the VMO's pages were discarded.
+  bool discarded_ TA_GUARDED(lock_) = false;
 
   // a tree of pages
   VmPageList page_list_ TA_GUARDED(lock_);

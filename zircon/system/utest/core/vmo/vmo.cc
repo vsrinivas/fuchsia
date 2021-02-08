@@ -1812,6 +1812,9 @@ TEST(VmoTestCase, LockUnlock) {
   EXPECT_EQ(0u, lock_state.offset);
   EXPECT_EQ(kSize, lock_state.size);
   EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+
+  // Unlock on an unlocked VMO should fail.
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
 }
 
 }  // namespace
