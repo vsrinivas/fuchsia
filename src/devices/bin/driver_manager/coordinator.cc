@@ -1767,6 +1767,23 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     return status;
   }
 
+  const auto driver_host_dev = [this](zx::channel request) {
+    auto status = fidl::BindSingleInFlightOnly<
+        llcpp::fuchsia::device::manager::DriverHostDevelopment::Interface>(
+        dispatcher_, std::move(request), this);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           llcpp::fuchsia::device::manager::DriverHostDevelopment::Name,
+           zx_status_get_string(status));
+    }
+    return status;
+  };
+  status = svc_dir->AddEntry(llcpp::fuchsia::device::manager::DriverHostDevelopment::Name,
+                             fbl::MakeRefCounted<fs::Service>(driver_host_dev));
+  if (status != ZX_OK) {
+    return status;
+  }
+
   if (config_.enable_ephemeral) {
     const auto driver_registrar = [this](zx::channel request) {
       auto result = fidl::BindServer<llcpp::fuchsia::driver::registrar::DriverRegistrar::Interface>(
@@ -1833,4 +1850,9 @@ void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wa
 
 std::string Coordinator::GetFragmentDriverPath() const {
   return config_.path_prefix + "driver/fragment.so";
+}
+
+void Coordinator::RestartDriverHosts(::fidl::StringView driver_path_view,
+                                     RestartDriverHostsCompleter::Sync& completer) {
+  completer.ReplySuccess();
 }

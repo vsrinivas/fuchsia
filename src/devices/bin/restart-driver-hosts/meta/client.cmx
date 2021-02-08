@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/fidl_restart_driver_hosts"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.device.manager.DriverHostDevelopment"
+        ]
+    }
+}

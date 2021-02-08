@@ -187,6 +187,7 @@
                 "fuchsia.boot.RootResource",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.NameProvider",
                 "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.power.statecontrol.Admin",

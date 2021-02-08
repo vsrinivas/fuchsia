@@ -234,6 +234,10 @@
             path: "/svc_for_sys/fuchsia.device.manager.DebugDumper",
         },
         {
+            protocol: "fuchsia.device.manager.DriverHostDevelopment",
+            path: "/svc_for_sys/fuchsia.device.manager.DriverHostDevelopment",
+        },
+        {
             protocol: "fuchsia.device.manager.BindDebugger",
             path: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
         },

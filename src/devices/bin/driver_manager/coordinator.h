@@ -151,6 +151,7 @@ struct CoordinatorConfig {
 };
 
 class Coordinator : public device_manager_fidl::BindDebugger::Interface,
+                    public device_manager_fidl::DriverHostDevelopment::Interface,
                     public llcpp::fuchsia::driver::registrar::DriverRegistrar::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -416,6 +417,10 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
 
   zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                  size_t buflen, size_t* size);
+
+  // TODO(fxbug.dev/68309): Currently unimplemented.
+  void RestartDriverHosts(::fidl::StringView driver_path_view,
+                          RestartDriverHostsCompleter::Sync& completer) override;
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
