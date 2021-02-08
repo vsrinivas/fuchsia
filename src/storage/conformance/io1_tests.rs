@@ -5,7 +5,9 @@
 use {
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
     fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::StreamExt,
     io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
@@ -47,6 +49,14 @@ async fn get_open_status(node_proxy: &io::NodeProxy) -> Status {
     let io::NodeEvent::OnOpen_ { s, info: _ } =
         events.next().await.expect("OnOpen event not received").expect("FIDL error");
     Status::from_raw(s)
+}
+
+async fn assert_on_open_not_received(node_proxy: &io::NodeProxy) {
+    let mut events = node_proxy.take_event_stream();
+    // Wait at most 200ms for an OnOpen event to appear.
+    let event =
+        events.next().on_timeout(zx::Duration::from_millis(200).after_now(), || Option::None).await;
+    assert!(event.is_none(), "Unexpected OnOpen event received");
 }
 
 /// Helper function to open the desired node in the root folder. Only use this
@@ -318,6 +328,43 @@ async fn open_child_dir_with_extra_rights() {
         .expect("Cannot open directory");
 
     assert_eq!(get_open_status(&child_dir_client).await, Status::ACCESS_DENIED);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn open_dir_without_describe_flag() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    let root = root_directory(all_rights, vec![]);
+    let root_dir = get_directory_from_harness(&harness, root);
+
+    for dir_flags in build_flag_combinations(0, all_rights) {
+        assert_eq!(dir_flags & io::OPEN_FLAG_DESCRIBE, 0);
+        let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+
+        root_dir
+            .open(dir_flags, io::MODE_TYPE_DIRECTORY, ".", server)
+            .expect("Cannot open directory");
+
+        assert_on_open_not_received(&client).await;
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn open_file_without_describe_flag() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
+        assert_eq!(file_flags & io::OPEN_FLAG_DESCRIBE, 0);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
+        let test_dir = get_directory_from_harness(&harness, root);
+        let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+
+        test_dir.open(file_flags, io::MODE_TYPE_FILE, TEST_FILE, server).expect("Cannot open file");
+
+        assert_on_open_not_received(&client).await;
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -631,6 +678,38 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
         assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
     }
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn directory_describe() {
+    let harness = connect_to_harness().await;
+    let root = root_directory(0, vec![]);
+    let test_dir = get_directory_from_harness(&harness, root);
+
+    let node_info = test_dir.describe().await.expect("describe failed");
+
+    assert!(matches!(node_info, io::NodeInfo::Directory { .. }));
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_describe() {
+    let harness = connect_to_harness().await;
+    let root = root_directory(io::OPEN_RIGHT_READABLE, vec![file(TEST_FILE, 0, vec![])]);
+    let test_dir = get_directory_from_harness(&harness, root);
+    let file = open_node::<io::FileMarker>(
+        &test_dir,
+        io::OPEN_RIGHT_READABLE,
+        io::MODE_TYPE_FILE,
+        TEST_FILE,
+    )
+    .await;
+
+    let node_info = file.describe().await.expect("describe failed");
+
+    assert!(matches!(node_info, io::NodeInfo::File { .. }));
+}
+
+// TODO(fxbug.dev/33880): Write vmofile_describe test. It currently returns File instead of Vmofile
+// on rustvfs.
 
 #[cfg(test)]
 mod tests {
