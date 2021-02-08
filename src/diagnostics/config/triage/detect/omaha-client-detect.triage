@@ -42,5 +42,14 @@
                 ],
             },
         },
+        no_installation_error: {
+            no: [
+                "installation_error_today",
+            ],
+            now: "Hours(48)",
+            values: {
+                installation_error_timestamps: [],
+            },
+        },
     },
 }
