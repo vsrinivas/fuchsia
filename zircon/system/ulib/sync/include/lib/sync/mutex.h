@@ -66,6 +66,12 @@ zx_status_t sync_mutex_trylock(sync_mutex_t* mutex);
 // Does nothing if the mutex is already unlocked.
 void sync_mutex_unlock(sync_mutex_t* mutex) __TA_RELEASE(mutex);
 
+// Assert that |mutex| is currently held by the calling thread, and terminate
+// the program if it is not.  Mostly useful in situations where either trylock
+// or timed lock are being used, but the user needs to make Clang's static
+// thread analyzer happy in the case that the mutex was successfully acquired.
+void sync_mutex_assert_held(sync_mutex_t* mutex) __TA_ASSERT(mutex);
+
 __END_CDECLS
 
 #endif  // LIB_SYNC_MUTEX_H_

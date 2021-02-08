@@ -18,6 +18,10 @@ __NO_INLINE __NO_RETURN void PanicAttemptedToReenterMutex(void) {
   __builtin_trap();
 }
 
+__NO_INLINE __NO_RETURN void PanicMutexNotHeldDuringAssertHeld(void) {
+  __builtin_trap();
+}
+
 // On success, this will leave the mutex in the LOCKED_WITH_WAITERS state.
 static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
                                   zx_futex_storage_t owned_and_contested_val,
@@ -150,5 +154,13 @@ void sync_mutex_unlock(sync_mutex_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
         __builtin_trap();
       }
     }
+  }
+}
+
+void sync_mutex_assert_held(sync_mutex_t* mutex) {
+  zx_futex_storage_t state = atomic_load_explicit(&mutex->futex, memory_order_relaxed);
+  if (_zx_thread_self() != libsync_mutex_make_owner_from_state(state)) {
+    PanicMutexNotHeldDuringAssertHeld();
+    __builtin_trap();
   }
 }

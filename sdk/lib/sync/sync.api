@@ -3,5 +3,5 @@
   "pkg/sync/include/lib/sync/condition.h": "36383c497c91e6ee1b9d04258609a65c",
   "pkg/sync/include/lib/sync/internal/condition-template.h": "23bc401516f442af746be2c0bcdf7aca",
   "pkg/sync/include/lib/sync/internal/mutex-internal.h": "8ad8a8967d899fd0ad4582a21a4b76ce",
-  "pkg/sync/include/lib/sync/mutex.h": "fa5a5b0798bc5600a6a6281574887b49"
+  "pkg/sync/include/lib/sync/mutex.h": "3b7156a912fa536211df9793f77c78c6"
 }

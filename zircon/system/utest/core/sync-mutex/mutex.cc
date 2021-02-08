@@ -200,3 +200,20 @@ TEST(SyncMutex, NoRecursion) {
     sync_mutex_lock(&mutex);
   });
 }
+
+TEST(SyncMutex, AssertHeld) {
+  // Grab a mutex and assert that we are holding it
+  {
+    sync_mutex_t mutex;
+    sync_mutex_lock(&mutex);
+    sync_mutex_assert_held(&mutex);
+    sync_mutex_unlock(&mutex);
+  }
+
+  // Now, attempt to assert that we are holding a mutex that we never acquired,
+  // and make sure this results in death.
+  ASSERT_DEATH([]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    sync_mutex_t mutex;
+    sync_mutex_assert_held(&mutex);
+  });
+}
