@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/unification/global_variables.gni")
+import("//src/sys/build/components.gni")
 
 if (is_kernel) {
   # NOTE: This cannot be called 'tests' due to the target with the same name
@@ -41,12 +42,13 @@ test("boot-option-tests") {
   ]
 }
 
-test_package("boot-option-test-package") {
-  package_name = "boot-option-tests"
-  tests = [
-    {
-      name = "boot-option-tests"
-    },
-  ]
+fuchsia_component("boot-option-test-component") {
+  testonly = true
   deps = [ ":boot-option-tests" ]
+  manifest = "meta/boot-option-tests.cmx"
+}
+
+fuchsia_test_package("boot-option-test-package") {
+  package_name = "boot-option-tests"
+  test_components = [ ":boot-option-test-component" ]
 }
