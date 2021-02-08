@@ -145,7 +145,7 @@ class CompositeTestCase : public MultipleDeviceTestCase {
  protected:
   void SetUp() override {
     MultipleDeviceTestCase::SetUp();
-    ASSERT_NOT_NULL(coordinator_.fragment_driver());
+    ASSERT_NOT_NULL(coordinator().fragment_driver());
   }
 };
 
@@ -171,7 +171,7 @@ void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
   for (size_t i = 0; i < device_indexes_count; ++i) {
     auto device_state = device(device_indexes[i]);
     // Check that the fragments got bound
-    fbl::String driver = coordinator()->fragment_driver()->libname;
+    fbl::String driver = coordinator().fragment_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(
         CheckBindDriverReceived(device_state->controller_remote, driver.data()));
     coordinator_loop()->RunUntilIdle();
@@ -460,7 +460,7 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
     ASSERT_NOT_NULL(comp_device2);
   }
   // Remove device 0 and its children (fragment and composite devices).
-  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(device_indexes[0])->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
   zx::channel& device_remote = device(device_indexes[0])->controller_remote;
@@ -512,7 +512,7 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
-    fbl::String driver = coordinator()->fragment_driver()->libname;
+    fbl::String driver = coordinator().fragment_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(
         CheckBindDriverReceived(device_state->controller_remote, driver.data()));
     coordinator_loop()->RunUntilIdle();
@@ -524,7 +524,7 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
-    fbl::String driver = coordinator()->fragment_driver()->libname;
+    fbl::String driver = coordinator().fragment_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(
         CheckBindDriverReceived(device_state->controller_remote, driver.data()));
     coordinator_loop()->RunUntilIdle();
@@ -576,7 +576,7 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
   }
 
   // Remove device 0 and its children (fragment and composite devices).
-  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(device_indexes[0])->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
   zx::channel& device_remote = device(device_indexes[0])->controller_remote;
@@ -618,7 +618,7 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
-    fbl::String driver = coordinator()->fragment_driver()->libname;
+    fbl::String driver = coordinator().fragment_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(
         CheckBindDriverReceived(device_state->controller_remote, driver.data()));
     coordinator_loop()->RunUntilIdle();
@@ -732,8 +732,8 @@ TEST_F(CompositeTestCase, ResumeOrder) {
   ASSERT_NOT_NULL(comp_device);
 
   // Put all the devices in suspended state
-  coordinator_.sys_device()->set_state(Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator().sys_device()->set_state(Device::State::kSuspended);
+  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
   for (auto idx : device_indexes) {
     device(idx)->device->set_state(Device::State::kSuspended);
@@ -780,7 +780,7 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
     zx::channel remote;
     ASSERT_OK(zx::channel::create(0, &watcher, &remote));
     ASSERT_OK(
-        devfs_watch(coordinator()->root_device()->self, std::move(remote), fio::WATCH_MASK_ADDED));
+        devfs_watch(coordinator().root_device()->self, std::move(remote), fio::WATCH_MASK_ADDED));
   }
 
   size_t device_indexes[2];
@@ -846,12 +846,12 @@ TEST_F(CompositeTestCase, Topology) {
       kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
       &composite_remote_coordinator, &composite_remote_controller));
 
-  Devnode* dn = coordinator()->root_device()->self;
+  Devnode* dn = coordinator().root_device()->self;
   fbl::RefPtr<Device> composite_dev;
   ASSERT_OK(devfs_walk(dn, "composite-dev", &composite_dev));
 
   char path_buf[PATH_MAX];
-  ASSERT_OK(coordinator()->GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));
+  ASSERT_OK(coordinator().GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));
   ASSERT_STR_EQ(path_buf, "/dev/composite-dev");
 }
 
@@ -1059,7 +1059,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
   VerifyMetadata(buf, len);
 
   // Remove device 0 and its children (fragment and composite devices).
-  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(device_indexes[0])->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
   zx::channel& device_remote = device(device_indexes[0])->controller_remote;
@@ -1102,7 +1102,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
-    fbl::String driver = coordinator()->fragment_driver()->libname;
+    fbl::String driver = coordinator().fragment_driver()->libname;
     ASSERT_NO_FATAL_FAILURES(
         CheckBindDriverReceived(device_state->controller_remote, driver.data()));
     coordinator_loop()->RunUntilIdle();

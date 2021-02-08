@@ -16,8 +16,8 @@ void ResumeTestCase::StateTest(zx_status_t resume_status, Device::State want_dev
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
 
   // Mark all devices suspened.
-  coordinator_.sys_device()->set_state(Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator().sys_device()->set_state(Device::State::kSuspended);
+  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
   device(index)->device->set_state(Device::State::kSuspended);
   ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::FULLY_ON));
@@ -68,8 +68,8 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   }
 
   // Mark all devices suspened. Otherwise resume will fail
-  coordinator_.sys_device()->set_state(Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  coordinator().sys_device()->set_state(Device::State::kSuspended);
+  coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->set_state(Device::State::kSuspended);
   for (auto& desc : devices) {
     fbl::RefPtr<Device> dev;
@@ -89,7 +89,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   ASSERT_TRUE(DeviceHasPendingMessages(sys_proxy_controller_remote_));
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(sys_proxy_controller_remote_, target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_EQ(coordinator_.sys_device()->state(), Device::State::kActive);
+  ASSERT_EQ(coordinator().sys_device()->state(), Device::State::kActive);
 
   ASSERT_TRUE(DeviceHasPendingMessages(platform_bus_controller_remote()));
   ASSERT_NO_FATAL_FAILURES(

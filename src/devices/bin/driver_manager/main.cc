@@ -285,7 +285,8 @@ int main(int argc, char** argv) {
   };
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  svc::Outgoing outgoing{loop.dispatcher()};
+  svc::Outgoing outgoing(loop.dispatcher());
+  InspectManager inspect_manager(loop.dispatcher());
 
   std::optional<DriverRunner> driver_runner;
   // TODO(fxbug.dev/33183): Replace this with a driver_index component.
@@ -370,7 +371,7 @@ int main(int argc, char** argv) {
     config.oom_event = zx::event(oom_event);
   }
 
-  Coordinator coordinator(std::move(config), loop.dispatcher());
+  Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher());
 
   // Services offered to the rest of the system.
   status = coordinator.InitOutgoingServices(outgoing.svc_dir());

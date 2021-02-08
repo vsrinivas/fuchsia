@@ -49,7 +49,7 @@ TEST_F(InitTestCase, MakeVisibleThenDefaultInit) {
   ASSERT_FALSE(device(index)->device->is_visible());
   ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 
-  coordinator_.MakeVisible(device(index)->device);
+  coordinator().MakeVisible(device(index)->device);
   ASSERT_TRUE(device(index)->device->is_visible());
 }
 
@@ -65,7 +65,7 @@ TEST_F(InitTestCase, DefaultInitThenMakeVisible) {
   ASSERT_EQ(Device::State::kInitializing, device(index)->device->state());
 
   // Not visible until the init hook completes.
-  coordinator_.MakeVisible(device(index)->device);
+  coordinator().MakeVisible(device(index)->device);
   ASSERT_FALSE(device(index)->device->is_visible());
 
   ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(index)->controller_remote, ZX_OK));
@@ -88,7 +88,7 @@ TEST_F(InitTestCase, InitThenUnbind) {
   ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txid));
 
   ASSERT_NO_FATAL_FAILURES(
-      coordinator_.ScheduleDriverHostRequestedRemove(device(index)->device, true /* do_unbind */));
+      coordinator().ScheduleDriverHostRequestedRemove(device(index)->device, true /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // We should not get the unbind request until we reply to the init.
@@ -316,6 +316,6 @@ TEST_F(InitTestCase, LegacyInvisibleNoInit) {
   ASSERT_FALSE(device(index)->device->is_visible());
   ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 
-  coordinator_.MakeVisible(device(index)->device);
+  coordinator().MakeVisible(device(index)->device);
   ASSERT_TRUE(device(index)->device->is_visible());
 }
