@@ -691,7 +691,7 @@ void Guest::Launch(AppLaunchRequest request) {
   if (request.application.resolved_url == kLinuxUriScheme) {
     auto it = background_views_.begin();
     if (it == background_views_.end()) {
-      FX_LOGS(INFO) << "No background views available";
+      pending_views_.push_back(std::move(request));
       return;
     }
     FX_LOGS(INFO) << "Found background view";

@@ -50,6 +50,9 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   void CreateView(zx::eventpair view_token,
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
+  void CreateViewWithViewRef(zx::eventpair token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override;
 };
 
 }  // namespace linux_runner

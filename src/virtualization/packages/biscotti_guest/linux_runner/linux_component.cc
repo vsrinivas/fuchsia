@@ -62,4 +62,10 @@ void LinuxComponent::CreateView(
                                     std::move(outgoing_services));
 }
 
+void LinuxComponent::CreateViewWithViewRef(zx::eventpair token,
+                                           fuchsia::ui::views::ViewRefControl view_ref_control,
+                                           fuchsia::ui::views::ViewRef view_ref) {
+  return CreateView(std::move(token), nullptr, nullptr);
+}
+
 }  // namespace linux_runner
