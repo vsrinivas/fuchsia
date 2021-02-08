@@ -64,7 +64,7 @@ zx_status_t LightDevice::SetBrightnessValue(double value) {
       .polarity = false,
       .period_ns = kPwmPeriodNs,
       .duty_cycle = static_cast<float>(value * 100.0 / (kMaxBrightness * 1.0)),
-      .mode_config_buffer = &regular,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&regular),
       .mode_config_size = sizeof(regular),
   };
   if ((status = pwm_->SetConfig(&config)) != ZX_OK) {

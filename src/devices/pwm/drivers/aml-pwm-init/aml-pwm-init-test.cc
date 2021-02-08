@@ -12,8 +12,8 @@
 bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {
   return (lhs.polarity == rhs.polarity) && (lhs.period_ns == rhs.period_ns) &&
          (lhs.duty_cycle == rhs.duty_cycle) && (lhs.mode_config_size == rhs.mode_config_size) &&
-         (static_cast<aml_pwm::mode_config*>(lhs.mode_config_buffer)->mode ==
-          static_cast<aml_pwm::mode_config*>(rhs.mode_config_buffer)->mode);
+         (reinterpret_cast<aml_pwm::mode_config*>(lhs.mode_config_buffer)->mode ==
+          reinterpret_cast<aml_pwm::mode_config*>(rhs.mode_config_buffer)->mode);
 }
 
 namespace pwm_init {
@@ -62,7 +62,7 @@ TEST(PwmInitDeviceTest, InitTest) {
       .polarity = false,
       .period_ns = 30053,
       .duty_cycle = static_cast<float>(49.931787176),
-      .mode_config_buffer = &two_timer,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&two_timer),
       .mode_config_size = sizeof(two_timer),
   };
   pwm_.ExpectSetConfig(ZX_OK, init_cfg);

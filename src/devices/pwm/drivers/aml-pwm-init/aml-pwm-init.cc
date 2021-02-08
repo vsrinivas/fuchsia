@@ -77,7 +77,7 @@ zx_status_t PwmInitDevice::Init() {
       .polarity = false,
       .period_ns = 30053,
       .duty_cycle = static_cast<float>(49.931787176),
-      .mode_config_buffer = &two_timer,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&two_timer),
       .mode_config_size = sizeof(two_timer),
   };
   if ((status = pwm_.SetConfig(&init_cfg)) != ZX_OK) {

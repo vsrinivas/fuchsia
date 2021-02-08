@@ -17,8 +17,8 @@
 bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {
   return (lhs.polarity == rhs.polarity) && (lhs.period_ns == rhs.period_ns) &&
          (lhs.duty_cycle == rhs.duty_cycle) && (lhs.mode_config_size == rhs.mode_config_size) &&
-         (static_cast<aml_pwm::mode_config*>(lhs.mode_config_buffer)->mode ==
-          static_cast<aml_pwm::mode_config*>(rhs.mode_config_buffer)->mode);
+         (reinterpret_cast<aml_pwm::mode_config*>(lhs.mode_config_buffer)->mode ==
+          reinterpret_cast<aml_pwm::mode_config*>(rhs.mode_config_buffer)->mode);
 }
 
 namespace aml_light {
@@ -83,7 +83,8 @@ class AmlLightTest : public zxtest::Test {
 TEST_F(AmlLightTest, GetInfoTest1) {
   pwm_.ExpectEnable(ZX_OK);
   aml_pwm::mode_config regular = {aml_pwm::ON, {}};
-  pwm_config_t init_config = {false, 170625, 100.0, &regular, sizeof(regular)};
+  pwm_config_t init_config = {false, 170625, 100.0, reinterpret_cast<uint8_t*>(&regular),
+                              sizeof(regular)};
   pwm_.ExpectSetConfig(ZX_OK, init_config);
 
   auto gpio = gpio_.GetProto();
@@ -172,7 +173,8 @@ TEST_F(AmlLightTest, SetValueTest1) {
 TEST_F(AmlLightTest, SetValueTest2) {
   pwm_.ExpectEnable(ZX_OK);
   aml_pwm::mode_config regular = {aml_pwm::ON, {}};
-  pwm_config_t config = {false, 170625, 100.0, &regular, sizeof(regular)};
+  pwm_config_t config = {false, 170625, 100.0, reinterpret_cast<uint8_t*>(&regular),
+                         sizeof(regular)};
   pwm_.ExpectSetConfig(ZX_OK, config);
 
   auto gpio = gpio_.GetProto();
@@ -231,7 +233,8 @@ TEST_F(AmlLightTest, SetValueTest2) {
 TEST_F(AmlLightTest, SetInvalidValueTest) {
   pwm_.ExpectEnable(ZX_OK);
   aml_pwm::mode_config regular = {aml_pwm::ON, {}};
-  pwm_config_t config = {false, 170625, 100.0, &regular, sizeof(regular)};
+  pwm_config_t config = {false, 170625, 100.0, reinterpret_cast<uint8_t*>(&regular),
+                         sizeof(regular)};
   pwm_.ExpectSetConfig(ZX_OK, config);
 
   auto gpio = gpio_.GetProto();

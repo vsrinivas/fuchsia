@@ -159,7 +159,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
     pwm_config_t cfg = {false, thermal_info_.voltage_pwm_period_ns,
                         static_cast<float>(thermal_info_.voltage_table[target_index].duty_cycle),
-                        &on, sizeof(on)};
+                        reinterpret_cast<uint8_t*>(&on), sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;
@@ -190,8 +190,8 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
     pwm_config_t cfg = {
         false, thermal_info_.voltage_pwm_period_ns,
-        static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle), &on,
-        sizeof(on)};
+        static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle),
+        reinterpret_cast<uint8_t*>(&on), sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;

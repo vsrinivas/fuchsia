@@ -35,13 +35,15 @@ class AmlPwm {
     if (!ids_[0].protect) {
       mode_configs_[0].mode = OFF;
       mode_configs_[0].regular = {};
-      configs_[0] = {false, 0, 0.0, &mode_configs_[0], sizeof(mode_config)};
+      configs_[0] = {false, 0, 0.0, reinterpret_cast<uint8_t*>(&mode_configs_[0]),
+                     sizeof(mode_config)};
       SetMode(0, OFF);
     }
     if (!ids_[1].protect) {
       mode_configs_[1].mode = OFF;
       mode_configs_[1].regular = {};
-      configs_[1] = {false, 0, 0.0, &mode_configs_[1], sizeof(mode_config)};
+      configs_[1] = {false, 0, 0.0, reinterpret_cast<uint8_t*>(&mode_configs_[1]),
+                     sizeof(mode_config)};
       SetMode(1, OFF);
     }
   }

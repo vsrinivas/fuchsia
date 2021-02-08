@@ -78,7 +78,7 @@ zx_status_t TestPwmDevice::PwmImplGetConfig(uint32_t idx, pwm_config_t* out_conf
   out_config->polarity = false;
   out_config->period_ns = 1000;
   out_config->duty_cycle = 39.0;
-  auto mode_cfg = static_cast<mode_config*>(out_config->mode_config_buffer);
+  auto mode_cfg = reinterpret_cast<mode_config*>(out_config->mode_config_buffer);
   mode_cfg->mode = 0;
   mode_cfg->magic.magic = 12345;
 
@@ -92,8 +92,8 @@ zx_status_t TestPwmDevice::PwmImplSetConfig(uint32_t idx, const pwm_config_t* co
 
   if (config->polarity || (config->period_ns != 1000) || (config->duty_cycle != 39.0) ||
       (config->mode_config_size != sizeof(mode_config)) ||
-      (static_cast<const mode_config*>(config->mode_config_buffer)->mode != 0) ||
-      (static_cast<const mode_config*>(config->mode_config_buffer)->magic.magic != 12345)) {
+      (reinterpret_cast<const mode_config*>(config->mode_config_buffer)->mode != 0) ||
+      (reinterpret_cast<const mode_config*>(config->mode_config_buffer)->magic.magic != 12345)) {
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;

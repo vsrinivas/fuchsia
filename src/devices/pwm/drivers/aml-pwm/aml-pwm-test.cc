@@ -5,8 +5,8 @@
 #include "aml-pwm.h"
 
 #include <vector>
-#include <ddk/metadata/pwm.h>
 
+#include <ddk/metadata/pwm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
@@ -23,7 +23,8 @@ class FakeAmlPwmDevice : public AmlPwmDevice {
  public:
   static std::unique_ptr<FakeAmlPwmDevice> Create(ddk::MmioBuffer mmio0, ddk::MmioBuffer mmio1,
                                                   ddk::MmioBuffer mmio2, ddk::MmioBuffer mmio3,
-                                                  ddk::MmioBuffer mmio4, std::vector<pwm_id_t> ids) {
+                                                  ddk::MmioBuffer mmio4,
+                                                  std::vector<pwm_id_t> ids) {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeAmlPwmDevice>(&ac);
     if (!ac.check()) {
@@ -154,7 +155,7 @@ TEST_F(AmlPwmDeviceTest, ProtectTest) {
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &mode_cfg,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&mode_cfg),
       .mode_config_size = sizeof(mode_cfg),
   };
   EXPECT_NOT_OK(pwm_->PwmImplSetConfig(3, &cfg));
@@ -169,7 +170,7 @@ TEST_F(AmlPwmDeviceTest, GetConfigTest) {
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &mode_cfg,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&mode_cfg),
       .mode_config_size = sizeof(mode_cfg),
   };
   EXPECT_OK(pwm_->PwmImplGetConfig(0, &cfg));
@@ -189,7 +190,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &fail,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&fail),
       .mode_config_size = sizeof(fail),
   };
   EXPECT_NOT_OK(pwm_->PwmImplSetConfig(0, &fail_cfg));  // Fail
@@ -203,7 +204,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
         .polarity = false,
         .period_ns = 1250,
         .duty_cycle = 100.0,
-        .mode_config_buffer = &fail,
+        .mode_config_buffer = reinterpret_cast<uint8_t*>(&fail),
         .mode_config_size = sizeof(fail),
     };
     EXPECT_NOT_OK(pwm_->PwmImplSetConfig(10, &fail_cfg));  // Fail
@@ -218,7 +219,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &off,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&off),
       .mode_config_size = sizeof(off),
   };
   EXPECT_OK(pwm_->PwmImplSetConfig(0, &off_cfg));
@@ -235,7 +236,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &on,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&on),
       .mode_config_size = sizeof(on),
   };
   EXPECT_OK(pwm_->PwmImplSetConfig(0, &on_cfg));  // turn on
@@ -279,7 +280,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
       .polarity = false,
       .period_ns = 1000,
       .duty_cycle = 30.0,
-      .mode_config_buffer = &ds,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&ds),
       .mode_config_size = sizeof(ds),
   };
   EXPECT_OK(pwm_->PwmImplSetConfig(2, &ds_cfg));
@@ -305,7 +306,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
       .polarity = false,
       .period_ns = 1000,
       .duty_cycle = 30.0,
-      .mode_config_buffer = &timer2,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&timer2),
       .mode_config_size = sizeof(timer2),
   };
   EXPECT_OK(pwm_->PwmImplSetConfig(7, &timer2_cfg));
@@ -324,7 +325,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigFailTest) {
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &on,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&on),
       .mode_config_size = sizeof(on),
   };
   EXPECT_OK(pwm_->PwmImplSetConfig(0, &on_cfg));  // Success

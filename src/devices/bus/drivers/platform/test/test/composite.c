@@ -488,14 +488,14 @@ static zx_status_t test_pwm(pwm_protocol_t* pwm) {
   zx_status_t status = ZX_OK;
   mode_config_t mode_cfg = {.mode = 0, .magic = {12345}};
   pwm_config_t cfg = {
-      false, 1000, 39.0, &mode_cfg, sizeof(mode_cfg),
+      false, 1000, 39.0, (uint8_t*)&mode_cfg, sizeof(mode_cfg),
   };
   if ((status = pwm_set_config(pwm, &cfg)) != ZX_OK) {
     return status;
   }
   mode_config_t out_mode_cfg = {.mode = 0, .magic = {0}};
   pwm_config_t out_config = {
-      false, 0, 0.0, &out_mode_cfg, sizeof(out_mode_cfg),
+      false, 0, 0.0, (uint8_t*)&out_mode_cfg, sizeof(out_mode_cfg),
   };
   pwm_get_config(pwm, &out_config);
   if (cfg.polarity != out_config.polarity || cfg.period_ns != out_config.period_ns ||

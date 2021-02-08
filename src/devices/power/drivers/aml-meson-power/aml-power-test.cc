@@ -16,8 +16,8 @@
 bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {
   return (lhs.polarity == rhs.polarity) && (lhs.period_ns == rhs.period_ns) &&
          (lhs.duty_cycle == rhs.duty_cycle) && (lhs.mode_config_size == rhs.mode_config_size) &&
-         (static_cast<aml_pwm::mode_config*>(lhs.mode_config_buffer)->mode ==
-          static_cast<aml_pwm::mode_config*>(rhs.mode_config_buffer)->mode);
+         (reinterpret_cast<aml_pwm::mode_config*>(lhs.mode_config_buffer)->mode ==
+          reinterpret_cast<aml_pwm::mode_config*>(rhs.mode_config_buffer)->mode);
 }
 
 namespace power {
@@ -131,33 +131,33 @@ TEST_F(AmlPowerTest, SetVoltage) {
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
 
   // Initialize to 0.69V
-  pwm_config_t cfg = {false, 1250, 100, &on, sizeof(on)};
+  pwm_config_t cfg = {false, 1250, 100, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
   // Scale up to 1.05V
-  cfg = {false, 1250, 92, &on, sizeof(on)};
+  cfg = {false, 1250, 92, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 84, &on, sizeof(on)};
+  cfg = {false, 1250, 84, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 76, &on, sizeof(on)};
+  cfg = {false, 1250, 76, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 68, &on, sizeof(on)};
+  cfg = {false, 1250, 68, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 59, &on, sizeof(on)};
+  cfg = {false, 1250, 59, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 51, &on, sizeof(on)};
+  cfg = {false, 1250, 51, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 43, &on, sizeof(on)};
+  cfg = {false, 1250, 43, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 34, &on, sizeof(on)};
+  cfg = {false, 1250, 34, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 26, &on, sizeof(on)};
+  cfg = {false, 1250, 26, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 17, &on, sizeof(on)};
+  cfg = {false, 1250, 17, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 8, &on, sizeof(on)};
+  cfg = {false, 1250, 8, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 3, &on, sizeof(on)};
+  cfg = {false, 1250, 3, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
   uint32_t actual;
@@ -202,7 +202,7 @@ TEST_F(AmlPowerTest, GetVoltage) {
 
   // Initialize to 0.69V
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
-  pwm_config_t cfg = {false, 1250, 100, &on, sizeof(on)};
+  pwm_config_t cfg = {false, 1250, 100, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
   uint32_t requested_voltage, actual_voltage;
@@ -237,15 +237,15 @@ TEST_F(AmlPowerTest, SetVoltageRoundDown) {
   constexpr uint32_t kTestVoltageFinalActual = 930'000;
 
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
-  pwm_config_t cfg = {false, 1250, 62, &on, sizeof(on)};
+  pwm_config_t cfg = {false, 1250, 62, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 54, &on, sizeof(on)};
+  cfg = {false, 1250, 54, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 45, &on, sizeof(on)};
+  cfg = {false, 1250, 45, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 37, &on, sizeof(on)};
+  cfg = {false, 1250, 37, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 34, &on, sizeof(on)};
+  cfg = {false, 1250, 34, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
   uint32_t actual;
@@ -270,21 +270,21 @@ TEST_F(AmlPowerTest, SetVoltageLittleCluster) {
   constexpr uint32_t kTestVoltageFinal = 930'000;
 
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
-  pwm_config_t cfg = {false, 1250, 89, &on, sizeof(on)};
+  pwm_config_t cfg = {false, 1250, 89, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 81, &on, sizeof(on)};
+  cfg = {false, 1250, 81, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 73, &on, sizeof(on)};
+  cfg = {false, 1250, 73, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 65, &on, sizeof(on)};
+  cfg = {false, 1250, 65, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 56, &on, sizeof(on)};
+  cfg = {false, 1250, 56, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 48, &on, sizeof(on)};
+  cfg = {false, 1250, 48, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 40, &on, sizeof(on)};
+  cfg = {false, 1250, 40, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  cfg = {false, 1250, 34, &on, sizeof(on)};
+  cfg = {false, 1250, 34, reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
   uint32_t actual;

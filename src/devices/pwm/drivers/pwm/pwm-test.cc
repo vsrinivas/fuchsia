@@ -72,7 +72,7 @@ TEST_F(PwmDeviceTest, SetConfigTest) {
       .polarity = false,
       .period_ns = 1000,
       .duty_cycle = 45.0,
-      .mode_config_buffer = &fake_mode,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(reinterpret_cast<uint8_t*>(&fake_mode)),
       .mode_config_size = sizeof(fake_mode),
   };
   EXPECT_OK(pwm_->PwmSetConfig(&fake_config));

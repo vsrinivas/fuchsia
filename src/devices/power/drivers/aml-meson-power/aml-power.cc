@@ -235,8 +235,8 @@ zx_status_t AmlPower::RequestVoltage(const ddk::PwmProtocolClient& pwm, uint32_t
   if (*current_voltage_index == kInvalidIndex) {
     // Update new duty cycle.
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
-    pwm_config_t cfg = {false, pwm_period_, static_cast<float>(target->duty_cycle), &on,
-                        sizeof(on)};
+    pwm_config_t cfg = {false, pwm_period_, static_cast<float>(target->duty_cycle),
+                        reinterpret_cast<uint8_t*>(&on), sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;
@@ -266,8 +266,8 @@ zx_status_t AmlPower::RequestVoltage(const ddk::PwmProtocolClient& pwm, uint32_t
     // Update new duty cycle.
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
     pwm_config_t cfg = {false, pwm_period_,
-                        static_cast<float>(voltage_table_[*current_voltage_index].duty_cycle), &on,
-                        sizeof(on)};
+                        static_cast<float>(voltage_table_[*current_voltage_index].duty_cycle),
+                        reinterpret_cast<uint8_t*>(&on), sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;

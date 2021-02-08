@@ -30,7 +30,7 @@ struct PwmConfig {
    ///       struct mode_config_two_timer two_timer;
    ///     };
    ///   };
-   [Mutable] vector<voidptr> mode_config;
+   [Mutable, Buffer] vector<uint8> mode_config;
 };
 
 [BanjoLayout = "ddk-protocol"]
