@@ -5,9 +5,9 @@
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
-    filter::Filter, messenger, role, ActionSender, Address, Audience, Fingerprint, Message,
-    MessageAction, MessageClientId, MessageError, MessageType, MessengerAction, MessengerId,
-    MessengerType, Payload, Role, Signature, Status,
+    filter::Filter, messenger, role, ActionSender, Address, Attribution, Audience, Fingerprint,
+    Message, MessageAction, MessageClientId, MessageError, MessageType, MessengerAction,
+    MessengerId, MessengerType, Payload, Role, Signature, Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -36,15 +36,23 @@ pub enum Error {
     MessengerNotFound,
 }
 
-/// `Broker` captures the information necessary to process messages to a broker:
-/// messenger_id: The `MessengerId` associated with the broker so that it can be
-///               distinguished from other messengers.
-/// filter:       A condition that is applied to a message to determine whether
-///               it should be directed to the broker.
+/// `Broker` captures the information necessary to process messages to a broker.
 #[derive(Clone)]
 struct Broker<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    /// The `MessengerId` associated with the broker so that it can be distinguished from other
+    /// messengers.
     messenger_id: MessengerId,
+    /// A condition that is applied to a message to determine whether it should be directed to the
+    /// broker.
     filter: Option<Filter<P, A, R>>,
+}
+
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> PartialEq for Broker<P, A, R> {
+    fn eq(&self, other: &Self) -> bool {
+        // Since each broker has a unique [`MessengerId`], it is implied that any brokers that share
+        // the same [`MessengerId`] are the same, having matching filters as well.
+        self.messenger_id == other.messenger_id
+    }
 }
 
 /// The MessageHub controls the message flow for a set of messengers. It
@@ -220,9 +228,36 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             return_path.append(&mut source_return_path);
             let last_index = return_path.len() - 1;
 
-            if sender_id == message.get_return_path()[0].get_messenger_id() {
-                // If this is the reply's author, send to the first messenger in
-                // the original message's return path.
+            if self.is_broker(sender_id) && !source_return_path_messenger_ids.contains(&sender_id) {
+                // If the sender is in the return path as a broker and not a participant in the
+                // source message's return path, determine next broker to forward to.
+                let mut candidate_index = self
+                    .brokers
+                    .iter()
+                    .position(|broker| broker.messenger_id == sender_id)
+                    .expect("broker should be found")
+                    + 1;
+
+                // A candidate broker is one that is after the sending broker, has a filter
+                // matching the current message, and is not in the return path already.
+                while candidate_index < self.brokers.len() && target_index.is_none() {
+                    target_index = brokers.iter().position(|broker| {
+                        *broker == self.brokers[candidate_index]
+                            && !source_return_path_messenger_ids.contains(&broker.messenger_id)
+                    });
+
+                    candidate_index += 1;
+                }
+
+                // If we can't find a next broker, we should skip over those considered.
+                if target_index.is_none() {
+                    target_index = Some(brokers.len());
+                }
+            } else if sender_id == message.get_return_path()[0].get_messenger_id()
+                && !matches!(message.get_attribution(), Attribution::Derived(..))
+            {
+                // If this is the reply's original author, send to the first
+                // messenger in the original message's return path.
                 target_index = Some(0);
 
                 // Mark source message as delivered. In the case the sender is the

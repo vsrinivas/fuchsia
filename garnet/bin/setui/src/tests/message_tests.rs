@@ -699,6 +699,63 @@ async fn test_bind_to_recipient() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
+async fn test_reply_propagation() {
+    let messenger_factory = test::message::create_hub();
+
+    // Create messenger to send source message.
+    let (sending_messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("sending messenger should be created");
+
+    // Create broker to propagate a derived message.
+    let (_, mut broker) = messenger_factory
+        .create(MessengerType::Broker(Some(filter::Builder::single(filter::Condition::Custom(
+            Arc::new(move |message| message.payload() == REPLY),
+        )))))
+        .await
+        .expect("broker should be created");
+
+    // Create messenger to be target of source message.
+    let (_, mut target_receptor) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("target messenger should be created");
+
+    // Send top level message.
+    let mut result_receptor = sending_messenger
+        .message(ORIGINAL, Audience::Messenger(target_receptor.get_signature()))
+        .send();
+
+    // Ensure target receives message and reply back.
+    verify_payload(
+        ORIGINAL,
+        &mut target_receptor,
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.reply(REPLY).send().ack();
+            })
+        })),
+    )
+    .await;
+
+    // Ensure broker receives reply and propagate modified message.
+    verify_payload(
+        REPLY,
+        &mut broker,
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.propagate(MODIFIED).send().ack();
+            })
+        })),
+    )
+    .await;
+
+    // Ensure original sender gets reply.
+    verify_payload(MODIFIED, &mut result_receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_propagation() {
     let messenger_factory = test::message::create_hub();
 

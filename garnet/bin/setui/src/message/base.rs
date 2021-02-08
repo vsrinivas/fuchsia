@@ -543,6 +543,12 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         return self.return_path.clone();
     }
 
+    /// Returns the message's attribution, which identifies whether it has been modified by a source
+    /// other than the original author.
+    pub fn get_attribution(&self) -> &Attribution<P, A, R> {
+        &self.attribution
+    }
+
     /// Returns the message's type.
     pub fn get_type(&self) -> &MessageType<P, A, R> {
         match &self.attribution {
