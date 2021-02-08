@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("options") {
   sources = [ "options.cc" ]
@@ -64,45 +64,6 @@ source_set("volume-descriptor-test") {
   ]
 }
 
-test_package("storage-volume-image-tests") {
-  deps = [
-    ":storage-volume-image-integration-test",
-    ":storage-volume-image-test",
-  ]
-
-  tests = [
-    {
-      name = "storage-volume-image-test"
-    },
-    {
-      name = "storage-volume-image-integration-test"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//src/storage/volume_image/serialization/address_descriptor.schema.json")
-      dest = "schema/address_descriptor.schema.json"
-    },
-    {
-      path = rebase_path(
-              "//src/storage/volume_image/serialization/blob_manifest.schema.json")
-      dest = "schema/blob_manifest.schema.json"
-    },
-    {
-      path = rebase_path(
-              "//src/storage/volume_image/serialization/volume_descriptor.schema.json")
-      dest = "schema/volume_descriptor.schema.json"
-    },
-    {
-      path = rebase_path(
-              "//src/storage/volume_image/serialization/volume_image.schema.json")
-      dest = "schema/volume_image.schema.json"
-    },
-  ]
-}
-
 test("storage-volume-image-test") {
   deps = [
     ":volume-descriptor-test",
@@ -127,6 +88,38 @@ test("storage-volume-image-integration-test") {
   if (is_fuchsia) {
     deps += [ "//sdk/lib/fdio" ]
   }
+}
+
+resource("serialization-schemas") {
+  sources = [
+    "serialization/address_descriptor.schema.json",
+    "serialization/blob_manifest.schema.json",
+    "serialization/volume_descriptor.schema.json",
+    "serialization/volume_image.schema.json",
+  ]
+  outputs = [ "data/schema/{{source_file_part}}" ]
+}
+
+fuchsia_component("storage-volume-image-test-component") {
+  manifest = "meta/storage-volume-image-test.cmx"
+  deps = [
+    ":serialization-schemas",
+    ":storage-volume-image-test",
+  ]
+  testonly = true
+}
+
+fuchsia_component("storage-volume-image-integration-test-component") {
+  manifest = "meta/storage-volume-image-integration-test.cmx"
+  deps = [ ":storage-volume-image-integration-test" ]
+  testonly = true
+}
+
+fuchsia_test_package("storage-volume-image-tests") {
+  test_components = [
+    ":storage-volume-image-test-component",
+    ":storage-volume-image-integration-test-component",
+  ]
 }
 
 group("tests") {
