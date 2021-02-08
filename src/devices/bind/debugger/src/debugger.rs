@@ -8,7 +8,7 @@ use crate::encode_bind_program_v1::{RawCondition, RawInstruction, RawOp};
 use crate::errors::UserError;
 use crate::instruction::{DeviceProperty, RawAstLocation};
 use num_traits::FromPrimitive;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,11 +47,11 @@ enum DebuggerOutput {
 pub fn debug(
     instructions: &[RawInstruction<[u32; 3]>],
     properties: &[DeviceProperty],
-) -> Result<bool, DebuggerError> {
+) -> Result<Option<HashSet<DeviceProperty>>, DebuggerError> {
     let mut debugger = Debugger::new(instructions, properties)?;
-    let binds = debugger.evaluate_bind_program()?;
+    let matched_properties = debugger.evaluate_bind_program()?;
     debugger.log_output()?;
-    Ok(binds)
+    Ok(matched_properties)
 }
 
 struct Debugger<'a> {
@@ -92,37 +92,39 @@ impl<'a> Debugger<'a> {
         }
     }
 
-    fn get_device_property(&self, key: u32) -> Result<u32, DebuggerError> {
-        let value = self.properties.get(&key);
-        if let Some(value) = value {
-            return Ok(*value);
+    fn get_device_property(&self, key: u32) -> Result<DeviceProperty, DebuggerError> {
+        if let Some((key, value)) = self.properties.get_key_value(&key) {
+            return Ok(DeviceProperty { key: *key, value: *value });
         }
 
         // TODO(fxbug.dev/45663): The behavior of setting missing properties to 0 is implemented to be
         // consistent with binding.cc. This behavior should eventually be changed to deal with
         // missing properties in a better way.
         match key {
-            BIND_PROTOCOL => return Err(DebuggerError::MissingBindProtocol),
+            BIND_PROTOCOL => Err(DebuggerError::MissingBindProtocol),
             BIND_AUTOBIND => {
                 println!(
                     "WARNING: Driver has BI_ABORT_IF_AUTOBIND. \
                     This bind program will fail in autobind contexts."
                 );
                 // Set autobind = false, since the debugger is always run with a specific driver.
-                Ok(0)
+                Ok(DeviceProperty { key: BIND_AUTOBIND, value: 0 })
             }
             _ => {
                 println!(
                     "WARNING: Device has no value for {}. The value will be set to 0.",
                     self.key_string(key)?
                 );
-                Ok(0)
+                Ok(DeviceProperty { key, value: 0 })
             }
         }
     }
 
-    pub fn evaluate_bind_program(&mut self) -> Result<bool, DebuggerError> {
+    pub fn evaluate_bind_program(
+        &mut self,
+    ) -> Result<Option<HashSet<DeviceProperty>>, DebuggerError> {
         let mut instructions = self.instructions.iter();
+        let mut matched_properties = HashSet::new();
 
         while let Some(mut instruction) = instructions.next() {
             let condition = FromPrimitive::from_u32(instruction.condition())
@@ -138,11 +140,12 @@ impl<'a> Debugger<'a> {
                     return Err(DebuggerError::BindFlagsNotSupported);
                 }
 
-                let device_value = self.get_device_property(key)?;
+                let device_property = self.get_device_property(key)?;
+                matched_properties.insert(device_property);
 
                 match condition {
-                    RawCondition::Equal => device_value == instruction.value(),
-                    RawCondition::NotEqual => device_value != instruction.value(),
+                    RawCondition::Equal => device_property.value == instruction.value(),
+                    RawCondition::NotEqual => device_property.value != instruction.value(),
                     RawCondition::Always => unreachable!(),
                 }
             };
@@ -154,8 +157,8 @@ impl<'a> Debugger<'a> {
             }
 
             match operation {
-                RawOp::Abort => return Ok(false),
-                RawOp::Match => return Ok(true),
+                RawOp::Abort => return Ok(None),
+                RawOp::Match => return Ok(Some(matched_properties)),
                 RawOp::Goto => {
                     let label = instruction.parameter_a();
                     while !(FromPrimitive::from_u32(instruction.operation()) == Some(RawOp::Label)
@@ -406,7 +409,12 @@ mod test {
             to_raw_instruction(Instruction::Abort(instruction::Condition::Always)).unwrap(),
         ];
         let properties = Vec::new();
-        assert_eq!(debug(&instructions, &properties), Ok(true));
+        assert_eq!(
+            debug(&instructions, &properties),
+            Ok(Some(
+                vec![DeviceProperty { key: 0x0002, value: 0 },].into_iter().collect::<HashSet<_>>()
+            ))
+        );
     }
 
     #[test]
@@ -459,7 +467,12 @@ mod test {
         symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
         let raw_instructions = compile_to_raw(statements, symbol_table);
         let properties = Vec::new();
-        assert_eq!(debug(&raw_instructions, &properties), Ok(true));
+        assert_eq!(
+            debug(&raw_instructions, &properties),
+            Ok(Some(
+                vec![DeviceProperty { key: 0x0100, value: 0 },].into_iter().collect::<HashSet<_>>()
+            ))
+        );
     }
 
     mod condition_equals {
@@ -486,7 +499,14 @@ mod test {
             let raw_instructions = condition_equals_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 42 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![DeviceProperty { key: 0x0100, value: 42 }]
+                        .into_iter()
+                        .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::ConditionStatement {
@@ -504,7 +524,7 @@ mod test {
             let raw_instructions = condition_equals_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 5 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::ConditionStatement {
@@ -522,7 +542,7 @@ mod test {
             let raw_instructions = condition_equals_instructions();
             let properties = Vec::new();
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::ConditionStatement {
@@ -559,7 +579,14 @@ mod test {
             let raw_instructions = condition_not_equals_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 5 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![DeviceProperty { key: 0x0100, value: 5 }]
+                        .into_iter()
+                        .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::ConditionStatement {
@@ -577,7 +604,14 @@ mod test {
             let raw_instructions = condition_not_equals_instructions();
             let properties = Vec::new();
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![DeviceProperty { key: 0x0100, value: 0 }]
+                        .into_iter()
+                        .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::ConditionStatement {
@@ -595,7 +629,7 @@ mod test {
             let raw_instructions = condition_not_equals_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 42 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::ConditionStatement {
@@ -629,7 +663,15 @@ mod test {
             let raw_instructions = accept_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 42 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![DeviceProperty { key: 0x0100, value: 42 }]
+                        .into_iter()
+                        .collect::<HashSet<_>>()
+                )
+            );
+
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::AcceptStatementSuccess { key: 0x0100, value: 42, line: 7 }]
@@ -642,7 +684,7 @@ mod test {
             let raw_instructions = accept_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 5 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::AcceptStatementFailure { key: 0x0100, line: 7 }]
@@ -655,7 +697,7 @@ mod test {
             let raw_instructions = accept_instructions();
             let properties = Vec::new();
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![DebuggerOutput::AcceptStatementFailure { key: 0x0100, line: 7 }]
@@ -741,7 +783,17 @@ mod test {
                 DeviceProperty { key: 0x0200, value: 1 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![
+                        DeviceProperty { key: 0x0100, value: 1 },
+                        DeviceProperty { key: 0x0200, value: 1 }
+                    ]
+                    .into_iter()
+                    .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![
@@ -770,7 +822,17 @@ mod test {
                 DeviceProperty { key: 0x0200, value: 2 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![
+                        DeviceProperty { key: 0x0100, value: 2 },
+                        DeviceProperty { key: 0x0200, value: 2 },
+                    ]
+                    .into_iter()
+                    .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![
@@ -802,7 +864,17 @@ mod test {
             let raw_instructions = if_else_instructions();
             let properties = vec![DeviceProperty { key: 0x0200, value: 3 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![
+                        DeviceProperty { key: 0x0200, value: 3 },
+                        DeviceProperty { key: 0x0100, value: 0 },
+                    ]
+                    .into_iter()
+                    .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![
@@ -837,7 +909,7 @@ mod test {
                 DeviceProperty { key: 0x0200, value: 42 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![
@@ -869,7 +941,7 @@ mod test {
             let raw_instructions = if_else_instructions();
             let properties = Vec::new();
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![
@@ -927,7 +999,7 @@ mod test {
                 DeviceProperty { key: 0x0200, value: 1 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![
@@ -997,7 +1069,7 @@ mod test {
             let raw_instructions = full_program_instructions();
             let properties = vec![DeviceProperty { key: 0x0100, value: 42 }];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![
@@ -1021,7 +1093,18 @@ mod test {
                 DeviceProperty { key: 0x0200, value: 1 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(debugger.evaluate_bind_program().unwrap());
+            assert_eq!(
+                debugger.evaluate_bind_program().unwrap(),
+                Some(
+                    vec![
+                        DeviceProperty { key: 0x0100, value: 43 },
+                        DeviceProperty { key: 0x0200, value: 1 },
+                        DeviceProperty { key: 0x0300, value: 0 },
+                    ]
+                    .into_iter()
+                    .collect::<HashSet<_>>()
+                )
+            );
             assert_eq!(
                 debugger.output,
                 vec![
@@ -1051,7 +1134,7 @@ mod test {
                 DeviceProperty { key: 0x0200, value: 3 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![
@@ -1076,7 +1159,7 @@ mod test {
                 DeviceProperty { key: 0x0300, value: 5 },
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
-            assert!(!debugger.evaluate_bind_program().unwrap());
+            assert!(debugger.evaluate_bind_program().unwrap().is_none());
             assert_eq!(
                 debugger.output,
                 vec![

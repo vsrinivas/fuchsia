@@ -9,6 +9,7 @@ use fidl_fuchsia_device_manager;
 use num_derive::FromPrimitive;
 use std::fmt;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct DeviceProperty {
     pub key: u32,
     pub value: u32,

@@ -96,7 +96,7 @@ async fn main() {
     }
 
     let binds = match debugger::debug(&raw_instructions, &device_properties) {
-        Ok(binds) => binds,
+        Ok(properties) => properties.is_some(),
         Err(err) => {
             eprintln!("{}", err);
             std::process::exit(1);

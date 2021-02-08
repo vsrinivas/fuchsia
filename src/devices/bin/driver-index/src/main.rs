@@ -12,6 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{zx_status_t, Status};
 use futures::prelude::*;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 /// Wraps all hosted protocols into a single type that can be matched against
@@ -29,7 +30,7 @@ impl Driver {
     fn matches(
         &self,
         properties: &Vec<DeviceProperty>,
-    ) -> Result<bool, bind::debugger::DebuggerError> {
+    ) -> Result<Option<HashSet<DeviceProperty>>, bind::debugger::DebuggerError> {
         bind::debugger::debug(&self.bind_program, properties)
     }
 }
@@ -58,8 +59,8 @@ impl Indexer {
         let properties = node_to_device_property(&properties)?;
         for driver in &self.drivers {
             match driver.matches(&properties) {
-                Ok(matches) => {
-                    if matches {
+                Ok(matched_properties) => {
+                    if matched_properties.is_some() {
                         return Ok((driver.url.clone(), fdf::NodeAddArgs::EMPTY));
                     }
                     continue;
