@@ -446,6 +446,20 @@ TEST_F(PciProtocolTests, MsiX) {
   EXPECT_OK(pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
 }
 
+// Ensure that bus mastering is enabled when requesting MSI modes.
+TEST_F(PciProtocolTests, MsiEnablesBusMastering) {
+  pci().EnableBusMaster(false);
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, 1));
+  uint16_t value = 0;
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_COMMAND, &value));
+  ASSERT_EQ(PCI_CFG_COMMAND_BUS_MASTER_EN, value & PCI_CFG_COMMAND_BUS_MASTER_EN);
+
+  pci().EnableBusMaster(false);
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, 1));
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_COMMAND, &value));
+  ASSERT_EQ(PCI_CFG_COMMAND_BUS_MASTER_EN, value & PCI_CFG_COMMAND_BUS_MASTER_EN);
+}
+
 // The Quadro card supports 4 MSI interrupts.
 TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   pci::MsiControlReg msi_ctrl = {

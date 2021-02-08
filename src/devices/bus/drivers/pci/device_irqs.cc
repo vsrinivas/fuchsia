@@ -211,6 +211,13 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // Bus mastering must be enabled to generate MSI messages.
+  zx_status_t status = EnableBusMaster(true);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "[%s] Failed to enable bus mastering for MSI mode (%d)", cfg_->addr(), status);
+    return status;
+  }
+
   auto result = AllocateMsi(irq_cnt);
   if (result.is_ok()) {
     auto [alloc, info] = std::move(result.value());
@@ -233,6 +240,13 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
   ZX_DEBUG_ASSERT(irqs_.mode == PCI_IRQ_MODE_DISABLED);
   ZX_DEBUG_ASSERT(!irqs_.msi_allocation);
   ZX_DEBUG_ASSERT(caps_.msix);
+
+  // Bus mastering must be enabled to generate MSI-X messages.
+  zx_status_t status = EnableBusMaster(true);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "[%s] Failed to enable bus mastering for MSI-X mode (%d)", cfg_->addr(), status);
+    return status;
+  }
 
   // MSI-X supports non-pow2 counts, but the MSI allocator still allocates in
   // pow2 based blocks.

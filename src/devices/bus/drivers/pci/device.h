@@ -151,7 +151,7 @@ class Device : public PciDeviceType,
   // @param enable If true, allow the device to access main system memory as a bus
   // master.
   // @return A zx_status_t indicating success or failure of the operation.
-  zx_status_t EnableBusMaster(bool enabled) __TA_EXCLUDES(dev_lock_);
+  zx_status_t EnableBusMaster(bool enabled) __TA_REQUIRES(dev_lock_);
 
   // Enable or disable PIO access in a device's configuration.
   //

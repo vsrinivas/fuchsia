@@ -254,7 +254,7 @@ void Device::DisableLocked() {
 }
 
 zx_status_t Device::EnableBusMaster(bool enabled) {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  // Only allow bus mastering to be turned off if the device is disabled.
   if (enabled && disabled_) {
     return ZX_ERR_BAD_STATE;
   }

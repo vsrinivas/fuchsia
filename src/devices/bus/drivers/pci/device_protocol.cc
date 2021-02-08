@@ -164,6 +164,8 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {
+  fbl::AutoLock dev_lock(&dev_lock_);
+
   zx_status_t status = EnableBusMaster(request_.enable);
   zxlogf(DEBUG, "[%s] EnableBusMaster { enabled = %u, status = %s }", cfg_->addr(), request_.enable,
          zx_status_get_string(status));

@@ -359,16 +359,16 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
 }
 
 zx_status_t PcieDevice::EnableBusMaster(bool enabled) {
+  Guard<Mutex> guard{&dev_lock_};
+  return EnableBusMasterLocked(enabled);
+}
+
+zx_status_t PcieDevice::EnableBusMasterLocked(bool enabled) {
   if (enabled && disabled_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx_status_t st =
-      ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
+  ModifyCmdLocked(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
   return upstream_->EnableBusMasterUpstream(enabled);
 }
 

@@ -242,16 +242,14 @@ zx_status_t Bridge::EnableBusMasterUpstream(bool enabled) {
   // If being asked to disable Bus Mastering then we should ensure that no other
   // devices downstream of this bridge still have it enabled. If any do then we
   // leave BusMastering enabled.
-  {
-    fbl::AutoLock dev_lock(&dev_lock_);
-    if (enabled) {
-      downstream_bus_mastering_cnt_++;
-    } else {
-      if (downstream_bus_mastering_cnt_ == 0) {
-        return ZX_ERR_BAD_STATE;
-      }
-      downstream_bus_mastering_cnt_--;
+  fbl::AutoLock dev_lock(&dev_lock_);
+  if (enabled) {
+    downstream_bus_mastering_cnt_++;
+  } else {
+    if (downstream_bus_mastering_cnt_ == 0) {
+      return ZX_ERR_BAD_STATE;
     }
+    downstream_bus_mastering_cnt_--;
   }
 
   // Only make a change to the bridge's configuration in a case where the
