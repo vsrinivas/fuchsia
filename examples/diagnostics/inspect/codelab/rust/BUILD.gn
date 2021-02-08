@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("rust") {
   deps = [ ":inspect_rust_codelab" ]
@@ -17,199 +16,130 @@ group("tests") {
   ]
 }
 
-package("inspect_rust_codelab") {
+fuchsia_component("inspect_rust_codelab_client") {
+  manifest = "client/meta/inspect_rust_codelab_client.cmx"
+  deps = [ "client:bin" ]
+}
+
+fuchsia_component("inspect_rust_codelab_fizzbuzz") {
+  manifest = "fizzbuzz/meta/inspect_rust_codelab_fizzbuzz.cmx"
+  deps = [ "fizzbuzz:bin" ]
+}
+
+fuchsia_component("inspect_rust_codelab_part_1") {
+  manifest = "part_1/meta/inspect_rust_codelab_part_1.cmx"
+  deps = [ "part_1:bin" ]
+}
+
+fuchsia_component("inspect_rust_codelab_part_2") {
+  manifest = "part_2/meta/inspect_rust_codelab_part_2.cmx"
+  deps = [ "part_2:bin" ]
+}
+
+fuchsia_component("inspect_rust_codelab_part_3") {
+  manifest = "part_3/meta/inspect_rust_codelab_part_3.cmx"
+  deps = [ "part_3:bin" ]
+}
+
+fuchsia_component("inspect_rust_codelab_part_4") {
+  manifest = "part_4/meta/inspect_rust_codelab_part_4.cmx"
+  deps = [ "part_4:bin" ]
+}
+
+fuchsia_component("inspect_rust_codelab_part_5") {
+  manifest = "part_5/meta/inspect_rust_codelab_part_5.cmx"
+  deps = [ "part_5:bin" ]
+}
+
+fuchsia_package("inspect_rust_codelab") {
   deps = [
-    "client:bin",
-    "fizzbuzz:bin",
-    "part_1:bin",
-    "part_2:bin",
-    "part_3:bin",
-    "part_4:bin",
-    "part_5:bin",
-  ]
-
-  binaries = [
-    {
-      name = "inspect_rust_codelab_client"
-    },
-    {
-      name = "inspect_rust_codelab_fizzbuzz"
-    },
-    {
-      name = "inspect_rust_codelab_part_1"
-    },
-    {
-      name = "inspect_rust_codelab_part_2"
-    },
-    {
-      name = "inspect_rust_codelab_part_3"
-    },
-    {
-      name = "inspect_rust_codelab_part_4"
-    },
-    {
-      name = "inspect_rust_codelab_part_5"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("client/meta/inspect_rust_codelab_client.cmx")
-      dest = "inspect_rust_codelab_client.cmx"
-    },
-    {
-      path = rebase_path("fizzbuzz/meta/inspect_rust_codelab_fizzbuzz.cmx")
-      dest = "inspect_rust_codelab_fizzbuzz.cmx"
-    },
-    {
-      path = rebase_path("part_1/meta/inspect_rust_codelab_part_1.cmx")
-      dest = "inspect_rust_codelab_part_1.cmx"
-    },
-    {
-      path = rebase_path("part_2/meta/inspect_rust_codelab_part_2.cmx")
-      dest = "inspect_rust_codelab_part_2.cmx"
-    },
-    {
-      path = rebase_path("part_3/meta/inspect_rust_codelab_part_3.cmx")
-      dest = "inspect_rust_codelab_part_3.cmx"
-    },
-    {
-      path = rebase_path("part_4/meta/inspect_rust_codelab_part_4.cmx")
-      dest = "inspect_rust_codelab_part_4.cmx"
-    },
-    {
-      path = rebase_path("part_5/meta/inspect_rust_codelab_part_5.cmx")
-      dest = "inspect_rust_codelab_part_5.cmx"
-    },
+    ":inspect_rust_codelab_client",
+    ":inspect_rust_codelab_fizzbuzz",
+    ":inspect_rust_codelab_part_1",
+    ":inspect_rust_codelab_part_2",
+    ":inspect_rust_codelab_part_3",
+    ":inspect_rust_codelab_part_4",
+    ":inspect_rust_codelab_part_5",
   ]
 }
 
-test_package("inspect_rust_codelab_unittests") {
-  deps = [
-    "part_1:bin_test",
-    "part_2:bin_test",
-    "part_3:bin_test",
-    "part_4:bin_test",
-    "part_5:bin_test",
-  ]
+fuchsia_unittest_component("inspect_rust_codelab_part_1_bin_test") {
+  deps = [ "part_1:bin_test" ]
+}
 
-  tests = [
-    {
-      name = "inspect_rust_codelab_part_1_bin_test"
-      dest = "reverser_unittests_part_1"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_2_bin_test"
-      dest = "reverser_unittests_part_2"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_3_bin_test"
-      dest = "reverser_unittests_part_3"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_4_bin_test"
-      dest = "reverser_unittests_part_4"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_5_bin_test"
-      dest = "reverser_unittests_part_5"
-      environments = basic_envs
-    },
+fuchsia_unittest_component("inspect_rust_codelab_part_2_bin_test") {
+  deps = [ "part_2:bin_test" ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_3_bin_test") {
+  deps = [ "part_3:bin_test" ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_4_bin_test") {
+  deps = [ "part_4:bin_test" ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_5_bin_test") {
+  deps = [ "part_5:bin_test" ]
+}
+
+fuchsia_test_package("inspect_rust_codelab_unittests") {
+  test_components = [
+    ":inspect_rust_codelab_part_1_bin_test",
+    ":inspect_rust_codelab_part_2_bin_test",
+    ":inspect_rust_codelab_part_3_bin_test",
+    ":inspect_rust_codelab_part_4_bin_test",
+    ":inspect_rust_codelab_part_5_bin_test",
   ]
 }
 
-test_package("inspect_rust_codelab_integration_tests") {
+fuchsia_unittest_component("inspect_rust_codelab_part_1_integration_test") {
+  manifest = "meta/inspect_rust_codelab_part_1_integration_test.cmx"
   deps = [
-    "fizzbuzz:bin",
-    "part_1:bin",
+    ":inspect_rust_codelab_part_1",
     "part_1/tests:integration_test",
-    "part_2:bin",
+  ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_2_integration_test") {
+  manifest = "meta/inspect_rust_codelab_part_2_integration_test.cmx"
+  deps = [
+    ":inspect_rust_codelab_part_2",
     "part_2/tests:integration_test",
-    "part_3:bin",
+  ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_3_integration_test") {
+  manifest = "meta/inspect_rust_codelab_part_3_integration_test.cmx"
+  deps = [
+    ":inspect_rust_codelab_part_3",
     "part_3/tests:integration_test",
-    "part_4:bin",
+  ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_4_integration_test") {
+  manifest = "meta/inspect_rust_codelab_part_4_integration_test.cmx"
+  deps = [
+    ":inspect_rust_codelab_part_4",
     "part_4/tests:integration_test",
-    "part_5:bin",
+  ]
+}
+
+fuchsia_unittest_component("inspect_rust_codelab_part_5_integration_test") {
+  manifest = "meta/inspect_rust_codelab_part_5_integration_test.cmx"
+  deps = [
+    ":inspect_rust_codelab_fizzbuzz",
+    ":inspect_rust_codelab_part_5",
     "part_5/tests:integration_test",
   ]
+}
 
-  tests = [
-    {
-      name = "inspect_rust_codelab_part_1_integration_test"
-      dest = "integration_test_part_1"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_2_integration_test"
-      dest = "integration_test_part_2"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_3_integration_test"
-      dest = "integration_test_part_3"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_4_integration_test"
-      dest = "integration_test_part_4"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_rust_codelab_part_5_integration_test"
-      dest = "integration_test_part_5"
-      environments = basic_envs
-    },
-  ]
-
-  binaries = [
-    {
-      name = "inspect_rust_codelab_fizzbuzz"
-    },
-    {
-      name = "inspect_rust_codelab_part_1"
-    },
-    {
-      name = "inspect_rust_codelab_part_2"
-    },
-    {
-      name = "inspect_rust_codelab_part_3"
-    },
-    {
-      name = "inspect_rust_codelab_part_4"
-    },
-    {
-      name = "inspect_rust_codelab_part_5"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("fizzbuzz/meta/inspect_rust_codelab_fizzbuzz.cmx")
-      dest = "inspect_rust_codelab_fizzbuzz.cmx"
-    },
-    {
-      path = rebase_path("part_1/meta/inspect_rust_codelab_part_1.cmx")
-      dest = "inspect_rust_codelab_part_1.cmx"
-    },
-    {
-      path = rebase_path("part_2/meta/inspect_rust_codelab_part_2.cmx")
-      dest = "inspect_rust_codelab_part_2.cmx"
-    },
-    {
-      path = rebase_path("part_3/meta/inspect_rust_codelab_part_3.cmx")
-      dest = "inspect_rust_codelab_part_3.cmx"
-    },
-    {
-      path = rebase_path("part_4/meta/inspect_rust_codelab_part_4.cmx")
-      dest = "inspect_rust_codelab_part_4.cmx"
-    },
-    {
-      path = rebase_path("part_5/meta/inspect_rust_codelab_part_5.cmx")
-      dest = "inspect_rust_codelab_part_5.cmx"
-    },
+fuchsia_test_package("inspect_rust_codelab_integration_tests") {
+  test_components = [
+    ":inspect_rust_codelab_part_1_integration_test",
+    ":inspect_rust_codelab_part_2_integration_test",
+    ":inspect_rust_codelab_part_3_integration_test",
+    ":inspect_rust_codelab_part_4_integration_test",
+    ":inspect_rust_codelab_part_5_integration_test",
   ]
 }

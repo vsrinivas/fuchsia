@@ -1580,7 +1580,7 @@ This section is under construction.
 [rust-part2-meta]: /examples/diagnostics/inspect/codelab/rust/part_2/meta/inspect_rust_codelab_part_2.cmx
 [rust-part3-unittest]: /examples/diagnostics/inspect/codelab/rust/part_3/src/reverser.rs#99
 [rust-part4-integration]: /examples/diagnostics/inspect/codelab/rust/part_4/tests/integration_test.rs
-[rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/meta/integration_test_part_4.cmx
+[rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/meta/inspect_rust_codelab_part_4_integration_test.cmx
 
 [inspect-dart-codelab]: /examples/diagnostics/inspect/codelab/dart
 [dart-part1]: /examples/diagnostics/inspect/codelab/dart/part_1

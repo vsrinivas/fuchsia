@@ -13,11 +13,10 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/integration_test_part_5"
+        "binary": "bin/inspect_rust_codelab_part_4_integration_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]
