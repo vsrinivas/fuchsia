@@ -4,9 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/use_unoffered",
     },
-    use: [
-        { runner: "elf" },
-    ],
 }

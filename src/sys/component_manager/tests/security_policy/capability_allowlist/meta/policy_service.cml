@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/policy_service_bin",
     },
     capabilities: [
@@ -15,9 +16,6 @@
             rights: [ "r*" ],
             path: "/test",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

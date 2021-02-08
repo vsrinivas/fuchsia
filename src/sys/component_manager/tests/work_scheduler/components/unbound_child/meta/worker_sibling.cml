@@ -1,10 +1,10 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/unbound_child_worker_sibling",
     },
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.sys2.WorkScheduler",
             from: "parent",

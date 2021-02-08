@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/child_for_stress_test",
     },
     collections: [
@@ -13,7 +14,6 @@
         { protocol: "test.componentmanager.stresstests.ChildRealm" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

@@ -3,6 +3,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/namespace_capabilities_integration_test_root",
     },
 
@@ -18,8 +19,6 @@
         { protocol: "fuchsia.test.Suite" },
     ],
     use: [
-        { runner: "elf" },
-
         // Needed to bind to children
         {
             protocol: "fuchsia.sys2.Realm",

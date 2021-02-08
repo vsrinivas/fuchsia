@@ -1,14 +1,12 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/protected_ops_util",
         job_policy_ambient_mark_vmo_exec: "true",
     },
     capabilities: [
         { protocol: "test.policy.ProtectedOperations" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

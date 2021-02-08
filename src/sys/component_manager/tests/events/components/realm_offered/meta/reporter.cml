@@ -4,6 +4,7 @@
         "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/realm_offered_reporter",
     },
     use: [
@@ -24,6 +25,5 @@
             from: "parent",
             modes: [ "sync" ],
         },
-        { runner: "elf" },
     ],
 }

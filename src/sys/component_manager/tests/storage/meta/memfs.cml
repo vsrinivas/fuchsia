@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/memfs",
     },
     capabilities: [
@@ -9,9 +10,6 @@
             rights: [ "rw*" ],
             path: "/svc/fuchsia.io.Directory",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

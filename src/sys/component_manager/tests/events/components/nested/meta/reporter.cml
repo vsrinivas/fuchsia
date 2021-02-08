@@ -4,6 +4,7 @@
         "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/nested_reporter",
     },
     children: [
@@ -24,7 +25,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
         },

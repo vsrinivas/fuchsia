@@ -1,13 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/cap_getter_bin",
     },
     capabilities: [
         { protocol: "test.policy.Access" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "test.policy.Restricted",

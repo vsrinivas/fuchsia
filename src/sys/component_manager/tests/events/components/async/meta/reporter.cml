@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/async_reporter",
     },
     collections: [
@@ -10,7 +11,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
@@ -27,7 +27,7 @@
                 "started",
             ],
             from: "framework",
-            modes: ["async"],
+            modes: [ "async" ],
         },
     ],
 }

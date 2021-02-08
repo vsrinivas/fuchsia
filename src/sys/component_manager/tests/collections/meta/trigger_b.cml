@@ -3,6 +3,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/trigger",
         args: [
             "Triggered",
@@ -13,7 +14,6 @@
         { protocol: "fidl.test.components.Trigger" },
     ],
     use: [
-        { runner: "elf" },
         { protocol: "fidl.examples.routing.echo.Echo" },
     ],
     expose: [

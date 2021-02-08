@@ -2,6 +2,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/destruction_collection_realm",
     },
     collections: [
@@ -11,7 +12,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/storage_user",
     },
     capabilities: [
@@ -11,7 +12,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             storage: "data",
             path: "/data",

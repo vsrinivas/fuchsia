@@ -1,13 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/use_storage",
     },
     capabilities: [
         { protocol: "fidl.test.components.Trigger" },
     ],
     use: [
-        { runner: "elf" },
         {
             storage: "data",
             path: "/data",

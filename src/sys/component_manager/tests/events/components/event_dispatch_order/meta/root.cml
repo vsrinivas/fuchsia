@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/stub_component",
     },
     children: [
@@ -9,8 +10,5 @@
             url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
             startup: "eager",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
 }

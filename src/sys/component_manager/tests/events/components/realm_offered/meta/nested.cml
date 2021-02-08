@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/realm_offered_nested",
     },
     children: [
@@ -36,7 +37,6 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
-        { runner: "elf" },
     ],
     offer: [
         {
@@ -54,7 +54,7 @@
             from: "framework",
             as: "started_nested",
             to: [ "#reporter" ],
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
     ],
 }

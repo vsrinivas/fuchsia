@@ -1,13 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/bound_worker",
     },
     capabilities: [
         { protocol: "fuchsia.sys2.Worker" },
     ],
     use: [
-        { runner: "elf" },
         { protocol: "fuchsia.sys2.WorkSchedulerControl" },
         {
             protocol: [

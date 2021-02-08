@@ -4,6 +4,7 @@
         "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/capability_ready_root",
     },
     children: [
@@ -14,7 +15,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         { protocol: "fuchsia.sys2.EventSource" },
         {
             protocol: [ "fidl.examples.routing.echo.Echo" ],

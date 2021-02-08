@@ -5,6 +5,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/expose_dir_rights",
     },
     capabilities: [
@@ -39,9 +40,6 @@
             rights: [ "rw*" ],
             path: "/read_only_after_scoped",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

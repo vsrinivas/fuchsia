@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/advanced_routing_reporter",
         args: [
             "Hippos",
@@ -8,7 +9,6 @@
         ],
     },
     use: [
-        { runner: "elf" },
         {
             directory: "hub",
             from: "parent",

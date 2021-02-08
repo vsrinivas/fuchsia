@@ -2,13 +2,11 @@
 // by `echo_client`.
 {
     program: {
+        runner: "elf",
         binary: "bin/echo_server",
     },
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

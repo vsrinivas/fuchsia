@@ -4,6 +4,7 @@
         "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/dynamic_child_reporter",
     },
     collections: [
@@ -13,7 +14,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         { protocol: "fuchsia.sys2.EventSource" },
         {
             protocol: [
@@ -35,7 +35,7 @@
                 "stopped",
             ],
             from: "framework",
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
     ],
 }

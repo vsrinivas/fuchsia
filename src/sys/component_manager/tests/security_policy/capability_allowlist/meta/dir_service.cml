@@ -5,6 +5,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/dir_service_bin",
     },
     capabilities: [
@@ -18,9 +19,6 @@
             rights: [ "rw*" ],
             path: "/unrestricted",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

@@ -3,10 +3,10 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/interpose_echo_looper",
     },
     use: [
-        { runner: "elf" },
         { protocol: "fidl.examples.routing.echo.Echo" },
     ],
 }

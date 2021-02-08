@@ -6,6 +6,7 @@
 
     // The binary to run for this component.
     program: {
+        runner: "elf",
         binary: "bin/component_manager_test_resolvers_resolver",
     },
 
@@ -20,7 +21,6 @@
     // Capabilities used by this component.
     use: [
         // Use the built-in ELF runner to run native binaries.
-        { runner: "elf" },
     ],
 
     // Capabilities exposed to the component's parent.

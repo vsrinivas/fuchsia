@@ -4,6 +4,7 @@
         "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/scoped_echo_reporter",
     },
     children: [
@@ -17,7 +18,6 @@
         { protocol: "fidl.test.components.Trigger" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
@@ -31,7 +31,7 @@
                 "started",
             ],
             from: "framework",
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
     ],
     expose: [
