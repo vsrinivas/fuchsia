@@ -28,6 +28,9 @@ if (!is_host) {
 
       # For `fx lint`.
       "//tools/fidl/fidlc:fidl-lint",
+
+      # For 'fx create'.
+      "//tools/create",
     ]
   }
 }

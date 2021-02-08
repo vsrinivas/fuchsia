@@ -8,5 +8,6 @@ per-file report-bug=gboone@google.com
 # per-file-COMPONENT report-bug=Tools>fx
 
 per-file cmc.fx = file: /tools/cmc/OWNERS
+per-file create.fx = file: /tools/create/OWNERS
 
 # COMPONENT: Tools>fx
