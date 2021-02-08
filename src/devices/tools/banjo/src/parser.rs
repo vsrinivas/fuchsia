@@ -80,7 +80,11 @@ handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "por
 
 fidl_handle_type = { "zx.handle:" ~ fidl_handle_subtype ~ reference? }
 
-fidl_handle_subtype = { "VMO" }
+fidl_handle_subtype = { "NONE" | "PROCESS" | "THREAD" | "VMO" | "CHANNEL" | "EVENTPAIR" | "PORT" |
+                      "INTERRUPT" | "PCI_DEVICE" | "LOG" | "SOCKET" | "RESOURCE" | "EVENT" |
+                      "JOB" | "VMAR" | "FIFO" | "GUEST" | "VCPU" | "TIMER" | "IOMMU" | "BTI" |
+                      "PROFILE" | "PMT" | "SUSPEND_TOKEN" | "PAGER" | "EXCEPTION" | "CLOCK" |
+                      "STREAM" | "MSI_ALLOCATION" | "MSI_INTERRUPT" | "MSI" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
 ident = @{ ("@")? ~ (alpha | digit | "_")+ }

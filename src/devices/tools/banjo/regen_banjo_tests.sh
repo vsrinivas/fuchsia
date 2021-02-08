@@ -44,7 +44,8 @@ do
 
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
     || [ "$filename" = "protocol-base" ] || [ "$filename" = "api" ] \
-    || [ "$filename" = "pass-callback" ] || [ "$filename" = "fidl_handle" ]; then
+    || [ "$filename" = "pass-callback" ] || [ "$filename" = "fidl_handle" ] \
+    || [ "$filename" = "handles" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 
@@ -78,7 +79,7 @@ do
     with_cpp=false
   fi
 
-  if [ "$filename" = "references" ] || [ "$filename" = "buffer" ]; then
+  if [ "$filename" = "references" ] || [ "$filename" = "buffer" ] || [ "$filename" = "handles" ]; then
     with_rust=false
   fi
 

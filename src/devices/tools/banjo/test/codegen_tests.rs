@@ -26,6 +26,7 @@ mod c {
     codegen_test!(example_7, CBackend, ["banjo/example-7.test.banjo"], "c/example-7.h");
     codegen_test!(example_8, CBackend, ["banjo/example-8.test.banjo"], "c/example-8.h");
     codegen_test!(example_9, CBackend, ["banjo/example-9.test.banjo"], "c/example-9.h");
+    codegen_test!(handles, CBackend, [zx!(), "banjo/handles.test.banjo"], "c/handles.h");
     codegen_test!(order, CBackend, ["banjo/order.test.banjo"], "c/order.h");
     codegen_test!(point, CBackend, ["banjo/point.test.banjo"], "c/point.h");
     codegen_test!(
@@ -164,6 +165,13 @@ mod cpp {
         CppSubtype::Base
     );
     codegen_test!(
+        handles,
+        CppBackend,
+        [zx!(), "banjo/handles.test.banjo"],
+        "cpp/handles.h",
+        CppSubtype::Base
+    );
+    codegen_test!(
         simple,
         CppBackend,
         [zx!(), "banjo/simple.test.banjo"],
@@ -267,6 +275,13 @@ mod cpp {
         CppBackend,
         ["banjo/example-9.test.banjo"],
         "cpp/example-9-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_handles,
+        CppBackend,
+        [zx!(), "banjo/handles.test.banjo"],
+        "cpp/handles-internal.h",
         CppSubtype::Internal
     );
     codegen_test!(

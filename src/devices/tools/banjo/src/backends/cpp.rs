@@ -64,6 +64,9 @@ fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<Stri
         ast::HandleTy::Pmt => Ok(String::from("zx::pmt")),
         ast::HandleTy::Clock => Ok(String::from("zx::clock")),
         ast::HandleTy::Msi => Ok(String::from("zx::msi")),
+        // This mapping supports the MSI --> MSI_ALLOCATION transition.
+        ast::HandleTy::MsiAllocation => Ok(String::from("zx::msi")),
+        _ => Ok(String::from("zx::handle")),
     }
 }
 

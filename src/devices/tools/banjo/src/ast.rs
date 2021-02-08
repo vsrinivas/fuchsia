@@ -197,6 +197,15 @@ pub enum HandleTy {
     Pmt,
     Clock,
     Msi,
+    Exception,
+    MsiAllocation,
+    MsiInterrupt,
+    Stream,
+    SuspendToken,
+    Iommu,
+    Vcpu,
+    None,
+    PciDevice,
 }
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
@@ -341,7 +350,36 @@ impl Ty {
                     match inner_pair.as_rule() {
                         Rule::fidl_handle_subtype => {
                             ty = match inner_pair.as_str() {
+                                "NONE" => HandleTy::None,
+                                "PROCESS" => HandleTy::Process,
+                                "THREAD" => HandleTy::Thread,
                                 "VMO" => HandleTy::Vmo,
+                                "CHANNEL" => HandleTy::Channel,
+                                "EVENT" => HandleTy::Event,
+                                "PORT" => HandleTy::Port,
+                                "INTERRUPT" => HandleTy::Interrupt,
+                                "PCI_DEVICE" => HandleTy::PciDevice,
+                                "LOG" => HandleTy::Log,
+                                "SOCKET" => HandleTy::Socket,
+                                "RESOURCE" => HandleTy::Resource,
+                                "EVENTPAIR" => HandleTy::EventPair,
+                                "JOB" => HandleTy::Job,
+                                "VMAR" => HandleTy::Vmar,
+                                "FIFO" => HandleTy::Fifo,
+                                "GUEST" => HandleTy::Guest,
+                                "VCPU" => HandleTy::Vcpu,
+                                "TIMER" => HandleTy::Timer,
+                                "IOMMU" => HandleTy::Iommu,
+                                "BTI" => HandleTy::Bti,
+                                "PROFILE" => HandleTy::Profile,
+                                "PMT" => HandleTy::Pmt,
+                                "SUSPEND_TOKEN" => HandleTy::SuspendToken,
+                                "PAGER" => HandleTy::Pager,
+                                "EXCEPTION" => HandleTy::Exception,
+                                "CLOCK" => HandleTy::Clock,
+                                "STREAM" => HandleTy::Stream,
+                                "MSI_ALLOCATION" => HandleTy::MsiAllocation,
+                                "MSI_INTERRUPT" => HandleTy::MsiInterrupt,
                                 _e => {
                                     return Err(ParseError::UnrecognizedType(
                                         inner_pair.as_str().to_string(),

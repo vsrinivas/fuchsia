@@ -177,6 +177,10 @@ if (host_toolchain == current_toolchain) {
     ]
 
     inputs = [
+      "test/banjo/handles.test.banjo",
+      "test/c/handles.h",
+      "test/cpp/handles.h",
+      "test/cpp/handles-internal.h",
       "test/banjo/union.test.banjo",
       "test/c/union.h",
       "test/banjo/binary.test.banjo",
