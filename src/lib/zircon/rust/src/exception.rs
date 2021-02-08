@@ -4,8 +4,10 @@
 
 //! Type-safe bindings for Zircon event objects.
 
-use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Process, Status, Thread};
+use crate::{object_get_property, object_set_property};
+use crate::{ok, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Process, Thread};
+use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -30,7 +32,7 @@ impl Exception {
         unsafe { Ok(Thread::from(Handle::from_raw(handle))) }
     }
 
-    /// Create a handle for the exception's thread
+    /// Create a handle for the exception's process
     ///
     /// Wraps the
     /// [zx_exception_get_thread](https://fuchsia.dev/fuchsia-src/reference/syscalls/exception_get_thread)
@@ -42,3 +44,9 @@ impl Exception {
         unsafe { Ok(Process::from(Handle::from_raw(handle))) }
     }
 }
+
+unsafe_handle_properties!(object: Exception,
+    props: [
+        {query_ty: EXCEPTION_STATE, tag: ExceptionStateTag, prop_ty: sys::zx_exception_state_t, get: get_exception_state, set: set_exception_state},
+    ]
+);
