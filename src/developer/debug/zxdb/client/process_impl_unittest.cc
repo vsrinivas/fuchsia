@@ -138,13 +138,15 @@ TEST_F(ProcessImplTest, GetTLSHelpers) {
       fxl::MakeRefCounted<ElfSymbol>(module_symbols->GetWeakPtr(), link_map_tls_modid_record);
   auto tlsbase_sym = fxl::MakeRefCounted<ElfSymbol>(module_symbols->GetWeakPtr(), tlsbase_record);
 
-  module_symbols->AddSymbolLocations("zxdb.thrd_t", {Location(kThrdTAddr + kModuleBase, FileLine(),
-                                                              0, symbol_context, thrd_t_sym)});
-  module_symbols->AddSymbolLocations("zxdb.link_map_tls_modid",
-                                     {Location(kLinkMapTlsModIdAddr + kModuleBase, FileLine(), 0,
-                                               symbol_context, link_map_tls_modid_sym)});
   module_symbols->AddSymbolLocations(
-      "zxdb.tlsbase",
+      Identifier(IdentifierComponent(SpecialIdentifier::kElf, "zxdb.thrd_t")),
+      {Location(kThrdTAddr + kModuleBase, FileLine(), 0, symbol_context, thrd_t_sym)});
+  module_symbols->AddSymbolLocations(
+      Identifier(IdentifierComponent(SpecialIdentifier::kElf, "zxdb.link_map_tls_modid")),
+      {Location(kLinkMapTlsModIdAddr + kModuleBase, FileLine(), 0, symbol_context,
+                link_map_tls_modid_sym)});
+  module_symbols->AddSymbolLocations(
+      Identifier(IdentifierComponent(SpecialIdentifier::kElf, "zxdb.tlsbase")),
       {Location(kTlsBaseAddr + kModuleBase, FileLine(), 0, symbol_context, tlsbase_sym)});
 
   sink()->AddMemory(kThrdTAddr + kModuleBase, {0x1, 0x2, 0x3, 0x4});

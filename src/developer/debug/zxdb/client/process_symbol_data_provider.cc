@@ -151,10 +151,20 @@ void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_contex
     std::copy(helpers.value()->tlsbase.begin(), helpers.value()->tlsbase.end(),
               std::back_inserter(program));
 
+    // This code manually creates a DwarfExprEval rather that use the AsyncDwarfExprEval (which
+    // makes things a little simpler) because we want to get the exact stack value (this is called
+    // in the context of another DwarfExprEval).
     auto dwarf_eval = std::make_shared<DwarfExprEval>();
     dwarf_eval->Push(static_cast<DwarfExprEval::StackEntry>(debug_address));
     dwarf_eval->Eval(this_ref, symbol_context, program,
                      [dwarf_eval, cb = std::move(cb)](DwarfExprEval*, const Err& err) mutable {
+                       // Prevent the DwarfExprEval from getting reentrantly deleted from within its
+                       // own callback by posting a reference back to the message loop. This creates
+                       // an owning reference to the DwarfExprEval to the message loop to force it
+                       // to get deleted in the future when that's executed rather than from within
+                       // this stack frame.
+                       debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [dwarf_eval]() {});
+
                        if (err.has_error()) {
                          return cb(err);
                        }

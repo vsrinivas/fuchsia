@@ -335,8 +335,9 @@ void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
     observer.WillUnloadModuleSymbols(this, module);
 }
 
-uint64_t ProcessImpl::GetSymbolAddress(const std::string& symbol, uint64_t* size) {
-  InputLocation location((Identifier(symbol)));
+uint64_t ProcessImpl::GetElfSymbolAddress(const std::string& symbol, uint64_t* size) {
+  Identifier elf_ident(IdentifierComponent(SpecialIdentifier::kElf, symbol));
+  InputLocation location(elf_ident);
   auto locs = symbols_.ResolveInputLocation(location);
 
   for (const auto& loc : locs) {
@@ -378,11 +379,11 @@ void ProcessImpl::LoadTLSHelpers() {
   std::vector<HelperToLoad> regions;
   regions.resize(3);
 
-  regions[0].addr = GetSymbolAddress("zxdb.thrd_t", &regions[0].size);
+  regions[0].addr = GetElfSymbolAddress("zxdb.thrd_t", &regions[0].size);
   regions[0].target = &tls_helpers_.thrd_t;
-  regions[1].addr = GetSymbolAddress("zxdb.link_map_tls_modid", &regions[1].size);
+  regions[1].addr = GetElfSymbolAddress("zxdb.link_map_tls_modid", &regions[1].size);
   regions[1].target = &tls_helpers_.link_map_tls_modid;
-  regions[2].addr = GetSymbolAddress("zxdb.tlsbase", &regions[2].size);
+  regions[2].addr = GetElfSymbolAddress("zxdb.tlsbase", &regions[2].size);
   regions[2].target = &tls_helpers_.tlsbase;
 
   for (const auto& region : regions) {

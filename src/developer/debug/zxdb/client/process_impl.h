@@ -85,7 +85,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void DidLoadModuleSymbols(LoadedModuleSymbols* module) override;
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override;
 
-  uint64_t GetSymbolAddress(const std::string& symbol, uint64_t* size);
+  uint64_t GetElfSymbolAddress(const std::string& symbol, uint64_t* size);
 
   // Run the given callback as soon as the TLS helpers are loaded. If the TLS helpers failed to
   // load, pass false to the callback.
