@@ -30,7 +30,9 @@
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmObject::GlobalList VmObject::all_vmos_ = {};
-fbl::DoublyLinkedList<VmObject::VmoCursor*> VmObject::all_vmos_cursors_ = {};
+
+fbl::DoublyLinkedList<VmObject::Cursor*> VmObject::all_vmos_cursors_ = {};
+
 bool VmObject::eviction_promote_no_clones_ = false;
 
 VmObject::VmObject(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr)
@@ -61,7 +63,9 @@ uint32_t VmObject::ScanAllForZeroPages(bool reclaim) {
 void VmObject::HarvestAllAccessedBits() {
   Guard<Mutex> guard{AllVmosLock::Get()};
   {
-    VmoCursor cursor;
+    Cursor cursor(AllVmosLock::Get(), all_vmos_, all_vmos_cursors_);
+    AssertHeld(cursor.lock_ref());
+
     VmObject* vmo;
     while ((vmo = cursor.Next())) {
       fbl::RefPtr<VmObject> vmo_ref = fbl::MakeRefPtrUpgradeFromRaw(vmo, guard);
@@ -90,9 +94,7 @@ void VmObject::AddToGlobalList() {
 void VmObject::RemoveFromGlobalList() {
   Guard<Mutex> guard{AllVmosLock::Get()};
   DEBUG_ASSERT(InGlobalList());
-  for (auto& cursor : all_vmos_cursors_) {
-    cursor.AdvanceIf(this);
-  }
+  Cursor::AdvanceCursors(all_vmos_cursors_, this);
   all_vmos_.erase(*this);
 }
 
@@ -445,36 +447,6 @@ zx_status_t VmObject::RoundSize(uint64_t size, uint64_t* out_size) {
   }
 
   return ZX_OK;
-}
-
-VmObject::VmoCursor::VmoCursor() {
-  if (!VmObject::all_vmos_.is_empty()) {
-    iter_ = VmObject::all_vmos_.begin();
-  } else {
-    iter_ = VmObject::all_vmos_.end();
-  }
-
-  VmObject::all_vmos_cursors_.push_front(this);
-}
-
-VmObject::VmoCursor::~VmoCursor() { VmObject::all_vmos_cursors_.erase(*this); }
-
-VmObject* VmObject::VmoCursor::Next() {
-  if (iter_ == VmObject::all_vmos_.end()) {
-    return nullptr;
-  }
-
-  VmObject* result = &*iter_;
-  iter_++;
-  return result;
-}
-
-void VmObject::VmoCursor::AdvanceIf(const VmObject* h) {
-  if (iter_ != VmObject::all_vmos_.end()) {
-    if (&*iter_ == h) {
-      iter_++;
-    }
-  }
 }
 
 VmHierarchyBase::VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state)

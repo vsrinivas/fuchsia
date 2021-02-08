@@ -107,6 +107,8 @@ inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
 VmCowPages::DiscardableList VmCowPages::discardable_reclaim_candidates_ = {};
 VmCowPages::DiscardableList VmCowPages::discardable_non_reclaim_candidates_ = {};
 
+fbl::DoublyLinkedList<VmCowPages::Cursor*> VmCowPages::discardable_vmos_cursors_ = {};
+
 // Helper class for collecting pages to performed batched Removes from the page queue to not incur
 // its spinlock overhead for every single page. Pages that it removes from the page queue get placed
 // into a provided list. Note that pages are not moved into the list until *after* Flush has been
@@ -3148,6 +3150,9 @@ void VmCowPages::RemoveFromDiscardableListLocked() {
   }
 
   DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+
+  Cursor::AdvanceCursors(discardable_vmos_cursors_, this);
+
   if (discardable_state_ == DiscardableState::kReclaimable) {
     discardable_reclaim_candidates_.erase(*this);
   } else {
@@ -3159,6 +3164,8 @@ void VmCowPages::RemoveFromDiscardableListLocked() {
 
 void VmCowPages::MoveToReclaimCandidatesListLocked() {
   DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+
+  Cursor::AdvanceCursors(discardable_vmos_cursors_, this);
   discardable_non_reclaim_candidates_.erase(*this);
 
   discardable_reclaim_candidates_.push_back(this);
@@ -3169,6 +3176,7 @@ void VmCowPages::MoveToNonReclaimCandidatesListLocked(bool new_candidate) {
     DEBUG_ASSERT(!fbl::InContainer<internal::DiscardableListTag>(*this));
   } else {
     DEBUG_ASSERT(fbl::InContainer<internal::DiscardableListTag>(*this));
+    Cursor::AdvanceCursors(discardable_vmos_cursors_, this);
     discardable_reclaim_candidates_.erase(*this);
   }
 
@@ -3232,6 +3240,80 @@ bool VmCowPages::DebugIsDiscarded() const {
     return false;
   }
   return DebugIsInDiscardableListLocked(/*reclaim_candidate=*/false);
+}
+
+VmCowPages::DiscardablePageCounts VmCowPages::GetDiscardablePageCounts() const {
+  DiscardablePageCounts counts = {};
+
+  Guard<Mutex> guard{&lock_};
+  if (discardable_state_ == DiscardableState::kUnset) {
+    return counts;
+  }
+
+  uint64_t pages = 0;
+  page_list_.ForEveryPage([&pages](const auto* p, uint64_t) {
+    if (p->IsPage()) {
+      ++pages;
+    }
+    return ZX_ERR_NEXT;
+  });
+
+  switch (discardable_state_) {
+    case DiscardableState::kReclaimable:
+      counts.unlocked = pages;
+      break;
+    case DiscardableState::kUnreclaimable:
+      counts.locked = pages;
+      break;
+    case DiscardableState::kDiscarded:
+      DEBUG_ASSERT(pages == 0);
+      break;
+    default:
+      break;
+  }
+
+  return counts;
+}
+
+VmCowPages::DiscardablePageCounts VmCowPages::DebugDiscardablePageCounts() {
+  DiscardablePageCounts total_counts = {};
+  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+
+  // The union of the two lists should give us a list of all discardable vmos.
+  DiscardableList* lists_to_process[] = {&discardable_reclaim_candidates_,
+                                         &discardable_non_reclaim_candidates_};
+
+  for (auto list : lists_to_process) {
+    Cursor cursor(DiscardableVmosLock::Get(), *list, discardable_vmos_cursors_);
+    AssertHeld(cursor.lock_ref());
+
+    VmCowPages* cow;
+    while ((cow = cursor.Next())) {
+      fbl::RefPtr<VmCowPages> cow_ref = fbl::MakeRefPtrUpgradeFromRaw(cow, guard);
+      if (cow_ref) {
+        // Get page counts for each vmo outside of the |DiscardableVmosLock|, since
+        // GetDiscardablePageCounts() will acquire the VmCowPages lock. Holding the
+        // |DiscardableVmosLock| while acquiring the VmCowPages lock will violate lock ordering
+        // constraints between the two.
+        //
+        // Since we upgraded the raw pointer to a RefPtr under the |DiscardableVmosLock|, we know
+        // that the object is valid. We will call Next() on our cursor after re-acquiring the
+        // |DiscardableVmosLock| to safely iterate to the next element on the list.
+        guard.CallUnlocked([&total_counts, cow_ref = ktl::move(cow_ref)]() mutable {
+          DiscardablePageCounts counts = cow_ref->GetDiscardablePageCounts();
+          total_counts.locked += counts.locked;
+          total_counts.unlocked += counts.unlocked;
+
+          // Explicitly reset the RefPtr to force any destructor to run right now and not in the
+          // cleanup of the lambda, which might happen after the |DiscardableVmosLock| has been
+          // re-acquired.
+          cow_ref.reset();
+        });
+      }
+    }
+  }
+
+  return total_counts;
 }
 
 uint64_t VmCowPages::DiscardPages() {

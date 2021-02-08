@@ -1812,6 +1812,53 @@ static bool vmo_discard_failure_test() {
   END_TEST;
 }
 
+static bool vmo_discardable_counts_test() {
+  BEGIN_TEST;
+
+  constexpr int kNumVmos = 10;
+  fbl::RefPtr<VmObjectPaged> vmos[kNumVmos];
+
+  // Create some discardable vmos.
+  zx_status_t status;
+  for (int i = 0; i < kNumVmos; i++) {
+    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kDiscardable,
+                                   (i + 1) * PAGE_SIZE, &vmos[i]);
+    ASSERT_EQ(ZX_OK, status);
+  }
+
+  VmCowPages::DiscardablePageCounts expected = {};
+
+  // Lock all vmos. Unlock a few. And dicard a few unlocked ones.
+  // Compute the expected page counts as a result of these operations.
+  for (int i = 0; i < kNumVmos; i++) {
+    EXPECT_EQ(ZX_OK, vmos[i]->TryLockRange(0, (i + 1) * PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, vmos[i]->CommitRange(0, (i + 1) * PAGE_SIZE));
+
+    if (rand() % 2) {
+      EXPECT_EQ(ZX_OK, vmos[i]->UnlockRange(0, (i + 1) * PAGE_SIZE));
+
+      if (rand() % 2) {
+        // Discarded pages won't show up under locked or unlocked counts.
+        EXPECT_EQ(static_cast<uint64_t>(i + 1), vmos[i]->DebugGetCowPages()->DiscardPages());
+      } else {
+        // Unlocked but not discarded.
+        expected.unlocked += (i + 1);
+      }
+    } else {
+      // Locked.
+      expected.locked += (i + 1);
+    }
+  }
+
+  VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();
+  // There might be other discardable vmos in the rest of the system, so the actual page counts
+  // might be higher than the expected counts.
+  EXPECT_LE(expected.locked, counts.locked);
+  EXPECT_LE(expected.unlocked, counts.unlocked);
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -1848,6 +1895,7 @@ VM_UNITTEST(vmo_lock_count_test)
 VM_UNITTEST(vmo_discardable_states_test)
 VM_UNITTEST(vmo_discard_test)
 VM_UNITTEST(vmo_discard_failure_test)
+VM_UNITTEST(vmo_discardable_counts_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

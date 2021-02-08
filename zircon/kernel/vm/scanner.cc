@@ -84,13 +84,18 @@ void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->DebugQueueCounts();
   for (size_t i = 0; i < PageQueues::kNumPagerBacked; i++) {
-    printf("[SCAN]: Found %lu user-paged backed pages in queue %zu\n", queue_counts.pager_backed[i],
+    printf("[SCAN]: Found %lu user-pager backed pages in queue %zu\n", queue_counts.pager_backed[i],
            i);
   }
-  printf("[SCAN]: Found %lu user-paged backed pages in inactive queue\n",
+  printf("[SCAN]: Found %lu user-pager backed pages in inactive queue\n",
          queue_counts.pager_backed_inactive);
-  printf("[SCAN]: Next queue rotation in %ld ms\n", time_till_queue_rotate / ZX_MSEC(1));
   printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.unswappable_zero_fork);
+
+  VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();
+  printf("[SCAN]: Found %lu locked pages in discardable vmos\n", counts.locked);
+  printf("[SCAN]: Found %lu unlocked pages in discardable vmos\n", counts.unlocked);
+
+  printf("[SCAN]: Next queue rotation in %ld ms\n", time_till_queue_rotate / ZX_MSEC(1));
 }
 
 zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {

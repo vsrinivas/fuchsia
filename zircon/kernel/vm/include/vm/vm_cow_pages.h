@@ -241,6 +241,17 @@ class VmCowPages final
   // list. Returns the number of pages freed.
   uint64_t DiscardPages() TA_EXCL(DiscardableVmosLock::Get()) TA_EXCL(lock_);
 
+  struct DiscardablePageCounts {
+    uint64_t locked;
+    uint64_t unlocked;
+  };
+
+  // Returns the total number of pages locked and unlocked across all discardable vmos.
+  // Note that this might not be exact and we might miss some vmos, because the
+  // |DiscardableVmosLock| is dropped after processing each vmo on the global discardable lists.
+  // That is fine since these numbers are only used for accounting.
+  static DiscardablePageCounts DebugDiscardablePageCounts() TA_EXCL(DiscardableVmosLock::Get());
+
  private:
   // private constructor (use Create())
   VmCowPages(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
@@ -518,6 +529,8 @@ class VmCowPages final
   bool DebugIsInDiscardableListLocked(bool reclaim_candidate) const TA_REQ(lock_)
       TA_EXCL(DiscardableVmosLock::Get());
 
+  DiscardablePageCounts GetDiscardablePageCounts() const TA_EXCL(lock_);
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
@@ -629,6 +642,15 @@ class VmCowPages final
   // optional reference back to a VmObjectPaged so that we can perform mapping updates. This is a
   // raw pointer to avoid circular references, the VmObjectPaged destructor needs to update it.
   VmObjectPaged* paged_ref_ TA_GUARDED(lock_) = nullptr;
+
+  using Cursor =
+      VmoCursor<VmCowPages, DiscardableVmosLock, DiscardableList, DiscardableList::iterator>;
+
+  // The list of all outstanding cursors iterating over the discardable lists:
+  // |discardable_reclaim_candidates_| and |discardable_non_reclaim_candidates_|. The cursors should
+  // be advanced (by calling AdvanceIf()) before removing any element from the discardable lists.
+  static fbl::DoublyLinkedList<Cursor*> discardable_vmos_cursors_
+      TA_GUARDED(DiscardableVmosLock::Get());
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_COW_PAGES_H_
