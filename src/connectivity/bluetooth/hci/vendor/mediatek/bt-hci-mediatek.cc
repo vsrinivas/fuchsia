@@ -332,7 +332,7 @@ zx_status_t BtHciMediatek::CardRead32(uint32_t address, uint32_t* value) {
   txn.incr = true;
   txn.write = false;
   txn.use_dma = false;
-  txn.virt_buffer = value;
+  txn.virt_buffer = reinterpret_cast<uint8_t*>(value);
   txn.virt_size = sizeof(*value);
   txn.buf_offset = 0;
 
@@ -354,7 +354,7 @@ zx_status_t BtHciMediatek::CardWrite32(uint32_t address, uint32_t value) {
   txn.incr = true;
   txn.write = true;
   txn.use_dma = false;
-  txn.virt_buffer = &value;
+  txn.virt_buffer = reinterpret_cast<uint8_t*>(&value);
   txn.virt_size = sizeof(value);
   txn.buf_offset = 0;
 

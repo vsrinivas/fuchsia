@@ -296,7 +296,7 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
 
   txn.addr = addr;
   txn.write = write;
-  txn.virt_buffer = data;
+  txn.virt_buffer = reinterpret_cast<uint8_t*>(data);
   if (size > std::numeric_limits<uint32_t>::max()) {
     BRCMF_ERR("brcmf_sdiod_transfer failed: size invalid (overflow)");
     return ZX_ERR_INTERNAL;

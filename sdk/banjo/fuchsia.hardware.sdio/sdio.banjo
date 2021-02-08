@@ -71,7 +71,7 @@ struct SdioRwTxn {
     /// Used if use_dma is true
     handle<vmo> dma_vmo;
     /// Used if use_dma is false
-    [Mutable] vector<voidptr> virt;
+    [Mutable, Buffer] vector<uint8> virt;
     /// offset into dma_vmo or virt
     uint64 buf_offset;
 };
