@@ -21,8 +21,8 @@ use {
     anyhow::Error,
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{
-        FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
-        SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
+        FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, SeekOrigin, Vmofile,
+        INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
         VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
@@ -199,15 +199,7 @@ impl FileConnection {
             }
         };
 
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::File(FileObject { event: None, stream: None });
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
-                Ok(()) => (),
-                Err(_) => return,
-            }
-        }
-
-        let handle_requests = FileConnection {
+        let mut connection = FileConnection {
             scope: scope.clone(),
             file,
             requests,
@@ -215,9 +207,26 @@ impl FileConnection {
             readable,
             writable,
             seek: 0,
+        };
+
+        if flags & OPEN_FLAG_DESCRIBE != 0 {
+            match connection.get_node_info().await {
+                Ok(mut info) => {
+                    let send_result =
+                        control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info));
+                    if send_result.is_err() {
+                        return;
+                    }
+                }
+                Err(status) => {
+                    debug_assert!(status != Status::OK);
+                    control_handle.shutdown_with_epitaph(status);
+                    return;
+                }
+            }
         }
-        .handle_requests();
-        handle_requests.await;
+
+        connection.handle_requests().await;
     }
 
     async fn ensure_vmo<'state_guard>(
@@ -366,6 +375,19 @@ impl FileConnection {
         }
     }
 
+    /// Returns `NodeInfo` for the VMO file.
+    async fn get_node_info(&mut self) -> Result<NodeInfo, Status> {
+        let vmofile = update_initialized_state! {
+            match &*self.file.state().await;
+            error: "get_node_info" => Err(Status::INTERNAL);
+            { vmo, size, .. } => {
+                let vmo = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap();
+                Ok(Vmofile {vmo, offset: 0, length: *size})
+            }
+        }?;
+        Ok(NodeInfo::Vmofile(vmofile))
+    }
+
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
     async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
@@ -381,10 +403,13 @@ impl FileConnection {
                 let _ = self.handle_close(|status| responder.send(status.into_raw())).await;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Describe { responder } => {
-                let mut info = NodeInfo::File(FileObject { event: None, stream: None });
-                responder.send(&mut info)?;
-            }
+            FileRequest::Describe { responder } => match self.get_node_info().await {
+                Ok(mut info) => responder.send(&mut info)?,
+                Err(status) => {
+                    debug_assert!(status != Status::OK);
+                    responder.control_handle().shutdown_with_epitaph(status);
+                }
+            },
             FileRequest::Sync { responder } => {
                 // VMOs are always in sync.
                 responder.send(ZX_OK)?;

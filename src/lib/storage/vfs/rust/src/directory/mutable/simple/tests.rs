@@ -17,6 +17,7 @@ use crate::{
     assert_unlink, assert_unlink_err, assert_watch, assert_watcher_one_message_watched_events,
     assert_write, open_as_directory_assert_err, open_as_file_assert_err,
     open_get_directory_proxy_assert_ok, open_get_file_proxy_assert_ok, open_get_proxy_assert,
+    open_get_vmo_file_proxy_assert_ok,
 };
 
 use crate::{
@@ -543,9 +544,9 @@ fn link_file_within_directory() {
             // `open_as_file_assert_content!` as the later will immediately close the connection,
             // and if no connections exist the VMO is recycled and the assertion is invoked to
             // check if the VMO content matches the final expected state.
-            let file = open_get_file_proxy_assert_ok!(&proxy, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&proxy, flags, "file");
 
-            open_as_file_assert_content!(&proxy, flags, "file", "Initial");
+            open_as_vmo_file_assert_content!(&proxy, flags, "file", "Initial");
 
             let root_token = assert_get_token!(&proxy);
             assert_link!(&proxy, "file", root_token, "same-file");
@@ -562,11 +563,11 @@ fn link_file_within_directory() {
                 assert_read_dirents!(proxy, 1000, expected.into_vec());
             }
 
-            let same_file = open_get_file_proxy_assert_ok!(&proxy, flags, "same-file");
+            let same_file = open_get_vmo_file_proxy_assert_ok!(&proxy, flags, "same-file");
             assert_write!(file, "------- twice");
             assert_write!(same_file, "Updated");
 
-            open_as_file_assert_content!(&proxy, flags, "file", "Updated twice");
+            open_as_vmo_file_assert_content!(&proxy, flags, "file", "Updated twice");
 
             drop(watcher_client);
             assert_close!(file);
@@ -612,9 +613,9 @@ fn link_file_across_directories() {
             // `open_as_file_assert_content!` as the later will immediately close the connection,
             // and if no connections exist the VMO is recycled and the assertion is invoked to
             // check if the VMO content matches the final expected state.
-            let passwd = open_get_file_proxy_assert_ok!(&etc, flags, "passwd");
+            let passwd = open_get_vmo_file_proxy_assert_ok!(&etc, flags, "passwd");
 
-            open_as_file_assert_content!(&etc, flags, "passwd", "secret");
+            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "secret");
 
             let tmp_token = assert_get_token!(&tmp);
             assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
@@ -638,11 +639,11 @@ fn link_file_across_directories() {
                 assert_read_dirents!(tmp, 1000, expected.into_vec());
             }
 
-            let linked_passwd = open_get_file_proxy_assert_ok!(&tmp, flags, "linked-passwd");
+            let linked_passwd = open_get_vmo_file_proxy_assert_ok!(&tmp, flags, "linked-passwd");
             assert_write!(passwd, "-------- twice");
             assert_write!(linked_passwd, "modified");
 
-            open_as_file_assert_content!(&etc, flags, "passwd", "modified twice");
+            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "modified twice");
 
             drop(tmp_watcher_client);
             assert_close!(passwd);
@@ -740,9 +741,9 @@ fn link_from_immutable_to_mutable() {
             // `open_as_file_assert_content!` as the later will immediately close the connection,
             // and if no connections exist the VMO is recycled and the assertion is invoked to
             // check if the VMO content matches the final expected state.
-            let passwd = open_get_file_proxy_assert_ok!(&etc, flags, "passwd");
+            let passwd = open_get_vmo_file_proxy_assert_ok!(&etc, flags, "passwd");
 
-            open_as_file_assert_content!(&etc, flags, "passwd", "secret");
+            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "secret");
 
             let tmp_token = assert_get_token!(&tmp);
             assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
@@ -766,11 +767,11 @@ fn link_from_immutable_to_mutable() {
                 assert_read_dirents!(tmp, 1000, expected.into_vec());
             }
 
-            let linked_passwd = open_get_file_proxy_assert_ok!(&tmp, flags, "linked-passwd");
+            let linked_passwd = open_get_vmo_file_proxy_assert_ok!(&tmp, flags, "linked-passwd");
             assert_write!(passwd, "-------- twice");
             assert_write!(linked_passwd, "modified");
 
-            open_as_file_assert_content!(&etc, flags, "passwd", "modified twice");
+            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "modified twice");
 
             drop(tmp_watcher_client);
             assert_close!(passwd);

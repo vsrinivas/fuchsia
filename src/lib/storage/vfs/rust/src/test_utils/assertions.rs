@@ -10,10 +10,10 @@ pub mod reexport {
         crate::directory::test_utils::DirentsSameInodeBuilder,
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, FileEvent, FileMarker, FileObject,
-            NodeInfo, SeekOrigin, Service, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_DIRECTORY,
-            DIRENT_TYPE_FILE, DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET, DIRENT_TYPE_UNKNOWN,
-            INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, WATCH_EVENT_ADDED,
-            WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE, WATCH_EVENT_REMOVED,
+            NodeInfo, SeekOrigin, Service, Vmofile, DIRENT_TYPE_BLOCK_DEVICE,
+            DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET,
+            DIRENT_TYPE_UNKNOWN, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+            WATCH_EVENT_ADDED, WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE, WATCH_EVENT_REMOVED,
         },
         fuchsia_zircon::{MessageBuf, Status},
         futures::stream::StreamExt,
@@ -370,6 +370,25 @@ macro_rules! open_get_file_proxy_assert_ok {
 
 // See comment at the top of the file for why this is a macro.
 #[macro_export]
+macro_rules! open_get_vmo_file_proxy_assert_ok {
+    ($proxy:expr, $flags:expr, $path:expr) => {{
+        use $crate::test_utils::assertions::reexport::{
+            FileEvent, FileMarker, NodeInfo, Status, Vmofile,
+        };
+
+        open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(Status::from_raw(s), Status::OK);
+            let info = *info.expect("Empty NodeInfo");
+            assert!(
+                matches!(info, NodeInfo::Vmofile(Vmofile { .. })),
+                format!("Expected Vmofile but got {:?}", info)
+            );
+        })
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
 macro_rules! open_as_file_assert_err {
     ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::{FileEvent, FileMarker, Status};
@@ -454,6 +473,25 @@ macro_rules! clone_get_file_proxy_assert_ok {
             assert_eq!(
                 info,
                 Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),
+            );
+        })
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! clone_get_vmo_file_proxy_assert_ok {
+    ($proxy:expr, $flags:expr) => {{
+        use $crate::test_utils::assertions::reexport::{
+            FileEvent, FileMarker, NodeInfo, Status, Vmofile,
+        };
+
+        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(Status::from_raw(s), Status::OK);
+            let info = *info.expect("Empty NodeInfo");
+            assert!(
+                matches!(info, NodeInfo::Vmofile(Vmofile { .. })),
+                format!("Expected Vmofile but got {:?}", info)
             );
         })
     }};

@@ -13,7 +13,7 @@ use crate::{
     assert_read_fidl_err_closed, assert_seek, assert_seek_err, assert_truncate,
     assert_truncate_err, assert_vmo_content, assert_write, assert_write_at, assert_write_at_err,
     assert_write_err, assert_write_fidl_err_closed, clone_as_file_assert_err,
-    clone_get_file_proxy_assert_ok, clone_get_proxy_assert, report_invalid_vmo_content,
+    clone_get_proxy_assert, clone_get_vmo_file_proxy_assert_ok, report_invalid_vmo_content,
 };
 
 use crate::{
@@ -33,7 +33,7 @@ use super::test_utils::{
 use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
-        FileEvent, FileMarker, FileObject, NodeAttributes, NodeInfo, INO_UNKNOWN, MODE_TYPE_FILE,
+        FileEvent, FileMarker, NodeAttributes, NodeInfo, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE,
         OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
         VMO_FLAG_WRITE,
@@ -111,10 +111,8 @@ fn read_only_read_with_describe() {
 
         assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
-            assert_eq!(
-                info,
-                Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None })))
-            );
+            let info = *info.expect("Empty NodeInfo");
+            assert!(matches!(info, NodeInfo::Vmofile(Vmofile { vmo: _, offset: 0, length: 14 })));
         });
     });
 }
@@ -256,10 +254,11 @@ fn read_error() {
 
             assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                 assert_eq!(s, ZX_OK);
-                assert_eq!(
+                let info = *info.expect("Empty NodeInfo");
+                assert!(matches!(
                     info,
-                    Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None })))
-                );
+                    NodeInfo::Vmofile(Vmofile { vmo: _, offset: 0, length: 10 })
+                ));
             });
 
             assert_read!(proxy, "Have value");
@@ -744,7 +743,7 @@ fn clone_reduce_access() {
             assert_seek!(first_proxy, 0, Start);
             assert_write!(first_proxy, "As updated");
 
-            let second_proxy = clone_get_file_proxy_assert_ok!(
+            let second_proxy = clone_get_vmo_file_proxy_assert_ok!(
                 &first_proxy,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
             );
@@ -771,7 +770,7 @@ fn clone_inherit_access() {
             assert_seek!(first_proxy, 0, Start);
             assert_write!(first_proxy, "As updated");
 
-            let second_proxy = clone_get_file_proxy_assert_ok!(
+            let second_proxy = clone_get_vmo_file_proxy_assert_ok!(
                 &first_proxy,
                 CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
             );
@@ -917,7 +916,8 @@ fn clone_can_not_remove_node_reference() {
                 assert_write_fidl_err_closed!(second_proxy, "Write attempt");
 
                 // We now try without OPEN_RIGHT_READABLE, as we might still be able to Seek.
-                let third_proxy = clone_get_file_proxy_assert_ok!(&first_proxy, OPEN_FLAG_DESCRIBE);
+                let third_proxy =
+                    clone_get_vmo_file_proxy_assert_ok!(&first_proxy, OPEN_FLAG_DESCRIBE);
 
                 assert_seek_err!(third_proxy, 0, Current, Status::BAD_HANDLE, 0);
 
