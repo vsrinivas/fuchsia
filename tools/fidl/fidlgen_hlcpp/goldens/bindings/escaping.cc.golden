@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace escaping {
-
 extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
 const fidl_type_t* DocCommentWithQuotes::FidlType =
     &fidl_test_escaping_DocCommentWithQuotesTable;
@@ -42,15 +41,11 @@ zx_status_t DocCommentWithQuotes::Clone(DocCommentWithQuotes* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace escaping
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace escaping {}  // namespace escaping
+
+}  // namespace escaping
 }  // namespace test
 }  // namespace fidl

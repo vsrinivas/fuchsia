@@ -10,9 +10,10 @@
 namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
-
 class StrictFoo;
+
 class FlexibleFoo;
+
 #ifdef __Fuchsia__
 class Protocol;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
@@ -208,15 +209,16 @@ inline zx_status_t Clone(
 }
 
 using FlexibleFooPtr = ::std::unique_ptr<FlexibleFoo>;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class Protocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(
@@ -228,7 +230,7 @@ class Protocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::requestflexibleenvelope::_internal::
             fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -244,7 +246,7 @@ class Protocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::requestflexibleenvelope::_internal::
             fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -252,14 +254,14 @@ class Protocol_RequestEncoder {
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class Protocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(
@@ -271,7 +273,7 @@ class Protocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::requestflexibleenvelope::_internal::
             fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -286,20 +288,17 @@ class Protocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::requestflexibleenvelope::_internal::
             fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace requestflexibleenvelope
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct IsFidlXUnion<::fidl::test::requestflexibleenvelope::StrictFoo>
     : public std::true_type {};
@@ -443,15 +442,12 @@ struct Equality<::fidl::test::requestflexibleenvelope::FlexibleFoo> {
     }
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
-
 #ifdef __Fuchsia__
 using ProtocolPtr = ::fidl::InterfacePtr<Protocol>;
 class Protocol_Proxy;
@@ -472,10 +468,11 @@ constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
 #ifdef __Fuchsia__
 class Protocol {
  public:
-  using Proxy_ = Protocol_Proxy;
-  using Stub_ = Protocol_Stub;
-  using EventSender_ = Protocol_EventSender;
-  using Sync_ = Protocol_Sync;
+  using Proxy_ = ::fidl::test::requestflexibleenvelope::Protocol_Proxy;
+  using Stub_ = ::fidl::test::requestflexibleenvelope::Protocol_Stub;
+  using EventSender_ =
+      ::fidl::test::requestflexibleenvelope::Protocol_EventSender;
+  using Sync_ = ::fidl::test::requestflexibleenvelope::Protocol_Sync;
   virtual ~Protocol();
   using RequestStrictResponseFlexibleCallback =
       fit::function<void(::fidl::test::requestflexibleenvelope::FlexibleFoo)>;
@@ -520,7 +517,7 @@ class Protocol_EventSender {
 
 class Protocol_Sync {
  public:
-  using Proxy_ = Protocol_SyncProxy;
+  using Proxy_ = ::fidl::test::requestflexibleenvelope::Protocol_SyncProxy;
   virtual ~Protocol_Sync();
   virtual zx_status_t RequestStrictResponseFlexible(
       ::fidl::test::requestflexibleenvelope::StrictFoo s,
@@ -544,14 +541,17 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
       RequestFlexibleResponseStrictCallback callback) override;
 
  private:
-  Protocol_Proxy(const Protocol_Proxy&) = delete;
-  Protocol_Proxy& operator=(const Protocol_Proxy&) = delete;
+  Protocol_Proxy(const ::fidl::test::requestflexibleenvelope::Protocol_Proxy&) =
+      delete;
+  Protocol_Proxy& operator=(
+      const ::fidl::test::requestflexibleenvelope::Protocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Protocol_Stub final : public ::fidl::internal::Stub,
-                            public Protocol_EventSender {
+class Protocol_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::requestflexibleenvelope::Protocol_EventSender {
  public:
   typedef class ::fidl::test::requestflexibleenvelope::Protocol Protocol_clazz;
   explicit Protocol_Stub(Protocol_clazz* impl);
@@ -564,7 +564,8 @@ class Protocol_Stub final : public ::fidl::internal::Stub,
   Protocol_clazz* impl_;
 };
 
-class Protocol_SyncProxy : public Protocol_Sync {
+class Protocol_SyncProxy
+    : public ::fidl::test::requestflexibleenvelope::Protocol_Sync {
  public:
   explicit Protocol_SyncProxy(::zx::channel channel);
   ~Protocol_SyncProxy() override;
@@ -579,7 +580,6 @@ class Protocol_SyncProxy : public Protocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Protocol>;
 };
-
 #endif  // __Fuchsia__
 }  // namespace requestflexibleenvelope
 }  // namespace test

@@ -10,35 +10,59 @@
 namespace fidl {
 namespace test {
 namespace union_ {
-
 class Union;
+
 class StructWithNullableXUnion;
+
 class StrictUnion;
+
 class StrictSimpleXUnion;
+
 class StrictFoo;
+
 class StrictBoundedXUnion;
+
 class ReverseOrdinalUnion;
+
 class Pizza;
+
 class Pasta;
+
 class StrictPizzaOrPasta;
+
 class PizzaOrPasta;
+
 class FlexiblePizzaOrPasta;
+
 class ExplicitPizzaOrPasta;
+
 class OlderSimpleUnion;
+
 #ifdef __Fuchsia__
 class TestProtocol;
 using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
 #endif  // __Fuchsia__
+
 class NullableUnionStruct;
+
 class NewerSimpleUnion;
+
 class FlexibleUnion;
+
 class FlexibleFoo;
+
 class FieldCollision;
+
 class ExplicitXUnion;
+
 class ExplicitUnion;
+
 class ExplicitStrictFoo;
+
 class ExplicitFoo;
+
 class Empty;
+
 class XUnionContainingEmptyStruct;
 
 class Union final {
@@ -151,7 +175,7 @@ class StructWithNullableXUnion final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<OlderSimpleUnion> x1{};
+  ::std::unique_ptr<::fidl::test::union_::OlderSimpleUnion> x1{};
 
   static inline ::std::unique_ptr<StructWithNullableXUnion> New() {
     return ::std::make_unique<StructWithNullableXUnion>();
@@ -1133,15 +1157,16 @@ inline zx_status_t Clone(const ::fidl::test::union_::OlderSimpleUnion& value,
 }
 
 using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class TestProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage
@@ -1151,7 +1176,7 @@ class TestProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::union_::_internal::
             fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -1165,7 +1190,7 @@ class TestProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::union_::_internal::
             fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -1173,14 +1198,14 @@ class TestProtocol_RequestEncoder {
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class TestProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage
@@ -1193,7 +1218,7 @@ class TestProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::union_::_internal::
             fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -1208,21 +1233,20 @@ class TestProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::union_::_internal::
             fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
 
 class NullableUnionStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<Union> the_union{};
+  ::std::unique_ptr<::fidl::test::union_::Union> the_union{};
 
   static inline ::std::unique_ptr<NullableUnionStruct> New() {
     return ::std::make_unique<NullableUnionStruct>();
@@ -2165,11 +2189,9 @@ inline zx_status_t Clone(
 
 using XUnionContainingEmptyStructPtr =
     ::std::unique_ptr<XUnionContainingEmptyStruct>;
+
 }  // namespace union_
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct IsFidlXUnion<::fidl::test::union_::Union> : public std::true_type {};
 
@@ -3658,4 +3680,5 @@ struct Equality<::fidl::test::union_::XUnionContainingEmptyStruct> {
     }
   }
 };
+
 }  // namespace fidl

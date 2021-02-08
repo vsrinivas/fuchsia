@@ -34,15 +34,14 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace bits {
-
 namespace wire {
 // |StrictBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
@@ -147,10 +146,9 @@ constexpr inline void StrictBits::operator^=(
 }
 
 }  // namespace wire
-
 using StrictBits = wire::StrictBits;
-
 namespace wire {
+
 // |MyBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -253,10 +251,9 @@ constexpr inline void MyBits::operator^=(
 }
 
 }  // namespace wire
-
 using MyBits = wire::MyBits;
-
 namespace wire {
+
 // |FlexibleBits| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class FlexibleBits final {
@@ -366,14 +363,12 @@ constexpr inline void FlexibleBits::operator^=(
 }
 
 }  // namespace wire
-
 using FlexibleBits = wire::FlexibleBits;
-
+namespace wire {}  // namespace wire
 }  // namespace bits
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -399,14 +394,13 @@ static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::bits::wire::FlexibleBits>);
 static_assert(sizeof(::llcpp::fidl::test::bits::wire::FlexibleBits) ==
               sizeof(uint64_t));
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace bits {}  // namespace bits
+namespace bits {
+namespace wire {}  // namespace wire
+}  // namespace bits
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

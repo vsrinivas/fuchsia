@@ -34,22 +34,21 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <middle/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace transitivedependencies {
-
 namespace wire {
 struct Baz;
 }  // namespace wire
-using Baz = wire::Baz;  // struct
-
+using Baz = wire::Baz;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
 
 struct Baz {
@@ -141,13 +140,12 @@ struct Baz {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace transitivedependencies
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -163,14 +161,13 @@ static_assert(offsetof(::llcpp::fidl::test::transitivedependencies::wire::Baz,
 static_assert(
     sizeof(::llcpp::fidl::test::transitivedependencies::wire::Baz) ==
     ::llcpp::fidl::test::transitivedependencies::wire::Baz::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace transitivedependencies {}  // namespace transitivedependencies
+namespace transitivedependencies {
+namespace wire {}  // namespace wire
+}  // namespace transitivedependencies
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

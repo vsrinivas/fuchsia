@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace emptystruct {
 namespace testing {
-
-class EmptyProtocol_TestBase : public EmptyProtocol {
+class EmptyProtocol_TestBase : public ::fidl::test::emptystruct::EmptyProtocol {
  public:
   virtual ~EmptyProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

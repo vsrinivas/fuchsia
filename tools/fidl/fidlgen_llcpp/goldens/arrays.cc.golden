@@ -4,12 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace arrays {
-
 void ::llcpp::fidl::test::arrays::wire::UnionSmallArray::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSmallArray) == sizeof(fidl_xunion_t));
@@ -27,8 +21,3 @@ void ::llcpp::fidl::test::arrays::wire::UnionLargeArray::
   static_assert(offsetof(UnionLargeArray, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-}  // namespace arrays
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 namespace testing {
-
-class Parent_TestBase : public Parent {
+class Parent_TestBase
+    : public ::fidl::test::inheritancewithrecursivedecl::Parent {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -19,7 +19,8 @@ class Parent_TestBase : public Parent {
   }
 };
 
-class Child_TestBase : public Child {
+class Child_TestBase
+    : public ::fidl::test::inheritancewithrecursivedecl::Child {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

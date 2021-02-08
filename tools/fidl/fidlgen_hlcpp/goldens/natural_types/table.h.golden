@@ -10,11 +10,14 @@
 namespace fidl {
 namespace test {
 namespace table {
-
 class SimpleTable;
+
 class ReverseOrdinalTable;
+
 class OlderSimpleTable;
+
 class NewerSimpleTable;
+
 class EmptyTable;
 
 class SimpleTable final {
@@ -698,11 +701,9 @@ class EmptyTable final {
 };
 
 using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
+
 }  // namespace table
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::table::SimpleTable>
     : public EncodableCodingTraits<::fidl::test::table::SimpleTable, 16> {};
@@ -871,4 +872,5 @@ struct Equality<::fidl::test::table::EmptyTable> {
     return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
+
 }  // namespace fidl

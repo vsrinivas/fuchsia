@@ -4,12 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace doccomments {
-
 void ::llcpp::fidl::test::doccomments::wire::StrictUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
@@ -19,20 +13,29 @@ void ::llcpp::fidl::test::doccomments::wire::StrictUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace doccomments {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
     6649887292072346213lu;
+
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
+
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodResponseTable;
 [[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal =
     3999525675942213370lu;
+
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
+
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace
-Interface::ResultOf::Method::Method(
-    ::fidl::UnownedClientEnd<Interface> _client) {
+::llcpp::fidl::test::doccomments::Interface::ResultOf::Method::Method(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
+        _client) {
   MethodRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -42,7 +45,8 @@ Interface::ResultOf::Method::Method(
 ::fidl::Result Interface::ClientImpl::Method() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Method(
-        ::fidl::UnownedClientEnd<Interface>(_channel->handle()));
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>(
+            _channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -155,9 +159,12 @@ namespace methods {
 
 void InterfaceDispatchMethod(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
-  Interface::TypedChannelInterface::MethodCompleter::Sync completer(txn);
-  reinterpret_cast<Interface::TypedChannelInterface*>(interface)->Method(
-      completer);
+  ::llcpp::fidl::test::doccomments::Interface::TypedChannelInterface::
+      MethodCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::doccomments::Interface::TypedChannelInterface*>(
+      interface)
+      ->Method(completer);
 }
 
 }  // namespace methods
@@ -165,7 +172,8 @@ void InterfaceDispatchMethod(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry Interface[] = {
-    {kInterface_Method_Ordinal, Interface::MethodRequest::Type,
+    {kInterface_Method_Ordinal,
+     ::llcpp::fidl::test::doccomments::Interface::MethodRequest::Type,
      methods::InterfaceDispatchMethod},
 };
 
@@ -197,11 +205,13 @@ namespace entries {
   return Interface::Dispatch(this, msg, txn);
 }
 
-void Interface::MethodRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::doccomments::Interface::MethodRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kInterface_Method_Ordinal);
 }
 
-void Interface::OnEventResponse::_InitHeader() {
+void ::llcpp::fidl::test::doccomments::Interface::OnEventResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kInterface_OnEvent_Ordinal);
 }
 

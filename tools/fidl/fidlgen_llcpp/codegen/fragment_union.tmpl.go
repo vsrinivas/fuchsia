@@ -6,10 +6,11 @@ package codegen
 
 const fragmentUnionTmpl = `
 {{- define "UnionForwardDeclaration" }}
-namespace wire {
-class {{ .Name }};
+{{ EnsureNamespace .Decl.Wire }}
+class {{ .Decl.Wire.Name }};
 }  // namespace wire
-using {{ .Name }} = wire::{{ .Name }};
+using {{ .Decl.Wire.Name }} = wire::{{ .Decl.Wire.Name }};
+namespace wire {
 {{- end }}
 
 {{- define "UnionMemberCloseHandles" }}
@@ -24,22 +25,23 @@ using {{ .Name }} = wire::{{ .Name }};
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "UnionDeclaration" }}
+{{ EnsureNamespace .Decl.Wire }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
-namespace wire {
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
-class {{ .Name }} {
+class {{ .Decl.Wire.Name }} {
   public:
-  {{ .Name }}() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  {{ .Decl.Wire.Name }}() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
-  {{ .Name }}({{ .Name }}&&) = default;
-  {{ .Name }}& operator=({{ .Name }}&&) = default;
+  {{ .Decl.Wire.Name }}({{ .Decl.Wire.Name }}&&) = default;
+  {{ .Decl.Wire.Name }}& operator=({{ .Decl.Wire.Name }}&&) = default;
 
-  ~{{ .Name }}() {
+  ~{{ .Decl.Wire.Name }}() {
     reset_ptr(nullptr);
   }
 
@@ -58,23 +60,23 @@ class {{ .Name }} {
 
   bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}>&& val) {
-    {{ $.Name }} result;
+  static {{ $.Decl.Wire.Name }} With{{ .UpperCamelCaseName }}(::fidl::tracking_ptr<{{ .Type.Wire }}>&& val) {
+    {{ $.Decl.Wire.Name }} result;
     result.set_{{ .Name }}(std::move(val));
     return result;
   }
 
   template <typename... Args>
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyAllocator& allocator, Args&&... args) {
-    {{ $.Name }} result;
-    result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type.WireDecl }}>(allocator,
+  static {{ $.Decl.Wire.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+    {{ $.Decl.Wire.Name }} result;
+    result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type.Wire }}>(allocator,
                            std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::Allocator& allocator, Args&&... args) {
-    {{ $.Name }} result;
-    result.set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}>(allocator,
+  static {{ $.Decl.Wire.Name }} With{{ .UpperCamelCaseName }}(::fidl::Allocator& allocator, Args&&... args) {
+    {{ $.Decl.Wire.Name }} result;
+    result.set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.Wire }}>(allocator,
                            std::forward<Args>(args)...));
     return result;
   }
@@ -82,7 +84,7 @@ class {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}>&& elem) {
+  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.Wire }}>&& elem) {
     ordinal_ = Ordinal::{{ .TagName }};
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -90,24 +92,24 @@ class {{ .Name }} {
   template <typename... Args>
   void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::{{ .TagName }};
-    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.WireDecl }}>(allocator, std::forward<Args>(args)...));
+    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.Wire }}>(allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_{{ .Name }}(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::{{ .TagName }};
-    set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}>(allocator, std::forward<Args>(args)...));
+    set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.Wire }}>(allocator, std::forward<Args>(args)...));
   }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.WireDecl }}& mutable_{{ .Name }}() {
+  {{ .Type.Wire }}& mutable_{{ .Name }}() {
     ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
-    return *static_cast<{{ .Type.WireDecl }}*>(envelope_.data.get());
+    return *static_cast<{{ .Type.Wire }}*>(envelope_.data.get());
   }
-  const {{ .Type.WireDecl }}& {{ .Name }}() const {
+  const {{ .Type.Wire }}& {{ .Name }}() const {
     ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
-    return *static_cast<{{ .Type.WireDecl }}*>(envelope_.data.get());
+    return *static_cast<{{ .Type.Wire }}*>(envelope_.data.get());
   }
   {{- end }}
 
@@ -145,8 +147,8 @@ class {{ .Name }} {
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
     {{- range .Members }}
     case {{ .Ordinal }}: {
-      ::fidl::tracking_ptr<{{.Type.WireDecl}}> to_destroy =
-        static_cast<::fidl::tracking_ptr<{{.Type.WireDecl}}>>(std::move(envelope_.data));
+      ::fidl::tracking_ptr<{{.Type.Wire}}> to_destroy =
+        static_cast<::fidl::tracking_ptr<{{.Type.Wire}}>>(std::move(envelope_.data));
       break;
     }
     {{- end}}
@@ -163,9 +165,8 @@ class {{ .Name }} {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -175,9 +176,10 @@ class {{ .Name }} {
 {{- define "UnionDefinition" }}
 {{- if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 {{- if .IsFlexible }}
-auto {{ .Namespace }}::wire::{{ .Name }}::which() const -> Tag {
+auto {{ .Decl.Wire }}::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
   {{- range .Members }}
@@ -190,14 +192,14 @@ auto {{ .Namespace }}::wire::{{ .Name }}::which() const -> Tag {
 }
 {{- end }}
 
-void {{ .Namespace }}::wire::{{ .Name }}::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_t));
-  static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
-  static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
+void {{ .Decl.Wire }}::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof({{ .Decl.Wire.Name }}) == sizeof(fidl_xunion_t));
+  static_assert(offsetof({{ .Decl.Wire.Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof({{ .Decl.Wire.Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 {{- if .IsResourceType }}
-void wire::{{ .Name }}::_CloseHandles() {
+void {{ .Decl.Wire }}::_CloseHandles() {
   switch (ordinal_) {
   {{- range .Members }}
     {{- template "UnionMemberCloseHandles" . }}
@@ -209,6 +211,7 @@ void wire::{{ .Name }}::_CloseHandles() {
 {{- end }}
 
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -218,13 +221,15 @@ void wire::{{ .Name }}::_CloseHandles() {
 {{- define "UnionTraits" }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 template <>
-struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
+struct IsFidlType<{{ .Decl.Wire }}> : public std::true_type {};
 template <>
-struct IsUnion<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Namespace }}::wire::{{ .Name }}>);
+struct IsUnion<{{ .Decl.Wire }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ .Decl.Wire }}>);
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}

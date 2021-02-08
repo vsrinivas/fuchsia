@@ -35,16 +35,15 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <someotherlibrary/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace typealiases {
-
 namespace wire {
 
 enum class obj_type : uint32_t {
@@ -55,16 +54,15 @@ enum class obj_type : uint32_t {
 };
 
 }  // namespace wire
-
 using obj_type = wire::obj_type;
-
 namespace wire {
+
 struct ExampleOfUseOfAliases;
 }  // namespace wire
-using ExampleOfUseOfAliases = wire::ExampleOfUseOfAliases;  // struct
+using ExampleOfUseOfAliases = wire::ExampleOfUseOfAliases;
+namespace wire {
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 
 struct ExampleOfUseOfAliases {
@@ -185,14 +183,13 @@ struct ExampleOfUseOfAliases {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
+}  // namespace wire
 }  // namespace typealiases
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -236,14 +233,13 @@ static_assert(
     sizeof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases) ==
     ::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases::PrimarySize);
 #endif  // __Fuchsia__
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace typealiases {}  // namespace typealiases
+namespace typealiases {
+namespace wire {}  // namespace wire
+}  // namespace typealiases
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

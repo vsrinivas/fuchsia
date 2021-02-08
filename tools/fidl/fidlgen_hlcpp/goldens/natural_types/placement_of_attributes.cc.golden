@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace placementofattributes {
-
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
 const fidl_type_t* ExampleXUnion::FidlType =
     &fidl_test_placementofattributes_ExampleXUnionTable;
@@ -179,6 +178,7 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
 const fidl_type_t* ExampleUnion::FidlType =
     &fidl_test_placementofattributes_ExampleUnionTable;
@@ -318,6 +318,7 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
 const fidl_type_t* ExampleTable::FidlType =
     &fidl_test_placementofattributes_ExampleTableTable;
@@ -464,6 +465,7 @@ zx_status_t ExampleTable::Clone(ExampleTable* result) const {
   }
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
+
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
 const fidl_type_t* ExampleStruct::FidlType =
     &fidl_test_placementofattributes_ExampleStructTable;
@@ -494,6 +496,7 @@ zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 }  // namespace placementofattributes
 }  // namespace test
 }  // namespace fidl

@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/bindingsdenylist/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace bindingsdenylist {
-namespace testing {}  // namespace testing
-}  // namespace bindingsdenylist
-}  // namespace test
-}  // namespace fidl

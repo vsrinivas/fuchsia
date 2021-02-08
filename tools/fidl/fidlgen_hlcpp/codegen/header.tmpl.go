@@ -25,6 +25,7 @@ const headerTemplate = `
 {{ if IncludeProxiesAndStubs -}}
 {{ template "Header/ProxiesAndStubs" . }}
 {{- end }}
+{{ EndOfFile }}
 
 {{ end }}
 
@@ -32,11 +33,6 @@ const headerTemplate = `
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-
-{{- range .Library }}
-namespace {{ . }} {
-{{- end }}
-{{ "" }}
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
@@ -56,11 +52,8 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
 {{- end }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
-namespace fidl {
-{{ "" }}
+
+{{ EnsureNamespace "fidl" }}
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
@@ -70,7 +63,6 @@ namespace fidl {
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
 {{- end -}}
 
-}  // namespace fidl
 {{- end }}
 
 {{- define "Header/ProxiesAndStubs" }}
@@ -78,10 +70,6 @@ namespace fidl {
 // Proxies and stubs declarations
 //
 
-{{- range .Library }}
-namespace {{ . }} {
-{{- end }}
-{{ "" }}
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/ProxiesAndStubs" . }}{{- end }}
@@ -93,9 +81,6 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceDeclaration" . }}{{- end }}
 {{- end }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
 {{- end }}
 
 {{- define "DispatchProtocolForwardDeclaration/NaturalTypes" -}}

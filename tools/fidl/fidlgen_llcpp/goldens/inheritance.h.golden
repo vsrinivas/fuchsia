@@ -35,19 +35,20 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace inheritance {
-
 class super;
+
 class sub;
 
 extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
 class super final {
@@ -62,7 +63,8 @@ class super final {
     fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_inheritance_superfooResponseTable;
+        &::llcpp::fidl::test::inheritance::
+            fidl_test_inheritance_superfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -182,7 +184,8 @@ class super final {
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_inheritance_superfooRequestTable;
+        &::llcpp::fidl::test::inheritance::
+            fidl_test_inheritance_superfooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -405,17 +408,20 @@ class super final {
    public:
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
-    static ResultOf::foo foo(::fidl::UnownedClientEnd<super> _client_end,
-                             ::fidl::StringView s) {
+    static ResultOf::foo foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
+            _client_end,
+        ::fidl::StringView s) {
       return ResultOf::foo(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::foo foo(::fidl::UnownedClientEnd<super> _client_end,
-                                    ::fidl::BufferSpan _request_buffer,
-                                    ::fidl::StringView s,
-                                    ::fidl::BufferSpan _response_buffer) {
+    static UnownedResultOf::foo foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
+            _client_end,
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
           _client_end, _request_buffer.data, _request_buffer.capacity, s,
           _response_buffer.data, _response_buffer.capacity);
@@ -549,6 +555,7 @@ class super final {
 };
 
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 class sub final {
@@ -563,7 +570,8 @@ class sub final {
     fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_inheritance_subfooResponseTable;
+        &::llcpp::fidl::test::inheritance::
+            fidl_test_inheritance_subfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -683,7 +691,8 @@ class sub final {
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_inheritance_subfooRequestTable;
+        &::llcpp::fidl::test::inheritance::
+            fidl_test_inheritance_subfooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -906,17 +915,20 @@ class sub final {
    public:
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
-    static ResultOf::foo foo(::fidl::UnownedClientEnd<sub> _client_end,
-                             ::fidl::StringView s) {
+    static ResultOf::foo foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
+            _client_end,
+        ::fidl::StringView s) {
       return ResultOf::foo(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::foo foo(::fidl::UnownedClientEnd<sub> _client_end,
-                                    ::fidl::BufferSpan _request_buffer,
-                                    ::fidl::StringView s,
-                                    ::fidl::BufferSpan _response_buffer) {
+    static UnownedResultOf::foo foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
+            _client_end,
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
           _client_end, _request_buffer.data, _request_buffer.capacity, s,
           _response_buffer.data, _response_buffer.capacity);
@@ -1053,7 +1065,6 @@ class sub final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1100,11 +1111,8 @@ static_assert(sizeof(::llcpp::fidl::test::inheritance::sub::fooResponse) ==
               ::llcpp::fidl::test::inheritance::sub::fooResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fidl::test::inheritance::sub::fooResponse, y) ==
               16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace inheritance {

@@ -7,17 +7,17 @@ package codegen
 const tmplProtocolDecoderEncoders = `
 {{- define "ProtocolDecoderEncoders" -}}
 
-{{- $ns := .Namespace -}}
+{{- $ns := .Decl.Natural.Namespace -}}
 
 {{- range .Methods -}}
 
 {{- if .HasRequest }}
 [](uint8_t* bytes, uint32_t num_bytes, zx_handle_info_t* handles, uint32_t num_handles) ->
   :std::pair<zx_status_t, zx_status_t> {
-  ::llcpp::{{ $ns }}::{{ .RequestTypeName }}::DecodedMessage decoded(bytes, num_bytes);
+  {{ .RequestCodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
   if (decoded.status()) {
-    ::llcpp::{{ $ns }}::{{ .RequestTypeName }}* value = decoded.PrimaryObject();
-    ::llcpp::{{ $ns }}::{{ .RequestTypeName }}::OwnedEncodedMessage encoded(value);
+    {{ .RequestCodingTable.Wire }}* value = decoded.PrimaryObject();
+    {{ .RequestCodingTable.Wire }}::OwnedEncodedMessage encoded(value);
     if (!encoded.status()) {
       return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());
     }
@@ -33,10 +33,10 @@ const tmplProtocolDecoderEncoders = `
 {{- if .HasResponse }}
 [](uint8_t* bytes, uint32_t num_bytes, zx_handle_info_t* handles, uint32_t num_handles) ->
   :std::pair<zx_status_t, zx_status_t> {
-  ::llcpp::{{ $ns }}::{{ .ResponseTypeName }}::DecodedMessage decoded(bytes, num_bytes);
+  {{ .ResponseCodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
   if (decoded.status()) {
-    ::llcpp::{{ $ns }}::{{ .ResponseTypeName }}* value = decoded.PrimaryObject();
-    ::llcpp::{{ $ns }}::{{ .RequestTypeName }}::{{ .Name }}::OwnedEncodedMessage encoded(value);
+    {{ .ResponseCodingTable.Wire }}* value = decoded.PrimaryObject();
+    {{ .RequestCodingTable.Wire }}::{{ .Name }}::OwnedEncodedMessage encoded(value);
     if (!encoded.status()) {
       return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());
     }

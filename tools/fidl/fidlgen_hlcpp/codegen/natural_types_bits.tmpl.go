@@ -6,61 +6,62 @@ package codegen
 
 const bitsTemplate = `
 {{- define "BitsForwardDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{- if .IsStrict }}
 {{- /* strict bits */}}
 {{- range .DocComments }}
 ///{{ . }}
 {{- end }}
-enum class {{ .Name }} : {{ .Type }} {
+enum class {{ .Decl.Natural.Name }} : {{ .Type.Natural }} {
   {{- range .Members }}
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Name }} = {{ .Value }},
+  {{ .Name }} = {{ .Value.Natural }},
   {{- end }}
 };
 
-const static {{ .Name }} {{ .MaskName }} = static_cast<{{ .Name }}>({{ .Mask }}u);
+const static {{ .Decl.Natural.Name }} {{ .MaskName.Natural.Name }} = static_cast<{{ .Decl.Natural.Name }}>({{ .Mask }}u);
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator|({{ .Namespace }}::{{ .Name }} _lhs,
-                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) | static_cast<{{ .Type }}>(_rhs));
+constexpr inline {{ .Decl.Natural }} operator|({{ .Decl.Natural }} _lhs,
+                                                         {{ .Decl.Natural }} _rhs) {
+  return static_cast<{{ .Decl.Natural }}>(
+    static_cast<{{ .Type.Natural }}>(_lhs) | static_cast<{{ .Type.Natural }}>(_rhs));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }}& operator|=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
+constexpr inline {{ .Decl.Natural }}& operator|=({{ .Decl.Natural }}& _lhs,
+                                                           {{ .Decl.Natural }} _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator&({{ .Namespace }}::{{ .Name }} _lhs,
-                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) & static_cast<{{ .Type }}>(_rhs));
+constexpr inline {{ .Decl.Natural }} operator&({{ .Decl.Natural }} _lhs,
+                                                         {{ .Decl.Natural }} _rhs) {
+  return static_cast<{{ .Decl.Natural }}>(
+    static_cast<{{ .Type.Natural }}>(_lhs) & static_cast<{{ .Type.Natural }}>(_rhs));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }}& operator&=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
+constexpr inline {{ .Decl.Natural }}& operator&=({{ .Decl.Natural }}& _lhs,
+                                                           {{ .Decl.Natural }} _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator^({{ .Namespace }}::{{ .Name }} _lhs,
-                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) ^ static_cast<{{ .Type }}>(_rhs));
+constexpr inline {{ .Decl.Natural }} operator^({{ .Decl.Natural }} _lhs,
+                                                         {{ .Decl.Natural }} _rhs) {
+  return static_cast<{{ .Decl.Natural }}>(
+    static_cast<{{ .Type.Natural }}>(_lhs) ^ static_cast<{{ .Type.Natural }}>(_rhs));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }}& operator^=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
+constexpr inline {{ .Decl.Natural }}& operator^=({{ .Decl.Natural }}& _lhs,
+                                                           {{ .Decl.Natural }} _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .Name }} _value) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    ~static_cast<{{ .Type }}>(_value) & static_cast<{{ .Type }}>({{ .MaskName }}));
+constexpr inline {{ .Decl.Natural }} operator~({{ .Decl.Natural }} _value) {
+  return static_cast<{{ .Decl.Natural }}>(
+    ~static_cast<{{ .Type.Natural }}>(_value) & static_cast<{{ .Type.Natural }}>({{ .MaskName.Natural }}));
 }
 
 {{- else }}
@@ -68,107 +69,107 @@ constexpr inline {{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .N
 {{- range .DocComments }}
 //{{ . }}
 {{- end }}
-// |{{ .Name }}| is flexible, hence may contain unknown members not
+// |{{ .Decl.Natural.Name }}| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
-class {{ .Name }} final {
+class {{ .Decl.Natural.Name }} final {
 public:
-  constexpr {{ .Name }}() = default;
-  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
+  constexpr {{ .Decl.Natural.Name }}() = default;
+  constexpr {{ .Decl.Natural.Name }}(const {{ .Decl.Natural.Name }}& other) = default;
 
-  // Constructs an instance of |{{ .Name }}| from an underlying primitive value
+  // Constructs an instance of |{{ .Decl.Natural.Name }}| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
-  constexpr inline static fit::optional<{{ .Name }}> TryFrom({{ .Type }} value) {
+  constexpr inline static fit::optional<{{ .Decl.Natural.Name }}> TryFrom({{ .Type.Natural }} value) {
     if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return {{ .Name }}(value & {{ .Name }}::kMask.value_);
+    return {{ .Decl.Natural.Name }}(value & {{ .Decl.Natural.Name }}::kMask.value_);
   }
 
-  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
+  // Constructs an instance of |{{ .Decl.Natural.Name }}| from an underlying primitive value,
   // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static {{ .Name }} TruncatingUnknown({{ .Type }} value) {
-    return {{ .Name }}(value & {{ .Name }}::kMask.value_);
+  constexpr inline static {{ .Decl.Natural.Name }} TruncatingUnknown({{ .Type.Natural }} value) {
+    return {{ .Decl.Natural.Name }}(value & {{ .Decl.Natural.Name }}::kMask.value_);
   }
 
-  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
+  // Constructs an instance of |{{ .Decl.Natural.Name }}| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
-  constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
+  constexpr explicit {{ .Decl.Natural.Name }}({{ .Type.Natural }} value) : value_(value) {}
 
   {{- range .Members }}
-  const static {{ $.Name }} {{ .Name }};
+  const static {{ $.Decl.Natural.Name }} {{ .Name }};
   {{- end }}
-  const static {{ .Name }} kMask;
+  const static {{ .Decl.Natural.Name }} kMask;
 
-  explicit constexpr inline operator {{ .Type }}() const { return value_; }
+  explicit constexpr inline operator {{ .Type.Natural }}() const { return value_; }
   explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
-  constexpr inline bool operator==(const {{ .Name }}& other) const { return value_ == other.value_; }
-  constexpr inline bool operator!=(const {{ .Name }}& other) const { return value_ != other.value_; }
-  constexpr inline {{ .Name }} operator~() const;
-  constexpr inline {{ .Name }} operator|(const {{ .Name }}& other) const;
-  constexpr inline {{ .Name }} operator&(const {{ .Name }}& other) const;
-  constexpr inline {{ .Name }} operator^(const {{ .Name }}& other) const;
-  constexpr inline void operator|=(const {{ .Name }}& other);
-  constexpr inline void operator&=(const {{ .Name }}& other);
-  constexpr inline void operator^=(const {{ .Name }}& other);
+  constexpr inline bool operator==(const {{ .Decl.Natural.Name }}& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const {{ .Decl.Natural.Name }}& other) const { return value_ != other.value_; }
+  constexpr inline {{ .Decl.Natural.Name }} operator~() const;
+  constexpr inline {{ .Decl.Natural.Name }} operator|(const {{ .Decl.Natural.Name }}& other) const;
+  constexpr inline {{ .Decl.Natural.Name }} operator&(const {{ .Decl.Natural.Name }}& other) const;
+  constexpr inline {{ .Decl.Natural.Name }} operator^(const {{ .Decl.Natural.Name }}& other) const;
+  constexpr inline void operator|=(const {{ .Decl.Natural.Name }}& other);
+  constexpr inline void operator&=(const {{ .Decl.Natural.Name }}& other);
+  constexpr inline void operator^=(const {{ .Decl.Natural.Name }}& other);
 
   {{- if .IsFlexible }}
-  constexpr inline {{ .Name }} unknown_bits() const {
-    return *this & {{ .Name }}(~kMask.value_);
+  constexpr inline {{ .Decl.Natural.Name }} unknown_bits() const {
+    return *this & {{ .Decl.Natural.Name }}(~kMask.value_);
   }
   constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
   {{- end }}
 
 private:
-  {{ .Type }} value_ = 0;
+  {{ .Type.Natural }} value_ = 0;
 };
 
 #if !(__cplusplus < 201703)
 
 {{- range $member := .Members }}
-constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+constexpr const {{ $.Decl.Natural }} {{ $.Decl.Natural.Name }}::{{ $member.Name }} = {{ $.Decl.Natural }}({{ $member.Value.Natural }});
 {{- end }}
-constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::kMask = {{ $.Namespace }}::{{ $.Name }}({{ .Mask }}u);
+constexpr const {{ .Decl.Natural }} {{ .Decl.Natural.Name }}::kMask = {{ $.Decl.Natural }}({{ .Mask }}u);
 
 #endif  // !(__cplusplus < 201703)
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator~() const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(~this->value_ & kMask.value_));
+constexpr inline {{ .Decl.Natural }} {{ .Decl.Natural.Name }}::operator~() const {
+  return {{ $.Decl.Natural }}(static_cast<{{ .Type.Natural }}>(~this->value_ & kMask.value_));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator|(
-    const {{ .Namespace }}::{{ .Name }}& other) const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ | other.value_));
+constexpr inline {{ .Decl.Natural }} {{ .Decl.Natural.Name }}::operator|(
+    const {{ .Decl.Natural }}& other) const {
+  return {{ $.Decl.Natural }}(static_cast<{{ .Type.Natural }}>(this->value_ | other.value_));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator&(
-    const {{ .Namespace }}::{{ .Name }}& other) const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ & other.value_));
+constexpr inline {{ .Decl.Natural }} {{ .Decl.Natural.Name }}::operator&(
+    const {{ .Decl.Natural }}& other) const {
+  return {{ $.Decl.Natural }}(static_cast<{{ .Type.Natural }}>(this->value_ & other.value_));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator^(
-    const {{ .Namespace }}::{{ .Name }}& other) const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ ^ other.value_));
+constexpr inline {{ .Decl.Natural }} {{ .Decl.Natural.Name }}::operator^(
+    const {{ .Decl.Natural }}& other) const {
+  return {{ $.Decl.Natural }}(static_cast<{{ .Type.Natural }}>(this->value_ ^ other.value_));
 }
 
-constexpr inline void {{ .Name }}::operator|=(
-    const {{ .Namespace }}::{{ .Name }}& other) {
+constexpr inline void {{ .Decl.Natural.Name }}::operator|=(
+    const {{ .Decl.Natural }}& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void {{ .Name }}::operator&=(
-    const {{ .Namespace }}::{{ .Name }}& other) {
+constexpr inline void {{ .Decl.Natural.Name }}::operator&=(
+    const {{ .Decl.Natural }}& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void {{ .Name }}::operator^=(
-    const {{ .Namespace }}::{{ .Name }}& other) {
+constexpr inline void {{ .Decl.Natural.Name }}::operator^=(
+    const {{ .Decl.Natural }}& other) {
   this->value_ ^= other.value_;
 }
 {{- end }}
 
-inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
+inline zx_status_t Clone({{ .Decl.Natural }} value,
+                         {{ .Decl.Natural }}* result) {
   *result = value;
   return ZX_OK;
 }
@@ -176,13 +177,14 @@ inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
 {{- end }}
 
 {{- define "BitsDefinition" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{- if .IsFlexible }}
 #if (__cplusplus < 201703)
 
 {{- range $member := .Members }}
-constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+constexpr const {{ $.Decl.Natural }} {{ $.Decl.Natural.Name }}::{{ $member.Name }} = {{ $.Decl.Natural }}({{ $member.Value.Natural }});
 {{- end }}
-constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::kMask = {{ $.Namespace }}::{{ $.Name }}({{ .Mask }}u);
+constexpr const {{ .Decl.Natural }} {{ .Decl.Natural.Name }}::kMask = {{ $.Decl.Natural }}({{ .Mask }}u);
 
 #endif  // (__cplusplus < 201703)
 {{- end }}
@@ -190,32 +192,32 @@ constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::kMask = {{ $.Namespac
 
 {{- define "BitsTraits" }}
 template <>
-struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
-  static constexpr size_t inline_size_old = sizeof({{ .Namespace }}::{{ .Name }});
-  static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Namespace }}::{{ .Name }});
-  static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset,
+struct CodingTraits<{{ .Decl.Natural }}> {
+  static constexpr size_t inline_size_old = sizeof({{ .Decl.Natural }});
+  static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Decl.Natural }});
+  static void Encode(Encoder* encoder, {{ .Decl.Natural }}* value, size_t offset,
                      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
-    {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
+    {{ .Type.Natural }} underlying = static_cast<{{ .Type.Natural }}>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
-    {{ .Type }} underlying = {};
+  static void Decode(Decoder* decoder, {{ .Decl.Natural }}* value, size_t offset) {
+    {{ .Type.Natural }} underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<{{ .Namespace }}::{{ .Name }}>(underlying);
+    *value = static_cast<{{ .Decl.Natural }}>(underlying);
   }
 };
 
-inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
-  return {{ .Namespace }}::Clone(value, result);
+inline zx_status_t Clone({{ .Decl.Natural }} value,
+                         {{ .Decl.Natural }}* result) {
+  return {{ .Decl.Natural.Namespace }}::Clone(value, result);
 }
 
 template<>
-struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
-    {{ .Type }} _lhs_underlying = static_cast<{{ .Type }}>(_lhs);
-    {{ .Type }} _rhs_underlying = static_cast<{{ .Type }}>(_rhs);
+struct Equality<{{ .Decl.Natural }}> {
+  bool operator()(const {{ .Decl.Natural }}& _lhs, const {{ .Decl.Natural }}& _rhs) const {
+    {{ .Type.Natural }} _lhs_underlying = static_cast<{{ .Type.Natural }}>(_lhs);
+    {{ .Type.Natural }} _rhs_underlying = static_cast<{{ .Type.Natural }}>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };

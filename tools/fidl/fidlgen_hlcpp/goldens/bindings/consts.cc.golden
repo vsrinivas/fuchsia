@@ -10,17 +10,12 @@
 namespace fidl {
 namespace test {
 namespace consts {
-
-const char USERNAME[] = "\"squeenze\"";
-}  // namespace consts
-}  // namespace test
-}  // namespace fidl
+const char* USERNAME = "\"squeenze\"";
 
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace consts {}  // namespace consts
+
+}  // namespace consts
 }  // namespace test
 }  // namespace fidl

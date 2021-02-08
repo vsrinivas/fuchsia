@@ -10,10 +10,12 @@
 namespace fidl {
 namespace test {
 namespace doccomments {
-
 class Table;
+
 class Struct;
+
 class StrictUnion;
+
 #ifdef __Fuchsia__
 /// interface comment #1
 ///
@@ -21,6 +23,7 @@ class StrictUnion;
 class Interface;
 using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 class Service;
 #endif  // __Fuchsia__
@@ -110,7 +113,8 @@ constexpr inline ::fidl::test::doccomments::MyStrictBits& operator^=(
 constexpr inline ::fidl::test::doccomments::MyStrictBits operator~(
     ::fidl::test::doccomments::MyStrictBits _value) {
   return static_cast<::fidl::test::doccomments::MyStrictBits>(
-      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyStrictBitsMask));
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(::fidl::test::doccomments::MyStrictBitsMask));
 }
 
 inline zx_status_t Clone(::fidl::test::doccomments::MyStrictBits value,
@@ -293,6 +297,7 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleBits value,
   *result = value;
   return ZX_OK;
 }
+
 class FlexibleUnion;
 
 /// table comment #1
@@ -516,12 +521,12 @@ inline zx_status_t Clone(const ::fidl::test::doccomments::StrictUnion& value,
 }
 
 using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
-}
 
+}  // namespace _internal
 class Interface_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
@@ -529,18 +534,18 @@ class Interface_RequestEncoder {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_doccomments_InterfaceMethodRequestTable,
+               &::fidl::test::doccomments::_internal::
+                   fidl_test_doccomments_InterfaceMethodRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
-}
 
+}  // namespace _internal
 class Interface_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnEvent(::fidl::Encoder* _encoder) {
@@ -548,13 +553,13 @@ class Interface_ResponseEncoder {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_doccomments_InterfaceOnEventEventTable,
+               &::fidl::test::doccomments::_internal::
+                   fidl_test_doccomments_InterfaceOnEventEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
 
 /// flexible union comment #1
@@ -658,11 +663,9 @@ using FlexibleUnionPtr = ::std::unique_ptr<FlexibleUnion>;
 ///
 /// const comment #3
 constexpr int32_t C = 4u;
+
 }  // namespace doccomments
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::doccomments::Table>
     : public EncodableCodingTraits<::fidl::test::doccomments::Table, 16> {};
@@ -988,4 +991,5 @@ struct Equality<::fidl::test::doccomments::FlexibleUnion> {
     }
   }
 };
+
 }  // namespace fidl

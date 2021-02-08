@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/encapsulatedstructs/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace encapsulatedstructs {
-namespace testing {}  // namespace testing
-}  // namespace encapsulatedstructs
-}  // namespace test
-}  // namespace fidl

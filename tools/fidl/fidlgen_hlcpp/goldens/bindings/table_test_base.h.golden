@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/table/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace table {
-namespace testing {}  // namespace testing
-}  // namespace table
-}  // namespace test
-}  // namespace fidl

@@ -72,7 +72,8 @@ constexpr inline ::fidl::test::consts::BitsType& operator^=(
 constexpr inline ::fidl::test::consts::BitsType operator~(
     ::fidl::test::consts::BitsType _value) {
   return static_cast<::fidl::test::consts::BitsType>(
-      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(BitsTypeMask));
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(::fidl::test::consts::BitsTypeMask));
 }
 
 inline zx_status_t Clone(::fidl::test::consts::BitsType value,
@@ -81,7 +82,7 @@ inline zx_status_t Clone(::fidl::test::consts::BitsType value,
   return ZX_OK;
 }
 
-extern const char USERNAME[];
+extern const char* USERNAME;
 
 constexpr uint32_t POPULATION_USA_2018 = 330000000u;
 
@@ -91,13 +92,15 @@ constexpr float MIN_TEMP = -273.15f;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
-constexpr EnumType enumVal = EnumType::VALUE;
+constexpr ::fidl::test::consts::EnumType enumVal =
+    ::fidl::test::consts::EnumType::VALUE;
 
-constexpr EnumType enumTrue = EnumType::true_;
+constexpr ::fidl::test::consts::EnumType enumTrue =
+    ::fidl::test::consts::EnumType::true_;
 
-constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
+constexpr int32_t enumPrimitiveVal = ::fidl::test::consts::EnumType::VALUE;
 
-constexpr int32_t enumPrimitiveTrue = EnumType::true_;
+constexpr int32_t enumPrimitiveTrue = ::fidl::test::consts::EnumType::true_;
 
 constexpr bool ENABLED_FLAG = true;
 
@@ -105,22 +108,22 @@ constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
 
-constexpr BitsType bitsVal = BitsType::VALUE;
+constexpr ::fidl::test::consts::BitsType bitsVal =
+    ::fidl::test::consts::BitsType::VALUE;
 
-constexpr BitsType bitsTrue = BitsType::true_;
+constexpr ::fidl::test::consts::BitsType bitsTrue =
+    ::fidl::test::consts::BitsType::true_;
 
-constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
+constexpr int32_t bitsPrimitiveVal = ::fidl::test::consts::BitsType::VALUE;
 
-constexpr int32_t bitsPrimitiveTrue = BitsType::true_;
+constexpr int32_t bitsPrimitiveTrue = ::fidl::test::consts::BitsType::true_;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
 constexpr uint16_t ANSWER = 42u;
+
 }  // namespace consts
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::consts::EnumType> {
   static constexpr size_t inline_size_old =
@@ -189,4 +192,5 @@ struct Equality<::fidl::test::consts::BitsType> {
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
+
 }  // namespace fidl

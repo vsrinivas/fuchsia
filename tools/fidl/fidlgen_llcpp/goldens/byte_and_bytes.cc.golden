@@ -3,12 +3,3 @@
 #include <fidl/test/byteandbytes/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace byteandbytes {}  // namespace byteandbytes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

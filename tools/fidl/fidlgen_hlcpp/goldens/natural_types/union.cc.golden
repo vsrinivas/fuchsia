@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace union_ {
-
 extern "C" const fidl_type_t fidl_test_union_UnionTable;
 const fidl_type_t* Union::FidlType = &fidl_test_union_UnionTable;
 
@@ -235,6 +234,7 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
 const fidl_type_t* StructWithNullableXUnion::FidlType =
     &fidl_test_union_StructWithNullableXUnionTable;
@@ -267,6 +267,7 @@ zx_status_t StructWithNullableXUnion::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_union_StrictUnionTable;
 const fidl_type_t* StrictUnion::FidlType = &fidl_test_union_StrictUnionTable;
 
@@ -493,6 +494,7 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_StrictSimpleXUnionTable;
 const fidl_type_t* StrictSimpleXUnion::FidlType =
     &fidl_test_union_StrictSimpleXUnionTable;
@@ -704,6 +706,7 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_StrictFooTable;
 const fidl_type_t* StrictFoo::FidlType = &fidl_test_union_StrictFooTable;
 
@@ -880,6 +883,7 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_StrictBoundedXUnionTable;
 const fidl_type_t* StrictBoundedXUnion::FidlType =
     &fidl_test_union_StrictBoundedXUnionTable;
@@ -1027,6 +1031,7 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_ReverseOrdinalUnionTable;
 const fidl_type_t* ReverseOrdinalUnion::FidlType =
     &fidl_test_union_ReverseOrdinalUnionTable;
@@ -1201,6 +1206,7 @@ void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_PizzaTable;
 const fidl_type_t* Pizza::FidlType = &fidl_test_union_PizzaTable;
 
@@ -1226,6 +1232,7 @@ zx_status_t Pizza::Clone(Pizza* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_union_PastaTable;
 const fidl_type_t* Pasta::FidlType = &fidl_test_union_PastaTable;
 
@@ -1251,6 +1258,7 @@ zx_status_t Pasta::Clone(Pasta* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_union_StrictPizzaOrPastaTable;
 const fidl_type_t* StrictPizzaOrPasta::FidlType =
     &fidl_test_union_StrictPizzaOrPastaTable;
@@ -1440,6 +1448,7 @@ void StrictPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_PizzaOrPastaTable;
 const fidl_type_t* PizzaOrPasta::FidlType = &fidl_test_union_PizzaOrPastaTable;
 
@@ -1623,6 +1632,7 @@ void PizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_FlexiblePizzaOrPastaTable;
 const fidl_type_t* FlexiblePizzaOrPasta::FidlType =
     &fidl_test_union_FlexiblePizzaOrPastaTable;
@@ -1842,6 +1852,7 @@ void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_ExplicitPizzaOrPastaTable;
 const fidl_type_t* ExplicitPizzaOrPasta::FidlType =
     &fidl_test_union_ExplicitPizzaOrPastaTable;
@@ -2032,6 +2043,7 @@ void ExplicitPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_OlderSimpleUnionTable;
 const fidl_type_t* OlderSimpleUnion::FidlType =
     &fidl_test_union_OlderSimpleUnionTable;
@@ -2234,6 +2246,7 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_NullableUnionStructTable;
 const fidl_type_t* NullableUnionStruct::FidlType =
     &fidl_test_union_NullableUnionStructTable;
@@ -2264,6 +2277,7 @@ zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_union_NewerSimpleUnionTable;
 const fidl_type_t* NewerSimpleUnion::FidlType =
     &fidl_test_union_NewerSimpleUnionTable;
@@ -2510,6 +2524,7 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_FlexibleUnionTable;
 const fidl_type_t* FlexibleUnion::FidlType =
     &fidl_test_union_FlexibleUnionTable;
@@ -2766,6 +2781,7 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_FlexibleFooTable;
 const fidl_type_t* FlexibleFoo::FidlType = &fidl_test_union_FlexibleFooTable;
 
@@ -2971,6 +2987,7 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_FieldCollisionTable;
 const fidl_type_t* FieldCollision::FidlType =
     &fidl_test_union_FieldCollisionTable;
@@ -3110,6 +3127,7 @@ void FieldCollision::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_ExplicitXUnionTable;
 const fidl_type_t* ExplicitXUnion::FidlType =
     &fidl_test_union_ExplicitXUnionTable;
@@ -3311,6 +3329,7 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
 const fidl_type_t* ExplicitUnion::FidlType =
     &fidl_test_union_ExplicitUnionTable;
@@ -3489,6 +3508,7 @@ void ExplicitUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_ExplicitStrictFooTable;
 const fidl_type_t* ExplicitStrictFoo::FidlType =
     &fidl_test_union_ExplicitStrictFooTable;
@@ -3667,6 +3687,7 @@ void ExplicitStrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_ExplicitFooTable;
 const fidl_type_t* ExplicitFoo::FidlType = &fidl_test_union_ExplicitFooTable;
 
@@ -3872,6 +3893,7 @@ void ExplicitFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_union_EmptyTable;
 const fidl_type_t* Empty::FidlType = &fidl_test_union_EmptyTable;
 
@@ -3897,6 +3919,7 @@ zx_status_t Empty::Clone(Empty* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_union_XUnionContainingEmptyStructTable;
 const fidl_type_t* XUnionContainingEmptyStruct::FidlType =
     &fidl_test_union_XUnionContainingEmptyStructTable;
@@ -4079,6 +4102,7 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(
     }
   }
 }
+
 }  // namespace union_
 }  // namespace test
 }  // namespace fidl

@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace error {
 namespace testing {
-
-class Example_TestBase : public Example {
+class Example_TestBase : public ::fidl::test::error::Example {
  public:
   virtual ~Example_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

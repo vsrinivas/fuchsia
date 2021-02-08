@@ -12,7 +12,6 @@
 namespace fidl {
 namespace test {
 namespace transitivedependencies {
-
 class Baz;
 
 class Baz final {
@@ -39,11 +38,9 @@ inline zx_status_t Clone(
 }
 
 using BazPtr = ::std::unique_ptr<Baz>;
+
 }  // namespace transitivedependencies
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::transitivedependencies::Baz>
     : public EncodableCodingTraits<::fidl::test::transitivedependencies::Baz,
@@ -70,13 +67,8 @@ struct Equality<::fidl::test::transitivedependencies::Baz> {
     return true;
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace transitivedependencies {}  // namespace transitivedependencies
-}  // namespace test
 }  // namespace fidl

@@ -98,15 +98,10 @@ zx_status_t ExampleOfUseOfAliases::Clone(ExampleOfUseOfAliases* _result) const {
 }
 #endif  // __Fuchsia__
 
-}  // namespace typealiases
-}  // namespace test
-}  // namespace fidl
-
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace typealiases {}  // namespace typealiases
+
+}  // namespace typealiases
 }  // namespace test
 }  // namespace fidl

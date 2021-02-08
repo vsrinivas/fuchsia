@@ -7,8 +7,3 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace fidl {
-namespace test {
-namespace inheritance {}  // namespace inheritance
-}  // namespace test
-}  // namespace fidl

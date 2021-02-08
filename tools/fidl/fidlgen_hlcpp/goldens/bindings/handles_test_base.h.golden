@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace handles {
 namespace testing {
-
-class SomeProtocol_TestBase : public SomeProtocol {
+class SomeProtocol_TestBase : public ::fidl::test::handles::SomeProtocol {
  public:
   virtual ~SomeProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

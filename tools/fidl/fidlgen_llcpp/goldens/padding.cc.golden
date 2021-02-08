@@ -3,12 +3,3 @@
 #include <fidl/test/padding/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace padding {}  // namespace padding
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

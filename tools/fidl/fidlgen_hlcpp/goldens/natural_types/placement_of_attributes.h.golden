@@ -12,10 +12,12 @@
 namespace fidl {
 namespace test {
 namespace placementofattributes {
-
 class ExampleXUnion;
+
 class ExampleUnion;
+
 class ExampleTable;
+
 class ExampleStruct;
 
 enum class ExampleEnum : uint32_t {
@@ -82,7 +84,9 @@ constexpr inline ::fidl::test::placementofattributes::ExampleBits& operator^=(
 constexpr inline ::fidl::test::placementofattributes::ExampleBits operator~(
     ::fidl::test::placementofattributes::ExampleBits _value) {
   return static_cast<::fidl::test::placementofattributes::ExampleBits>(
-      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(ExampleBitsMask));
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(
+          ::fidl::test::placementofattributes::ExampleBitsMask));
 }
 
 inline zx_status_t Clone(
@@ -91,6 +95,7 @@ inline zx_status_t Clone(
   *result = value;
   return ZX_OK;
 }
+
 #ifdef __Fuchsia__
 class ExampleProtocol;
 using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
@@ -388,13 +393,13 @@ inline zx_status_t Clone(
 using ExampleStructPtr = ::std::unique_ptr<ExampleStruct>;
 
 constexpr uint32_t EXAMPLE_CONST = 0u;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
-}
 
+}  // namespace _internal
 class ExampleProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder,
@@ -405,7 +410,7 @@ class ExampleProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::placementofattributes::_internal::
             fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -414,18 +419,13 @@ class ExampleProtocol_RequestEncoder {
   }
 };
 
-namespace _internal {}
-
 class ExampleProtocol_ResponseEncoder {
  public:
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace placementofattributes
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct IsFidlXUnion<::fidl::test::placementofattributes::ExampleXUnion>
     : public std::true_type {};
@@ -700,4 +700,5 @@ struct Equality<::fidl::test::placementofattributes::ExampleBits> {
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
+
 }  // namespace fidl

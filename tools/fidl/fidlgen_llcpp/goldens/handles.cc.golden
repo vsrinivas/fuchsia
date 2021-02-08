@@ -4,14 +4,8 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace handles {
-
 #ifdef __Fuchsia__
-void wire::Handles::_CloseHandles() {
+void ::llcpp::fidl::test::handles::wire::Handles::_CloseHandles() {
   plain_handle.reset();
   bti_handle.reset();
   channel_handle.reset();
@@ -48,6 +42,10 @@ void wire::Handles::_CloseHandles() {
 }
 #endif  // __Fuchsia__
 
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace handles {
 namespace {}  // namespace
 
 std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::DispatchEvent(

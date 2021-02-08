@@ -6,17 +6,16 @@ package codegen
 
 const tmplDecoderEncoder = `
 {{- define "DecoderEncoder" -}}
-{{- $ns := .Namespace -}}
 [](uint8_t* bytes, uint32_t num_bytes, zx_handle_info_t* handles, uint32_t num_handles) ->
   :std::pair<zx_status_t, zx_status_t> {
-  ::llcpp::{{ $ns }}::{{ .Name }}::DecodedMessage decoded(bytes, num_bytes);
+  {{ .Decl.Wire }}::DecodedMessage decoded(bytes, num_bytes);
 
   if (decoded.status() != ZX_OK) {
     return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), ZX_ERR_INTERNAL);
   }
 
-  ::llcpp::{{ $ns }}::{{ .Name }}* value = decoded.PrimaryObject();
-  ::llcpp::{{ $ns }}::{{ .Name }}::OwnedEncodedMessage encoded(value);
+  {{ .Decl.Wire }}* value = decoded.PrimaryObject();
+  {{ .Decl.Wire }}::OwnedEncodedMessage encoded(value);
 
   if (encoded.status() != ZX_OK) {
     return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());

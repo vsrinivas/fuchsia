@@ -8,7 +8,7 @@ const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
   {{- if .HasResponse }}
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}
-{{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
+{{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::{{ .Name }}(
@@ -23,7 +23,7 @@ const fragmentClientSyncMethodsTmpl = `
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
   {{- else }}{{ if .Request }}
-::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
+::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}(
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::{{ .Name }}(
@@ -42,7 +42,7 @@ const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestManagedMethodDefinition" }}
   {{- if .HasResponse }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}
-{{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
+{{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::{{ .Name }}(
@@ -54,7 +54,7 @@ const fragmentClientSyncMethodsTmpl = `
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
   {{- else }}
-::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
+::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::{{ .Name }}(

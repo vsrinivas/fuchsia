@@ -7,17 +7,7 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace fidl {
-namespace test {
-namespace bindingsdenylist {}  // namespace bindingsdenylist
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace bindingsdenylist {}  // namespace bindingsdenylist
-}  // namespace test
-}  // namespace fidl

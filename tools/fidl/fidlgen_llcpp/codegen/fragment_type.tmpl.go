@@ -40,14 +40,14 @@ const fragmentTypeTmpl = `
     {{- end }}
   {{- else if eq .ArgumentType.Kind TypeKinds.Array }}
     {
-      {{ .ArgumentType.ElementType.WireDecl }}* {{ .ArgumentName }}_element = {{ template "ArgumentValue" . }}.data();
+      {{ .ArgumentType.ElementType.Wire }}* {{ .ArgumentName }}_element = {{ template "ArgumentValue" . }}.data();
       for (size_t i = 0; i < {{ template "ArgumentValue" . }}.size(); ++i, ++{{ .ArgumentName }}_element) {
         {{- template "TypeCloseHandles" NewTypedArgumentElement .ArgumentName .ArgumentType.ElementType }}
       }
     }
   {{- else if eq .ArgumentType.Kind TypeKinds.Vector }}
     {
-      {{ .ArgumentType.ElementType.WireDecl }}* {{ .ArgumentName }}_element = {{ template "ArgumentValue" . }}.mutable_data();
+      {{ .ArgumentType.ElementType.Wire }}* {{ .ArgumentName }}_element = {{ template "ArgumentValue" . }}.mutable_data();
       for (uint64_t i = 0; i < {{ template "ArgumentValue" . }}.count(); ++i, ++{{ .ArgumentName }}_element) {
         {{- template "TypeCloseHandles" NewTypedArgumentElement .ArgumentName .ArgumentType.ElementType }}
       }

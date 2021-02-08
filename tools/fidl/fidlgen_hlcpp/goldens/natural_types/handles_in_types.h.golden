@@ -25,7 +25,9 @@ inline zx_status_t Clone(::fidl::test::handlesintypes::obj_type value,
 }
 
 class UnionWithHandle;
+
 class TableWithHandle;
+
 class HandlesInTypes;
 
 #ifdef __Fuchsia__
@@ -247,9 +249,9 @@ class HandlesInTypes final {
 
   ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array{};
 
-  TableWithHandle table_with_handle{};
+  ::fidl::test::handlesintypes::TableWithHandle table_with_handle{};
 
-  UnionWithHandle union_with_handle{};
+  ::fidl::test::handlesintypes::UnionWithHandle union_with_handle{};
 
   static inline ::std::unique_ptr<HandlesInTypes> New() {
     return ::std::make_unique<HandlesInTypes>();
@@ -274,9 +276,6 @@ using HandlesInTypesPtr = ::std::unique_ptr<HandlesInTypes>;
 
 }  // namespace handlesintypes
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::handlesintypes::obj_type> {
   static constexpr size_t inline_size_old =
@@ -472,4 +471,5 @@ struct Equality<::fidl::test::handlesintypes::HandlesInTypes> {
   }
 };
 #endif  // __Fuchsia__
+
 }  // namespace fidl

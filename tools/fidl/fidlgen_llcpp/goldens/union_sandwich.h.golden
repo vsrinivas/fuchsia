@@ -34,57 +34,60 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace unionsandwich {
-
 namespace wire {
 class UnionSize8Alignment4;
 }  // namespace wire
 using UnionSize8Alignment4 = wire::UnionSize8Alignment4;
 namespace wire {
+
 struct SandwichUnionSize8Alignment4;
 }  // namespace wire
-using SandwichUnionSize8Alignment4 =
-    wire::SandwichUnionSize8Alignment4;  // struct
+using SandwichUnionSize8Alignment4 = wire::SandwichUnionSize8Alignment4;
 namespace wire {
+
 class UnionSize36Alignment4;
 }  // namespace wire
 using UnionSize36Alignment4 = wire::UnionSize36Alignment4;
 namespace wire {
+
 struct SandwichUnionSize36Alignment4;
 }  // namespace wire
-using SandwichUnionSize36Alignment4 =
-    wire::SandwichUnionSize36Alignment4;  // struct
+using SandwichUnionSize36Alignment4 = wire::SandwichUnionSize36Alignment4;
 namespace wire {
+
 class UnionSize12Alignment4;
 }  // namespace wire
 using UnionSize12Alignment4 = wire::UnionSize12Alignment4;
 namespace wire {
+
 struct SandwichUnionSize12Alignment4;
 }  // namespace wire
-using SandwichUnionSize12Alignment4 =
-    wire::SandwichUnionSize12Alignment4;  // struct
+using SandwichUnionSize12Alignment4 = wire::SandwichUnionSize12Alignment4;
 namespace wire {
+
 struct StructSize16Alignment8;
 }  // namespace wire
-using StructSize16Alignment8 = wire::StructSize16Alignment8;  // struct
+using StructSize16Alignment8 = wire::StructSize16Alignment8;
 namespace wire {
+
 class UnionSize24Alignment8;
 }  // namespace wire
 using UnionSize24Alignment8 = wire::UnionSize24Alignment8;
 namespace wire {
+
 struct SandwichUnionSize24Alignment8;
 }  // namespace wire
-using SandwichUnionSize24Alignment8 =
-    wire::SandwichUnionSize24Alignment8;  // struct
-
+using SandwichUnionSize24Alignment8 = wire::SandwichUnionSize24Alignment8;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize8Alignment4Table;
 
 class UnionSize8Alignment4 {
@@ -192,9 +195,6 @@ class UnionSize8Alignment4 {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize36Alignment4Table;
 
 class UnionSize36Alignment4 {
@@ -302,9 +302,6 @@ class UnionSize36Alignment4 {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize12Alignment4Table;
 
 class UnionSize12Alignment4 {
@@ -412,9 +409,6 @@ class UnionSize12Alignment4 {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize24Alignment8Table;
 
 class UnionSize24Alignment8 {
@@ -544,9 +538,6 @@ class UnionSize24Alignment8 {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_unionsandwich_SandwichUnionSize8Alignment4Table;
 
@@ -645,9 +636,7 @@ struct SandwichUnionSize8Alignment4 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_unionsandwich_SandwichUnionSize36Alignment4Table;
 
@@ -746,9 +735,7 @@ struct SandwichUnionSize36Alignment4 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_unionsandwich_SandwichUnionSize12Alignment4Table;
 
@@ -847,9 +834,7 @@ struct SandwichUnionSize12Alignment4 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_unionsandwich_StructSize16Alignment8Table;
 
@@ -946,9 +931,7 @@ struct StructSize16Alignment8 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_unionsandwich_SandwichUnionSize24Alignment8Table;
 
@@ -1047,13 +1030,12 @@ struct SandwichUnionSize24Alignment8 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace unionsandwich
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1229,14 +1211,13 @@ static_assert(sizeof(::llcpp::fidl::test::unionsandwich::wire::
                          SandwichUnionSize24Alignment8) ==
               ::llcpp::fidl::test::unionsandwich::wire::
                   SandwichUnionSize24Alignment8::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace unionsandwich {}  // namespace unionsandwich
+namespace unionsandwich {
+namespace wire {}  // namespace wire
+}  // namespace unionsandwich
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

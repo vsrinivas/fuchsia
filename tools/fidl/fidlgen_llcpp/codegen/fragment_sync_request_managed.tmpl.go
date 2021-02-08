@@ -7,13 +7,13 @@ package codegen
 const fragmentSyncRequestManagedTmpl = `
 {{- define "ParamsNoTypedChannels" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.WireDeclNoTypedChannels }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.WireNoTypedChannels }} {{ $param.Name }}
   {{- end -}}
 {{- end }}
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.WireDecl }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.Wire }} {{ $param.Name }}
   {{- end -}}
 {{- end }}
 

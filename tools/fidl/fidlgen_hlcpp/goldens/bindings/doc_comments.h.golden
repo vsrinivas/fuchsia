@@ -10,10 +10,12 @@
 namespace fidl {
 namespace test {
 namespace doccomments {
-
 class Table;
+
 class Struct;
+
 class StrictUnion;
+
 #ifdef __Fuchsia__
 /// interface comment #1
 ///
@@ -21,6 +23,7 @@ class StrictUnion;
 class Interface;
 using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 class Service;
 #endif  // __Fuchsia__
@@ -110,7 +113,8 @@ constexpr inline ::fidl::test::doccomments::MyStrictBits& operator^=(
 constexpr inline ::fidl::test::doccomments::MyStrictBits operator~(
     ::fidl::test::doccomments::MyStrictBits _value) {
   return static_cast<::fidl::test::doccomments::MyStrictBits>(
-      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyStrictBitsMask));
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(::fidl::test::doccomments::MyStrictBitsMask));
 }
 
 inline zx_status_t Clone(::fidl::test::doccomments::MyStrictBits value,
@@ -293,6 +297,7 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleBits value,
   *result = value;
   return ZX_OK;
 }
+
 class FlexibleUnion;
 
 /// table comment #1
@@ -516,12 +521,12 @@ inline zx_status_t Clone(const ::fidl::test::doccomments::StrictUnion& value,
 }
 
 using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
-}
 
+}  // namespace _internal
 class Interface_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
@@ -529,18 +534,18 @@ class Interface_RequestEncoder {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_doccomments_InterfaceMethodRequestTable,
+               &::fidl::test::doccomments::_internal::
+                   fidl_test_doccomments_InterfaceMethodRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
-}
 
+}  // namespace _internal
 class Interface_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnEvent(::fidl::Encoder* _encoder) {
@@ -548,13 +553,13 @@ class Interface_ResponseEncoder {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_doccomments_InterfaceOnEventEventTable,
+               &::fidl::test::doccomments::_internal::
+                   fidl_test_doccomments_InterfaceOnEventEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
 
 /// flexible union comment #1
@@ -658,11 +663,9 @@ using FlexibleUnionPtr = ::std::unique_ptr<FlexibleUnion>;
 ///
 /// const comment #3
 constexpr int32_t C = 4u;
+
 }  // namespace doccomments
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::doccomments::Table>
     : public EncodableCodingTraits<::fidl::test::doccomments::Table, 16> {};
@@ -988,15 +991,12 @@ struct Equality<::fidl::test::doccomments::FlexibleUnion> {
     }
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
 namespace test {
 namespace doccomments {
-
 #ifdef __Fuchsia__
 /// interface comment #1
 ///
@@ -1015,6 +1015,7 @@ constexpr uint64_t kInterface_OnEvent_Ordinal = 0x37812b697096f6falu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 class Service;
 #endif  // __Fuchsia__
@@ -1024,10 +1025,10 @@ class Service;
 /// interface comment #3
 class Interface {
  public:
-  using Proxy_ = Interface_Proxy;
-  using Stub_ = Interface_Stub;
-  using EventSender_ = Interface_EventSender;
-  using Sync_ = Interface_Sync;
+  using Proxy_ = ::fidl::test::doccomments::Interface_Proxy;
+  using Stub_ = ::fidl::test::doccomments::Interface_Stub;
+  using EventSender_ = ::fidl::test::doccomments::Interface_EventSender;
+  using Sync_ = ::fidl::test::doccomments::Interface_Sync;
   virtual ~Interface();
 
   /// method comment #1
@@ -1061,7 +1062,7 @@ class Interface_EventSender {
 
 class Interface_Sync {
  public:
-  using Proxy_ = Interface_SyncProxy;
+  using Proxy_ = ::fidl::test::doccomments::Interface_SyncProxy;
   virtual ~Interface_Sync();
   virtual zx_status_t Method() = 0;
 };
@@ -1076,14 +1077,16 @@ class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
   OnEventCallback OnEvent;
 
  private:
-  Interface_Proxy(const Interface_Proxy&) = delete;
-  Interface_Proxy& operator=(const Interface_Proxy&) = delete;
+  Interface_Proxy(const ::fidl::test::doccomments::Interface_Proxy&) = delete;
+  Interface_Proxy& operator=(
+      const ::fidl::test::doccomments::Interface_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Interface_Stub final : public ::fidl::internal::Stub,
-                             public Interface_EventSender {
+class Interface_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::doccomments::Interface_EventSender {
  public:
   typedef class ::fidl::test::doccomments::Interface Interface_clazz;
   explicit Interface_Stub(Interface_clazz* impl);
@@ -1097,7 +1100,7 @@ class Interface_Stub final : public ::fidl::internal::Stub,
   Interface_clazz* impl_;
 };
 
-class Interface_SyncProxy : public Interface_Sync {
+class Interface_SyncProxy : public ::fidl::test::doccomments::Interface_Sync {
  public:
   explicit Interface_SyncProxy(::zx::channel channel);
   ~Interface_SyncProxy() override;
@@ -1107,8 +1110,8 @@ class Interface_SyncProxy : public Interface_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Interface>;
 };
-
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 /// service comment #1
@@ -1126,8 +1129,10 @@ class Service final {
   explicit operator bool() const { return !!service_; }
   /// Returns a |fidl::MemberConnector| which can be used to connect to the
   /// member protocol "interface".
-  ::fidl::MemberConnector<Interface> interface() const {
-    return ::fidl::MemberConnector<Interface>(service_.get(), "interface");
+  ::fidl::MemberConnector<::fidl::test::doccomments::Interface> interface()
+      const {
+    return ::fidl::MemberConnector<::fidl::test::doccomments::Interface>(
+        service_.get(), "interface");
   }
 
  private:
@@ -1146,7 +1151,8 @@ class Service::Handler final {
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_interface(
-      ::fidl::InterfaceRequestHandler<Interface> handler) {
+      ::fidl::InterfaceRequestHandler<::fidl::test::doccomments::Interface>
+          handler) {
     return service_->AddMember("interface", std::move(handler));
   }
 

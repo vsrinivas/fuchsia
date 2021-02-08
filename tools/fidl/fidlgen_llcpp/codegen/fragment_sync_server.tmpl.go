@@ -20,7 +20,7 @@ namespace methods {
 {{- range .Methods }}
   {{- if .HasRequest }}
 
-void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}(void* interface, void* bytes,
+void {{ .LLProps.ProtocolName.Name }}Dispatch{{ .Name }}(void* interface, void* bytes,
     ::fidl::Transaction* txn) {
   {{- if .Request }}
   auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
@@ -39,8 +39,8 @@ namespace entries {
 
 ::fidl::internal::MethodEntry {{ .Name }}[] = {
 {{- range .ClientMethods }}
-  { {{ .OrdinalName }}, {{ .LLProps.ProtocolName }}::{{ .Name}}Request::Type,
-    methods::{{ .LLProps.ProtocolName }}Dispatch{{ .Name }} },
+  { {{ .OrdinalName }}, {{ .LLProps.ProtocolName }}::{{ .Name }}Request::Type,
+    methods::{{ .LLProps.ProtocolName.Name }}Dispatch{{ .Name }} },
 {{- end }}
 };
 

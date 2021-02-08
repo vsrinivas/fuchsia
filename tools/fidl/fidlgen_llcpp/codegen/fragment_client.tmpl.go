@@ -14,6 +14,7 @@ const fragmentClientTmpl = `
 {{- end }}
 
 {{- define "ClientDeclaration" }}
+{{ EnsureNamespace .Decl.Wire }}
 {{- $outer := . }}
 class {{ .Name }}::AsyncEventHandler : public {{ .Name }}::EventHandlerInterface {
  public:

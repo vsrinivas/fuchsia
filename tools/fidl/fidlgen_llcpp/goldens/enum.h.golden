@@ -34,15 +34,14 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace enum_ {
-
 namespace wire {
 
 enum class MyStrictEnum : uint32_t {
@@ -53,9 +52,7 @@ enum class MyStrictEnum : uint32_t {
 };
 
 }  // namespace wire
-
 using MyStrictEnum = wire::MyStrictEnum;
-
 namespace wire {
 
 class MyFlexibleEnumWithCustomUnknown final {
@@ -105,9 +102,7 @@ constexpr const ::llcpp::fidl::test::enum_::wire::
                 3u);
 
 }  // namespace wire
-
 using MyFlexibleEnumWithCustomUnknown = wire::MyFlexibleEnumWithCustomUnknown;
-
 namespace wire {
 
 class MyFlexibleEnum final {
@@ -146,14 +141,12 @@ constexpr const ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum
     MyFlexibleEnum::BAR = ::llcpp::fidl::test::enum_::wire::MyFlexibleEnum(2u);
 
 }  // namespace wire
-
 using MyFlexibleEnum = wire::MyFlexibleEnum;
-
+namespace wire {}  // namespace wire
 }  // namespace enum_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -168,14 +161,13 @@ struct IsFidlType<
 template <>
 struct IsFidlType<::llcpp::fidl::test::enum_::wire::MyFlexibleEnum>
     : public std::true_type {};
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace enum_ {}  // namespace enum_
+namespace enum_ {
+namespace wire {}  // namespace wire
+}  // namespace enum_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

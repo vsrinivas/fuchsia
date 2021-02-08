@@ -6,19 +6,22 @@ package codegen
 
 const tableTemplate = `
 {{- define "TableForwardDeclaration" }}
-class {{ .Name }};
+{{ EnsureNamespace .Decl.Natural }}
+class {{ .Decl.Natural.Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "TableDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 {{- range .DocComments }}
 ///{{ . }}
 {{- end }}
-class {{ .Name }} final {
+class {{ .Decl.Natural.Name }} final {
  public:
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
@@ -27,7 +30,7 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  const {{ .Type.NatDecl }}& {{ .Name }}() const {
+  const {{ .Type.Natural }}& {{ .Name }}() const {
     ZX_ASSERT({{ .FieldPresenceIsSet }});
     return {{ .FieldDataName }}.value;
   }
@@ -37,14 +40,14 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Type.NatDecl }}* mutable_{{ .Name }}() {
+  {{ .Type.Natural }}* mutable_{{ .Name }}() {
     if (!{{ .FieldPresenceIsSet }}) {
       {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value);
     }
     return &{{ .FieldDataName }}.value;
   }
-  {{$.Name}}& set_{{ .Name }}({{ .Type.NatDecl }} _value) {
+  {{ $.Decl.Natural.Name }}& set_{{ .Name }}({{ .Type.Natural }} _value) {
     if (!{{ .FieldPresenceIsSet }}) {
       {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value, std::move(_value));
@@ -72,17 +75,17 @@ class {{ .Name }} final {
     _unknown_data.insert({ord, std::move(data)});
   }
 
-  {{ .Name }}();
-  {{ .Name }}({{ .Name }}&& other);
-  ~{{ .Name }}();
-  {{ .Name }}& operator=({{ .Name }}&& other);
+  {{ .Decl.Natural.Name }}();
+  {{ .Decl.Natural.Name }}({{ .Decl.Natural.Name }}&& other);
+  ~{{ .Decl.Natural.Name }}();
+  {{ .Decl.Natural.Name }}& operator=({{ .Decl.Natural.Name }}&& other);
 
-  static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
+  static inline ::std::unique_ptr<{{ .Decl.Natural.Name }}> New() { return ::std::make_unique<{{ .Decl.Natural.Name }}>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               fit::optional<::fidl::HandleInformation> maybe_handle_info = fit::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
-  zx_status_t Clone({{ .Name }}* _result) const;
+  static void Decode(::fidl::Decoder* _decoder, {{ .Decl.Natural.Name }}* _value, size_t _offset);
+  zx_status_t Clone({{ .Decl.Natural.Name }}* _result) const;
  private:
   template <class T, class... Args>
   void Construct(T* p, Args&&... args) {
@@ -125,7 +128,7 @@ class {{ .Name }} final {
     {{ .ValueUnionName }}() {}
     ~{{ .ValueUnionName }}() {}
 
-    {{ .Type.NatDecl }} value;
+    {{ .Type.Natural }} value;
   };
   {{ .ValueUnionName }} {{ .FieldDataName }};
   {{- end }}
@@ -136,23 +139,26 @@ class {{ .Name }} final {
   {{- end }}
 };
 
-using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
+using {{ .Decl.Natural.Name }}Ptr = ::std::unique_ptr<{{ .Decl.Natural.Name }}>;
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{ end }}
 
 {{- end }}
 
 {{- define "TableDefinition" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{- if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+const fidl_type_t* {{ .Decl.Natural.Name }}::FidlType = &{{ .TableType }};
 
-{{ .Name }}::{{ .Name }}() {}
+{{ .Decl.Natural.Name }}::{{ .Decl.Natural.Name }}() {}
 
-{{ .Name }}::{{ .Name }}({{ .Name }}&& other) {
+{{ .Decl.Natural.Name }}::{{ .Decl.Natural.Name }}({{ .Decl.Natural.Name }}&& other) {
   field_presence_ = other.field_presence_;
   {{- range .Members }}
   if ({{ .FieldPresenceIsSet }}) {
@@ -162,7 +168,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   _unknown_data = std::move(other._unknown_data);
 }
 
-{{ .Name }}::~{{ .Name }}() {
+{{ .Decl.Natural.Name }}::~{{ .Decl.Natural.Name }}() {
   {{- range .Members }}
   if ({{ .FieldPresenceIsSet }}) {
     Destruct(&{{ .FieldDataName }}.value);
@@ -170,7 +176,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   {{- end }}
 }
 
-{{ .Name }}& {{ .Name }}::operator=({{ .Name }}&& other) {
+{{ .Decl.Natural.Name }}& {{ .Decl.Natural.Name }}::operator=({{ .Decl.Natural.Name }}&& other) {
   {{- range .Members }}
   if (other.{{ .FieldPresenceIsSet }}) {
     if ({{ .FieldPresenceIsSet }}) {
@@ -188,11 +194,11 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   return *this;
 }
 
-bool {{ .Name }}::IsEmpty() const {
+bool {{ .Decl.Natural.Name }}::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void {{ .Decl.Natural.Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
@@ -217,7 +223,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
     ::fidl::Encode(
         _encoder,
         &{{ .FieldDataName }}.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.NatDecl }}, ::fidl::Encoder>(_encoder))
+        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Natural }}, ::fidl::Encoder>(_encoder))
     {{- if .HandleInformation -}}
         , ::fidl::HandleInformation{
           .object_type = {{ .HandleInformation.ObjectType }},
@@ -245,7 +251,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
   }
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
+void {{ .Decl.Natural.Name }}::Decode(::fidl::Decoder* _decoder, {{ .Decl.Natural.Name }}* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -305,7 +311,7 @@ done_{{ .Ordinal }}:
   return;
 }
 
-zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
+zx_status_t {{ .Decl.Natural.Name }}::Clone({{ .Decl.Natural.Name }}* result) const {
   {{- range .Members }}
   if ({{ .FieldPresenceIsSet }}) {
     zx_status_t _status = ::fidl::Clone({{ .FieldDataName }}.value, result->mutable_{{ .Name }}());
@@ -318,6 +324,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{ end }}
 
@@ -326,18 +333,19 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- define "TableTraits" }}
 {{- if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 template <>
-struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
+struct CodingTraits<{{ .Decl.Natural }}>
+    : public EncodableCodingTraits<{{ .Decl.Natural }}, {{ .InlineSize }}> {};
 
-inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
+inline zx_status_t Clone(const {{ .Decl.Natural }}& _value,
+                         {{ .Decl.Natural }}* result) {
   return _value.Clone(result);
 }
 template<>
-struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
+struct Equality<{{ .Decl.Natural }}> {
+  bool operator()(const {{ .Decl.Natural }}& _lhs, const {{ .Decl.Natural }}& _rhs) const {
     {{- range .Members }}
     if (_lhs.{{ .MethodHasName }}()) {
       if (!_rhs.{{ .MethodHasName }}()) {
@@ -354,6 +362,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
   }
 };
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{ end }}
 

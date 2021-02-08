@@ -10,13 +10,13 @@
 namespace fidl {
 namespace test {
 namespace bindingsdenylist {
-
 #ifdef __Fuchsia__
 class OnlyHlcpp;
 #endif  // __Fuchsia__
 
 constexpr uint32_t AllBindings = 0u;
+
 }  // namespace bindingsdenylist
 }  // namespace test
+
 }  // namespace fidl
-namespace fidl {}  // namespace fidl

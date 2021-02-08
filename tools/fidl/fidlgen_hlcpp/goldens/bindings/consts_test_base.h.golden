@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/consts/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace consts {
-namespace testing {}  // namespace testing
-}  // namespace consts
-}  // namespace test
-}  // namespace fidl

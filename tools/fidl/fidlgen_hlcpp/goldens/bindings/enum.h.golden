@@ -124,9 +124,6 @@ inline zx_status_t Clone(::fidl::test::enum_::MyFlexibleEnum value,
 
 }  // namespace enum_
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::enum_::MyStrictEnum> {
   static constexpr size_t inline_size_old =
@@ -235,13 +232,7 @@ struct Equality<::fidl::test::enum_::MyFlexibleEnum> {
   }
 };
 
-}  // namespace fidl
-
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace enum_ {}  // namespace enum_
-}  // namespace test
 }  // namespace fidl

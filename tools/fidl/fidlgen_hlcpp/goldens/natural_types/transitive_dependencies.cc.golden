@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace transitivedependencies {
-
 extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
 const fidl_type_t* Baz::FidlType = &fidl_test_transitivedependencies_BazTable;
 
@@ -36,6 +35,7 @@ zx_status_t Baz::Clone(Baz* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 }  // namespace transitivedependencies
 }  // namespace test
 }  // namespace fidl

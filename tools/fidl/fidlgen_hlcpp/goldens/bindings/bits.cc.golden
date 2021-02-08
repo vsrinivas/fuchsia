@@ -20,15 +20,11 @@ constexpr const ::fidl::test::bits::FlexibleBits FlexibleBits::kMask =
     ::fidl::test::bits::FlexibleBits(9223372036854775809u);
 
 #endif  // (__cplusplus < 201703)
-}  // namespace bits
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace bits {}  // namespace bits
+
+}  // namespace bits
 }  // namespace test
 }  // namespace fidl

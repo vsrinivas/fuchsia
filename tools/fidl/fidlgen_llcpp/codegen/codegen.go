@@ -61,6 +61,10 @@ var (
 				Access:        false,
 				MutableAccess: false}
 		},
+		"EnsureNamespace": cpp.EnsureNamespace,
+		"PushNamespace":   cpp.PushNamespace,
+		"PopNamespace":    cpp.PopNamespace,
+		"EndOfFile":       cpp.EndOfFile,
 	}
 )
 

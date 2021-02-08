@@ -34,15 +34,14 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace consts {
-
 namespace wire {
 
 enum class EnumType : int32_t {
@@ -53,10 +52,9 @@ enum class EnumType : int32_t {
 };
 
 }  // namespace wire
-
 using EnumType = wire::EnumType;
-
 namespace wire {
+
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -159,10 +157,10 @@ constexpr inline void BitsType::operator^=(
 }
 
 }  // namespace wire
-
 using BitsType = wire::BitsType;
+namespace wire {}  // namespace wire
 
-extern const char USERNAME[];
+extern const char* USERNAME;
 
 constexpr uint32_t POPULATION_USA_2018 = 330000000u;
 
@@ -172,14 +170,17 @@ constexpr float MIN_TEMP = -273.15f;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
-constexpr ::llcpp::fidl::test::consts::wire::EnumType enumVal = EnumType::VALUE;
+constexpr ::llcpp::fidl::test::consts::wire::EnumType enumVal =
+    ::llcpp::fidl::test::consts::wire::EnumType::VALUE;
 
 constexpr ::llcpp::fidl::test::consts::wire::EnumType enumTrue =
-    EnumType::true_;
+    ::llcpp::fidl::test::consts::wire::EnumType::true_;
 
-constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
+constexpr int32_t enumPrimitiveVal =
+    ::llcpp::fidl::test::consts::wire::EnumType::VALUE;
 
-constexpr int32_t enumPrimitiveTrue = EnumType::true_;
+constexpr int32_t enumPrimitiveTrue =
+    ::llcpp::fidl::test::consts::wire::EnumType::true_;
 
 constexpr bool ENABLED_FLAG = true;
 
@@ -187,14 +188,17 @@ constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
 
-constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsVal = BitsType::VALUE;
+constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsVal =
+    ::llcpp::fidl::test::consts::wire::BitsType::VALUE;
 
 constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsTrue =
-    BitsType::true_;
+    ::llcpp::fidl::test::consts::wire::BitsType::true_;
 
-constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
+constexpr int32_t bitsPrimitiveVal =
+    ::llcpp::fidl::test::consts::wire::BitsType::VALUE;
 
-constexpr int32_t bitsPrimitiveTrue = BitsType::true_;
+constexpr int32_t bitsPrimitiveTrue =
+    ::llcpp::fidl::test::consts::wire::BitsType::true_;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
@@ -204,7 +208,6 @@ constexpr uint16_t ANSWER = 42u;
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -218,14 +221,17 @@ static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::consts::wire::BitsType>);
 static_assert(sizeof(::llcpp::fidl::test::consts::wire::BitsType) ==
               sizeof(uint32_t));
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace consts {}  // namespace consts
+namespace consts {
+
+namespace wire {}  // namespace wire
+
+namespace wire {}  // namespace wire
+
+}  // namespace consts
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

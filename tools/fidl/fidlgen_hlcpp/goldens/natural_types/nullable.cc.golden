@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace nullable {
-
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableVectorTable;
 const fidl_type_t* StructWithNullableVector::FidlType =
     &fidl_test_nullable_StructWithNullableVectorTable;
@@ -43,6 +42,7 @@ zx_status_t StructWithNullableVector::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
 const fidl_type_t* StructWithNullableUnion::FidlType =
     &fidl_test_nullable_StructWithNullableUnionTable;
@@ -75,6 +75,7 @@ zx_status_t StructWithNullableUnion::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
 const fidl_type_t* StructWithNullableStruct::FidlType =
     &fidl_test_nullable_StructWithNullableStructTable;
@@ -107,6 +108,7 @@ zx_status_t StructWithNullableStruct::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
 const fidl_type_t* StructWithNullableString::FidlType =
     &fidl_test_nullable_StructWithNullableStringTable;
@@ -139,6 +141,7 @@ zx_status_t StructWithNullableString::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 const fidl_type_t* StructWithNullableRequest::FidlType =
@@ -421,6 +424,7 @@ void SimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;
 const fidl_type_t* Int32Wrapper::FidlType =
     &fidl_test_nullable_Int32WrapperTable;
@@ -451,6 +455,7 @@ zx_status_t Int32Wrapper::Clone(Int32Wrapper* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 }  // namespace nullable
 }  // namespace test
 }  // namespace fidl

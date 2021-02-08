@@ -6,34 +6,35 @@ package codegen
 
 const enumTemplate = `
 {{- define "EnumForwardDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{ if .IsStrict }}
 {{range .DocComments}}
 ///{{ . }}
 {{- end}}
-enum class {{ .Name }} : {{ .Type }} {
+enum class {{ .Decl.Natural.Name }} : {{ .Type.Natural }} {
   {{- range .Members }}
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Name }} = {{ .Value }},
+  {{ .Name }} = {{ .Value.Natural }},
   {{- end }}
 };
 {{ else }}
 {{range .DocComments}}
 ///{{ . }}
 {{- end}}
-class {{ .Name }} final {
+class {{ .Decl.Natural.Name }} final {
 public:
-  constexpr {{ .Name }}() : value_(0) {}
-  constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
-  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
-  constexpr operator {{ .Type }}() const { return value_; }
+  constexpr {{ .Decl.Natural.Name }}() : value_(0) {}
+  constexpr explicit {{ .Decl.Natural.Name }}({{ .Type.Natural }} value) : value_(value) {}
+  constexpr {{ .Decl.Natural.Name }}(const {{ .Decl.Natural.Name }}& other) = default;
+  constexpr operator {{ .Type.Natural }}() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
       {{ range .Members }}
       {{ if not .IsUnknown }}
-    case {{ .Value }}:
+    case {{ .Value.Natural }}:
       {{ end }}
       {{ end }}
       return false;
@@ -42,41 +43,42 @@ public:
     }
   }
 
-  constexpr static {{ .Name }} Unknown() {
-    return {{ .Name }}({{ .UnknownValueForTmpl | printf "%#x" }});
+  constexpr static {{ .Decl.Natural.Name }} Unknown() {
+    return {{ .Decl.Natural.Name }}({{ .UnknownValueForTmpl | printf "%#x" }});
   }
 
   {{- range .Members }}
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  static const {{ $.Name }} {{ .Name }};
+  static const {{ $.Decl.Natural.Name }} {{ .Name }};
   {{- end }}
 
 private:
-  {{ .Type }} value_;
+  {{ .Type.Natural }} value_;
 };
 
 #if !(__cplusplus < 201703)
 {{- range $member := .Members }}
-constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+constexpr const {{ $.Decl.Natural }} {{ $.Decl.Natural.Name }}::{{ $member.Name }} = {{ $.Decl.Natural }}({{ $member.Value.Natural }});
 {{- end }}
 #endif  // !(__cplusplus < 201703)
 
 {{ end }}
 
-inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
+inline zx_status_t Clone({{ .Decl.Natural }} value,
+                         {{ .Decl.Natural }}* result) {
   *result = value;
   return ZX_OK;
 }
 {{ end }}
 
 {{- define "EnumDefinition" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{- if .IsFlexible }}
 #if (__cplusplus < 201703)
 {{- range $member := .Members }}
-constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+constexpr const {{ $.Decl.Natural }} {{ $.Decl.Natural.Name }}::{{ $member.Name }} = {{ $.Decl.Natural }}({{ $member.Value.Natural }});
 {{- end }}
 #endif  // (__cplusplus < 201703)
 {{- end }}
@@ -84,29 +86,29 @@ constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }}
 
 {{- define "EnumTraits" }}
 template <>
-struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
-  static constexpr size_t inline_size_old = sizeof({{ .Namespace }}::{{ .Name }});
-  static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Namespace }}::{{ .Name }});
-  static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset,
+struct CodingTraits<{{ .Decl.Natural }}> {
+  static constexpr size_t inline_size_old = sizeof({{ .Decl.Natural }});
+  static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Decl.Natural }});
+  static void Encode(Encoder* encoder, {{ .Decl.Natural }}* value, size_t offset,
                      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
-    {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
+    {{ .Type.Natural }} underlying = static_cast<{{ .Type.Natural }}>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
-    {{ .Type }} underlying = {};
+  static void Decode(Decoder* decoder, {{ .Decl.Natural }}* value, size_t offset) {
+    {{ .Type.Natural }} underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<{{ .Namespace }}::{{ .Name }}>(underlying);
+    *value = static_cast<{{ .Decl.Natural }}>(underlying);
   }
 };
 
-inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
-  return {{ .Namespace }}::Clone(value, result);
+inline zx_status_t Clone({{ .Decl.Natural }} value,
+                         {{ .Decl.Natural }}* result) {
+  return {{ .Decl.Natural.Namespace }}::Clone(value, result);
 }
 template<>
-struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
+struct Equality<{{ .Decl.Natural }}> {
+  bool operator()(const {{ .Decl.Natural }}& _lhs, const {{ .Decl.Natural }}& _rhs) const {
     return _lhs == _rhs;
   }
 };

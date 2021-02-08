@@ -3,12 +3,3 @@
 #include <fidl/test/enum/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace enum_ {}  // namespace enum_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

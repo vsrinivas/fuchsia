@@ -34,39 +34,39 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace arrays {
-
 namespace wire {
 class UnionSmallArray;
 }  // namespace wire
 using UnionSmallArray = wire::UnionSmallArray;
 namespace wire {
+
 class UnionLargeArray;
 }  // namespace wire
 using UnionLargeArray = wire::UnionLargeArray;
 namespace wire {
+
 class TableSmallArray;
-}  // namespace wire
-namespace wire {
+
 class TableLargeArray;
-}  // namespace wire
-namespace wire {
+
 struct StructSmallArray;
 }  // namespace wire
-using StructSmallArray = wire::StructSmallArray;  // struct
+using StructSmallArray = wire::StructSmallArray;
 namespace wire {
+
 struct StructLargeArray;
 }  // namespace wire
-using StructLargeArray = wire::StructLargeArray;  // struct
-
+using StructLargeArray = wire::StructLargeArray;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
@@ -173,9 +173,6 @@ class UnionSmallArray {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray {
@@ -281,10 +278,6 @@ class UnionLargeArray {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
-
-}  // namespace wire
-
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_arrays_TableSmallArrayTable;
 
@@ -566,10 +559,9 @@ class TableSmallArray::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableSmallArray::Frame frame_;
 };
+
 }  // namespace wire
-
 using TableSmallArray = wire::TableSmallArray;
-
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
@@ -852,11 +844,11 @@ class TableLargeArray::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableLargeArray::Frame frame_;
 };
+
 }  // namespace wire
-
 using TableLargeArray = wire::TableLargeArray;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 
 struct StructSmallArray {
@@ -949,9 +941,7 @@ struct StructSmallArray {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_arrays_StructLargeArrayTable;
 
 struct StructLargeArray {
@@ -1044,13 +1034,12 @@ struct StructLargeArray {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace arrays
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1122,14 +1111,13 @@ static_assert(offsetof(::llcpp::fidl::test::arrays::wire::StructLargeArray,
                        a) == 0);
 static_assert(sizeof(::llcpp::fidl::test::arrays::wire::StructLargeArray) ==
               ::llcpp::fidl::test::arrays::wire::StructLargeArray::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace arrays {}  // namespace arrays
+namespace arrays {
+namespace wire {}  // namespace wire
+}  // namespace arrays
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

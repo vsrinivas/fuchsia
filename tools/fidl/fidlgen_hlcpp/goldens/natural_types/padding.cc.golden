@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace padding {
-
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteMiddleTable;
 const fidl_type_t* Padding7ByteMiddle::FidlType =
     &fidl_test_padding_Padding7ByteMiddleTable;
@@ -45,6 +44,7 @@ zx_status_t Padding7ByteMiddle::Clone(Padding7ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
 const fidl_type_t* Padding7ByteEnd::FidlType =
     &fidl_test_padding_Padding7ByteEndTable;
@@ -79,6 +79,7 @@ zx_status_t Padding7ByteEnd::Clone(Padding7ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteMiddleTable;
 const fidl_type_t* Padding6ByteMiddle::FidlType =
     &fidl_test_padding_Padding6ByteMiddleTable;
@@ -113,6 +114,7 @@ zx_status_t Padding6ByteMiddle::Clone(Padding6ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
 const fidl_type_t* Padding6ByteEnd::FidlType =
     &fidl_test_padding_Padding6ByteEndTable;
@@ -147,6 +149,7 @@ zx_status_t Padding6ByteEnd::Clone(Padding6ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteMiddleTable;
 const fidl_type_t* Padding5ByteMiddle::FidlType =
     &fidl_test_padding_Padding5ByteMiddleTable;
@@ -185,6 +188,7 @@ zx_status_t Padding5ByteMiddle::Clone(Padding5ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
 const fidl_type_t* Padding5ByteEnd::FidlType =
     &fidl_test_padding_Padding5ByteEndTable;
@@ -223,6 +227,7 @@ zx_status_t Padding5ByteEnd::Clone(Padding5ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
 const fidl_type_t* Padding4ByteMiddle::FidlType =
     &fidl_test_padding_Padding4ByteMiddleTable;
@@ -257,6 +262,7 @@ zx_status_t Padding4ByteMiddle::Clone(Padding4ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
 const fidl_type_t* Padding4ByteEnd::FidlType =
     &fidl_test_padding_Padding4ByteEndTable;
@@ -291,6 +297,7 @@ zx_status_t Padding4ByteEnd::Clone(Padding4ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t
     fidl_test_padding_Padding4ByteAlignmentLength12Table;
 const fidl_type_t* Padding4ByteAlignmentLength12::FidlType =
@@ -337,6 +344,7 @@ zx_status_t Padding4ByteAlignmentLength12::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
 const fidl_type_t* Padding3ByteMiddle::FidlType =
     &fidl_test_padding_Padding3ByteMiddleTable;
@@ -371,6 +379,7 @@ zx_status_t Padding3ByteMiddle::Clone(Padding3ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
 const fidl_type_t* Padding3ByteEnd::FidlType =
     &fidl_test_padding_Padding3ByteEndTable;
@@ -405,6 +414,7 @@ zx_status_t Padding3ByteEnd::Clone(Padding3ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteMiddleTable;
 const fidl_type_t* Padding2ByteMiddle::FidlType =
     &fidl_test_padding_Padding2ByteMiddleTable;
@@ -439,6 +449,7 @@ zx_status_t Padding2ByteMiddle::Clone(Padding2ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
 const fidl_type_t* Padding2ByteEnd::FidlType =
     &fidl_test_padding_Padding2ByteEndTable;
@@ -473,6 +484,7 @@ zx_status_t Padding2ByteEnd::Clone(Padding2ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t
     fidl_test_padding_Padding2ByteAlignmentLength6Table;
 const fidl_type_t* Padding2ByteAlignmentLength6::FidlType =
@@ -515,6 +527,7 @@ zx_status_t Padding2ByteAlignmentLength6::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
 const fidl_type_t* Padding1ByteMiddle::FidlType =
     &fidl_test_padding_Padding1ByteMiddleTable;
@@ -549,6 +562,7 @@ zx_status_t Padding1ByteMiddle::Clone(Padding1ByteMiddle* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
 const fidl_type_t* Padding1ByteEnd::FidlType =
     &fidl_test_padding_Padding1ByteEndTable;
@@ -583,6 +597,7 @@ zx_status_t Padding1ByteEnd::Clone(Padding1ByteEnd* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 }  // namespace padding
 }  // namespace test
 }  // namespace fidl

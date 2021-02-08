@@ -12,10 +12,12 @@
 namespace fidl {
 namespace test {
 namespace placementofattributes {
-
 class ExampleXUnion;
+
 class ExampleUnion;
+
 class ExampleTable;
+
 class ExampleStruct;
 
 enum class ExampleEnum : uint32_t {
@@ -82,7 +84,9 @@ constexpr inline ::fidl::test::placementofattributes::ExampleBits& operator^=(
 constexpr inline ::fidl::test::placementofattributes::ExampleBits operator~(
     ::fidl::test::placementofattributes::ExampleBits _value) {
   return static_cast<::fidl::test::placementofattributes::ExampleBits>(
-      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(ExampleBitsMask));
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(
+          ::fidl::test::placementofattributes::ExampleBitsMask));
 }
 
 inline zx_status_t Clone(
@@ -91,6 +95,7 @@ inline zx_status_t Clone(
   *result = value;
   return ZX_OK;
 }
+
 #ifdef __Fuchsia__
 class ExampleProtocol;
 using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
@@ -388,13 +393,13 @@ inline zx_status_t Clone(
 using ExampleStructPtr = ::std::unique_ptr<ExampleStruct>;
 
 constexpr uint32_t EXAMPLE_CONST = 0u;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
-}
 
+}  // namespace _internal
 class ExampleProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder,
@@ -405,7 +410,7 @@ class ExampleProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::placementofattributes::_internal::
             fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -414,18 +419,13 @@ class ExampleProtocol_RequestEncoder {
   }
 };
 
-namespace _internal {}
-
 class ExampleProtocol_ResponseEncoder {
  public:
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace placementofattributes
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct IsFidlXUnion<::fidl::test::placementofattributes::ExampleXUnion>
     : public std::true_type {};
@@ -700,15 +700,12 @@ struct Equality<::fidl::test::placementofattributes::ExampleBits> {
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
 namespace test {
 namespace placementofattributes {
-
 #ifdef __Fuchsia__
 using ExampleProtocolPtr = ::fidl::InterfacePtr<ExampleProtocol>;
 class ExampleProtocol_Proxy;
@@ -726,10 +723,11 @@ constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x207d2f81c0ddb184lu;
 #ifdef __Fuchsia__
 class ExampleProtocol {
  public:
-  using Proxy_ = ExampleProtocol_Proxy;
-  using Stub_ = ExampleProtocol_Stub;
-  using EventSender_ = ExampleProtocol_EventSender;
-  using Sync_ = ExampleProtocol_Sync;
+  using Proxy_ = ::fidl::test::placementofattributes::ExampleProtocol_Proxy;
+  using Stub_ = ::fidl::test::placementofattributes::ExampleProtocol_Stub;
+  using EventSender_ =
+      ::fidl::test::placementofattributes::ExampleProtocol_EventSender;
+  using Sync_ = ::fidl::test::placementofattributes::ExampleProtocol_Sync;
   virtual ~ExampleProtocol();
 
   virtual void Method(::exampleusing::Empty arg) = 0;
@@ -757,7 +755,7 @@ class ExampleProtocol_EventSender {
 
 class ExampleProtocol_Sync {
  public:
-  using Proxy_ = ExampleProtocol_SyncProxy;
+  using Proxy_ = ::fidl::test::placementofattributes::ExampleProtocol_SyncProxy;
   virtual ~ExampleProtocol_Sync();
   virtual zx_status_t Method(::exampleusing::Empty arg) = 0;
 };
@@ -772,14 +770,19 @@ class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy,
   void Method(::exampleusing::Empty arg) override;
 
  private:
-  ExampleProtocol_Proxy(const ExampleProtocol_Proxy&) = delete;
-  ExampleProtocol_Proxy& operator=(const ExampleProtocol_Proxy&) = delete;
+  ExampleProtocol_Proxy(
+      const ::fidl::test::placementofattributes::ExampleProtocol_Proxy&) =
+      delete;
+  ExampleProtocol_Proxy& operator=(
+      const ::fidl::test::placementofattributes::ExampleProtocol_Proxy&) =
+      delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class ExampleProtocol_Stub final : public ::fidl::internal::Stub,
-                                   public ExampleProtocol_EventSender {
+class ExampleProtocol_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::placementofattributes::ExampleProtocol_EventSender {
  public:
   typedef class ::fidl::test::placementofattributes::ExampleProtocol
       ExampleProtocol_clazz;
@@ -793,7 +796,8 @@ class ExampleProtocol_Stub final : public ::fidl::internal::Stub,
   ExampleProtocol_clazz* impl_;
 };
 
-class ExampleProtocol_SyncProxy : public ExampleProtocol_Sync {
+class ExampleProtocol_SyncProxy
+    : public ::fidl::test::placementofattributes::ExampleProtocol_Sync {
  public:
   explicit ExampleProtocol_SyncProxy(::zx::channel channel);
   ~ExampleProtocol_SyncProxy() override;
@@ -803,7 +807,6 @@ class ExampleProtocol_SyncProxy : public ExampleProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 };
-
 #endif  // __Fuchsia__
 }  // namespace placementofattributes
 }  // namespace test

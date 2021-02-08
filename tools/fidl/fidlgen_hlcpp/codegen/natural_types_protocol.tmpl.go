@@ -6,33 +6,38 @@ package codegen
 
 const protocolTemplateNaturalTypes = `
 {{- define "ProtocolForwardDeclaration/NaturalTypes" }}
+{{ EnsureNamespace .Decl.Natural }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- range .DocComments }}
 ///{{ . }}
 {{- end }}
 class {{ .Name }};
 using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 
 {{- define "PointerParams" -}}
   {{- range $index, $param := . -}}
-    , {{ $param.Type.NatFullDecl }}* {{ $param.Name }}
+    , {{ $param.Type.Natural }}* {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "ProtocolDeclaration/NaturalTypes" }}
+{{ EnsureNamespace .Decl.Natural }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 
-namespace _internal {
-  {{- range .Methods }}
+{{- range .Methods }}
   {{- if .HasRequest }}
-  extern "C" const fidl_type_t {{ .RequestTypeName }};
+  {{ EnsureNamespace .RequestCodingTable.Natural }}
+  extern "C" const fidl_type_t {{ .RequestCodingTable.Natural.Name }};
   {{- end }}
-  {{- end }}
-}
+{{- end }}
 
-class {{ .RequestEncoderName }} {
+{{ EnsureNamespace .RequestEncoderName }}
+class {{ .RequestEncoderName.Name }} {
  public:
   {{- with $protocol := . }}
   {{- range .Methods }}
@@ -52,7 +57,7 @@ class {{ .RequestEncoderName }} {
     {{ end -}}
     {{- end }}
 
-    fidl_trace(DidHLCPPEncode, &_internal::{{ .RequestTypeName }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &{{ .RequestCodingTable.Natural }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -61,15 +66,15 @@ class {{ .RequestEncoderName }} {
   {{- end }}
 };
 
-namespace _internal {
-  {{- range .Methods }}
+{{- range .Methods }}
   {{- if .HasResponse }}
-  extern "C" const fidl_type_t {{ .ResponseTypeName }};
+  {{ EnsureNamespace .ResponseCodingTable.Natural }}
+  extern "C" const fidl_type_t {{ .ResponseCodingTable.Natural.Name }};
   {{- end }}
-  {{- end }}
-}
+{{- end }}
 
-class {{ .ResponseEncoderName }} {
+{{ EnsureNamespace .ResponseEncoderName }}
+class {{ .ResponseEncoderName.Name }} {
  public:
   {{- with $protocol := . }}
   {{- range .Methods }}
@@ -89,7 +94,7 @@ class {{ .ResponseEncoderName }} {
     {{ end -}}
     {{- end }}
 
-    fidl_trace(DidHLCPPEncode, &_internal::{{ .ResponseTypeName }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &{{ .ResponseCodingTable.Natural }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   {{- end }}
@@ -97,6 +102,7 @@ class {{ .ResponseEncoderName }} {
   {{- end }}
 };
 
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 `

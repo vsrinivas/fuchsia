@@ -17,19 +17,10 @@ const testBaseTemplate = `
 
 #include <{{ .PrimaryHeader }}>
 
-{{- range .Library }}
-namespace {{ . }} {
-{{- end }}
-namespace testing {
-{{ "" }}
-
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolTestBase" . }}{{- end }}
 {{- end -}}
 
-}  // namespace testing
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
+{{ EndOfFile }}
 {{ end }}
 `

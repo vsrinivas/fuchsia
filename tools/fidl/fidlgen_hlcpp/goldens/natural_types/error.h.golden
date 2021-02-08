@@ -10,9 +10,10 @@
 namespace fidl {
 namespace test {
 namespace error {
-
 class Example_foo_Response;
+
 class Example_foo_Result;
+
 #ifdef __Fuchsia__
 class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
@@ -24,10 +25,10 @@ class Example_foo_Response final {
   Example_foo_Response() = default;
   explicit Example_foo_Response(int64_t v) : y(std::move(v)) {}
   int64_t ResultValue_() { return std::move(y); }
-  explicit Example_foo_Response(std::tuple<int64_t> _value_tuple) {
+  explicit Example_foo_Response(::std::tuple<int64_t> _value_tuple) {
     std::tie(y) = std::move(_value_tuple);
   }
-  operator std::tuple<int64_t>() && { return std::make_tuple(std::move(y)); }
+  operator ::std::tuple<int64_t>() && { return std::make_tuple(std::move(y)); }
 
   int64_t y{};
 
@@ -122,7 +123,8 @@ class Example_foo_Result final {
   Example_foo_Result(fit::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(Example_foo_Response{result.take_value()});
+      set_response(
+          ::fidl::test::error::Example_foo_Response{result.take_value()});
     } else {
       set_err(std::move(result.take_error()));
     }
@@ -135,7 +137,7 @@ class Example_foo_Result final {
     if (is_err()) {
       return fit::error(err());
     }
-    std::tuple<int64_t> value_tuple = std::move(response());
+    ::std::tuple<int64_t> value_tuple = std::move(response());
     return fit::ok(std::move(std::get<0>(value_tuple)));
   }
 
@@ -156,12 +158,12 @@ inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Result& value,
 }
 
 using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
-}
 
+}  // namespace _internal
 class Example_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
@@ -170,19 +172,19 @@ class Example_RequestEncoder {
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_error_ExamplefooRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::error::_internal::fidl_test_error_ExamplefooRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
-}
 
+}  // namespace _internal
 class Example_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(
@@ -193,19 +195,17 @@ class Example_ResponseEncoder {
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_error_ExamplefooResponseTable,
+               &::fidl::test::error::_internal::
+                   fidl_test_error_ExamplefooResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace error
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::error::Example_foo_Response>
     : public EncodableCodingTraits<::fidl::test::error::Example_foo_Response,
@@ -300,4 +300,5 @@ struct Equality<::fidl::test::error::Example_foo_Result> {
     }
   }
 };
+
 }  // namespace fidl

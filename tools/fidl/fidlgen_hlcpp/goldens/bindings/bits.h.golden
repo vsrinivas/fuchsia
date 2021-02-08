@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace bits {
-
 enum class StrictBits : uint64_t {
 
   SMALLEST = 1u,
@@ -60,7 +59,8 @@ constexpr inline ::fidl::test::bits::StrictBits& operator^=(
 constexpr inline ::fidl::test::bits::StrictBits operator~(
     ::fidl::test::bits::StrictBits _value) {
   return static_cast<::fidl::test::bits::StrictBits>(
-      ~static_cast<uint64_t>(_value) & static_cast<uint64_t>(StrictBitsMask));
+      ~static_cast<uint64_t>(_value) &
+      static_cast<uint64_t>(::fidl::test::bits::StrictBitsMask));
 }
 
 inline zx_status_t Clone(::fidl::test::bits::StrictBits value,
@@ -68,6 +68,7 @@ inline zx_status_t Clone(::fidl::test::bits::StrictBits value,
   *result = value;
   return ZX_OK;
 }
+
 enum class MyBits : uint32_t {
 
   MY_FIRST_BIT = 1u,
@@ -118,7 +119,8 @@ constexpr inline ::fidl::test::bits::MyBits& operator^=(
 constexpr inline ::fidl::test::bits::MyBits operator~(
     ::fidl::test::bits::MyBits _value) {
   return static_cast<::fidl::test::bits::MyBits>(
-      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyBitsMask));
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(::fidl::test::bits::MyBitsMask));
 }
 
 inline zx_status_t Clone(::fidl::test::bits::MyBits value,
@@ -126,6 +128,7 @@ inline zx_status_t Clone(::fidl::test::bits::MyBits value,
   *result = value;
   return ZX_OK;
 }
+
 // |FlexibleBits| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class FlexibleBits final {
@@ -238,11 +241,9 @@ inline zx_status_t Clone(::fidl::test::bits::FlexibleBits value,
   *result = value;
   return ZX_OK;
 }
+
 }  // namespace bits
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::bits::StrictBits> {
   static constexpr size_t inline_size_old =
@@ -347,13 +348,8 @@ struct Equality<::fidl::test::bits::FlexibleBits> {
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace bits {}  // namespace bits
-}  // namespace test
 }  // namespace fidl

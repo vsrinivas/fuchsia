@@ -13,18 +13,17 @@
 namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
-
 #ifdef __Fuchsia__
 class Top;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
-}
 
+}  // namespace _internal
 class Top_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder) {
@@ -33,7 +32,7 @@ class Top_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
             fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -41,12 +40,11 @@ class Top_RequestEncoder {
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
-}
 
+}  // namespace _internal
 class Top_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder,
@@ -57,27 +55,23 @@ class Top_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
             fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace foreigntypeinresponseusedthroughcompose
 }  // namespace test
-}  // namespace fidl
-namespace fidl {}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
-
 #ifdef __Fuchsia__
 using TopPtr = ::fidl::InterfacePtr<Top>;
 class Top_Proxy;
@@ -95,10 +89,12 @@ constexpr uint64_t kTop_GetFoo_Ordinal = 0x6ae8d19bc98f3d92lu;
 #ifdef __Fuchsia__
 class Top {
  public:
-  using Proxy_ = Top_Proxy;
-  using Stub_ = Top_Stub;
-  using EventSender_ = Top_EventSender;
-  using Sync_ = Top_Sync;
+  using Proxy_ =
+      ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Proxy;
+  using Stub_ = ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Stub;
+  using EventSender_ =
+      ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_EventSender;
+  using Sync_ = ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Sync;
   virtual ~Top();
   using GetFooCallback = fit::function<void(::bottom::Foo)>;
 
@@ -128,7 +124,8 @@ class Top_EventSender {
 
 class Top_Sync {
  public:
-  using Proxy_ = Top_SyncProxy;
+  using Proxy_ =
+      ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_SyncProxy;
   virtual ~Top_Sync();
   virtual zx_status_t GetFoo(::bottom::Foo* out_foo) = 0;
 };
@@ -142,13 +139,20 @@ class Top_Proxy final : public ::fidl::internal::Proxy, public Top {
   void GetFoo(GetFooCallback callback) override;
 
  private:
-  Top_Proxy(const Top_Proxy&) = delete;
-  Top_Proxy& operator=(const Top_Proxy&) = delete;
+  Top_Proxy(
+      const ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Proxy&) =
+      delete;
+  Top_Proxy& operator=(
+      const ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Proxy&) =
+      delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Top_Stub final : public ::fidl::internal::Stub, public Top_EventSender {
+class Top_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::foreigntypeinresponseusedthroughcompose::
+          Top_EventSender {
  public:
   typedef class ::fidl::test::foreigntypeinresponseusedthroughcompose::Top
       Top_clazz;
@@ -162,7 +166,8 @@ class Top_Stub final : public ::fidl::internal::Stub, public Top_EventSender {
   Top_clazz* impl_;
 };
 
-class Top_SyncProxy : public Top_Sync {
+class Top_SyncProxy
+    : public ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Sync {
  public:
   explicit Top_SyncProxy(::zx::channel channel);
   ~Top_SyncProxy() override;
@@ -172,7 +177,6 @@ class Top_SyncProxy : public Top_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Top>;
 };
-
 #endif  // __Fuchsia__
 }  // namespace foreigntypeinresponseusedthroughcompose
 }  // namespace test

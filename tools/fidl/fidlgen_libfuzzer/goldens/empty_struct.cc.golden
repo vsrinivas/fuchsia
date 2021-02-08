@@ -89,7 +89,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: Send\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize<Empty>();
+      const size_t min_size_ = MinSize< ::fidl::test::emptystruct::Empty>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -105,9 +105,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
               slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize<Empty>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for Empty e\n", param_size_);
-      Empty e = Allocate<Empty>{}(&src_, &param_size_);
+      param_size_ =
+          MinSize< ::fidl::test::emptystruct::Empty>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::test::emptystruct::Empty e\n",
+              param_size_);
+      ::fidl::test::emptystruct::Empty e =
+          Allocate< ::fidl::test::emptystruct::Empty>{}(&src_, &param_size_);
 
       xprintf("Invoking method fidl_test_emptystruct_EmptyProtocol.Send\n");
       protocol_->Send(std::move(e));
@@ -119,7 +122,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: SendAndReceive\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize<Empty>();
+      const size_t min_size_ = MinSize< ::fidl::test::emptystruct::Empty>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -135,15 +138,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
               slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize<Empty>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for Empty e\n", param_size_);
-      Empty e = Allocate<Empty>{}(&src_, &param_size_);
+      param_size_ =
+          MinSize< ::fidl::test::emptystruct::Empty>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::test::emptystruct::Empty e\n",
+              param_size_);
+      ::fidl::test::emptystruct::Empty e =
+          Allocate< ::fidl::test::emptystruct::Empty>{}(&src_, &param_size_);
 
       xprintf(
           "Invoking method "
           "fidl_test_emptystruct_EmptyProtocol.SendAndReceive\n");
       protocol_->SendAndReceive(
-          std::move(e), [signaller = fuzzer_.NewCallbackSignaller()](Empty e) {
+          std::move(e), [signaller = fuzzer_.NewCallbackSignaller()](
+                            ::fidl::test::emptystruct::Empty e) {
             xprintf(
                 "Invoked fidl_test_emptystruct_EmptyProtocol.SendAndReceive\n");
             zx_status_t status_ = signaller.SignalCallback();

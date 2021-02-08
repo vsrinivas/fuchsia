@@ -3,14 +3,3 @@
 #include <fidl/test/structdefaultvalueenumlibraryreference/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
-
-}  // namespace structdefaultvalueenumlibraryreference
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

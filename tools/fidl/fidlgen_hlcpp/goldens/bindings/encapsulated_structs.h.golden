@@ -10,12 +10,16 @@
 namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
-
 class NonInlineStructTestStruct;
+
 class Int8Int32;
+
 class Int16Int8;
+
 class ArrayInt16Int8;
+
 class StructPaddingTestStruct;
+
 class TopLevelStruct;
 
 #ifdef __Fuchsia__
@@ -23,7 +27,7 @@ class NonInlineStructTestStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<Int16Int8> element{};
+  ::std::unique_ptr<::fidl::test::encapsulatedstructs::Int16Int8> element{};
 
   ::zx::handle h{};
 
@@ -109,7 +113,7 @@ class ArrayInt16Int8 final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::array<Int16Int8, 3> arr{};
+  ::std::array<::fidl::test::encapsulatedstructs::Int16Int8, 3> arr{};
 
   static inline ::std::unique_ptr<ArrayInt16Int8> New() {
     return ::std::make_unique<ArrayInt16Int8>();
@@ -135,11 +139,11 @@ class StructPaddingTestStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  Int16Int8 trailing{};
+  ::fidl::test::encapsulatedstructs::Int16Int8 trailing{};
 
-  Int8Int32 inner{};
+  ::fidl::test::encapsulatedstructs::Int8Int32 inner{};
 
-  ArrayInt16Int8 array{};
+  ::fidl::test::encapsulatedstructs::ArrayInt16Int8 array{};
 
   static inline ::std::unique_ptr<StructPaddingTestStruct> New() {
     return ::std::make_unique<StructPaddingTestStruct>();
@@ -166,9 +170,9 @@ class TopLevelStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  StructPaddingTestStruct a{};
+  ::fidl::test::encapsulatedstructs::StructPaddingTestStruct a{};
 
-  NonInlineStructTestStruct b{};
+  ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct b{};
 
   static inline ::std::unique_ptr<TopLevelStruct> New() {
     return ::std::make_unique<TopLevelStruct>();
@@ -193,9 +197,6 @@ using TopLevelStructPtr = ::std::unique_ptr<TopLevelStruct>;
 
 }  // namespace encapsulatedstructs
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 #ifdef __Fuchsia__
 template <>
 struct CodingTraits<
@@ -433,13 +434,8 @@ struct Equality<::fidl::test::encapsulatedstructs::TopLevelStruct> {
   }
 };
 #endif  // __Fuchsia__
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace encapsulatedstructs {}  // namespace encapsulatedstructs
-}  // namespace test
 }  // namespace fidl

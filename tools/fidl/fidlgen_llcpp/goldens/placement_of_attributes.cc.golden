@@ -4,11 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace placementofattributes {
 auto ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::which()
     const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
@@ -38,28 +33,40 @@ void ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal =
     2341079615635566980lu;
+
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
 
 }  // namespace
-ExampleProtocol::ResultOf::Method::Method(
-    ::fidl::UnownedClientEnd<ExampleProtocol> _client,
-    ::llcpp::exampleusing::wire::Empty& arg) {
+::llcpp::fidl::test::placementofattributes::ExampleProtocol::ResultOf::Method::
+    Method(::fidl::UnownedClientEnd<
+               ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+               _client,
+           ::llcpp::exampleusing::wire::Empty& arg) {
   MethodRequest::OwnedEncodedMessage _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-ExampleProtocol::UnownedResultOf::Method::Method(
-    ::fidl::UnownedClientEnd<ExampleProtocol> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, ::llcpp::exampleusing::wire::Empty& arg) {
+::llcpp::fidl::test::placementofattributes::ExampleProtocol::UnownedResultOf::
+    Method::Method(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::llcpp::exampleusing::wire::Empty& arg) {
   MethodRequest::UnownedEncodedMessage _request(_request_bytes,
                                                 _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Write(_client);
@@ -71,7 +78,10 @@ ExampleProtocol::UnownedResultOf::Method::Method(
     ::llcpp::exampleusing::wire::Empty arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Method(
-        ::fidl::UnownedClientEnd<ExampleProtocol>(_channel->handle()), arg);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>(
+            _channel->handle()),
+        arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -82,7 +92,9 @@ ExampleProtocol::UnownedResultOf::Method::Method(
     ::llcpp::exampleusing::wire::Empty arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::Method(
-        ::fidl::UnownedClientEnd<ExampleProtocol>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, arg);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -100,10 +112,13 @@ namespace methods {
 
 void ExampleProtocolDispatchMethod(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<ExampleProtocol::MethodRequest*>(bytes);
-  ExampleProtocol::TypedChannelInterface::MethodCompleter::Sync completer(txn);
-  reinterpret_cast<ExampleProtocol::TypedChannelInterface*>(interface)->Method(
-      std::move(message->arg), completer);
+  auto message = reinterpret_cast<::llcpp::fidl::test::placementofattributes::
+                                      ExampleProtocol::MethodRequest*>(bytes);
+  ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
+      TypedChannelInterface::MethodCompleter::Sync completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::placementofattributes::ExampleProtocol::
+                       TypedChannelInterface*>(interface)
+      ->Method(std::move(message->arg), completer);
 }
 
 }  // namespace methods
@@ -111,7 +126,9 @@ void ExampleProtocolDispatchMethod(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry ExampleProtocol[] = {
-    {kExampleProtocol_Method_Ordinal, ExampleProtocol::MethodRequest::Type,
+    {kExampleProtocol_Method_Ordinal,
+     ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
+         MethodRequest::Type,
      methods::ExampleProtocolDispatchMethod},
 };
 
@@ -143,7 +160,8 @@ namespace entries {
   return ExampleProtocol::Dispatch(this, msg, txn);
 }
 
-void ExampleProtocol::MethodRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
+    MethodRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kExampleProtocol_Method_Ordinal);
 }
 

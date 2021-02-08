@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/escaping/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace escaping {
-namespace testing {}  // namespace testing
-}  // namespace escaping
-}  // namespace test
-}  // namespace fidl

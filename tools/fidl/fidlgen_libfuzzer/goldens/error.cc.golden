@@ -108,15 +108,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       ::std::string s = Allocate< ::std::string>{}(&src_, &param_size_);
 
       xprintf("Invoking method fidl_test_error_Example.foo\n");
-      protocol_->foo(std::move(s), [signaller = fuzzer_.NewCallbackSignaller()](
-                                       Example_foo_Result result) {
-        xprintf("Invoked fidl_test_error_Example.foo\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n",
-                  status_);
-        }
-      });
+      protocol_->foo(
+          std::move(s), [signaller = fuzzer_.NewCallbackSignaller()](
+                            ::fidl::test::error::Example_foo_Result result) {
+            xprintf("Invoked fidl_test_error_Example.foo\n");
+            zx_status_t status_ = signaller.SignalCallback();
+            if (status_ != ZX_OK) {
+              xprintf("signaller.SignalCallback returned bad status: %d\n",
+                      status_);
+            }
+          });
 #endif
     }
 

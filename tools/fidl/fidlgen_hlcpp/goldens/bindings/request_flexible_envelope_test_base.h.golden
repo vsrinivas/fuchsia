@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
 namespace testing {
-
-class Protocol_TestBase : public Protocol {
+class Protocol_TestBase
+    : public ::fidl::test::requestflexibleenvelope::Protocol {
  public:
   virtual ~Protocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

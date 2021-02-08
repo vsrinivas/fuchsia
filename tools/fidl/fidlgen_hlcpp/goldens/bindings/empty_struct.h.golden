@@ -10,8 +10,8 @@
 namespace fidl {
 namespace test {
 namespace emptystruct {
-
 class Empty;
+
 #ifdef __Fuchsia__
 class EmptyProtocol;
 using EmptyProtocolHandle = ::fidl::InterfaceHandle<EmptyProtocol>;
@@ -40,15 +40,16 @@ inline zx_status_t Clone(const ::fidl::test::emptystruct::Empty& _value,
 }
 
 using EmptyPtr = ::std::unique_ptr<Empty>;
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class EmptyProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Send(
@@ -58,7 +59,8 @@ class EmptyProtocol_RequestEncoder {
     ::fidl::Encode(_encoder, e, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_emptystruct_EmptyProtocolSendRequestTable,
+               &::fidl::test::emptystruct::_internal::
+                   fidl_test_emptystruct_EmptyProtocolSendRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -72,7 +74,7 @@ class EmptyProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::emptystruct::_internal::
             fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -80,14 +82,14 @@ class EmptyProtocol_RequestEncoder {
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class EmptyProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Receive(
@@ -97,7 +99,8 @@ class EmptyProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, e, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_emptystruct_EmptyProtocolReceiveEventTable,
+               &::fidl::test::emptystruct::_internal::
+                   fidl_test_emptystruct_EmptyProtocolReceiveEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -110,20 +113,17 @@ class EmptyProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::emptystruct::_internal::
             fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace emptystruct
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::emptystruct::Empty>
     : public EncodableCodingTraits<::fidl::test::emptystruct::Empty, 1> {};
@@ -149,15 +149,12 @@ struct Equality<::fidl::test::emptystruct::Empty> {
     return true;
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
 namespace test {
 namespace emptystruct {
-
 #ifdef __Fuchsia__
 using EmptyProtocolPtr = ::fidl::InterfacePtr<EmptyProtocol>;
 class EmptyProtocol_Proxy;
@@ -177,10 +174,10 @@ constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal = 0x56ca6bd78bac3571lu;
 #ifdef __Fuchsia__
 class EmptyProtocol {
  public:
-  using Proxy_ = EmptyProtocol_Proxy;
-  using Stub_ = EmptyProtocol_Stub;
-  using EventSender_ = EmptyProtocol_EventSender;
-  using Sync_ = EmptyProtocol_Sync;
+  using Proxy_ = ::fidl::test::emptystruct::EmptyProtocol_Proxy;
+  using Stub_ = ::fidl::test::emptystruct::EmptyProtocol_Stub;
+  using EventSender_ = ::fidl::test::emptystruct::EmptyProtocol_EventSender;
+  using Sync_ = ::fidl::test::emptystruct::EmptyProtocol_Sync;
   virtual ~EmptyProtocol();
 
   virtual void Send(::fidl::test::emptystruct::Empty e) = 0;
@@ -218,7 +215,7 @@ class EmptyProtocol_EventSender {
 
 class EmptyProtocol_Sync {
  public:
-  using Proxy_ = EmptyProtocol_SyncProxy;
+  using Proxy_ = ::fidl::test::emptystruct::EmptyProtocol_SyncProxy;
   virtual ~EmptyProtocol_Sync();
   virtual zx_status_t Send(::fidl::test::emptystruct::Empty e) = 0;
   virtual zx_status_t SendAndReceive(
@@ -239,14 +236,17 @@ class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy,
                       SendAndReceiveCallback callback) override;
 
  private:
-  EmptyProtocol_Proxy(const EmptyProtocol_Proxy&) = delete;
-  EmptyProtocol_Proxy& operator=(const EmptyProtocol_Proxy&) = delete;
+  EmptyProtocol_Proxy(const ::fidl::test::emptystruct::EmptyProtocol_Proxy&) =
+      delete;
+  EmptyProtocol_Proxy& operator=(
+      const ::fidl::test::emptystruct::EmptyProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class EmptyProtocol_Stub final : public ::fidl::internal::Stub,
-                                 public EmptyProtocol_EventSender {
+class EmptyProtocol_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::emptystruct::EmptyProtocol_EventSender {
  public:
   typedef class ::fidl::test::emptystruct::EmptyProtocol EmptyProtocol_clazz;
   explicit EmptyProtocol_Stub(EmptyProtocol_clazz* impl);
@@ -260,7 +260,8 @@ class EmptyProtocol_Stub final : public ::fidl::internal::Stub,
   EmptyProtocol_clazz* impl_;
 };
 
-class EmptyProtocol_SyncProxy : public EmptyProtocol_Sync {
+class EmptyProtocol_SyncProxy
+    : public ::fidl::test::emptystruct::EmptyProtocol_Sync {
  public:
   explicit EmptyProtocol_SyncProxy(::zx::channel channel);
   ~EmptyProtocol_SyncProxy() override;
@@ -272,7 +273,6 @@ class EmptyProtocol_SyncProxy : public EmptyProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<EmptyProtocol>;
 };
-
 #endif  // __Fuchsia__
 }  // namespace emptystruct
 }  // namespace test

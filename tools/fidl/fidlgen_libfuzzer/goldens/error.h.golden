@@ -36,7 +36,8 @@ struct Allocate<Example_foo_Response> {
 template <>
 struct MinSize<Example_foo_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<Example_foo_Response>(), MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::fidl::test::error::Example_foo_Response>(),
+                      MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -54,7 +55,8 @@ struct Allocate<Example_foo_Result> {
     Example_foo_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(Allocate<Example_foo_Response>{}(src, size));
+        out.set_response(
+            Allocate<::fidl::test::error::Example_foo_Response>{}(src, size));
         break;
       }
       case 1: {

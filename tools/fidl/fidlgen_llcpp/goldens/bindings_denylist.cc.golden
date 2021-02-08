@@ -4,12 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace bindingsdenylist {
-
 void ::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OnlyLlcpp) == sizeof(fidl_xunion_t));
@@ -17,8 +11,3 @@ void ::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp::
   static_assert(offsetof(OnlyLlcpp, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-}  // namespace bindingsdenylist
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

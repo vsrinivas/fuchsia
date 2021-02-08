@@ -12,11 +12,7 @@ const fileSourceTmpl = `
 #include <memory>
 {{ "" }}
 
-{{- "" }}
-namespace llcpp {
-{{ range .Library }}
-namespace {{ . }} {
-{{- end }}
+
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
@@ -30,9 +26,6 @@ namespace {{ . }} {
 {{- end }}
 {{ "" }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
-}  // namespace llcpp
+{{ EndOfFile}}
 {{ end }}
 `

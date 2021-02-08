@@ -21,17 +21,14 @@ const implementationTemplate = `
 {{ template "Implementation/ProxiesAndStubs" . }}
 {{- end }}
 
+{{ EndOfFile }}
+
 {{ end }}
 
 {{- define "Implementation/NaturalTypes" }}
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-
-{{- range .Library }}
-namespace {{ . }} {
-{{- end }}
-{{ "" }}
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsDefinition" . }}{{- end }}
@@ -42,9 +39,6 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDefinition" . }}{{- end }}
 {{- end }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
 {{- end }}
 
 {{- define "Implementation/ProxiesAndStubs" }}
@@ -52,18 +46,10 @@ namespace {{ . }} {
 // Proxies and stubs definitions
 //
 
-{{- range .Library }}
-namespace {{ . }} {
-{{- end }}
-{{ "" }}
-
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
 {{- end }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
 {{- end }}
 
 {{- define "DispatchProtocolDefinition" -}}

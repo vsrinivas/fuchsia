@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/enum/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace enum_ {
-namespace testing {}  // namespace testing
-}  // namespace enum_
-}  // namespace test
-}  // namespace fidl

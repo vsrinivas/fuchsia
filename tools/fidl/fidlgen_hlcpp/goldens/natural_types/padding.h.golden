@@ -10,22 +10,36 @@
 namespace fidl {
 namespace test {
 namespace padding {
-
 class Padding7ByteMiddle;
+
 class Padding7ByteEnd;
+
 class Padding6ByteMiddle;
+
 class Padding6ByteEnd;
+
 class Padding5ByteMiddle;
+
 class Padding5ByteEnd;
+
 class Padding4ByteMiddle;
+
 class Padding4ByteEnd;
+
 class Padding4ByteAlignmentLength12;
+
 class Padding3ByteMiddle;
+
 class Padding3ByteEnd;
+
 class Padding2ByteMiddle;
+
 class Padding2ByteEnd;
+
 class Padding2ByteAlignmentLength6;
+
 class Padding1ByteMiddle;
+
 class Padding1ByteEnd;
 
 class Padding7ByteMiddle final {
@@ -480,11 +494,9 @@ inline zx_status_t Clone(const ::fidl::test::padding::Padding1ByteEnd& _value,
 }
 
 using Padding1ByteEndPtr = ::std::unique_ptr<Padding1ByteEnd>;
+
 }  // namespace padding
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::padding::Padding7ByteMiddle>
     : public EncodableCodingTraits<::fidl::test::padding::Padding7ByteMiddle,
@@ -1053,4 +1065,5 @@ struct Equality<::fidl::test::padding::Padding1ByteEnd> {
     return true;
   }
 };
+
 }  // namespace fidl

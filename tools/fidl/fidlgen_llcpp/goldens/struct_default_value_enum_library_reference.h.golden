@@ -34,22 +34,21 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <dependent/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
-
 namespace wire {
 struct Foo;
 }  // namespace wire
-using Foo = wire::Foo;  // struct
-
+using Foo = wire::Foo;
 namespace wire {
+
 extern "C" const fidl_type_t
     fidl_test_structdefaultvalueenumlibraryreference_FooTable;
 
@@ -142,13 +141,12 @@ struct Foo {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -170,15 +168,12 @@ static_assert(sizeof(::llcpp::fidl::test::
                          structdefaultvalueenumlibraryreference::wire::Foo) ==
               ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::
                   wire::Foo::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
-
+namespace wire {}  // namespace wire
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
 }  // namespace fidl

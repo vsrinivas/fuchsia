@@ -10,8 +10,8 @@
 namespace fidl {
 namespace test {
 namespace consts {
+const char* USERNAME = "\"squeenze\"";
 
-const char USERNAME[] = "\"squeenze\"";
 }  // namespace consts
 }  // namespace test
 }  // namespace fidl

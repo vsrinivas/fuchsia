@@ -7,35 +7,30 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace fidl {
-namespace test {
-namespace inheritance {}  // namespace inheritance
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
+#ifdef __Fuchsia__
+
 namespace fidl {
 namespace test {
 namespace inheritance {
-
-#ifdef __Fuchsia__
-namespace {
-
+namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
-}  // namespace
-
+}  // namespace _internal
 super::~super() = default;
 
-const fidl_type_t* super_RequestDecoder::GetType(uint64_t ordinal,
-                                                 bool* out_needs_response) {
+const fidl_type_t* ::fidl::test::inheritance::super_RequestDecoder::GetType(
+    uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::ksuper_foo_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_inheritance_superfooRequestTable;
+      return &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -45,7 +40,8 @@ const fidl_type_t* super_RequestDecoder::GetType(uint64_t ordinal,
 const fidl_type_t* super_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::ksuper_foo_Ordinal:
-      return &fidl_test_inheritance_superfooResponseTable;
+      return &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooResponseTable;
     default:
       return nullptr;
   }
@@ -85,15 +81,18 @@ super_foo_ResponseHandler(super::fooCallback&& callback) {
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_inheritance_superfooResponseTable);
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooResponseTable);
 }
 
 }  // namespace
 void super_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::ksuper_foo_Ordinal);
-  controller_->Send(&fidl_test_inheritance_superfooRequestTable,
-                    super_RequestEncoder::foo(&_encoder, &s),
-                    super_foo_ResponseHandler(std::move(callback)));
+  controller_->Send(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooRequestTable,
+      ::fidl::test::inheritance::super_RequestEncoder::foo(&_encoder, &s),
+      super_foo_ResponseHandler(std::move(callback)));
 }
 
 super_Stub::super_Stub(super_clazz* impl) : impl_(impl) { (void)impl_; }
@@ -109,8 +108,10 @@ class super_foo_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::Encoder _encoder(internal::ksuper_foo_Ordinal);
-    response_.Send(&fidl_test_inheritance_superfooResponseTable,
-                   super_ResponseEncoder::foo(&_encoder, &y));
+    response_.Send(
+        &::fidl::test::inheritance::_internal::
+            fidl_test_inheritance_superfooResponseTable,
+        ::fidl::test::inheritance::super_ResponseEncoder::foo(&_encoder, &y));
   }
 
  private:
@@ -123,7 +124,8 @@ zx_status_t super_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                   ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
-      super_RequestDecoder::GetType(message.ordinal(), &needs_response);
+      ::fidl::test::inheritance::super_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -168,34 +170,43 @@ zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksuper_foo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ =
-      proxy_.Call(&fidl_test_inheritance_superfooRequestTable,
-                  &fidl_test_inheritance_superfooResponseTable,
-                  super_RequestEncoder::foo(&_encoder, &s), &response_);
+  zx_status_t status_ = proxy_.Call(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooRequestTable,
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooResponseTable,
+      ::fidl::test::inheritance::super_RequestEncoder::foo(&_encoder, &s),
+      &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
   return ZX_OK;
 }
-
+}  // namespace inheritance
+}  // namespace test
+}  // namespace fidl
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-namespace {
 
+namespace fidl {
+namespace test {
+namespace inheritance {
+namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
-}  // namespace
-
+}  // namespace _internal
 sub::~sub() = default;
 
-const fidl_type_t* sub_RequestDecoder::GetType(uint64_t ordinal,
-                                               bool* out_needs_response) {
+const fidl_type_t* ::fidl::test::inheritance::sub_RequestDecoder::GetType(
+    uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::ksub_foo_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_inheritance_subfooRequestTable;
+      return &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -205,7 +216,8 @@ const fidl_type_t* sub_RequestDecoder::GetType(uint64_t ordinal,
 const fidl_type_t* sub_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::ksub_foo_Ordinal:
-      return &fidl_test_inheritance_subfooResponseTable;
+      return &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooResponseTable;
     default:
       return nullptr;
   }
@@ -245,15 +257,18 @@ sub_foo_ResponseHandler(sub::fooCallback&& callback) {
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_inheritance_subfooResponseTable);
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooResponseTable);
 }
 
 }  // namespace
 void sub_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::ksub_foo_Ordinal);
-  controller_->Send(&fidl_test_inheritance_subfooRequestTable,
-                    sub_RequestEncoder::foo(&_encoder, &s),
-                    sub_foo_ResponseHandler(std::move(callback)));
+  controller_->Send(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooRequestTable,
+      ::fidl::test::inheritance::sub_RequestEncoder::foo(&_encoder, &s),
+      sub_foo_ResponseHandler(std::move(callback)));
 }
 
 sub_Stub::sub_Stub(sub_clazz* impl) : impl_(impl) { (void)impl_; }
@@ -269,8 +284,10 @@ class sub_foo_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::Encoder _encoder(internal::ksub_foo_Ordinal);
-    response_.Send(&fidl_test_inheritance_subfooResponseTable,
-                   sub_ResponseEncoder::foo(&_encoder, &y));
+    response_.Send(
+        &::fidl::test::inheritance::_internal::
+            fidl_test_inheritance_subfooResponseTable,
+        ::fidl::test::inheritance::sub_ResponseEncoder::foo(&_encoder, &y));
   }
 
  private:
@@ -283,7 +300,8 @@ zx_status_t sub_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                 ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
-      sub_RequestDecoder::GetType(message.ordinal(), &needs_response);
+      ::fidl::test::inheritance::sub_RequestDecoder::GetType(message.ordinal(),
+                                                             &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -328,18 +346,19 @@ zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksub_foo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ =
-      proxy_.Call(&fidl_test_inheritance_subfooRequestTable,
-                  &fidl_test_inheritance_subfooResponseTable,
-                  sub_RequestEncoder::foo(&_encoder, &s), &response_);
+  zx_status_t status_ = proxy_.Call(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooRequestTable,
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooResponseTable,
+      ::fidl::test::inheritance::sub_RequestEncoder::foo(&_encoder, &s),
+      &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
   return ZX_OK;
 }
-
-#endif  // __Fuchsia__
-
 }  // namespace inheritance
 }  // namespace test
 }  // namespace fidl
+#endif  // __Fuchsia__

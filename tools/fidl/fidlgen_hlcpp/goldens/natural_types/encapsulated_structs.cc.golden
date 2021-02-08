@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
-
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
@@ -91,6 +90,7 @@ zx_status_t Int8Int32::Clone(Int8Int32* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int16Int8Table;
 const fidl_type_t* Int16Int8::FidlType =
     &fidl_test_encapsulatedstructs_Int16Int8Table;
@@ -125,6 +125,7 @@ zx_status_t Int16Int8::Clone(Int16Int8* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
 const fidl_type_t* ArrayInt16Int8::FidlType =
     &fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
@@ -155,6 +156,7 @@ zx_status_t ArrayInt16Int8::Clone(ArrayInt16Int8* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
 const fidl_type_t* StructPaddingTestStruct::FidlType =
@@ -196,6 +198,7 @@ zx_status_t StructPaddingTestStruct::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
 const fidl_type_t* TopLevelStruct::FidlType =

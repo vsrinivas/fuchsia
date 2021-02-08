@@ -10,21 +10,21 @@
 namespace fidl {
 namespace test {
 namespace inheritance {
-
 #ifdef __Fuchsia__
 class super;
 using superHandle = ::fidl::InterfaceHandle<super>;
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 class sub;
 using subHandle = ::fidl::InterfaceHandle<sub>;
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
-}
 
+}  // namespace _internal
 class super_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
@@ -34,18 +34,18 @@ class super_RequestEncoder {
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_inheritance_superfooRequestTable,
+               &::fidl::test::inheritance::_internal::
+                   fidl_test_inheritance_superfooRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
-}
 
+}  // namespace _internal
 class super_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
@@ -55,20 +55,20 @@ class super_ResponseEncoder {
     ::fidl::Encode(_encoder, y, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_inheritance_superfooResponseTable,
+               &::fidl::test::inheritance::_internal::
+                   fidl_test_inheritance_superfooResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
-}
 
+}  // namespace _internal
 class sub_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
@@ -78,18 +78,18 @@ class sub_RequestEncoder {
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_inheritance_subfooRequestTable,
+               &::fidl::test::inheritance::_internal::
+                   fidl_test_inheritance_subfooRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
-}
 
+}  // namespace _internal
 class sub_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
@@ -99,15 +99,16 @@ class sub_ResponseEncoder {
     ::fidl::Encode(_encoder, y, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_inheritance_subfooResponseTable,
+               &::fidl::test::inheritance::_internal::
+                   fidl_test_inheritance_subfooResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace inheritance
 }  // namespace test
+
 }  // namespace fidl
-namespace fidl {}  // namespace fidl

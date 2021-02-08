@@ -12,19 +12,27 @@
 namespace fidl {
 namespace test {
 namespace nullable {
-
 class StructWithNullableVector;
+
 class StructWithNullableUnion;
+
 class StructWithNullableStruct;
+
 class StructWithNullableString;
+
 class StructWithNullableRequest;
+
 class StructWithNullableProtocol;
+
 class StructWithNullableHandle;
+
 #ifdef __Fuchsia__
 class SimpleProtocol;
 using SimpleProtocolHandle = ::fidl::InterfaceHandle<SimpleProtocol>;
 #endif  // __Fuchsia__
+
 class SimpleUnion;
+
 class Int32Wrapper;
 
 class StructWithNullableVector final {
@@ -57,7 +65,7 @@ class StructWithNullableUnion final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<SimpleUnion> val{};
+  ::std::unique_ptr<::fidl::test::nullable::SimpleUnion> val{};
 
   static inline ::std::unique_ptr<StructWithNullableUnion> New() {
     return ::std::make_unique<StructWithNullableUnion>();
@@ -83,7 +91,7 @@ class StructWithNullableStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<Int32Wrapper> val{};
+  ::std::unique_ptr<::fidl::test::nullable::Int32Wrapper> val{};
 
   static inline ::std::unique_ptr<StructWithNullableStruct> New() {
     return ::std::make_unique<StructWithNullableStruct>();
@@ -136,7 +144,7 @@ class StructWithNullableRequest final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::InterfaceRequest<SimpleProtocol> val{};
+  ::fidl::InterfaceRequest<::fidl::test::nullable::SimpleProtocol> val{};
 
   static inline ::std::unique_ptr<StructWithNullableRequest> New() {
     return ::std::make_unique<StructWithNullableRequest>();
@@ -165,7 +173,7 @@ class StructWithNullableProtocol final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::InterfaceHandle<class SimpleProtocol> val{};
+  ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol> val{};
 
   static inline ::std::unique_ptr<StructWithNullableProtocol> New() {
     return ::std::make_unique<StructWithNullableProtocol>();
@@ -218,11 +226,10 @@ using StructWithNullableHandlePtr = ::std::unique_ptr<StructWithNullableHandle>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
-}
 
+}  // namespace _internal
 class SimpleProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Add(::fidl::Encoder* _encoder, int32_t* a,
@@ -234,18 +241,18 @@ class SimpleProtocol_RequestEncoder {
     ::fidl::Encode(_encoder, b, 20);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_nullable_SimpleProtocolAddRequestTable,
+               &::fidl::test::nullable::_internal::
+                   fidl_test_nullable_SimpleProtocolAddRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
-}
 
+}  // namespace _internal
 class SimpleProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Add(::fidl::Encoder* _encoder,
@@ -255,13 +262,13 @@ class SimpleProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, sum, 16);
 
     fidl_trace(DidHLCPPEncode,
-               &_internal::fidl_test_nullable_SimpleProtocolAddResponseTable,
+               &::fidl::test::nullable::_internal::
+                   fidl_test_nullable_SimpleProtocolAddResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
 
 class SimpleUnion final {
@@ -373,11 +380,9 @@ inline zx_status_t Clone(const ::fidl::test::nullable::Int32Wrapper& _value,
 }
 
 using Int32WrapperPtr = ::std::unique_ptr<Int32Wrapper>;
+
 }  // namespace nullable
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableVector>
     : public EncodableCodingTraits<
@@ -558,7 +563,7 @@ struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableProtocol>
           !HasPadding<
               ::fidl::test::nullable::StructWithNullableProtocol>::value &&
           IsMemcpyCompatible<::fidl::InterfaceHandle<
-              class ::fidl::test::nullable::SimpleProtocol>>::value> {};
+              ::fidl::test::nullable::SimpleProtocol>>::value> {};
 
 inline zx_status_t Clone(
     const ::fidl::test::nullable::StructWithNullableProtocol& value,
@@ -702,4 +707,5 @@ struct Equality<::fidl::test::nullable::Int32Wrapper> {
     return true;
   }
 };
+
 }  // namespace fidl

@@ -35,31 +35,31 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <exampleusing/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace placementofattributes {
-
 namespace wire {
 class ExampleXUnion;
 }  // namespace wire
 using ExampleXUnion = wire::ExampleXUnion;
 namespace wire {
+
 class ExampleUnion;
 }  // namespace wire
 using ExampleUnion = wire::ExampleUnion;
 namespace wire {
+
 class ExampleTable;
-}  // namespace wire
-namespace wire {
+
 struct ExampleStruct;
 }  // namespace wire
-using ExampleStruct = wire::ExampleStruct;  // struct
+using ExampleStruct = wire::ExampleStruct;
 namespace wire {
 
 enum class ExampleEnum : uint32_t {
@@ -68,10 +68,9 @@ enum class ExampleEnum : uint32_t {
 };
 
 }  // namespace wire
-
 using ExampleEnum = wire::ExampleEnum;
-
 namespace wire {
+
 // |ExampleBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -179,12 +178,11 @@ constexpr inline void ExampleBits::operator^=(
 }
 
 }  // namespace wire
-
 using ExampleBits = wire::ExampleBits;
-
+namespace wire {}  // namespace wire
 class ExampleProtocol;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion {
@@ -289,9 +287,6 @@ class ExampleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion {
@@ -397,10 +392,6 @@ class ExampleUnion {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
-
-}  // namespace wire
-
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
 
@@ -683,11 +674,11 @@ class ExampleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   ExampleTable::Frame frame_;
 };
+
 }  // namespace wire
-
 using ExampleTable = wire::ExampleTable;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
 
 struct ExampleStruct {
@@ -786,6 +777,7 @@ constexpr uint32_t EXAMPLE_CONST = 0u;
 
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
 
@@ -805,7 +797,8 @@ class ExampleProtocol final {
     explicit MethodRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+        &::llcpp::fidl::test::placementofattributes::
+            fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -983,7 +976,9 @@ class ExampleProtocol final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Method Method(
-        ::fidl::UnownedClientEnd<ExampleProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+            _client_end,
         ::llcpp::exampleusing::wire::Empty arg) {
       return ResultOf::Method(_client_end, arg);
     }
@@ -991,7 +986,9 @@ class ExampleProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Method Method(
-        ::fidl::UnownedClientEnd<ExampleProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::llcpp::exampleusing::wire::Empty arg) {
       return UnownedResultOf::Method(_client_end, _request_buffer.data,
@@ -1110,7 +1107,6 @@ class ExampleProtocol final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1192,14 +1188,12 @@ static_assert(sizeof(::llcpp::fidl::test::placementofattributes::
 static_assert(offsetof(::llcpp::fidl::test::placementofattributes::
                            ExampleProtocol::MethodRequest,
                        arg) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace placementofattributes {
+namespace wire {}  // namespace wire
 
 class ExampleProtocol::AsyncEventHandler
     : public ExampleProtocol::EventHandlerInterface {

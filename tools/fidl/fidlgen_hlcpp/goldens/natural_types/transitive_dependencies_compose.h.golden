@@ -13,18 +13,17 @@
 namespace fidl {
 namespace test {
 namespace transitivedependenciescompose {
-
 #ifdef __Fuchsia__
 class Top;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
-}
 
+}  // namespace _internal
 class Top_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder) {
@@ -33,7 +32,7 @@ class Top_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::transitivedependenciescompose::_internal::
             fidl_test_transitivedependenciescompose_TopGetFooRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -41,12 +40,11 @@ class Top_RequestEncoder {
     return _encoder->GetMessage();
   }
 };
-
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
-}
 
+}  // namespace _internal
 class Top_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder,
@@ -57,16 +55,16 @@ class Top_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::transitivedependenciescompose::_internal::
             fidl_test_transitivedependenciescompose_TopGetFooResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace transitivedependenciescompose
 }  // namespace test
+
 }  // namespace fidl
-namespace fidl {}  // namespace fidl

@@ -3,12 +3,3 @@
 #include <fidl/test/table/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace table {}  // namespace table
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

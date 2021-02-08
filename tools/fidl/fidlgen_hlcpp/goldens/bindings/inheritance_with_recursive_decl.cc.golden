@@ -7,37 +7,29 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace fidl {
-namespace test {
-namespace inheritancewithrecursivedecl {
-
-}  // namespace inheritancewithrecursivedecl
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
+#ifdef __Fuchsia__
+
 namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
-
-#ifdef __Fuchsia__
-namespace {
-
+namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
-}  // namespace
-
+}  // namespace _internal
 Parent::~Parent() = default;
 
-const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal,
-                                                  bool* out_needs_response) {
+const fidl_type_t* ::fidl::test::inheritancewithrecursivedecl::
+    Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kParent_First_Ordinal:
       *out_needs_response = false;
-      return &fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+      return &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -78,8 +70,11 @@ void Parent_Proxy::First(
         request) {
   ::fidl::Encoder _encoder(internal::kParent_First_Ordinal);
   controller_->Send(
-      &fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
-      Parent_RequestEncoder::First(&_encoder, &request), nullptr);
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
+      ::fidl::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
+          &_encoder, &request),
+      nullptr);
 }
 
 Parent_Stub::Parent_Stub(Parent_clazz* impl) : impl_(impl) { (void)impl_; }
@@ -91,7 +86,7 @@ namespace {}  // namespace
 zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                    ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
+  const fidl_type_t* request_type = ::fidl::test::inheritancewithrecursivedecl::
       Parent_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -139,34 +134,42 @@ zx_status_t Parent_SyncProxy::First(
         request) {
   ::fidl::Encoder _encoder(internal::kParent_First_Ordinal);
   return proxy_.Send(
-      &fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
-      Parent_RequestEncoder::First(&_encoder, &request));
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
+      ::fidl::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
+          &_encoder, &request));
 }
-
+}  // namespace inheritancewithrecursivedecl
+}  // namespace test
+}  // namespace fidl
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-namespace {
 
+namespace fidl {
+namespace test {
+namespace inheritancewithrecursivedecl {
+namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
 
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
-}  // namespace
-
+}  // namespace _internal
 Child::~Child() = default;
 
-const fidl_type_t* Child_RequestDecoder::GetType(uint64_t ordinal,
-                                                 bool* out_needs_response) {
+const fidl_type_t* ::fidl::test::inheritancewithrecursivedecl::
+    Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     case internal::kChild_First_Ordinal:
       *out_needs_response = false;
-      return &fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+      return &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
     case internal::kChild_Second_Ordinal:
       *out_needs_response = false;
-      return &fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+      return &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -207,16 +210,22 @@ void Child_Proxy::First(
         request) {
   ::fidl::Encoder _encoder(internal::kChild_First_Ordinal);
   controller_->Send(
-      &fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
-      Child_RequestEncoder::First(&_encoder, &request), nullptr);
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
+      ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
+          &_encoder, &request),
+      nullptr);
 }
 void Child_Proxy::Second(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_Ordinal);
   controller_->Send(
-      &fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
-      Child_RequestEncoder::Second(&_encoder, &request), nullptr);
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
+      ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
+          &_encoder, &request),
+      nullptr);
 }
 
 Child_Stub::Child_Stub(Child_clazz* impl) : impl_(impl) { (void)impl_; }
@@ -229,7 +238,8 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                   ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
-      Child_RequestDecoder::GetType(message.ordinal(), &needs_response);
+      ::fidl::test::inheritancewithrecursivedecl::Child_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -283,8 +293,10 @@ zx_status_t Child_SyncProxy::First(
         request) {
   ::fidl::Encoder _encoder(internal::kChild_First_Ordinal);
   return proxy_.Send(
-      &fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
-      Child_RequestEncoder::First(&_encoder, &request));
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
+      ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
+          &_encoder, &request));
 }
 
 zx_status_t Child_SyncProxy::Second(
@@ -292,12 +304,12 @@ zx_status_t Child_SyncProxy::Second(
         request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_Ordinal);
   return proxy_.Send(
-      &fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
-      Child_RequestEncoder::Second(&_encoder, &request));
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
+      ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
+          &_encoder, &request));
 }
-
-#endif  // __Fuchsia__
-
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl
+#endif  // __Fuchsia__

@@ -54,6 +54,10 @@ func NewFidlGenerator(mode CodeGenerationMode) *FidlGenerator {
 		"Eq":                     func(a interface{}, b interface{}) bool { return a == b },
 		"IncludeDomainObjects":   func() bool { return mode == Monolithic || mode == OnlyGenerateDomainObjects },
 		"IncludeProxiesAndStubs": func() bool { return mode == Monolithic },
+		"EnsureNamespace":        cpp.EnsureNamespace,
+		"PushNamespace":          cpp.PushNamespace,
+		"PopNamespace":           cpp.PopNamespace,
+		"EndOfFile":              cpp.EndOfFile,
 	})
 
 	// Natural types templates

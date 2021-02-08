@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace struct_ {
-
 extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
 const fidl_type_t* Simple::FidlType = &fidl_test_struct_SimpleTable;
 
@@ -41,6 +40,7 @@ zx_status_t Simple::Clone(Simple* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
 const fidl_type_t* BasicStruct::FidlType = &fidl_test_struct_BasicStructTable;
 
@@ -74,15 +74,11 @@ zx_status_t BasicStruct::Clone(BasicStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace struct_
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace struct_ {}  // namespace struct_
+
+}  // namespace struct_
 }  // namespace test
 }  // namespace fidl

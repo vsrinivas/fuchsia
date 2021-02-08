@@ -35,15 +35,14 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/vmo.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace handlesintypes {
-
 namespace wire {
 
 enum class obj_type : uint32_t {
@@ -54,23 +53,22 @@ enum class obj_type : uint32_t {
 };
 
 }  // namespace wire
-
 using obj_type = wire::obj_type;
-
 namespace wire {
+
 class UnionWithHandle;
 }  // namespace wire
 using UnionWithHandle = wire::UnionWithHandle;
 namespace wire {
+
 class TableWithHandle;
-}  // namespace wire
-namespace wire {
+
 struct HandlesInTypes;
 }  // namespace wire
-using HandlesInTypes = wire::HandlesInTypes;  // struct
+using HandlesInTypes = wire::HandlesInTypes;
+namespace wire {
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
@@ -175,13 +173,9 @@ class UnionWithHandle {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
-
-}  // namespace wire
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-namespace wire {
 
 extern "C" const fidl_type_t fidl_test_handlesintypes_TableWithHandleTable;
 
@@ -472,13 +466,13 @@ class TableWithHandle::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableWithHandle::Frame frame_;
 };
-}  // namespace wire
 
+}  // namespace wire
 using TableWithHandle = wire::TableWithHandle;
+namespace wire {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
 
 struct HandlesInTypes {
@@ -596,14 +590,13 @@ struct HandlesInTypes {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
+}  // namespace wire
 }  // namespace handlesintypes
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -667,14 +660,13 @@ static_assert(
     sizeof(::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes) ==
     ::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes::PrimarySize);
 #endif  // __Fuchsia__
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace handlesintypes {}  // namespace handlesintypes
+namespace handlesintypes {
+namespace wire {}  // namespace wire
+}  // namespace handlesintypes
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

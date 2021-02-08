@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace emptystruct {
-
 extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
 const fidl_type_t* Empty::FidlType = &fidl_test_emptystruct_EmptyTable;
 
@@ -36,6 +35,7 @@ zx_status_t Empty::Clone(Empty* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 }  // namespace emptystruct
 }  // namespace test
 }  // namespace fidl

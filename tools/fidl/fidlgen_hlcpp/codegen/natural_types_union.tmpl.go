@@ -6,30 +6,33 @@ package codegen
 
 const unionTemplate = `
 {{- define "UnionForwardDeclaration" }}
-class {{ .Name }};
+{{ EnsureNamespace .Decl.Natural }}
+class {{ .Decl.Natural.Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "UnionDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 {{- range .DocComments }}
 ///{{ . }}
 {{- end }}
-class {{ .Name }} final {
+class {{ .Decl.Natural.Name }} final {
  public:
  static const fidl_type_t* FidlType;
 
-  {{ .Name }}();
-  ~{{ .Name }}();
+  {{ .Decl.Natural.Name }}();
+  ~{{ .Decl.Natural.Name }}();
 
-  {{ .Name }}({{ .Name }}&&);
-  {{ .Name }}& operator=({{ .Name }}&&);
+  {{ .Decl.Natural.Name }}({{ .Decl.Natural.Name }}&&);
+  {{ .Decl.Natural.Name }}& operator=({{ .Decl.Natural.Name }}&&);
 
   {{ range .Members }}
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.NatFullDecl }}&&);
+  static {{ $.Decl.Natural.Name }} With{{ .UpperCamelCaseName }}({{ .Type.Natural }}&&);
   {{- end }}
 
   {{/* There are two different tag types here:
@@ -69,12 +72,12 @@ class {{ .Name }} final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
+  static inline ::std::unique_ptr<{{ .Decl.Natural.Name }}> New() { return ::std::make_unique<{{ .Decl.Natural.Name }}>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
               fit::optional<::fidl::HandleInformation> maybe_handle_info = fit::nullopt);
-  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
-  zx_status_t Clone({{ .Name }}* result) const;
+  static void Decode(::fidl::Decoder* decoder, {{ .Decl.Natural.Name }}* value, size_t offset);
+  zx_status_t Clone({{ .Decl.Natural.Name }}* result) const;
 
   bool has_invalid_tag() const {
     return tag_ == Invalid;
@@ -86,22 +89,22 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Type.NatFullDecl }}& {{ .Name }}() {
+  {{ .Type.Natural }}& {{ .Name }}() {
     EnsureStorageInitialized(Tag::{{ .TagName }});
     return {{ .StorageName }};
   }
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  const {{ .Type.NatFullDecl }}& {{ .Name }}() const {
+  const {{ .Type.Natural }}& {{ .Name }}() const {
     ZX_ASSERT(is_{{ .Name }}());
     return {{ .StorageName }};
   }
-  {{ $.Name }}& set_{{ .Name }}({{ .Type.NatFullDecl }} value);
+  {{ $.Decl.Natural.Name }}& set_{{ .Name }}({{ .Type.Natural }} value);
   {{- end }}
 
   {{- if .IsFlexible }}
-  {{ .Name }}& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }});
+  {{ .Decl.Natural.Name }}& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }});
   {{- end }}
 
   Tag Which() const {
@@ -148,26 +151,26 @@ class {{ .Name }} final {
   {{- end }}
 {{- end }}
 
-  friend ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>;
+  friend ::fidl::Equality<{{ .Decl.Natural }}>;
 
   {{- if .Result }}
-  {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>&& result) {
+  {{ .Decl.Natural.Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl.Natural }}>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       {{- if eq 0 .Result.ValueArity }}
-      set_response({{ .Result.ValueStructDecl }}{});
+      set_response({{ .Result.ValueStructDecl.Natural }}{});
       {{- else }}
-      set_response({{ .Result.ValueStructDecl }}{result.take_value()});
+      set_response({{ .Result.ValueStructDecl.Natural }}{result.take_value()});
       {{- end }}
     } else {
       set_err(std::move(result.take_error()));
     }
   }
-  {{ .Name }}(fit::ok_result<{{ .Result.ValueDecl }}>&& result)
-    : {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
-  {{ .Name }}(fit::error_result<{{ .Result.ErrorDecl }}>&& result)
-    : {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
-  operator fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>() && {
+  {{ .Decl.Natural.Name }}(fit::ok_result<{{ .Result.ValueDecl }}>&& result)
+    : {{ .Decl.Natural.Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl.Natural }}>(std::move(result))) { }
+  {{ .Decl.Natural.Name }}(fit::error_result<{{ .Result.ErrorDecl.Natural }}>&& result)
+    : {{ .Decl.Natural.Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl.Natural }}>(std::move(result))) { }
+  operator fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl.Natural }}>() && {
     if (is_err()) {
       return fit::error(err());
     }
@@ -189,7 +192,7 @@ class {{ .Name }} final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
   {{- range .Members }}
-    {{ .Type.NatFullDecl }} {{ .StorageName }};
+    {{ .Type.Natural }} {{ .StorageName }};
   {{- end }}
   {{- if .IsFlexible }}
     {{ if .IsResourceType }}::fidl::UnknownData{{ else }}std::vector<uint8_t>{{ end }} unknown_data_;
@@ -197,37 +200,40 @@ class {{ .Name }} final {
   };
 };
 
-inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
+inline zx_status_t Clone(const {{ .Decl.Natural }}& value,
+                         {{ .Decl.Natural }}* result) {
   return value.Clone(result);
 }
 
-using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
+using {{ .Decl.Natural.Name }}Ptr = ::std::unique_ptr<{{ .Decl.Natural.Name }}>;
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{ end }}
 
 {{- end }}
 
 {{- define "UnionDefinition" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{- if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+const fidl_type_t* {{ .Decl.Natural.Name }}::FidlType = &{{ .TableType }};
 
-{{ .Name }}::{{ .Name }}() {}
+{{ .Decl.Natural.Name }}::{{ .Decl.Natural.Name }}() {}
 
-{{ .Name }}::~{{ .Name }}() {
+{{ .Decl.Natural.Name }}::~{{ .Decl.Natural.Name }}() {
   Destroy();
 }
 
-{{ .Name }}::{{ .Name }}({{ .Name }}&& other) : tag_(other.tag_) {
+{{ .Decl.Natural.Name }}::{{ .Decl.Natural.Name }}({{ .Decl.Natural.Name }}&& other) : tag_(other.tag_) {
   switch (tag_) {
   {{- range .Members }}
     case Tag::{{ .TagName }}:
     {{- if .Type.NeedsDtor }}
-      new (&{{ .StorageName }}) {{ .Type.NatFullDecl }}();
+      new (&{{ .StorageName }}) {{ .Type.Natural }}();
     {{- end }}
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
@@ -243,7 +249,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   }
 }
 
-{{ .Name }}& {{ .Name }}::operator=({{ .Name }}&& other) {
+{{ .Decl.Natural.Name }}& {{ .Decl.Natural.Name }}::operator=({{ .Decl.Natural.Name }}&& other) {
   if (this != &other) {
     Destroy();
     tag_ = other.tag_;
@@ -251,7 +257,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     {{- range .Members }}
       case Tag::{{ .TagName }}:
         {{- if .Type.NeedsDtor }}
-        new (&{{ .StorageName }}) {{ .Type.NatFullDecl }}();
+        new (&{{ .StorageName }}) {{ .Type.Natural }}();
         {{- end }}
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
         break;
@@ -270,14 +276,14 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 }
 
 {{ range .Members -}}
-{{ $.Name }} {{ $.Name }}::With{{ .UpperCamelCaseName }}({{ .Type.NatFullDecl }}&& val) {
-  {{ $.Name }} result;
+{{ $.Decl.Natural.Name }} {{ $.Decl.Natural.Name }}::With{{ .UpperCamelCaseName }}({{ .Type.Natural }}&& val) {
+  {{ $.Decl.Natural.Name }} result;
   result.set_{{ .Name }}(std::move(val));
   return result;
 }
 {{ end }}
 
-void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
+void {{ .Decl.Natural.Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
                          fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
@@ -287,7 +293,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
   switch (Which()) {
     {{- range .Members }}
     case Tag::{{ .TagName }}: {
-      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.NatFullDecl }}, ::fidl::Encoder>(encoder));      
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Natural }}, ::fidl::Encoder>(encoder));      
       {{- if .HandleInformation }}
       ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset, ::fidl::HandleInformation {
         .object_type = {{ .HandleInformation.ObjectType }},
@@ -329,7 +335,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
   }
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
+void {{ .Decl.Natural.Name }}::Decode(::fidl::Decoder* decoder, {{ .Decl.Natural.Name }}* value, size_t offset) {
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
@@ -346,7 +352,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.NeedsDtor }}
-      new (&value->{{ .StorageName }}) {{ .Type.NatFullDecl }}();
+      new (&value->{{ .StorageName }}) {{ .Type.Natural }}();
       {{- end }}
       ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
       break;
@@ -367,7 +373,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 {{ end }}
 }
 
-zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
+zx_status_t {{ .Decl.Natural.Name }}::Clone({{ .Decl.Natural.Name }}* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
@@ -376,7 +382,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
     {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.NeedsDtor }}
-      new (&result->{{ .StorageName }}) {{ .Type.NatFullDecl }}();
+      new (&result->{{ .StorageName }}) {{ .Type.Natural }}();
       {{- end }}
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
@@ -391,7 +397,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 
 {{- range $member := .Members }}
 
-{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.NatFullDecl }} value) {
+{{ $.Decl.Natural.Name }}& {{ $.Decl.Natural.Name }}::set_{{ .Name }}({{ .Type.Natural }} value) {
   EnsureStorageInitialized(Tag::{{ .TagName }});
   {{ .StorageName }} = std::move(value);
   return *this;
@@ -400,7 +406,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- end }}
 
 {{- if .IsFlexible }}
-{{ .Name }}& {{ .Name }}::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }}) {
+{{ .Decl.Natural.Name }}& {{ .Decl.Natural.Name }}::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }}) {
   EnsureStorageInitialized(ordinal);
   {{- if .IsResourceType }}
   unknown_data_.bytes = std::move(bytes);
@@ -412,7 +418,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 }
 {{- end }}
 
-void {{ .Name }}::Destroy() {
+void {{ .Decl.Natural.Name }}::Destroy() {
   switch (tag_) {
   {{- range .Members }}
     case Tag::{{ .TagName }}:
@@ -435,7 +441,7 @@ void {{ .Name }}::Destroy() {
   tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
-void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+void {{ .Decl.Natural.Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   if (tag_ != tag) {
     Destroy();
     tag_ = tag;
@@ -444,7 +450,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
       {{- range .Members }}
       case Tag::{{ .TagName }}:
-        new (&{{ .StorageName }}) {{ .Type.NatFullDecl }}();
+        new (&{{ .StorageName }}) {{ .Type.Natural }}();
         break;
       {{- end }}
       default:
@@ -456,6 +462,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{ end }}
 
@@ -464,19 +471,20 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 {{- define "UnionTraits" }}
 {{- if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 template <>
-struct IsFidlXUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+struct IsFidlXUnion<{{ .Decl.Natural }}> : public std::true_type {};
 
 template <>
-struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
+struct CodingTraits<{{ .Decl.Natural }}>
+    : public EncodableCodingTraits<{{ .Decl.Natural }}, {{ .InlineSize }}> {};
 
 template <>
-struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
+struct CodingTraits<std::unique_ptr<{{ .Decl.Natural }}>> {
   static constexpr size_t inline_size_v1_no_ee = {{ .InlineSize }};
 
-  static void Encode(Encoder* encoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset,
+  static void Encode(Encoder* encoder, std::unique_ptr<{{ .Decl.Natural }}>* value, size_t offset,
                      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     {{/* TODO(fxbug.dev/7805): Disallow empty xunions (but permit nullable/optional
          xunions). */ -}}
@@ -487,37 +495,37 @@ struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
+  static void Decode(Decoder* decoder, std::unique_ptr<{{ .Decl.Natural }}>* value, size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
     }
 
-    value->reset(new {{ .Namespace }}::{{ .Name }});
+    value->reset(new {{ .Decl.Natural }});
 
-    {{ .Namespace }}::{{ .Name }}::Decode(decoder, value->get(), offset);
+    {{ .Decl.Natural }}::Decode(decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
-  return {{ .Namespace }}::Clone(value, result);
+inline zx_status_t Clone(const {{ .Decl.Natural }}& value,
+                         {{ .Decl.Natural }}* result) {
+  return {{ .Decl.Natural.Namespace }}::Clone(value, result);
 }
 
 template<>
-struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
+struct Equality<{{ .Decl.Natural }}> {
+  bool operator()(const {{ .Decl.Natural }}& _lhs, const {{ .Decl.Natural }}& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     {{ with $xunion := . -}}
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>({{ $xunion.Namespace }}::{{ $xunion.Name }}::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>({{ $xunion.Decl.Natural }}::Tag::Invalid):
         return true;
     {{- range .Members }}
-      case {{ $xunion.Namespace }}::{{ $xunion.Name }}::Tag::{{ .TagName }}:
+      case {{ $xunion.Decl.Natural }}::Tag::{{ .TagName }}:
         return ::fidl::Equals(_lhs.{{ .StorageName }}, _rhs.{{ .StorageName }});
       {{- end }}
       {{ if .IsFlexible -}}
@@ -532,6 +540,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
   }
 };
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{ end }}
 

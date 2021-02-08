@@ -4,14 +4,4 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace consts {
-const char USERNAME[] = "\"squeenze\"";
-
-}  // namespace consts
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
+const char* ::llcpp::fidl::test::consts::USERNAME = "\"squeenze\"";

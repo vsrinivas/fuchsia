@@ -4,10 +4,3 @@
 
 #include <fidl/test/typealiases/cpp/fidl.h>
 #include <someotherlibrary/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace typealiases {
-namespace testing {}  // namespace testing
-}  // namespace typealiases
-}  // namespace test
-}  // namespace fidl

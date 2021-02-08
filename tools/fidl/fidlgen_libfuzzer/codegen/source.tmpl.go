@@ -58,16 +58,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   zx_status_t status_;
 {{- range $protocolIdx, $protocol := $protocols }}{{ if len $protocol.Methods }}
   if (protocol_selection_ == {{ $protocolIdx }}) {
-#if !defined(PROTOCOL_{{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }})
+#if !defined(PROTOCOL_{{ $protocol.FuzzingName }})
     // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}\n");
+    xprintf("Early exit: Chose disabled protocol: {{ $protocol.FuzzingName }}\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr<{{ $protocol.Namespace }}::{{ $protocol.Name }}> protocol_;
+    ::fidl::InterfacePtr<{{ $protocol.Decl.Natural }}> protocol_;
 
-    xprintf("Starting {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }} service\n");
-    ::fidl::fuzzing::Fuzzer<{{ $protocol.Namespace }}::{{ $protocol.Name }}> fuzzer_(loop_->dispatcher());
+    xprintf("Starting {{ $protocol.FuzzingName }} service\n");
+    ::fidl::fuzzing::Fuzzer<{{ $protocol.Decl.Natural }}> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
@@ -96,7 +96,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       return 0;
 #else
       const size_t min_size_ = {{ range $paramIdx, $param := $method.Request }}
-        {{- if $paramIdx }} + {{ end }}MinSize<{{ $param.Type.NatDecl }}>()
+        {{- if $paramIdx }} + {{ end }}MinSize<{{ $param.Type.Natural }}>()
       {{- end }};
 
       // Must have enough bytes for input.
@@ -112,12 +112,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
       size_t param_size_;
   {{- range $method.Request }}
-      param_size_ = MinSize<{{ .Type.NatDecl }}>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for {{ .Type.NatDecl }} {{ .Name }}\n", param_size_);
-      {{ .Type.NatDecl }} {{ .Name }} = Allocate<{{ .Type.NatDecl }}>{}(&src_, &param_size_);
+      param_size_ = MinSize<{{ .Type.Natural }}>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for {{ .Type.Natural }} {{ .Name }}\n", param_size_);
+      {{ .Type.Natural }} {{ .Name }} = Allocate<{{ .Type.Natural }}>{}(&src_, &param_size_);
   {{- end }}
 
-      xprintf("Invoking method {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}.{{ $method.Name }}\n");
+      xprintf("Invoking method {{ $protocol.FuzzingName }}.{{ $method.Name }}\n");
       protocol_->{{ $method.Name }}({{ range $paramIdx, $param := $method.Request }}
           {{- if $paramIdx }}, {{ end -}}
           std::move({{ $param.Name }})
@@ -126,9 +126,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           {{- if len $method.Request }}, {{ end -}}
           [signaller = fuzzer_.NewCallbackSignaller()]({{ range $paramIdx, $param := $method.Response }}
             {{- if $paramIdx }}, {{ end -}}
-            {{ $param.Type.NatDecl }} {{ $param.Name }}
+            {{ $param.Type.Natural }} {{ $param.Name }}
           {{- end }}) {
-        xprintf("Invoked {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}.{{ $method.Name }}\n");
+        xprintf("Invoked {{ $protocol.FuzzingName }}.{{ $method.Name }}\n");
         zx_status_t status_ = signaller.SignalCallback();
         if (status_ != ZX_OK) {
           xprintf("signaller.SignalCallback returned bad status: %d\n", status_);

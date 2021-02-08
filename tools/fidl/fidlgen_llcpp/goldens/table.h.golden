@@ -34,32 +34,24 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace table {
-
 namespace wire {
 class SimpleTable;
-}  // namespace wire
-namespace wire {
-class ReverseOrdinalTable;
-}  // namespace wire
-namespace wire {
-class OlderSimpleTable;
-}  // namespace wire
-namespace wire {
-class NewerSimpleTable;
-}  // namespace wire
-namespace wire {
-class EmptyTable;
-}  // namespace wire
 
-namespace wire {
+class ReverseOrdinalTable;
+
+class OlderSimpleTable;
+
+class NewerSimpleTable;
+
+class EmptyTable;
 
 extern "C" const fidl_type_t fidl_test_table_SimpleTableTable;
 
@@ -420,10 +412,9 @@ class SimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   SimpleTable::Frame frame_;
 };
+
 }  // namespace wire
-
 using SimpleTable = wire::SimpleTable;
-
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_ReverseOrdinalTableTable;
@@ -866,10 +857,9 @@ class ReverseOrdinalTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   ReverseOrdinalTable::Frame frame_;
 };
+
 }  // namespace wire
-
 using ReverseOrdinalTable = wire::ReverseOrdinalTable;
-
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_OlderSimpleTableTable;
@@ -1152,10 +1142,9 @@ class OlderSimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   OlderSimpleTable::Frame frame_;
 };
+
 }  // namespace wire
-
 using OlderSimpleTable = wire::OlderSimpleTable;
-
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_NewerSimpleTableTable;
@@ -1599,10 +1588,9 @@ class NewerSimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   NewerSimpleTable::Frame frame_;
 };
+
 }  // namespace wire
-
 using NewerSimpleTable = wire::NewerSimpleTable;
-
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_EmptyTableTable;
@@ -1797,15 +1785,14 @@ class EmptyTable::UnownedBuilder final {
  private:
   uint64_t max_ordinal_ = 0;
 };
+
 }  // namespace wire
-
 using EmptyTable = wire::EmptyTable;
-
+namespace wire {}  // namespace wire
 }  // namespace table
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1870,14 +1857,13 @@ struct IsTableBuilder<::llcpp::fidl::test::table::wire::EmptyTable::Builder>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::table::wire::EmptyTable>);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace table {}  // namespace table
+namespace table {
+namespace wire {}  // namespace wire
+}  // namespace table
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

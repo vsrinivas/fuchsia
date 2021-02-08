@@ -91,7 +91,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           "Early exit: Chose disabled method: RequestStrictResponseFlexible\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize<StrictFoo>();
+      const size_t min_size_ =
+          MinSize< ::fidl::test::requestflexibleenvelope::StrictFoo>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -107,9 +108,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
               slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize<StrictFoo>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for StrictFoo s\n", param_size_);
-      StrictFoo s = Allocate<StrictFoo>{}(&src_, &param_size_);
+      param_size_ =
+          MinSize< ::fidl::test::requestflexibleenvelope::StrictFoo>() +
+          slack_size_per_param;
+      xprintf(
+          "Allocating %zu bytes for "
+          "::fidl::test::requestflexibleenvelope::StrictFoo s\n",
+          param_size_);
+      ::fidl::test::requestflexibleenvelope::StrictFoo s =
+          Allocate< ::fidl::test::requestflexibleenvelope::StrictFoo>{}(
+              &src_, &param_size_);
 
       xprintf(
           "Invoking method "
@@ -117,7 +125,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           "RequestStrictResponseFlexible\n");
       protocol_->RequestStrictResponseFlexible(
           std::move(s),
-          [signaller = fuzzer_.NewCallbackSignaller()](FlexibleFoo f) {
+          [signaller = fuzzer_.NewCallbackSignaller()](
+              ::fidl::test::requestflexibleenvelope::FlexibleFoo f) {
             xprintf(
                 "Invoked "
                 "fidl_test_requestflexibleenvelope_Protocol."
@@ -137,7 +146,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           "Early exit: Chose disabled method: RequestFlexibleResponseStrict\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize<FlexibleFoo>();
+      const size_t min_size_ =
+          MinSize< ::fidl::test::requestflexibleenvelope::FlexibleFoo>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -153,9 +163,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
               slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize<FlexibleFoo>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for FlexibleFoo s\n", param_size_);
-      FlexibleFoo s = Allocate<FlexibleFoo>{}(&src_, &param_size_);
+      param_size_ =
+          MinSize< ::fidl::test::requestflexibleenvelope::FlexibleFoo>() +
+          slack_size_per_param;
+      xprintf(
+          "Allocating %zu bytes for "
+          "::fidl::test::requestflexibleenvelope::FlexibleFoo s\n",
+          param_size_);
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo s =
+          Allocate< ::fidl::test::requestflexibleenvelope::FlexibleFoo>{}(
+              &src_, &param_size_);
 
       xprintf(
           "Invoking method "
@@ -163,7 +180,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           "RequestFlexibleResponseStrict\n");
       protocol_->RequestFlexibleResponseStrict(
           std::move(s),
-          [signaller = fuzzer_.NewCallbackSignaller()](StrictFoo f) {
+          [signaller = fuzzer_.NewCallbackSignaller()](
+              ::fidl::test::requestflexibleenvelope::StrictFoo f) {
             xprintf(
                 "Invoked "
                 "fidl_test_requestflexibleenvelope_Protocol."

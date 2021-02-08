@@ -35,32 +35,39 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace protocolrequest {
-
 class Parent;
+
 class Child;
 
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestResponseTable;
 
@@ -80,7 +87,8 @@ class Parent final {
     GetChildResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocolrequest_ParentGetChildResponseTable;
+        &::llcpp::fidl::test::protocolrequest::
+            fidl_test_protocolrequest_ParentGetChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -335,7 +343,8 @@ class Parent final {
     GetChildRequestResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
+        &::llcpp::fidl::test::protocolrequest::
+            fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -594,7 +603,8 @@ class Parent final {
     explicit TakeChildRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocolrequest_ParentTakeChildRequestTable;
+        &::llcpp::fidl::test::protocolrequest::
+            fidl_test_protocolrequest_ParentTakeChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -733,7 +743,8 @@ class Parent final {
     explicit TakeChildRequestRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+        &::llcpp::fidl::test::protocolrequest::
+            fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1121,14 +1132,16 @@ class Parent final {
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::GetChild GetChild(
-        ::fidl::UnownedClientEnd<Parent> _client_end) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end) {
       return ResultOf::GetChild(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::GetChild GetChild(
-        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::GetChild(_client_end, _response_buffer.data,
                                        _response_buffer.capacity);
@@ -1137,14 +1150,16 @@ class Parent final {
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::GetChildRequest GetChildRequest(
-        ::fidl::UnownedClientEnd<Parent> _client_end) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end) {
       return ResultOf::GetChildRequest(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::GetChildRequest GetChildRequest(
-        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::GetChildRequest(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -1153,7 +1168,8 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeChild TakeChild(
-        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end,
         ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
       return ResultOf::TakeChild(_client_end, c);
     }
@@ -1161,7 +1177,8 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::TakeChild TakeChild(
-        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
       return UnownedResultOf::TakeChild(_client_end, _request_buffer.data,
@@ -1171,7 +1188,8 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeChildRequest TakeChildRequest(
-        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end,
         ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
       return ResultOf::TakeChildRequest(_client_end, r);
     }
@@ -1179,7 +1197,8 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::TakeChildRequest TakeChildRequest(
-        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
       return UnownedResultOf::TakeChildRequest(
@@ -1556,7 +1575,6 @@ class Child final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1649,11 +1667,8 @@ static_assert(
     offsetof(
         ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest,
         r) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace protocolrequest {

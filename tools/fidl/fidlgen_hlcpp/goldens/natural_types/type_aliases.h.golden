@@ -73,9 +73,6 @@ using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
 
 }  // namespace typealiases
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::typealiases::obj_type> {
   static constexpr size_t inline_size_old =
@@ -176,4 +173,5 @@ struct Equality<::fidl::test::typealiases::ExampleOfUseOfAliases> {
   }
 };
 #endif  // __Fuchsia__
+
 }  // namespace fidl

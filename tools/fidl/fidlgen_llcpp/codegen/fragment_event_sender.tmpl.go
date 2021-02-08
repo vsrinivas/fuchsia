@@ -14,6 +14,7 @@ const fragmentEventSenderTmpl = `
 {{- end }}
 
 {{- define "EventSenderDeclaration" }}
+{{ EnsureNamespace .Decl.Wire }}
 // |EventSender| owns a server endpoint of a channel speaking
 // the {{ .Name }} protocol, and can send events in that protocol.
 class {{ .Name }}::EventSender {
@@ -21,7 +22,7 @@ class {{ .Name }}::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  explicit EventSender(::fidl::ServerEnd<{{ .Namespace }}::{{ .Name }}> server_end)
+  explicit EventSender(::fidl::ServerEnd<{{ .Decl.Wire }}> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
@@ -99,7 +100,7 @@ class {{ .Name }}::WeakEventSender {
 {{- define "EventSenderDefinition" }}
   {{- range .Events }}
     {{- /* Managed */}}
-zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
+zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventManagedMethodSignature" . }} {
   {{ .Name }}Response::OwnedEncodedMessage _response{
       {{- template "PassthroughMessageParams" .Response -}}
@@ -110,7 +111,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
     {{- /* Caller-allocated */}}
     {{- if .Response }}
 {{ "" }}
-zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
+zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
       {{- template "CommaPassthroughMessageParams" .Response -}}

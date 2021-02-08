@@ -48,16 +48,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   zx_status_t status_;
   if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_fidl_test_union__TestProtocol)
+#if !defined(PROTOCOL_fidl_test_union_TestProtocol)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
-        "Early exit: Chose disabled protocol: fidl_test_union__TestProtocol\n");
+        "Early exit: Chose disabled protocol: fidl_test_union_TestProtocol\n");
     return 0;
 #else
 
     ::fidl::InterfacePtr< ::fidl::test::union_::TestProtocol> protocol_;
 
-    xprintf("Starting fidl_test_union__TestProtocol service\n");
+    xprintf("Starting fidl_test_union_TestProtocol service\n");
     ::fidl::fuzzing::Fuzzer< ::fidl::test::union_::TestProtocol> fuzzer_(
         loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {

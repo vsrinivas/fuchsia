@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
-
 extern "C" const fidl_type_t
     fidl_test_structdefaultvalueenumlibraryreference_FooTable;
 const fidl_type_t* Foo::FidlType =
@@ -38,16 +37,10 @@ zx_status_t Foo::Clone(Foo* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace structdefaultvalueenumlibraryreference
-}  // namespace test
-}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace fidl {
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
 
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test

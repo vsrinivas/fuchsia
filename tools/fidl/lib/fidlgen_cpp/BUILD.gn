@@ -11,6 +11,8 @@ go_library("fidlgen_cpp") {
     "clang_formatter.go",
     "enum.go",
     "ir.go",
+    "names.go",
+    "namespace.go",
     "typed_channel_migration.go",
   ]
 }

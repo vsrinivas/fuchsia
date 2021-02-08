@@ -3,12 +3,3 @@
 #include <fidl/test/transitivedependencies/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace transitivedependencies {}  // namespace transitivedependencies
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

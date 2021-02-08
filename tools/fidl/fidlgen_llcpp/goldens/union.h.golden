@@ -35,118 +35,141 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace union_ {
-
 namespace wire {
 class Union;
 }  // namespace wire
 using Union = wire::Union;
 namespace wire {
+
 struct StructWithNullableXUnion;
 }  // namespace wire
-using StructWithNullableXUnion = wire::StructWithNullableXUnion;  // struct
+using StructWithNullableXUnion = wire::StructWithNullableXUnion;
 namespace wire {
+
 class StrictUnion;
 }  // namespace wire
 using StrictUnion = wire::StrictUnion;
 namespace wire {
+
 class StrictSimpleXUnion;
 }  // namespace wire
 using StrictSimpleXUnion = wire::StrictSimpleXUnion;
 namespace wire {
+
 class StrictFoo;
 }  // namespace wire
 using StrictFoo = wire::StrictFoo;
 namespace wire {
+
 class StrictBoundedXUnion;
 }  // namespace wire
 using StrictBoundedXUnion = wire::StrictBoundedXUnion;
 namespace wire {
+
 class ReverseOrdinalUnion;
 }  // namespace wire
 using ReverseOrdinalUnion = wire::ReverseOrdinalUnion;
 namespace wire {
+
 struct Pizza;
 }  // namespace wire
-using Pizza = wire::Pizza;  // struct
+using Pizza = wire::Pizza;
 namespace wire {
+
 struct Pasta;
 }  // namespace wire
-using Pasta = wire::Pasta;  // struct
+using Pasta = wire::Pasta;
 namespace wire {
+
 class StrictPizzaOrPasta;
 }  // namespace wire
 using StrictPizzaOrPasta = wire::StrictPizzaOrPasta;
 namespace wire {
+
 class PizzaOrPasta;
 }  // namespace wire
 using PizzaOrPasta = wire::PizzaOrPasta;
 namespace wire {
+
 class FlexiblePizzaOrPasta;
 }  // namespace wire
 using FlexiblePizzaOrPasta = wire::FlexiblePizzaOrPasta;
 namespace wire {
+
 class ExplicitPizzaOrPasta;
 }  // namespace wire
 using ExplicitPizzaOrPasta = wire::ExplicitPizzaOrPasta;
 namespace wire {
+
 class OlderSimpleUnion;
 }  // namespace wire
 using OlderSimpleUnion = wire::OlderSimpleUnion;
+namespace wire {}  // namespace wire
 class TestProtocol;
 namespace wire {
 struct NullableUnionStruct;
 }  // namespace wire
-using NullableUnionStruct = wire::NullableUnionStruct;  // struct
+using NullableUnionStruct = wire::NullableUnionStruct;
 namespace wire {
+
 class NewerSimpleUnion;
 }  // namespace wire
 using NewerSimpleUnion = wire::NewerSimpleUnion;
 namespace wire {
+
 class FlexibleUnion;
 }  // namespace wire
 using FlexibleUnion = wire::FlexibleUnion;
 namespace wire {
+
 class FlexibleFoo;
 }  // namespace wire
 using FlexibleFoo = wire::FlexibleFoo;
 namespace wire {
+
 class FieldCollision;
 }  // namespace wire
 using FieldCollision = wire::FieldCollision;
 namespace wire {
+
 class ExplicitXUnion;
 }  // namespace wire
 using ExplicitXUnion = wire::ExplicitXUnion;
 namespace wire {
+
 class ExplicitUnion;
 }  // namespace wire
 using ExplicitUnion = wire::ExplicitUnion;
 namespace wire {
+
 class ExplicitStrictFoo;
 }  // namespace wire
 using ExplicitStrictFoo = wire::ExplicitStrictFoo;
 namespace wire {
+
 class ExplicitFoo;
 }  // namespace wire
 using ExplicitFoo = wire::ExplicitFoo;
 namespace wire {
+
 struct Empty;
 }  // namespace wire
-using Empty = wire::Empty;  // struct
+using Empty = wire::Empty;
 namespace wire {
+
 class XUnionContainingEmptyStruct;
 }  // namespace wire
 using XUnionContainingEmptyStruct = wire::XUnionContainingEmptyStruct;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_union_UnionTable;
 
 class Union {
@@ -391,9 +414,6 @@ class Union {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictUnionTable;
 
 class StrictUnion {
@@ -640,9 +660,6 @@ class StrictUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictSimpleXUnionTable;
 
 class StrictSimpleXUnion {
@@ -866,9 +883,6 @@ class StrictSimpleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictFooTable;
 
 class StrictFoo {
@@ -1029,9 +1043,6 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictBoundedXUnionTable;
 
 class StrictBoundedXUnion {
@@ -1139,9 +1150,6 @@ class StrictBoundedXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ReverseOrdinalUnionTable;
 
 class ReverseOrdinalUnion {
@@ -1308,9 +1316,6 @@ class ReverseOrdinalUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictPizzaOrPastaTable;
 
 class StrictPizzaOrPasta {
@@ -1491,9 +1496,6 @@ class StrictPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_PizzaOrPastaTable;
 
 class PizzaOrPasta {
@@ -1671,9 +1673,6 @@ class PizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FlexiblePizzaOrPastaTable;
 
 class FlexiblePizzaOrPasta {
@@ -1852,9 +1851,6 @@ class FlexiblePizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitPizzaOrPastaTable;
 
 class ExplicitPizzaOrPasta {
@@ -2035,9 +2031,6 @@ class ExplicitPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
@@ -2196,9 +2189,6 @@ class OlderSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_NewerSimpleUnionTable;
 
 class NewerSimpleUnion {
@@ -2425,9 +2415,6 @@ class NewerSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FlexibleUnionTable;
 
 class FlexibleUnion {
@@ -2673,9 +2660,6 @@ class FlexibleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FlexibleFooTable;
 
 class FlexibleFoo {
@@ -2834,9 +2818,6 @@ class FlexibleFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FieldCollisionTable;
 
 class FieldCollision {
@@ -2947,9 +2928,6 @@ class FieldCollision {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitXUnionTable;
 
 class ExplicitXUnion {
@@ -3106,9 +3084,6 @@ class ExplicitXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
 
 class ExplicitUnion {
@@ -3281,9 +3256,6 @@ class ExplicitUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitStrictFooTable;
 
 class ExplicitStrictFoo {
@@ -3448,9 +3420,6 @@ class ExplicitStrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitFooTable;
 
 class ExplicitFoo {
@@ -3609,9 +3578,6 @@ class ExplicitFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_XUnionContainingEmptyStructTable;
 
 class XUnionContainingEmptyStruct {
@@ -3724,9 +3690,6 @@ class XUnionContainingEmptyStruct {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
@@ -3820,9 +3783,7 @@ struct StructWithNullableXUnion {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_PizzaTable;
 
 struct Pizza {
@@ -3915,9 +3876,7 @@ struct Pizza {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_PastaTable;
 
 struct Pasta {
@@ -4008,14 +3967,17 @@ struct Pasta {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
@@ -4035,7 +3997,8 @@ class TestProtocol final {
     StrictXUnionHenceResponseMayBeStackAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+        &::llcpp::fidl::test::union_::
+            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -4306,7 +4269,8 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+        &::llcpp::fidl::test::union_::
+            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -4849,7 +4813,8 @@ class TestProtocol final {
     // necessary.
     static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<TestProtocol> _client_end) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+            _client_end) {
       return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
           _client_end);
     }
@@ -4858,7 +4823,8 @@ class TestProtocol final {
     // response buffers.
     static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::UnownedClientEnd<TestProtocol> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -4868,7 +4834,8 @@ class TestProtocol final {
     // heap-allocated.
     static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<TestProtocol> _client_end) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+            _client_end) {
       return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
           _client_end);
     }
@@ -4877,7 +4844,8 @@ class TestProtocol final {
     // response buffers.
     static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::UnownedClientEnd<TestProtocol> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -5073,8 +5041,8 @@ class TestProtocol final {
   class EventSender;
   class WeakEventSender;
 };
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_union_NullableUnionStructTable;
 
 struct NullableUnionStruct {
@@ -5170,9 +5138,7 @@ struct NullableUnionStruct {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_union_EmptyTable;
 
 struct Empty {
@@ -5263,13 +5229,12 @@ struct Empty {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace union_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -5582,14 +5547,12 @@ struct IsUnion<::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace union_ {
+namespace wire {}  // namespace wire
 
 class TestProtocol::AsyncEventHandler
     : public TestProtocol::EventHandlerInterface {
@@ -5743,6 +5706,7 @@ class TestProtocol::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<TestProtocol>> binding_;
 };
 
+namespace wire {}  // namespace wire
 }  // namespace union_
 }  // namespace test
 }  // namespace fidl

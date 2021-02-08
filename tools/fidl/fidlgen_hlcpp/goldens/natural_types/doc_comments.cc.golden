@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace doccomments {
-
 extern "C" const fidl_type_t fidl_test_doccomments_TableTable;
 const fidl_type_t* Table::FidlType = &fidl_test_doccomments_TableTable;
 
@@ -154,6 +153,7 @@ zx_status_t Table::Clone(Table* result) const {
   }
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
+
 extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
 const fidl_type_t* Struct::FidlType = &fidl_test_doccomments_StructTable;
 
@@ -180,6 +180,7 @@ zx_status_t Struct::Clone(Struct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;
 const fidl_type_t* StrictUnion::FidlType =
     &fidl_test_doccomments_StrictUnionTable;
@@ -319,12 +320,14 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 #if (__cplusplus < 201703)
 constexpr const ::fidl::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO =
     ::fidl::test::doccomments::MyFlexibleEnum(1u);
 constexpr const ::fidl::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR =
     ::fidl::test::doccomments::MyFlexibleEnum(2u);
 #endif  // (__cplusplus < 201703)
+
 #if (__cplusplus < 201703)
 constexpr const ::fidl::test::doccomments::MyFlexibleBits
     MyFlexibleBits::MY_FIRST_BIT =
@@ -336,6 +339,7 @@ constexpr const ::fidl::test::doccomments::MyFlexibleBits
     MyFlexibleBits::kMask = ::fidl::test::doccomments::MyFlexibleBits(3u);
 
 #endif  // (__cplusplus < 201703)
+
 extern "C" const fidl_type_t fidl_test_doccomments_FlexibleUnionTable;
 const fidl_type_t* FlexibleUnion::FidlType =
     &fidl_test_doccomments_FlexibleUnionTable;
@@ -504,6 +508,7 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 }  // namespace doccomments
 }  // namespace test
 }  // namespace fidl

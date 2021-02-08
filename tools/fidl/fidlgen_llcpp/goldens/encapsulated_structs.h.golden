@@ -35,42 +35,46 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/handle.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
-
 namespace wire {
 struct NonInlineStructTestStruct;
 }  // namespace wire
-using NonInlineStructTestStruct = wire::NonInlineStructTestStruct;  // struct
+using NonInlineStructTestStruct = wire::NonInlineStructTestStruct;
 namespace wire {
+
 struct Int8Int32;
 }  // namespace wire
-using Int8Int32 = wire::Int8Int32;  // struct
+using Int8Int32 = wire::Int8Int32;
 namespace wire {
+
 struct Int16Int8;
 }  // namespace wire
-using Int16Int8 = wire::Int16Int8;  // struct
+using Int16Int8 = wire::Int16Int8;
 namespace wire {
+
 struct ArrayInt16Int8;
 }  // namespace wire
-using ArrayInt16Int8 = wire::ArrayInt16Int8;  // struct
+using ArrayInt16Int8 = wire::ArrayInt16Int8;
 namespace wire {
+
 struct StructPaddingTestStruct;
 }  // namespace wire
-using StructPaddingTestStruct = wire::StructPaddingTestStruct;  // struct
+using StructPaddingTestStruct = wire::StructPaddingTestStruct;
 namespace wire {
+
 struct TopLevelStruct;
 }  // namespace wire
-using TopLevelStruct = wire::TopLevelStruct;  // struct
+using TopLevelStruct = wire::TopLevelStruct;
+namespace wire {
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
 
@@ -179,10 +183,8 @@ struct NonInlineStructTestStruct {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int8Int32Table;
 
 struct Int8Int32 {
@@ -276,9 +278,7 @@ struct Int8Int32 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int16Int8Table;
 
 struct Int16Int8 {
@@ -372,9 +372,7 @@ struct Int16Int8 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
 
 struct ArrayInt16Int8 {
@@ -468,9 +466,7 @@ struct ArrayInt16Int8 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
 
@@ -569,10 +565,8 @@ struct StructPaddingTestStruct {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
 
 struct TopLevelStruct {
@@ -679,14 +673,13 @@ struct TopLevelStruct {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
+}  // namespace wire
 }  // namespace encapsulatedstructs
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 #ifdef __Fuchsia__
@@ -815,14 +808,13 @@ static_assert(
     ::llcpp::fidl::test::encapsulatedstructs::wire::TopLevelStruct::
         PrimarySize);
 #endif  // __Fuchsia__
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace encapsulatedstructs {}  // namespace encapsulatedstructs
+namespace encapsulatedstructs {
+namespace wire {}  // namespace wire
+}  // namespace encapsulatedstructs
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

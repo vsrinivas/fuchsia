@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/unionsandwich/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace unionsandwich {
-namespace testing {}  // namespace testing
-}  // namespace unionsandwich
-}  // namespace test
-}  // namespace fidl

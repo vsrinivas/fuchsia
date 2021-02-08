@@ -5,21 +5,25 @@
 #include <memory>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
-
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 7703637629648977298lu;
+
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
 }  // namespace
-Top::ResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client) {
+::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::ResultOf::
+    GetFoo::GetFoo(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            _client) {
   GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
@@ -28,8 +32,12 @@ Top::ResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client) {
   error_ = _request.error();
 }
 
-Top::ResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client,
-                              zx_time_t _deadline) {
+::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::ResultOf::
+    GetFoo::GetFoo(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            _client,
+        zx_time_t _deadline) {
   GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
@@ -38,9 +46,12 @@ Top::ResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client,
   error_ = _request.error();
 }
 
-Top::UnownedResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client,
-                                     uint8_t* _response_bytes,
-                                     uint32_t _response_byte_capacity)
+::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    UnownedResultOf::GetFoo::GetFoo(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            _client,
+        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(_client, _response_bytes,
@@ -49,30 +60,42 @@ Top::UnownedResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client,
   error_ = _request.error();
 }
 
-Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
+::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::ResultOf::
+    GetFoo
+    Top::ClientImpl::GetFoo_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::GetFoo(::fidl::UnownedClientEnd<Top>(_channel->handle()));
+    return ResultOf::GetFoo(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>(
+            _channel->handle()));
   }
-  return Top::ResultOf::GetFoo(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+      ResultOf::GetFoo(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    UnownedResultOf::GetFoo
+    Top::ClientImpl::GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::GetFoo(
-        ::fidl::UnownedClientEnd<Top>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>(
+            _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return Top::UnownedResultOf::GetFoo(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+      UnownedResultOf::GetFoo(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-Top::GetFooResponseContext::GetFooResponseContext()
+::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    GetFooResponseContext::GetFooResponseContext()
     : ::fidl::internal::ResponseContext(GetFooResponse::Type,
                                         kTop_GetFoo_Ordinal) {}
 
-void Top::GetFooResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    GetFooResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<GetFooResponse*>(reply));
 }
 
@@ -118,8 +141,12 @@ std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
 namespace methods {
 
 void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  Top::TypedChannelInterface::GetFooCompleter::Sync completer(txn);
-  reinterpret_cast<Top::TypedChannelInterface*>(interface)->GetFoo(completer);
+  ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+      TypedChannelInterface::GetFooCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+          TypedChannelInterface*>(interface)
+      ->GetFoo(completer);
 }
 
 }  // namespace methods
@@ -127,7 +154,10 @@ void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
 namespace entries {
 
 ::fidl::internal::MethodEntry Top[] = {
-    {kTop_GetFoo_Ordinal, Top::GetFooRequest::Type, methods::TopDispatchGetFoo},
+    {kTop_GetFoo_Ordinal,
+     ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+         GetFooRequest::Type,
+     methods::TopDispatchGetFoo},
 };
 
 }  // namespace entries
@@ -171,11 +201,13 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-void Top::GetFooRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    GetFooRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kTop_GetFoo_Ordinal);
 }
 
-void Top::GetFooResponse::_InitHeader() {
+void ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
+    GetFooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kTop_GetFoo_Ordinal);
 }
 

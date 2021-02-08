@@ -4,12 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace error {
-
 void ::llcpp::fidl::test::error::wire::Example_foo_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Example_foo_Result) == sizeof(fidl_xunion_t));
@@ -19,16 +13,23 @@ void ::llcpp::fidl::test::error::wire::Example_foo_Result::
                 offsetof(fidl_xunion_t, envelope));
 }
 
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace error {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal =
     6333213382893778862lu;
+
 extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 }  // namespace
-Example::ResultOf::foo::foo(::fidl::UnownedClientEnd<Example> _client,
-                            const ::fidl::StringView& s) {
+::llcpp::fidl::test::error::Example::ResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example> _client,
+    const ::fidl::StringView& s) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
@@ -36,8 +37,9 @@ Example::ResultOf::foo::foo(::fidl::UnownedClientEnd<Example> _client,
   error_ = _request.error();
 }
 
-Example::ResultOf::foo::foo(::fidl::UnownedClientEnd<Example> _client,
-                            const ::fidl::StringView& s, zx_time_t _deadline) {
+::llcpp::fidl::test::error::Example::ResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example> _client,
+    const ::fidl::StringView& s, zx_time_t _deadline) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
@@ -46,12 +48,11 @@ Example::ResultOf::foo::foo(::fidl::UnownedClientEnd<Example> _client,
   error_ = _request.error();
 }
 
-Example::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<Example> _client,
-                                   uint8_t* _request_bytes,
-                                   uint32_t _request_byte_capacity,
-                                   const ::fidl::StringView& s,
-                                   uint8_t* _response_bytes,
-                                   uint32_t _response_byte_capacity)
+::llcpp::fidl::test::error::Example::UnownedResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example> _client,
+    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+    const ::fidl::StringView& s, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   fooRequest::UnownedEncodedMessage _request(_request_bytes,
                                              _request_byte_capacity, 0, s);
@@ -61,33 +62,39 @@ Example::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<Example> _client,
   error_ = _request.error();
 }
 
-Example::ResultOf::foo Example::ClientImpl::foo_Sync(::fidl::StringView s) {
+::llcpp::fidl::test::error::Example::ResultOf::foo
+Example::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::foo(::fidl::UnownedClientEnd<Example>(_channel->handle()),
-                         s);
+    return ResultOf::foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example>(
+            _channel->handle()),
+        s);
   }
-  return Example::ResultOf::foo(
+  return ::llcpp::fidl::test::error::Example::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-Example::UnownedResultOf::foo Example::ClientImpl::foo_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::error::Example::UnownedResultOf::foo
+Example::ClientImpl::foo_Sync(::fidl::BufferSpan _request_buffer,
+                              ::fidl::StringView s,
+                              ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        ::fidl::UnownedClientEnd<Example>(_channel->handle()),
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return Example::UnownedResultOf::foo(
+  return ::llcpp::fidl::test::error::Example::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-Example::fooResponseContext::fooResponseContext()
+::llcpp::fidl::test::error::Example::fooResponseContext::fooResponseContext()
     : ::fidl::internal::ResponseContext(fooResponse::Type,
                                         kExample_foo_Ordinal) {}
 
-void Example::fooResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::error::Example::fooResponseContext::OnReply(
+    uint8_t* reply) {
   OnReply(reinterpret_cast<fooResponse*>(reply));
 }
 
@@ -137,10 +144,13 @@ namespace methods {
 
 void ExampleDispatchfoo(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<Example::fooRequest*>(bytes);
-  Example::TypedChannelInterface::fooCompleter::Sync completer(txn);
-  reinterpret_cast<Example::TypedChannelInterface*>(interface)->foo(
-      std::move(message->s), completer);
+  auto message =
+      reinterpret_cast<::llcpp::fidl::test::error::Example::fooRequest*>(bytes);
+  ::llcpp::fidl::test::error::Example::TypedChannelInterface::fooCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::error::Example::TypedChannelInterface*>(
+      interface)
+      ->foo(std::move(message->s), completer);
 }
 
 }  // namespace methods
@@ -148,7 +158,8 @@ void ExampleDispatchfoo(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry Example[] = {
-    {kExample_foo_Ordinal, Example::fooRequest::Type,
+    {kExample_foo_Ordinal,
+     ::llcpp::fidl::test::error::Example::fooRequest::Type,
      methods::ExampleDispatchfoo},
 };
 
@@ -187,15 +198,18 @@ namespace entries {
 }
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::ReplySuccess(
     int64_t y) {
-  ::fidl::aligned<Example_foo_Response> _response;
+  ::fidl::aligned<::llcpp::fidl::test::error::wire::Example_foo_Response>
+      _response;
   _response.value.y = std::move(y);
 
   return Reply(
-      Example_foo_Result::WithResponse(::fidl::unowned_ptr(&_response)));
+      ::llcpp::fidl::test::error::wire::Example_foo_Result::WithResponse(
+          ::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::ReplyError(
     uint32_t error) {
-  return Reply(Example_foo_Result::WithErr(::fidl::unowned_ptr(&error)));
+  return Reply(::llcpp::fidl::test::error::wire::Example_foo_Result::WithErr(
+      ::fidl::unowned_ptr(&error)));
 }
 
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::Reply(
@@ -207,18 +221,22 @@ namespace entries {
 }
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer, int64_t y) {
-  ::fidl::aligned<Example_foo_Response> response;
+  ::fidl::aligned<::llcpp::fidl::test::error::wire::Example_foo_Response>
+      response;
   response.value.y = std::move(y);
 
-  return Reply(std::move(_buffer), Example_foo_Result::WithResponse(
-                                       ::fidl::unowned_ptr(&response)));
+  return Reply(
+      std::move(_buffer),
+      ::llcpp::fidl::test::error::wire::Example_foo_Result::WithResponse(
+          ::fidl::unowned_ptr(&response)));
 }
 
-void Example::fooRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::error::Example::fooRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kExample_foo_Ordinal);
 }
 
-void Example::fooResponse::_InitHeader() {
+void ::llcpp::fidl::test::error::Example::fooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kExample_foo_Ordinal);
 }
 

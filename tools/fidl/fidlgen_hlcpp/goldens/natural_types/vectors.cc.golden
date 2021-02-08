@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace vectors {
-
 extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
 const fidl_type_t* ExampleUseOfVectors::FidlType =
     &fidl_test_vectors_ExampleUseOfVectorsTable;
@@ -47,6 +46,7 @@ zx_status_t ExampleUseOfVectors::Clone(ExampleUseOfVectors* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+
 }  // namespace vectors
 }  // namespace test
 }  // namespace fidl

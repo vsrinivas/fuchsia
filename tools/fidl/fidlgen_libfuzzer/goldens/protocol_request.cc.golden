@@ -89,8 +89,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TakeChild\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::fidl::InterfaceHandle<class Child> >();
+      const size_t min_size_ = MinSize<
+          ::fidl::InterfaceHandle< ::fidl::test::protocolrequest::Child> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -106,14 +106,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
               slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::fidl::InterfaceHandle<class Child> >() +
+      param_size_ = MinSize< ::fidl::InterfaceHandle<
+                        ::fidl::test::protocolrequest::Child> >() +
                     slack_size_per_param;
       xprintf(
-          "Allocating %zu bytes for ::fidl::InterfaceHandle<class Child> c\n",
+          "Allocating %zu bytes for "
+          "::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c\n",
           param_size_);
-      ::fidl::InterfaceHandle<class Child> c =
-          Allocate< ::fidl::InterfaceHandle<class Child> >{}(&src_,
-                                                             &param_size_);
+      ::fidl::InterfaceHandle< ::fidl::test::protocolrequest::Child> c =
+          Allocate< ::fidl::InterfaceHandle<
+              ::fidl::test::protocolrequest::Child> >{}(&src_, &param_size_);
 
       xprintf("Invoking method fidl_test_protocolrequest_Parent.TakeChild\n");
       protocol_->TakeChild(std::move(c));
@@ -125,7 +127,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TakeChildRequest\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<Child> >();
+      const size_t min_size_ = MinSize<
+          ::fidl::InterfaceRequest< ::fidl::test::protocolrequest::Child> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -141,12 +144,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
               slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::fidl::InterfaceRequest<Child> >() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::fidl::InterfaceRequest<Child> r\n",
-              param_size_);
-      ::fidl::InterfaceRequest<Child> r =
-          Allocate< ::fidl::InterfaceRequest<Child> >{}(&src_, &param_size_);
+      param_size_ = MinSize< ::fidl::InterfaceRequest<
+                        ::fidl::test::protocolrequest::Child> >() +
+                    slack_size_per_param;
+      xprintf(
+          "Allocating %zu bytes for "
+          "::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r\n",
+          param_size_);
+      ::fidl::InterfaceRequest< ::fidl::test::protocolrequest::Child> r =
+          Allocate< ::fidl::InterfaceRequest<
+              ::fidl::test::protocolrequest::Child> >{}(&src_, &param_size_);
 
       xprintf(
           "Invoking method "

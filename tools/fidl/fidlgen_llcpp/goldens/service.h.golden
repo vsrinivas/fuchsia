@@ -35,24 +35,29 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace service {
-
 class SecondProtocol;
+
 class FirstProtocol;
+
 class SingleMemberService;
+
 class MultiHomogeneousMemberService;
+
 class MultiHeterogeneousMemberService;
+
 class EmptyService;
 
 extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 
@@ -241,7 +246,8 @@ class SecondProtocol final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MethodOnSecond MethodOnSecond(
-        ::fidl::UnownedClientEnd<SecondProtocol> _client_end) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::SecondProtocol>
+            _client_end) {
       return ResultOf::MethodOnSecond(_client_end);
     }
   };
@@ -346,6 +352,7 @@ class SecondProtocol final {
 
 extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 
@@ -534,7 +541,8 @@ class FirstProtocol final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MethodOnFirst MethodOnFirst(
-        ::fidl::UnownedClientEnd<FirstProtocol> _client_end) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::service::FirstProtocol>
+            _client_end) {
       return ResultOf::MethodOnFirst(_client_end);
     }
   };
@@ -653,10 +661,10 @@ class SingleMemberService final {
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
     // Connects to the member protocol "single_member".
-    // Returns a |fidl::ClientEnd<FirstProtocol>| on success,
-    // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |fidl::Client| to create a client that supports both
-    // asynchronous and synchronous operations.
+    // Returns a |fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>|
+    // on success, which can be used with |fidl::BindSyncClient| to create a
+    // synchronous client, or |fidl::Client| to create a client that supports
+    // both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -667,8 +675,10 @@ class SingleMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<FirstProtocol>> connect_single_member() {
-      auto endpoints = ::fidl::CreateEndpoints<FirstProtocol>();
+    ::zx::status<::fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>>
+    connect_single_member() {
+      auto endpoints = ::fidl::CreateEndpoints<
+          ::llcpp::fidl::test::service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -701,7 +711,9 @@ class SingleMemberService final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_single_member(
-        ::fidl::ServiceHandlerInterface::MemberHandler<FirstProtocol> handler) {
+        ::fidl::ServiceHandlerInterface::MemberHandler<
+            ::llcpp::fidl::test::service::FirstProtocol>
+            handler) {
       return service_handler_->AddMember("single_member", std::move(handler));
     }
 
@@ -727,10 +739,10 @@ class MultiHomogeneousMemberService final {
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
     // Connects to the member protocol "first_member".
-    // Returns a |fidl::ClientEnd<FirstProtocol>| on success,
-    // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |fidl::Client| to create a client that supports both
-    // asynchronous and synchronous operations.
+    // Returns a |fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>|
+    // on success, which can be used with |fidl::BindSyncClient| to create a
+    // synchronous client, or |fidl::Client| to create a client that supports
+    // both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -741,8 +753,10 @@ class MultiHomogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<FirstProtocol>> connect_first_member() {
-      auto endpoints = ::fidl::CreateEndpoints<FirstProtocol>();
+    ::zx::status<::fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>>
+    connect_first_member() {
+      auto endpoints = ::fidl::CreateEndpoints<
+          ::llcpp::fidl::test::service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -756,10 +770,10 @@ class MultiHomogeneousMemberService final {
     }
 
     // Connects to the member protocol "second_member".
-    // Returns a |fidl::ClientEnd<FirstProtocol>| on success,
-    // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |fidl::Client| to create a client that supports both
-    // asynchronous and synchronous operations.
+    // Returns a |fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>|
+    // on success, which can be used with |fidl::BindSyncClient| to create a
+    // synchronous client, or |fidl::Client| to create a client that supports
+    // both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -770,8 +784,10 @@ class MultiHomogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<FirstProtocol>> connect_second_member() {
-      auto endpoints = ::fidl::CreateEndpoints<FirstProtocol>();
+    ::zx::status<::fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>>
+    connect_second_member() {
+      auto endpoints = ::fidl::CreateEndpoints<
+          ::llcpp::fidl::test::service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -804,7 +820,9 @@ class MultiHomogeneousMemberService final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_first_member(
-        ::fidl::ServiceHandlerInterface::MemberHandler<FirstProtocol> handler) {
+        ::fidl::ServiceHandlerInterface::MemberHandler<
+            ::llcpp::fidl::test::service::FirstProtocol>
+            handler) {
       return service_handler_->AddMember("first_member", std::move(handler));
     }
 
@@ -815,7 +833,9 @@ class MultiHomogeneousMemberService final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_second_member(
-        ::fidl::ServiceHandlerInterface::MemberHandler<FirstProtocol> handler) {
+        ::fidl::ServiceHandlerInterface::MemberHandler<
+            ::llcpp::fidl::test::service::FirstProtocol>
+            handler) {
       return service_handler_->AddMember("second_member", std::move(handler));
     }
 
@@ -841,10 +861,10 @@ class MultiHeterogeneousMemberService final {
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
     // Connects to the member protocol "first_member".
-    // Returns a |fidl::ClientEnd<FirstProtocol>| on success,
-    // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |fidl::Client| to create a client that supports both
-    // asynchronous and synchronous operations.
+    // Returns a |fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>|
+    // on success, which can be used with |fidl::BindSyncClient| to create a
+    // synchronous client, or |fidl::Client| to create a client that supports
+    // both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -855,8 +875,10 @@ class MultiHeterogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<FirstProtocol>> connect_first_member() {
-      auto endpoints = ::fidl::CreateEndpoints<FirstProtocol>();
+    ::zx::status<::fidl::ClientEnd<::llcpp::fidl::test::service::FirstProtocol>>
+    connect_first_member() {
+      auto endpoints = ::fidl::CreateEndpoints<
+          ::llcpp::fidl::test::service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -870,10 +892,10 @@ class MultiHeterogeneousMemberService final {
     }
 
     // Connects to the member protocol "second_member".
-    // Returns a |fidl::ClientEnd<SecondProtocol>| on success,
-    // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |fidl::Client| to create a client that supports both
-    // asynchronous and synchronous operations.
+    // Returns a |fidl::ClientEnd<::llcpp::fidl::test::service::SecondProtocol>|
+    // on success, which can be used with |fidl::BindSyncClient| to create a
+    // synchronous client, or |fidl::Client| to create a client that supports
+    // both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -884,8 +906,11 @@ class MultiHeterogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<SecondProtocol>> connect_second_member() {
-      auto endpoints = ::fidl::CreateEndpoints<SecondProtocol>();
+    ::zx::status<
+        ::fidl::ClientEnd<::llcpp::fidl::test::service::SecondProtocol>>
+    connect_second_member() {
+      auto endpoints = ::fidl::CreateEndpoints<
+          ::llcpp::fidl::test::service::SecondProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -918,7 +943,9 @@ class MultiHeterogeneousMemberService final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_first_member(
-        ::fidl::ServiceHandlerInterface::MemberHandler<FirstProtocol> handler) {
+        ::fidl::ServiceHandlerInterface::MemberHandler<
+            ::llcpp::fidl::test::service::FirstProtocol>
+            handler) {
       return service_handler_->AddMember("first_member", std::move(handler));
     }
 
@@ -929,7 +956,8 @@ class MultiHeterogeneousMemberService final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_second_member(
-        ::fidl::ServiceHandlerInterface::MemberHandler<SecondProtocol>
+        ::fidl::ServiceHandlerInterface::MemberHandler<
+            ::llcpp::fidl::test::service::SecondProtocol>
             handler) {
       return service_handler_->AddMember("second_member", std::move(handler));
     }
@@ -976,7 +1004,6 @@ class EmptyService final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1005,11 +1032,8 @@ static_assert(
     sizeof(::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest) ==
     ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest::
         PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace service {

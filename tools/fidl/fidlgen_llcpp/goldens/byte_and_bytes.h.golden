@@ -34,21 +34,20 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace byteandbytes {
-
 namespace wire {
 struct ByteAndBytes;
 }  // namespace wire
-using ByteAndBytes = wire::ByteAndBytes;  // struct
-
+using ByteAndBytes = wire::ByteAndBytes;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
 
 struct ByteAndBytes {
@@ -149,13 +148,12 @@ struct ByteAndBytes {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace byteandbytes
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -177,14 +175,13 @@ static_assert(offsetof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes,
 static_assert(
     sizeof(::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes) ==
     ::llcpp::fidl::test::byteandbytes::wire::ByteAndBytes::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace byteandbytes {}  // namespace byteandbytes
+namespace byteandbytes {
+namespace wire {}  // namespace wire
+}  // namespace byteandbytes
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

@@ -34,25 +34,25 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace struct_ {
-
 namespace wire {
 struct Simple;
 }  // namespace wire
-using Simple = wire::Simple;  // struct
+using Simple = wire::Simple;
 namespace wire {
+
 struct BasicStruct;
 }  // namespace wire
-using BasicStruct = wire::BasicStruct;  // struct
-
+using BasicStruct = wire::BasicStruct;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
 
 struct Simple {
@@ -145,9 +145,7 @@ struct Simple {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
 
 struct BasicStruct {
@@ -243,13 +241,12 @@ struct BasicStruct {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace struct_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -279,14 +276,13 @@ static_assert(offsetof(::llcpp::fidl::test::struct_::wire::BasicStruct, y) ==
               8);
 static_assert(sizeof(::llcpp::fidl::test::struct_::wire::BasicStruct) ==
               ::llcpp::fidl::test::struct_::wire::BasicStruct::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace struct_ {}  // namespace struct_
+namespace struct_ {
+namespace wire {}  // namespace wire
+}  // namespace struct_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

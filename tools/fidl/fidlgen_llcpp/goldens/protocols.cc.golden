@@ -4,12 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace protocols {
-
 void ::llcpp::fidl::test::protocols::wire::
     WithErrorSyntax_ResponseAsStruct_Result::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ResponseAsStruct_Result) ==
@@ -30,27 +24,39 @@ void ::llcpp::fidl::test::protocols::wire::
                 offsetof(fidl_xunion_t, envelope));
 }
 
+namespace llcpp {
+namespace fidl {
+namespace test {
+namespace protocols {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kTransitional_Request_Ordinal =
     7121112290509197032lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestResponseTable;
 [[maybe_unused]] constexpr uint64_t kTransitional_OneWay_Ordinal =
     1124136612964114085lu;
+
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalOneWayResponseTable;
 [[maybe_unused]] constexpr uint64_t kTransitional_Event_Ordinal =
     6033576734966581606lu;
+
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
+
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 }  // namespace
-Transitional::ResultOf::Request::Request(
-    ::fidl::UnownedClientEnd<Transitional> _client, int64_t x) {
+::llcpp::fidl::test::protocols::Transitional::ResultOf::Request::Request(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+        _client,
+    int64_t x) {
   RequestRequest::OwnedEncodedMessage _request(zx_txid_t(0), x);
   _request.GetOutgoingMessage().Call<RequestResponse>(
       _client, bytes_,
@@ -59,9 +65,10 @@ Transitional::ResultOf::Request::Request(
   error_ = _request.error();
 }
 
-Transitional::ResultOf::Request::Request(
-    ::fidl::UnownedClientEnd<Transitional> _client, int64_t x,
-    zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::Transitional::ResultOf::Request::Request(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+        _client,
+    int64_t x, zx_time_t _deadline) {
   RequestRequest::OwnedEncodedMessage _request(zx_txid_t(0), x);
   _request.GetOutgoingMessage().Call<RequestResponse>(
       _client, bytes_,
@@ -70,10 +77,11 @@ Transitional::ResultOf::Request::Request(
   error_ = _request.error();
 }
 
-Transitional::UnownedResultOf::Request::Request(
-    ::fidl::UnownedClientEnd<Transitional> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, int64_t x, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::Request::Request(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+        _client,
+    uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t x,
+    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   RequestRequest::UnownedEncodedMessage _request(_request_bytes,
                                                  _request_byte_capacity, 0, x);
@@ -83,17 +91,20 @@ Transitional::UnownedResultOf::Request::Request(
   error_ = _request.error();
 }
 
-Transitional::ResultOf::OneWay::OneWay(
-    ::fidl::UnownedClientEnd<Transitional> _client, int64_t x) {
+::llcpp::fidl::test::protocols::Transitional::ResultOf::OneWay::OneWay(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+        _client,
+    int64_t x) {
   OneWayRequest::OwnedEncodedMessage _request(zx_txid_t(0), x);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-Transitional::UnownedResultOf::OneWay::OneWay(
-    ::fidl::UnownedClientEnd<Transitional> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, int64_t x) {
+::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::OneWay::OneWay(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+        _client,
+    uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t x) {
   OneWayRequest::UnownedEncodedMessage _request(_request_bytes,
                                                 _request_byte_capacity, 0, x);
   _request.GetOutgoingMessage().Write(_client);
@@ -101,34 +112,40 @@ Transitional::UnownedResultOf::OneWay::OneWay(
   error_ = _request.error();
 }
 
-Transitional::ResultOf::Request Transitional::ClientImpl::Request_Sync(
-    int64_t x) {
+::llcpp::fidl::test::protocols::Transitional::ResultOf::Request
+Transitional::ClientImpl::Request_Sync(int64_t x) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::Request(
-        ::fidl::UnownedClientEnd<Transitional>(_channel->handle()), x);
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>(
+            _channel->handle()),
+        x);
   }
-  return Transitional::ResultOf::Request(
+  return ::llcpp::fidl::test::protocols::Transitional::ResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-Transitional::UnownedResultOf::Request Transitional::ClientImpl::Request_Sync(
-    ::fidl::BufferSpan _request_buffer, int64_t x,
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::Request
+Transitional::ClientImpl::Request_Sync(::fidl::BufferSpan _request_buffer,
+                                       int64_t x,
+                                       ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::Request(
-        ::fidl::UnownedClientEnd<Transitional>(_channel->handle()),
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, x,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return Transitional::UnownedResultOf::Request(
+  return ::llcpp::fidl::test::protocols::Transitional::UnownedResultOf::Request(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-Transitional::RequestResponseContext::RequestResponseContext()
+::llcpp::fidl::test::protocols::Transitional::RequestResponseContext::
+    RequestResponseContext()
     : ::fidl::internal::ResponseContext(RequestResponse::Type,
                                         kTransitional_Request_Ordinal) {}
 
-void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::Transitional::RequestResponseContext::
+    OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<RequestResponse*>(reply));
 }
 
@@ -170,7 +187,9 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 ::fidl::Result Transitional::ClientImpl::OneWay(int64_t x) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::OneWay(
-        ::fidl::UnownedClientEnd<Transitional>(_channel->handle()), x);
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>(
+            _channel->handle()),
+        x);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -180,7 +199,8 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
     ::fidl::BufferSpan _request_buffer, int64_t x) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::OneWay(
-        ::fidl::UnownedClientEnd<Transitional>(_channel->handle()),
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, x);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -294,18 +314,26 @@ namespace methods {
 
 void TransitionalDispatchRequest(void* interface, void* bytes,
                                  ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<Transitional::RequestRequest*>(bytes);
-  Transitional::TypedChannelInterface::RequestCompleter::Sync completer(txn);
-  reinterpret_cast<Transitional::TypedChannelInterface*>(interface)->Request(
-      std::move(message->x), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::protocols::Transitional::RequestRequest*>(bytes);
+  ::llcpp::fidl::test::protocols::Transitional::TypedChannelInterface::
+      RequestCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::Transitional::TypedChannelInterface*>(
+      interface)
+      ->Request(std::move(message->x), completer);
 }
 
 void TransitionalDispatchOneWay(void* interface, void* bytes,
                                 ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<Transitional::OneWayRequest*>(bytes);
-  Transitional::TypedChannelInterface::OneWayCompleter::Sync completer(txn);
-  reinterpret_cast<Transitional::TypedChannelInterface*>(interface)->OneWay(
-      std::move(message->x), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::protocols::Transitional::OneWayRequest*>(bytes);
+  ::llcpp::fidl::test::protocols::Transitional::TypedChannelInterface::
+      OneWayCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::Transitional::TypedChannelInterface*>(
+      interface)
+      ->OneWay(std::move(message->x), completer);
 }
 
 }  // namespace methods
@@ -313,9 +341,11 @@ void TransitionalDispatchOneWay(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry Transitional[] = {
-    {kTransitional_Request_Ordinal, Transitional::RequestRequest::Type,
+    {kTransitional_Request_Ordinal,
+     ::llcpp::fidl::test::protocols::Transitional::RequestRequest::Type,
      methods::TransitionalDispatchRequest},
-    {kTransitional_OneWay_Ordinal, Transitional::OneWayRequest::Type,
+    {kTransitional_OneWay_Ordinal,
+     ::llcpp::fidl::test::protocols::Transitional::OneWayRequest::Type,
      methods::TransitionalDispatchOneWay},
 };
 
@@ -360,19 +390,23 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-void Transitional::RequestRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::Transitional::RequestRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kTransitional_Request_Ordinal);
 }
 
-void Transitional::RequestResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::Transitional::RequestResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kTransitional_Request_Ordinal);
 }
 
-void Transitional::OneWayRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::Transitional::OneWayRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kTransitional_OneWay_Ordinal);
 }
 
-void Transitional::EventResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::Transitional::EventResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kTransitional_Event_Ordinal);
 }
 
@@ -394,47 +428,62 @@ namespace {
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodA_Ordinal =
     565531679656837166lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodARequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodAResponseTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_Ordinal =
     5963604044179602938lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventARequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventAEventTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodB_Ordinal =
     6746905632127147242lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal =
     875219241480379432lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
     9065806117349865322lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
-ChannelProtocol::ResultOf::MethodA::MethodA(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, int64_t a, int64_t b) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodA::MethodA(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
+        _client,
+    int64_t a, int64_t b) {
   MethodARequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-ChannelProtocol::UnownedResultOf::MethodA::MethodA(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, int64_t a, int64_t b) {
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MethodA::
+    MethodA(::fidl::UnownedClientEnd<
+                ::llcpp::fidl::test::protocols::ChannelProtocol>
+                _client,
+            uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t a,
+            int64_t b) {
   MethodARequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Write(_client);
@@ -442,8 +491,10 @@ ChannelProtocol::UnownedResultOf::MethodA::MethodA(
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::MethodB::MethodB(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, int64_t a, int64_t b) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB::MethodB(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
+        _client,
+    int64_t a, int64_t b) {
   MethodBRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(
       _client, bytes_,
@@ -452,9 +503,10 @@ ChannelProtocol::ResultOf::MethodB::MethodB(
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::MethodB::MethodB(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, int64_t a, int64_t b,
-    zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB::MethodB(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
+        _client,
+    int64_t a, int64_t b, zx_time_t _deadline) {
   MethodBRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(
       _client, bytes_,
@@ -463,10 +515,13 @@ ChannelProtocol::ResultOf::MethodB::MethodB(
   error_ = _request.error();
 }
 
-ChannelProtocol::UnownedResultOf::MethodB::MethodB(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, int64_t a, int64_t b,
-    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MethodB::
+    MethodB(::fidl::UnownedClientEnd<
+                ::llcpp::fidl::test::protocols::ChannelProtocol>
+                _client,
+            uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t a,
+            int64_t b, uint8_t* _response_bytes,
+            uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   MethodBRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, a, b);
@@ -476,8 +531,11 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::TakeHandle::TakeHandle(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, ::zx::handle& h) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle::
+    TakeHandle(::fidl::UnownedClientEnd<
+                   ::llcpp::fidl::test::protocols::ChannelProtocol>
+                   _client,
+               ::zx::handle& h) {
   TakeHandleRequest::OwnedEncodedMessage _request(zx_txid_t(0), h);
   _request.GetOutgoingMessage().Call<TakeHandleResponse>(
       _client, bytes_,
@@ -486,9 +544,11 @@ ChannelProtocol::ResultOf::TakeHandle::TakeHandle(
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::TakeHandle::TakeHandle(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, ::zx::handle& h,
-    zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle::
+    TakeHandle(::fidl::UnownedClientEnd<
+                   ::llcpp::fidl::test::protocols::ChannelProtocol>
+                   _client,
+               ::zx::handle& h, zx_time_t _deadline) {
   TakeHandleRequest::OwnedEncodedMessage _request(zx_txid_t(0), h);
   _request.GetOutgoingMessage().Call<TakeHandleResponse>(
       _client, bytes_,
@@ -498,10 +558,13 @@ ChannelProtocol::ResultOf::TakeHandle::TakeHandle(
   error_ = _request.error();
 }
 
-ChannelProtocol::UnownedResultOf::TakeHandle::TakeHandle(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, ::zx::handle& h, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::TakeHandle::
+    TakeHandle(::fidl::UnownedClientEnd<
+                   ::llcpp::fidl::test::protocols::ChannelProtocol>
+                   _client,
+               uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+               ::zx::handle& h, uint8_t* _response_bytes,
+               uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   TakeHandleRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, h);
@@ -511,8 +574,11 @@ ChannelProtocol::UnownedResultOf::TakeHandle::TakeHandle(
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::MutateSocket::MutateSocket(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, ::zx::socket& a) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MutateSocket::
+    MutateSocket(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::protocols::ChannelProtocol>
+                     _client,
+                 ::zx::socket& a) {
   MutateSocketRequest::OwnedEncodedMessage _request(zx_txid_t(0), a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, bytes_,
@@ -521,9 +587,11 @@ ChannelProtocol::ResultOf::MutateSocket::MutateSocket(
   error_ = _request.error();
 }
 
-ChannelProtocol::ResultOf::MutateSocket::MutateSocket(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, ::zx::socket& a,
-    zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MutateSocket::
+    MutateSocket(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::protocols::ChannelProtocol>
+                     _client,
+                 ::zx::socket& a, zx_time_t _deadline) {
   MutateSocketRequest::OwnedEncodedMessage _request(zx_txid_t(0), a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, bytes_,
@@ -533,10 +601,13 @@ ChannelProtocol::ResultOf::MutateSocket::MutateSocket(
   error_ = _request.error();
 }
 
-ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
-    ::fidl::UnownedClientEnd<ChannelProtocol> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, ::zx::socket& a, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MutateSocket::
+    MutateSocket(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::protocols::ChannelProtocol>
+                     _client,
+                 uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                 ::zx::socket& a, uint8_t* _response_bytes,
+                 uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   MutateSocketRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, a);
@@ -548,8 +619,11 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
 
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(int64_t a, int64_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::MethodA(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()), a, b);
+    auto _res =
+        ResultOf::MethodA(::fidl::UnownedClientEnd<
+                              ::llcpp::fidl::test::protocols::ChannelProtocol>(
+                              _channel->handle()),
+                          a, b);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -559,42 +633,51 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
     ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::MethodA(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, a, b);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-ChannelProtocol::ResultOf::MethodB ChannelProtocol::ClientImpl::MethodB_Sync(
-    int64_t a, int64_t b) {
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB
+ChannelProtocol::ClientImpl::MethodB_Sync(int64_t a, int64_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::MethodB(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()), a, b);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
+        a, b);
   }
-  return ChannelProtocol::ResultOf::MethodB(
+  return ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MethodB(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-ChannelProtocol::UnownedResultOf::MethodB
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MethodB
 ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BufferSpan _request_buffer,
                                           int64_t a, int64_t b,
                                           ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::MethodB(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, a, b,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ChannelProtocol::UnownedResultOf::MethodB(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::
+      MethodB(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-ChannelProtocol::MethodBResponseContext::MethodBResponseContext()
+::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponseContext::
+    MethodBResponseContext()
     : ::fidl::internal::ResponseContext(MethodBResponse::Type,
                                         kChannelProtocol_MethodB_Ordinal) {}
 
-void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponseContext::
+    OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<MethodBResponse*>(reply));
 }
 
@@ -634,35 +717,42 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-ChannelProtocol::ResultOf::TakeHandle
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle
 ChannelProtocol::ClientImpl::TakeHandle_Sync(::zx::handle h) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::TakeHandle(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()), h);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
+        h);
   }
-  return ChannelProtocol::ResultOf::TakeHandle(
+  return ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::TakeHandle(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-ChannelProtocol::UnownedResultOf::TakeHandle
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::TakeHandle
 ChannelProtocol::ClientImpl::TakeHandle_Sync(
     ::fidl::BufferSpan _request_buffer, ::zx::handle h,
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::TakeHandle(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, h,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ChannelProtocol::UnownedResultOf::TakeHandle(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::
+      TakeHandle(::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-ChannelProtocol::TakeHandleResponseContext::TakeHandleResponseContext()
+::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponseContext::
+    TakeHandleResponseContext()
     : ::fidl::internal::ResponseContext(TakeHandleResponse::Type,
                                         kChannelProtocol_TakeHandle_Ordinal) {}
 
-void ChannelProtocol::TakeHandleResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::
+    TakeHandleResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<TakeHandleResponse*>(reply));
 }
 
@@ -701,35 +791,44 @@ void ChannelProtocol::TakeHandleResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-ChannelProtocol::ResultOf::MutateSocket
+::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(::zx::socket a) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::MutateSocket(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()), a);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
+        a);
   }
-  return ChannelProtocol::ResultOf::MutateSocket(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::ChannelProtocol::ResultOf::
+      MutateSocket(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-ChannelProtocol::UnownedResultOf::MutateSocket
+::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::MutateSocket
 ChannelProtocol::ClientImpl::MutateSocket_Sync(
     ::fidl::BufferSpan _request_buffer, ::zx::socket a,
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::MutateSocket(
-        ::fidl::UnownedClientEnd<ChannelProtocol>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, a,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return ChannelProtocol::UnownedResultOf::MutateSocket(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::ChannelProtocol::UnownedResultOf::
+      MutateSocket(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-ChannelProtocol::MutateSocketResponseContext::MutateSocketResponseContext()
+::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponseContext::
+    MutateSocketResponseContext()
     : ::fidl::internal::ResponseContext(
           MutateSocketResponse::Type, kChannelProtocol_MutateSocket_Ordinal) {}
 
-void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::
+    MutateSocketResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<MutateSocketResponse*>(reply));
 }
 
@@ -877,35 +976,51 @@ namespace methods {
 
 void ChannelProtocolDispatchMethodA(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<ChannelProtocol::MethodARequest*>(bytes);
-  ChannelProtocol::TypedChannelInterface::MethodACompleter::Sync completer(txn);
-  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)->MethodA(
-      std::move(message->a), std::move(message->b), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest*>(bytes);
+  ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface::
+      MethodACompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface*>(
+      interface)
+      ->MethodA(std::move(message->a), std::move(message->b), completer);
 }
 
 void ChannelProtocolDispatchMethodB(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<ChannelProtocol::MethodBRequest*>(bytes);
-  ChannelProtocol::TypedChannelInterface::MethodBCompleter::Sync completer(txn);
-  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)->MethodB(
-      std::move(message->a), std::move(message->b), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest*>(bytes);
+  ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface::
+      MethodBCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface*>(
+      interface)
+      ->MethodB(std::move(message->a), std::move(message->b), completer);
 }
 
 void ChannelProtocolDispatchTakeHandle(void* interface, void* bytes,
                                        ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<ChannelProtocol::TakeHandleRequest*>(bytes);
-  ChannelProtocol::TypedChannelInterface::TakeHandleCompleter::Sync completer(
-      txn);
-  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest*>(
+      bytes);
+  ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface::
+      TakeHandleCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface*>(
+      interface)
       ->TakeHandle(std::move(message->h), completer);
 }
 
 void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<ChannelProtocol::MutateSocketRequest*>(bytes);
-  ChannelProtocol::TypedChannelInterface::MutateSocketCompleter::Sync completer(
-      txn);
-  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest*>(
+      bytes);
+  ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface::
+      MutateSocketCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::ChannelProtocol::TypedChannelInterface*>(
+      interface)
       ->MutateSocket(std::move(message->a), completer);
 }
 
@@ -914,15 +1029,17 @@ void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry ChannelProtocol[] = {
-    {kChannelProtocol_MethodA_Ordinal, ChannelProtocol::MethodARequest::Type,
+    {kChannelProtocol_MethodA_Ordinal,
+     ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest::Type,
      methods::ChannelProtocolDispatchMethodA},
-    {kChannelProtocol_MethodB_Ordinal, ChannelProtocol::MethodBRequest::Type,
+    {kChannelProtocol_MethodB_Ordinal,
+     ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest::Type,
      methods::ChannelProtocolDispatchMethodB},
     {kChannelProtocol_TakeHandle_Ordinal,
-     ChannelProtocol::TakeHandleRequest::Type,
+     ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest::Type,
      methods::ChannelProtocolDispatchTakeHandle},
     {kChannelProtocol_MutateSocket_Ordinal,
-     ChannelProtocol::MutateSocketRequest::Type,
+     ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest::Type,
      methods::ChannelProtocolDispatchMutateSocket},
 };
 
@@ -990,43 +1107,60 @@ ChannelProtocol::TypedChannelInterface::MutateSocketCompleterBase::Reply(
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-void ChannelProtocol::MethodARequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChannelProtocol_MethodA_Ordinal);
 }
 
-void ChannelProtocol::EventAResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_EventA_Ordinal);
 }
 
-void ChannelProtocol::MethodBRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChannelProtocol_MethodB_Ordinal);
 }
 
-void ChannelProtocol::MethodBResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MethodB_Ordinal);
 }
 
-void ChannelProtocol::TakeHandleRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChannelProtocol_TakeHandle_Ordinal);
 }
 
-void ChannelProtocol::TakeHandleRequest::_CloseHandles() { h.reset(); }
+void ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest::
+    _CloseHandles() {
+  h.reset();
+}
 
-void ChannelProtocol::TakeHandleResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_TakeHandle_Ordinal);
 }
 
-void ChannelProtocol::MutateSocketRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChannelProtocol_MutateSocket_Ordinal);
 }
 
-void ChannelProtocol::MutateSocketRequest::_CloseHandles() { a.reset(); }
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest::
+    _CloseHandles() {
+  a.reset();
+}
 
-void ChannelProtocol::MutateSocketResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
 }
 
-void ChannelProtocol::MutateSocketResponse::_CloseHandles() { b.reset(); }
+void ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse::
+    _CloseHandles() {
+  b.reset();
+}
 
 zx_status_t ChannelProtocol::EventSender::EventA(int64_t a, int64_t b) const {
   EventAResponse::OwnedEncodedMessage _response{a, b};
@@ -1047,73 +1181,93 @@ namespace {
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
         7699066378708085668lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
         4641225961522096302lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
         4935493674668456948lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
         8985942600963248509lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
         7344052883704365182lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
         2103802322332450033lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
         1323081535741489193lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
         1691906546593908418lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
-WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse::
-    NoRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestNoResponse::NoRequestNoResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client) {
   NoRequestNoResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
-    NoRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestEmptyResponse::NoRequestEmptyResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client) {
   NoRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
       _client, bytes_,
@@ -1123,9 +1277,11 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
-    NoRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestEmptyResponse::NoRequestEmptyResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         zx_time_t _deadline) {
   NoRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
@@ -1137,9 +1293,11 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
-    NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client)
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestWithResponse::NoRequestWithResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   NoRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
@@ -1149,9 +1307,11 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
-    NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestWithResponse::NoRequestWithResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
@@ -1162,9 +1322,11 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
-    NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    NoRequestWithResponse::NoRequestWithResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   NoRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
@@ -1174,9 +1336,11 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse::
-    WithRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestNoResponse::WithRequestNoResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         const ::fidl::StringView& arg) {
   WithRequestNoResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Write(_client);
@@ -1184,9 +1348,11 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
-    WithRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    WithRequestNoResponse::WithRequestNoResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         const ::fidl::StringView& arg) {
   WithRequestNoResponseRequest::UnownedEncodedMessage _request(
@@ -1196,9 +1362,11 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
-    WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestEmptyResponse::WithRequestEmptyResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         const ::fidl::StringView& arg) {
   WithRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0),
                                                                 arg);
@@ -1210,9 +1378,11 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
-    WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestEmptyResponse::WithRequestEmptyResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         const ::fidl::StringView& arg, zx_time_t _deadline) {
   WithRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0),
                                                                 arg);
@@ -1225,9 +1395,11 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
-    WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    WithRequestEmptyResponse::WithRequestEmptyResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         const ::fidl::StringView& arg, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
@@ -1240,9 +1412,11 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
-    WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestWithResponse::WithRequestWithResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         const ::fidl::StringView& arg)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
@@ -1254,9 +1428,11 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
-    WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestWithResponse::WithRequestWithResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         const ::fidl::StringView& arg, zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
@@ -1268,9 +1444,11 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
   error_ = _request.error();
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
-    WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client,
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    WithRequestWithResponse::WithRequestWithResponse(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         const ::fidl::StringView& arg, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
@@ -1287,32 +1465,37 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
 WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::NoRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse
-WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse_Sync() {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestEmptyResponse
+    WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::NoRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()));
   }
-  return WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      ResultOf::NoRequestEmptyResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext::
-    NoRequestEmptyResponseResponseContext()
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestEmptyResponseResponseContext::
+        NoRequestEmptyResponseResponseContext()
     : ::fidl::internal::ResponseContext(
           NoRequestEmptyResponseResponse::Type,
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal) {}
 
-void WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext::
-    OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestEmptyResponseResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<NoRequestEmptyResponseResponse*>(reply));
 }
 
@@ -1352,38 +1535,44 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse
-WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync() {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    NoRequestWithResponse
+    WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()));
   }
-  return WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      ResultOf::NoRequestWithResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
-WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync(
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    NoRequestWithResponse
+    WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync(
+        ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      UnownedResultOf::NoRequestWithResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
-    NoRequestWithResponseResponseContext()
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestWithResponseResponseContext::NoRequestWithResponseResponseContext()
     : ::fidl::internal::ResponseContext(
           NoRequestWithResponseResponse::Type,
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal) {}
 
-void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
-    OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestWithResponseResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<NoRequestWithResponseResponse*>(reply));
 }
 
@@ -1425,7 +1614,8 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
     ::fidl::StringView arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::WithRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         arg);
     return ::fidl::Result(_res.status(), _res.error());
@@ -1437,7 +1627,8 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::WithRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, arg);
     return ::fidl::Result(_res.status(), _res.error());
@@ -1445,43 +1636,49 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
-WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
-    ::fidl::StringView arg) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestEmptyResponse
+    WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
+        ::fidl::StringView arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         arg);
   }
-  return WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      ResultOf::WithRequestEmptyResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
-WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    WithRequestEmptyResponse
+    WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+        ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, arg,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return WithAndWithoutRequestResponse::UnownedResultOf::
-      WithRequestEmptyResponse(
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      UnownedResultOf::WithRequestEmptyResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::WithRequestEmptyResponseResponseContext::
-    WithRequestEmptyResponseResponseContext()
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestEmptyResponseResponseContext::
+        WithRequestEmptyResponseResponseContext()
     : ::fidl::internal::ResponseContext(
           WithRequestEmptyResponseResponse::Type,
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal) {}
 
-void WithAndWithoutRequestResponse::WithRequestEmptyResponseResponseContext::
-    OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestEmptyResponseResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<WithRequestEmptyResponseResponse*>(reply));
 }
 
@@ -1525,43 +1722,49 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
-WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
-    ::fidl::StringView arg) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::ResultOf::
+    WithRequestWithResponse
+    WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
+        ::fidl::StringView arg) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         arg);
   }
-  return WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      ResultOf::WithRequestWithResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
-WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+    WithRequestWithResponse
+    WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+        ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse>(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, arg,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return WithAndWithoutRequestResponse::UnownedResultOf::
-      WithRequestWithResponse(
+  return ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      UnownedResultOf::WithRequestWithResponse(
           ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithAndWithoutRequestResponse::WithRequestWithResponseResponseContext::
-    WithRequestWithResponseResponseContext()
+::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestWithResponseResponseContext::
+        WithRequestWithResponseResponseContext()
     : ::fidl::internal::ResponseContext(
           WithRequestWithResponseResponse::Type,
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal) {}
 
-void WithAndWithoutRequestResponse::WithRequestWithResponseResponseContext::
-    OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestWithResponseResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<WithRequestWithResponseResponse*>(reply));
 }
 
@@ -1748,27 +1951,32 @@ namespace methods {
 
 void WithAndWithoutRequestResponseDispatchNoRequestNoResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::TypedChannelInterface::
-      NoRequestNoResponseCompleter::Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+  ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      TypedChannelInterface::NoRequestNoResponseCompleter::Sync completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::protocols::
+                       WithAndWithoutRequestResponse::TypedChannelInterface*>(
       interface)
       ->NoRequestNoResponse(completer);
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::TypedChannelInterface::
-      NoRequestEmptyResponseCompleter::Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+  ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      TypedChannelInterface::NoRequestEmptyResponseCompleter::Sync completer(
+          txn);
+  reinterpret_cast<::llcpp::fidl::test::protocols::
+                       WithAndWithoutRequestResponse::TypedChannelInterface*>(
       interface)
       ->NoRequestEmptyResponse(completer);
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestWithResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::TypedChannelInterface::
-      NoRequestWithResponseCompleter::Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+  ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      TypedChannelInterface::NoRequestWithResponseCompleter::Sync completer(
+          txn);
+  reinterpret_cast<::llcpp::fidl::test::protocols::
+                       WithAndWithoutRequestResponse::TypedChannelInterface*>(
       interface)
       ->NoRequestWithResponse(completer);
 }
@@ -1776,10 +1984,13 @@ void WithAndWithoutRequestResponseDispatchNoRequestWithResponse(
 void WithAndWithoutRequestResponseDispatchWithRequestNoResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
-      WithAndWithoutRequestResponse::WithRequestNoResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::TypedChannelInterface::
-      WithRequestNoResponseCompleter::Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+          WithRequestNoResponseRequest*>(bytes);
+  ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      TypedChannelInterface::WithRequestNoResponseCompleter::Sync completer(
+          txn);
+  reinterpret_cast<::llcpp::fidl::test::protocols::
+                       WithAndWithoutRequestResponse::TypedChannelInterface*>(
       interface)
       ->WithRequestNoResponse(std::move(message->arg), completer);
 }
@@ -1787,10 +1998,13 @@ void WithAndWithoutRequestResponseDispatchWithRequestNoResponse(
 void WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
-      WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::TypedChannelInterface::
-      WithRequestEmptyResponseCompleter::Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseRequest*>(bytes);
+  ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      TypedChannelInterface::WithRequestEmptyResponseCompleter::Sync completer(
+          txn);
+  reinterpret_cast<::llcpp::fidl::test::protocols::
+                       WithAndWithoutRequestResponse::TypedChannelInterface*>(
       interface)
       ->WithRequestEmptyResponse(std::move(message->arg), completer);
 }
@@ -1798,10 +2012,13 @@ void WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse(
 void WithAndWithoutRequestResponseDispatchWithRequestWithResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
-      WithAndWithoutRequestResponse::WithRequestWithResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::TypedChannelInterface::
-      WithRequestWithResponseCompleter::Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseRequest*>(bytes);
+  ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+      TypedChannelInterface::WithRequestWithResponseCompleter::Sync completer(
+          txn);
+  reinterpret_cast<::llcpp::fidl::test::protocols::
+                       WithAndWithoutRequestResponse::TypedChannelInterface*>(
       interface)
       ->WithRequestWithResponse(std::move(message->arg), completer);
 }
@@ -1812,22 +2029,28 @@ namespace entries {
 
 ::fidl::internal::MethodEntry WithAndWithoutRequestResponse[] = {
     {kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-     WithAndWithoutRequestResponse::NoRequestNoResponseRequest::Type,
+     ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+         NoRequestNoResponseRequest::Type,
      methods::WithAndWithoutRequestResponseDispatchNoRequestNoResponse},
     {kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-     WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest::Type,
+     ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+         NoRequestEmptyResponseRequest::Type,
      methods::WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse},
     {kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-     WithAndWithoutRequestResponse::NoRequestWithResponseRequest::Type,
+     ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+         NoRequestWithResponseRequest::Type,
      methods::WithAndWithoutRequestResponseDispatchNoRequestWithResponse},
     {kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-     WithAndWithoutRequestResponse::WithRequestNoResponseRequest::Type,
+     ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+         WithRequestNoResponseRequest::Type,
      methods::WithAndWithoutRequestResponseDispatchWithRequestNoResponse},
     {kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-     WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::Type,
+     ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+         WithRequestEmptyResponseRequest::Type,
      methods::WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse},
     {kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-     WithAndWithoutRequestResponse::WithRequestWithResponseRequest::Type,
+     ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+         WithRequestWithResponseRequest::Type,
      methods::WithAndWithoutRequestResponseDispatchWithRequestWithResponse},
 };
 
@@ -1901,78 +2124,80 @@ WithAndWithoutRequestResponse::TypedChannelInterface::dispatch_message(
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-void WithAndWithoutRequestResponse::NoRequestNoResponseRequest::_InitHeader(
-    zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestNoResponseRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid, kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest::_InitHeader(
-    zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestEmptyResponseRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse::
-    _InitHeader() {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestEmptyResponseResponse::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::NoRequestWithResponseRequest::_InitHeader(
-    zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestWithResponseRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::NoRequestWithResponseResponse::
-    _InitHeader() {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    NoRequestWithResponseResponse::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::WithRequestNoResponseRequest::_InitHeader(
-    zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestNoResponseRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::
-    _InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestEmptyResponseRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse::
-    _InitHeader() {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestEmptyResponseResponse::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0,
       kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::WithRequestWithResponseRequest::_InitHeader(
-    zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestWithResponseRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
       &_hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::WithRequestWithResponseResponse::
-    _InitHeader() {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    WithRequestWithResponseResponse::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::OnEmptyResponseResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    OnEmptyResponseResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0,
                        kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
 }
 
-void WithAndWithoutRequestResponse::OnWithResponseResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+    OnWithResponseResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0,
                        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
 }
@@ -2013,26 +2238,34 @@ namespace {
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
     4000554951765344912lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
     3421672554503271630lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal =
     627496610701472780lu;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
-WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ResponseAsStruct::
+    ResponseAsStruct(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                         _client) {
   ResponseAsStructRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, bytes_,
@@ -2042,8 +2275,11 @@ WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client, zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ResponseAsStruct::
+    ResponseAsStruct(::fidl::UnownedClientEnd<
+                         ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                         _client,
+                     zx_time_t _deadline) {
   ResponseAsStructRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, bytes_,
@@ -2054,9 +2290,12 @@ WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
   error_ = _request.error();
 }
 
-WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+    ResponseAsStruct::ResponseAsStruct(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client,
+        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ResponseAsStructRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
@@ -2065,8 +2304,10 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive::
+    ErrorAsPrimitive(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                         _client) {
   ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, bytes_,
@@ -2076,8 +2317,11 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client, zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive::
+    ErrorAsPrimitive(::fidl::UnownedClientEnd<
+                         ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                         _client,
+                     zx_time_t _deadline) {
   ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, bytes_,
@@ -2088,9 +2332,12 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
   error_ = _request.error();
 }
 
-WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+    ErrorAsPrimitive::ErrorAsPrimitive(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client,
+        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
@@ -2099,8 +2346,10 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum::
+    ErrorAsEnum(::fidl::UnownedClientEnd<
+                ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                    _client) {
   ErrorAsEnumRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, bytes_,
@@ -2109,8 +2358,11 @@ WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client, zx_time_t _deadline) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum::
+    ErrorAsEnum(::fidl::UnownedClientEnd<
+                    ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                    _client,
+                zx_time_t _deadline) {
   ErrorAsEnumRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, bytes_,
@@ -2120,9 +2372,11 @@ WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(
   error_ = _request.error();
 }
 
-WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
-    ::fidl::UnownedClientEnd<WithErrorSyntax> _client, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
+::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum::
+    ErrorAsEnum(::fidl::UnownedClientEnd<
+                    ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                    _client,
+                uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ErrorAsEnumRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
@@ -2131,35 +2385,43 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
   error_ = _request.error();
 }
 
-WithErrorSyntax::ResultOf::ResponseAsStruct
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ResponseAsStruct
 WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::ResponseAsStruct(
-        ::fidl::UnownedClientEnd<WithErrorSyntax>(_channel->handle()));
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>(
+            _channel->handle()));
   }
-  return WithErrorSyntax::ResultOf::ResponseAsStruct(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::
+      ResponseAsStruct(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithErrorSyntax::UnownedResultOf::ResponseAsStruct
-WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+    ResponseAsStruct
+    WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
+        ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::ResponseAsStruct(
-        ::fidl::UnownedClientEnd<WithErrorSyntax>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>(
+            _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return WithErrorSyntax::UnownedResultOf::ResponseAsStruct(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+      ResponseAsStruct(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithErrorSyntax::ResponseAsStructResponseContext::
-    ResponseAsStructResponseContext()
+::llcpp::fidl::test::protocols::WithErrorSyntax::
+    ResponseAsStructResponseContext::ResponseAsStructResponseContext()
     : ::fidl::internal::ResponseContext(
           ResponseAsStructResponse::Type,
           kWithErrorSyntax_ResponseAsStruct_Ordinal) {}
 
-void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::
+    ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<ResponseAsStructResponse*>(reply));
 }
 
@@ -2197,35 +2459,43 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-WithErrorSyntax::ResultOf::ErrorAsPrimitive
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive
 WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::ErrorAsPrimitive(
-        ::fidl::UnownedClientEnd<WithErrorSyntax>(_channel->handle()));
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>(
+            _channel->handle()));
   }
-  return WithErrorSyntax::ResultOf::ErrorAsPrimitive(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::
+      ErrorAsPrimitive(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
-WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+    ErrorAsPrimitive
+    WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
+        ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::ErrorAsPrimitive(
-        ::fidl::UnownedClientEnd<WithErrorSyntax>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>(
+            _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+      ErrorAsPrimitive(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithErrorSyntax::ErrorAsPrimitiveResponseContext::
-    ErrorAsPrimitiveResponseContext()
+::llcpp::fidl::test::protocols::WithErrorSyntax::
+    ErrorAsPrimitiveResponseContext::ErrorAsPrimitiveResponseContext()
     : ::fidl::internal::ResponseContext(
           ErrorAsPrimitiveResponse::Type,
           kWithErrorSyntax_ErrorAsPrimitive_Ordinal) {}
 
-void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::
+    ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<ErrorAsPrimitiveResponse*>(reply));
 }
 
@@ -2263,33 +2533,40 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-WithErrorSyntax::ResultOf::ErrorAsEnum
+::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::ErrorAsEnum(
-        ::fidl::UnownedClientEnd<WithErrorSyntax>(_channel->handle()));
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>(
+            _channel->handle()));
   }
-  return WithErrorSyntax::ResultOf::ErrorAsEnum(
+  return ::llcpp::fidl::test::protocols::WithErrorSyntax::ResultOf::ErrorAsEnum(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithErrorSyntax::UnownedResultOf::ErrorAsEnum
+::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::ErrorAsEnum(
-        ::fidl::UnownedClientEnd<WithErrorSyntax>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>(
+            _channel->handle()),
         _response_buffer.data, _response_buffer.capacity);
   }
-  return WithErrorSyntax::UnownedResultOf::ErrorAsEnum(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return ::llcpp::fidl::test::protocols::WithErrorSyntax::UnownedResultOf::
+      ErrorAsEnum(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-WithErrorSyntax::ErrorAsEnumResponseContext::ErrorAsEnumResponseContext()
+::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
+    ErrorAsEnumResponseContext()
     : ::fidl::internal::ResponseContext(ErrorAsEnumResponse::Type,
                                         kWithErrorSyntax_ErrorAsEnum_Ordinal) {}
 
-void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::
+    ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<ErrorAsEnumResponse*>(reply));
 }
 
@@ -2337,25 +2614,31 @@ namespace methods {
 
 void WithErrorSyntaxDispatchResponseAsStruct(void* interface, void* bytes,
                                              ::fidl::Transaction* txn) {
-  WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleter::Sync
-      completer(txn);
-  reinterpret_cast<WithErrorSyntax::TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::protocols::WithErrorSyntax::TypedChannelInterface::
+      ResponseAsStructCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::WithErrorSyntax::TypedChannelInterface*>(
+      interface)
       ->ResponseAsStruct(completer);
 }
 
 void WithErrorSyntaxDispatchErrorAsPrimitive(void* interface, void* bytes,
                                              ::fidl::Transaction* txn) {
-  WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleter::Sync
-      completer(txn);
-  reinterpret_cast<WithErrorSyntax::TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::protocols::WithErrorSyntax::TypedChannelInterface::
+      ErrorAsPrimitiveCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::WithErrorSyntax::TypedChannelInterface*>(
+      interface)
       ->ErrorAsPrimitive(completer);
 }
 
 void WithErrorSyntaxDispatchErrorAsEnum(void* interface, void* bytes,
                                         ::fidl::Transaction* txn) {
-  WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleter::Sync completer(
-      txn);
-  reinterpret_cast<WithErrorSyntax::TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::protocols::WithErrorSyntax::TypedChannelInterface::
+      ErrorAsEnumCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::protocols::WithErrorSyntax::TypedChannelInterface*>(
+      interface)
       ->ErrorAsEnum(completer);
 }
 
@@ -2365,13 +2648,15 @@ namespace entries {
 
 ::fidl::internal::MethodEntry WithErrorSyntax[] = {
     {kWithErrorSyntax_ResponseAsStruct_Ordinal,
-     WithErrorSyntax::ResponseAsStructRequest::Type,
+     ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructRequest::
+         Type,
      methods::WithErrorSyntaxDispatchResponseAsStruct},
     {kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-     WithErrorSyntax::ErrorAsPrimitiveRequest::Type,
+     ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveRequest::
+         Type,
      methods::WithErrorSyntaxDispatchErrorAsPrimitive},
     {kWithErrorSyntax_ErrorAsEnum_Ordinal,
-     WithErrorSyntax::ErrorAsEnumRequest::Type,
+     ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumRequest::Type,
      methods::WithErrorSyntaxDispatchErrorAsEnum},
 };
 
@@ -2413,18 +2698,22 @@ WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
     ResponseAsStructCompleterBase::ReplySuccess(int64_t a, int64_t b,
                                                 int64_t c) {
-  ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> _response;
+  ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ResponseAsStruct_Response>
+      _response;
   _response.value.a = std::move(a);
   _response.value.b = std::move(b);
   _response.value.c = std::move(c);
 
-  return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
-      ::fidl::unowned_ptr(&_response)));
+  return Reply(::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
+                       ::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
     ResponseAsStructCompleterBase::ReplyError(uint32_t error) {
-  return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithErr(
-      ::fidl::unowned_ptr(&error)));
+  return Reply(::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ResponseAsStruct_Result::WithErr(
+                       ::fidl::unowned_ptr(&error)));
 }
 
 ::fidl::Result
@@ -2440,14 +2729,17 @@ WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
     ResponseAsStructCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer,
                                                 int64_t a, int64_t b,
                                                 int64_t c) {
-  ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> response;
+  ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ResponseAsStruct_Response>
+      response;
   response.value.a = std::move(a);
   response.value.b = std::move(b);
   response.value.c = std::move(c);
 
   return Reply(std::move(_buffer),
-               WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
-                   ::fidl::unowned_ptr(&response)));
+               ::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
+                       ::fidl::unowned_ptr(&response)));
 }
 
 ::fidl::Result
@@ -2459,15 +2751,19 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
     ErrorAsPrimitiveCompleterBase::ReplySuccess() {
-  ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> _response;
+  ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ErrorAsPrimitive_Response>
+      _response;
 
-  return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
-      ::fidl::unowned_ptr(&_response)));
+  return Reply(::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
+                       ::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
     ErrorAsPrimitiveCompleterBase::ReplyError(uint32_t error) {
-  return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(
-      ::fidl::unowned_ptr(&error)));
+  return Reply(::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(
+                       ::fidl::unowned_ptr(&error)));
 }
 
 ::fidl::Result
@@ -2481,11 +2777,14 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
     ErrorAsPrimitiveCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
-  ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
+  ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ErrorAsPrimitive_Response>
+      response;
 
   return Reply(std::move(_buffer),
-               WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
-                   ::fidl::unowned_ptr(&response)));
+               ::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
+                       ::fidl::unowned_ptr(&response)));
 }
 
 ::fidl::Result
@@ -2497,16 +2796,20 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
     ErrorAsEnumCompleterBase::ReplySuccess() {
-  ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> _response;
+  ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ErrorAsEnum_Response>
+      _response;
 
-  return Reply(WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
-      ::fidl::unowned_ptr(&_response)));
+  return Reply(
+      ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+          WithResponse(::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::ReplyError(
-    ErrorEnun error) {
+    ::llcpp::fidl::test::protocols::wire::ErrorEnun error) {
   return Reply(
-      WithErrorSyntax_ErrorAsEnum_Result::WithErr(::fidl::unowned_ptr(&error)));
+      ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+          WithErr(::fidl::unowned_ptr(&error)));
 }
 
 ::fidl::Result
@@ -2521,34 +2824,43 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer) {
-  ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
+  ::fidl::aligned<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ErrorAsEnum_Response>
+      response;
 
-  return Reply(std::move(_buffer),
-               WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
-                   ::fidl::unowned_ptr(&response)));
+  return Reply(
+      std::move(_buffer),
+      ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+          WithResponse(::fidl::unowned_ptr(&response)));
 }
 
-void WithErrorSyntax::ResponseAsStructRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kWithErrorSyntax_ResponseAsStruct_Ordinal);
 }
 
-void WithErrorSyntax::ResponseAsStructResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ResponseAsStruct_Ordinal);
 }
 
-void WithErrorSyntax::ErrorAsPrimitiveRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
 }
 
-void WithErrorSyntax::ErrorAsPrimitiveResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
 }
 
-void WithErrorSyntax::ErrorAsEnumRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
 
-void WithErrorSyntax::ErrorAsEnumResponse::_InitHeader() {
+void ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse::
+    _InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
 

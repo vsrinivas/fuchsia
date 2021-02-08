@@ -37,15 +37,14 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/socket.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace protocols {
-
 namespace wire {
 
 enum class obj_type : uint32_t {
@@ -56,36 +55,42 @@ enum class obj_type : uint32_t {
 };
 
 }  // namespace wire
-
 using obj_type = wire::obj_type;
-
 namespace wire {
+
 struct WithErrorSyntax_ResponseAsStruct_Response;
 }  // namespace wire
 using WithErrorSyntax_ResponseAsStruct_Response =
-    wire::WithErrorSyntax_ResponseAsStruct_Response;  // struct
+    wire::WithErrorSyntax_ResponseAsStruct_Response;
 namespace wire {
+
 class WithErrorSyntax_ResponseAsStruct_Result;
 }  // namespace wire
 using WithErrorSyntax_ResponseAsStruct_Result =
     wire::WithErrorSyntax_ResponseAsStruct_Result;
 namespace wire {
+
 struct WithErrorSyntax_ErrorAsPrimitive_Response;
 }  // namespace wire
 using WithErrorSyntax_ErrorAsPrimitive_Response =
-    wire::WithErrorSyntax_ErrorAsPrimitive_Response;  // struct
+    wire::WithErrorSyntax_ErrorAsPrimitive_Response;
 namespace wire {
+
 class WithErrorSyntax_ErrorAsPrimitive_Result;
 }  // namespace wire
 using WithErrorSyntax_ErrorAsPrimitive_Result =
     wire::WithErrorSyntax_ErrorAsPrimitive_Result;
 namespace wire {
+
 struct WithErrorSyntax_ErrorAsEnum_Response;
 }  // namespace wire
 using WithErrorSyntax_ErrorAsEnum_Response =
-    wire::WithErrorSyntax_ErrorAsEnum_Response;  // struct
+    wire::WithErrorSyntax_ErrorAsEnum_Response;
+namespace wire {}  // namespace wire
 class Transitional;
+
 class ChannelProtocol;
+
 class WithAndWithoutRequestResponse;
 namespace wire {
 
@@ -97,17 +102,17 @@ enum class ErrorEnun : uint32_t {
 };
 
 }  // namespace wire
-
 using ErrorEnun = wire::ErrorEnun;
-
 namespace wire {
+
 class WithErrorSyntax_ErrorAsEnum_Result;
 }  // namespace wire
 using WithErrorSyntax_ErrorAsEnum_Result =
     wire::WithErrorSyntax_ErrorAsEnum_Result;
+namespace wire {}  // namespace wire
 class WithErrorSyntax;
-
 namespace wire {
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
@@ -303,9 +308,6 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
@@ -501,9 +503,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
@@ -704,9 +703,6 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
@@ -808,9 +804,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
@@ -908,9 +902,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
@@ -1007,16 +999,21 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestResponseTable;
+
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalOneWayResponseTable;
+
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
+
 extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 class Transitional final {
@@ -1031,7 +1028,8 @@ class Transitional final {
     RequestResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_TransitionalRequestResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_TransitionalRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1151,7 +1149,8 @@ class Transitional final {
     explicit RequestRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_TransitionalRequestRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_TransitionalRequestRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1276,7 +1275,8 @@ class Transitional final {
     explicit OneWayRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_TransitionalOneWayRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_TransitionalOneWayRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1397,7 +1397,8 @@ class Transitional final {
     EventResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_TransitionalEventEventTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_TransitionalEventEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1659,14 +1660,17 @@ class Transitional final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Request Request(
-        ::fidl::UnownedClientEnd<Transitional> _client_end, int64_t x) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+            _client_end,
+        int64_t x) {
       return ResultOf::Request(_client_end, x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Request Request(
-        ::fidl::UnownedClientEnd<Transitional> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, int64_t x,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Request(
@@ -1677,14 +1681,17 @@ class Transitional final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::OneWay OneWay(
-        ::fidl::UnownedClientEnd<Transitional> _client_end, int64_t x) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+            _client_end,
+        int64_t x) {
       return ResultOf::OneWay(_client_end, x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::OneWay OneWay(
-        ::fidl::UnownedClientEnd<Transitional> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, int64_t x) {
       return UnownedResultOf::OneWay(_client_end, _request_buffer.data,
                                      _request_buffer.capacity, x);
@@ -1854,22 +1861,31 @@ class Transitional final {
 
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodARequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodAResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventARequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventAEventTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
@@ -1889,7 +1905,8 @@ class ChannelProtocol final {
     explicit MethodARequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolMethodARequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2014,7 +2031,8 @@ class ChannelProtocol final {
     EventAResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolEventAEventTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2133,7 +2151,8 @@ class ChannelProtocol final {
     MethodBResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolMethodBResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2256,7 +2275,8 @@ class ChannelProtocol final {
     explicit MethodBRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolMethodBRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2498,7 +2518,8 @@ class ChannelProtocol final {
     explicit TakeHandleRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2631,7 +2652,8 @@ class ChannelProtocol final {
     MutateSocketResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2762,7 +2784,8 @@ class ChannelProtocol final {
     explicit MutateSocketRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3207,15 +3230,19 @@ class ChannelProtocol final {
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MethodA MethodA(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, int64_t a,
-        int64_t b) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
+        int64_t a, int64_t b) {
       return ResultOf::MethodA(_client_end, a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MethodA MethodA(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
       return UnownedResultOf::MethodA(_client_end, _request_buffer.data,
                                       _request_buffer.capacity, a, b);
@@ -3224,15 +3251,19 @@ class ChannelProtocol final {
     // Allocates 56 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MethodB MethodB(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, int64_t a,
-        int64_t b) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
+        int64_t a, int64_t b) {
       return ResultOf::MethodB(_client_end, a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MethodB MethodB(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MethodB(
@@ -3243,14 +3274,19 @@ class ChannelProtocol final {
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeHandle TakeHandle(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, ::zx::handle h) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
+        ::zx::handle h) {
       return ResultOf::TakeHandle(_client_end, h);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::TakeHandle TakeHandle(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::handle h,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::TakeHandle(
@@ -3261,14 +3297,19 @@ class ChannelProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MutateSocket MutateSocket(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, ::zx::socket a) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
+        ::zx::socket a) {
       return ResultOf::MutateSocket(_client_end, a);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MutateSocket MutateSocket(
-        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::socket a,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MutateSocket(
@@ -3523,34 +3564,49 @@ class ChannelProtocol final {
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
@@ -3929,7 +3985,8 @@ class WithAndWithoutRequestResponse final {
     NoRequestWithResponseResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4183,7 +4240,8 @@ class WithAndWithoutRequestResponse final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4433,7 +4491,8 @@ class WithAndWithoutRequestResponse final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4564,7 +4623,8 @@ class WithAndWithoutRequestResponse final {
     WithRequestWithResponseResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4694,7 +4754,8 @@ class WithAndWithoutRequestResponse final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4942,7 +5003,8 @@ class WithAndWithoutRequestResponse final {
     OnWithResponseResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -5530,28 +5592,36 @@ class WithAndWithoutRequestResponse final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::NoRequestNoResponse NoRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end) {
       return ResultOf::NoRequestNoResponse(_client_end);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end) {
       return ResultOf::NoRequestEmptyResponse(_client_end);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
     // heap-allocated.
     static ResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end) {
       return ResultOf::NoRequestWithResponse(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::NoRequestWithResponse(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -5559,7 +5629,9 @@ class WithAndWithoutRequestResponse final {
 
     // Request is heap-allocated.
     static ResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::StringView arg) {
       return ResultOf::WithRequestNoResponse(_client_end, arg);
     }
@@ -5567,7 +5639,9 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
       return UnownedResultOf::WithRequestNoResponse(
           _client_end, _request_buffer.data, _request_buffer.capacity, arg);
@@ -5576,7 +5650,9 @@ class WithAndWithoutRequestResponse final {
     // Allocates 16 bytes of response buffer on the stack. Request is
     // heap-allocated.
     static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::StringView arg) {
       return ResultOf::WithRequestEmptyResponse(_client_end, arg);
     }
@@ -5584,7 +5660,9 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestEmptyResponse(
@@ -5594,7 +5672,9 @@ class WithAndWithoutRequestResponse final {
 
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::StringView arg) {
       return ResultOf::WithRequestWithResponse(_client_end, arg);
     }
@@ -5602,7 +5682,9 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestWithResponse(
@@ -5912,14 +5994,19 @@ class WithAndWithoutRequestResponse final {
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
@@ -5941,7 +6028,8 @@ class WithErrorSyntax final {
     ResponseAsStructResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -6192,7 +6280,8 @@ class WithErrorSyntax final {
     ErrorAsPrimitiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -6442,7 +6531,8 @@ class WithErrorSyntax final {
     ErrorAsEnumResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
+        &::llcpp::fidl::test::protocols::
+            fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -6939,14 +7029,18 @@ class WithErrorSyntax final {
     // Allocates 80 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ResponseAsStruct ResponseAsStruct(
-        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client_end) {
       return ResultOf::ResponseAsStruct(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ResponseAsStruct ResponseAsStruct(
-        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::ResponseAsStruct(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -6955,14 +7049,18 @@ class WithErrorSyntax final {
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client_end) {
       return ResultOf::ErrorAsPrimitive(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::ErrorAsPrimitive(
           _client_end, _response_buffer.data, _response_buffer.capacity);
@@ -6971,14 +7069,18 @@ class WithErrorSyntax final {
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ErrorAsEnum ErrorAsEnum(
-        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client_end) {
       return ResultOf::ErrorAsEnum(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ErrorAsEnum ErrorAsEnum(
-        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithErrorSyntax>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::ErrorAsEnum(_client_end, _response_buffer.data,
                                           _response_buffer.capacity);
@@ -7149,7 +7251,8 @@ class WithErrorSyntax final {
       ::fidl::Result Reply(::llcpp::fidl::test::protocols::wire::
                                WithErrorSyntax_ErrorAsEnum_Result result);
       ::fidl::Result ReplySuccess();
-      ::fidl::Result ReplyError(ErrorEnun error);
+      ::fidl::Result ReplyError(
+          ::llcpp::fidl::test::protocols::wire::ErrorEnun error);
       ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                            ::llcpp::fidl::test::protocols::wire::
                                WithErrorSyntax_ErrorAsEnum_Result result);
@@ -7218,7 +7321,6 @@ class WithErrorSyntax final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -7804,14 +7906,12 @@ static_assert(
     offsetof(
         ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse,
         result) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace protocols {
+namespace wire {}  // namespace wire
 
 class Transitional::AsyncEventHandler
     : public Transitional::EventHandlerInterface {
@@ -8416,6 +8516,8 @@ class WithAndWithoutRequestResponse::WeakEventSender {
       ::fidl::internal::AsyncServerBinding<WithAndWithoutRequestResponse>>
       binding_;
 };
+
+namespace wire {}  // namespace wire
 
 class WithErrorSyntax::AsyncEventHandler
     : public WithErrorSyntax::EventHandlerInterface {

@@ -6,31 +6,34 @@ package codegen
 
 const serviceTemplate = `
 {{- define "ServiceForwardDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 #ifdef __Fuchsia__
-class {{ .Name }};
+class {{ .Decl.Natural.Name }};
 #endif // __Fuchsia__
 {{- end }}
 
 {{- define "ServiceDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{range .DocComments}}
 ///{{ . }}
 {{- end}}
-class {{ .Name }} final {
+class {{ .Decl.Natural.Name }} final {
  public:
   class Handler;
 
   static constexpr char Name[] = "{{ .ServiceName }}";
 
-  explicit {{ .Name }}(std::unique_ptr<::fidl::ServiceConnector> service)
+  explicit {{ .Decl.Natural.Name }}(std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
 
   {{- range .Members }}
   /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "{{ .Name }}".
-  ::fidl::MemberConnector<{{ .ProtocolType }}> {{ .MethodName }}() const {
-    return ::fidl::MemberConnector<{{ .ProtocolType }}>(service_.get(), "{{ .Name }}");
+  ::fidl::MemberConnector<{{ .ProtocolType.Natural }}> {{ .MethodName }}() const {
+    return ::fidl::MemberConnector<{{ .ProtocolType.Natural }}>(service_.get(), "{{ .Name }}");
   }
   {{- end }}
 
@@ -39,7 +42,7 @@ class {{ .Name }} final {
 };
 
 /// Facilitates member protocol registration for servers.
-class {{ .Name }}::Handler final {
+class {{ .Decl.Natural.Name }}::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service)
@@ -56,7 +59,7 @@ class {{ .Name }}::Handler final {
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .ProtocolType }}> handler) {
+  zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .ProtocolType.Natural }}> handler) {
     return service_->AddMember("{{ .Name }}", std::move(handler));
   }
   {{- end }}
@@ -66,6 +69,7 @@ class {{ .Name }}::Handler final {
   ::fidl::ServiceHandlerBase* const service_;
   {{- end }}
 };
+{{- PopNamespace }}
 #endif // __Fuchsia__
 {{- end }}
 `

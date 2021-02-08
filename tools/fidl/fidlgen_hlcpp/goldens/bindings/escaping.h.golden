@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace escaping {
-
 class DocCommentWithQuotes;
 
 /// "pleaseescapethisdocommentproperly"
@@ -39,11 +38,9 @@ inline zx_status_t Clone(
 }
 
 using DocCommentWithQuotesPtr = ::std::unique_ptr<DocCommentWithQuotes>;
+
 }  // namespace escaping
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::escaping::DocCommentWithQuotes>
     : public EncodableCodingTraits<::fidl::test::escaping::DocCommentWithQuotes,
@@ -72,13 +69,8 @@ struct Equality<::fidl::test::escaping::DocCommentWithQuotes> {
     return true;
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace escaping {}  // namespace escaping
-}  // namespace test
 }  // namespace fidl

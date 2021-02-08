@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace byteandbytes {
-
 class ByteAndBytes;
 
 class ByteAndBytes final {
@@ -43,11 +42,9 @@ inline zx_status_t Clone(const ::fidl::test::byteandbytes::ByteAndBytes& _value,
 }
 
 using ByteAndBytesPtr = ::std::unique_ptr<ByteAndBytes>;
+
 }  // namespace byteandbytes
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::byteandbytes::ByteAndBytes>
     : public EncodableCodingTraits<::fidl::test::byteandbytes::ByteAndBytes,
@@ -89,4 +86,5 @@ struct Equality<::fidl::test::byteandbytes::ByteAndBytes> {
     return true;
   }
 };
+
 }  // namespace fidl

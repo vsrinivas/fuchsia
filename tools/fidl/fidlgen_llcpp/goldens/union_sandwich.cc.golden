@@ -4,12 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace unionsandwich {
-
 void ::llcpp::fidl::test::unionsandwich::wire::UnionSize8Alignment4::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSize8Alignment4) == sizeof(fidl_xunion_t));
@@ -45,8 +39,3 @@ void ::llcpp::fidl::test::unionsandwich::wire::UnionSize24Alignment8::
   static_assert(offsetof(UnionSize24Alignment8, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-}  // namespace unionsandwich
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

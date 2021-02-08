@@ -8,8 +8,7 @@ namespace fidl {
 namespace test {
 namespace nullable {
 namespace testing {
-
-class SimpleProtocol_TestBase : public SimpleProtocol {
+class SimpleProtocol_TestBase : public ::fidl::test::nullable::SimpleProtocol {
  public:
   virtual ~SimpleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

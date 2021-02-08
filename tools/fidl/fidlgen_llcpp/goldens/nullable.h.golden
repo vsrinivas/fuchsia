@@ -36,55 +36,62 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 #include <zx/llcpp/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace nullable {
-
 namespace wire {
 struct StructWithNullableVector;
 }  // namespace wire
-using StructWithNullableVector = wire::StructWithNullableVector;  // struct
+using StructWithNullableVector = wire::StructWithNullableVector;
 namespace wire {
+
 struct StructWithNullableUnion;
 }  // namespace wire
-using StructWithNullableUnion = wire::StructWithNullableUnion;  // struct
+using StructWithNullableUnion = wire::StructWithNullableUnion;
 namespace wire {
+
 struct StructWithNullableStruct;
 }  // namespace wire
-using StructWithNullableStruct = wire::StructWithNullableStruct;  // struct
+using StructWithNullableStruct = wire::StructWithNullableStruct;
 namespace wire {
+
 struct StructWithNullableString;
 }  // namespace wire
-using StructWithNullableString = wire::StructWithNullableString;  // struct
+using StructWithNullableString = wire::StructWithNullableString;
 namespace wire {
+
 struct StructWithNullableRequest;
 }  // namespace wire
-using StructWithNullableRequest = wire::StructWithNullableRequest;  // struct
+using StructWithNullableRequest = wire::StructWithNullableRequest;
 namespace wire {
+
 struct StructWithNullableProtocol;
 }  // namespace wire
-using StructWithNullableProtocol = wire::StructWithNullableProtocol;  // struct
+using StructWithNullableProtocol = wire::StructWithNullableProtocol;
 namespace wire {
+
 struct StructWithNullableHandle;
 }  // namespace wire
-using StructWithNullableHandle = wire::StructWithNullableHandle;  // struct
+using StructWithNullableHandle = wire::StructWithNullableHandle;
+namespace wire {}  // namespace wire
 class SimpleProtocol;
 namespace wire {
 class SimpleUnion;
 }  // namespace wire
 using SimpleUnion = wire::SimpleUnion;
 namespace wire {
+
 struct Int32Wrapper;
 }  // namespace wire
-using Int32Wrapper = wire::Int32Wrapper;  // struct
-
+using Int32Wrapper = wire::Int32Wrapper;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_nullable_SimpleUnionTable;
 
 class SimpleUnion {
@@ -243,9 +250,6 @@ class SimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableVectorTable;
 
 struct StructWithNullableVector {
@@ -341,9 +345,7 @@ struct StructWithNullableVector {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
 
 struct StructWithNullableUnion {
@@ -437,9 +439,7 @@ struct StructWithNullableUnion {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
 
 struct StructWithNullableStruct {
@@ -534,9 +534,7 @@ struct StructWithNullableStruct {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
 
 struct StructWithNullableString {
@@ -632,10 +630,8 @@ struct StructWithNullableString {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 
 struct StructWithNullableRequest {
@@ -739,11 +735,9 @@ struct StructWithNullableRequest {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
 
 struct StructWithNullableProtocol {
@@ -847,11 +841,9 @@ struct StructWithNullableProtocol {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-namespace wire {
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 
 struct StructWithNullableHandle {
@@ -954,10 +946,11 @@ struct StructWithNullableHandle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 #endif  // __Fuchsia__
 
+}  // namespace wire
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 class SimpleProtocol final {
@@ -972,7 +965,8 @@ class SimpleProtocol final {
     AddResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_nullable_SimpleProtocolAddResponseTable;
+        &::llcpp::fidl::test::nullable::
+            fidl_test_nullable_SimpleProtocolAddResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1092,7 +1086,8 @@ class SimpleProtocol final {
     explicit AddRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_nullable_SimpleProtocolAddRequestTable;
+        &::llcpp::fidl::test::nullable::
+            fidl_test_nullable_SimpleProtocolAddRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1313,15 +1308,17 @@ class SimpleProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Add Add(
-        ::fidl::UnownedClientEnd<SimpleProtocol> _client_end, int32_t a,
-        int32_t b) {
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
+            _client_end,
+        int32_t a, int32_t b) {
       return ResultOf::Add(_client_end, a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Add Add(
-        ::fidl::UnownedClientEnd<SimpleProtocol> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Add(
@@ -1456,8 +1453,8 @@ class SimpleProtocol final {
   class EventSender;
   class WeakEventSender;
 };
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;
 
 struct Int32Wrapper {
@@ -1550,13 +1547,12 @@ struct Int32Wrapper {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace nullable
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1724,14 +1720,12 @@ static_assert(offsetof(::llcpp::fidl::test::nullable::wire::Int32Wrapper,
                        val) == 0);
 static_assert(sizeof(::llcpp::fidl::test::nullable::wire::Int32Wrapper) ==
               ::llcpp::fidl::test::nullable::wire::Int32Wrapper::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace nullable {
+namespace wire {}  // namespace wire
 
 class SimpleProtocol::AsyncEventHandler
     : public SimpleProtocol::EventHandlerInterface {
@@ -1834,6 +1828,7 @@ class SimpleProtocol::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<SimpleProtocol>> binding_;
 };
 
+namespace wire {}  // namespace wire
 }  // namespace nullable
 }  // namespace test
 }  // namespace fidl

@@ -34,21 +34,20 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace vectors {
-
 namespace wire {
 struct ExampleUseOfVectors;
 }  // namespace wire
-using ExampleUseOfVectors = wire::ExampleUseOfVectors;  // struct
-
+using ExampleUseOfVectors = wire::ExampleUseOfVectors;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
 
 struct ExampleUseOfVectors {
@@ -146,13 +145,12 @@ struct ExampleUseOfVectors {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace vectors
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -170,14 +168,13 @@ static_assert(offsetof(::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors,
 static_assert(
     sizeof(::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors) ==
     ::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace vectors {}  // namespace vectors
+namespace vectors {
+namespace wire {}  // namespace wire
+}  // namespace vectors
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

@@ -35,21 +35,21 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <bottom/llcpp/fidl.h>
 #include <middle/llcpp/fidl.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
-
 class Top;
 
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
@@ -68,7 +68,8 @@ class Top final {
     GetFooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
+        &::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::
+            fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -406,14 +407,19 @@ class Top final {
    public:
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::GetFoo GetFoo(::fidl::UnownedClientEnd<Top> _client_end) {
+    static ResultOf::GetFoo GetFoo(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            _client_end) {
       return ResultOf::GetFoo(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::GetFoo GetFoo(
-        ::fidl::UnownedClientEnd<Top> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
+            _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::GetFoo(_client_end, _response_buffer.data,
                                      _response_buffer.capacity);
@@ -546,7 +552,6 @@ class Top final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -578,11 +583,8 @@ static_assert(
     offsetof(::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top::
                  GetFooResponse,
              foo) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {

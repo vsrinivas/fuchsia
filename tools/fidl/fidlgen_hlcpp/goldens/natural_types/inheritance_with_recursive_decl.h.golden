@@ -10,22 +10,22 @@
 namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
-
 #ifdef __Fuchsia__
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 #endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-}
 
+}  // namespace _internal
 class Parent_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage First(
@@ -38,7 +38,7 @@ class Parent_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::inheritancewithrecursivedecl::_internal::
             fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -47,22 +47,20 @@ class Parent_RequestEncoder {
   }
 };
 
-namespace _internal {}
-
 class Parent_ResponseEncoder {
  public:
 };
-
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace _internal {
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
-}  // namespace _internal
 
+}  // namespace _internal
 class Child_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage First(
@@ -75,7 +73,7 @@ class Child_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::inheritancewithrecursivedecl::_internal::
             fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -92,7 +90,7 @@ class Child_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &_internal::
+        &::fidl::test::inheritancewithrecursivedecl::_internal::
             fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
@@ -101,14 +99,12 @@ class Child_RequestEncoder {
   }
 };
 
-namespace _internal {}
-
 class Child_ResponseEncoder {
  public:
 };
-
 #endif  // __Fuchsia__
+
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
+
 }  // namespace fidl
-namespace fidl {}  // namespace fidl

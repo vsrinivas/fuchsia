@@ -35,22 +35,22 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace emptystruct {
-
 namespace wire {
 struct Empty;
 }  // namespace wire
-using Empty = wire::Empty;  // struct
+using Empty = wire::Empty;
+namespace wire {}  // namespace wire
 class EmptyProtocol;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
 
 struct Empty {
@@ -141,18 +141,23 @@ struct Empty {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
@@ -172,7 +177,8 @@ class EmptyProtocol final {
     explicit SendRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+        &::llcpp::fidl::test::emptystruct::
+            fidl_test_emptystruct_EmptyProtocolSendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -298,7 +304,8 @@ class EmptyProtocol final {
     ReceiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+        &::llcpp::fidl::test::emptystruct::
+            fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -422,7 +429,8 @@ class EmptyProtocol final {
     SendAndReceiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
+        &::llcpp::fidl::test::emptystruct::
+            fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -547,7 +555,8 @@ class EmptyProtocol final {
     explicit SendAndReceiveRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+        &::llcpp::fidl::test::emptystruct::
+            fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -825,7 +834,9 @@ class EmptyProtocol final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Send Send(
-        ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+            _client_end,
         ::llcpp::fidl::test::emptystruct::wire::Empty e) {
       return ResultOf::Send(_client_end, e);
     }
@@ -833,7 +844,9 @@ class EmptyProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Send Send(
-        ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::emptystruct::wire::Empty e) {
       return UnownedResultOf::Send(_client_end, _request_buffer.data,
@@ -843,7 +856,9 @@ class EmptyProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::SendAndReceive SendAndReceive(
-        ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+            _client_end,
         ::llcpp::fidl::test::emptystruct::wire::Empty e) {
       return ResultOf::SendAndReceive(_client_end, e);
     }
@@ -851,7 +866,9 @@ class EmptyProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::SendAndReceive SendAndReceive(
-        ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::emptystruct::wire::Empty e,
         ::fidl::BufferSpan _response_buffer) {
@@ -1029,7 +1046,6 @@ class EmptyProtocol final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1108,14 +1124,12 @@ static_assert(
     offsetof(
         ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveResponse,
         e) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace emptystruct {
+namespace wire {}  // namespace wire
 
 class EmptyProtocol::AsyncEventHandler
     : public EmptyProtocol::EventHandlerInterface {

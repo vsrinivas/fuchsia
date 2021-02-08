@@ -3,12 +3,3 @@
 #include <fidl/test/bits/llcpp/fidl.h>
 
 #include <memory>
-
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace bits {}  // namespace bits
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

@@ -35,26 +35,27 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
-
 namespace wire {
 class StrictFoo;
 }  // namespace wire
 using StrictFoo = wire::StrictFoo;
 namespace wire {
+
 class FlexibleFoo;
 }  // namespace wire
 using FlexibleFoo = wire::FlexibleFoo;
+namespace wire {}  // namespace wire
 class Protocol;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_StrictFooTable;
 
 class StrictFoo {
@@ -216,9 +217,6 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
 
 class FlexibleFoo {
@@ -379,13 +377,15 @@ class FlexibleFoo {
 };
 
 }  // namespace wire
-
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
@@ -405,7 +405,8 @@ class Protocol final {
     RequestStrictResponseFlexibleResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+        &::llcpp::fidl::test::requestflexibleenvelope::
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -542,7 +543,8 @@ class Protocol final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+        &::llcpp::fidl::test::requestflexibleenvelope::
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -680,7 +682,8 @@ class Protocol final {
     RequestFlexibleResponseStrictResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+        &::llcpp::fidl::test::requestflexibleenvelope::
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -817,7 +820,8 @@ class Protocol final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+        &::llcpp::fidl::test::requestflexibleenvelope::
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1179,7 +1183,9 @@ class Protocol final {
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
-        ::fidl::UnownedClientEnd<Protocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+            _client_end,
         ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s) {
       return ResultOf::RequestStrictResponseFlexible(_client_end, s);
     }
@@ -1188,7 +1194,9 @@ class Protocol final {
     // response buffers.
     static UnownedResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
-        ::fidl::UnownedClientEnd<Protocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
         ::fidl::BufferSpan _response_buffer) {
@@ -1200,7 +1208,9 @@ class Protocol final {
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
-        ::fidl::UnownedClientEnd<Protocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+            _client_end,
         ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s) {
       return ResultOf::RequestFlexibleResponseStrict(_client_end, s);
     }
@@ -1209,7 +1219,9 @@ class Protocol final {
     // response buffers.
     static UnownedResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
-        ::fidl::UnownedClientEnd<Protocol> _client_end,
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+            _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
         ::fidl::BufferSpan _response_buffer) {
@@ -1411,7 +1423,6 @@ class Protocol final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1496,14 +1507,12 @@ static_assert(sizeof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
 static_assert(offsetof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrictResponse,
                        f) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
+namespace wire {}  // namespace wire
 
 class Protocol::AsyncEventHandler : public Protocol::EventHandlerInterface {
  public:

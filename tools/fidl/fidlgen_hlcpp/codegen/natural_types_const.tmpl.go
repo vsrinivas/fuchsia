@@ -6,19 +6,21 @@ package codegen
 
 const constTemplate = `
 {{- define "ConstDeclaration" }}
+{{ EnsureNamespace .Decl.Natural }}
 {{range .DocComments}}
 ///{{ . }}
 {{- end}}
 {{- if .Extern }}
-extern {{ .Decorator }} {{ .Type.NatDecl }} {{ .Name }};
+extern {{ .Decorator }} {{ .Type.Natural }} {{ .Decl.Natural.Name }};
 {{- else }}
-{{ .Decorator }} {{ .Type.NatDecl }} {{ .Name }} = {{ .Value }};
+{{ .Decorator }} {{ .Type.Natural }} {{ .Decl.Natural.Name }} = {{ .Value.Natural }};
 {{- end }}
 {{- end }}
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
-{{ .Decorator }} {{ .Type.NatDecl }} {{ .Name }} = {{ .Value }};
+{{ EnsureNamespace .Decl.Natural }}
+{{ .Decorator }} {{ .Type.Natural }} {{ .Decl.Natural.Name }} = {{ .Value.Natural }};
 {{- end }}
 {{- end }}
 `

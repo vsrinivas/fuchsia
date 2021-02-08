@@ -4,10 +4,3 @@
 
 #include <dependent/cpp/fidl.h>
 #include <fidl/test/structdefaultvalueenumlibraryreference/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
-namespace testing {}  // namespace testing
-}  // namespace structdefaultvalueenumlibraryreference
-}  // namespace test
-}  // namespace fidl

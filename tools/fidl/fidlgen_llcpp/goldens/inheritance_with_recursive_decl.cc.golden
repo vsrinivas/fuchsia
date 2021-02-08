@@ -5,36 +5,42 @@
 #include <memory>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
-
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kParent_First_Ordinal =
     3051519745671742363lu;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstResponseTable;
 
 }  // namespace
-Parent::ResultOf::First::First(
-    ::fidl::UnownedClientEnd<Parent> _client,
-    ::fidl::ServerEnd<
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request) {
+::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::ResultOf::First::
+    First(::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+              _client,
+          ::fidl::ServerEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+              request) {
   FirstRequest::OwnedEncodedMessage _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-Parent::UnownedResultOf::First::First(
-    ::fidl::UnownedClientEnd<Parent> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity,
-    ::fidl::ServerEnd<
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request) {
+::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::UnownedResultOf::
+    First::First(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+                     _client,
+                 uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                 ::fidl::ServerEnd<
+                     ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+                     request) {
   FirstRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
@@ -47,7 +53,10 @@ Parent::UnownedResultOf::First::First(
         request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::First(
-        ::fidl::UnownedClientEnd<Parent>(_channel->handle()), request);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>(
+            _channel->handle()),
+        request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -59,7 +68,9 @@ Parent::UnownedResultOf::First::First(
         request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::First(
-        ::fidl::UnownedClientEnd<Parent>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -77,10 +88,14 @@ namespace methods {
 
 void ParentDispatchFirst(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<Parent::FirstRequest*>(bytes);
-  Parent::TypedChannelInterface::FirstCompleter::Sync completer(txn);
-  reinterpret_cast<Parent::TypedChannelInterface*>(interface)->First(
-      std::move(message->request), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest*>(
+      bytes);
+  ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
+      TypedChannelInterface::FirstCompleter::Sync completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
+                       TypedChannelInterface*>(interface)
+      ->First(std::move(message->request), completer);
 }
 
 }  // namespace methods
@@ -88,7 +103,9 @@ void ParentDispatchFirst(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry Parent[] = {
-    {kParent_First_Ordinal, Parent::FirstRequest::Type,
+    {kParent_First_Ordinal,
+     ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest::
+         Type,
      methods::ParentDispatchFirst},
 };
 
@@ -120,43 +137,57 @@ namespace entries {
   return Parent::Dispatch(this, msg, txn);
 }
 
-void Parent::FirstRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_First_Ordinal);
 }
 
-void Parent::FirstRequest::_CloseHandles() { request.reset(); }
+void ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest::
+    _CloseHandles() {
+  request.reset();
+}
 
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kChild_First_Ordinal =
     3051519745671742363lu;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstResponseTable;
 [[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal =
     489667253787160198lu;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+
 extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondResponseTable;
 
 }  // namespace
-Child::ResultOf::First::First(
-    ::fidl::UnownedClientEnd<Child> _client,
-    ::fidl::ServerEnd<
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request) {
+::llcpp::fidl::test::inheritancewithrecursivedecl::Child::ResultOf::First::
+    First(::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              _client,
+          ::fidl::ServerEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+              request) {
   FirstRequest::OwnedEncodedMessage _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-Child::UnownedResultOf::First::First(
-    ::fidl::UnownedClientEnd<Child> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity,
-    ::fidl::ServerEnd<
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request) {
+::llcpp::fidl::test::inheritancewithrecursivedecl::Child::UnownedResultOf::
+    First::First(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+                     _client,
+                 uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                 ::fidl::ServerEnd<
+                     ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+                     request) {
   FirstRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
@@ -164,21 +195,28 @@ Child::UnownedResultOf::First::First(
   error_ = _request.error();
 }
 
-Child::ResultOf::Second::Second(
-    ::fidl::UnownedClientEnd<Child> _client,
-    ::fidl::ServerEnd<
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request) {
+::llcpp::fidl::test::inheritancewithrecursivedecl::Child::ResultOf::Second::
+    Second(::fidl::UnownedClientEnd<
+               ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+               _client,
+           ::fidl::ServerEnd<
+               ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+               request) {
   SecondRequest::OwnedEncodedMessage _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 
-Child::UnownedResultOf::Second::Second(
-    ::fidl::UnownedClientEnd<Child> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity,
-    ::fidl::ServerEnd<
-        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>& request) {
+::llcpp::fidl::test::inheritancewithrecursivedecl::Child::UnownedResultOf::
+    Second::Second(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl::ServerEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>&
+            request) {
   SecondRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
@@ -191,7 +229,10 @@ Child::UnownedResultOf::Second::Second(
         request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::First(
-        ::fidl::UnownedClientEnd<Child>(_channel->handle()), request);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
+        request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -203,7 +244,9 @@ Child::UnownedResultOf::Second::Second(
         request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::First(
-        ::fidl::UnownedClientEnd<Child>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -215,7 +258,10 @@ Child::UnownedResultOf::Second::Second(
         request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Second(
-        ::fidl::UnownedClientEnd<Child>(_channel->handle()), request);
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
+        request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -227,7 +273,9 @@ Child::UnownedResultOf::Second::Second(
         request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::Second(
-        ::fidl::UnownedClientEnd<Child>(_channel->handle()),
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
@@ -245,18 +293,26 @@ namespace methods {
 
 void ChildDispatchFirst(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<Child::FirstRequest*>(bytes);
-  Child::TypedChannelInterface::FirstCompleter::Sync completer(txn);
-  reinterpret_cast<Child::TypedChannelInterface*>(interface)->First(
-      std::move(message->request), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest*>(
+      bytes);
+  ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+      TypedChannelInterface::FirstCompleter::Sync completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+                       TypedChannelInterface*>(interface)
+      ->First(std::move(message->request), completer);
 }
 
 void ChildDispatchSecond(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<Child::SecondRequest*>(bytes);
-  Child::TypedChannelInterface::SecondCompleter::Sync completer(txn);
-  reinterpret_cast<Child::TypedChannelInterface*>(interface)->Second(
-      std::move(message->request), completer);
+  auto message = reinterpret_cast<
+      ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest*>(
+      bytes);
+  ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+      TypedChannelInterface::SecondCompleter::Sync completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+                       TypedChannelInterface*>(interface)
+      ->Second(std::move(message->request), completer);
 }
 
 }  // namespace methods
@@ -264,9 +320,13 @@ void ChildDispatchSecond(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry Child[] = {
-    {kChild_First_Ordinal, Child::FirstRequest::Type,
+    {kChild_First_Ordinal,
+     ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest::
+         Type,
      methods::ChildDispatchFirst},
-    {kChild_Second_Ordinal, Child::SecondRequest::Type,
+    {kChild_Second_Ordinal,
+     ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest::
+         Type,
      methods::ChildDispatchSecond},
 };
 
@@ -298,17 +358,25 @@ namespace entries {
   return Child::Dispatch(this, msg, txn);
 }
 
-void Child::FirstRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChild_First_Ordinal);
 }
 
-void Child::FirstRequest::_CloseHandles() { request.reset(); }
+void ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest::
+    _CloseHandles() {
+  request.reset();
+}
 
-void Child::SecondRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest::
+    _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChild_Second_Ordinal);
 }
 
-void Child::SecondRequest::_CloseHandles() { request.reset(); }
+void ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest::
+    _CloseHandles() {
+  request.reset();
+}
 
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test

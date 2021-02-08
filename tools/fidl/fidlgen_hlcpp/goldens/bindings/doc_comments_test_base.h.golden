@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace doccomments {
 namespace testing {
-
-class Interface_TestBase : public Interface {
+class Interface_TestBase : public ::fidl::test::doccomments::Interface {
  public:
   virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

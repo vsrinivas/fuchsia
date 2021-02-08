@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
-
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_StrictFooTable;
 const fidl_type_t* StrictFoo::FidlType =
     &fidl_test_requestflexibleenvelope_StrictFooTable;
@@ -188,6 +187,7 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
 const fidl_type_t* FlexibleFoo::FidlType =
     &fidl_test_requestflexibleenvelope_FlexibleFooTable;
@@ -394,6 +394,7 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 }  // namespace requestflexibleenvelope
 }  // namespace test
 }  // namespace fidl

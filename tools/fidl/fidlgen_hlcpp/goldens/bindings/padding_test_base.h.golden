@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/padding/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace padding {
-namespace testing {}  // namespace testing
-}  // namespace padding
-}  // namespace test
-}  // namespace fidl

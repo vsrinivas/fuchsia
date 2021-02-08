@@ -7,13 +7,13 @@ package codegen
 const fragmentProtocolTmpl = `
 {{- define "ArgumentDeclaration" -}}
   {{- if eq .Type.WireFamily FamilyKinds.TrivialCopy }}
-  {{ .Type.WireDecl }} {{ .Name }}
+  {{ .Type.Wire }} {{ .Name }}
   {{- else if eq .Type.WireFamily FamilyKinds.Reference }}
-  {{ .Type.WireDecl }}& {{ .Name }}
+  {{ .Type.Wire }}& {{ .Name }}
   {{- else if eq .Type.WireFamily FamilyKinds.String }}
-  const {{ .Type.WireDecl }}& {{ .Name }}
+  const {{ .Type.Wire }}& {{ .Name }}
   {{- else if eq .Type.WireFamily FamilyKinds.Vector }}
-  {{ .Type.WireDecl }}& {{ .Name }}
+  {{ .Type.Wire }}& {{ .Name }}
   {{- end }}
 {{- end }}
 
@@ -42,21 +42,14 @@ const fragmentProtocolTmpl = `
     {{- else if eq $param.Type.WireFamily FamilyKinds.String }}
       {{ $param.Name }}(::fidl::unowned_ptr_t<const char>({{ $param.Name }}.data()), {{ $param.Name }}.size())
     {{- else if eq $param.Type.WireFamily FamilyKinds.Vector }}
-      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.WireDecl }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
+      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.Wire }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
     {{- end }}
   {{- end }}
 {{- end }}
 
 {{- define "ProtocolForwardDeclaration" }}
-class {{ .Name }};
-{{- end }}
-
-{{- define "RequestCodingTable" -}}
-&{{ .RequestTypeName }}
-{{- end }}
-
-{{- define "ResponseCodingTable" -}}
-&{{ .ResponseTypeName }}
+{{ EnsureNamespace .Decl.Wire }}
+class {{ .Decl.Wire.Name }};
 {{- end }}
 
 {{- /* All the parameters for a method which value content. */}}
@@ -149,10 +142,13 @@ class {{ .Name }};
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
-extern "C" const fidl_type_t {{ .RequestTypeName }};
-extern "C" const fidl_type_t {{ .ResponseTypeName }};
+{{ EnsureNamespace .RequestCodingTable.Wire }}
+extern "C" const fidl_type_t {{ .RequestCodingTable.Wire.Name }};
+{{ EnsureNamespace .ResponseCodingTable.Wire }}
+extern "C" const fidl_type_t {{ .ResponseCodingTable.Wire.Name }};
   {{- end }}
 {{ "" }}
+{{ EnsureNamespace .Decl.Wire }}
 
 {{- range .DocComments }}
 //{{ . }}
@@ -172,7 +168,7 @@ class {{ .Name }} final {
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
         {{- range $index, $param := .Response }}
-    {{ $param.Type.WireDecl }} {{ $param.Name }};
+    {{ $param.Type.Wire }} {{ $param.Name }};
         {{- end }}
 
     {{- if .Response }}
@@ -187,7 +183,7 @@ class {{ .Name }} final {
 
     static constexpr const fidl_type_t* Type =
     {{- if .Response }}
-      {{ template "ResponseCodingTable" . }};
+      &{{ .ResponseCodingTable.Wire }};
     {{- else }}
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
@@ -343,7 +339,7 @@ class {{ .Name }} final {
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
         {{- range $index, $param := .Request }}
-    {{ $param.Type.WireDecl }} {{ $param.Name }};
+    {{ $param.Type.Wire }} {{ $param.Name }};
         {{- end }}
 
     {{- if .Request }}
@@ -358,7 +354,7 @@ class {{ .Name }} final {
 
     static constexpr const fidl_type_t* Type =
     {{- if .Request }}
-      {{ template "RequestCodingTable" . }};
+      &{{ .RequestCodingTable.Wire }};
     {{- else }}
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
@@ -543,7 +539,7 @@ class {{ .Name }} final {
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
     // method.
     ::fidl::Result HandleOneEvent(
-        ::fidl::UnownedClientEnd<{{ .Namespace }}::{{ .Name }}> client_end);
+        ::fidl::UnownedClientEnd<{{ .Decl.Wire }}> client_end);
   };
   {{- end }}
 
@@ -558,11 +554,11 @@ class {{ .Name }} final {
     class {{ .Name }} final : public ::fidl::Result {
      public:
       explicit {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ $protocol.Namespace }}::{{ $protocol.Name }}> _client
+          ::fidl::UnownedClientEnd<{{ $protocol.Decl.Wire }}> _client
           {{- template "CommaMessagePrototype" .Request }});
     {{- if .HasResponse }}
       {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ $protocol.Namespace }}::{{ $protocol.Name }}> _client
+          ::fidl::UnownedClientEnd<{{ $protocol.Decl.Wire }}> _client
           {{- template "CommaMessagePrototype" .Request }},
           zx_time_t _deadline);
     {{- end }}
@@ -624,7 +620,7 @@ class {{ .Name }} final {
     class {{ .Name }} final : public ::fidl::Result {
      public:
       explicit {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ $protocol.Namespace }}::{{ $protocol.Name }}> _client
+          ::fidl::UnownedClientEnd<{{ $protocol.Decl.Wire }}> _client
         {{- if .Request -}}
           , uint8_t* _request_bytes, uint32_t _request_byte_capacity
         {{- end -}}
@@ -674,7 +670,7 @@ class {{ .Name }} final {
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel or a
-  // const reference to a |fidl::ClientEnd<{{ .Namespace }}::{{ .Name }}>|,
+  // const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
   // avoiding setting up a client.
   class Call final {
     Call() = delete;
@@ -910,25 +906,25 @@ class {{ .Name }} final {
 {{- if .HasRequest }}
 
 template <>
-struct IsFidlType<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request> : public std::true_type {};
+struct IsFidlType<{{ $protocol.Decl.Wire }}::{{ .Name }}Request> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request> : public std::true_type {};
-static_assert(sizeof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request)
-    == {{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request::PrimarySize);
+struct IsFidlMessage<{{ $protocol.Decl.Wire }}::{{ .Name }}Request> : public std::true_type {};
+static_assert(sizeof({{ $protocol.Decl.Wire }}::{{ .Name }}Request)
+    == {{ $protocol.Decl.Wire }}::{{ .Name }}Request::PrimarySize);
 {{- range $index, $param := .Request }}
-static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $protocol.Decl.Wire }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- if .HasResponse }}
 
 template <>
-struct IsFidlType<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response> : public std::true_type {};
+struct IsFidlType<{{ $protocol.Decl.Wire }}::{{ .Name }}Response> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response> : public std::true_type {};
-static_assert(sizeof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response)
-    == {{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response::PrimarySize);
+struct IsFidlMessage<{{ $protocol.Decl.Wire }}::{{ .Name }}Response> : public std::true_type {};
+static_assert(sizeof({{ $protocol.Decl.Wire }}::{{ .Name }}Response)
+    == {{ $protocol.Decl.Wire }}::{{ .Name }}Response::PrimarySize);
 {{- range $index, $param := .Response }}
-static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $protocol.Decl.Wire }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- end }}
@@ -941,15 +937,17 @@ static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $meth
 {{- end }}
 
 {{- define "ProtocolDefinition" }}
-
+{{ EnsureNamespace .Decl.Wire }}
 namespace {
 {{ $protocol := . -}}
 
 {{- range .Methods }}
 [[maybe_unused]]
-constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu;
-extern "C" const fidl_type_t {{ .RequestTypeName }};
-extern "C" const fidl_type_t {{ .ResponseTypeName }};
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu; {{/* TODO: Make a DeclName for OrdinalName */}}
+{{ EnsureNamespace .RequestCodingTable.Wire }}
+extern "C" const fidl_type_t {{ .RequestCodingTable.Wire.Name }};
+{{ EnsureNamespace .ResponseCodingTable.Wire }}
+extern "C" const fidl_type_t {{ .ResponseCodingTable.Wire.Name }};
 {{- end }}
 
 }  // namespace

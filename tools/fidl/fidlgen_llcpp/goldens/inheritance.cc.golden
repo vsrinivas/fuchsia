@@ -5,20 +5,21 @@
 #include <memory>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace inheritance {
-
 namespace {
 
 [[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 4999045011615110827lu;
+
 extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace
-super::ResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
-                          const ::fidl::StringView& s) {
+::llcpp::fidl::test::inheritance::super::ResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super> _client,
+    const ::fidl::StringView& s) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
@@ -26,8 +27,9 @@ super::ResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
   error_ = _request.error();
 }
 
-super::ResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
-                          const ::fidl::StringView& s, zx_time_t _deadline) {
+::llcpp::fidl::test::inheritance::super::ResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super> _client,
+    const ::fidl::StringView& s, zx_time_t _deadline) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
@@ -36,12 +38,11 @@ super::ResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
   error_ = _request.error();
 }
 
-super::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
-                                 uint8_t* _request_bytes,
-                                 uint32_t _request_byte_capacity,
-                                 const ::fidl::StringView& s,
-                                 uint8_t* _response_bytes,
-                                 uint32_t _response_byte_capacity)
+::llcpp::fidl::test::inheritance::super::UnownedResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super> _client,
+    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+    const ::fidl::StringView& s, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   fooRequest::UnownedEncodedMessage _request(_request_bytes,
                                              _request_byte_capacity, 0, s);
@@ -51,33 +52,40 @@ super::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
   error_ = _request.error();
 }
 
-super::ResultOf::foo super::ClientImpl::foo_Sync(::fidl::StringView s) {
+::llcpp::fidl::test::inheritance::super::ResultOf::foo
+super::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::foo(::fidl::UnownedClientEnd<super>(_channel->handle()),
-                         s);
+    return ResultOf::foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>(
+            _channel->handle()),
+        s);
   }
-  return super::ResultOf::foo(
+  return ::llcpp::fidl::test::inheritance::super::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::inheritance::super::UnownedResultOf::foo
+super::ClientImpl::foo_Sync(::fidl::BufferSpan _request_buffer,
+                            ::fidl::StringView s,
+                            ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        ::fidl::UnownedClientEnd<super>(_channel->handle()),
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>(
+            _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
-  return super::UnownedResultOf::foo(
+  return ::llcpp::fidl::test::inheritance::super::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-super::fooResponseContext::fooResponseContext()
+::llcpp::fidl::test::inheritance::super::fooResponseContext::
+    fooResponseContext()
     : ::fidl::internal::ResponseContext(fooResponse::Type, ksuper_foo_Ordinal) {
 }
 
-void super::fooResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::inheritance::super::fooResponseContext::OnReply(
+    uint8_t* reply) {
   OnReply(reinterpret_cast<fooResponse*>(reply));
 }
 
@@ -126,10 +134,15 @@ std::optional<::fidl::UnbindInfo> super::ClientImpl::DispatchEvent(
 namespace methods {
 
 void superDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<super::fooRequest*>(bytes);
-  super::TypedChannelInterface::fooCompleter::Sync completer(txn);
-  reinterpret_cast<super::TypedChannelInterface*>(interface)->foo(
-      std::move(message->s), completer);
+  auto message =
+      reinterpret_cast<::llcpp::fidl::test::inheritance::super::fooRequest*>(
+          bytes);
+  ::llcpp::fidl::test::inheritance::super::TypedChannelInterface::fooCompleter::
+      Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::inheritance::super::TypedChannelInterface*>(
+      interface)
+      ->foo(std::move(message->s), completer);
 }
 
 }  // namespace methods
@@ -137,7 +150,9 @@ void superDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
 namespace entries {
 
 ::fidl::internal::MethodEntry super[] = {
-    {ksuper_foo_Ordinal, super::fooRequest::Type, methods::superDispatchfoo},
+    {ksuper_foo_Ordinal,
+     ::llcpp::fidl::test::inheritance::super::fooRequest::Type,
+     methods::superDispatchfoo},
 };
 
 }  // namespace entries
@@ -181,23 +196,27 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-void super::fooRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::inheritance::super::fooRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, ksuper_foo_Ordinal);
 }
 
-void super::fooResponse::_InitHeader() {
+void ::llcpp::fidl::test::inheritance::super::fooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, ksuper_foo_Ordinal);
 }
 
 namespace {
 
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 4999045011615110827lu;
+
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace
-sub::ResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
-                        const ::fidl::StringView& s) {
+::llcpp::fidl::test::inheritance::sub::ResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub> _client,
+    const ::fidl::StringView& s) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
@@ -205,8 +224,9 @@ sub::ResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
   error_ = _request.error();
 }
 
-sub::ResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
-                        const ::fidl::StringView& s, zx_time_t _deadline) {
+::llcpp::fidl::test::inheritance::sub::ResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub> _client,
+    const ::fidl::StringView& s, zx_time_t _deadline) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
@@ -215,12 +235,11 @@ sub::ResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
   error_ = _request.error();
 }
 
-sub::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
-                               uint8_t* _request_bytes,
-                               uint32_t _request_byte_capacity,
-                               const ::fidl::StringView& s,
-                               uint8_t* _response_bytes,
-                               uint32_t _response_byte_capacity)
+::llcpp::fidl::test::inheritance::sub::UnownedResultOf::foo::foo(
+    ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub> _client,
+    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+    const ::fidl::StringView& s, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   fooRequest::UnownedEncodedMessage _request(_request_bytes,
                                              _request_byte_capacity, 0, s);
@@ -230,31 +249,38 @@ sub::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
   error_ = _request.error();
 }
 
-sub::ResultOf::foo sub::ClientImpl::foo_Sync(::fidl::StringView s) {
+::llcpp::fidl::test::inheritance::sub::ResultOf::foo sub::ClientImpl::foo_Sync(
+    ::fidl::StringView s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::foo(::fidl::UnownedClientEnd<sub>(_channel->handle()), s);
+    return ResultOf::foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>(
+            _channel->handle()),
+        s);
   }
-  return sub::ResultOf::foo(
+  return ::llcpp::fidl::test::inheritance::sub::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl::BufferSpan _response_buffer) {
+::llcpp::fidl::test::inheritance::sub::UnownedResultOf::foo
+sub::ClientImpl::foo_Sync(::fidl::BufferSpan _request_buffer,
+                          ::fidl::StringView s,
+                          ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        ::fidl::UnownedClientEnd<sub>(_channel->handle()), _request_buffer.data,
-        _request_buffer.capacity, s, _response_buffer.data,
-        _response_buffer.capacity);
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
   }
-  return sub::UnownedResultOf::foo(
+  return ::llcpp::fidl::test::inheritance::sub::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-sub::fooResponseContext::fooResponseContext()
+::llcpp::fidl::test::inheritance::sub::fooResponseContext::fooResponseContext()
     : ::fidl::internal::ResponseContext(fooResponse::Type, ksub_foo_Ordinal) {}
 
-void sub::fooResponseContext::OnReply(uint8_t* reply) {
+void ::llcpp::fidl::test::inheritance::sub::fooResponseContext::OnReply(
+    uint8_t* reply) {
   OnReply(reinterpret_cast<fooResponse*>(reply));
 }
 
@@ -303,10 +329,14 @@ std::optional<::fidl::UnbindInfo> sub::ClientImpl::DispatchEvent(
 namespace methods {
 
 void subDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  auto message = reinterpret_cast<sub::fooRequest*>(bytes);
-  sub::TypedChannelInterface::fooCompleter::Sync completer(txn);
-  reinterpret_cast<sub::TypedChannelInterface*>(interface)->foo(
-      std::move(message->s), completer);
+  auto message =
+      reinterpret_cast<::llcpp::fidl::test::inheritance::sub::fooRequest*>(
+          bytes);
+  ::llcpp::fidl::test::inheritance::sub::TypedChannelInterface::fooCompleter::
+      Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::inheritance::sub::TypedChannelInterface*>(interface)
+      ->foo(std::move(message->s), completer);
 }
 
 }  // namespace methods
@@ -314,7 +344,8 @@ void subDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
 namespace entries {
 
 ::fidl::internal::MethodEntry sub[] = {
-    {ksub_foo_Ordinal, sub::fooRequest::Type, methods::subDispatchfoo},
+    {ksub_foo_Ordinal, ::llcpp::fidl::test::inheritance::sub::fooRequest::Type,
+     methods::subDispatchfoo},
 };
 
 }  // namespace entries
@@ -357,11 +388,12 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-void sub::fooRequest::_InitHeader(zx_txid_t _txid) {
+void ::llcpp::fidl::test::inheritance::sub::fooRequest::_InitHeader(
+    zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, ksub_foo_Ordinal);
 }
 
-void sub::fooResponse::_InitHeader() {
+void ::llcpp::fidl::test::inheritance::sub::fooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, ksub_foo_Ordinal);
 }
 

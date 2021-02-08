@@ -49,7 +49,9 @@ struct Allocate<StructWithNullableVector> {
 };
 template <>
 struct MinSize<StructWithNullableUnion> {
-  operator size_t() { return MinSize<::std::unique_ptr<SimpleUnion>>(); }
+  operator size_t() {
+    return MinSize<::std::unique_ptr<::fidl::test::nullable::SimpleUnion>>();
+  }
 };
 template <>
 struct Allocate<StructWithNullableUnion> {
@@ -59,14 +61,20 @@ struct Allocate<StructWithNullableUnion> {
         (*size - MinSize<StructWithNullableUnion>()) / 1;
     StructWithNullableUnion out;
     size_t out_size;
-    out_size = MinSize<::std::unique_ptr<SimpleUnion>>() + slack_per_member;
-    out.val = Allocate<::std::unique_ptr<SimpleUnion>>{}(src, &out_size);
+    out_size =
+        MinSize<::std::unique_ptr<::fidl::test::nullable::SimpleUnion>>() +
+        slack_per_member;
+    out.val =
+        Allocate<::std::unique_ptr<::fidl::test::nullable::SimpleUnion>>{}(
+            src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<StructWithNullableStruct> {
-  operator size_t() { return MinSize<::std::unique_ptr<Int32Wrapper>>(); }
+  operator size_t() {
+    return MinSize<::std::unique_ptr<::fidl::test::nullable::Int32Wrapper>>();
+  }
 };
 template <>
 struct Allocate<StructWithNullableStruct> {
@@ -76,8 +84,12 @@ struct Allocate<StructWithNullableStruct> {
         (*size - MinSize<StructWithNullableStruct>()) / 1;
     StructWithNullableStruct out;
     size_t out_size;
-    out_size = MinSize<::std::unique_ptr<Int32Wrapper>>() + slack_per_member;
-    out.val = Allocate<::std::unique_ptr<Int32Wrapper>>{}(src, &out_size);
+    out_size =
+        MinSize<::std::unique_ptr<::fidl::test::nullable::Int32Wrapper>>() +
+        slack_per_member;
+    out.val =
+        Allocate<::std::unique_ptr<::fidl::test::nullable::Int32Wrapper>>{}(
+            src, &out_size);
     return out;
   }
 };
@@ -101,7 +113,8 @@ struct Allocate<StructWithNullableString> {
 template <>
 struct MinSize<StructWithNullableRequest> {
   operator size_t() {
-    return MinSize<::fidl::InterfaceRequest<SimpleProtocol>>();
+    return MinSize<
+        ::fidl::InterfaceRequest<::fidl::test::nullable::SimpleProtocol>>();
   }
 };
 template <>
@@ -112,17 +125,20 @@ struct Allocate<StructWithNullableRequest> {
         (*size - MinSize<StructWithNullableRequest>()) / 1;
     StructWithNullableRequest out;
     size_t out_size;
-    out_size =
-        MinSize<::fidl::InterfaceRequest<SimpleProtocol>>() + slack_per_member;
-    out.val =
-        Allocate<::fidl::InterfaceRequest<SimpleProtocol>>{}(src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<
+                   ::fidl::test::nullable::SimpleProtocol>>() +
+               slack_per_member;
+    out.val = Allocate<
+        ::fidl::InterfaceRequest<::fidl::test::nullable::SimpleProtocol>>{}(
+        src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<StructWithNullableProtocol> {
   operator size_t() {
-    return MinSize<::fidl::InterfaceHandle<class SimpleProtocol>>();
+    return MinSize<
+        ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol>>();
   }
 };
 template <>
@@ -133,9 +149,12 @@ struct Allocate<StructWithNullableProtocol> {
         (*size - MinSize<StructWithNullableProtocol>()) / 1;
     StructWithNullableProtocol out;
     size_t out_size;
-    out_size = MinSize<::fidl::InterfaceHandle<class SimpleProtocol>>() +
-               slack_per_member;
-    out.val = Allocate<::fidl::InterfaceHandle<class SimpleProtocol>>{}(
+    out_size =
+        MinSize<
+            ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol>>() +
+        slack_per_member;
+    out.val = Allocate<
+        ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol>>{}(
         src, &out_size);
     return out;
   }

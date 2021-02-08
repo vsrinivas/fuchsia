@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace union_ {
 namespace testing {
-
-class TestProtocol_TestBase : public TestProtocol {
+class TestProtocol_TestBase : public ::fidl::test::union_::TestProtocol {
  public:
   virtual ~TestProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

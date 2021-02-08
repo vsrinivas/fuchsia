@@ -8,8 +8,8 @@ namespace fidl {
 namespace test {
 namespace placementofattributes {
 namespace testing {
-
-class ExampleProtocol_TestBase : public ExampleProtocol {
+class ExampleProtocol_TestBase
+    : public ::fidl::test::placementofattributes::ExampleProtocol {
  public:
   virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

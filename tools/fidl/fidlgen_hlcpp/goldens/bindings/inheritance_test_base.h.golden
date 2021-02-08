@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace inheritance {
 namespace testing {
-
-class super_TestBase : public super {
+class super_TestBase : public ::fidl::test::inheritance::super {
  public:
   virtual ~super_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -17,7 +16,7 @@ class super_TestBase : public super {
   }
 };
 
-class sub_TestBase : public sub {
+class sub_TestBase : public ::fidl::test::inheritance::sub {
  public:
   virtual ~sub_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

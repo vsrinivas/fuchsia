@@ -34,83 +34,95 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace padding {
-
 namespace wire {
 struct Padding7ByteMiddle;
 }  // namespace wire
-using Padding7ByteMiddle = wire::Padding7ByteMiddle;  // struct
+using Padding7ByteMiddle = wire::Padding7ByteMiddle;
 namespace wire {
+
 struct Padding7ByteEnd;
 }  // namespace wire
-using Padding7ByteEnd = wire::Padding7ByteEnd;  // struct
+using Padding7ByteEnd = wire::Padding7ByteEnd;
 namespace wire {
+
 struct Padding6ByteMiddle;
 }  // namespace wire
-using Padding6ByteMiddle = wire::Padding6ByteMiddle;  // struct
+using Padding6ByteMiddle = wire::Padding6ByteMiddle;
 namespace wire {
+
 struct Padding6ByteEnd;
 }  // namespace wire
-using Padding6ByteEnd = wire::Padding6ByteEnd;  // struct
+using Padding6ByteEnd = wire::Padding6ByteEnd;
 namespace wire {
+
 struct Padding5ByteMiddle;
 }  // namespace wire
-using Padding5ByteMiddle = wire::Padding5ByteMiddle;  // struct
+using Padding5ByteMiddle = wire::Padding5ByteMiddle;
 namespace wire {
+
 struct Padding5ByteEnd;
 }  // namespace wire
-using Padding5ByteEnd = wire::Padding5ByteEnd;  // struct
+using Padding5ByteEnd = wire::Padding5ByteEnd;
 namespace wire {
+
 struct Padding4ByteMiddle;
 }  // namespace wire
-using Padding4ByteMiddle = wire::Padding4ByteMiddle;  // struct
+using Padding4ByteMiddle = wire::Padding4ByteMiddle;
 namespace wire {
+
 struct Padding4ByteEnd;
 }  // namespace wire
-using Padding4ByteEnd = wire::Padding4ByteEnd;  // struct
+using Padding4ByteEnd = wire::Padding4ByteEnd;
 namespace wire {
+
 struct Padding4ByteAlignmentLength12;
 }  // namespace wire
-using Padding4ByteAlignmentLength12 =
-    wire::Padding4ByteAlignmentLength12;  // struct
+using Padding4ByteAlignmentLength12 = wire::Padding4ByteAlignmentLength12;
 namespace wire {
+
 struct Padding3ByteMiddle;
 }  // namespace wire
-using Padding3ByteMiddle = wire::Padding3ByteMiddle;  // struct
+using Padding3ByteMiddle = wire::Padding3ByteMiddle;
 namespace wire {
+
 struct Padding3ByteEnd;
 }  // namespace wire
-using Padding3ByteEnd = wire::Padding3ByteEnd;  // struct
+using Padding3ByteEnd = wire::Padding3ByteEnd;
 namespace wire {
+
 struct Padding2ByteMiddle;
 }  // namespace wire
-using Padding2ByteMiddle = wire::Padding2ByteMiddle;  // struct
+using Padding2ByteMiddle = wire::Padding2ByteMiddle;
 namespace wire {
+
 struct Padding2ByteEnd;
 }  // namespace wire
-using Padding2ByteEnd = wire::Padding2ByteEnd;  // struct
+using Padding2ByteEnd = wire::Padding2ByteEnd;
 namespace wire {
+
 struct Padding2ByteAlignmentLength6;
 }  // namespace wire
-using Padding2ByteAlignmentLength6 =
-    wire::Padding2ByteAlignmentLength6;  // struct
+using Padding2ByteAlignmentLength6 = wire::Padding2ByteAlignmentLength6;
 namespace wire {
+
 struct Padding1ByteMiddle;
 }  // namespace wire
-using Padding1ByteMiddle = wire::Padding1ByteMiddle;  // struct
+using Padding1ByteMiddle = wire::Padding1ByteMiddle;
 namespace wire {
+
 struct Padding1ByteEnd;
 }  // namespace wire
-using Padding1ByteEnd = wire::Padding1ByteEnd;  // struct
-
+using Padding1ByteEnd = wire::Padding1ByteEnd;
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteMiddleTable;
 
 struct Padding7ByteMiddle {
@@ -206,9 +218,7 @@ struct Padding7ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
 
 struct Padding7ByteEnd {
@@ -303,9 +313,7 @@ struct Padding7ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteMiddleTable;
 
 struct Padding6ByteMiddle {
@@ -401,9 +409,7 @@ struct Padding6ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
 
 struct Padding6ByteEnd {
@@ -498,9 +504,7 @@ struct Padding6ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteMiddleTable;
 
 struct Padding5ByteMiddle {
@@ -598,9 +602,7 @@ struct Padding5ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
 
 struct Padding5ByteEnd {
@@ -697,9 +699,7 @@ struct Padding5ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
 
 struct Padding4ByteMiddle {
@@ -795,9 +795,7 @@ struct Padding4ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
 
 struct Padding4ByteEnd {
@@ -892,9 +890,7 @@ struct Padding4ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_padding_Padding4ByteAlignmentLength12Table;
 
@@ -995,9 +991,7 @@ struct Padding4ByteAlignmentLength12 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
 
 struct Padding3ByteMiddle {
@@ -1093,9 +1087,7 @@ struct Padding3ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
 
 struct Padding3ByteEnd {
@@ -1190,9 +1182,7 @@ struct Padding3ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteMiddleTable;
 
 struct Padding2ByteMiddle {
@@ -1288,9 +1278,7 @@ struct Padding2ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
 
 struct Padding2ByteEnd {
@@ -1385,9 +1373,7 @@ struct Padding2ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t
     fidl_test_padding_Padding2ByteAlignmentLength6Table;
 
@@ -1486,9 +1472,7 @@ struct Padding2ByteAlignmentLength6 {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
 
 struct Padding1ByteMiddle {
@@ -1584,9 +1568,7 @@ struct Padding1ByteMiddle {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
-namespace wire {
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
 
 struct Padding1ByteEnd {
@@ -1681,13 +1663,12 @@ struct Padding1ByteEnd {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 }  // namespace padding
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -1963,14 +1944,13 @@ static_assert(offsetof(::llcpp::fidl::test::padding::wire::Padding1ByteEnd,
                        b) == 2);
 static_assert(sizeof(::llcpp::fidl::test::padding::wire::Padding1ByteEnd) ==
               ::llcpp::fidl::test::padding::wire::Padding1ByteEnd::PrimarySize);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
-namespace padding {}  // namespace padding
+namespace padding {
+namespace wire {}  // namespace wire
+}  // namespace padding
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

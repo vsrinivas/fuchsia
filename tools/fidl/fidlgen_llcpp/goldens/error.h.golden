@@ -35,26 +35,27 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace error {
-
 namespace wire {
 struct Example_foo_Response;
 }  // namespace wire
-using Example_foo_Response = wire::Example_foo_Response;  // struct
+using Example_foo_Response = wire::Example_foo_Response;
 namespace wire {
+
 class Example_foo_Result;
 }  // namespace wire
 using Example_foo_Result = wire::Example_foo_Result;
+namespace wire {}  // namespace wire
 class Example;
-
 namespace wire {
+
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 
 class Example_foo_Result {
@@ -236,9 +237,6 @@ class Example_foo_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-}  // namespace wire
-
-namespace wire {
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 
 struct Example_foo_Response {
@@ -332,9 +330,10 @@ struct Example_foo_Response {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 
+}  // namespace wire
 extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+
 extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 class Example final {
@@ -353,7 +352,7 @@ class Example final {
     fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_error_ExamplefooResponseTable;
+        &::llcpp::fidl::test::error::fidl_test_error_ExamplefooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -476,7 +475,7 @@ class Example final {
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_error_ExamplefooRequestTable;
+        &::llcpp::fidl::test::error::fidl_test_error_ExamplefooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -696,15 +695,18 @@ class Example final {
    public:
     // Allocates 48 bytes of response buffer on the stack. Request is
     // heap-allocated.
-    static ResultOf::foo foo(::fidl::UnownedClientEnd<Example> _client_end,
-                             ::fidl::StringView s) {
+    static ResultOf::foo foo(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example>
+            _client_end,
+        ::fidl::StringView s) {
       return ResultOf::foo(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::foo foo(
-        ::fidl::UnownedClientEnd<Example> _client_end,
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example>
+            _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
@@ -849,7 +851,6 @@ class Example final {
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
-
 namespace fidl {
 
 template <>
@@ -896,14 +897,12 @@ static_assert(sizeof(::llcpp::fidl::test::error::Example::fooResponse) ==
               ::llcpp::fidl::test::error::Example::fooResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fidl::test::error::Example::fooResponse,
                        result) == 16);
-
 }  // namespace fidl
-
 namespace llcpp {
-
 namespace fidl {
 namespace test {
 namespace error {
+namespace wire {}  // namespace wire
 
 class Example::AsyncEventHandler : public Example::EventHandlerInterface {
  public:

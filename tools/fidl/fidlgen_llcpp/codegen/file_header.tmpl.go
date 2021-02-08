@@ -32,6 +32,7 @@ const fileHeaderTmpl = `
 #include <lib/fit/function.h>
 #include <lib/fit/optional.h>
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/connect_service.h>
@@ -45,6 +46,7 @@ const fileHeaderTmpl = `
 {{ range .HandleTypes -}}
 #include <lib/zx/{{ . }}.h>
 {{ end -}}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 {{ if .Headers -}}
@@ -54,13 +56,6 @@ const fileHeaderTmpl = `
 #include <{{ . }}/{{ $root.IncludeStem }}.h>
 {{ end -}}
 {{ end -}}
-
-{{- "" }}
-namespace llcpp {
-{{ range .Library }}
-namespace {{ . }} {
-{{- end }}
-{{ "" }}
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
@@ -88,12 +83,7 @@ namespace {{ . }} {
 {{- end }}
 {{ "" }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
-}  // namespace llcpp
-
-namespace fidl {
+{{ EnsureNamespace "fidl" }}
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
@@ -104,15 +94,9 @@ namespace fidl {
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
 {{- end }}
 
-}  // namespace fidl
-
-namespace llcpp {
-{{ range .Library }}
-namespace {{ . }} {
-{{- end }}
-{{ "" }}
-
 {{- range .Decls }}
+{{ EnsureNamespace .Decl.Wire  }}
+
 {{- if Eq .Kind Kinds.Protocol }}
 {{ template "ClientDeclaration" . }}
 {{ "" }}
@@ -122,9 +106,6 @@ namespace {{ . }} {
 {{- end }}
 {{ "" }}
 
-{{- range .LibraryReversed }}
-}  // namespace {{ . }}
-{{- end }}
-}  // namespace llcpp
+{{ EndOfFile }}
 {{ end }}
 `

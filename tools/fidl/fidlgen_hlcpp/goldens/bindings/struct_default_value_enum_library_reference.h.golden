@@ -12,7 +12,6 @@
 namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
-
 class Foo;
 
 class Foo final {
@@ -39,11 +38,9 @@ inline zx_status_t Clone(
 }
 
 using FooPtr = ::std::unique_ptr<Foo>;
+
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::structdefaultvalueenumlibraryreference::Foo>
     : public EncodableCodingTraits<
@@ -76,15 +73,8 @@ struct Equality<::fidl::test::structdefaultvalueenumlibraryreference::Foo> {
     return true;
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
-
-}  // namespace structdefaultvalueenumlibraryreference
-}  // namespace test
 }  // namespace fidl

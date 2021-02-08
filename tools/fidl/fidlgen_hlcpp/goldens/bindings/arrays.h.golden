@@ -10,12 +10,16 @@
 namespace fidl {
 namespace test {
 namespace arrays {
-
 class UnionSmallArray;
+
 class UnionLargeArray;
+
 class TableSmallArray;
+
 class TableLargeArray;
+
 class StructSmallArray;
+
 class StructLargeArray;
 
 class UnionSmallArray final {
@@ -417,11 +421,9 @@ inline zx_status_t Clone(const ::fidl::test::arrays::StructLargeArray& _value,
 }
 
 using StructLargeArrayPtr = ::std::unique_ptr<StructLargeArray>;
+
 }  // namespace arrays
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct IsFidlXUnion<::fidl::test::arrays::UnionSmallArray>
     : public std::true_type {};
@@ -658,13 +660,8 @@ struct Equality<::fidl::test::arrays::StructLargeArray> {
     return true;
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace arrays {}  // namespace arrays
-}  // namespace test
 }  // namespace fidl

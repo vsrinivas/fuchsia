@@ -9,8 +9,8 @@ namespace fidl {
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 namespace testing {
-
-class Top_TestBase : public Top {
+class Top_TestBase
+    : public ::fidl::test::foreigntypeinresponseusedthroughcompose::Top {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

@@ -6,10 +6,11 @@ package codegen
 
 const fragmentStructTmpl = `
 {{- define "StructForwardDeclaration" }}
-namespace wire {
-struct {{ .Name }};
+{{ EnsureNamespace .Decl.Wire }}
+struct {{ .Decl.Wire.Name }};
 }  // namespace wire
-using {{ .Name }} = wire::{{ .Name }}; // struct
+using {{ .Decl.Wire.Name }} = wire::{{ .Decl.Wire.Name }};
+namespace wire {
 {{- end }}
 
 {{- define "StructMemberCloseHandles" }}
@@ -29,15 +30,16 @@ using {{ .Name }} = wire::{{ .Name }}; // struct
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
+{{ EnsureNamespace .Decl.Wire }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
-namespace wire {
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
-struct {{ .Name }} {
+struct {{ .Decl.Wire.Name }} {
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSize }};
@@ -50,7 +52,7 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.WireDecl }} {{ .Name }} = {};
+  {{ .Type.Wire }} {{ .Name }} = {};
   {{- end }}
 
   {{- if .IsResourceType }}
@@ -60,15 +62,15 @@ struct {{ .Name }} {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
-        : message_(bytes, byte_size, sizeof({{ .Name }}),
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Decl.Wire.Name }}* value)
+        : message_(bytes, byte_size, sizeof({{ .Decl.Wire.Name }}),
     {{- if gt .MaxHandles 0 }}
       handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
     {{- else }}
       nullptr, 0, 0
     {{- end }}
       ) {
-      message_.Encode<{{ .Name }}>(value);
+      message_.Encode<{{ .Decl.Wire.Name }}>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -93,7 +95,7 @@ struct {{ .Name }} {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage({{ .Name }}* value)
+    explicit OwnedEncodedMessage({{ .Decl.Wire.Name }}* value)
         {{- if gt .MaxSentSize 512 -}}
       : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>>()),
         message_(bytes_->data(), {{- template "SentSize" .}}
@@ -130,10 +132,10 @@ struct {{ .Name }} {
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                     uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      Decode<struct {{ .Name }}>();
+      Decode<struct {{ .Decl.Wire.Name }}>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct {{ .Name }}>();
+      Decode<struct {{ .Decl.Wire.Name }}>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -147,9 +149,9 @@ struct {{ .Name }} {
     }
     {{- end }}
 
-    struct {{ .Name }}* PrimaryObject() {
+    struct {{ .Decl.Wire.Name }}* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct {{ .Name }}*>(bytes());
+      return reinterpret_cast<struct {{ .Decl.Wire.Name }}*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles won't be closed
@@ -158,8 +160,8 @@ struct {{ .Name }} {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
-}  // namespace wire
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -167,13 +169,16 @@ struct {{ .Name }} {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDefinition" }}
+{{ EnsureNamespace "::"}}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
-void wire::{{ .Name }}::_CloseHandles() {
+{{- PushNamespace }}
+void {{ .Decl.Wire }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "StructMemberCloseHandles" . }}
   {{- end }}
 }
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -183,18 +188,20 @@ void wire::{{ .Name }}::_CloseHandles() {
 {{- define "StructTraits" }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
+{{- PushNamespace }}
 {{- end }}
 template <>
-struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
+struct IsFidlType<{{ .Decl.Wire }}> : public std::true_type {};
 template <>
-struct IsStruct<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Namespace }}::wire::{{ .Name }}>);
+struct IsStruct<{{ .Decl.Wire }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ .Decl.Wire }}>);
 {{- $struct := . }}
 {{- range .Members }}
-static_assert(offsetof({{ $struct.Namespace }}::wire::{{ $struct.Name }}, {{ .Name }}) == {{ .Offset }});
+static_assert(offsetof({{ $struct.Decl.Wire }}, {{ .Name }}) == {{ .Offset }});
 {{- end }}
-static_assert(sizeof({{ .Namespace }}::wire::{{ .Name }}) == {{ .Namespace }}::wire::{{ .Name }}::PrimarySize);
+static_assert(sizeof({{ .Decl.Wire }}) == {{ .Decl.Wire }}::PrimarySize);
 {{- if .IsResourceType }}
+{{- PopNamespace }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}

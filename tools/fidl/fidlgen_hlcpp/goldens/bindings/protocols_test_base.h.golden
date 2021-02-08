@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace protocols {
 namespace testing {
-
-class Transitional_TestBase : public Transitional {
+class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
  public:
   virtual ~Transitional_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -18,7 +17,8 @@ class Transitional_TestBase : public Transitional {
   void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
 };
 
-class ChannelProtocol_TestBase : public ChannelProtocol {
+class ChannelProtocol_TestBase
+    : public ::fidl::test::protocols::ChannelProtocol {
  public:
   virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -35,7 +35,7 @@ class ChannelProtocol_TestBase : public ChannelProtocol {
 };
 
 class WithAndWithoutRequestResponse_TestBase
-    : public WithAndWithoutRequestResponse {
+    : public ::fidl::test::protocols::WithAndWithoutRequestResponse {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -62,7 +62,8 @@ class WithAndWithoutRequestResponse_TestBase
   }
 };
 
-class WithErrorSyntax_TestBase : public WithErrorSyntax {
+class WithErrorSyntax_TestBase
+    : public ::fidl::test::protocols::WithErrorSyntax {
  public:
   virtual ~WithErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

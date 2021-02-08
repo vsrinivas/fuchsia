@@ -72,6 +72,22 @@ type EncodedLibraryIdentifier string
 
 type EncodedCompoundIdentifier string
 
+func (li LibraryIdentifier) Encode() EncodedLibraryIdentifier {
+	ss := make([]string, len(li))
+	for i, s := range li {
+		ss[i] = string(s)
+	}
+	return EncodedLibraryIdentifier(strings.Join(ss, "."))
+}
+
+func (ci CompoundIdentifier) Encode() EncodedCompoundIdentifier {
+	rhs := string(ci.Name)
+	if ci.Member != "" {
+		rhs += "." + string(ci.Member)
+	}
+	return EncodedCompoundIdentifier(string(ci.Library.Encode()) + "/" + rhs)
+}
+
 func (eli EncodedLibraryIdentifier) Parts() LibraryIdentifier {
 	return ParseLibraryName(eli)
 }

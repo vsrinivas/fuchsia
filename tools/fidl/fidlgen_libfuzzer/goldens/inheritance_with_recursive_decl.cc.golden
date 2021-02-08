@@ -90,7 +90,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: First\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<Parent> >();
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -107,12 +108,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
       size_t param_size_;
       param_size_ =
-          MinSize< ::fidl::InterfaceRequest<Parent> >() + slack_size_per_param;
+          MinSize< ::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent> >() +
+          slack_size_per_param;
       xprintf(
-          "Allocating %zu bytes for ::fidl::InterfaceRequest<Parent> request\n",
+          "Allocating %zu bytes for "
+          "::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl:"
+          ":Parent> request\n",
           param_size_);
-      ::fidl::InterfaceRequest<Parent> request =
-          Allocate< ::fidl::InterfaceRequest<Parent> >{}(&src_, &param_size_);
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>
+          request = Allocate< ::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent> >{}(
+              &src_, &param_size_);
 
       xprintf(
           "Invoking method "
@@ -173,7 +181,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: First\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<Parent> >();
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -190,12 +199,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
       size_t param_size_;
       param_size_ =
-          MinSize< ::fidl::InterfaceRequest<Parent> >() + slack_size_per_param;
+          MinSize< ::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent> >() +
+          slack_size_per_param;
       xprintf(
-          "Allocating %zu bytes for ::fidl::InterfaceRequest<Parent> request\n",
+          "Allocating %zu bytes for "
+          "::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl:"
+          ":Parent> request\n",
           param_size_);
-      ::fidl::InterfaceRequest<Parent> request =
-          Allocate< ::fidl::InterfaceRequest<Parent> >{}(&src_, &param_size_);
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>
+          request = Allocate< ::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent> >{}(
+              &src_, &param_size_);
 
       xprintf(
           "Invoking method "
@@ -209,7 +225,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: Second\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<Parent> >();
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
@@ -226,12 +243,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
       size_t param_size_;
       param_size_ =
-          MinSize< ::fidl::InterfaceRequest<Parent> >() + slack_size_per_param;
+          MinSize< ::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent> >() +
+          slack_size_per_param;
       xprintf(
-          "Allocating %zu bytes for ::fidl::InterfaceRequest<Parent> request\n",
+          "Allocating %zu bytes for "
+          "::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl:"
+          ":Parent> request\n",
           param_size_);
-      ::fidl::InterfaceRequest<Parent> request =
-          Allocate< ::fidl::InterfaceRequest<Parent> >{}(&src_, &param_size_);
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>
+          request = Allocate< ::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent> >{}(
+              &src_, &param_size_);
 
       xprintf(
           "Invoking method "

@@ -10,7 +10,6 @@
 namespace fidl {
 namespace test {
 namespace vectors {
-
 class ExampleUseOfVectors;
 
 class ExampleUseOfVectors final {
@@ -40,11 +39,9 @@ inline zx_status_t Clone(
 }
 
 using ExampleUseOfVectorsPtr = ::std::unique_ptr<ExampleUseOfVectors>;
+
 }  // namespace vectors
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::vectors::ExampleUseOfVectors>
     : public EncodableCodingTraits<::fidl::test::vectors::ExampleUseOfVectors,
@@ -82,4 +79,5 @@ struct Equality<::fidl::test::vectors::ExampleUseOfVectors> {
     return true;
   }
 };
+
 }  // namespace fidl

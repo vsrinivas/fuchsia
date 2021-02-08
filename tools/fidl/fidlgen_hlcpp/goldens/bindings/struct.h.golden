@@ -10,8 +10,8 @@
 namespace fidl {
 namespace test {
 namespace struct_ {
-
 class Simple;
+
 class BasicStruct;
 
 class Simple final {
@@ -66,11 +66,9 @@ inline zx_status_t Clone(const ::fidl::test::struct_::BasicStruct& _value,
 }
 
 using BasicStructPtr = ::std::unique_ptr<BasicStruct>;
+
 }  // namespace struct_
 }  // namespace test
-}  // namespace fidl
-namespace fidl {
-
 template <>
 struct CodingTraits<::fidl::test::struct_::Simple>
     : public EncodableCodingTraits<::fidl::test::struct_::Simple, 2> {};
@@ -133,13 +131,8 @@ struct Equality<::fidl::test::struct_::BasicStruct> {
     return true;
   }
 };
-}  // namespace fidl
 
 //
 // Proxies and stubs declarations
 //
-namespace fidl {
-namespace test {
-namespace struct_ {}  // namespace struct_
-}  // namespace test
 }  // namespace fidl

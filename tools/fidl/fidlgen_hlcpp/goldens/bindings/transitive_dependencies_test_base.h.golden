@@ -4,10 +4,3 @@
 
 #include <fidl/test/transitivedependencies/cpp/fidl.h>
 #include <middle/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace transitivedependencies {
-namespace testing {}  // namespace testing
-}  // namespace transitivedependencies
-}  // namespace test
-}  // namespace fidl

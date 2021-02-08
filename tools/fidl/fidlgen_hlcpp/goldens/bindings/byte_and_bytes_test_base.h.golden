@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/byteandbytes/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace byteandbytes {
-namespace testing {}  // namespace testing
-}  // namespace byteandbytes
-}  // namespace test
-}  // namespace fidl

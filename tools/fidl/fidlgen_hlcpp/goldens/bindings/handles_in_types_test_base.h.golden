@@ -3,10 +3,3 @@
 #pragma once
 
 #include <fidl/test/handlesintypes/cpp/fidl.h>
-namespace fidl {
-namespace test {
-namespace handlesintypes {
-namespace testing {}  // namespace testing
-}  // namespace handlesintypes
-}  // namespace test
-}  // namespace fidl

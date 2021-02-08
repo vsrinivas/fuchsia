@@ -7,8 +7,7 @@ namespace fidl {
 namespace test {
 namespace protocolrequest {
 namespace testing {
-
-class Parent_TestBase : public Parent {
+class Parent_TestBase : public ::fidl::test::protocolrequest::Parent {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -18,9 +17,8 @@ class Parent_TestBase : public Parent {
   void GetChildRequest(GetChildRequestCallback callback) override {
     NotImplemented_("GetChildRequest");
   }
-  void TakeChild(
-      ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child> c)
-      override {
+  void TakeChild(::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>
+                     c) override {
     NotImplemented_("TakeChild");
   }
   void TakeChildRequest(
@@ -30,7 +28,7 @@ class Parent_TestBase : public Parent {
   }
 };
 
-class Child_TestBase : public Child {
+class Child_TestBase : public ::fidl::test::protocolrequest::Child {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

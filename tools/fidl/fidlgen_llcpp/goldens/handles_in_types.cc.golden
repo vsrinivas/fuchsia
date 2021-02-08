@@ -4,11 +4,6 @@
 
 #include <memory>
 
-namespace llcpp {
-
-namespace fidl {
-namespace test {
-namespace handlesintypes {
 #ifdef __Fuchsia__
 auto ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::which() const
     -> Tag {
@@ -29,7 +24,8 @@ void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
   static_assert(offsetof(UnionWithHandle, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-void wire::UnionWithHandle::_CloseHandles() {
+void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
+    _CloseHandles() {
   switch (ordinal_) {
     case Ordinal::kH: {
       mutable_h().reset();
@@ -42,7 +38,8 @@ void wire::UnionWithHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void wire::TableWithHandle::_CloseHandles() {
+void ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle::
+    _CloseHandles() {
   if (has_h()) {
     h().reset();
   }
@@ -50,7 +47,8 @@ void wire::TableWithHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void wire::HandlesInTypes::_CloseHandles() {
+void ::llcpp::fidl::test::handlesintypes::wire::HandlesInTypes::
+    _CloseHandles() {
   normal_handle.reset();
   {
     ::zx::vmo* handle_in_vec_element = handle_in_vec.mutable_data();
@@ -85,8 +83,3 @@ void wire::HandlesInTypes::_CloseHandles() {
   union_with_handle._CloseHandles();
 }
 #endif  // __Fuchsia__
-
-}  // namespace handlesintypes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
