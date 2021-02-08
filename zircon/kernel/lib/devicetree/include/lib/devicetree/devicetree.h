@@ -61,6 +61,69 @@ inline NodeNameTokens SplitNodeName(std::string_view node) {
 // to iterate over the elements in a path with implied `/` separators.
 using NodePath = fbl::DoublyLinkedList<Node*>;
 
+// Some property values encode a list of NUL-terminated strings.
+// This is also useful for separating path strings at '/' characters.
+template <char Separator = '\0'>
+class StringList {
+ public:
+  class iterator {
+   public:
+    constexpr iterator() = default;
+    constexpr iterator(const iterator&) = default;
+    constexpr iterator& operator=(const iterator&) = default;
+
+    constexpr bool operator==(iterator& other) const {
+      return len_ == other.len_ && rest_.size() == other.rest_.size();
+    }
+    constexpr bool operator!=(iterator& other) const { return !(*this == other); }
+
+    constexpr iterator& operator++() {  // prefix
+      if (len_ == std::string_view::npos) {
+        // This was the last word.
+        rest_ = {};
+      } else if (rest_.empty()) {
+        // This was the last word and it was empty.
+        len_ = std::string_view::npos;
+      } else {
+        // Move to the next word.  If it's empty, record len_ = 0.
+        // Otherwise len_ = npos if it's the last word and not empty.
+        rest_ = rest_.substr(len_ + 1);
+        len_ = rest_.empty() ? 0 : rest_.find_first_of(Separator);
+      }
+      return *this;
+    }
+
+    constexpr iterator operator++(int) {  // postfix
+      iterator old = *this;
+      ++*this;
+      return old;
+    }
+
+    constexpr std::string_view operator*() const { return rest_.substr(0, len_); }
+
+   private:
+    friend StringList;
+
+    std::string_view rest_;
+    size_t len_ = std::string_view::npos;
+  };
+  using const_iterator = iterator;
+
+  constexpr explicit StringList(std::string_view str) : data_(str) {}
+
+  constexpr iterator begin() const {
+    iterator it;
+    it.rest_ = data_;
+    it.len_ = data_.find_first_of(Separator);
+    return it;
+  }
+
+  constexpr iterator end() const { return iterator{}; }
+
+ private:
+  std::string_view data_;
+};
+
 // See
 // https://devicetree-specification.readthedocs.io/en/v0.3/devicetree-basics.html#property-values
 // for the types and representations of possible property values.
@@ -77,6 +140,8 @@ class PropertyValue {
     // Exclude NUL terminator from factoring into the string_view's size.
     return {reinterpret_cast<const char*>(bytes_.data()), bytes_.size() - 1};
   }
+
+  StringList<> AsStringList() const { return StringList<>{AsString()}; }
 
   uint32_t AsUint32() const;
 

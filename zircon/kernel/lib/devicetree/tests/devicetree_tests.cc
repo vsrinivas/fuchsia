@@ -61,8 +61,7 @@ void ReadTestData(std::string_view filename, uint8_t buff[kMaxSize]) {
   ASSERT_NO_FATAL_FAILURES(GetTestDataPath(filename, path));
 
   FILE* file = fopen(path.c_str(), "r");
-  ASSERT_NOT_NULL(file, "failed to open %.*s: %s", static_cast<int>(filename.size()),
-                  filename.data(), strerror(errno));
+  ASSERT_NOT_NULL(file, "failed to open %s: %s", path.c_str(), strerror(errno));
 
   ASSERT_EQ(0, fseek(file, 0, SEEK_END));
   auto size = static_cast<size_t>(ftell(file));
@@ -358,6 +357,72 @@ TEST(DevicetreeTest, MemoryReservations) {
     }
   }
   EXPECT_EQ(i, 4, "wrong number of entries");
+}
+
+TEST(DevicetreeTest, StringList) {
+  using namespace std::literals;
+
+  unsigned int i = 0;
+  for (auto str : devicetree::StringList(""sv)) {
+    ++i;
+    EXPECT_FALSE(true, "list should be empty");
+    EXPECT_TRUE(str.empty());
+  }
+  EXPECT_EQ(i, 0);
+
+  i = 0;
+  for (auto str : devicetree::StringList("one"sv)) {
+    ++i;
+    EXPECT_STR_EQ("one", str);
+  }
+  EXPECT_EQ(i, 1);
+
+  i = 0;
+  for (auto str : devicetree::StringList("one\0two\0three"sv)) {
+    switch (i++) {
+      case 0:
+        EXPECT_STR_EQ("one", str);
+        break;
+      case 1:
+        EXPECT_STR_EQ("two", str);
+        break;
+      case 2:
+        EXPECT_STR_EQ("three", str);
+        break;
+    }
+  }
+  EXPECT_EQ(i, 3);
+
+  i = 0;
+  for (auto str : devicetree::StringList("one\0\0two\0"sv)) {
+    switch (i++) {
+      case 0:
+        EXPECT_STR_EQ("one", str);
+        break;
+      case 2:
+        EXPECT_STR_EQ("two", str);
+        break;
+      default:
+        EXPECT_EQ(0, str.size());
+    }
+  }
+  EXPECT_EQ(i, 4);
+
+  i = 0;
+  for (auto str : devicetree::StringList<'/'>("foo/bar/baz"sv)) {
+    switch (i++) {
+      case 0:
+        EXPECT_STR_EQ("foo", str);
+        break;
+      case 1:
+        EXPECT_STR_EQ("bar", str);
+        break;
+      case 3:
+        EXPECT_STR_EQ("baz", str);
+        break;
+    }
+  }
+  EXPECT_EQ(i, 3);
 }
 
 }  // namespace
