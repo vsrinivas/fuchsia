@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
+#
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -26,6 +27,7 @@ HOST_THIRD_PARTY_DEPS_DATA = os.path.join(
 # Cargo args to ignore from the deps_data.json files.
 CARGO_IGNORE_ARGS = ['--frozen', '--locked']
 
+
 @contextmanager
 def cwd(dir):
     previous = os.getcwd()
@@ -39,9 +41,7 @@ def cwd(dir):
 def main():
     parser = argparse.ArgumentParser("Run cargo clippy on a file or target.")
     parser.add_argument(
-        "--target",
-        help="GN target on which to run clippy",
-        default=None)
+        "--target", help="GN target on which to run clippy", default=None)
     parser.add_argument(
         "--file",
         dest="files",
@@ -88,7 +88,8 @@ def main():
 
     rust_tool_prebuilts = \
         os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust_tools", HOST_PLATFORM, "bin")
-    rust_prebuilts = os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust", HOST_PLATFORM, "bin")
+    rust_prebuilts = os.path.join(
+        PREBUILT_THIRD_PARTY_DIR, "rust", HOST_PLATFORM, "bin")
 
     # The third_party build records the arguments it used to invoke cargo. Use the same ones for
     # the clippy invocation.
@@ -111,7 +112,8 @@ def main():
             cargo_args = host_third_party_deps_data['cargo_args']
         else:
             cargo_args = third_party_deps_data['cargo_args']
-        cargo_args = filter(lambda arg: arg not in CARGO_IGNORE_ARGS, cargo_args)
+        cargo_args = filter(
+            lambda arg: arg not in CARGO_IGNORE_ARGS, cargo_args)
         # Some crates use #![deny(warnings)], which will cause clippy to fail entirely if it finds
         # issues in those crates. Cap all lints at `warn` to avoid this.
         cargo_args += ['--', '--cap-lints', 'warn']
@@ -121,6 +123,7 @@ def main():
             return subprocess.call(call_args + cargo_args, env=env)
 
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())
