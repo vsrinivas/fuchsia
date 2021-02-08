@@ -70,6 +70,11 @@ bool ExprTokenizer::Tokenize() {
     if (done())
       break;
 
+    // Comments.
+    if (HandleComment())
+      continue;
+
+    // Strings.
     if (auto string_info = DoesBeginStringLiteral(language_, input_, cur_)) {
       // String literals are handled specially by the string parser.
       auto result = ParseStringLiteral(input_, *string_info, &cur_, &error_location_);
@@ -105,6 +110,7 @@ bool ExprTokenizer::Tokenize() {
       continue;
     }
 
+    // All other token types.
     const ExprTokenRecord& record = ClassifyCurrent();
     if (has_error())
       break;
@@ -275,6 +281,51 @@ const ExprTokenRecord& ExprTokenizer::ClassifyCurrent() {
   err_ = Err(fxl::StringPrintf("Invalid character '%c' in expression.\n", cur) +
              GetErrorContext(input_, cur_));
   return RecordForTokenType(ExprTokenType::kInvalid);
+}
+
+bool ExprTokenizer::HandleComment() {
+  FX_DCHECK(!at_end());
+
+  // Currently both C++ and Rust have the same comment schemes. Expect a two character comment
+  // begin: "//" or /*".
+  if (cur_ + 2 > input_.size())
+    return false;  // Not enough room.
+  if (cur_char() != '/')
+    return false;
+
+  size_t comment_begin = cur_;
+  if (input_[cur_ + 1] == '/') {
+    // Comment to end of line.
+    while (!at_end() && cur_char() != '\n')
+      cur_++;
+    tokens_.emplace_back(ExprTokenType::kComment,
+                         input_.substr(comment_begin, cur_ - comment_begin), comment_begin);
+    return true;
+
+  } else if (input_[cur_ + 1] == '*') {
+    // Comment to "*/".
+    while (cur_ + 2 <= input_.size() && !(input_[cur_] == '*' && input_[cur_ + 1] == '/'))
+      cur_++;
+
+    if (cur_ + 2 > input_.size()) {
+      // Reached the end of input before a comment end marker. This is normally a syntax error.
+      // But the main time this code path is used is in syntax highlighting which is often used for
+      // part of a file. In that case, a missing terminator is not an error. Since this will be
+      // seldom hit and doesn't really hurt the normal expression parsing case, don't emit an error.
+      // If we want to emit an error, we probably need to add a strict mode so the syntax
+      // highlighter can get the permissive behavior.
+      cur_ = input_.size();  // Comment goes to the end of input.
+    } else {
+      // Consume the terminator.
+      cur_ += 2;
+    }
+
+    tokens_.emplace_back(ExprTokenType::kComment,
+                         input_.substr(comment_begin, cur_ - comment_begin), comment_begin);
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace zxdb

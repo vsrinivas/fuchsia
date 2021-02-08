@@ -378,6 +378,28 @@ TEST(FormatContext, FormatSourceLineC) {
       out.GetDebugString());
 }
 
+TEST(FormatContext, FormatSourceLineComment) {
+  FormatSourceOpts opts;
+  opts.language = ExprLanguage::kC;
+
+  // Block comment.
+  OutputBuffer out = FormatSourceLine(opts, false, "1 /* foo */ 2");
+  EXPECT_EQ("kNumberNormal \"1 \", kComment \"/* foo */ \", kNumberNormal \"2\"",
+            out.GetDebugString());
+
+  // End-of-line comment.
+  out = FormatSourceLine(opts, false, "1 // foo bar");
+  EXPECT_EQ("kNumberNormal \"1 \", kComment \"// foo bar\"", out.GetDebugString());
+
+  // Unterminated block comment.
+  out = FormatSourceLine(opts, false, "1 /* foo");
+  EXPECT_EQ("kNumberNormal \"1 \", kComment \"/* foo\"", out.GetDebugString());
+
+  // Block comment with no begin (will happen if the block starts on a previous line).
+  out = FormatSourceLine(opts, false, "foo */ 2");
+  EXPECT_EQ("kComment \"foo */ \", kNumberNormal \"2\"", out.GetDebugString());
+}
+
 TEST(FormatContext, FormatSourceLineRust) {
   FormatSourceOpts opts;
   opts.language = ExprLanguage::kRust;

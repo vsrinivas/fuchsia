@@ -1224,4 +1224,20 @@ TEST_F(ExprParserTest, CTernaryIf) {
   EXPECT_EQ("Rust '?' operators are not supported.", parser().err().msg());
 }
 
+// Tests that comments are ignored.
+TEST_F(ExprParserTest, Comments) {
+  EXPECT_EQ(
+      "BINARY_OP(=)\n"
+      " IDENTIFIER(\"a\")\n"
+      " BINARY_OP(+)\n"
+      "  LITERAL(3)\n"
+      "  LITERAL(2)\n",
+      GetParseString("a = /* no */ 3 +// no\n 2"));
+
+  // Unmatched */ token.
+  auto result = Parse(" 3 + */");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected */", parser().err().msg());
+}
+
 }  // namespace zxdb

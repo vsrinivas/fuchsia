@@ -87,6 +87,10 @@ SyntaxVariants SyntaxForTokenType(ExprTokenType type) {
   if (type == ExprTokenType::kStringLiteral)
     return SyntaxVariants(Syntax::kStringNormal, Syntax::kStringDim, Syntax::kStringBold);
 
+  // Comments.
+  if (type == ExprTokenType::kComment)
+    return SyntaxVariants(Syntax::kComment, Syntax::kComment, Syntax::kComment);
+
   // Assume everything that's an alphanumeric token is a keyword.
   const ExprTokenRecord& record = RecordForTokenType(type);
   if (record.is_alphanum)
@@ -123,7 +127,13 @@ OutputBuffer FormatSourceLineWithTokens(const FormatSourceOpts& opts, bool is_hi
       // Keyword or quasi-built-in. Since there's no general "keyword" token type, assign these all
       // to the "if" token which will trigger the keyword formatting.
       spans.emplace_back(token.byte_offset(), ExprTokenType::kIf);
+    } else if (token.type() == ExprTokenType::kCommentBlockEnd) {
+      // We have a "*/" on a line. Assume that everything before it was actually a comment and
+      // we just didn't see the opening "/*" on a previous line.
+      spans.clear();
+      spans.emplace_back(0, ExprTokenType::kComment);
     } else {
+      // All other tokens.
       spans.emplace_back(token.byte_offset(), token.type());
     }
   }

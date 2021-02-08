@@ -160,6 +160,7 @@ class ExprParser {
   // These handlers will be passed a token that was just consumed, so the current state of the
   // parser will point to the *next* token (or the end).
   fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> BadToken(const ExprToken& token);
   fxl::RefPtr<ExprNode> BinaryOpInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> DotOrArrowInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);

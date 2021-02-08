@@ -80,7 +80,7 @@ constexpr int kPrecedenceRustCast = 140;              // foo as Bar
 constexpr int kPrecedenceUnary = 150;                 // ++ -- +a -a ! ~ *a &a
 constexpr int kPrecedenceCallAccess = 160;            // () . -> []
 //constexpr int kPrecedenceScope = 170;               // ::  (Highest precedence)
-// clang-format on
+//  clang-format on
 
 }  // namespace
 
@@ -97,9 +97,11 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        nullptr,                      -1},                             // kInvalid
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kName
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kSpecialName
+    {nullptr,                        nullptr,                      -1},                             // kComment (will be stripped).
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kInteger
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFloat
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kStringLiteral
+    {&ExprParser::BadToken,          nullptr,                      -1},                             // kCommentBlockEnd
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kEquals
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kEquality
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kInequality
@@ -175,6 +177,13 @@ ExprParser::ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
     : language_(lang), name_lookup_callback_(std::move(name_lookup)), tokens_(std::move(tokens)) {
   static_assert(std::size(ExprParser::kDispatchInfo) == static_cast<int>(ExprTokenType::kNumTypes),
                 "kDispatchInfo needs updating to match ExprTokenType");
+
+  // Strip comments from the input. This is easier than handling them at read-time and we don't
+  // need the flexibility of that information.
+  tokens_.erase(
+      std::remove_if(tokens_.begin(), tokens_.end(),
+                     [](const ExprToken& t) { return t.type() == ExprTokenType::kComment; }),
+      tokens_.end());
 }
 
 fxl::RefPtr<ExprNode> ExprParser::ParseExpression() {
@@ -968,6 +977,11 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<AddressOfExprNode>(std::move(right));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::BadToken(const ExprToken& token) {
+  SetError(token, "Unexpected " + token.value());
+  return nullptr;
 }
 
 fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,

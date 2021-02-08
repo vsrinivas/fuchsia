@@ -63,6 +63,10 @@ class ExprTokenizer {
 
   const ExprTokenRecord& ClassifyCurrent();
 
+  // Checks for a comment beginning at the cur_char(). If it is one, appends a token for the entire
+  // comment contents and returns true. Returns false if a comment does not begin here.
+  bool HandleComment();
+
   bool done() const { return at_end() || has_error(); }
   bool has_error() const { return err_.has_error(); }
   bool at_end() const { return cur_ == input_.size(); }

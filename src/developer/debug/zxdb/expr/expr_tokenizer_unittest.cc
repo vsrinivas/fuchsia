@@ -486,4 +486,63 @@ TEST(ExprTokenizer, IsNameToken) {
   EXPECT_FALSE(ExprTokenizer::IsNameToken(ExprLanguage::kRust, "~foo"));
 }
 
+TEST(ExprTokenizer, Comments) {
+  // Single-line comment to end of input.
+  ExprTokenizer single_to_end("1// foo");
+  EXPECT_TRUE(single_to_end.Tokenize());
+  auto tokens = single_to_end.tokens();
+  ASSERT_EQ(2u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[0].type());
+  EXPECT_EQ(ExprTokenType::kComment, tokens[1].type());
+  EXPECT_EQ("// foo", tokens[1].value());
+
+  // Single-line comment to end of line.
+  ExprTokenizer single_to_line("1// foo\n2");
+  EXPECT_TRUE(single_to_line.Tokenize());
+  tokens = single_to_line.tokens();
+  ASSERT_EQ(3u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[0].type());
+  EXPECT_EQ("1", tokens[0].value());
+  EXPECT_EQ(ExprTokenType::kComment, tokens[1].type());
+  EXPECT_EQ("// foo", tokens[1].value());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[2].type());
+  EXPECT_EQ("2", tokens[2].value());
+
+  // Block comment.
+  ExprTokenizer block("1/* foo */2");
+  EXPECT_TRUE(block.Tokenize());
+  tokens = block.tokens();
+  ASSERT_EQ(3u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[0].type());
+  EXPECT_EQ("1", tokens[0].value());
+  EXPECT_EQ(ExprTokenType::kComment, tokens[1].type());
+  EXPECT_EQ("/* foo */", tokens[1].value());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[2].type());
+  EXPECT_EQ("2", tokens[2].value());
+
+  // Block comment with no terminator. See comment in ExprTokenizer::HandleComment about why
+  // we don't throw an error in this case.
+  ExprTokenizer block_to_end("1/* foo ");
+  EXPECT_TRUE(block_to_end.Tokenize());
+  tokens = block_to_end.tokens();
+  ASSERT_EQ(2u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[0].type());
+  EXPECT_EQ("1", tokens[0].value());
+  EXPECT_EQ(ExprTokenType::kComment, tokens[1].type());
+  EXPECT_EQ("/* foo ", tokens[1].value());
+
+  // Block end comment with no beginning. This just has a special token type and is otherwise
+  // ignored.
+  ExprTokenizer mismatched_end("1*/2");
+  EXPECT_TRUE(mismatched_end.Tokenize());
+  tokens = mismatched_end.tokens();
+  ASSERT_EQ(3u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[0].type());
+  EXPECT_EQ("1", tokens[0].value());
+  EXPECT_EQ(ExprTokenType::kCommentBlockEnd, tokens[1].type());
+  EXPECT_EQ("*/", tokens[1].value());
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[2].type());
+  EXPECT_EQ("2", tokens[2].value());
+}
+
 }  // namespace zxdb
