@@ -67,7 +67,7 @@ static composite_device_desc_t composite_dev = []() {
   desc.props_count = countof(props);
   desc.fragments = fragments;
   desc.fragments_count = countof(fragments);
-  desc.coresident_device_index = 1;
+  desc.coresident_device_index = UINT32_MAX;
   return desc;
 }();
 
