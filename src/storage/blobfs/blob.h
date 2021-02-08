@@ -347,6 +347,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
     std::optional<BlobCompressor> compressor;
 
+    // Target compressed size for this blob indicates the possible on-disk compressed size in bytes.
+    std::optional<uint64_t> target_compression_size_;
+
     // The fused write error.  Once writing has failed, we return the same error on subsequent
     // writes in case a higher layer dropped the error and returned a short write instead.
     zx_status_t write_error = ZX_OK;

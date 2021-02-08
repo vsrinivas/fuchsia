@@ -29,8 +29,10 @@ namespace blobfs {
 // differences between compression algorithms.
 class BlobCompressor {
  public:
-  // Initializes a compression object given the requested |settings| and input |blob_size|.
-  static std::optional<BlobCompressor> Create(CompressionSettings settings, size_t blob_size);
+  // Initializes a compression object given the requested |settings| and input
+  // |uncompressed_blob_size|.
+  static std::optional<BlobCompressor> Create(CompressionSettings settings,
+                                              size_t uncompressed_blob_size);
 
   BlobCompressor(BlobCompressor&& o) = default;
   BlobCompressor& operator=(BlobCompressor&& o) = default;
@@ -44,9 +46,9 @@ class BlobCompressor {
   zx_status_t End() { return compressor_->End(); }
 
   // Returns a reference to a VMO containing the compressed blob.
-  const zx::vmo& Vmo() const { return compressed_blob_.vmo(); }
+  const zx::vmo& Vmo() const { return compressed_buffer_.vmo(); }
   // Returns a reference to the compression buffer.
-  const void* Data() const { return compressed_blob_.start(); }
+  const void* Data() const { return compressed_buffer_.start(); }
 
   const Compressor& compressor() { return *compressor_; }
   CompressionAlgorithm algorithm() const { return algorithm_; }
@@ -56,7 +58,11 @@ class BlobCompressor {
                  CompressionAlgorithm algorithm);
 
   std::unique_ptr<Compressor> compressor_;
-  fzl::OwnedVmoMapper compressed_blob_;
+
+  // Stores the entire compressed blob for non-streaming writes and compressed partial chunks
+  // for streaming writes.
+  fzl::OwnedVmoMapper compressed_buffer_;
+
   CompressionAlgorithm algorithm_;
 };
 

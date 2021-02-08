@@ -22,18 +22,19 @@
 namespace blobfs {
 
 std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings settings,
-                                                     size_t blob_size) {
+                                                     size_t uncompressed_blob_size) {
   switch (settings.compression_algorithm) {
     case CompressionAlgorithm::LZ4: {
       fzl::OwnedVmoMapper compressed_blob;
-      const size_t max = fbl::round_up(LZ4Compressor::BufferMax(blob_size), kBlobfsBlockSize);
+      const size_t max =
+          fbl::round_up(LZ4Compressor::BufferMax(uncompressed_blob_size), kBlobfsBlockSize);
       zx_status_t status = compressed_blob.CreateAndMap(max, "lz4-blob");
       if (status != ZX_OK) {
         return std::nullopt;
       }
       std::unique_ptr<LZ4Compressor> compressor;
-      status = LZ4Compressor::Create(blob_size, compressed_blob.start(), compressed_blob.size(),
-                                     &compressor);
+      status = LZ4Compressor::Create(uncompressed_blob_size, compressed_blob.start(),
+                                     compressed_blob.size(), &compressor);
       if (status != ZX_OK) {
         return std::nullopt;
       }
@@ -43,13 +44,14 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
     }
     case CompressionAlgorithm::ZSTD: {
       fzl::OwnedVmoMapper compressed_blob;
-      const size_t max = fbl::round_up(ZSTDCompressor::BufferMax(blob_size), kBlobfsBlockSize);
+      const size_t max =
+          fbl::round_up(ZSTDCompressor::BufferMax(uncompressed_blob_size), kBlobfsBlockSize);
       zx_status_t status = compressed_blob.CreateAndMap(max, "zstd-blob");
       if (status != ZX_OK) {
         return std::nullopt;
       }
       std::unique_ptr<ZSTDCompressor> compressor;
-      status = ZSTDCompressor::Create(settings, blob_size, compressed_blob.start(),
+      status = ZSTDCompressor::Create(settings, uncompressed_blob_size, compressed_blob.start(),
                                       compressed_blob.size(), &compressor);
       if (status != ZX_OK) {
         return std::nullopt;
@@ -60,15 +62,16 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
     }
     case CompressionAlgorithm::ZSTD_SEEKABLE: {
       fzl::OwnedVmoMapper compressed_blob;
-      const size_t max =
-          fbl::round_up(ZSTDSeekableCompressor::BufferMax(blob_size), kBlobfsBlockSize);
+      const size_t max = fbl::round_up(ZSTDSeekableCompressor::BufferMax(uncompressed_blob_size),
+                                       kBlobfsBlockSize);
       zx_status_t status = compressed_blob.CreateAndMap(max, "zstd-seekable-blob");
       if (status != ZX_OK) {
         return std::nullopt;
       }
       std::unique_ptr<ZSTDSeekableCompressor> compressor;
-      status = ZSTDSeekableCompressor::Create(settings, blob_size, compressed_blob.start(),
-                                              compressed_blob.size(), &compressor);
+      status =
+          ZSTDSeekableCompressor::Create(settings, uncompressed_blob_size, compressed_blob.start(),
+                                         compressed_blob.size(), &compressor);
       if (status != ZX_OK) {
         return std::nullopt;
       }
@@ -79,7 +82,8 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
     case CompressionAlgorithm::CHUNKED: {
       std::unique_ptr<ChunkedCompressor> compressor;
       size_t max;
-      zx_status_t status = ChunkedCompressor::Create(settings, blob_size, &max, &compressor);
+      zx_status_t status =
+          ChunkedCompressor::Create(settings, uncompressed_blob_size, &max, &compressor);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to create compressor: " << zx_status_get_string(status);
         return std::nullopt;
@@ -94,8 +98,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
       }
       status = compressor->SetOutput(compressed_blob.start(), compressed_blob.size());
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to initialize compressor: "
-                       << zx_status_get_string(status);
+        FX_LOGS(ERROR) << "Failed to initialize compressor: " << zx_status_get_string(status);
         return std::nullopt;
       }
       return BlobCompressor(std::move(compressor), std::move(compressed_blob),
@@ -108,9 +111,10 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
 }
 
 BlobCompressor::BlobCompressor(std::unique_ptr<Compressor> compressor,
-                               fzl::OwnedVmoMapper compressed_blob, CompressionAlgorithm algorithm)
+                               fzl::OwnedVmoMapper compressed_buffer,
+                               CompressionAlgorithm algorithm)
     : compressor_(std::move(compressor)),
-      compressed_blob_(std::move(compressed_blob)),
+      compressed_buffer_(std::move(compressed_buffer)),
       algorithm_(algorithm) {
   ZX_ASSERT(algorithm_ != CompressionAlgorithm::UNCOMPRESSED);
 }
