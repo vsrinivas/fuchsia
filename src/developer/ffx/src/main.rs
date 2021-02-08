@@ -50,12 +50,12 @@ const CURRENT_EXE_HASH: &str = "current.hash";
 
 const NON_FASTBOOT_MSG: &str = "\
 This command needs to be run against a target in the Fastboot state.
-Try rebooting the device into Fastboot with the command `ffx target reboot --bootloader` and try 
-re-running this command.";
+Try rebooting the device into Fastboot with the command `ffx target
+reboot --bootloader` and try re-running this command.";
 
 const TARGET_IN_FASTBOOT: &str = "\
-This command cannot be run against a target in the Fastboot state.  Try rebooting the device or
-flashing the device into a running state.";
+This command cannot be run against a target in the Fastboot state. Try
+rebooting the device or flashing the device into a running state.";
 
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.

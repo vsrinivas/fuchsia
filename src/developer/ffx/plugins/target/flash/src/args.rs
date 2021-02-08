@@ -28,7 +28,7 @@ To include SSH keys as well:
     $ ffx target flash
     --oem-stage add-staged-bootloader-file ssh.authorized_keys,
     ~/fuchsia/.ssh/authorized_keys
-    ~/fuchsia/out/flash.json
+    ~/fuchsia/out/default/flash.json
      fuchsia",
     note = "Flases an image to a target device using the fastboot protocol.
 Requires a specific <manifest> file and <product> name as an input.
