@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/hello_world_cpp_unittests"
+        "binary": "bin/hello_world_cpp_test_bin"
     }
 }

@@ -2,18 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("cpp") {
-  deps = [ ":hello_world_cpp" ]
+  deps = [ ":hello-world-cpp" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [ ":hello_world_cpp_tests" ]
+  deps = [ ":hello-world-cpp-unittests" ]
 }
 
 executable("bin") {
@@ -22,35 +21,24 @@ executable("bin") {
   sources = [ "hello_world.cc" ]
 }
 
-package("hello_world_cpp") {
+fuchsia_component("component") {
+  component_name = "hello-world-cpp"
+  manifest = "meta/hello_world_cpp.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "hello_world_cpp"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/hello_world_cpp.cmx")
-      dest = "hello_world_cpp.cmx"
-    },
-  ]
 }
 
-test("hello_world_cpp_unittests") {
-  sources = [ "hello_world_unittest.cc" ]
+fuchsia_package("hello-world-cpp") {
+  deps = [ ":component" ]
+}
 
+executable("unittests") {
+  testonly = true
+  output_name = "hello_world_cpp_test_bin"
+  sources = [ "hello_world_unittest.cc" ]
   deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
-test_package("hello_world_cpp_tests") {
-  deps = [ ":hello_world_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "hello_world_cpp_unittests"
-    },
-  ]
+fuchsia_unittest_package("hello-world-cpp-unittests") {
+  manifest = "meta/hello_world_cpp_unittests.cmx"
+  deps = [ ":unittests" ]
 }
