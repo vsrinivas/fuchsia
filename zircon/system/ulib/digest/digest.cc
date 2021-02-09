@@ -9,6 +9,8 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <iomanip>
+#include <iostream>
 #include <memory>
 
 #include <digest/digest.h>
@@ -124,6 +126,15 @@ void Digest::CopyTruncatedTo(uint8_t* out, size_t len) const {
 
 bool Digest::Equals(const uint8_t* rhs, size_t len) const {
   return rhs && len == sizeof(bytes_) && CRYPTO_memcmp(bytes_, rhs, sizeof(bytes_)) == 0;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Digest& digest) {
+  std::ios::fmtflags f(stream.flags());
+  for (uint8_t byte : digest.bytes_) {
+    stream << std::setfill('0') << std::hex << std::setw(2) << int{byte};
+  }
+  stream.flags(f);
+  return stream;
 }
 
 }  // namespace digest
