@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/tools/blobfs-compression/blobfs-compression.h"
-
-#include <zircon/assert.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
+#include "src/storage/blobfs/compression/configs/chunked-compression-params.h"
+#include "src/storage/tools/blobfs-compression/blobfs-compression.h"
 
 namespace blobfs_compress {
 namespace {
+using namespace blobfs;
 
 void BufferFill(uint8_t* data, size_t size, unsigned seed) {
   size_t i = 0;
@@ -32,7 +31,7 @@ TEST(BlobfsCompressionTest, CompressBufferEmpty) {
   size_t len = 0ul;
 
   size_t compressed_len;
-  chunked_compression::CompressionParams params = ComputeDefaultBlobfsCompressionParams(len);
+  chunked_compression::CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(len);
   size_t compressed_limit = params.ComputeOutputSizeLimit(len);
   fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
   ASSERT_EQ(BlobfsCompress(data, len, compressed_data.get(), &compressed_len, params), ZX_OK);
@@ -46,7 +45,7 @@ TEST(BlobfsCompressionTest, CompressBufferSmall) {
   BufferFill(data.get(), len, 0);
 
   size_t compressed_len;
-  chunked_compression::CompressionParams params = ComputeDefaultBlobfsCompressionParams(len);
+  chunked_compression::CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(len);
   size_t compressed_limit = params.ComputeOutputSizeLimit(len);
   fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
   ASSERT_EQ(BlobfsCompress(data.get(), len, compressed_data.get(), &compressed_len, params), ZX_OK);
@@ -60,7 +59,7 @@ TEST(BlobfsCompressionTest, CompressBufferlarge) {
   BufferFill(data.get(), len, 0);
 
   size_t compressed_len;
-  chunked_compression::CompressionParams params = ComputeDefaultBlobfsCompressionParams(len);
+  chunked_compression::CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(len);
   size_t compressed_limit = params.ComputeOutputSizeLimit(len);
   fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
 
@@ -75,7 +74,7 @@ TEST(BlobfsCompressionTest, CompressNoDestBuffer) {
   BufferFill(data.get(), len, 0);
 
   size_t compressed_len, compressed_len_no_dest;
-  chunked_compression::CompressionParams params = ComputeDefaultBlobfsCompressionParams(len);
+  chunked_compression::CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(len);
   size_t compressed_limit = params.ComputeOutputSizeLimit(len);
 
   fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);

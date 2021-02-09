@@ -13,12 +13,13 @@
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
 #include "src/lib/chunked-compression/status.h"
+#include "src/storage/blobfs/compression/configs/chunked-compression-params.h"
 #include "src/storage/tools/blobfs-compression/blobfs-compression.h"
 
 namespace {
 
-using chunked_compression::ChunkedCompressor;
-using chunked_compression::CompressionParams;
+using ::chunked_compression::ChunkedCompressor;
+using ::chunked_compression::CompressionParams;
 
 void usage(const char* fname) {
   fprintf(stderr, "Usage: %s <source_file> [destination_file]\n\n", fname);
@@ -112,7 +113,8 @@ int main(int argc, char* const* argv) {
     return 1;
   }
 
-  CompressionParams params = blobfs_compress::ComputeDefaultBlobfsCompressionParams(src_size);
+  CompressionParams
+      params = blobfs::GetDefaultChunkedCompressionParams(src_size);
 
   uint8_t* dest_write_buf = nullptr;
   fbl::unique_fd dst_fd;

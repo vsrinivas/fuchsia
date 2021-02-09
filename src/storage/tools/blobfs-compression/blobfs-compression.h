@@ -8,9 +8,6 @@
 #include "src/lib/chunked-compression/chunked-compressor.h"
 namespace blobfs_compress {
 
-chunked_compression::CompressionParams ComputeDefaultBlobfsCompressionParams(
-    size_t sz);
-
 zx_status_t BlobfsCompress(const uint8_t* src,
                    size_t src_sz,
                    uint8_t* dest_write_buf,

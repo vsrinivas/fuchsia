@@ -19,6 +19,7 @@ test("blobfs-compression-test") {
   deps = [
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs/compression/configs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]

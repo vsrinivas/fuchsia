@@ -10,7 +10,10 @@ executable("blobfs-compression") {
     "common.cc",
     "main.cc",
   ]
-  deps = [ "//src/lib/chunked-compression" ]
+  deps = [
+    "//src/lib/chunked-compression",
+    "//src/storage/blobfs/compression/configs",
+  ]
 }
 
 sdk_host_tool("blobfs-compression_sdk") {

@@ -11,30 +11,19 @@
 
 #include <fs/trace.h>
 #include <src/lib/chunked-compression/chunked-archive.h>
-#include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/status.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
 #include "src/storage/blobfs/compression-settings.h"
+#include "src/storage/blobfs/compression/configs/chunked-compression-params.h"
 
 namespace blobfs {
 
 namespace {
 
-using chunked_compression::CompressionParams;
-using chunked_compression::Status;
-using chunked_compression::ToZxStatus;
-
-// TODO (fxbug.dev/66779): Unify this blobfs compression level with sdk compression tool.
-constexpr int kDefaultLevel = 14;
-constexpr int kTargetFrameSize = 32 * 1024;
-
-CompressionParams DefaultParams(size_t input_size) {
-  CompressionParams params;
-  params.compression_level = kDefaultLevel;
-  params.chunk_size = CompressionParams::ChunkSizeForInputSize(input_size, kTargetFrameSize);
-  return params;
-}
+using ::chunked_compression::CompressionParams;
+using ::chunked_compression::Status;
+using ::chunked_compression::ToZxStatus;
 
 }  // namespace
 
@@ -48,9 +37,10 @@ zx_status_t ChunkedCompressor::Create(CompressionSettings settings, size_t input
                                       size_t* output_limit_out,
                                       std::unique_ptr<ChunkedCompressor>* out) {
   ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::CHUNKED);
-  CompressionParams params = DefaultParams(input_size);
-  params.compression_level =
-      settings.compression_level ? *(settings.compression_level) : kDefaultLevel;
+  CompressionParams params = GetDefaultChunkedCompressionParams(input_size);
+  if (settings.compression_level) {
+    params.compression_level = *(settings.compression_level);
+  }
 
   chunked_compression::StreamingChunkedCompressor compressor(params);
 
@@ -75,7 +65,8 @@ zx_status_t ChunkedCompressor::SetOutput(void* dst, size_t dst_len) {
 }
 
 size_t ChunkedCompressor::BufferMax(size_t input_length) {
-  chunked_compression::CompressionParams params = DefaultParams(input_length);
+  chunked_compression::CompressionParams
+      params = GetDefaultChunkedCompressionParams(input_length);
   return params.ComputeOutputSizeLimit(input_length);
 }
 

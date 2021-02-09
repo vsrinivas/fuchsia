@@ -13,16 +13,12 @@
 
 namespace blobfs_compress {
 namespace {
-using chunked_compression::ChunkedCompressor;
-using chunked_compression::CompressionParams;
-using chunked_compression::ToZxStatus;
+using ::chunked_compression::ChunkedCompressor;
+using ::chunked_compression::CompressionParams;
+using ::chunked_compression::ToZxStatus;
 
 constexpr const char kAnsiUpLine[] = "\33[A";
 constexpr const char kAnsiClearLine[] = "\33[2K\r";
-
-// TODO (fxbug.dev/66779): Use blobfs compression level directly instead of hardcoding.
-constexpr int kDefaultBlobfsCompressionLevel = 14;
-constexpr size_t kTargetFrameSize = 32 * 1024;
 }  // namespace
 
 // ProgressWriter writes live a progress indicator to stdout. Updates are written in-place
@@ -65,20 +61,6 @@ class ProgressWriter {
   std::chrono::steady_clock::time_point last_report_;
   int refresh_hz_;
 };
-
-// Returns the exact same Blobfs compression parameters used in Fuchsia.
-CompressionParams ComputeDefaultBlobfsCompressionParams(size_t sz) {
-  CompressionParams params;
-
-  // Use default param values, which are opaque to sdk users.
-  // This allows us to fine tune these and keep them in sync with blobfs chunked
-  // compression algorithm.
-  params.frame_checksum = false;
-  params.compression_level = kDefaultBlobfsCompressionLevel;
-  params.chunk_size =
-      CompressionParams::ChunkSizeForInputSize(sz, kTargetFrameSize);
-  return params;
-}
 
 // Returns 0 if the compression runs successfully; otherwise non-zero values.
 // This method reads |src_sz| from |src|, compresses it using the compression

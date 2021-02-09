@@ -90,6 +90,7 @@ static_library("blobfs") {
     "//zircon/system/ulib/digest",
   ]
   deps = [
+    "compression/configs",
     "//sdk/lib/syslog/cpp",
     "//src/lib/chunked-compression",
     "//src/storage/fvm",
