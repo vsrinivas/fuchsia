@@ -9,17 +9,13 @@
 
 #include "version.h"
 
-#if __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
-
 namespace cpp17 {
+
+#if __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::addressof;
 
-}  // namespace cpp17
-
 #else  // Provide constexpr polyfill for addressof.
-
-namespace cpp17 {
 
 template <typename T>
 constexpr T* addressof(T& arg) noexcept {
@@ -29,8 +25,32 @@ constexpr T* addressof(T& arg) noexcept {
 template <typename T>
 const T* addressof(const T&&) = delete;
 
+#endif  // __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 }  // namespace cpp17
 
-#endif  // __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+namespace cpp20 {
+
+#if __cpp_lib_to_address >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::to_address;
+
+#else  // Provide to_address polyfill.
+
+template <typename T>
+constexpr std::enable_if_t<!std::is_function<T>::value, T*> to_address(T* pointer) noexcept {
+  return pointer;
+}
+
+template <typename T>
+constexpr std::enable_if_t<!std::is_function<T>::value,
+                           typename std::pointer_traits<T>::element_type*>
+to_address(const T& pointer) noexcept {
+  return pointer.operator->();
+}
+
+#endif  // __cpp_lib_to_address >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+}  // namespace cpp20
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_MEMORY_H_
