@@ -63,10 +63,10 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
   zx_status_t SerialImplEnable(bool enable);
 
   // ddk::SerialImplProtocol
-  zx_status_t SerialImplRead(void* buf, size_t size, size_t* actual);
+  zx_status_t SerialImplRead(uint8_t* buf, size_t size, size_t* actual);
 
   // ddk::SerialImplProtocol
-  zx_status_t SerialImplWrite(const void* buf, size_t size, size_t* actual);
+  zx_status_t SerialImplWrite(const uint8_t* buf, size_t size, size_t* actual);
 
   // ddk::SerialImplProtocol
   zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);

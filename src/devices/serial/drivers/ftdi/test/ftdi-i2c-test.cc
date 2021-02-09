@@ -39,8 +39,8 @@ class FakeSerial : public ddk::SerialImplProtocol<FakeSerial> {
 
   zx_status_t SerialImplEnable(bool enable) { return ZX_OK; }
 
-  zx_status_t SerialImplRead(void* out_buf_buffer, size_t buf_size, size_t* out_buf_actual) {
-    uint8_t* out_buf = reinterpret_cast<uint8_t*>(out_buf_buffer);
+  zx_status_t SerialImplRead(uint8_t* out_buf_buffer, size_t buf_size, size_t* out_buf_actual) {
+    uint8_t* out_buf = out_buf_buffer;
     if (expected_reads_.size() == 0) {
       if (unexpected_is_error_) {
         printf("Read with no expected read set\n");
@@ -65,8 +65,8 @@ class FakeSerial : public ddk::SerialImplProtocol<FakeSerial> {
     return ZX_OK;
   }
 
-  zx_status_t SerialImplWrite(const void* buf_buffer, size_t buf_size, size_t* out_actual) {
-    const uint8_t* out_buf = reinterpret_cast<const uint8_t*>(buf_buffer);
+  zx_status_t SerialImplWrite(const uint8_t* buf_buffer, size_t buf_size, size_t* out_actual) {
+    const uint8_t* out_buf = buf_buffer;
     if (expected_writes_.size() == 0) {
       if (unexpected_is_error_) {
         printf("Write with no expected wrte set\n");

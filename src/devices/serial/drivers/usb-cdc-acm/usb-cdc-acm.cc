@@ -168,7 +168,7 @@ zx_status_t UsbCdcAcmDevice::SerialImplEnable(bool enable) {
   return ZX_OK;
 }
 
-zx_status_t UsbCdcAcmDevice::SerialImplRead(void* data, size_t len, size_t* actual) {
+zx_status_t UsbCdcAcmDevice::SerialImplRead(uint8_t* data, size_t len, size_t* actual) {
   zx_status_t status = DdkRead(data, len, 0, actual);
   if (status == ZX_OK && actual == nullptr) {
     return ZX_ERR_SHOULD_WAIT;
@@ -176,7 +176,7 @@ zx_status_t UsbCdcAcmDevice::SerialImplRead(void* data, size_t len, size_t* actu
   return status;
 }
 
-zx_status_t UsbCdcAcmDevice::SerialImplWrite(const void* buf, size_t length, size_t* actual) {
+zx_status_t UsbCdcAcmDevice::SerialImplWrite(const uint8_t* buf, size_t length, size_t* actual) {
   return DdkWrite(buf, length, 0, actual);
 }
 

@@ -41,8 +41,8 @@ class UsbCdcAcmDevice : public DeviceType,
   zx_status_t SerialImplGetInfo(serial_port_info_t* info);
   zx_status_t SerialImplConfig(uint32_t baud_rate, uint32_t flags);
   zx_status_t SerialImplEnable(bool enable);
-  zx_status_t SerialImplRead(void* data, size_t len, size_t* actual);
-  zx_status_t SerialImplWrite(const void* buf, size_t length, size_t* actual);
+  zx_status_t SerialImplRead(uint8_t* data, size_t len, size_t* actual);
+  zx_status_t SerialImplWrite(const uint8_t* buf, size_t length, size_t* actual);
   zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
  private:

@@ -148,7 +148,7 @@ zx_status_t FtdiDevice::CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_
   return ZX_OK;
 }
 
-zx_status_t FtdiDevice::SerialImplWrite(const void* buf, size_t length, size_t* actual) {
+zx_status_t FtdiDevice::SerialImplWrite(const uint8_t* buf, size_t length, size_t* actual) {
   return DdkWrite(buf, length, 0, actual);
 }
 
@@ -183,7 +183,7 @@ zx_status_t FtdiDevice::DdkWrite(const void* buf, size_t length, zx_off_t off, s
   return status;
 }
 
-zx_status_t FtdiDevice::SerialImplRead(void* data, size_t len, size_t* actual) {
+zx_status_t FtdiDevice::SerialImplRead(uint8_t* data, size_t len, size_t* actual) {
   zx_status_t status = DdkRead(data, len, 0, actual);
   if (status == ZX_OK && (actual == 0)) {
     return ZX_ERR_SHOULD_WAIT;

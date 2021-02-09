@@ -298,7 +298,7 @@ zx_status_t Uart16550::SerialImplEnable(bool enable) {
   return ZX_OK;
 }
 
-zx_status_t Uart16550::SerialImplRead(void* buf, size_t size, size_t* actual) {
+zx_status_t Uart16550::SerialImplRead(uint8_t* buf, size_t size, size_t* actual) {
   std::lock_guard<std::mutex> lock(device_mutex_);
   *actual = 0;
 
@@ -307,7 +307,7 @@ zx_status_t Uart16550::SerialImplRead(void* buf, size_t size, size_t* actual) {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto p = static_cast<uint8_t*>(buf);
+  auto p = buf;
 
   auto lcr = LineStatusRegister::Get();
 
@@ -341,7 +341,7 @@ zx_status_t Uart16550::SerialImplRead(void* buf, size_t size, size_t* actual) {
   return ZX_OK;
 }
 
-zx_status_t Uart16550::SerialImplWrite(const void* buf, size_t size, size_t* actual) {
+zx_status_t Uart16550::SerialImplWrite(const uint8_t* buf, size_t size, size_t* actual) {
   std::lock_guard<std::mutex> lock(device_mutex_);
   *actual = 0;
 
@@ -350,7 +350,7 @@ zx_status_t Uart16550::SerialImplWrite(const void* buf, size_t size, size_t* act
     return ZX_ERR_BAD_STATE;
   }
 
-  auto p = static_cast<const uint8_t*>(buf);
+  auto p = buf;
   size_t writable = std::min(size, uart_fifo_len_);
 
   auto lsr = LineStatusRegister::Get();

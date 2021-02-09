@@ -65,13 +65,13 @@ class FakeSerialImpl : public ddk::SerialImplProtocol<FakeSerialImpl> {
     return ZX_OK;
   }
 
-  zx_status_t SerialImplRead(void* buf, size_t length, size_t* out_actual) {
+  zx_status_t SerialImplRead(uint8_t* buf, size_t length, size_t* out_actual) {
     if (!(state_ & SERIAL_STATE_READABLE)) {
       *out_actual = 0;
       return ZX_ERR_SHOULD_WAIT;
     }
 
-    char* buffer = static_cast<char*>(buf);
+    char* buffer = reinterpret_cast<char*>(buf);
     size_t i;
 
     for (i = 0; i < length && i < kBufferLength && read_buffer_[i]; ++i) {
@@ -87,13 +87,13 @@ class FakeSerialImpl : public ddk::SerialImplProtocol<FakeSerialImpl> {
     return ZX_OK;
   }
 
-  zx_status_t SerialImplWrite(const void* buf, size_t length, size_t* out_actual) {
+  zx_status_t SerialImplWrite(const uint8_t* buf, size_t length, size_t* out_actual) {
     if (!(state_ & SERIAL_STATE_WRITABLE)) {
       *out_actual = 0;
       return ZX_ERR_SHOULD_WAIT;
     }
 
-    const char* buffer = static_cast<const char*>(buf);
+    const char* buffer = reinterpret_cast<const char*>(buf);
     size_t i;
 
     for (i = 0; i < length && i < kBufferLength; ++i) {

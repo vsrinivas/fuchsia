@@ -280,7 +280,7 @@ zx_status_t SerialDevice::DdkRead(void* buf, size_t count, zx_off_t off, size_t*
     return ZX_ERR_BAD_STATE;
   }
 
-  return serial_.Read(buf, count, actual);
+  return serial_.Read(reinterpret_cast<uint8_t*>(buf), count, actual);
 }
 
 zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
@@ -290,7 +290,7 @@ zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, 
     return ZX_ERR_BAD_STATE;
   }
 
-  return serial_.Write(buf, count, actual);
+  return serial_.Write(reinterpret_cast<const uint8_t*>(buf), count, actual);
 }
 
 void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
