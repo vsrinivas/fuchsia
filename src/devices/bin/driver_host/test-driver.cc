@@ -24,7 +24,8 @@
 using llcpp::fuchsia::device::restarttest::TestDevice;
 
 class TestDevhostDriver;
-using DeviceType = ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
                           public TestDevice::Interface {
@@ -34,6 +35,14 @@ class TestDevhostDriver : public DeviceType,
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
+
+  // Device message ops implementation.
+
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    TestDevice::Dispatch(this, msg, &transaction);
+    return transaction.Status();
+  }
 
  private:
   struct devhost_test_metadata metadata_;
@@ -103,4 +112,4 @@ static zx_driver_ops_t test_devhost_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(test-devhost-parent, test_devhost_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(test - devhost - parent, test_devhost_driver_ops, "zircon", "0.1");

@@ -157,8 +157,11 @@ test("driver_host_test") {
   deps = [
     ":common",
     ":fuchsia.device.restarttest_llcpp",
+    "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
