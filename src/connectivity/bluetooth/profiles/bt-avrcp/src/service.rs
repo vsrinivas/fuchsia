@@ -57,6 +57,8 @@ struct AvrcpClientController {
 
     /// The position change interval this FIDL controller client would like position change events
     /// delievered.
+    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
+    #[allow(dead_code)]
     position_change_interval: u32,
 
     /// The current count of outgoing notifications currently outstanding an not acknowledged by the

@@ -133,6 +133,8 @@ pub(crate) struct ScenicViewStrategy {
     pending_present_count: usize,
     next_presentation_times: Vec<i64>,
     present_interval: i64,
+    // TODO(fxbug.dev/69491): Remove this or explain why it's here.
+    #[allow(dead_code)]
     last_presentation_time: i64,
     remaining_presents_in_flight_allowed: i64,
     render_timer_scheduled: bool,

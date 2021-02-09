@@ -849,6 +849,8 @@ pub struct HostImageCycler {
     node: EntityNode,
     content_node: ShapeNode,
     content_material: Material,
+    // TODO(fxbug.dev/69494): Remove this or explain why it's here.
+    #[allow(dead_code)]
     content_shape: Option<Rectangle>,
 }
 

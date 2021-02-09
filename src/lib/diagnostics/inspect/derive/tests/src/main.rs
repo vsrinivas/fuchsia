@@ -83,6 +83,8 @@ struct PowerYak {
     ty: cell::RefCell<IDebug<Horse>>,
     counter: Box<UintProperty>,
     last_words: parking_lot::RwLock<StringProperty>,
+    // TODO(fxbug.dev/69493): Remove this or explain why it's here.
+    #[allow(dead_code)]
     inspect_node: Node,
 }
 

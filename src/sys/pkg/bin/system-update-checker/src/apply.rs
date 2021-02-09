@@ -401,6 +401,8 @@ mod test_apply_system_update_impl {
 
     struct ProgressUpdateInstaller {
         states: Vec<State>,
+        // TODO(fxbug.dev/69496): Remove this or explain why it's here.
+        #[allow(dead_code)]
         reboot_controller_server_end: Option<ServerEnd<RebootControllerMarker>>,
     }
     impl ProgressUpdateInstaller {
@@ -509,9 +511,9 @@ mod test_apply_system_update_impl {
                 fraction_completed: None
             })))
         );
-        assert_matches!(stream.next().await, Some(Err((ApplyProgress {
-            download_size: None,
-            fraction_completed: None
-        }, _))));
+        assert_matches!(
+            stream.next().await,
+            Some(Err((ApplyProgress { download_size: None, fraction_completed: None }, _)))
+        );
     }
 }

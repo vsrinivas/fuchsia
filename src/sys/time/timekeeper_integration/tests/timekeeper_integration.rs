@@ -83,6 +83,8 @@ struct PushSourcePuppet {
     /// Sender to push updates to `push_source`.
     update_sink: Sender<Update>,
     /// Task for retrieving updates in `push_source`.
+    // TODO(fxbug.dev/69497): Remove this or explain why it's here.
+    #[allow(dead_code)]
     update_task: fasync::Task<()>,
     /// Task serving the client.
     client_task: Option<fasync::Task<()>>,

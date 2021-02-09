@@ -386,6 +386,8 @@ pub(crate) struct TestSetup {
     // Let connection to sandbox be made lazily, so a netemul sandbox is not
     // created for tests that don't need it.
     sandbox: Option<sandbox::SandboxProxy>,
+    // TODO(fxbug.dev/69490): Remove this or explain why it's here.
+    #[allow(dead_code)]
     nets: Option<fidl::endpoints::ClientEnd<net::SetupHandleMarker>>,
     stacks: Vec<TestStack>,
 }

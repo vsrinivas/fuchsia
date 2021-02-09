@@ -54,6 +54,8 @@ pub(crate) struct FrameVmo {
     latest_notify: zx::Time,
 
     /// The number of channels.
+    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
+    #[allow(dead_code)]
     channels: u16,
 }
 

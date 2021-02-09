@@ -23,7 +23,11 @@ use crate::{
 };
 
 struct ControlSession {
+    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
+    #[allow(dead_code)]
     discovery_token: Option<Arc<DiscoverySession>>,
+    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
+    #[allow(dead_code)]
     discoverable_token: Option<Arc<HostDiscoverableSession>>,
 }
 

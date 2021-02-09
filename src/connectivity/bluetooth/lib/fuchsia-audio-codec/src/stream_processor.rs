@@ -170,6 +170,8 @@ struct StreamProcessorInner {
     /// A cursor on the next input buffer location to be written to when new input data arrives.
     input_cursor: Option<(InputBufferIndex, u64)>,
     /// The size of each output packet
+    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
+    #[allow(dead_code)]
     output_packet_size: u64,
     /// An queue of the indexes of output buffers that have been filled by the processor and a
     /// waiter if someone is waiting on it.

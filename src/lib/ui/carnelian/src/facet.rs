@@ -453,6 +453,8 @@ pub struct Scene {
     facet_order: Vec<FacetId>,
     layers: LayerMap,
     composition: Composition,
+    // TODO(fxbug.dev/69491): Remove this or explain why it's here.
+    #[allow(dead_code)]
     size: Option<Size>,
     options: SceneOptions,
 }

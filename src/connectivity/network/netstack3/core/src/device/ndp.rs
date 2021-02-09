@@ -1252,6 +1252,8 @@ pub(crate) struct NdpState<D: LinkDevice, Instant> {
     /// See ReachableTime in [RFC 4861 section 6.3.2] for more details.
     ///
     /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
+    // TODO(fxbug.dev/69490): Remove this or explain why it's here.
+    #[allow(dead_code)]
     reachable_time: Duration,
 
     /// The time between retransmissions of Neighbor Solicitation messages to a

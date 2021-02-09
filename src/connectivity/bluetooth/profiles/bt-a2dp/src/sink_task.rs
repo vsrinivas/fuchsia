@@ -79,6 +79,8 @@ struct ConfiguredSinkTask {
     /// Future that will return the Session ID for Media, if we have started the session.
     session_id_fut: Option<Shared<oneshot::Receiver<u64>>>,
     /// Session Task (AVRCP relay) if it is started
+    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
+    #[allow(dead_code)]
     session_task: Option<fasync::Task<()>>,
 }
 
@@ -153,7 +155,9 @@ impl MediaTaskRunner for ConfiguredSinkTask {
             let session_id = session_id_fut.await;
             media_stream_task(
                 stream,
-                Box::new(move || player::Player::new(session_id, codec_config.clone(), audio_factory.clone())),
+                Box::new(move || {
+                    player::Player::new(session_id, codec_config.clone(), audio_factory.clone())
+                }),
                 stream_inspect,
             )
             .await
@@ -405,7 +409,9 @@ mod tests {
 
         // Should try to start the player
         match exec.run_until_stalled(&mut audio_factory_requests.next()) {
-            Poll::Ready(Some(Ok(media::SessionAudioConsumerFactoryRequest::CreateAudioConsumer{ .. }))) => {},
+            Poll::Ready(Some(Ok(
+                media::SessionAudioConsumerFactoryRequest::CreateAudioConsumer { .. },
+            ))) => {}
             x => panic!("Expected a audio consumer request, got {:?}", x),
         };
     }
