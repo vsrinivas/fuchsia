@@ -15,13 +15,14 @@ __BEGIN_CDECLS
 
 // Forward declarations
 typedef struct doer_protocol doer_protocol_t;
+typedef struct doer_protocol_ops doer_protocol_ops_t;
 typedef struct container container_t;
 
 // Declarations
-typedef struct doer_protocol_ops {
+struct doer_protocol_ops {
     void (*do_something)(void* ctx, zx_handle_t the_handle);
     void (*do_something_else)(void* ctx, zx_handle_t the_handle_too);
-} doer_protocol_ops_t;
+};
 
 
 struct doer_protocol {
@@ -29,6 +30,13 @@ struct doer_protocol {
     void* ctx;
 };
 
+struct container {
+    zx_handle_t a_handle;
+    zx_handle_t another_handle;
+};
+
+
+// Helpers
 static inline void doer_do_something(const doer_protocol_t* proto, zx_handle_t the_handle) {
     proto->ops->do_something(proto->ctx, the_handle);
 }
@@ -36,12 +44,6 @@ static inline void doer_do_something(const doer_protocol_t* proto, zx_handle_t t
 static inline void doer_do_something_else(const doer_protocol_t* proto, zx_handle_t the_handle_too) {
     proto->ops->do_something_else(proto->ctx, the_handle_too);
 }
-
-
-struct container {
-    zx_handle_t a_handle;
-    zx_handle_t another_handle;
-};
 
 
 __END_CDECLS

@@ -1,4 +1,1 @@
-struct {callback_name} {{
-  {callback};
-  void* ctx;
-}};
+../../../../../banjo/src/backends/templates/c/callback.h

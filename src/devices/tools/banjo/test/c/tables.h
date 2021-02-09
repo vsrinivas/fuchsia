@@ -37,4 +37,7 @@ struct a {
 };
 
 
+// Helpers
+
+
 __END_CDECLS

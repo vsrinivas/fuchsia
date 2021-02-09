@@ -1,3 +1,1 @@
-{decl} {c_name} {{
-{members}
-}}{attrs};
+../../../../../banjo/src/backends/templates/c/struct.h

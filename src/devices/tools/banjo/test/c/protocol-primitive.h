@@ -26,10 +26,12 @@ typedef void (*async_primitive_uint64_callback)(void* ctx, uint64_t u64, uint64_
 typedef void (*async_primitive_float32_callback)(void* ctx, float f32, float f32_2);
 typedef void (*async_primitive_float64_callback)(void* ctx, double f64, double f64_2);
 typedef struct async_primitive_protocol async_primitive_protocol_t;
+typedef struct async_primitive_protocol_ops async_primitive_protocol_ops_t;
 typedef struct synchronous_primitive_protocol synchronous_primitive_protocol_t;
+typedef struct synchronous_primitive_protocol_ops synchronous_primitive_protocol_ops_t;
 
 // Declarations
-typedef struct async_primitive_protocol_ops {
+struct async_primitive_protocol_ops {
     void (*bool)(void* ctx, bool b, async_primitive_bool_callback callback, void* cookie);
     void (*int8)(void* ctx, int8_t i8, async_primitive_int8_callback callback, void* cookie);
     void (*int16)(void* ctx, int16_t i16, async_primitive_int16_callback callback, void* cookie);
@@ -41,7 +43,7 @@ typedef struct async_primitive_protocol_ops {
     void (*uint64)(void* ctx, uint64_t u64, async_primitive_uint64_callback callback, void* cookie);
     void (*float32)(void* ctx, float f32, async_primitive_float32_callback callback, void* cookie);
     void (*float64)(void* ctx, double u64, async_primitive_float64_callback callback, void* cookie);
-} async_primitive_protocol_ops_t;
+};
 
 
 struct async_primitive_protocol {
@@ -49,6 +51,28 @@ struct async_primitive_protocol {
     void* ctx;
 };
 
+struct synchronous_primitive_protocol_ops {
+    bool (*bool)(void* ctx, bool b, bool* out_b_2);
+    int8_t (*int8)(void* ctx, int8_t i8, int8_t* out_i8_2);
+    int16_t (*int16)(void* ctx, int16_t i16, int16_t* out_i16_2);
+    int32_t (*int32)(void* ctx, int32_t i32, int32_t* out_i32_2);
+    int64_t (*int64)(void* ctx, int64_t i64, int64_t* out_i64_2);
+    uint8_t (*uint8)(void* ctx, uint8_t u8, uint8_t* out_u8_2);
+    uint16_t (*uint16)(void* ctx, uint16_t u16, uint16_t* out_u16_2);
+    uint32_t (*uint32)(void* ctx, uint32_t u32, uint32_t* out_u32_2);
+    uint64_t (*uint64)(void* ctx, uint64_t u64, uint64_t* out_u64_2);
+    float (*float32)(void* ctx, float f32, float* out_f32_2);
+    double (*float64)(void* ctx, double u64, double* out_f64_2);
+};
+
+
+struct synchronous_primitive_protocol {
+    synchronous_primitive_protocol_ops_t* ops;
+    void* ctx;
+};
+
+
+// Helpers
 static inline void async_primitive_bool(const async_primitive_protocol_t* proto, bool b, async_primitive_bool_callback callback, void* cookie) {
     proto->ops->bool(proto->ctx, b, callback, cookie);
 }
@@ -93,27 +117,6 @@ static inline void async_primitive_float64(const async_primitive_protocol_t* pro
     proto->ops->float64(proto->ctx, u64, callback, cookie);
 }
 
-
-typedef struct synchronous_primitive_protocol_ops {
-    bool (*bool)(void* ctx, bool b, bool* out_b_2);
-    int8_t (*int8)(void* ctx, int8_t i8, int8_t* out_i8_2);
-    int16_t (*int16)(void* ctx, int16_t i16, int16_t* out_i16_2);
-    int32_t (*int32)(void* ctx, int32_t i32, int32_t* out_i32_2);
-    int64_t (*int64)(void* ctx, int64_t i64, int64_t* out_i64_2);
-    uint8_t (*uint8)(void* ctx, uint8_t u8, uint8_t* out_u8_2);
-    uint16_t (*uint16)(void* ctx, uint16_t u16, uint16_t* out_u16_2);
-    uint32_t (*uint32)(void* ctx, uint32_t u32, uint32_t* out_u32_2);
-    uint64_t (*uint64)(void* ctx, uint64_t u64, uint64_t* out_u64_2);
-    float (*float32)(void* ctx, float f32, float* out_f32_2);
-    double (*float64)(void* ctx, double u64, double* out_f64_2);
-} synchronous_primitive_protocol_ops_t;
-
-
-struct synchronous_primitive_protocol {
-    synchronous_primitive_protocol_ops_t* ops;
-    void* ctx;
-};
-
 static inline bool synchronous_primitive_bool(const synchronous_primitive_protocol_t* proto, bool b, bool* out_b_2) {
     return proto->ops->bool(proto->ctx, b, out_b_2);
 }
@@ -157,7 +160,6 @@ static inline float synchronous_primitive_float32(const synchronous_primitive_pr
 static inline double synchronous_primitive_float64(const synchronous_primitive_protocol_t* proto, double u64, double* out_f64_2) {
     return proto->ops->float64(proto->ctx, u64, out_f64_2);
 }
-
 
 
 __END_CDECLS

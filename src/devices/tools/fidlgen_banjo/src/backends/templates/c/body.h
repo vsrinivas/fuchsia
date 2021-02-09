@@ -1,9 +1,1 @@
-__BEGIN_CDECLS
-
-// Forward declarations
-{declarations}
-
-// Declarations
-{definitions}
-
-__END_CDECLS
+../../../../../banjo/src/backends/templates/c/body.h

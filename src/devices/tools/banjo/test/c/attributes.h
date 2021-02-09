@@ -45,4 +45,7 @@ struct none_struct {
 };
 
 
+// Helpers
+
+
 __END_CDECLS

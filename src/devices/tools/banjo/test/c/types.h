@@ -47,6 +47,7 @@ typedef uint32_t default_enum_t;
 #define arrays_size UINT32_C(32)
 typedef struct arrays arrays_t;
 typedef struct this_is_an_interface_protocol this_is_an_interface_protocol_t;
+typedef struct this_is_an_interface_protocol_ops this_is_an_interface_protocol_ops_t;
 typedef struct interfaces interfaces_t;
 
 // Declarations
@@ -463,9 +464,9 @@ struct arrays {
     zx_handle_t handle_2[32][4];
 };
 
-typedef struct this_is_an_interface_protocol_ops {
+struct this_is_an_interface_protocol_ops {
     void (*copy)(void* ctx, const char* s, uint32_t count, char* out_s, size_t s_capacity);
-} this_is_an_interface_protocol_ops_t;
+};
 
 
 struct this_is_an_interface_protocol {
@@ -473,15 +474,16 @@ struct this_is_an_interface_protocol {
     void* ctx;
 };
 
-static inline void this_is_an_interface_copy(const this_is_an_interface_protocol_t* proto, const char* s, uint32_t count, char* out_s, size_t s_capacity) {
-    proto->ops->copy(proto->ctx, s, count, out_s, s_capacity);
-}
-
-
 struct interfaces {
     this_is_an_interface_protocol_t nonnullable_interface;
     this_is_an_interface_protocol_t nullable_interface;
 };
+
+
+// Helpers
+static inline void this_is_an_interface_copy(const this_is_an_interface_protocol_t* proto, const char* s, uint32_t count, char* out_s, size_t s_capacity) {
+    proto->ops->copy(proto->ctx, s, count, out_s, s_capacity);
+}
 
 
 __END_CDECLS

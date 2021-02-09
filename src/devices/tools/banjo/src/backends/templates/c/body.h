@@ -6,4 +6,7 @@ __BEGIN_CDECLS
 // Declarations
 {definitions}
 
+// Helpers
+{helpers}
+
 __END_CDECLS

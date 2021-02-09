@@ -66,4 +66,7 @@ typedef int16_t int16_enum_t;
 // Declarations
 
 
+// Helpers
+
+
 __END_CDECLS

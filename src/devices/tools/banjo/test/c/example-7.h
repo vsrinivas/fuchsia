@@ -15,11 +15,12 @@ __BEGIN_CDECLS
 
 // Forward declarations
 typedef struct hello_protocol hello_protocol_t;
+typedef struct hello_protocol_ops hello_protocol_ops_t;
 
 // Declarations
-typedef struct hello_protocol_ops {
+struct hello_protocol_ops {
     void (*say)(void* ctx, const char* req, char* out_response, size_t response_capacity);
-} hello_protocol_ops_t;
+};
 
 
 struct hello_protocol {
@@ -27,10 +28,11 @@ struct hello_protocol {
     void* ctx;
 };
 
+
+// Helpers
 static inline void hello_say(const hello_protocol_t* proto, const char* req, char* out_response, size_t response_capacity) {
     proto->ops->say(proto->ctx, req, out_response, response_capacity);
 }
-
 
 
 __END_CDECLS

@@ -23,4 +23,7 @@ struct point {
 };
 
 
+// Helpers
+
+
 __END_CDECLS

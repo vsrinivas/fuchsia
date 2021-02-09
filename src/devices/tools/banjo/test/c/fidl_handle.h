@@ -22,4 +22,7 @@ struct some_struct {
 };
 
 
+// Helpers
+
+
 __END_CDECLS

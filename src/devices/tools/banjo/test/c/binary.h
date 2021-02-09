@@ -19,4 +19,7 @@ __BEGIN_CDECLS
 // Declarations
 
 
+// Helpers
+
+
 __END_CDECLS

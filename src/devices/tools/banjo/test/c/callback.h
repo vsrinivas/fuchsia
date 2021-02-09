@@ -16,6 +16,7 @@ __BEGIN_CDECLS
 // Forward declarations
 typedef struct point point_t;
 typedef struct drawing_protocol drawing_protocol_t;
+typedef struct drawing_protocol_ops drawing_protocol_ops_t;
 typedef uint32_t direction_t;
 #define DIRECTION_UP UINT32_C(0)
 #define DIRECTION_DOWN UINT32_C(1)
@@ -29,13 +30,13 @@ struct point {
     int32_t y;
 };
 
-typedef struct drawing_protocol_ops {
+struct drawing_protocol_ops {
     void (*register_callback)(void* ctx);
     void (*deregister_callback)(void* ctx);
     int32_t (*draw_lots)(void* ctx, zx_handle_t commands, point_t* out_p);
     zx_status_t (*draw_array)(void* ctx, const point_t points[4]);
     void (*describe)(void* ctx, const char* one, char* out_two, size_t two_capacity);
-} drawing_protocol_ops_t;
+};
 
 
 struct drawing_protocol {
@@ -43,6 +44,13 @@ struct drawing_protocol {
     void* ctx;
 };
 
+struct draw {
+  void (*callback)(void* ctx, const point_t* p, direction_t d);
+  void* ctx;
+};
+
+
+// Helpers
 static inline void drawing_register_callback(const drawing_protocol_t* proto) {
     proto->ops->register_callback(proto->ctx);
 }
@@ -63,11 +71,6 @@ static inline void drawing_describe(const drawing_protocol_t* proto, const char*
     proto->ops->describe(proto->ctx, one, out_two, two_capacity);
 }
 
-
-struct draw {
-  void (*callback)(void* ctx, const point_t* p, direction_t d);
-  void* ctx;
-};
 
 
 __END_CDECLS

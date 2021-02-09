@@ -27,4 +27,7 @@ struct foo {
 };
 
 
+// Helpers
+
+
 __END_CDECLS

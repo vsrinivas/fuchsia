@@ -16,11 +16,14 @@ __BEGIN_CDECLS
 // Forward declarations
 #define array_size UINT32_C(32)
 typedef struct arrayof_arrays_protocol arrayof_arrays_protocol_t;
+typedef struct arrayof_arrays_protocol_ops arrayof_arrays_protocol_ops_t;
 typedef struct array2_protocol array2_protocol_t;
+typedef struct array2_protocol_ops array2_protocol_ops_t;
 typedef struct array_protocol array_protocol_t;
+typedef struct array_protocol_ops array_protocol_ops_t;
 
 // Declarations
-typedef struct arrayof_arrays_protocol_ops {
+struct arrayof_arrays_protocol_ops {
     void (*bool)(void* ctx, const bool b[32][4], bool out_b[32][4]);
     void (*int8)(void* ctx, const int8_t i8[32][4], int8_t out_i8[32][4]);
     void (*int16)(void* ctx, const int16_t i16[32][4], int16_t out_i16[32][4]);
@@ -33,7 +36,7 @@ typedef struct arrayof_arrays_protocol_ops {
     void (*float32)(void* ctx, const float f32[32][4], float out_f32[32][4]);
     void (*float64)(void* ctx, const double u64[32][4], double out_f64[32][4]);
     void (*handle)(void* ctx, const zx_handle_t u64[32][4], zx_handle_t out_f64[32][4]);
-} arrayof_arrays_protocol_ops_t;
+};
 
 
 struct arrayof_arrays_protocol {
@@ -41,6 +44,50 @@ struct arrayof_arrays_protocol {
     void* ctx;
 };
 
+struct array2_protocol_ops {
+    void (*bool)(void* ctx, const bool b[32], bool out_b[32]);
+    void (*int8)(void* ctx, const int8_t i8[32], int8_t out_i8[32]);
+    void (*int16)(void* ctx, const int16_t i16[32], int16_t out_i16[32]);
+    void (*int32)(void* ctx, const int32_t i32[32], int32_t out_i32[32]);
+    void (*int64)(void* ctx, const int64_t i64[32], int64_t out_i64[32]);
+    void (*uint8)(void* ctx, const uint8_t u8[32], uint8_t out_u8[32]);
+    void (*uint16)(void* ctx, const uint16_t u16[32], uint16_t out_u16[32]);
+    void (*uint32)(void* ctx, const uint32_t u32[32], uint32_t out_u32[32]);
+    void (*uint64)(void* ctx, const uint64_t u64[32], uint64_t out_u64[32]);
+    void (*float32)(void* ctx, const float f32[32], float out_f32[32]);
+    void (*float64)(void* ctx, const double u64[32], double out_f64[32]);
+    void (*handle)(void* ctx, const zx_handle_t u64[32], zx_handle_t out_f64[32]);
+};
+
+
+struct array2_protocol {
+    array2_protocol_ops_t* ops;
+    void* ctx;
+};
+
+struct array_protocol_ops {
+    void (*bool)(void* ctx, const bool b[1], bool out_b[1]);
+    void (*int8)(void* ctx, const int8_t i8[1], int8_t out_i8[1]);
+    void (*int16)(void* ctx, const int16_t i16[1], int16_t out_i16[1]);
+    void (*int32)(void* ctx, const int32_t i32[1], int32_t out_i32[1]);
+    void (*int64)(void* ctx, const int64_t i64[1], int64_t out_i64[1]);
+    void (*uint8)(void* ctx, const uint8_t u8[1], uint8_t out_u8[1]);
+    void (*uint16)(void* ctx, const uint16_t u16[1], uint16_t out_u16[1]);
+    void (*uint32)(void* ctx, const uint32_t u32[1], uint32_t out_u32[1]);
+    void (*uint64)(void* ctx, const uint64_t u64[1], uint64_t out_u64[1]);
+    void (*float32)(void* ctx, const float f32[1], float out_f32[1]);
+    void (*float64)(void* ctx, const double u64[1], double out_f64[1]);
+    void (*handle)(void* ctx, const zx_handle_t u64[1], zx_handle_t out_f64[1]);
+};
+
+
+struct array_protocol {
+    array_protocol_ops_t* ops;
+    void* ctx;
+};
+
+
+// Helpers
 static inline void arrayof_arrays_bool(const arrayof_arrays_protocol_t* proto, const bool b[32][4], bool out_b[32][4]) {
     proto->ops->bool(proto->ctx, b, out_b);
 }
@@ -88,28 +135,6 @@ static inline void arrayof_arrays_float64(const arrayof_arrays_protocol_t* proto
 static inline void arrayof_arrays_handle(const arrayof_arrays_protocol_t* proto, const zx_handle_t u64[32][4], zx_handle_t out_f64[32][4]) {
     proto->ops->handle(proto->ctx, u64, out_f64);
 }
-
-
-typedef struct array2_protocol_ops {
-    void (*bool)(void* ctx, const bool b[32], bool out_b[32]);
-    void (*int8)(void* ctx, const int8_t i8[32], int8_t out_i8[32]);
-    void (*int16)(void* ctx, const int16_t i16[32], int16_t out_i16[32]);
-    void (*int32)(void* ctx, const int32_t i32[32], int32_t out_i32[32]);
-    void (*int64)(void* ctx, const int64_t i64[32], int64_t out_i64[32]);
-    void (*uint8)(void* ctx, const uint8_t u8[32], uint8_t out_u8[32]);
-    void (*uint16)(void* ctx, const uint16_t u16[32], uint16_t out_u16[32]);
-    void (*uint32)(void* ctx, const uint32_t u32[32], uint32_t out_u32[32]);
-    void (*uint64)(void* ctx, const uint64_t u64[32], uint64_t out_u64[32]);
-    void (*float32)(void* ctx, const float f32[32], float out_f32[32]);
-    void (*float64)(void* ctx, const double u64[32], double out_f64[32]);
-    void (*handle)(void* ctx, const zx_handle_t u64[32], zx_handle_t out_f64[32]);
-} array2_protocol_ops_t;
-
-
-struct array2_protocol {
-    array2_protocol_ops_t* ops;
-    void* ctx;
-};
 
 static inline void array2_bool(const array2_protocol_t* proto, const bool b[32], bool out_b[32]) {
     proto->ops->bool(proto->ctx, b, out_b);
@@ -159,28 +184,6 @@ static inline void array2_handle(const array2_protocol_t* proto, const zx_handle
     proto->ops->handle(proto->ctx, u64, out_f64);
 }
 
-
-typedef struct array_protocol_ops {
-    void (*bool)(void* ctx, const bool b[1], bool out_b[1]);
-    void (*int8)(void* ctx, const int8_t i8[1], int8_t out_i8[1]);
-    void (*int16)(void* ctx, const int16_t i16[1], int16_t out_i16[1]);
-    void (*int32)(void* ctx, const int32_t i32[1], int32_t out_i32[1]);
-    void (*int64)(void* ctx, const int64_t i64[1], int64_t out_i64[1]);
-    void (*uint8)(void* ctx, const uint8_t u8[1], uint8_t out_u8[1]);
-    void (*uint16)(void* ctx, const uint16_t u16[1], uint16_t out_u16[1]);
-    void (*uint32)(void* ctx, const uint32_t u32[1], uint32_t out_u32[1]);
-    void (*uint64)(void* ctx, const uint64_t u64[1], uint64_t out_u64[1]);
-    void (*float32)(void* ctx, const float f32[1], float out_f32[1]);
-    void (*float64)(void* ctx, const double u64[1], double out_f64[1]);
-    void (*handle)(void* ctx, const zx_handle_t u64[1], zx_handle_t out_f64[1]);
-} array_protocol_ops_t;
-
-
-struct array_protocol {
-    array_protocol_ops_t* ops;
-    void* ctx;
-};
-
 static inline void array_bool(const array_protocol_t* proto, const bool b[1], bool out_b[1]) {
     proto->ops->bool(proto->ctx, b, out_b);
 }
@@ -228,7 +231,6 @@ static inline void array_float64(const array_protocol_t* proto, const double u64
 static inline void array_handle(const array_protocol_t* proto, const zx_handle_t u64[1], zx_handle_t out_f64[1]) {
     proto->ops->handle(proto->ctx, u64, out_f64);
 }
-
 
 
 __END_CDECLS

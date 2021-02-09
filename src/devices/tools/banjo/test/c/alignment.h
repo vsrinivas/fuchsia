@@ -49,4 +49,7 @@ struct packing_0 {
 } __attribute__ ((packed));
 
 
+// Helpers
+
+
 __END_CDECLS

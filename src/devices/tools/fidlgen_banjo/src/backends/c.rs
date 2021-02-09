@@ -563,6 +563,7 @@ fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
     ))
 }
 
+#[derive(PartialEq, Eq)]
 enum ProtocolType {
     Callback,
     Interface,
@@ -741,13 +742,15 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(format!(include_str!("templates/c/protocol_ops.h"), c_name = to_c_name(name), fns = fns))
     }
 
-    fn codegen_helper_def(
+    fn codegen_protocol_helper(
         &self,
-        name: &str,
-        methods: &Vec<Method>,
-        ir: &FidlIr,
+        data: &'a Interface, ir: &FidlIr
     ) -> Result<String, Error> {
-        methods
+        if ProtocolType::from(&data.maybe_attributes) == ProtocolType::Callback {
+            return Ok("".to_string());
+        }
+        let name = data.name.get_name();
+        data.methods
             .iter()
             .map(|m| {
                 let mut accum = String::new();
@@ -836,7 +839,6 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 include_str!("templates/c/protocol.h"),
                 protocol_name = to_c_name(name),
                 protocol_def = self.codegen_protocol_def2(name, &data.methods, ir)?,
-                helper_def = self.codegen_helper_def(name, &data.methods, ir)?
             ),
             ProtocolType::Callback => {
                 let m = data.methods.get(0).ok_or(anyhow!("callback has no methods"))?;
@@ -897,7 +899,8 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(match ProtocolType::from(&data.maybe_attributes) {
             ProtocolType::Interface | ProtocolType::Protocol => {
                 format!(
-                    "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;",
+                    "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;\n\
+                     typedef struct {c_name}_protocol_ops {c_name}_protocol_ops_t;",
                     async_decls = self.codegen_async_decls(&name, &data.methods, ir)?,
                     c_name = name
                 )
@@ -991,10 +994,19 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
 
+        let helpers = decl_order.iter()
+            .filter_map(|decl| match decl {
+                Decl::Interface { data } => Some(self.codegen_protocol_helper(data, &ir)),
+                _ => None,
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+
         self.w.write_fmt(format_args!(
             include_str!("templates/c/body.h"),
             declarations = declarations,
             definitions = definitions,
+            helpers = helpers,
         ))?;
         Ok(())
     }

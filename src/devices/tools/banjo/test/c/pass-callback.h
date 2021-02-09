@@ -22,6 +22,7 @@ typedef uint8_t direction_t;
 #define DIRECTION_RIGHT UINT8_C(4)
 typedef struct action_notify action_notify_t;
 typedef struct action_protocol_protocol action_protocol_protocol_t;
+typedef struct action_protocol_protocol_ops action_protocol_protocol_ops_t;
 typedef uint32_t action_t;
 #define ACTION_START UINT32_C(0x1)
 #define ACTION_STOP UINT32_C(0x2)
@@ -37,16 +38,19 @@ struct action_notify {
   void* ctx;
 };
 
-typedef struct action_protocol_protocol_ops {
+struct action_protocol_protocol_ops {
     zx_status_t (*register_callback)(void* ctx, uint32_t id, const action_notify_t* cb);
     zx_status_t (*get_callback)(void* ctx, uint32_t id, action_notify_t* out_cb);
-} action_protocol_protocol_ops_t;
+};
 
 
 struct action_protocol_protocol {
     action_protocol_protocol_ops_t* ops;
     void* ctx;
 };
+
+
+// Helpers
 
 static inline zx_status_t action_protocol_register_callback(const action_protocol_protocol_t* proto, uint32_t id, const action_notify_t* cb) {
     return proto->ops->register_callback(proto->ctx, id, cb);
@@ -55,7 +59,6 @@ static inline zx_status_t action_protocol_register_callback(const action_protoco
 static inline zx_status_t action_protocol_get_callback(const action_protocol_protocol_t* proto, uint32_t id, action_notify_t* out_cb) {
     return proto->ops->get_callback(proto->ctx, id, out_cb);
 }
-
 
 
 __END_CDECLS

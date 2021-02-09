@@ -17,6 +17,7 @@ __BEGIN_CDECLS
 typedef struct some_type some_type_t;
 typedef struct vector_field_in_struct vector_field_in_struct_t;
 typedef struct in_out_protocol_protocol in_out_protocol_protocol_t;
+typedef struct in_out_protocol_protocol_ops in_out_protocol_protocol_ops_t;
 typedef struct mutable_field mutable_field_t;
 
 // Declarations
@@ -33,11 +34,11 @@ struct vector_field_in_struct {
     size_t the_default_vector_count;
 };
 
-typedef struct in_out_protocol_protocol_ops {
+struct in_out_protocol_protocol_ops {
     void (*do_something)(void* ctx, some_type_t* param);
     void (*do_some_other_thing)(void* ctx, const some_type_t* param);
     void (*do_some_default_thing)(void* ctx, const some_type_t* param);
-} in_out_protocol_protocol_ops_t;
+};
 
 
 struct in_out_protocol_protocol {
@@ -45,6 +46,14 @@ struct in_out_protocol_protocol {
     void* ctx;
 };
 
+struct mutable_field {
+    char* some_string;
+    const char* some_other_string;
+    const char* some_default_string;
+};
+
+
+// Helpers
 static inline void in_out_protocol_do_something(const in_out_protocol_protocol_t* proto, some_type_t* param) {
     proto->ops->do_something(proto->ctx, param);
 }
@@ -56,13 +65,6 @@ static inline void in_out_protocol_do_some_other_thing(const in_out_protocol_pro
 static inline void in_out_protocol_do_some_default_thing(const in_out_protocol_protocol_t* proto, const some_type_t* param) {
     proto->ops->do_some_default_thing(proto->ctx, param);
 }
-
-
-struct mutable_field {
-    char* some_string;
-    const char* some_other_string;
-    const char* some_default_string;
-};
 
 
 __END_CDECLS

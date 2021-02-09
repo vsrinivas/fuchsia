@@ -15,9 +15,10 @@ __BEGIN_CDECLS
 
 // Forward declarations
 typedef struct api_protocol api_protocol_t;
+typedef struct api_protocol_ops api_protocol_ops_t;
 
 // Declarations
-typedef struct api_protocol_ops {
+struct api_protocol_ops {
     zx_status_t (*bool)(void* ctx, zx_handle_t handle, bool data);
     zx_status_t (*int8)(void* ctx, zx_handle_t handle, int8_t data);
     zx_status_t (*int16)(void* ctx, zx_handle_t handle, int16_t data);
@@ -60,7 +61,7 @@ typedef struct api_protocol_ops {
     zx_time_t (*return_time)(void* ctx, zx_handle_t handle);
     uint32_t (*return_uint32)(void* ctx, zx_handle_t handle);
     uint64_t (*return_uint64)(void* ctx, zx_handle_t handle);
-} api_protocol_ops_t;
+};
 
 
 struct api_protocol {
@@ -68,6 +69,8 @@ struct api_protocol {
     void* ctx;
 };
 
+
+// Helpers
 static inline zx_status_t api_bool(const api_protocol_t* proto, zx_handle_t handle, bool data) {
     return proto->ops->bool(proto->ctx, handle, data);
 }
@@ -235,7 +238,6 @@ static inline uint32_t api_return_uint32(const api_protocol_t* proto, zx_handle_
 static inline uint64_t api_return_uint64(const api_protocol_t* proto, zx_handle_t handle) {
     return proto->ops->return_uint64(proto->ctx, handle);
 }
-
 
 
 __END_CDECLS

@@ -24,4 +24,7 @@ struct some_data {
 };
 
 
+// Helpers
+
+
 __END_CDECLS
