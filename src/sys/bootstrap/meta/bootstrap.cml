@@ -748,6 +748,10 @@
             from: "#fshost",
         },
         {
+            protocol: "fuchsia.update.verify.BlobfsVerifier",
+            from: "#fshost",
+        },
+        {
             protocol: "fuchsia.device.NameProvider",
             from: "#device_name_provider",
         },

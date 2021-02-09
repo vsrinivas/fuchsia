@@ -150,6 +150,7 @@
                 "fuchsia.thermal.Controller",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.kernel.Reader",
+                "fuchsia.update.verify.BlobfsVerifier",
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#bootstrap",
