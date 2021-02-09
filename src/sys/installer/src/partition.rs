@@ -225,7 +225,7 @@ impl Partition {
     /// Read this partition into a FIDL buffer.
     async fn read_data(&self) -> Result<Buffer, Error> {
         let mut rounded_size = self.size;
-        let page_size = zx::sys::ZX_PAGE_SIZE as usize;
+        let page_size = zx::system_get_page_size() as usize;
         if rounded_size % page_size != 0 {
             rounded_size += page_size;
             rounded_size -= rounded_size % page_size;
