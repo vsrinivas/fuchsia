@@ -21,14 +21,15 @@
 #include <zxtest/zxtest.h>
 
 #include "registers.h"
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
 namespace {
 
 constexpr size_t kDataLen = 32;
 
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+class DeviceState {
  public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {
+  DeviceState() {
     region_.emplace(regs_, sizeof(uint32_t), std::size(regs_));
     // Control register
     regs_[2].SetWriteCallback([=](uint64_t value) {
@@ -62,36 +63,11 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
     // Reg5
     regs_[5].SetWriteCallback([=](uint64_t value) { reg5_ = value; });
     regs_[5].SetReadCallback([=]() { return reg5_; });
-    zx::interrupt::create(zx::resource(ZX_HANDLE_INVALID), 0, ZX_INTERRUPT_VIRTUAL, &irq_);
   }
 
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
-    auto buffer = region_->GetMmioBuffer();
-    out_mmio->offset = buffer.get_offset();
-    out_mmio->size = buffer.get_size();
-    out_mmio->vmo = buffer.get_vmo()->get();
-    return ZX_OK;
-  }
+  void set_irq_signaller(zx::unowned_interrupt signaller) { irq_signaller_ = std::move(signaller); }
 
   ddk::MmioBuffer GetMmio() { return region_->GetMmioBuffer(); }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    irq_signaller_ = zx::unowned_interrupt(irq_);
-    *out_irq = std::move(irq_);
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
 
   bool PortResetRX() {
     bool reset = reset_rx_;
@@ -178,8 +154,6 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
   uint64_t status_reg_ = 0;
   ddk_fake::FakeMmioReg regs_[6];
   std::optional<ddk_fake::FakeMmioRegRegion> region_;
-  pdev_protocol_t proto_;
-  zx::interrupt irq_;
   zx::unowned_interrupt irq_signaller_;
 };
 
@@ -224,8 +198,7 @@ class Ddk : public fake_ddk::Bind {
 class AmlUartHarness : public zxtest::Test {
  public:
   void SetUp() override {
-    zx::interrupt interrupt;
-    ASSERT_OK(zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+    state_.set_irq_signaller(pdev_.CreateVirtualInterrupt(0));
     {
       fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
       protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
@@ -236,7 +209,7 @@ class AmlUartHarness : public zxtest::Test {
     info.serial_vid = PDEV_VID_BROADCOM;
     info.serial_pid = PDEV_PID_BCM43458;
     auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, pdev_.proto(), info,
-                                                  ddk::MmioBuffer(pdev_.GetMmio()));
+                                                  state_.GetMmio());
     zx_status_t status = uart->Init();
     ASSERT_OK(status);
     // The AmlUart* is now owned by the fake_ddk.
@@ -253,11 +226,12 @@ class AmlUartHarness : public zxtest::Test {
 
   serial::AmlUart& Device() { return *device_.get(); }
 
-  FakePDev& Pdev() { return pdev_; }
+  DeviceState& device_state() { return state_; }
 
  private:
   Ddk ddk_;
-  FakePDev pdev_;
+  DeviceState state_;
+  fake_pdev::FakePDev pdev_;
   std::unique_ptr<serial::AmlUart> device_;
 };
 
@@ -271,51 +245,51 @@ TEST_F(AmlUartHarness, SerialImplAsyncGetInfo) {
 
 TEST_F(AmlUartHarness, SerialImplAsyncConfig) {
   ASSERT_OK(Device().SerialImplAsyncEnable(false));
-  ASSERT_EQ(Pdev().Control().tx_enable(), 0);
-  ASSERT_EQ(Pdev().Control().rx_enable(), 0);
-  ASSERT_EQ(Pdev().Control().inv_cts(), 0);
+  ASSERT_EQ(device_state().Control().tx_enable(), 0);
+  ASSERT_EQ(device_state().Control().rx_enable(), 0);
+  ASSERT_EQ(device_state().Control().inv_cts(), 0);
   static constexpr uint32_t serial_test_config =
       SERIAL_DATA_BITS_6 | SERIAL_STOP_BITS_2 | SERIAL_PARITY_EVEN | SERIAL_FLOW_CTRL_CTS_RTS;
   ASSERT_OK(Device().SerialImplAsyncConfig(20, serial_test_config));
-  ASSERT_EQ(Pdev().DataBits(), SERIAL_DATA_BITS_6);
-  ASSERT_EQ(Pdev().StopBits(), SERIAL_STOP_BITS_2);
-  ASSERT_EQ(Pdev().Parity(), SERIAL_PARITY_EVEN);
-  ASSERT_TRUE(Pdev().FlowControl());
+  ASSERT_EQ(device_state().DataBits(), SERIAL_DATA_BITS_6);
+  ASSERT_EQ(device_state().StopBits(), SERIAL_STOP_BITS_2);
+  ASSERT_EQ(device_state().Parity(), SERIAL_PARITY_EVEN);
+  ASSERT_TRUE(device_state().FlowControl());
   ASSERT_OK(Device().SerialImplAsyncConfig(40, SERIAL_SET_BAUD_RATE_ONLY));
-  ASSERT_EQ(Pdev().DataBits(), SERIAL_DATA_BITS_6);
-  ASSERT_EQ(Pdev().StopBits(), SERIAL_STOP_BITS_2);
-  ASSERT_EQ(Pdev().Parity(), SERIAL_PARITY_EVEN);
-  ASSERT_TRUE(Pdev().FlowControl());
+  ASSERT_EQ(device_state().DataBits(), SERIAL_DATA_BITS_6);
+  ASSERT_EQ(device_state().StopBits(), SERIAL_STOP_BITS_2);
+  ASSERT_EQ(device_state().Parity(), SERIAL_PARITY_EVEN);
+  ASSERT_TRUE(device_state().FlowControl());
 
   ASSERT_NOT_OK(Device().SerialImplAsyncConfig(0, serial_test_config));
   ASSERT_NOT_OK(Device().SerialImplAsyncConfig(UINT32_MAX, serial_test_config));
   ASSERT_NOT_OK(Device().SerialImplAsyncConfig(1, serial_test_config));
-  ASSERT_EQ(Pdev().DataBits(), SERIAL_DATA_BITS_6);
-  ASSERT_EQ(Pdev().StopBits(), SERIAL_STOP_BITS_2);
-  ASSERT_EQ(Pdev().Parity(), SERIAL_PARITY_EVEN);
-  ASSERT_TRUE(Pdev().FlowControl());
+  ASSERT_EQ(device_state().DataBits(), SERIAL_DATA_BITS_6);
+  ASSERT_EQ(device_state().StopBits(), SERIAL_STOP_BITS_2);
+  ASSERT_EQ(device_state().Parity(), SERIAL_PARITY_EVEN);
+  ASSERT_TRUE(device_state().FlowControl());
   ASSERT_OK(Device().SerialImplAsyncConfig(40, SERIAL_SET_BAUD_RATE_ONLY));
-  ASSERT_EQ(Pdev().DataBits(), SERIAL_DATA_BITS_6);
-  ASSERT_EQ(Pdev().StopBits(), SERIAL_STOP_BITS_2);
-  ASSERT_EQ(Pdev().Parity(), SERIAL_PARITY_EVEN);
-  ASSERT_TRUE(Pdev().FlowControl());
+  ASSERT_EQ(device_state().DataBits(), SERIAL_DATA_BITS_6);
+  ASSERT_EQ(device_state().StopBits(), SERIAL_STOP_BITS_2);
+  ASSERT_EQ(device_state().Parity(), SERIAL_PARITY_EVEN);
+  ASSERT_TRUE(device_state().FlowControl());
 }
 
 TEST_F(AmlUartHarness, SerialImplAsyncEnable) {
   ASSERT_OK(Device().SerialImplAsyncEnable(false));
-  ASSERT_EQ(Pdev().Control().tx_enable(), 0);
-  ASSERT_EQ(Pdev().Control().rx_enable(), 0);
-  ASSERT_EQ(Pdev().Control().inv_cts(), 0);
+  ASSERT_EQ(device_state().Control().tx_enable(), 0);
+  ASSERT_EQ(device_state().Control().rx_enable(), 0);
+  ASSERT_EQ(device_state().Control().inv_cts(), 0);
   ASSERT_OK(Device().SerialImplAsyncEnable(true));
-  ASSERT_EQ(Pdev().Control().tx_enable(), 1);
-  ASSERT_EQ(Pdev().Control().rx_enable(), 1);
-  ASSERT_EQ(Pdev().Control().inv_cts(), 0);
-  ASSERT_TRUE(Pdev().PortResetRX());
-  ASSERT_TRUE(Pdev().PortResetTX());
-  ASSERT_FALSE(Pdev().Control().rst_rx());
-  ASSERT_FALSE(Pdev().Control().rst_tx());
-  ASSERT_TRUE(Pdev().Control().tx_interrupt_enable());
-  ASSERT_TRUE(Pdev().Control().rx_interrupt_enable());
+  ASSERT_EQ(device_state().Control().tx_enable(), 1);
+  ASSERT_EQ(device_state().Control().rx_enable(), 1);
+  ASSERT_EQ(device_state().Control().inv_cts(), 0);
+  ASSERT_TRUE(device_state().PortResetRX());
+  ASSERT_TRUE(device_state().PortResetTX());
+  ASSERT_FALSE(device_state().Control().rst_rx());
+  ASSERT_FALSE(device_state().Control().rst_tx());
+  ASSERT_TRUE(device_state().Control().tx_interrupt_enable());
+  ASSERT_TRUE(device_state().Control().rx_interrupt_enable());
 }
 
 TEST_F(AmlUartHarness, SerialImplReadAsync) {
@@ -334,7 +308,7 @@ TEST_F(AmlUartHarness, SerialImplReadAsync) {
     sync_completion_signal(&context->completion);
   };
   Device().SerialImplAsyncReadAsync(cb, &context);
-  Pdev().Inject(context.data, kDataLen);
+  device_state().Inject(context.data, kDataLen);
   sync_completion_wait(&context.completion, ZX_TIME_INFINITE);
 }
 
@@ -353,7 +327,7 @@ TEST_F(AmlUartHarness, SerialImplWriteAsync) {
   };
   Device().SerialImplAsyncWriteAsync(context.data, kDataLen, cb, &context);
   sync_completion_wait(&context.completion, ZX_TIME_INFINITE);
-  auto buf = Pdev().TxBuf();
+  auto buf = device_state().TxBuf();
   ASSERT_EQ(buf.size(), kDataLen);
   ASSERT_EQ(memcmp(buf.data(), context.data, buf.size()), 0);
 }
@@ -374,7 +348,7 @@ TEST_F(AmlUartHarness, SerialImplAsyncWriteDoubleCallback) {
   Device().SerialImplAsyncWriteAsync(context.data, kDataLen, cb, &context);
   Device().HandleTXRaceForTest();
   sync_completion_wait(&context.completion, ZX_TIME_INFINITE);
-  auto buf = Pdev().TxBuf();
+  auto buf = device_state().TxBuf();
   ASSERT_EQ(buf.size(), kDataLen);
   ASSERT_EQ(memcmp(buf.data(), context.data, buf.size()), 0);
 }
@@ -395,7 +369,7 @@ TEST_F(AmlUartHarness, SerialImplAsyncReadDoubleCallback) {
     sync_completion_signal(&context->completion);
   };
   Device().SerialImplAsyncReadAsync(cb, &context);
-  Pdev().Inject(context.data, kDataLen);
+  device_state().Inject(context.data, kDataLen);
   Device().HandleRXRaceForTest();
   sync_completion_wait(&context.completion, ZX_TIME_INFINITE);
 }
