@@ -267,7 +267,7 @@ impl TestCaseProcessor {
                 Finished { result, control_handle: _ } => {
                     // get all test stdout logs before sending finish event.
                     if let Some(ref mut stdout_fut) = stdout_fut.take().as_mut() {
-                        stdout_fut.await?;
+                        stdout_fut.await.context("Couldn't get test stdout")?;
                     }
 
                     let result = match result.status {
@@ -280,13 +280,16 @@ impl TestCaseProcessor {
                         // by the test and it forgets to set the result.
                         None => TestResult::Error,
                     };
-                    sender.send(TestEvent::test_case_finished(&name, result)).await?;
+                    sender
+                        .send(TestEvent::test_case_finished(&name, result))
+                        .await
+                        .context("Failed to send TestCaseFinished Event")?;
                     return Ok(());
                 }
             }
         }
         if let Some(ref mut stdout_fut) = stdout_fut.take().as_mut() {
-            stdout_fut.await?;
+            stdout_fut.await.context("Couldn't get test stdout")?;
         }
         Ok(())
     }
@@ -311,11 +314,11 @@ impl TestCaseProcessor {
         };
 
         let f = async move {
-            while let Some(log) = stream.try_next().await.context("reading stdout log msg")? {
+            while let Some(log) = stream.try_next().await.context("Error reading stdout log msg")? {
                 sender
                     .send(TestEvent::stdout_message(&name, &log))
                     .await
-                    .context("sending stdout log msg")?
+                    .context("Error sending stdout log msg")?
             }
             Ok(())
         };
@@ -328,7 +331,7 @@ impl TestCaseProcessor {
     /// This will wait for all the stdout logs and events to be collected
     pub async fn wait_for_finish(&mut self) -> Result<(), anyhow::Error> {
         if let Some(ref mut f) = self.f.take().as_mut() {
-            return Ok(f.await?);
+            return Ok(f.await.context("Failure waiting for stdout and events")?);
         }
         Ok(())
     }
@@ -393,7 +396,7 @@ impl SuiteInstance {
                 .get_next()
                 .await
                 .map_err(suite_error)
-                .context("getting test cases")?;
+                .context("Error getting test cases")?;
             if cases.is_empty() {
                 break;
             }
@@ -422,7 +425,8 @@ impl SuiteInstance {
         test_filter: Option<&str>,
         run_options: TestRunOptions,
     ) -> Result<(), anyhow::Error> {
-        let invocations = self.enumerate_tests(&test_filter).await?;
+        let invocations =
+            self.enumerate_tests(&test_filter).await.context("Cannot enumerate tests")?;
         self.run_and_collect_results_for_invocations(sender, invocations, run_options).await
     }
 
@@ -446,7 +450,7 @@ impl SuiteInstance {
             successful_completion &= self
                 .run_invocations(chunk, run_options.clone(), &mut sender)
                 .await
-                .context("running test cases")?;
+                .context("Error running test cases")?;
         }
         if successful_completion {
             sender.send(TestEvent::test_finished()).await.context("sending TestFinished event")?;
@@ -480,10 +484,13 @@ impl SuiteInstance {
                 OnTestCaseStarted { invocation, primary_log, listener, control_handle: _ } => {
                     let name =
                         invocation.name.ok_or(anyhow::anyhow!("cannot find name in invocation"))?;
-                    sender.send(TestEvent::test_case_started(&name)).await?;
+                    sender
+                        .send(TestEvent::test_case_started(&name))
+                        .await
+                        .context("Failed to send TestCaseStart event")?;
                     let test_case_processor = TestCaseProcessor::new(
                         name,
-                        listener.into_stream()?,
+                        listener.into_stream().context("Cannot convert listener to stream")?,
                         primary_log,
                         sender.clone(),
                     );
@@ -500,7 +507,8 @@ impl SuiteInstance {
         join_all(test_case_processors.iter_mut().map(|i| i.wait_for_finish()))
             .await
             .into_iter()
-            .collect::<Result<Vec<()>, Error>>()?;
+            .collect::<Result<Vec<()>, Error>>()
+            .context("Error waiting for all invocations to finish")?;
         Ok(successful_completion)
     }
 
