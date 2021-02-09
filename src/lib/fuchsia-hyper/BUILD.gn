@@ -4,7 +4,8 @@
 
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 rustc_library("fuchsia-hyper") {
   name = "fuchsia_hyper"
@@ -72,14 +73,14 @@ rustc_library("fuchsia-hyper") {
   }
 }
 
-test_package("fuchsia-hyper-tests") {
+fuchsia_component("fuchsia-hyper-lib-test") {
+  testonly = true
+  manifest = "meta/fuchsia_hyper_lib_test.cmx"
   deps = [ ":fuchsia-hyper_test" ]
+}
 
-  tests = [
-    {
-      name = "fuchsia_hyper_lib_test"
-    },
-  ]
+fuchsia_test_package("fuchsia-hyper-tests") {
+  test_components = [ ":fuchsia-hyper-lib-test" ]
 }
 
 group("tests") {
