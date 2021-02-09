@@ -17,6 +17,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/script"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/errutil"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/sl4f"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -57,14 +58,9 @@ func TestReboot(t *testing.T) {
 
 	if err := doTest(ctx); err != nil {
 		logger.Errorf(ctx, "test failed: %v", err)
-		// FIXME(fxbug.dev/53362) It appears dumping a all process
-		// backtraces may be causing a SIGPIPE. Disabling for now to
-		// see if it will stop this test from flaking out.
-		/*
-			if e := errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err); e != nil {
-				logger.Errorf(ctx, "failed to dump process back traces: %v", e)
-			}
-		*/
+		if e := errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err); e != nil {
+			logger.Errorf(ctx, "failed to dump process back traces: %v", e)
+		}
 		t.Fatal(err)
 	}
 }
