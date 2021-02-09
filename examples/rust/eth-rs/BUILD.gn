@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "eth_rs"
@@ -20,18 +20,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("eth-rs") {
+fuchsia_package_with_single_component("eth-rs") {
+  manifest = "meta/eth-rs.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "eth_rs"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/eth-rs.cmx")
-      dest = "eth-rs.cmx"
-    },
-  ]
 }

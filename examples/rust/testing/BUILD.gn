@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
@@ -27,13 +26,4 @@ rustc_binary("testing_integration_test_two") {
   source_root = "tests/integration_test_two.rs"
 
   sources = [ "tests/integration_test_two.rs" ]
-}
-
-group("testing-tests") {
-  testonly = true
-  public_deps = [
-    ":testing_integration_test",
-    ":testing_integration_test_two",
-    ":testing_test",
-  ]
 }

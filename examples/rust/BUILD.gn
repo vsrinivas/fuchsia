@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("rust") {
   testonly = true
@@ -32,19 +32,22 @@ group("tests") {
   ]
 }
 
-test_package("garnet-rust-examples") {
-  deps = [ "testing:testing-tests" ]  #TARGET
+fuchsia_unittest_component("testing_lib_test") {
+  deps = [ "testing:testing_test" ]
+}
 
-  # You need to include these for them to end up in the final image
-  tests = [
-    {
-      name = "testing_lib_test"
-    },
-    {
-      name = "testing_integration_test"
-    },
-    {
-      name = "testing_integration_test_two"
-    },
+fuchsia_unittest_component("testing_integration_test") {
+  deps = [ "testing:testing_integration_test" ]
+}
+
+fuchsia_unittest_component("testing_integration_test_two") {
+  deps = [ "testing:testing_integration_test_two" ]
+}
+
+fuchsia_test_package("garnet-rust-examples") {
+  test_components = [
+    ":testing_lib_test",
+    ":testing_integration_test",
+    ":testing_integration_test_two",
   ]
 }
