@@ -106,6 +106,7 @@ rustc_binary("bin") {
     "src/util/sme_conversion.rs",
     "src/util/state_machine.rs",
     "src/util/telemetry/mod.rs",
+    "src/util/telemetry/test_fixtures.rs",
     "src/util/testing/cobalt.rs",
     "src/util/testing/generate_struct.rs",
     "src/util/testing/mod.rs",
