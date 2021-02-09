@@ -21,6 +21,7 @@ use {
             create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
         },
         regulatory_manager::RegulatoryManager,
+        util::telemetry::Telemetry,
     },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
@@ -214,11 +215,15 @@ fn main() -> Result<(), Error> {
         .context("failed to connect to device service")?;
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    let telemetry = Telemetry::new(component::inspector().root());
 
     let saved_networks =
         Arc::new(executor.run_singlethreaded(SavedNetworksManager::new(cobalt_api.clone()))?);
-    let network_selector =
-        Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api.clone()));
+    let network_selector = Arc::new(NetworkSelector::new(
+        Arc::clone(&saved_networks),
+        cobalt_api.clone(),
+        telemetry.clone(),
+    ));
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
         wlan_svc.clone(),

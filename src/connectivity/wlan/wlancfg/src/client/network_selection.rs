@@ -10,6 +10,7 @@ use {
         },
         config_management::{self, Credential, SavedNetworksManager},
         mode_management::iface_manager_api::IfaceManagerApi,
+        util::telemetry::Telemetry,
     },
     async_trait::async_trait,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -45,6 +46,7 @@ pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
     cobalt_api: Arc<Mutex<CobaltSender>>,
+    telemetry: impl ConnectionTrackerApi,
 }
 
 struct ScanResultCache {
@@ -78,10 +80,24 @@ impl InternalBss<'_> {
         }
         return rssi;
     }
+
+    fn to_telemetry_candidate(&self) -> telemetry::CandidateBss {
+        let channel = Channel::from_fidl(self.bss_info.channel);
+        telemetry::CandidateBss {
+            rssi: self.bss_info.rssi,
+            recent_failure_count: self.network_info.recent_failure_count,
+            band: if channel.is_5ghz() {
+                types::Band::WlanBand5Ghz
+            } else {
+                types::Band::WlanBand2Ghz
+            },
+            score: self.score(),
+        }
+    }
 }
 
 impl NetworkSelector {
-    pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender) -> Self {
+    pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender, telemetry: Telemetry) -> Self {
         Self {
             saved_network_manager,
             scan_result_cache: Arc::new(Mutex::new(ScanResultCache {
@@ -89,6 +105,7 @@ impl NetworkSelector {
                 results: Vec::new(),
             })),
             cobalt_api: Arc::new(Mutex::new(cobalt_api)),
+            telemetry
         }
     }
 
