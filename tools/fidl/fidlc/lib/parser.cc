@@ -588,8 +588,9 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kBits));
   if (!Ok())
     return Fail();
+  auto decl_start_token = decl_token.value();
 
-  ValidateModifiers<types::Strictness>(modifiers, decl_token.value());
+  ValidateModifiers<types::Strictness>(modifiers, decl_start_token);
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -639,8 +640,12 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
   if (members.empty())
     return Fail(ErrMustHaveOneMember);
 
+  if (modifiers.strictness != std::nullopt) {
+    decl_start_token = modifiers.strictness_token.value();
+  }
+
   return std::make_unique<raw::BitsDeclaration>(
-      scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes), std::move(identifier),
       std::move(maybe_type_ctor), std::move(members),
       modifiers.strictness.value_or(types::Strictness::kStrict));
 }
@@ -698,8 +703,9 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kEnum));
   if (!Ok())
     return Fail();
+  auto decl_start_token = decl_token.value();
 
-  ValidateModifiers<types::Strictness>(modifiers, decl_token.value());
+  ValidateModifiers<types::Strictness>(modifiers, decl_start_token);
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -749,8 +755,12 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
   if (members.empty())
     return Fail(ErrMustHaveOneMember);
 
+  if (modifiers.strictness != std::nullopt) {
+    decl_start_token = modifiers.strictness_token.value();
+  }
+
   return std::make_unique<raw::EnumDeclaration>(
-      scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes), std::move(identifier),
       std::move(maybe_type_ctor), std::move(members),
       modifiers.strictness.value_or(types::Strictness::kStrict));
 }

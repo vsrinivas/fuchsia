@@ -109,6 +109,156 @@ alias foo = vector<vector<array<uint8,5>>:optional>:<optional,9>;
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, BitsUnmodified) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+bits Foo {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = bits {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, BitsFlexible) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+flexible bits Foo {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = flexible bits {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, BitsStrict) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+strict bits Foo {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = strict bits {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, BitsUnmodifiedWithWrappedType) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+bits Foo : uint64 {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = bits : uint64 {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, BitsFlexibleWithWrappedType) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+flexible bits Foo : uint64 {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = flexible bits : uint64 {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, BitsStrictWithWrappedType) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+strict bits Foo : uint64 {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = strict bits : uint64 {
+  SMALLEST = 1;
+  BIGGEST = 0x8000000000000000;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, Consts) {
   std::string old_version = R"FIDL(
 library example;
@@ -124,6 +274,156 @@ library example;
 const FOO uint8 = 34;
 const BAR string:3 = "abc";
 const BAZ bool = true;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, EnumUnmodified) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+enum Foo {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = enum {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, EnumFlexible) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+flexible enum Foo {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = flexible enum {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, EnumStrict) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+strict enum Foo {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = strict enum {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, EnumUnmodifiedWithWrappedType) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+enum Foo : uint64 {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = enum : uint64 {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, EnumFlexibleWithWrappedType) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+flexible enum Foo : uint64 {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = flexible enum : uint64 {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, EnumStrictWithWrappedType) {
+  std::string old_version = R"FIDL(
+library example;
+
+/// Doc comment.
+strict enum Foo : uint64 {
+  FOO = 1;
+  BAR = 2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+/// Doc comment.
+type Foo = strict enum : uint64 {
+  FOO = 1;
+  BAR = 2;
+};
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));

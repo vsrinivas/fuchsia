@@ -8,10 +8,53 @@
 
 namespace fidl::conv {
 
+// Until FTP-033 is fully implemented, it is possible for "strict" types to not
+// have an actual "strict" keyword preceeding them (ie, "struct struct S {...}"
+// and "struct S {...}" are represented identically in the raw AST).  This
+// helper function works around that problem by determining whether or not the
+// actual "strict" keyword was used in the declaration text.
+std::optional<types::Strictness> optional_strictness(Token& decl_start_token) {
+  if (decl_start_token.subkind() == Token::Subkind::kStrict) {
+    return std::make_optional(types::Strictness::kStrict);
+  }
+  if (decl_start_token.subkind() == Token::Subkind::kFlexible) {
+    return std::make_optional(types::Strictness::kFlexible);
+  }
+  return std::nullopt;
+}
+
+void ConvertingTreeVisitor::OnBitsDeclaration(const std::unique_ptr<raw::BitsDeclaration> &element) {
+  Token& start = *element->decl_start_token;
+  Token& end = element->identifier->end_;
+  if (element->maybe_type_ctor != nullptr) {
+    end = element->maybe_type_ctor->end_;
+  }
+
+  auto ref = element->maybe_type_ctor == nullptr ? std::nullopt :
+             std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(element->maybe_type_ctor);
+  std::unique_ptr<Conversion> conv = std::make_unique<BitsDeclarationConversion>(element->identifier, ref, optional_strictness(start));
+  Converting converting(this, std::move(conv), start, end);
+  TreeVisitor::OnBitsDeclaration(element);
+}
+
 void ConvertingTreeVisitor::OnConstDeclaration(const std::unique_ptr<raw::ConstDeclaration> &element) {
   std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
   Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
   TreeVisitor::OnConstDeclaration(element);
+}
+
+void ConvertingTreeVisitor::OnEnumDeclaration(const std::unique_ptr<raw::EnumDeclaration> &element) {
+  Token& start = *element->decl_start_token;
+  Token& end = element->identifier->end_;
+  if (element->maybe_type_ctor != nullptr) {
+    end = element->maybe_type_ctor->end_;
+  }
+
+  auto ref = element->maybe_type_ctor == nullptr ? std::nullopt :
+             std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(element->maybe_type_ctor);
+  std::unique_ptr<Conversion> conv = std::make_unique<EnumDeclarationConversion>(element->identifier, ref, optional_strictness(start));
+  Converting converting(this, std::move(conv), start, end);
+  TreeVisitor::OnEnumDeclaration(element);
 }
 
 void ConvertingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& element) {

@@ -166,7 +166,7 @@ class MemberedDeclarationConversion : public Conversion {
 
   std::string Write(Syntax syntax) override;
 
- private:
+ protected:
   virtual std::string get_fidl_type() = 0;
 
   std::string get_decl_str() {
@@ -201,6 +201,54 @@ class StructDeclarationConversion : public MemberedDeclarationConversion {
  private:
   std::string get_fidl_type() override {
     return "struct";
+  }
+};
+
+// Handles the conversion of declarations specified using the bits keyword.
+// It is similar to the MemberedDeclarationConversion that it wraps, but has to
+// account for the possibility that a declaration contains an (optional)
+// wrapped type, like "bits NAME : WRAPPED_TYPE {..."
+class BitsDeclarationConversion : public MemberedDeclarationConversion {
+ public:
+  BitsDeclarationConversion(
+      const std::unique_ptr<raw::Identifier>& identifier,
+      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>& maybe_wrapped_type,
+      const std::optional<types::Strictness>& strictness)
+      : MemberedDeclarationConversion(identifier, strictness, types::Resourceness::kValue),
+        maybe_wrapped_type_(maybe_wrapped_type) {}
+
+  const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>> maybe_wrapped_type_;
+
+  void AddChildText(std::string child) override {}
+
+  std::string Write(Syntax syntax) override;
+
+ private:
+  std::string get_fidl_type() override {
+    return "bits";
+  }
+
+  std::string get_wrapped_type() {
+    if (maybe_wrapped_type_.has_value()) {
+      return " : " + maybe_wrapped_type_.value().get()->copy_to_str();
+    }
+    return "";
+  }
+};
+
+// Identical to the BitsDeclarationConversion, except that it replaces the word
+// "bits" with "enum."
+class EnumDeclarationConversion : public BitsDeclarationConversion {
+ public:
+  EnumDeclarationConversion(
+      const std::unique_ptr<raw::Identifier>& identifier,
+      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>& maybe_wrapped_type,
+      const std::optional<types::Strictness>& strictness)
+      : BitsDeclarationConversion(identifier, maybe_wrapped_type, strictness) {}
+
+ private:
+  std::string get_fidl_type() override {
+    return "enum";
   }
 };
 

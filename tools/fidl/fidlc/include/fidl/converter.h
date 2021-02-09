@@ -63,13 +63,13 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   //   types of conversions are supported.
 
   // Bits.
-  void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {}
+  void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override;
 
   // Constants.
   void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override;
 
   // Enums.
-  void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override {}
+  void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override;
 
   // Files.
   void OnFile(std::unique_ptr<raw::File> const& element) override;

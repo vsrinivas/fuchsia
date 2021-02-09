@@ -297,11 +297,14 @@ class BitsMember final : public SourceElement {
 
 class BitsDeclaration final : public SourceElement {
  public:
-  BitsDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+  BitsDeclaration(SourceElement const& element,
+                  std::unique_ptr<Token> decl_start_token,
+                  std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
                   std::vector<std::unique_ptr<BitsMember>> members, types::Strictness strictness)
       : SourceElement(element),
+        decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         maybe_type_ctor(std::move(maybe_type_ctor)),
@@ -310,6 +313,7 @@ class BitsDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
+  std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<TypeConstructor> maybe_type_ctor;
@@ -391,11 +395,14 @@ class EnumMember final : public SourceElement {
 
 class EnumDeclaration final : public SourceElement {
  public:
-  EnumDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+  EnumDeclaration(SourceElement const& element,
+                  std::unique_ptr<Token> decl_start_token,
+                  std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
                   std::vector<std::unique_ptr<EnumMember>> members, types::Strictness strictness)
       : SourceElement(element),
+        decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         maybe_type_ctor(std::move(maybe_type_ctor)),
@@ -404,6 +411,7 @@ class EnumDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
+  std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<TypeConstructor> maybe_type_ctor;

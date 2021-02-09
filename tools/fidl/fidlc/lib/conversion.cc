@@ -88,4 +88,22 @@ std::string MemberedDeclarationConversion::Write(Syntax syntax) {
   return out;
 };
 
+std::string BitsDeclarationConversion::Write(Syntax syntax) {
+  std::string out;
+  Token name_token = identifier_->start_;
+  const char* start_pos = name_token.span().data().data();
+  const char* end_pos = name_token.span().data().data() + name_token.span().data().length();
+  std::string name = std::string(start_pos, end_pos);
+
+  if (syntax == Syntax::kOld) {
+    out += prefix() + get_decl_str() + " " + name + get_wrapped_type();
+  } else {
+    out += prefix() + "type " + name + " = " + get_decl_str() + get_wrapped_type();
+  }
+  for (const std::string& member : members_) {
+    out += member;
+  }
+  return out;
+};
+
 }  // namespace fidl::conv
