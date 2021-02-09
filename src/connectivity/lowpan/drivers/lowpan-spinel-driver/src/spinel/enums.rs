@@ -297,6 +297,12 @@ pub enum PropThread {
 impl_sub_enum!(Prop::Thread, PropThread);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum PropCntr {
+    AllMacCounters,
+}
+impl_sub_enum!(Prop::Cntr, PropCntr);
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum PropIpv6 {
     LlAddr,
     MlAddr,
@@ -332,6 +338,7 @@ pub enum Prop {
     Mac(PropMac),
     Net(PropNet),
     Thread(PropThread),
+    Cntr(PropCntr),
     Ipv6(PropIpv6),
     Unknown(u32),
 }
@@ -456,6 +463,8 @@ impl From<Prop> for u32 {
             Thread(PropThread::MgmtSetActiveDataset) => 0x151a,
             Thread(PropThread::MgmtSetPendingDataset) => 0x151b,
             Thread(PropThread::Unknown(x)) => x,
+
+            Cntr(PropCntr::AllMacCounters) => 0x691,
 
             Ipv6(PropIpv6::LlAddr) => 0x60,
             Ipv6(PropIpv6::MlAddr) => 0x61,
@@ -597,6 +606,8 @@ impl From<u32> for Prop {
             x if (x >= 0x60 && x < 0x70) || (x >= 0x1600 && x < 0x1700) => {
                 Ipv6(PropIpv6::Unknown(x))
             }
+
+            0x691 => Cntr(PropCntr::AllMacCounters),
 
             112 => Stream(PropStream::Debug),
             113 => Stream(PropStream::Raw),

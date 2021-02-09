@@ -1098,8 +1098,19 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn get_counters(&self) -> ZxResult<AllCounters> {
-        // TODO: Implement.
-        return Ok(AllCounters::EMPTY);
+        let res = self.get_property_simple::<AllMacCounters, _>(PropCntr::AllMacCounters).await?;
+
+        if res.tx_counters.len() != 17 || res.rx_counters.len() != 17 {
+            fx_log_err!(
+                "get_counters: Unexpected counter length: {} tx counters and \
+                        {} rx counters",
+                res.tx_counters.len(),
+                res.rx_counters.len()
+            );
+            return Err(ZxStatus::INTERNAL);
+        }
+
+        Ok(res.into())
     }
 
     async fn reset_counters(&self) -> ZxResult<AllCounters> {

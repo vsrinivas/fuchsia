@@ -6,6 +6,7 @@ use super::enums::*;
 use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
+use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
 use spinel_pack::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -490,6 +491,61 @@ pub struct NeighborTableEntry {
 }
 
 pub type NeighborTable = Vec<NeighborTableEntry>;
+
+#[spinel_packed("dd")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct AllMacCounters {
+    pub tx_counters: Vec<u32>,
+    pub rx_counters: Vec<u32>,
+}
+
+impl std::convert::Into<AllCounters> for AllMacCounters {
+    fn into(self) -> AllCounters {
+        AllCounters {
+            mac_tx: Some(MacCounters {
+                total: Some(self.tx_counters[0]),
+                unicast: Some(self.tx_counters[1]),
+                broadcast: Some(self.tx_counters[2]),
+                ack_requested: Some(self.tx_counters[3]),
+                acked: Some(self.tx_counters[4]),
+                no_ack_requested: Some(self.tx_counters[5]),
+                data: Some(self.tx_counters[6]),
+                data_poll: Some(self.tx_counters[7]),
+                beacon: Some(self.tx_counters[8]),
+                beacon_request: Some(self.tx_counters[9]),
+                other: Some(self.tx_counters[10]),
+                retries: Some(self.tx_counters[11]),
+                direct_max_retry_expiry: Some(self.tx_counters[15]),
+                indirect_max_retry_expiry: Some(self.tx_counters[16]),
+                err_cca: Some(self.tx_counters[12]),
+                err_abort: Some(self.tx_counters[13]),
+                err_busy_channel: Some(self.tx_counters[14]),
+                ..MacCounters::EMPTY
+            }),
+            mac_rx: Some(MacCounters {
+                total: Some(self.rx_counters[0]),
+                unicast: Some(self.rx_counters[1]),
+                broadcast: Some(self.rx_counters[2]),
+                data: Some(self.rx_counters[3]),
+                data_poll: Some(self.rx_counters[4]),
+                beacon: Some(self.rx_counters[5]),
+                beacon_request: Some(self.rx_counters[6]),
+                other: Some(self.rx_counters[7]),
+                address_filtered: Some(self.rx_counters[8]),
+                dest_addr_filtered: Some(self.rx_counters[9]),
+                duplicated: Some(self.rx_counters[10]),
+                err_no_frame: Some(self.rx_counters[11]),
+                err_unknown_neighbor: Some(self.rx_counters[12]),
+                err_invalid_src_addr: Some(self.rx_counters[13]),
+                err_sec: Some(self.rx_counters[14]),
+                err_fcs: Some(self.rx_counters[15]),
+                err_other: Some(self.rx_counters[16]),
+                ..MacCounters::EMPTY
+            }),
+            ..AllCounters::EMPTY
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
