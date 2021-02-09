@@ -16,10 +16,7 @@
 #include "gather_channels.h"
 #include "gather_cpu.h"
 #include "gather_device_info.h"
-#include "gather_inspectable.h"
-#include "gather_introspection.h"
 #include "gather_memory.h"
-#include "gather_memory_digest.h"
 #include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
@@ -38,13 +35,7 @@ void Harvester::GatherDeviceProperties() {
   FX_VLOGS(1) << "Harvester::GatherDeviceProperties";
   gather_device_info_.GatherDeviceProperties();
   gather_cpu_.GatherDeviceProperties();
-  // TODO(fxbug.dev/40872): re-enable once we need this data.
-  // gather_inspectable_.GatherDeviceProperties();
-  // gather_introspection_.GatherDeviceProperties();
   gather_memory_.GatherDeviceProperties();
-  // Temporarily turn of digest and memory summary gathering (until after
-  // dog food release).
-  // gather_memory_digest_.GatherDeviceProperties();
   gather_tasks_.GatherDeviceProperties();
 
   gather_vmos_.GatherDeviceProperties();
@@ -65,14 +56,6 @@ void Harvester::GatherFastData(async_dispatcher_t* dispatcher) {
 void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
   FX_VLOGS(1) << "Harvester::GatherSlowData";
   zx::time now = async::Now(dispatcher);
-
-  // TODO(fxbug.dev/40872): re-enable once we need this data.
-  // gather_inspectable_.PostUpdate(dispatcher, now, zx::sec(3));
-  // gather_introspection_.PostUpdate(dispatcher, now, zx::sec(10));
-
-  // Temporarily turn off digest and memory summary gathering (until after
-  // dog food).
-  // gather_memory_digest_.PostUpdate(dispatcher, now, zx::msec(500));
 
   gather_channels_.PostUpdate(dispatcher, now, zx::sec(1));
   gather_processes_and_memory_.PostUpdate(dispatcher, now, zx::sec(2));

@@ -48,12 +48,6 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
   zx::duration GetGatherThreadsAndCpuPeriod() const {
     return test_harvester->gather_threads_and_cpu_.update_period_;
   }
-  zx::duration GetGatherInspectablePeriod() const {
-    return test_harvester->gather_inspectable_.update_period_;
-  }
-  zx::duration GetGatherIntrospectionPeriod() const {
-    return test_harvester->gather_introspection_.update_period_;
-  }
   zx::duration GetGatherMemoryPeriod() const {
     return test_harvester->gather_memory_.update_period_;
   }

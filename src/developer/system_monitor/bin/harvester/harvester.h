@@ -9,10 +9,7 @@
 #include "gather_channels.h"
 #include "gather_cpu.h"
 #include "gather_device_info.h"
-#include "gather_inspectable.h"
-#include "gather_introspection.h"
 #include "gather_memory.h"
-#include "gather_memory_digest.h"
 #include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
@@ -52,12 +49,7 @@ class Harvester {
   GatherChannels gather_channels_{info_resource_, dockyard_proxy_.get()};
   GatherCpu gather_cpu_{info_resource_, dockyard_proxy_.get()};
   GatherDeviceInfo gather_device_info_{info_resource_, dockyard_proxy_.get()};
-  GatherInspectable gather_inspectable_{info_resource_, dockyard_proxy_.get()};
-  GatherIntrospection gather_introspection_{info_resource_,
-                                            dockyard_proxy_.get()};
   GatherMemory gather_memory_{info_resource_, dockyard_proxy_.get()};
-  GatherMemoryDigest gather_memory_digest_{info_resource_,
-                                           dockyard_proxy_.get()};
   GatherTasks gather_tasks_{info_resource_, dockyard_proxy_.get()};
   GatherThreadsAndCpu gather_threads_and_cpu_{info_resource_,
                                               dockyard_proxy_.get()};
