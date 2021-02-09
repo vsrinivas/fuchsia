@@ -22,6 +22,7 @@ use {
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
+    mock_verifier::MockVerifierService,
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::sync::Arc,
@@ -125,6 +126,16 @@ where
             .detach()
         });
 
+        // Set up verifier service.
+        let verifier_service = Arc::new(MockVerifierService::new(|_| Ok(())));
+        let verifier_service_clone = Arc::clone(&verifier_service);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(
+                Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream),
+            )
+            .detach()
+        });
+
         let (reflected_dir_client_end, reflected_dir_server_end) =
             fidl::endpoints::create_endpoints::<DirectoryMarker>()
                 .expect("creating reflected channel");
@@ -160,7 +171,11 @@ where
             apps: Apps { pkg_cache: pkg_cache_realm },
             pkgfs,
             proxies,
-            mocks: Mocks { logger_factory, _paver_service: paver_service },
+            mocks: Mocks {
+                logger_factory,
+                _paver_service: paver_service,
+                _verifier_service: verifier_service,
+            },
         }
     }
 }
@@ -174,6 +189,7 @@ struct Proxies {
 pub struct Mocks {
     pub logger_factory: Arc<MockLoggerFactory>,
     _paver_service: Arc<MockPaverService>,
+    _verifier_service: Arc<MockVerifierService>,
 }
 
 struct Apps {

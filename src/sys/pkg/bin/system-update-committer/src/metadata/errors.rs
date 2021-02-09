@@ -34,8 +34,6 @@ pub enum PolicyError {
 
 /// Error condition that may be returned when doing health verification.
 #[derive(Error, Debug)]
-// TODO(http://fxbug.dev/67381) use this.
-#[allow(dead_code)]
 pub enum VerifyError {
     #[error("the blobfs verification failed")]
     BlobFs(#[source] VerifyFailureReason),

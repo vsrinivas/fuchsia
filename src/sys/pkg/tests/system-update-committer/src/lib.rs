@@ -19,6 +19,7 @@ use {
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
+    mock_verifier::MockVerifierService,
     parking_lot::Mutex,
     serde_json::json,
     std::{fs::File, path::PathBuf, sync::Arc, time::Duration},
@@ -33,6 +34,7 @@ struct TestEnvBuilder {
     config_data: Option<(PathBuf, String)>,
     paver_service_builder: Option<MockPaverServiceBuilder>,
     reboot_service: Option<MockRebootService>,
+    verifier_service: Option<MockVerifierService>,
 }
 impl TestEnvBuilder {
     fn config_data(self, path: impl Into<PathBuf>, data: impl Into<String>) -> Self {
@@ -45,6 +47,10 @@ impl TestEnvBuilder {
 
     fn reboot_service(self, reboot_service: MockRebootService) -> Self {
         Self { reboot_service: Some(reboot_service), ..self }
+    }
+
+    fn verifier_service(self, verifier_service: MockVerifierService) -> Self {
+        Self { verifier_service: Some(verifier_service), ..self }
     }
 
     fn build(self) -> TestEnv {
@@ -88,9 +94,21 @@ impl TestEnvBuilder {
             .detach()
         });
 
+        // Set up verifier service.
+        let verifier_service =
+            Arc::new(self.verifier_service.unwrap_or_else(|| MockVerifierService::new(|_| Ok(()))));
+        let verifier_service_clone = Arc::clone(&verifier_service);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(
+                Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream),
+            )
+            .detach()
+        });
+
         let mut salt = [0; 4];
         zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
         let nested_environment_label = format!("committer-env_{}", hex::encode(&salt));
+
         let env = fs
             .create_nested_environment(&nested_environment_label)
             .expect("nested environment to create successfully");
@@ -112,6 +130,7 @@ impl TestEnvBuilder {
             _paver_service: paver_service,
             _reboot_service: reboot_service,
             nested_environment_label,
+            _verifier_service: verifier_service,
         }
     }
 }
@@ -122,11 +141,17 @@ struct TestEnv {
     _paver_service: Arc<MockPaverService>,
     _reboot_service: Arc<MockRebootService>,
     nested_environment_label: String,
+    _verifier_service: Arc<MockVerifierService>,
 }
 
 impl TestEnv {
     fn builder() -> TestEnvBuilder {
-        TestEnvBuilder { config_data: None, paver_service_builder: None, reboot_service: None }
+        TestEnvBuilder {
+            config_data: None,
+            paver_service_builder: None,
+            reboot_service: None,
+            verifier_service: None,
+        }
     }
 
     /// Opens a connection to the fuchsia.update/CommitStatusProvider FIDL service.
@@ -284,6 +309,39 @@ async fn multiple_commit_status_provider_requests() {
     );
 }
 
+/// Make sure the inspect data is plumbed through after successful verifications.
+#[fasync::run_singlethreaded(test)]
+async fn inspect_health_status_ok() {
+    let env = TestEnv::builder()
+        // Make sure we run health verifications.
+        .paver_service_builder(
+            MockPaverServiceBuilder::new()
+                .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
+        )
+        .build();
+
+    // Wait for verifications to complete.
+    let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
+    assert_eq!(OnSignals::new(&p, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+
+    // Observe verification shows up in inspect.
+    let hierarchy = env.system_update_committer_inspect_hierarchy().await;
+    assert_inspect_tree!(
+        hierarchy,
+        root: {
+            "verification": {
+                "ota_verification_duration": {
+                    "success": AnyProperty,
+                }
+            },
+            "fuchsia.inspect.Health": {
+                "start_timestamp_nanos": AnyProperty,
+                "status": "OK"
+            }
+        }
+    );
+}
+
 /// When the paver fails, the system-update-committer should trigger a reboot regardless of the
 /// config. Additionally, the inspect state should reflect the system being unhealthy. We could
 /// split this up into several tests, but instead we combine them to reduce redundant lines of code.
@@ -330,33 +388,104 @@ async fn paver_failure_causes_reboot() {
     );
 }
 
-/// Make sure the inspect data is plumbed through after successful verifications.
+/// When the verifications fail and the config says to reboot, we should reboot.
 #[fasync::run_singlethreaded(test)]
-async fn inspect_health_status_ok() {
+async fn verification_failure_causes_reboot() {
+    let (reboot_sender, reboot_recv) = oneshot::channel();
+    let reboot_sender = Arc::new(Mutex::new(Some(reboot_sender)));
     let env = TestEnv::builder()
+        // Make sure we run health verifications.
         .paver_service_builder(
             MockPaverServiceBuilder::new()
                 .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
         )
+        // Make the health verifications fail.
+        .verifier_service(MockVerifierService::new(|_| {
+            Err(fidl_fuchsia_update_verify::VerifyError::Internal)
+        }))
+        // Make us reboot on failure.
+        .config_data("config.json", json!({"blobfs": "reboot_on_failure"}).to_string())
+        // Handle the reboot requests.
+        .reboot_service(MockRebootService::new(Box::new(move |reason: RebootReason| {
+            reboot_sender.lock().take().unwrap().send(reason).unwrap();
+            Ok(())
+        })))
         .build();
 
-    // Wait for verifications to complete.
-    let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
-    assert_eq!(OnSignals::new(&p, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+    // We should observe a reboot.
+    assert_eq!(reboot_recv.await, Ok(RebootReason::RetrySystemUpdate));
 
-    // Observe verification shows up in inspect.
+    // Observe failed verification shows up in inspect.
     let hierarchy = env.system_update_committer_inspect_hierarchy().await;
     assert_inspect_tree!(
         hierarchy,
         root: {
             "verification": {
                 "ota_verification_duration": {
-                    "success": AnyProperty,
+                    "failure_blobfs": AnyProperty,
+                },
+                "ota_verification_failure": {
+                    "verify": 1u64,
                 }
             },
             "fuchsia.inspect.Health": {
+                "message": "Failed to put metadata in happy state: Verify(BlobFs(Verify(Internal)))",
                 "start_timestamp_nanos": AnyProperty,
-                "status": "OK"
+                "status": "UNHEALTHY"
+            }
+        }
+    );
+}
+
+/// When the verifications fail and the config says NOT to reboot, we should NOT reboot.
+#[fasync::run_singlethreaded(test)]
+async fn verification_failure_does_not_cause_reboot() {
+    let (reboot_sender, mut reboot_recv) = oneshot::channel();
+    let reboot_sender = Arc::new(Mutex::new(Some(reboot_sender)));
+    let env = TestEnv::builder()
+        // Make sure we run health verifications.
+        .paver_service_builder(
+            MockPaverServiceBuilder::new()
+                .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
+        )
+        // Make the health verifications fail.
+        .verifier_service(MockVerifierService::new(|_| {
+            Err(fidl_fuchsia_update_verify::VerifyError::Internal)
+        }))
+        // Make us IGNORE the verification failure.
+        .config_data("config.json", json!({"blobfs": "ignore"}).to_string())
+        // Handle the reboot requests.
+        .reboot_service(MockRebootService::new(Box::new(move |reason: RebootReason| {
+            reboot_sender.lock().take().unwrap().send(reason).unwrap();
+            Ok(())
+        })))
+        .build();
+
+    // The CommitStatusProvider should report "Committed", even though the verification fails. As a
+    // reminder, this is only happening because the config said to ignore the failed verification.
+    let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
+    assert_eq!(OnSignals::new(&p, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+
+    // We should NOT observe a reboot.
+    assert_eq!(reboot_recv.try_recv(), Ok(None));
+
+    // Observe failed verification shows up in inspect.
+    let hierarchy = env.system_update_committer_inspect_hierarchy().await;
+    assert_inspect_tree!(
+        hierarchy,
+        root: {
+            "verification": {
+                "ota_verification_duration": {
+                    "failure_blobfs": AnyProperty,
+                },
+                "ota_verification_failure": {
+                    "verify": 1u64,
+                }
+            },
+            "fuchsia.inspect.Health": {
+                "message": "Failed to put metadata in happy state: Verify(BlobFs(Verify(Internal)))",
+                "start_timestamp_nanos": AnyProperty,
+                "status": "UNHEALTHY"
             }
         }
     );

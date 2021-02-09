@@ -14,40 +14,31 @@ use {
     std::time::{Duration, Instant},
 };
 
-/// Dummy function to indicate where health verification will eventually go, and how to handle
-/// associated errors. This is NOT to be confused with verified execution; health verification
-/// is a different process we use to determine if we should give up on the backup slot.
-pub async fn do_health_verification(node: &finspect::Node) -> Result<(), VerifyError> {
-    let now = Instant::now();
-
-    // TODO(fxbug.dev/67381) call do_health_verification_impl. For now, we arbitrarily set to Ok
-    // so that we can integration test inspect.
-    let res = Ok(());
-
-    let () = write_to_inspect(node, &Ok(()), now.elapsed());
-    res
-}
-
 // Each health verification should time out after 1 hour.
 const VERIFY_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 
-// TODO(fxbug.dev/67381) call this from do_health_verification.
-#[allow(dead_code)]
-fn do_health_verification_impl(
-    proxy: &BlobfsVerifierProxy,
-) -> impl Future<Output = Result<(), VerifyError>> {
+/// Do the health verification and handle associated errors. This is NOT to be confused with
+/// verified execution; health verification is a different process we use to determine if we should
+/// give up on the backup slot.
+pub fn do_health_verification<'a>(
+    proxy: &'a BlobfsVerifierProxy,
+    node: &'a finspect::Node,
+) -> impl Future<Output = Result<(), VerifyError>> + 'a {
+    let now = Instant::now();
     let mut timer_fut = fasync::Timer::new(VERIFY_TIMEOUT).fuse();
     let mut verify_fut = proxy.verify(VerifyOptions { ..VerifyOptions::EMPTY }).fuse();
 
     // Report the blobfs verify result. If we add more verifications, we can factor each
     // verification into its own function and run all of them asynchronously.
     async move {
-        futures::select! {
+        let res = futures::select! {
             verify_res = verify_fut => verify_res
                 .map_err(|e| VerifyError::BlobFs(VerifyFailureReason::Fidl(e)))?
                 .map_err(|e| VerifyError::BlobFs(VerifyFailureReason::Verify(anyhow!("{:?}", e)))),
             _ = timer_fut => Err(VerifyError::BlobFs(VerifyFailureReason::Timeout)),
-        }
+        };
+        let () = write_to_inspect(node, &res, now.elapsed());
+        res
     }
 }
 
@@ -67,7 +58,7 @@ mod tests {
         let mock = Arc::new(MockVerifierService::new(|_| Ok(())));
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
-        assert_matches!(do_health_verification_impl(&proxy).await, Ok(()));
+        assert_matches!(do_health_verification(&proxy, &finspect::Node::default()).await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -76,7 +67,7 @@ mod tests {
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
         assert_matches!(
-            do_health_verification_impl(&proxy).await,
+            do_health_verification(&proxy, &finspect::Node::default()).await,
             Err(VerifyError::BlobFs(VerifyFailureReason::Verify(_)))
         );
     }
@@ -89,7 +80,7 @@ mod tests {
         drop(server);
 
         assert_matches!(
-            do_health_verification_impl(&proxy).await,
+            do_health_verification(&proxy, &finspect::Node::default()).await,
             Err(VerifyError::BlobFs(VerifyFailureReason::Fidl(_)))
         );
     }
@@ -112,9 +103,10 @@ mod tests {
         // Create a mock blobfs verifier that will never respond.
         let mock = Arc::new(MockVerifierService::new(HangingVerifyHook));
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
+        let node = finspect::Node::default();
 
         // Start do_health_verification, which will internally create the timeout future.
-        let fut = do_health_verification_impl(&proxy);
+        let fut = do_health_verification(&proxy, &node);
         pin_mut!(fut);
 
         // Since the timer has not expired, the future should still be pending.

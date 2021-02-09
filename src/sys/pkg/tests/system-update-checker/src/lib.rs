@@ -25,6 +25,7 @@ use {
     mock_installer::MockUpdateInstallerService,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,
+    mock_verifier::MockVerifierService,
     parking_lot::Mutex,
     std::{fs::File, sync::Arc},
     tempfile::TempDir,
@@ -45,6 +46,7 @@ struct Proxies {
     channel_provider: ProviderProxy,
     update_manager: ManagerProxy,
     commit_status_provider: CommitStatusProviderProxy,
+    _verifier: Arc<MockVerifierService>,
 }
 
 impl Mounts {
@@ -117,6 +119,14 @@ impl TestEnvBuilder {
             .detach();
         });
 
+        // Set up verifier service.
+        let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
+        let verifier_clone = Arc::clone(&verifier);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&verifier_clone).run_blobfs_verifier_service(stream))
+                .detach()
+        });
+
         let env = fs
             .create_salted_nested_environment("system-update-checker_integration_test_env")
             .expect("nested environment to create successfully");
@@ -154,6 +164,7 @@ impl TestEnvBuilder {
                 commit_status_provider: system_update_committer
                     .connect_to_service::<CommitStatusProviderMarker>()
                     .expect("connect to commit status provider"),
+                _verifier: verifier,
             },
             system_update_checker,
             system_update_committer,

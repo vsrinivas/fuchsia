@@ -36,6 +36,7 @@ rustc_test("driver") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/dir-reflector:test.pkg.reflector-rustc",
     "//src/sys/pkg/testing/mock-paver",
+    "//src/sys/pkg/testing/mock-verifier:lib",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",

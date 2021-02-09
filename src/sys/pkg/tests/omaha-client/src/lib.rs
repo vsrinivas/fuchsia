@@ -39,6 +39,7 @@ use {
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
+    mock_verifier::MockVerifierService,
     parking_lot::Mutex,
     serde_json::json,
     std::{
@@ -99,6 +100,7 @@ struct Proxies {
     update_manager: ManagerProxy,
     channel_control: ChannelControlProxy,
     commit_status_provider: CommitStatusProviderProxy,
+    _verifier: Arc<MockVerifierService>,
 }
 
 struct TestEnvBuilder {
@@ -202,6 +204,14 @@ impl TestEnvBuilder {
             .detach()
         });
 
+        // Set up verifier service.
+        let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
+        let verifier_clone = Arc::clone(&verifier);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&verifier_clone).run_blobfs_verifier_service(stream))
+                .detach()
+        });
+
         let nested_environment_label = Self::make_nested_environment_label();
 
         let (system_updater, env) = match self.installer {
@@ -273,6 +283,7 @@ impl TestEnvBuilder {
                 commit_status_provider: system_update_committer
                     .connect_to_service::<CommitStatusProviderMarker>()
                     .expect("connect to commit status provider"),
+                _verifier: verifier,
             },
             omaha_client,
             _system_updater: system_updater,

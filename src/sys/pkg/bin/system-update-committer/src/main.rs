@@ -12,11 +12,12 @@ use {
     config::Config,
     fidl_fuchsia_hardware_power_statecontrol::AdminMarker as PowerStateControlMarker,
     fidl_fuchsia_paver::PaverMarker,
+    fidl_fuchsia_update_verify::BlobfsVerifierMarker,
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_inspect::{self as finspect, health::Reporter},
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_zircon::{self as zx, HandleBased, Peered},
     futures::{channel::oneshot, prelude::*, stream::FuturesUnordered},
     std::{sync::Arc, time::Duration},
 };
@@ -63,8 +64,7 @@ async fn main_inner_async() -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
     let reboot_timer = fasync::Timer::new(MINIMUM_REBOOT_WAIT);
 
-    let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
-        .context("while connecting to paver")?;
+    let paver = connect_to_service::<PaverMarker>().context("while connecting to paver")?;
     let (boot_manager, boot_manager_server_end) =
         ::fidl::endpoints::create_proxy().context("while creating BootManager endpoints")?;
 
@@ -72,8 +72,10 @@ async fn main_inner_async() -> Result<(), Error> {
         .find_boot_manager(boot_manager_server_end)
         .context("transport error while calling find_boot_manager()")?;
 
-    let reboot_proxy = fuchsia_component::client::connect_to_service::<PowerStateControlMarker>()
+    let reboot_proxy = connect_to_service::<PowerStateControlMarker>()
         .context("while connecting to power state control")?;
+    let blobfs_verifier = connect_to_service::<BlobfsVerifierMarker>()
+        .context("while connecting to blobfs verifier")?;
 
     let futures = FuturesUnordered::new();
     let (p_internal, p_external) = zx::EventPair::create().context("while creating EventPairs")?;
@@ -87,7 +89,7 @@ async fn main_inner_async() -> Result<(), Error> {
     // Handle putting boot metadata in happy state, rebooting on failure (if necessary), and
     // reporting health to the inspect health node.
     futures.push(async move {
-        if let Err(e) = put_metadata_in_happy_state(&boot_manager, &p_internal, unblocker, verification_node_ref).await {
+        if let Err(e) = put_metadata_in_happy_state(&boot_manager, &p_internal, unblocker, &blobfs_verifier, verification_node_ref).await {
             health_node_ref.set_unhealthy(&format!("Failed to put metadata in happy state: {:?}", e));
             if should_reboot(&e, &config) {
                 fx_log_warn!(
@@ -102,8 +104,15 @@ async fn main_inner_async() -> Result<(), Error> {
                     anyhow!(e),
                     config
                 );
+                // Report to clients that we are committed, even though the metadata might not
+                // reflect that. This prevents the case where a health verification fails and the
+                // device is permanently barred from OTAing.
+                if let Err(e) = p_internal.signal_peer(zx::Signals::NONE, zx::Signals::USER_0) {
+                    fx_log_err!("Failed to force commit: {:#}", anyhow!(e));
+                }
             }
         } else {
+            fx_log_info!("metadata is in happy state!");
             health_node_ref.set_ok();
         }
     }.boxed_local());

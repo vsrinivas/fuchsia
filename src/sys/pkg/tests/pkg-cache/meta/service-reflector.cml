@@ -25,6 +25,10 @@
             protocol: "fuchsia.tracing.provider.Registry",
             path: "/reflected/fuchsia.tracing.provider.Registry",
         },
+        {
+            protocol: "fuchsia.update.verify.BlobfsVerifier",
+            path: "/reflected/fuchsia.update.verify.BlobfsVerifier",
+        },
     ],
     use: [
         { runner: "elf" },
@@ -35,6 +39,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.paver.Paver",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.update.verify.BlobfsVerifier",
                 "test.pkg.reflector.Reflector",
             ],
             from: "self",

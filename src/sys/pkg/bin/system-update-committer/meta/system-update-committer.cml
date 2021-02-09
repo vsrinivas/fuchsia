@@ -15,6 +15,7 @@
             protocol: [
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.paver.Paver",
+                "fuchsia.update.verify.BlobfsVerifier",
             ],
         },
     ],
