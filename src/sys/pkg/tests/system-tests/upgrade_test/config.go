@@ -12,15 +12,14 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/cli"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
-
-	systemTestConfig "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/config"
 )
 
 type config struct {
-	archiveConfig            *systemTestConfig.ArchiveConfig
-	installerConfig          *systemTestConfig.InstallerConfig
-	deviceConfig             *systemTestConfig.DeviceConfig
+	archiveConfig            *cli.ArchiveConfig
+	installerConfig          *cli.InstallerConfig
+	deviceConfig             *cli.DeviceConfig
 	downgradeBuilderName     string
 	downgradeBuildID         string
 	downgradeFuchsiaBuildDir string
@@ -36,15 +35,15 @@ type config struct {
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
-	installerConfig, err := systemTestConfig.NewInstallerConfig(fs)
+	installerConfig, err := cli.NewInstallerConfig(fs)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &config{
-		archiveConfig:   systemTestConfig.NewArchiveConfig(fs),
+		archiveConfig:   cli.NewArchiveConfig(fs),
 		installerConfig: installerConfig,
-		deviceConfig:    systemTestConfig.NewDeviceConfig(fs),
+		deviceConfig:    cli.NewDeviceConfig(fs),
 	}
 
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")

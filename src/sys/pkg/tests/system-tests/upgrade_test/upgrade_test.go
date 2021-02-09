@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/errutil"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/pave"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/script"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/errutil"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/sl4f"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/util"

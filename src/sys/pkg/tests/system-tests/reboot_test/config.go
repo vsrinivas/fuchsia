@@ -12,14 +12,13 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
-
-	systemTestConfig "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/config"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/cli"
 )
 
 type config struct {
-	archiveConfig    *systemTestConfig.ArchiveConfig
-	installerConfig  *systemTestConfig.InstallerConfig
-	deviceConfig     *systemTestConfig.DeviceConfig
+	archiveConfig    *cli.ArchiveConfig
+	installerConfig  *cli.InstallerConfig
+	deviceConfig     *cli.DeviceConfig
 	packagesPath     string
 	builderName      string
 	buildID          string
@@ -33,15 +32,15 @@ type config struct {
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
-	installerConfig, err := systemTestConfig.NewInstallerConfig(fs)
+	installerConfig, err := cli.NewInstallerConfig(fs)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &config{
-		archiveConfig:   systemTestConfig.NewArchiveConfig(fs),
+		archiveConfig:   cli.NewArchiveConfig(fs),
 		installerConfig: installerConfig,
-		deviceConfig:    systemTestConfig.NewDeviceConfig(fs),
+		deviceConfig:    cli.NewDeviceConfig(fs),
 	}
 
 	fs.StringVar(&c.builderName, "builder-name", "", "Pave to the latest version of this builder")
