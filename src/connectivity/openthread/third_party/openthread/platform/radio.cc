@@ -48,7 +48,7 @@ extern "C" void otPlatRadioSetPromiscuous(otInstance *a_instance, bool a_enable)
 
 extern "C" void platformRadioInit(const otPlatformConfig *a_platform_config) {
   SuccessOrDie(sRadioSpinel.GetSpinelInterface().Init(a_platform_config));
-  sRadioSpinel.Init(false, false);
+  sRadioSpinel.Init(a_platform_config->reset_rcp, false);
 }
 
 extern "C" otError otPlatRadioEnable(otInstance *a_instance) {
@@ -189,6 +189,8 @@ otError otPlatRadioSetTransmitPower(otInstance *a_instance, int8_t a_power) {
   OT_UNUSED_VARIABLE(a_instance);
   return sRadioSpinel.SetTransmitPower(a_power);
 }
+
+extern "C" void platformRadioDeinit(void) { sRadioSpinel.Deinit(); }
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
 

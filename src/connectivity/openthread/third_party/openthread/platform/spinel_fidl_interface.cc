@@ -18,16 +18,15 @@ SpinelFidlInterface::SpinelFidlInterface(Spinel::SpinelInterface::ReceiveFrameCa
 
 otError SpinelFidlInterface::Init(const otPlatformConfig *a_platform_config) {
   if (ot_stack_callback_ptr_.has_value()) {
-    otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM,
+    otPlatLog(OT_LOG_LEVEL_WARN, OT_LOG_REGION_PLATFORM,
               "spinelfidl: interface already initialized");
-    return OT_ERROR_ALREADY;
   }
   ot_stack_callback_ptr_ = a_platform_config->callback_ptr;
   return OT_ERROR_NONE;
 }
 
 void SpinelFidlInterface::Deinit(void) {
-  if (ot_stack_callback_ptr_.has_value()) {
+  if (!ot_stack_callback_ptr_.has_value()) {
     otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM, "spinelfidl: calling deinit before init");
   }
   ot_stack_callback_ptr_.reset();
@@ -100,6 +99,7 @@ otError SpinelFidlInterface::WaitForFrame(uint64_t aTimeoutUs) {
     ret_val = OT_ERROR_INVALID_STATE;
     OT_ASSERT(0);
   }
+  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "spinel-fidl: WaitForFrame() exited");
   return ret_val;
 }
 
@@ -120,6 +120,7 @@ void SpinelFidlInterface::Process(const otRadioSpinelContext &aContext) {
               "spinel-fidl: waiting for frame before init");
     OT_ASSERT(0);
   }
+  otPlatLog(OT_LOG_LEVEL_INFO, OT_LOG_REGION_PLATFORM, "spinel-fidl: Process() exited");
 }
 
 }  // namespace Fuchsia

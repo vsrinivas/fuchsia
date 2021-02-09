@@ -53,6 +53,7 @@ extern "C" {
 typedef struct otPlatformConfig {
   uint32_t m_speed_up_factor;  ///< Speed up factor.
   OtStackCallBack *callback_ptr;
+  bool reset_rcp;
 } otPlatformConfig;
 
 /**
@@ -67,6 +68,17 @@ typedef struct otPlatformConfig {
  *
  */
 otInstance *otSysInit(otPlatformConfig *a_platform_config);
+
+/**
+ * This function performs all platform-specific deinitialization of OpenThread's drivers.
+ *
+ * @note This function is not called by the OpenThread library. Instead, the system/RTOS should call
+ * this function when deinitialization of OpenThread's drivers is most appropriate.
+ *
+ * @returns None.
+ *
+ */
+void otSysDeinit();
 
 /**
  * This structure represents a context for a select() based mainloop.

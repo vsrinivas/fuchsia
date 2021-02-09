@@ -39,6 +39,7 @@
 
 void platformSimInit(void);
 extern "C" void platformRadioInit(const otPlatformConfig *a_platform_config);
+extern "C" void platformRadioDeinit();
 void platformRandomInit(void);
 void platformAlarmInit(uint32_t a_speed_up_factor);
 static OtStackCallBack *ot_stack_callback_ptr = nullptr;
@@ -60,4 +61,14 @@ extern void otTaskletsSignalPending(otInstance *aInstance) {
   if (ot_stack_callback_ptr != nullptr) {
     ot_stack_callback_ptr->PostOtLibTaskletProcessTask();
   }
+}
+
+void otSysDeinit(void) {
+#if OPENTHREAD_POSIX_VIRTUAL_TIME
+  virtualTimeDeinit();
+#endif
+  platformRadioDeinit();
+#if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
+  platformNetifDeinit();
+#endif
 }

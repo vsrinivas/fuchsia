@@ -133,6 +133,13 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer
 
   FX_LOGS(INFO) << "FIDL request Open got";
 
+  async::PostTask(app_.loop_.dispatcher(), [this]() {
+    otInstanceFinalize(static_cast<otInstance*>(app_.ot_instance_ptr_.value()));
+    app_.ot_instance_ptr_.reset();
+    otSysDeinit();
+    this->app_.InitOpenThreadLibrary(true);
+  });
+
   app_.ClientAllowanceInit();
   // Send out the reset frame
   app_.client_inbound_queue_.push_back(std::vector<uint8_t>{0x80, 0x06, 0x0, 0x70});
@@ -346,26 +353,40 @@ void OtStackApp::SendOneFrameToClient() {
   }
 }
 
-zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
-  is_test_env_ = is_test_env;
-  device_path_ = path;
-
+zx_status_t OtStackApp::InitRadioDrievr() {
   zx_status_t result = ConnectToOtRadioDev();
   if (result != ZX_OK) {
     return result;
   }
   RadioAllowanceInit();
+  return ZX_OK;
+}
 
-  lowpan_spinel_ptr_ = std::make_unique<OtStackCallBackImpl>(*this);
-
+void OtStackApp::InitOpenThreadLibrary(bool reset_rcp) {
+  FX_LOGS(INFO) << "init ot-lib";
   otPlatformConfig config;
   config.callback_ptr = lowpan_spinel_ptr_.get();
   config.m_speed_up_factor = 1;
+  config.reset_rcp = reset_rcp;
   ot_instance_ptr_ = static_cast<void*>(otSysInit(&config));
   ot::Ncp::otNcpInit(static_cast<otInstance*>(ot_instance_ptr_.value()));
   ot::Ncp::otNcpGetInstance()->Init(lowpan_spinel_ptr_.get());
+}
 
-  auto status = SetupFidlService();
+zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
+  is_test_env_ = is_test_env;
+  device_path_ = path;
+
+  lowpan_spinel_ptr_ = std::make_unique<OtStackCallBackImpl>(*this);
+
+  zx_status_t status = InitRadioDrievr();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  InitOpenThreadLibrary(false);
+
+  status = SetupFidlService();
   if (status != ZX_OK) {
     return status;
   }
