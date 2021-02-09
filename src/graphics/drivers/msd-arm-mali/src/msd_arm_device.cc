@@ -212,6 +212,15 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   }
 #endif
 
+  arm_mali_protocol mali_proto;
+  if (platform_device_->GetProtocol(ZX_PROTOCOL_ARM_MALI, &mali_proto)) {
+    mali_protocol_client_ = ddk::ArmMaliProtocolClient(&mali_proto);
+    DASSERT(mali_protocol_client_.is_valid());
+    mali_protocol_client_.GetProperties(&mali_properties_);
+  }
+
+  UpdateProtectedModeSupported();
+
   reset_semaphore_ = magma::PlatformSemaphore::Create();
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
@@ -239,6 +248,12 @@ void MsdArmDevice::InitInspect() {
   hang_timeout_count_ = inspect_.CreateUint("hang_timeout", 0);
   last_hang_timeout_ns_ = inspect_.CreateUint("last_hang_timeout_ns", 0);
   events_ = inspect_.CreateChild("events");
+  protected_mode_supported_property_ = inspect_.CreateBool("protected_mode_supported", false);
+}
+
+void MsdArmDevice::UpdateProtectedModeSupported() {
+  MAGMA_LOG(INFO, "Protected mode supported: %d", IsProtectedModeSupported());
+  protected_mode_supported_property_.Set(IsProtectedModeSupported());
 }
 
 bool MsdArmDevice::InitializeHardware() {
@@ -1281,6 +1296,8 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
 }
 
 bool MsdArmDevice::IsProtectedModeSupported() {
+  if (!mali_properties_.supports_protected_mode)
+    return false;
   uint32_t gpu_product_id = gpu_features_.gpu_id.product_id().get();
   // TODO(fxbug.dev/13130): Support protected mode when using ACE cache coherency. Apparently
   // the L2 needs to be powered down then switched to ACE Lite in that mode.

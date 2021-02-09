@@ -5,6 +5,7 @@
 #ifndef MSD_ARM_DEVICE_H
 #define MSD_ARM_DEVICE_H
 
+#include <fuchsia/hardware/gpu/mali/cpp/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/compiler.h>
 
@@ -192,6 +193,7 @@ class MsdArmDevice : public msd_device_t,
   bool PowerDownShaders();
   bool ResetDevice();
   void InitInspect();
+  void UpdateProtectedModeSupported();
   void AppendInspectEvent(InspectEvent event);
 
   magma::Status ProcessDumpStatusToLog();
@@ -223,9 +225,12 @@ class MsdArmDevice : public msd_device_t,
 
   inspect::UintProperty hang_timeout_count_;
   inspect::UintProperty last_hang_timeout_ns_;
+  inspect::BoolProperty protected_mode_supported_property_;
 
   std::mutex inspect_events_mutex_;
   MAGMA_GUARDED(inspect_events_mutex_) std::deque<InspectEvent> inspect_events_;
+
+  ddk::ArmMaliProtocolClient mali_protocol_client_;
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
@@ -266,6 +271,7 @@ class MsdArmDevice : public msd_device_t,
 
   std::unique_ptr<magma::PlatformHandle> default_profile_;
 
+  mali_properties_t mali_properties_{};
   GpuFeatures gpu_features_;
   ArmMaliCacheCoherencyStatus cache_coherency_status_ = kArmMaliCacheCoherencyNone;
 

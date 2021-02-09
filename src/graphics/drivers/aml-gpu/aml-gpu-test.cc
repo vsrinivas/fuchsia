@@ -4,6 +4,7 @@
 
 #include "aml-gpu.h"
 
+#include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/vmo.h>
@@ -85,9 +86,49 @@ class TestAmlGpu {
     EXPECT_EQ(1, divisor);
     EXPECT_OK(reset_mock.fidl_service()->VerifyAll());
   }
+
+  static void TestMetadata() {
+    using ::llcpp::fuchsia::hardware::gpu::amlogic::Metadata;
+    aml_gpu::AmlGpu aml_gpu(nullptr);
+    arm_mali_protocol_t protocol;
+    EXPECT_OK(aml_gpu.DdkGetProtocol(ZX_PROTOCOL_ARM_MALI, &protocol));
+
+    mali_properties_t properties;
+    protocol.ops->get_properties(protocol.ctx, &properties);
+    EXPECT_FALSE(properties.supports_protected_mode);
+
+    auto metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
+                        .set_supports_protected_mode(std::make_unique<bool>(false))
+                        .build();
+    {
+      fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
+      ASSERT_TRUE(encoded_metadata.ok());
+      auto& message = encoded_metadata.GetOutgoingMessage();
+      EXPECT_OK(aml_gpu.ProcessMetadata(
+          std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+    }
+
+    protocol.ops->get_properties(protocol.ctx, &properties);
+    EXPECT_FALSE(properties.supports_protected_mode);
+
+    metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
+                   .set_supports_protected_mode(std::make_unique<bool>(true))
+                   .build();
+    {
+      fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
+      ASSERT_TRUE(encoded_metadata.ok());
+      auto& message = encoded_metadata.GetOutgoingMessage();
+      EXPECT_OK(aml_gpu.ProcessMetadata(
+          std::vector<uint8_t>(message.bytes(), message.bytes() + message.byte_actual())));
+    }
+    protocol.ops->get_properties(protocol.ctx, &properties);
+    EXPECT_TRUE(properties.supports_protected_mode);
+  }
 };
 }  // namespace aml_gpu
 
 TEST(AmlGpu, SetClkFreq) { aml_gpu::TestAmlGpu::TestSetClkFreq(); }
 
 TEST(AmlGpu, InitialClkFreq) { aml_gpu::TestAmlGpu::TestInitialClkFreq(); }
+
+TEST(AmlGpu, Metadata) { aml_gpu::TestAmlGpu::TestMetadata(); }

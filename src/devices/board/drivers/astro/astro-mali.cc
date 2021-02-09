@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 
 #include <ddk/binding.h>
@@ -48,21 +49,6 @@ static pbus_bti_t mali_btis[] = {
     },
 };
 
-static const pbus_dev_t mali_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "mali";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
-  dev.mmio_list = mali_mmios;
-  dev.mmio_count = countof(mali_mmios);
-  dev.irq_list = mali_irqs;
-  dev.irq_count = countof(mali_irqs);
-  dev.bti_list = mali_btis;
-  dev.bti_count = countof(mali_btis);
-  return dev;
-}();
-
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
@@ -79,6 +65,35 @@ static const device_fragment_t mali_fragments[] = {
 };
 
 zx_status_t Astro::MaliInit() {
+  pbus_dev_t mali_dev = {};
+  mali_dev.name = "mali";
+  mali_dev.vid = PDEV_VID_AMLOGIC;
+  mali_dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  mali_dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
+  mali_dev.mmio_list = mali_mmios;
+  mali_dev.mmio_count = countof(mali_mmios);
+  mali_dev.irq_list = mali_irqs;
+  mali_dev.irq_count = countof(mali_irqs);
+  mali_dev.bti_list = mali_btis;
+  mali_dev.bti_count = countof(mali_btis);
+  using ::llcpp::fuchsia::hardware::gpu::amlogic::Metadata;
+  auto metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
+                      .set_supports_protected_mode(std::make_unique<bool>(true))
+                      .build();
+  fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
+  if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
+    zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error());
+    return encoded_metadata.status();
+  }
+  const pbus_metadata_t mali_metadata_list[] = {
+      {
+          .type = llcpp::fuchsia::hardware::gpu::amlogic::MALI_METADATA,
+          .data_buffer = encoded_metadata.GetOutgoingMessage().bytes(),
+          .data_size = encoded_metadata.GetOutgoingMessage().byte_actual(),
+      },
+  };
+  mali_dev.metadata_list = mali_metadata_list;
+  mali_dev.metadata_count = countof(mali_metadata_list);
   // Populate the BTI information
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;

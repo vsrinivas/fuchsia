@@ -19,6 +19,8 @@ class ZirconPlatformDeviceWithoutProtocol : public PlatformDevice {
 
   void* GetDeviceHandle() override { return zx_device(); }
 
+  bool GetProtocol(uint32_t proto_id, void* proto_out) override;
+
   std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
                                                       const char* name) const override;
 

@@ -175,5 +175,6 @@ DDK_PROTOCOL_DEF(REGISTERS,               152, "registers", 0)
 DDK_PROTOCOL_DEF(DAI,                     153, "dai", 0)
 DDK_PROTOCOL_DEF(GOLDFISH_SYNC,           154, "goldfish-sync", 0)
 DDK_PROTOCOL_DEF(RADAR,                   155, "radar", 0)
+DDK_PROTOCOL_DEF(ARM_MALI,                156, "arm-mali", PF_NOPUB)
 #undef DDK_PROTOCOL_DEF
 #endif

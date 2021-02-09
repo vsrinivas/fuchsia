@@ -56,6 +56,7 @@ group("banjo") {
     "fuchsia.hardware.goldfish.sync",
     "fuchsia.hardware.gpio",
     "fuchsia.hardware.gpioimpl",
+    "fuchsia.hardware.gpu.mali",
     "fuchsia.hardware.hidbus",
     "fuchsia.hardware.hiddevice",
     "fuchsia.hardware.i2c",

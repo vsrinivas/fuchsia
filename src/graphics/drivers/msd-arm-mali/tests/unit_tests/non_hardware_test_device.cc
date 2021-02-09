@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpu/mali/cpp/banjo.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/cpp/reader.h>
@@ -48,6 +49,8 @@ class FakePlatformDevice : public magma::PlatformDevice {
 
   uint32_t GetMmioCount() const override { return 1; }
 
+  bool GetProtocol(uint32_t proto_id, void* proto_out) override { return false; }
+
   std::unique_ptr<magma::PlatformHandle> GetBusTransactionInitiator() const override {
     return nullptr;
   }
@@ -72,8 +75,10 @@ class FakePlatformDevice : public magma::PlatformDevice {
   virtual std::unique_ptr<magma::PlatformMmio> CpuMapMmio(
       unsigned int index, magma::PlatformMmio::CachePolicy cache_policy) override {
     auto mmio = MockMmio::Create(1024 * 1024);
-    // Initialize MMIO with enough correct values that the driver can load.
 
+    // Initialize with the S905D3 GPU ID so protected memory can be enabled.
+    registers::GpuId::Get().FromValue(1888681984).WriteTo(mmio.get());
+    // Initialize MMIO with enough correct values that the driver can load.
     mmio->Write32(GpuFeatures::kAsPresentOffset, 0xff);
     return mmio;
   }
@@ -99,6 +104,21 @@ class FakePlatformDevice : public magma::PlatformDevice {
       return DRETP(nullptr, "Failed to get profile due to channel error");
     return magma::PlatformHandle::Create(profile.release());
   }
+};
+class FakePlatformDeviceWithProtocol : public FakePlatformDevice {
+ public:
+  FakePlatformDeviceWithProtocol(uint32_t proto_id, std::vector<uint8_t> metadata)
+      : proto_id_(proto_id), metadata_(metadata) {}
+  bool GetProtocol(uint32_t proto_id, void* proto_out) override {
+    if (proto_id != proto_id_)
+      return DRETF(false, "Bad proto %d", proto_id);
+    memcpy(proto_out, metadata_.data(), metadata_.size());
+    return true;
+  }
+
+ private:
+  uint32_t proto_id_;
+  std::vector<uint8_t> metadata_;
 };
 
 }  // namespace
@@ -376,6 +396,30 @@ class TestNonHardwareMsdArmDevice {
     }
     EXPECT_TRUE(found_child);
   }
+
+  static void mali_protocol_handler(void* ctx, mali_properties_t* properties) {
+    properties->supports_protected_mode = true;
+  }
+
+  void MaliProtocol() {
+    auto driver = MsdArmDriver::Create();
+    auto device = driver->CreateDeviceForTesting(std::make_unique<FakePlatformDevice>(),
+                                                 std::make_unique<MockBusMapper>());
+    ASSERT_TRUE(device);
+    EXPECT_FALSE(device->IsProtectedModeSupported());
+    arm_mali_protocol mali_proto{};
+    arm_mali_protocol_ops_t ops;
+    ops.get_properties = mali_protocol_handler;
+    mali_proto.ctx = this;
+    mali_proto.ops = &ops;
+    std::vector<uint8_t> proto_vec(sizeof(mali_proto));
+    memcpy(proto_vec.data(), &mali_proto, proto_vec.size());
+
+    device = driver->CreateDeviceForTesting(std::make_unique<FakePlatformDeviceWithProtocol>(
+                                                ZX_PROTOCOL_ARM_MALI, std::move(proto_vec)),
+                                            std::make_unique<MockBusMapper>());
+    EXPECT_TRUE(device->IsProtectedModeSupported());
+  }
 };
 
 TEST(NonHardwareMsdArmDevice, MockDump) {
@@ -406,4 +450,9 @@ TEST(NonHardwareMsdArmDevice, MockInitializeQuirks) {
 TEST(NonHardwareMsdArmDevice, Inspect) {
   TestNonHardwareMsdArmDevice test;
   test.Inspect();
+}
+
+TEST(NonHardwareMsdArmDevice, MaliProtocol) {
+  TestNonHardwareMsdArmDevice test;
+  test.MaliProtocol();
 }

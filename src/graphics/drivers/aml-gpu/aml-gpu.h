@@ -4,6 +4,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 
+#include <fuchsia/hardware/gpu/mali/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
@@ -60,7 +61,9 @@ class TestAmlGpu;
 class AmlGpu;
 using DdkDeviceType = ddk::Device<AmlGpu, ddk::Messageable, ddk::GetProtocolable>;
 
-class AmlGpu final : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_GPU_THERMAL> {
+class AmlGpu final : public DdkDeviceType,
+                     public ddk::ArmMaliProtocol<AmlGpu>,
+                     public ddk::EmptyProtocol<ZX_PROTOCOL_GPU_THERMAL> {
  public:
   AmlGpu(zx_device_t* parent);
 
@@ -72,6 +75,9 @@ class AmlGpu final : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
+  // ArmMaliProtocol implementation.
+  void ArmMaliGetProperties(mali_properties_t* out_properties);
+
   zx_status_t SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn);
 
  private:
@@ -81,8 +87,10 @@ class AmlGpu final : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   void InitClock();
   void SetClkFreqSource(int32_t clk_source);
   void SetInitialClkFreqSource(int32_t clk_source);
+  zx_status_t ProcessMetadata(std::vector<uint8_t> metadata);
 
   ddk::PDev pdev_;
+  mali_properties_t properties_{};
 
   std::optional<ddk::MmioBuffer> hiu_buffer_;
   std::optional<ddk::MmioBuffer> gpu_buffer_;

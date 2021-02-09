@@ -22,6 +22,14 @@
 
 namespace magma {
 
+bool ZirconPlatformDeviceWithoutProtocol::GetProtocol(uint32_t proto_id, void* proto_out) {
+  zx_status_t status = device_get_protocol(zx_device_, proto_id, proto_out);
+  if (status != ZX_OK) {
+    return DRETF(false, "device_get_protocol for %d failed: %d", proto_id, status);
+  }
+  return true;
+}
+
 Status ZirconPlatformDeviceWithoutProtocol::LoadFirmware(
     const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out, uint64_t* size_out) const {
   zx::vmo vmo;

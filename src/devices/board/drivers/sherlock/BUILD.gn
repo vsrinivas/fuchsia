@@ -101,6 +101,7 @@ template("sherlock_driver") {
       "//sdk/banjo/fuchsia.hardware.sdmmc",
       "//sdk/banjo/fuchsia.hardware.serial",
       "//sdk/banjo/fuchsia.sysmem",
+      "//sdk/fidl/fuchsia.hardware.gpu.amlogic:fuchsia.hardware.gpu.amlogic_llcpp",
       "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
       "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
       "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",

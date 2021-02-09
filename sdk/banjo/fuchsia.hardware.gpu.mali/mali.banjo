@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.gpu.mali;
+
+using zx;
+
+struct MaliProperties {
+    bool supports_protected_mode;
+};
+
+/// Low-level protocol between ARM Mali GPU driver and low-level SoC driver.
+[Layout = "ddk-protocol"]
+protocol ArmMali {
+    GetProperties() -> (MaliProperties properties);
+};

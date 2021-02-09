@@ -4,6 +4,7 @@
 
 #include "aml-gpu.h"
 
+#include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
 #include <fuchsia/hardware/gpu/clock/c/fidl.h>
 #include <fuchsia/hardware/iommu/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
@@ -177,10 +178,24 @@ void AmlGpu::InitClock() {
 }
 
 zx_status_t AmlGpu::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
-  pdev_protocol_t* gpu_proto = static_cast<pdev_protocol_t*>(out_proto);
-  // Forward the underlying ops.
-  pdev_.GetProto(gpu_proto);
-  return ZX_OK;
+  if (proto_id == ZX_PROTOCOL_ARM_MALI) {
+    auto proto = static_cast<arm_mali_protocol_t*>(out_proto);
+    proto->ctx = this;
+    proto->ops = &arm_mali_protocol_ops_;
+    return ZX_OK;
+  } else if (proto_id == ZX_PROTOCOL_PDEV) {
+    pdev_protocol_t* gpu_proto = static_cast<pdev_protocol_t*>(out_proto);
+    // Forward the underlying ops.
+    pdev_.GetProto(gpu_proto);
+    return ZX_OK;
+  } else {
+    zxlogf(ERROR, "Invalid protocol requested: %d", proto_id);
+    return ZX_ERR_INVALID_ARGS;
+  }
+}
+
+void AmlGpu::ArmMaliGetProperties(mali_properties_t* out_properties) {
+  *out_properties = properties_;
 }
 
 zx_status_t AmlGpu::SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn) {
@@ -200,14 +215,52 @@ zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_gpu_clock_Clock_dispatch(this, txn, msg, &fidl_ops);
 }
 
+zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
+  properties_ = {};
+  fidl::DecodedMessage<llcpp::fuchsia::hardware::gpu::amlogic::Metadata> decoded(
+      raw_metadata.data(), static_cast<uint32_t>(raw_metadata.size()));
+  if (!decoded.ok() || (decoded.error() != nullptr)) {
+    GPU_ERROR("Unable to parse metadata %s", decoded.error());
+    return ZX_ERR_INTERNAL;
+  }
+  const auto& metadata = decoded.PrimaryObject();
+  if (metadata->has_supports_protected_mode() && metadata->supports_protected_mode()) {
+    properties_.supports_protected_mode = true;
+  }
+  return ZX_OK;
+}
+
 zx_status_t AmlGpu::Bind() {
+  size_t size;
+  zx_status_t status =
+      DdkGetMetadataSize(llcpp::fuchsia::hardware::gpu::amlogic::MALI_METADATA, &size);
+  if (status == ZX_OK) {
+    std::vector<uint8_t> raw_metadata(size);
+    size_t actual;
+    status = DdkGetMetadata(llcpp::fuchsia::hardware::gpu::amlogic::MALI_METADATA,
+                            raw_metadata.data(), size, &actual);
+    if (status != ZX_OK) {
+      GPU_ERROR("Failed to get metadata");
+      return status;
+    }
+    if (size != actual) {
+      GPU_ERROR("Non-matching sizes %ld %ld", size, actual);
+      return ZX_ERR_INTERNAL;
+    }
+    status = ProcessMetadata(std::move(raw_metadata));
+    if (status != ZX_OK) {
+      GPU_ERROR("Error processing metadata %d", status);
+      return status;
+    }
+  }
+
   pdev_ = ddk::PDev::FromFragment(parent_);
   if (!pdev_.is_valid()) {
     GPU_ERROR("could not get platform device protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t status = pdev_.MapMmio(MMIO_GPU, &gpu_buffer_);
+  status = pdev_.MapMmio(MMIO_GPU, &gpu_buffer_);
   if (status != ZX_OK) {
     GPU_ERROR("pdev_map_mmio_buffer failed\n");
     return status;
