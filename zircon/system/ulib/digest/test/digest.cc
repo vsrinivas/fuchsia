@@ -28,7 +28,7 @@ const char* kZeroDigest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca4959
 // echo -n | sha256sum | cut -c1-64 | tr -d '\n' | xxd -p -r | sha256sum
 const char* kDoubleZeroDigest = "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456";
 
-TEST(DigestTestCase, Strings) {
+TEST(DigestTest, Strings) {
   Digest actual;
   size_t len = strlen(kZeroDigest);
   // Incorrect length
@@ -39,18 +39,30 @@ TEST(DigestTestCase, Strings) {
   snprintf(bad, sizeof(bad), "%s", kZeroDigest);
   bad[0] = 'g';
   EXPECT_STATUS(actual.Parse(bad), ZX_ERR_INVALID_ARGS);
+
+  auto ostream_to_string = [](const Digest& d) {
+    std::stringstream ss;
+    ss << d;
+    return ss.str();
+  };
+
   // Explicit length
   EXPECT_OK(actual.Parse(kZeroDigest, len));
   EXPECT_EQ(kZeroDigest, actual.ToString());
+  EXPECT_STREQ(kZeroDigest, ostream_to_string(actual).c_str());
+
   // Implicit length
   EXPECT_OK(actual.Parse(kDoubleZeroDigest));
   EXPECT_EQ(kDoubleZeroDigest, actual.ToString());
+  EXPECT_STREQ(kDoubleZeroDigest, ostream_to_string(actual).c_str());
+
   // fbl::String
   EXPECT_OK(actual.Parse(fbl::String(kZeroDigest)));
   EXPECT_EQ(kZeroDigest, actual.ToString());
+  EXPECT_STREQ(kZeroDigest, ostream_to_string(actual).c_str());
 }
 
-TEST(DigestTestCase, Zero) {
+TEST(DigestTest, Zero) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kZeroDigest));
   actual.Hash(nullptr, 0);
@@ -58,7 +70,7 @@ TEST(DigestTestCase, Zero) {
               ElementsAreArray(expected.get(), kSha256Length));
 }
 
-TEST(DigestTestCase, Self) {
+TEST(DigestTest, Self) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kDoubleZeroDigest));
   ASSERT_OK(actual.Parse(kZeroDigest));
@@ -69,7 +81,7 @@ TEST(DigestTestCase, Self) {
               ElementsAreArray(expected.get(), kSha256Length));
 }
 
-TEST(DigestTestCase, Split) {
+TEST(DigestTest, Split) {
   Digest actual, expected;
   actual.Init();
   size_t n = strlen(kZeroDigest);
@@ -84,7 +96,7 @@ TEST(DigestTestCase, Split) {
   }
 }
 
-TEST(DigestTestCase, Equality) {
+TEST(DigestTest, Equality) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kZeroDigest));
   ASSERT_OK(actual.Parse(kZeroDigest));
@@ -98,7 +110,7 @@ TEST(DigestTestCase, Equality) {
   EXPECT_FALSE(actual != expected) << "Doesn't not equal expected";
 }
 
-TEST(DigestTestCase, CopyTo) {
+TEST(DigestTest, CopyTo) {
   Digest actual;
   uint8_t buf[kSha256Length * 2];
   memset(buf, 1, sizeof(buf));
@@ -128,7 +140,7 @@ TEST(DigestTestCase, CopyTo) {
   }
 }
 
-TEST(DigestTestCase, Move) {
+TEST(DigestTest, Move) {
   const Digest uninitialized_digest;
   Digest digest1;
 

@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <ostream>
 
 #include <fbl/string.h>
 
@@ -93,12 +94,16 @@ class Digest final {
   // Opaque crypto implementation context.
   struct Context;
 
+  friend std::ostream& operator<<(std::ostream&, const Digest&);
+
   // Opaque pointer to the crypto implementation context.
   std::unique_ptr<Context> ctx_;
   // The raw bytes of the current digest.  This is filled in either by the
   // assignment operators or the Parse and Final methods.
   uint8_t bytes_[kSha256Length];
 };
+
+std::ostream& operator<<(std::ostream&, const Digest&);
 
 }  // namespace digest
 
