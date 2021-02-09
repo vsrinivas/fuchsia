@@ -42,6 +42,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
   //   the moment it serves as a useful list of TreeVisitor methods that are
   //   intended to be left unmodified by the ConvertingTreeVisitor.
+  // void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) override {}
   // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) override {}
   // void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) override {}
   // void OnConstant(std::unique_ptr<Constant> const& element) override {}
@@ -60,9 +61,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // must be overwritten by the implementation.
   // TODO(azaslavsky): convert remaining methods from noops to overrides as more
   //   types of conversions are supported.
-
-  // Aliases.
-  void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override {}
 
   // Bits.
   void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {}

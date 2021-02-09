@@ -38,6 +38,77 @@ std::string ToNewSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   return Convert(in, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 
+TEST(ConverterTests, AliasOfArray) {
+  std::string old_version = R"FIDL(
+library example;
+
+alias foo = array<uint8>:5;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+alias foo = array<uint8,5>;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, AliasOfHandleWithSubtype) {
+  std::string old_version = R"FIDL(
+library example;
+
+alias foo = handle:VMO?;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+alias foo = handle:<optional,VMO>;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, AliasOfHandleWithSubtypeAndRights) {
+  std::string old_version = R"FIDL(
+library example;
+
+alias foo = handle:<VMO,1>?;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+alias foo = handle:<optional,VMO,1>;
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, AliasOfDeeplyNested) {
+  std::string old_version = R"FIDL(
+library example;
+
+alias foo = vector<vector<array<uint8>:5>?>:9?;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+alias foo = vector<vector<array<uint8,5>>:optional>:<optional,9>;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, Consts) {
   std::string old_version = R"FIDL(
 library example;
