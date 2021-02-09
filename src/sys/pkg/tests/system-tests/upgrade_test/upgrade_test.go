@@ -90,14 +90,29 @@ func doTest(ctx context.Context) error {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
-	downgradeBuild, err := c.getDowngradeBuild(ctx, deviceClient, outputDir)
+	downgradeBuild, err := c.downgradeBuildConfig.GetBuild(ctx, deviceClient, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get downgrade build: %w", err)
 	}
 
-	upgradeBuild, err := c.getUpgradeBuild(ctx, deviceClient, outputDir)
+	upgradeBuild, err := c.upgradeBuildConfig.GetBuild(ctx, deviceClient, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get upgrade build: %w", err)
+	}
+
+	// Adapt the builds for the device.
+	if downgradeBuild != nil {
+		downgradeBuild, err = c.installerConfig.ConfigureBuild(ctx, deviceClient, downgradeBuild)
+		if err != nil {
+			return fmt.Errorf("failed to configure downgrade build for device: %w", err)
+		}
+	}
+
+	if upgradeBuild != nil {
+		upgradeBuild, err = c.installerConfig.ConfigureBuild(ctx, deviceClient, upgradeBuild)
+		if err != nil {
+			return fmt.Errorf("failed to configure upgrade build for device: %w", err)
+		}
 	}
 
 	ch := make(chan *sl4f.Client, 1)

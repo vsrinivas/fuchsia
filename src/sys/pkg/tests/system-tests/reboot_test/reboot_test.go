@@ -88,9 +88,12 @@ func doTest(ctx context.Context) error {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
-	build, err := c.getBuild(ctx, outputDir)
+	build, err := c.buildConfig.GetBuild(ctx, deviceClient, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get downgrade build: %w", err)
+	}
+	if build == nil {
+		return fmt.Errorf("no build configured")
 	}
 
 	ch := make(chan *sl4f.Client, 1)

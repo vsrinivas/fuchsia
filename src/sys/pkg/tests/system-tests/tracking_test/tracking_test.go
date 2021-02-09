@@ -15,6 +15,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/pave"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/sl4f"
@@ -80,30 +81,21 @@ func TestOTA(t *testing.T) {
 	// target. All OTA attempts must first Close and nil out an existing
 	// rpcClient and replace it with a new one after reboot. The final
 	// rpcClient, if present, will be closed by the defer here.
-	var rpcClient *sl4f.Client
+	rpcClient, err := initializeDevice(ctx, deviceClient)
+	if err != nil {
+		t.Fatalf("failed to initialize deivce: %v", err)
+	}
 	defer func() {
 		if rpcClient != nil {
 			rpcClient.Close()
 		}
 	}()
 
-	if c.shouldRepaveDevice() {
-		ch := make(chan *sl4f.Client, 1)
-		if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-			rpcClient, err = paveDevice(ctx, deviceClient)
-			ch <- rpcClient
-			return err
-		}); err != nil {
-			t.Fatalf("Failed to initialize device: %v", err)
-		}
-		rpcClient = <-ch
-	}
-
 	testTrackingOTAs(t, ctx, deviceClient, &rpcClient)
 }
 
 func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
-	builder, err := c.getUpgradeBuilder()
+	builder, err := c.upgradeBuildConfig.GetBuilder()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,18 +180,35 @@ func testTrackingOTAAttempt(
 	return systemOTA(ctx, device, rpcClient, repo, checkABR)
 }
 
-func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error) {
+func initializeDevice(ctx context.Context, deviceClient *device.Client) (*sl4f.Client, error) {
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return nil, err
 	}
 	defer cleanup()
 
-	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
+	downgradeBuild, err := c.downgradeBuildConfig.GetBuild(ctx, deviceClient, outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get downgrade build: %w", err)
 	}
 
+	var rpcClient *sl4f.Client
+	ch := make(chan *sl4f.Client)
+	if downgradeBuild != nil {
+		if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
+			rpcClient, err = paveDevice(ctx, deviceClient, downgradeBuild)
+			ch <- rpcClient
+			return err
+		}); err != nil {
+			return nil, err
+		}
+		rpcClient = <-ch
+	}
+
+	return rpcClient, nil
+}
+
+func paveDevice(ctx context.Context, device *device.Client, downgradeBuild artifacts.Build) (*sl4f.Client, error) {
 	downgradeRepo, err := downgradeBuild.GetPackageRepository(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting downgrade repository: %w", err)

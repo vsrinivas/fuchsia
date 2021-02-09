@@ -39,6 +39,7 @@ go_library("host-target-testing") {
     "avb/avb.go",
     "avb/avb_test.go",
     "cli/archive.go",
+    "cli/build.go",
     "cli/device.go",
     "cli/installer.go",
     "device/device.go",
