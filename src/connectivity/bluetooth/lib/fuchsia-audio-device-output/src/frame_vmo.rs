@@ -52,11 +52,6 @@ pub(crate) struct FrameVmo {
 
     /// The latest frame time that has been sent to notify for position.
     latest_notify: zx::Time,
-
-    /// The number of channels.
-    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    channels: u16,
 }
 
 impl FrameVmo {
@@ -72,7 +67,6 @@ impl FrameVmo {
             notifications_per_ring: 0,
             position_responder: None,
             latest_notify: zx::Time::INFINITE_PAST,
-            channels: 0,
         })
     }
 
@@ -96,7 +90,6 @@ impl FrameVmo {
         self.size = new_size;
         self.format = Some(format);
         self.frames_per_second = frames_per_second;
-        self.channels = channels;
         self.notifications_per_ring = notifications_per_ring;
         Ok(self.vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|e| Error::IOError(e))?)
     }

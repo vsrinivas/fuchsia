@@ -78,10 +78,8 @@ struct ConfiguredSinkTask {
     stream_inspect: Arc<Mutex<DataStreamInspect>>,
     /// Future that will return the Session ID for Media, if we have started the session.
     session_id_fut: Option<Shared<oneshot::Receiver<u64>>>,
-    /// Session Task (AVRCP relay) if it is started
-    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    session_task: Option<fasync::Task<()>>,
+    /// Session Task (AVRCP relay) if it is started.
+    _session_task: Option<fasync::Task<()>>,
 }
 
 impl ConfiguredSinkTask {
@@ -97,7 +95,7 @@ impl ConfiguredSinkTask {
             peer_id,
             stream_inspect: Arc::new(Mutex::new(stream_inspect)),
             session_id_fut: None,
-            session_task: None,
+            _session_task: None,
         }
     }
 
@@ -135,7 +133,7 @@ impl ConfiguredSinkTask {
                     Err(e) => warn!("{}: Couldn't publish session: {:?}", peer_id, e),
                 };
             };
-            self.session_task = Some(fasync::Task::local(session_fut));
+            self._session_task = Some(fasync::Task::local(session_fut));
         }
         self.session_id_fut
             .as_ref()

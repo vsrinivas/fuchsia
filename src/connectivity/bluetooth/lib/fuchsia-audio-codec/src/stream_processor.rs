@@ -169,10 +169,6 @@ struct StreamProcessorInner {
     client_owned: HashSet<InputBufferIndex>,
     /// A cursor on the next input buffer location to be written to when new input data arrives.
     input_cursor: Option<(InputBufferIndex, u64)>,
-    /// The size of each output packet
-    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    output_packet_size: u64,
     /// An queue of the indexes of output buffers that have been filled by the processor and a
     /// waiter if someone is waiting on it.
     /// Also holds the output waker, if it is registered.
@@ -325,8 +321,6 @@ impl StreamProcessorInner {
         let _ = Pin::new(&mut self.output_allocation)
             .output_mut()
             .ok_or(format_err!("allocation isn't complete"))?;
-        let settings = self.output_buffers().settings();
-        self.output_packet_size = settings.size_bytes.try_into()?;
         self.processor
             .complete_output_buffer_partial_settings(/*buffer_lifetime_ordinal=*/ 1)
             .context("setting output buffer settings")?;
@@ -465,7 +459,6 @@ impl StreamProcessor {
                 input_packet_size: 0,
                 client_owned: HashSet::new(),
                 input_cursor: None,
-                output_packet_size: 0,
                 output_queue: Default::default(),
                 input_waker: None,
                 input_allocation: maybe_done(SysmemAllocation::pending()),

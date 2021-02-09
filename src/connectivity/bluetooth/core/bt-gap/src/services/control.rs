@@ -23,17 +23,17 @@ use crate::{
 };
 
 struct ControlSession {
-    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    discovery_token: Option<Arc<DiscoverySession>>,
-    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    discoverable_token: Option<Arc<HostDiscoverableSession>>,
+    /// Token held when the control client has requested discovery.
+    /// Disables discovery request when dropped.
+    _discovery_token: Option<Arc<DiscoverySession>>,
+    /// Token held when the control client has requested discoverability.
+    /// Disables discoverability when dropped.
+    _discoverable_token: Option<Arc<HostDiscoverableSession>>,
 }
 
 impl ControlSession {
     fn new() -> ControlSession {
-        ControlSession { discovery_token: None, discoverable_token: None }
+        ControlSession { _discovery_token: None, _discoverable_token: None }
     }
 }
 
@@ -104,13 +104,13 @@ async fn handler(
             let mut resp = if discoverable {
                 match hd.set_discoverable().await {
                     Ok(token) => {
-                        session.discoverable_token = Some(token);
+                        session._discoverable_token = Some(token);
                         bt_fidl_status!()
                     }
                     Err(err) => err.as_status(),
                 }
             } else {
-                session.discoverable_token = None;
+                session._discoverable_token = None;
                 bt_fidl_status!()
             };
             responder.send(&mut resp)
@@ -175,13 +175,13 @@ async fn handler(
             let mut resp = if discovery {
                 match hd.start_discovery().await {
                     Ok(token) => {
-                        session.discovery_token = Some(token);
+                        session._discovery_token = Some(token);
                         bt_fidl_status!()
                     }
                     Err(err) => err.as_status(),
                 }
             } else {
-                session.discovery_token = None;
+                session._discovery_token = None;
                 bt_fidl_status!()
             };
             responder.send(&mut resp)

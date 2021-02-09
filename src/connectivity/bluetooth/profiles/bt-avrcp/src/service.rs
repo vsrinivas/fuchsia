@@ -55,12 +55,6 @@ struct AvrcpClientController {
     /// List of subscribed notifications the FIDL controller client cares about.
     notification_filter: Notifications,
 
-    /// The position change interval this FIDL controller client would like position change events
-    /// delievered.
-    // TODO(fxbug.dev/69489): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    position_change_interval: u32,
-
     /// The current count of outgoing notifications currently outstanding an not acknowledged by the
     /// FIDL client.
     /// Used as part of flow control for delivery of notifications to the client.
@@ -88,7 +82,6 @@ impl AvrcpClientController {
             controller,
             fidl_stream,
             notification_filter: Notifications::empty(),
-            position_change_interval: 0,
             notification_window_counter: 0,
             notification_queue: VecDeque::new(),
             notification_state: Notification::EMPTY,
@@ -141,11 +134,11 @@ impl AvrcpClientController {
             }
             ControllerRequest::SetNotificationFilter {
                 notifications,
-                position_change_interval,
+                // TODO(fxbug.dev/44332): coalesce position change intervals and notify on schedule
+                position_change_interval: _,
                 control_handle: _,
             } => {
                 self.notification_filter = notifications;
-                self.position_change_interval = position_change_interval;
                 self.send_notification_cache()?;
             }
             ControllerRequest::NotifyNotificationHandled { control_handle: _ } => {
