@@ -13,6 +13,8 @@ go_library("make-fuchsia-vol_lib") {
   sources = [
     "abr.go",
     "abr_test.go",
+    "disk.go",
+    "disk_test.go",
     "make-fuchsia-vol.go",
     "make-fuchsia-vol_test.go",
   ]
