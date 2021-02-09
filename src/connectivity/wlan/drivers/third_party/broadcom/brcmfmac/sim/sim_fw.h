@@ -17,7 +17,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 
-#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/types.h>
@@ -26,6 +25,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
@@ -39,6 +39,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_errinj.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_iovar.h"
 
 namespace wlan::brcmfmac {
 
@@ -240,6 +241,66 @@ class SimFirmware {
   // This function returns the wsec_key_list for an iface to outside.
   std::vector<brcmf_wsec_key_le> GetKeyList(uint16_t ifidx);
 
+  // Direct handlers for different iovars.
+  zx_status_t IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                               size_t value_len);
+  zx_status_t IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarArpolGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarAssocInfoGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarAssocMgrCmdSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                  size_t value_len);
+  zx_status_t IovarAssocRespIesGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarAssocRetryMaxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                    size_t value_len);
+  zx_status_t IovarAssocRetryMaxGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarAuthGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarBssSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+
+  zx_status_t IovarCapGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarChanspecSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                               size_t value_len);
+  zx_status_t IovarChanspecGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarCountrySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                              size_t value_len);
+  zx_status_t IovarCountryGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarCrashSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarCurEtheraddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                   size_t value_len);
+  zx_status_t IovarCurEtheraddrGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarEscanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarInterfaceRemoveSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                      size_t value_len);
+  zx_status_t IovarJoinSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarMpcSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarMpcGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarNmodeGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarPfnMacaddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                 size_t value_len);
+  zx_status_t IovarPfnMacaddrGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarRrmGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarRxchainGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarSnrGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarSsidSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarTlvSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarTlvGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarVerGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarVhtModeGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWmeAcStaGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWmeApsdGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWpaAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                              size_t value_len);
+  zx_status_t IovarWpaAuthGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWsecSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarWsecGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWsecKeySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                              size_t value_len);
+  zx_status_t IovarWsecKeyGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWstatsCountersGet(uint16_t ifidx, void* value_out, size_t value_len);
+
  private:
   struct Client {
     // When we receive an authentication request of a client, if it's a reasonable request, we will
@@ -287,17 +348,19 @@ class SimFirmware {
   typedef struct sim_iface_entry {
     common::MacAddr mac_addr;
     bool mac_addr_set;
-    uint16_t chanspec;
     int32_t bsscfgidx;
     bool allocated;
     int8_t iface_id;
+    bool ap_mode;
+    ApConfig ap_config;
+
+    // Iovar related fields
+    uint16_t chanspec;
     uint32_t wsec = 0;
     uint32_t cur_key_idx = 0;
     std::vector<brcmf_wsec_key_le> wsec_key_list;
     uint32_t wpa_auth = 0;
     uint32_t tlv = 0;
-    bool ap_mode;
-    ApConfig ap_config;
     uint32_t arpoe = 0;
     uint32_t arp_ol = 0;
     uint16_t auth_type = BRCMF_AUTH_MODE_OPEN;
@@ -488,6 +551,8 @@ class SimFirmware {
   std::atomic<unsigned long> error_inject_bits_ = 0;
   uint8_t assoc_resp_ies_[ASSOC_IES_MAX_LEN];
   size_t assoc_resp_ies_len_ = 0;
+
+  std::unordered_map<std::string, SimIovar> iovar_table_;
 };
 
 }  // namespace wlan::brcmfmac

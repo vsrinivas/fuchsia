@@ -31,6 +31,7 @@ source_set("sim_common") {
     "sim_device.cc",
     "sim_errinj.cc",
     "sim_hw.cc",
+    "sim_iovar.cc",
   ]
   public = [
     "sim.h",
@@ -38,6 +39,7 @@ source_set("sim_common") {
     "sim_errinj.h",
     "sim_fw.h",
     "sim_hw.h",
+    "sim_iovar.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.wlan.ieee80211",
