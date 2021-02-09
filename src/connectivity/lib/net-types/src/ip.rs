@@ -59,8 +59,9 @@ use std::net;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::{
-    sealed, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, Scope,
-    ScopeableAddress, SpecifiedAddr, SpecifiedAddress, UnicastAddr, UnicastAddress, Witness,
+    sealed, LinkLocalAddr, LinkLocalAddress, LinkLocalMulticastAddr, LinkLocalUnicastAddr,
+    MulticastAddr, MulticastAddress, Scope, ScopeableAddress, SpecifiedAddr, SpecifiedAddress,
+    UnicastAddr, UnicastAddress, Witness,
 };
 
 // NOTE on passing by reference vs by value: Clippy advises us to pass IPv4
@@ -110,6 +111,21 @@ impl<I: Ip> Debug for IpVersionMarker<I> {
 pub enum IpAddr<V4 = Ipv4Addr, V6 = Ipv6Addr> {
     V4(V4),
     V6(V6),
+}
+
+impl<V4, V6> IpAddr<V4, V6> {
+    /// Transposes a `IpAddr` of a witness type to a witness type of an
+    /// `IpAddr`.
+    ///
+    /// For example, you could use `transpose` to convert an
+    /// `IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>` into a
+    /// `SpecifiedAddr<IpAddr<Ipv4Addr, Ipv6Addr>>`.
+    pub fn transpose<W: IpAddrWitness<V4 = V4, V6 = V6>>(self) -> W {
+        match self {
+            IpAddr::V4(addr) => W::from_v4(addr),
+            IpAddr::V6(addr) => W::from_v6(addr),
+        }
+    }
 }
 
 impl<A: IpAddress> From<A> for IpAddr {
@@ -1004,15 +1020,34 @@ impl ScopeableAddress for IpAddr {
 /// trait for whichever of `Ipv4Addr` and `Ipv6Addr` is actually present in the
 /// enum. Thus, we can convert between `$witness<IpvXAddr>`, `$witness<IpAddr>`,
 /// and `IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>` arbitrarily.
+
+/// Provides various useful `From` impls for an IP address witness type.
+///
+/// `impl_from_witness!($witness)` implements:
+/// - `From<IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>> for
+///   $witness<IpAddr>`
+/// - `From<$witness<IpAddr>> for IpAddr<$witness<Ipv4Addr>,
+///   $witness<Ipv6Addr>>`
+/// - `From<$witness<Ipv4Addr>> for $witness<IpAddr>`
+/// - `From<$witness<Ipv6Addr>> for $witness<IpAddr>`
+/// - `From<$witness<Ipv4Addr>> for IpAddr`
+/// - `From<$witness<Ipv6Addr>> for IpAddr`
+/// - `TryFrom<Ipv4Addr> for $witness<Ipv4Addr>`
+/// - `TryFrom<Ipv6Addr> for $witness<Ipv6Addr>`
+///
+/// `impl_from_witness!($witness, $ipaddr, $new_unchecked)` implements:
+/// - `From<$witness<$ipaddr>> for $witness<IpAddr>`
+/// - `From<$witness<$ipaddr>> for $ipaddr`
+/// - `TryFrom<$ipaddr> for $witness<$ipaddr>`
 macro_rules! impl_from_witness {
     ($witness:ident) => {
-        impl_from_witness!($witness, Ipv4Addr);
-        impl_from_witness!($witness, Ipv6Addr);
+        impl_from_witness!($witness, Ipv4Addr, Witness::new_unchecked);
+        impl_from_witness!($witness, Ipv6Addr, Witness::new_unchecked);
 
         impl From<IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>> for $witness<IpAddr> {
             fn from(addr: IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>) -> $witness<IpAddr> {
                 unsafe {
-                    $witness::new_unchecked(match addr {
+                    Witness::new_unchecked(match addr {
                         IpAddr::V4(addr) => IpAddr::V4(addr.into_addr()),
                         IpAddr::V6(addr) => IpAddr::V6(addr.into_addr()),
                     })
@@ -1023,23 +1058,33 @@ macro_rules! impl_from_witness {
             fn from(addr: $witness<IpAddr>) -> IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
                 unsafe {
                     match addr.into_addr() {
-                        IpAddr::V4(addr) => IpAddr::V4($witness::new_unchecked(addr)),
-                        IpAddr::V6(addr) => IpAddr::V6($witness::new_unchecked(addr)),
+                        IpAddr::V4(addr) => IpAddr::V4(Witness::new_unchecked(addr)),
+                        IpAddr::V6(addr) => IpAddr::V6(Witness::new_unchecked(addr)),
                     }
                 }
             }
         }
     };
-    ($witness:ident, $ipaddr:ident) => {
+    ($witness:ident, $ipaddr:ident, $new_unchecked:expr) => {
         impl From<$witness<$ipaddr>> for $witness<IpAddr> {
             fn from(addr: $witness<$ipaddr>) -> $witness<IpAddr> {
-                unsafe { $witness::new_unchecked(addr.get().into()) }
+                let addr: $ipaddr = addr.into_addr();
+                let addr: IpAddr = addr.into();
+                #[allow(unused_unsafe)] // For when a closure is passed
+                unsafe {
+                    $new_unchecked(addr)
+                }
             }
         }
-
         impl From<$witness<$ipaddr>> for $ipaddr {
             fn from(addr: $witness<$ipaddr>) -> $ipaddr {
                 addr.into_addr()
+            }
+        }
+        impl TryFrom<$ipaddr> for $witness<$ipaddr> {
+            type Error = ();
+            fn try_from(addr: $ipaddr) -> Result<$witness<$ipaddr>, ()> {
+                Witness::new(addr).ok_or(())
             }
         }
     };
@@ -1048,7 +1093,9 @@ macro_rules! impl_from_witness {
 impl_from_witness!(SpecifiedAddr);
 impl_from_witness!(MulticastAddr);
 impl_from_witness!(LinkLocalAddr);
-impl_from_witness!(UnicastAddr, Ipv6Addr);
+impl_from_witness!(LinkLocalMulticastAddr);
+impl_from_witness!(UnicastAddr, Ipv6Addr, UnicastAddr::new_unchecked);
+impl_from_witness!(LinkLocalUnicastAddr, Ipv6Addr, |addr| LinkLocalAddr(UnicastAddr(addr)));
 
 /// An IPv4 address.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]
@@ -1449,6 +1496,11 @@ impl Witness<Ipv6Addr> for Ipv6SourceAddr {
     }
 
     #[inline]
+    unsafe fn new_unchecked(addr: Ipv6Addr) -> Ipv6SourceAddr {
+        Ipv6SourceAddr::new(addr).unwrap()
+    }
+
+    #[inline]
     fn into_addr(self) -> Ipv6Addr {
         match self {
             Ipv6SourceAddr::Unicast(addr) => addr.into_addr(),
@@ -1540,6 +1592,147 @@ impl Display for Ipv6SourceAddr {
 }
 
 impl Debug for Ipv6SourceAddr {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        Display::fmt(self, f)
+    }
+}
+
+/// An IPv6 address stored as a unicast or multicast witness type.
+///
+/// `UnicastOrMulticastIpv6Addr` is either a [`UnicastAddr`] or a
+/// [`MulticastAddr`]. It allows the user to match on the unicast-ness or
+/// multicast-ness of an IPv6 address and obtain a statically-typed witness in
+/// each case. This is useful if the user needs to call different functions
+/// which each take a witness type.
+#[allow(missing_docs)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum UnicastOrMulticastIpv6Addr {
+    Unicast(UnicastAddr<Ipv6Addr>),
+    Multicast(MulticastAddr<Ipv6Addr>),
+}
+
+impl UnicastOrMulticastIpv6Addr {
+    /// Constructs a new `UnicastOrMulticastIpv6Addr`.
+    ///
+    /// `new` constructs a new `UnicastOrMulticastIpv6Addr`, returning `None` if
+    /// `addr` is the unspecified address.
+    pub fn new(addr: Ipv6Addr) -> Option<UnicastOrMulticastIpv6Addr> {
+        SpecifiedAddr::new(addr).map(UnicastOrMulticastIpv6Addr::from_specified)
+    }
+
+    /// Constructs a new `UnicastOrMulticastIpv6Addr` from a specified address.
+    pub fn from_specified(addr: SpecifiedAddr<Ipv6Addr>) -> UnicastOrMulticastIpv6Addr {
+        if addr.is_unicast() {
+            UnicastOrMulticastIpv6Addr::Unicast(UnicastAddr(addr.into_addr()))
+        } else {
+            UnicastOrMulticastIpv6Addr::Multicast(MulticastAddr(addr.into_addr()))
+        }
+    }
+}
+
+impl crate::sealed::Sealed for UnicastOrMulticastIpv6Addr {}
+
+impl Witness<Ipv6Addr> for UnicastOrMulticastIpv6Addr {
+    #[inline]
+    fn new(addr: Ipv6Addr) -> Option<UnicastOrMulticastIpv6Addr> {
+        UnicastOrMulticastIpv6Addr::new(addr)
+    }
+
+    #[inline]
+    unsafe fn new_unchecked(addr: Ipv6Addr) -> UnicastOrMulticastIpv6Addr {
+        UnicastOrMulticastIpv6Addr::new(addr).unwrap()
+    }
+
+    #[inline]
+    fn into_addr(self) -> Ipv6Addr {
+        match self {
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr.into_addr(),
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr.into_addr(),
+        }
+    }
+}
+
+impl UnicastAddress for UnicastOrMulticastIpv6Addr {
+    fn is_unicast(&self) -> bool {
+        matches!(self, UnicastOrMulticastIpv6Addr::Unicast(_))
+    }
+}
+
+impl MulticastAddress for UnicastOrMulticastIpv6Addr {
+    fn is_multicast(&self) -> bool {
+        matches!(self, UnicastOrMulticastIpv6Addr::Multicast(_))
+    }
+}
+
+impl LinkLocalAddress for UnicastOrMulticastIpv6Addr {
+    fn is_linklocal(&self) -> bool {
+        match self {
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr.is_linklocal(),
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr.is_linklocal(),
+        }
+    }
+}
+
+impl From<UnicastOrMulticastIpv6Addr> for Ipv6Addr {
+    fn from(addr: UnicastOrMulticastIpv6Addr) -> Ipv6Addr {
+        addr.into_addr()
+    }
+}
+
+impl From<&'_ UnicastOrMulticastIpv6Addr> for Ipv6Addr {
+    fn from(addr: &UnicastOrMulticastIpv6Addr) -> Ipv6Addr {
+        addr.get()
+    }
+}
+
+impl From<UnicastAddr<Ipv6Addr>> for UnicastOrMulticastIpv6Addr {
+    fn from(addr: UnicastAddr<Ipv6Addr>) -> UnicastOrMulticastIpv6Addr {
+        UnicastOrMulticastIpv6Addr::Unicast(addr)
+    }
+}
+
+impl From<MulticastAddr<Ipv6Addr>> for UnicastOrMulticastIpv6Addr {
+    fn from(addr: MulticastAddr<Ipv6Addr>) -> UnicastOrMulticastIpv6Addr {
+        UnicastOrMulticastIpv6Addr::Multicast(addr)
+    }
+}
+
+impl TryFrom<Ipv6Addr> for UnicastOrMulticastIpv6Addr {
+    type Error = ();
+    fn try_from(addr: Ipv6Addr) -> Result<UnicastOrMulticastIpv6Addr, ()> {
+        UnicastOrMulticastIpv6Addr::new(addr).ok_or(())
+    }
+}
+
+impl AsRef<Ipv6Addr> for UnicastOrMulticastIpv6Addr {
+    fn as_ref(&self) -> &Ipv6Addr {
+        match self {
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr,
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr,
+        }
+    }
+}
+
+impl Deref for UnicastOrMulticastIpv6Addr {
+    type Target = Ipv6Addr;
+
+    fn deref(&self) -> &Ipv6Addr {
+        self.as_ref()
+    }
+}
+
+impl Display for UnicastOrMulticastIpv6Addr {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => write!(f, "{}", addr),
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => write!(f, "{}", addr),
+        }
+    }
+}
+
+impl Debug for UnicastOrMulticastIpv6Addr {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
@@ -1742,23 +1935,32 @@ pub struct AddrSubnet<S: IpAddress, A: Witness<S> = SpecifiedAddr<S>> {
 impl<S: IpAddress, A: Witness<S>> AddrSubnet<S, A> {
     /// Creates a new `AddrSubnet`.
     ///
-    /// `new` creates a new `AddrSubnet` with the given address and prefix
-    /// length. The network address of the subnet is taken to be the first
-    /// `prefix` bits of the address. It returns `Err` if `prefix` is longer
-    /// than the number of bits in this type of IP address (32 for IPv4 and 128
-    /// for IPv6), if `addr` is not a unicast address in the resulting subnet
-    /// (see [`IpAddress::is_unicast_in_subnet`]), or if `addr` does not satisfy
-    /// the requirements of the witness type `A`.
+    /// `new` is like [`from_witness`], except that it also converts `addr` into
+    /// the appropriate witness type, returning
+    /// [`AddrSubnetError::InvalidWitness`] if the conversion fails.
+    ///
+    /// [`from_witness`]: Witness::from_witness
     #[inline]
     pub fn new(addr: S, prefix: u8) -> Result<AddrSubnet<S, A>, AddrSubnetError> {
+        AddrSubnet::from_witness(A::new(addr).ok_or(AddrSubnetError::InvalidWitness)?, prefix)
+    }
+
+    /// Creates a new `AddrSubnet` from an existing witness.
+    ///
+    /// `from_witness` creates a new `AddrSubnet` with the given address and
+    /// prefix length. The network address of the subnet is taken to be the
+    /// first `prefix` bits of the address. It returns `Err` if `prefix` is
+    /// longer than the number of bits in this type of IP address (32 for IPv4
+    /// and 128 for IPv6) or if `addr` is not a unicast address in the resulting
+    /// subnet (see [`IpAddress::is_unicast_in_subnet`]).
+    pub fn from_witness(addr: A, prefix: u8) -> Result<AddrSubnet<S, A>, AddrSubnetError> {
         if prefix > S::BYTES * 8 {
             return Err(AddrSubnetError::PrefixTooLong);
         }
-        let subnet = Subnet { network: addr.mask(prefix), prefix };
-        if !addr.is_unicast_in_subnet(&subnet) {
+        let subnet = Subnet { network: addr.as_ref().mask(prefix), prefix };
+        if !addr.as_ref().is_unicast_in_subnet(&subnet) {
             return Err(AddrSubnetError::NotUnicastInSubnet);
         }
-        let addr = A::new(addr).ok_or(AddrSubnetError::InvalidWitness)?;
         Ok(AddrSubnet { addr, subnet })
     }
 
@@ -1806,6 +2008,28 @@ impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
     }
 }
 
+impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
+    /// Gets the address as a [`UnicastAddr`] witness.
+    ///
+    /// Since one of the invariants on an `AddrSubnet` is that its contained
+    /// address is unicast in its subnet, `ipv6_unicast_addr` can infallibly
+    /// convert its stored address to a `UnicastAddr`.
+    pub fn ipv6_unicast_addr(&self) -> UnicastAddr<Ipv6Addr> {
+        unsafe { UnicastAddr::new_unchecked(self.addr.get()) }
+    }
+
+    /// Converts this `AddrSubnet` into one storing a [`UnicastAddr`] witness.
+    ///
+    /// Since one of the invariants on an `AddrSubnet` is that its contained
+    /// address is unicast in its subnet, `into_unicast` can infallibly convert
+    /// its stored address to a `UnicastAddr`.
+    pub fn into_unicast(self) -> AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
+        let AddrSubnet { addr, subnet } = self;
+        let addr = unsafe { UnicastAddr::new_unchecked(addr.get()) };
+        AddrSubnet { addr, subnet }
+    }
+}
+
 /// A type which is a witness to some property about an `IpAddress`.
 ///
 /// `IpAddrWitness` extends [`Witness`] of [`IpAddr`] by adding associated types
@@ -1831,6 +2055,19 @@ pub trait IpAddrWitness: Witness<IpAddr> {
     /// For example, `SpecifiedAddr<IpAddr>: IpAddrWitness<V6 =
     /// SpecifiedAddr<Ipv6Addr>>`.
     type V6: Witness<Ipv6Addr> + Into<Self>;
+
+    // TODO(https://github.com/rust-lang/rust/issues/44491): Remove these
+    // functions once implied where bounds make them unnecessary.
+
+    /// Converts an IPv4-specific witness into a general witness.
+    fn from_v4(addr: Self::V4) -> Self {
+        addr.into()
+    }
+
+    /// Converts an IPv6-specific witness into a general witness.
+    fn from_v6(addr: Self::V6) -> Self {
+        addr.into()
+    }
 }
 
 macro_rules! impl_ip_addr_witness {
@@ -2013,16 +2250,16 @@ mod tests {
         assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), Err(SubnetError::HostBitsSet));
 
         AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
-        // The unspecified address is not considered to be a unicast address in
-        // any subnet (use assert, not assert_eq, because AddrSubnet doesn't
-        // impl Debug)
+        // The unspecified address will always fail because it is not valid for
+        // the `SpecifiedAddr` witness (use assert, not assert_eq, because
+        // AddrSubnet doesn't impl Debug).
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::UNSPECIFIED_ADDRESS, 16)
-                == Err(AddrSubnetError::NotUnicastInSubnet)
+                == Err(AddrSubnetError::InvalidWitness)
         );
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv6::UNSPECIFIED_ADDRESS, 64)
-                == Err(AddrSubnetError::NotUnicastInSubnet)
+                == Err(AddrSubnetError::InvalidWitness)
         );
         // Prefix exceeds 32/128 bits
         assert!(

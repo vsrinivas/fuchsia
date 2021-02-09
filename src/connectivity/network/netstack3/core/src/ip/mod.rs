@@ -2116,6 +2116,7 @@ mod tests {
 
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
+    use net_types::UnicastAddr;
     use packet::{Buf, ParseBuffer};
     use packet_formats::ethernet::{
         EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
@@ -2737,7 +2738,9 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
-        let extra_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]);
+        let extra_ip =
+            UnicastAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]))
+                .unwrap();
         let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
         dispatcher_builder.add_ndp_table_entry(
@@ -3248,7 +3251,7 @@ mod tests {
 
         let frame_dst = FrameDestination::Unicast;
 
-        let ip = config.local_mac.to_ipv6_link_local().addr().get();
+        let ip: Ipv6Addr = config.local_mac.to_ipv6_link_local().addr().get();
 
         let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))
@@ -3303,7 +3306,7 @@ mod tests {
             ctx.state_mut().add_ethernet_device(cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
-        let ip = cfg.local_mac.to_ipv6_link_local().addr().get();
+        let ip: Ipv6Addr = cfg.local_mac.to_ipv6_link_local().addr().get();
         let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(Ipv6PacketBuilder::new(
                 Ipv6::MULTICAST_SUBNET.network(),

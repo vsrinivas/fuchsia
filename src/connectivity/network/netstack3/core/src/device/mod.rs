@@ -9,6 +9,7 @@ pub(crate) mod ethernet;
 pub(crate) mod link;
 pub(crate) mod ndp;
 
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
@@ -19,7 +20,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
 };
-use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
+use net_types::{LinkLocalUnicastAddr, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
@@ -483,18 +484,40 @@ impl<D> DeviceState<D> {
     }
 }
 
+/// An `Ip` extension trait adding device layer functionality.
+pub(crate) trait DeviceIpExt<Instant>: Ip {
+    /// The information stored about an IP address assigned to an interface.
+    type AssignedAddress;
+    /// The state kept by the Group Messaging Protocol (GMP) used to announce
+    /// membership in an IP multicast group for this version of IP.
+    ///
+    /// Note that a GMP is only used when membership must be explicitly
+    /// announced. For example, a GMP is not used in the context of a loopback
+    /// device (because there are no remote hosts) or in the context of an IPsec
+    /// device (because multicast is not supported).
+    type GmpState;
+}
+
+impl<I: Instant> DeviceIpExt<I> for Ipv4 {
+    type AssignedAddress = AddrSubnet<Ipv4Addr>;
+    type GmpState = IgmpGroupState<I>;
+}
+
+impl<I: Instant> DeviceIpExt<I> for Ipv6 {
+    type AssignedAddress = AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>;
+    type GmpState = MldGroupState<I>;
+}
+
 /// Generic IP-Device state.
 // TODO(ghanan): Split this up into IPv4 and IPv6 specific device states.
 pub(crate) struct IpDeviceState<I: Instant> {
     /// Assigned IPv4 addresses.
-    // TODO(ghanan): Use `AddrSubnet` instead of `AddressEntry` as IPv4
-    //               addresses do not need the extra fields in `AddressEntry`.
-    ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr, I>>,
+    ipv4_addr_sub: Vec<AddrSubnet<Ipv4Addr>>,
 
     /// Assigned IPv6 addresses.
     ///
     /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, I>>,
+    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>>,
 
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>>,
@@ -634,7 +657,7 @@ impl AddressState {
 
 /// The type of address configuraion.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum AddressConfigurationType {
+pub(crate) enum AddrConfigType {
     /// Configured by stateless address autoconfiguration.
     Slaac,
 
@@ -648,7 +671,7 @@ pub(crate) enum AddressConfigurationType {
 pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> = SpecifiedAddr<S>> {
     addr_sub: AddrSubnet<S, A>,
     state: AddressState,
-    configuration_type: AddressConfigurationType,
+    config_type: AddrConfigType,
     valid_until: Option<Instant>,
 }
 
@@ -656,10 +679,10 @@ impl<S: IpAddress, Instant, A: Witness<S>> AddressEntry<S, Instant, A> {
     pub(crate) fn new(
         addr_sub: AddrSubnet<S, A>,
         state: AddressState,
-        configuration_type: AddressConfigurationType,
+        config_type: AddrConfigType,
         valid_until: Option<Instant>,
     ) -> Self {
-        Self { addr_sub, state, configuration_type, valid_until }
+        Self { addr_sub, state, config_type, valid_until }
     }
 
     pub(crate) fn addr_sub(&self) -> &AddrSubnet<S, A> {
@@ -670,8 +693,8 @@ impl<S: IpAddress, Instant, A: Witness<S>> AddressEntry<S, Instant, A> {
         self.state
     }
 
-    pub(crate) fn configuration_type(&self) -> AddressConfigurationType {
-        self.configuration_type
+    pub(crate) fn config_type(&self) -> AddrConfigType {
+        self.config_type
     }
 
     pub(crate) fn mark_permanent(&mut self) {
@@ -827,9 +850,9 @@ pub fn remove_device<D: EventDispatcher>(
 }
 
 /// List the device IDs of all devices that exist and are initialized.
-pub(crate) fn list_devices<'a, D: EventDispatcher>(
-    ctx: &'a Context<D>,
-) -> impl 'a + Iterator<Item = DeviceId> {
+pub(crate) fn list_devices<D: EventDispatcher>(
+    ctx: &Context<D>,
+) -> impl Iterator<Item = DeviceId> + '_ {
     // NOTE(joshlf): This unused closure exists so that any modifications to the
     // `DeviceProtocol` enum will cause this function to stop compiling. This is
     // to call out the fact that, when the `DeviceProtocol` enum is updated,
@@ -936,10 +959,10 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// Returns an [`Iterator`] of `AddrSubnet<A>`.
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
-pub fn get_assigned_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
-    ctx: &'a Context<D>,
+pub fn get_assigned_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
+    ctx: &Context<D>,
     device: DeviceId,
-) -> impl 'a + Iterator<Item = AddrSubnet<A>> {
+) -> Box<dyn Iterator<Item = AddrSubnet<A>> + '_> {
     match device.protocol {
         DeviceProtocol::Ethernet => {
             self::ethernet::get_assigned_ip_addr_subnets(ctx, device.id.into())
@@ -947,16 +970,14 @@ pub fn get_assigned_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
     }
 }
 
-/// Get the IP address/subnet pairs associated with this device, including
+/// Get the IPv6 address/subnet pairs associated with this device, including
 /// tentative and deprecated addresses.
-///
-/// Returns an [`Iterator`] of `AddressEntry<A, D::Instant>`.
-pub fn get_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
-    ctx: &'a Context<D>,
+pub fn get_ipv6_addr_subnets<D: EventDispatcher>(
+    ctx: &Context<D>,
     device: DeviceId,
-) -> impl 'a + Iterator<Item = &'a AddressEntry<A, D::Instant>> {
+) -> impl Iterator<Item = &'_ AddressEntry<Ipv6Addr, D::Instant, UnicastAddr<Ipv6Addr>>> + '_ {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnets(ctx, device.id.into()),
+        DeviceProtocol::Ethernet => self::ethernet::get_ipv6_addr_subnets(ctx, device.id.into()),
     }
 }
 
@@ -1156,7 +1177,7 @@ pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
 pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
     ctx: &Context<D>,
     device: DeviceId,
-) -> Option<LinkLocalAddr<Ipv6Addr>> {
+) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ipv6_link_local_addr(ctx, device.id.into()),
     }
@@ -1443,7 +1464,7 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
 pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
-    addr: Ipv6Addr,
+    addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
 ) {
     match device.protocol {

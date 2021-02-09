@@ -4,20 +4,23 @@
 
 //! The Ethernet protocol.
 
+use alloc::boxed::Box;
 use alloc::collections::HashMap;
 use alloc::collections::VecDeque;
 use alloc::vec::{IntoIter, Vec};
 use core::fmt::Debug;
-use core::iter::FilterMap;
 use core::num::NonZeroU8;
 use core::slice::Iter;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{
+    AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+    UnicastOrMulticastIpv6Addr,
+};
 use net_types::{
-    BroadcastAddress, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress,
-    SpecifiedAddr, UnicastAddress, Witness,
+    BroadcastAddress, LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress,
+    SpecifiedAddr, UnicastAddr, UnicastAddress, Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType};
@@ -33,7 +36,7 @@ use crate::device::arp::{
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
 use crate::device::{
-    AddressConfigurationType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
+    AddrConfigType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
     DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta, Tentative,
 };
 use crate::ip::gmp::igmp::{
@@ -184,7 +187,10 @@ impl<C: EthernetIpDeviceContext> IgmpContext<EthernetLinkDevice> for C {
 }
 
 impl<C: EthernetIpDeviceContext> MldContext<EthernetLinkDevice> for C {
-    fn get_ipv6_link_local_addr(&self, device: C::DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>> {
+    fn get_ipv6_link_local_addr(
+        &self,
+        device: C::DeviceId,
+    ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
         get_ipv6_link_local_addr(self, device)
     }
 
@@ -426,10 +432,9 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     // Join the MAC-derived link-local address. Mark it as configured by SLAAC
     // and not set to expire.
     let addr_sub = state.link().mac.to_ipv6_link_local().into_witness();
-    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddressConfigurationType::Slaac, None)
-        .expect(
-            "internal invariant violated: uninitialized device already had IP address assigned",
-        );
+    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfigType::Slaac, None).expect(
+        "internal invariant violated: uninitialized device already had IP address assigned",
+    );
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -454,19 +459,18 @@ pub(super) fn send_ip_frame<
     let state = ctx.get_state_mut_with(device_id).link_mut();
     let (local_mac, mtu) = (state.mac, state.mtu);
 
-    let local_addr = local_addr.get();
-    let dst_mac = match MulticastAddr::new(local_addr) {
+    #[ipv4addr]
+    let dst_mac = match MulticastAddr::from_witness(local_addr) {
         Some(multicast) => Ok(Mac::from(&multicast)),
         None => {
-            #[ipv4addr]
-            {
-                arp::lookup(ctx, device_id, local_mac, local_addr).ok_or(IpAddr::V4(local_addr))
-            }
-            #[ipv6addr]
-            {
-                <C as NdpHandler<_>>::lookup(ctx, device_id, local_addr)
-                    .ok_or(IpAddr::V6(local_addr))
-            }
+            arp::lookup(ctx, device_id, local_mac, local_addr.get()).ok_or(IpAddr::V4(local_addr))
+        }
+    };
+    #[ipv6addr]
+    let dst_mac = match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
+        UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
+        UnicastOrMulticastIpv6Addr::Unicast(addr) => {
+            <C as NdpHandler<_>>::lookup(ctx, device_id, addr).ok_or(IpAddr::V6(local_addr))
         }
     };
 
@@ -497,7 +501,8 @@ pub(super) fn send_ip_frame<
                 .map_err(|ser| ser.1.into_inner())?
                 .map_a(|buffer| Buf::new(buffer.as_ref().to_vec(), ..))
                 .into_inner();
-            let dropped = state.add_pending_frame(local_addr, frame);
+            let dropped = state
+                .add_pending_frame(local_addr.transpose::<SpecifiedAddr<IpAddr>>().get(), frame);
             if let Some(dropped) = dropped {
                 // TODO(brunodalbo): Is it ok to silently just let this drop? Or
                 //  should the IP layer be notified in any way?
@@ -610,52 +615,35 @@ pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
 pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
-) -> FilterMap<
-    Iter<AddressEntry<A, C::Instant>>,
-    fn(&AddressEntry<A, C::Instant>) -> Option<AddrSubnet<A>>,
-> {
+) -> Box<dyn Iterator<Item = AddrSubnet<A>> + '_> {
     let state = ctx.get_state_with(device_id).ip();
 
     #[ipv4addr]
-    let addresses = &state.ipv4_addr_sub;
+    return Box::new(state.ipv4_addr_sub.iter().cloned());
+    // let addresses = &state.ipv4_addr_sub;
 
     #[ipv6addr]
-    let addresses = &state.ipv6_addr_sub;
-
-    addresses.iter().filter_map(
-        |a| {
-            if a.state().is_assigned() {
-                Some(*a.addr_sub())
-            } else {
-                None
-            }
-        },
-    )
+    return Box::new(state.ipv6_addr_sub.iter().filter_map(|a| {
+        if a.state().is_assigned() {
+            Some((*a.addr_sub()).into_witness())
+        } else {
+            None
+        }
+    }));
 }
 
-/// Get the IP address/subnet pairs associated with this device, including
+/// Get the IPv6 address/subnet pairs associated with this device, including
 /// tentative and deprecated addresses.
-///
-/// Returns an [`Iterator`] of `Tentative<AddrSubnet<A>>`.
-///
-/// See [`Tentative`] and [`AddrSubnet`] for more information.
-#[specialize_ip_address]
-pub(super) fn get_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn get_ipv6_addr_subnets<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
-) -> Iter<AddressEntry<A, C::Instant>> {
+) -> Iter<AddressEntry<Ipv6Addr, C::Instant, UnicastAddr<Ipv6Addr>>> {
     let state = ctx.get_state_with(device_id).ip();
 
-    #[ipv4addr]
-    let addresses = &state.ipv4_addr_sub;
-
-    #[ipv6addr]
-    let addresses = &state.ipv6_addr_sub;
-
-    addresses.iter()
+    state.ipv6_addr_sub.iter()
 }
 
-/// Get the state of an address on a device.
+/// Gets the state of an address on a device.
 ///
 /// Returns `None` if `addr` is not associated with `device_id`.
 pub(super) fn get_ip_addr_state<C: EthernetIpDeviceContext, A: IpAddress>(
@@ -663,13 +651,10 @@ pub(super) fn get_ip_addr_state<C: EthernetIpDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<A>,
 ) -> Option<AddressState> {
-    get_ip_addr_state_inner(ctx, device_id, &addr.get(), None)
+    get_ip_addr_state_inner(ctx, device_id, &addr.get())
 }
 
-/// Get the state of an address on a device.
-///
-/// If `configuration_type` is provided, then only the state of an address of
-/// that configuration type will be returned.
+/// Gets the state of an address on a device.
 ///
 /// Returns `None` if `addr` is not associated with `device_id`.
 // TODO(ghanan): Use `SpecializedAddr` for `addr`.
@@ -677,29 +662,52 @@ fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
     addr: &A,
-    configuration_type: Option<AddressConfigurationType>,
 ) -> Option<AddressState> {
-    fn inner<A: IpAddress, I: Instant>(
-        addr_sub: &Vec<AddressEntry<A, I>>,
-        addr: A,
-        configuration_type: Option<AddressConfigurationType>,
-    ) -> Option<AddressState> {
-        addr_sub.iter().find_map(|a| {
-            if a.addr_sub().addr().get() == addr
-                && configuration_type.map_or(true, |x| x == a.configuration_type())
-            {
-                Some(a.state())
-            } else {
-                None
-            }
-        })
-    }
-
     let state = ctx.get_state_with(device_id).ip();
     addr.clone().with(
-        |addr| inner(&state.ipv4_addr_sub, addr, configuration_type),
-        |addr| inner(&state.ipv6_addr_sub, addr, configuration_type),
+        |addr| {
+            state.ipv4_addr_sub.iter().find_map(|a| {
+                if a.addr().get() == addr {
+                    Some(AddressState::Assigned)
+                } else {
+                    None
+                }
+            })
+        },
+        |addr| {
+            state.ipv6_addr_sub.iter().find_map(|a| {
+                if a.addr_sub().addr().get() == addr {
+                    Some(a.state())
+                } else {
+                    None
+                }
+            })
+        },
     )
+}
+
+/// Gets the state of an IPv6 address on a device with the an optional
+/// configuration type.
+///
+/// If `config_type` is provided, only the state of an address that type will be
+/// returned.
+///
+/// Returns `None` if `addr` is not associated with `device_id`.
+// TODO(ghanan): Use `SpecializedAddr` for `addr`.
+fn get_ipv6_addr_state_with_config<C: EthernetIpDeviceContext>(
+    ctx: &C,
+    device_id: C::DeviceId,
+    addr: &Ipv6Addr,
+    config_type: Option<AddrConfigType>,
+) -> Option<AddressState> {
+    ctx.get_state_with(device_id).ip().ipv6_addr_sub.iter().find_map(|a| {
+        if a.addr_sub().addr().get() == *addr && config_type.map_or(true, |c| c == a.config_type())
+        {
+            Some(a.state())
+        } else {
+            None
+        }
+    })
 }
 
 /// Adds an IP address and associated subnet to this device.
@@ -712,39 +720,45 @@ pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), AddressError> {
     // Add the IP address and mark it as a manually added address.
-    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddressConfigurationType::Manual, None)
+    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfigType::Manual, None)
 }
 
 /// Adds an IP address and associated subnet to this device.
 ///
-/// `configuration_type` is the way this address is being configured. See
-/// [`AddressConfigurationType`] for more details.
+/// `config_type` is the way this address is being configured. See
+/// [`AddrConfigType`] for more details.
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
+///
+/// # Panics
+///
+/// `add_ip_addr_subnet_inner` panics if `A = Ipv4Addr` and `config_type !=
+/// AddrConfigType::Manual` or `valid_until != None`.
 #[specialize_ip_address]
 fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr_sub: AddrSubnet<A>,
-    configuration_type: AddressConfigurationType,
+    config_type: AddrConfigType,
     valid_until: Option<C::Instant>,
 ) -> Result<(), AddressError> {
+    #[ipv4addr]
+    {
+        assert_eq!(config_type, AddrConfigType::Manual);
+        assert_eq!(valid_until, None);
+    }
+
     let addr = addr_sub.addr().get();
 
-    if get_ip_addr_state_inner(ctx, device_id, &addr, None).is_some() {
+    if get_ip_addr_state_inner(ctx, device_id, &addr).is_some() {
         return Err(AddressError::AlreadyExists);
     }
 
     let state = ctx.get_state_mut_with(device_id).ip_mut();
 
     #[ipv4addr]
-    state.ipv4_addr_sub.push(AddressEntry::new(
-        addr_sub,
-        AddressState::Assigned,
-        configuration_type,
-        valid_until,
-    ));
+    state.ipv4_addr_sub.push(addr_sub);
 
     #[ipv6addr]
     {
@@ -754,14 +768,14 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         let state = ctx.get_state_mut_with(device_id).ip_mut();
 
         state.ipv6_addr_sub.push(AddressEntry::new(
-            addr_sub,
+            addr_sub.into_unicast(),
             AddressState::Tentative,
-            configuration_type,
+            config_type,
             valid_until,
         ));
 
         // Do Duplicate Address Detection on `addr`.
-        ctx.start_duplicate_address_detection(device_id, addr);
+        ctx.start_duplicate_address_detection(device_id, addr_sub.ipv6_unicast_addr());
     }
 
     Ok(())
@@ -783,13 +797,17 @@ pub(super) fn del_ip_addr<C: EthernetIpDeviceContext, A: IpAddress>(
 
 /// Removes an IP address and associated subnet from this device.
 ///
-/// If `configuration_type` is provided, then only an address of that
+/// If `config_type` is provided, then only an address of that
 /// configuration type will be removed.
+///
+/// # Panics
+///
+/// `del_ip_addr_inner` panics if `A = Ipv4Addr` and `config_type != None`.
 fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: &A,
-    configuration_type: Option<AddressConfigurationType>,
+    config_type: Option<AddrConfigType>,
 ) -> Result<(), AddressError> {
     // NOTE: We use two separate calls here rather than a single call to `.with`
     // because both closures mutably borrow `builder`, and so they can't exist
@@ -797,18 +815,12 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     // `.with`.
     addr.clone().with_v4(
         |addr| {
+            assert_eq!(config_type, None);
+
             let state = ctx.get_state_mut_with(device_id).ip_mut();
 
             let original_size = state.ipv4_addr_sub.len();
-            if let Some(configuration_type) = configuration_type {
-                state.ipv4_addr_sub.retain(|x| {
-                    (x.addr_sub().addr().get() != addr)
-                        && (x.configuration_type() == configuration_type)
-                });
-            } else {
-                state.ipv4_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
-            }
-
+            state.ipv4_addr_sub.retain(|x| x.addr().get() != addr);
             let new_size = state.ipv4_addr_sub.len();
 
             if new_size == original_size {
@@ -823,8 +835,13 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     )?;
     addr.clone().with_v6(
         |addr| {
-            if let Some(state) = get_ip_addr_state_inner(ctx, device_id, &addr, configuration_type)
-            {
+            // TODO(fxbug.dev/69196): Give `addr` the type
+            // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this dynamic
+            // check here.
+            if let Some((addr, state)) = UnicastAddr::new(addr).and_then(|addr| {
+                get_ipv6_addr_state_with_config(ctx, device_id, &addr, config_type)
+                    .map(|state| (addr, state))
+            }) {
                 if state.is_tentative() {
                     // Cancel current duplicate address detection for `addr` as
                     // we are removing this IP.
@@ -870,10 +887,10 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
-) -> Option<LinkLocalAddr<Ipv6Addr>> {
+) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
     ctx.get_state_with(device_id).ip().ipv6_addr_sub.iter().find_map(|a| {
         if a.state().is_assigned() {
-            LinkLocalAddr::new(a.addr_sub().addr().get())
+            LinkLocalUnicastAddr::new(a.addr_sub().addr())
         } else {
             None
         }
@@ -1151,7 +1168,7 @@ pub(super) fn insert_static_arp_table_entry<C: EthernetIpDeviceContext>(
 pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    addr: Ipv6Addr,
+    addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
 ) {
     <C as NdpHandler<_>>::insert_static_neighbor(ctx, device_id, addr, mac)
@@ -1269,9 +1286,9 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn get_link_local_addr(
         &self,
         device_id: C::DeviceId,
-    ) -> Option<Tentative<LinkLocalAddr<Ipv6Addr>>> {
+    ) -> Option<Tentative<LinkLocalUnicastAddr<Ipv6Addr>>> {
         self.get_state_with(device_id).ip().ipv6_addr_sub.iter().find_map(|a| {
-            let addr = LinkLocalAddr::new(a.addr_sub().addr().get())?;
+            let addr = LinkLocalUnicastAddr::new(a.addr_sub().addr())?;
             Some(if a.state().is_tentative() {
                 Tentative::new_tentative(addr)
             } else {
@@ -1293,12 +1310,12 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         }
     }
 
-    type AddrEntriesIter = IntoIter<AddressEntry<Ipv6Addr, C::Instant>>;
+    type AddrEntriesIter = IntoIter<AddressEntry<Ipv6Addr, C::Instant, UnicastAddr<Ipv6Addr>>>;
 
     fn get_ipv6_addr_entries(
         &self,
         device_id: C::DeviceId,
-    ) -> IntoIter<AddressEntry<Ipv6Addr, C::Instant>> {
+    ) -> IntoIter<AddressEntry<Ipv6Addr, C::Instant, UnicastAddr<Ipv6Addr>>> {
         // TODO(joshlf): The fact that we clone the entire list of entries here
         // is just so that we can avoid writing out a large, ugly function
         // signature for `get_ipv6_addr_entries`. We would like to have the
@@ -1313,31 +1330,44 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         // better way.
         let mut addrs = self.get_state_with(device_id).ip().ipv6_addr_sub.clone();
         addrs.retain(|a| {
-            let addr: SpecifiedAddr<Ipv6Addr> = a.addr_sub().addr();
+            let addr: UnicastAddr<Ipv6Addr> = a.addr_sub().addr();
             !addr.is_linklocal()
         });
         addrs.into_iter()
     }
 
-    fn ipv6_addr_state(&self, device_id: C::DeviceId, address: &Ipv6Addr) -> Option<AddressState> {
-        let address = SpecifiedAddr::new(*address)?;
+    fn ipv6_addr_state(
+        &self,
+        device_id: C::DeviceId,
+        address: &UnicastAddr<Ipv6Addr>,
+    ) -> Option<AddressState> {
+        let address = SpecifiedAddr::new(address.get())?;
 
         get_ip_addr_state::<_, Ipv6Addr>(self, device_id, &address)
     }
 
-    fn address_resolved(&mut self, device_id: C::DeviceId, address: &Ipv6Addr, link_address: Mac) {
-        mac_resolved(self, device_id, IpAddr::V6(*address), link_address);
+    fn address_resolved(
+        &mut self,
+        device_id: C::DeviceId,
+        address: &UnicastAddr<Ipv6Addr>,
+        link_address: Mac,
+    ) {
+        mac_resolved(self, device_id, IpAddr::V6(address.get()), link_address);
     }
 
-    fn address_resolution_failed(&mut self, device_id: C::DeviceId, address: &Ipv6Addr) {
-        mac_resolution_failed(self, device_id, IpAddr::V6(*address));
+    fn address_resolution_failed(
+        &mut self,
+        device_id: C::DeviceId,
+        address: &UnicastAddr<Ipv6Addr>,
+    ) {
+        mac_resolution_failed(self, device_id, IpAddr::V6(address.get()));
     }
 
-    fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: Ipv6Addr) {
+    fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
         let state = self.get_state_mut_with(device_id).ip_mut();
 
         let original_size = state.ipv6_addr_sub.len();
-        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
+        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr() != addr);
         assert_eq!(
             state.ipv6_addr_sub.len(),
             original_size - 1,
@@ -1351,7 +1381,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         // are using.
     }
 
-    fn unique_address_determined(&mut self, device_id: C::DeviceId, addr: Ipv6Addr) {
+    fn unique_address_determined(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
         trace!(
             "ethernet::unique_address_determined: device_id = {:?}; addr = {:?}",
             device_id,
@@ -1360,9 +1390,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         let state = self.get_state_mut_with(device_id).ip_mut();
 
-        if let Some(entry) =
-            state.ipv6_addr_sub.iter_mut().find(|a| a.addr_sub().addr().get() == addr)
-        {
+        if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| a.addr_sub().addr() == addr) {
             entry.mark_permanent();
         } else {
             panic!("Attempted to resolve an unknown tentative address");
@@ -1396,7 +1424,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn add_slaac_addr_sub(
         &mut self,
         device_id: Self::DeviceId,
-        addr_sub: AddrSubnet<Ipv6Addr>,
+        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         valid_until: Self::Instant,
     ) -> Result<(), AddressError> {
         trace!(
@@ -1408,13 +1436,13 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         add_ip_addr_subnet_inner(
             self,
             device_id,
-            addr_sub,
-            AddressConfigurationType::Slaac,
+            addr_sub.into_witness(),
+            AddrConfigType::Slaac,
             Some(valid_until),
         )
     }
 
-    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &Ipv6Addr) {
+    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
         trace!(
             "ethernet::deprecate_slaac_addr: deprecating address {:?} on device {:?}",
             addr,
@@ -1423,10 +1451,11 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         let state = self.get_state_mut_with(device_id).ip_mut();
 
-        if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
-            (a.addr_sub().addr().get() == *addr)
-                && a.configuration_type() == AddressConfigurationType::Slaac
-        }) {
+        if let Some(entry) = state
+            .ipv6_addr_sub
+            .iter_mut()
+            .find(|a| (a.addr_sub().addr() == *addr) && a.config_type() == AddrConfigType::Slaac)
+        {
             match entry.state {
                 AddressState::Assigned => {
                     entry.state = AddressState::Deprecated;
@@ -1457,7 +1486,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         }
     }
 
-    fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &Ipv6Addr) {
+    fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
         trace!(
             "ethernet::invalidate_slaac_addr: invalidating address {:?} on device {:?}",
             addr,
@@ -1466,13 +1495,13 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         // `unwrap` will panic if `addr` is not an address configured via SLAAC
         // on `device_id`.
-        del_ip_addr_inner(self, device_id, addr, Some(AddressConfigurationType::Slaac)).unwrap();
+        del_ip_addr_inner(self, device_id, &addr.get(), Some(AddrConfigType::Slaac)).unwrap();
     }
 
     fn update_slaac_addr_valid_until(
         &mut self,
         device_id: Self::DeviceId,
-        addr: &Ipv6Addr,
+        addr: &UnicastAddr<Ipv6Addr>,
         valid_until: Self::Instant,
     ) {
         trace!(
@@ -1484,10 +1513,11 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         let state = self.get_state_mut_with(device_id).ip_mut();
 
-        if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
-            (a.addr_sub().addr().get() == *addr)
-                && a.configuration_type() == AddressConfigurationType::Slaac
-        }) {
+        if let Some(entry) = state
+            .ipv6_addr_sub
+            .iter_mut()
+            .find(|a| (a.addr_sub().addr() == *addr) && a.config_type() == AddrConfigType::Slaac)
+        {
             entry.valid_until = Some(valid_until);
         } else {
             panic!("Address is not configured via SLAAC on this device");
@@ -1501,14 +1531,14 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
         device_id: Self::DeviceId,
-        next_hop: Ipv6Addr,
+        next_hop: SpecifiedAddr<Ipv6Addr>,
         body: S,
     ) -> Result<(), S> {
         // `device_id` must not be uninitialized.
         assert!(self.is_device_usable(device_id));
 
         // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
-        send_ip_frame(self, device_id, SpecifiedAddr::new(next_hop).unwrap(), body)
+        send_ip_frame(self, device_id, next_hop, body)
     }
 }
 

@@ -274,7 +274,7 @@ pub mod options {
 
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{AddrSubnet, AddrSubnetError, Ipv6Addr};
-    use net_types::UnicastAddress;
+    use net_types::{UnicastAddr, UnicastAddress};
     use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
@@ -476,7 +476,9 @@ pub mod options {
         }
 
         /// Get an [`AddrSubnet`] from this prefix.
-        pub fn addr_subnet(&self) -> Result<AddrSubnet<Ipv6Addr>, AddrSubnetError> {
+        pub fn addr_subnet(
+            &self,
+        ) -> Result<AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, AddrSubnetError> {
             AddrSubnet::new(self.prefix, self.prefix_length)
         }
     }

@@ -17,6 +17,7 @@ extern crate core;
 pub mod ethernet;
 pub mod ip;
 
+use core::convert::TryFrom;
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 
@@ -38,6 +39,15 @@ pub trait Witness<A>: AsRef<A> + Sized + sealed::Sealed {
     /// `new` returns `None` if `addr` does not satisfy the property guaranteed
     /// by `Self`.
     fn new(addr: A) -> Option<Self>;
+
+    /// Constructs a new witness type without checking to see if `addr` actually
+    /// satisfies the required property.
+    ///
+    /// # Safety
+    ///
+    /// It is up to the caller to make sure that `addr` satisfies the required
+    /// property in order to avoid breaking the guarantees of this trait.
+    unsafe fn new_unchecked(addr: A) -> Self;
 
     /// Constructs a new witness type from an existing witness type.
     ///
@@ -383,6 +393,10 @@ more details."),
                 $type::new(addr)
             }
 
+            unsafe fn new_unchecked(addr: A) -> $type<A> {
+                $type(addr)
+            }
+
             #[inline]
             fn into_addr(self) -> A {
                 self.0
@@ -472,6 +486,10 @@ macro_rules! impl_nested_witness {
                 $inner_type::new(addr).and_then(Witness::<$inner_type<A>>::new)
             }
 
+            unsafe fn new_unchecked(addr: A) -> $outer_type<$inner_type<A>> {
+                $outer_type($inner_type(addr))
+            }
+
             #[inline]
             fn into_addr(self) -> A {
                 self.0.into_addr()
@@ -483,16 +501,78 @@ macro_rules! impl_nested_witness {
                 &self.0 .0
             }
         }
+
+        impl<A: $outer_trait + $inner_trait> TryFrom<$inner_type<A>> for $outer_type<$inner_type<A>> {
+            type Error = ();
+            fn try_from(addr: $inner_type<A>) -> Result<$outer_type<$inner_type<A>>, ()> {
+                $outer_type::new(addr).ok_or(())
+            }
+        }
+        impl<A: $outer_trait + $inner_trait> TryFrom<$outer_type<A>> for $outer_type<$inner_type<A>> {
+            type Error = ();
+            fn try_from(addr: $outer_type<A>) -> Result<$outer_type<$inner_type<A>>, ()> {
+                // Note that `.map($outer_type)` is sound because we're
+                // guaranteed by `addr: $outer_type<A>` that
+                // `$inner_type::new(addr.into_addr())` satisfies the
+                // `$outer_trait` property.
+                $inner_type::new(addr.into_addr()).map($outer_type).ok_or(())
+            }
+        }
     };
+}
+
+/// Implements `From<T> for SpecifiedAddr<A>` where `T` is the nested witness
+/// type `$outer_type<$inner_type<A>>`.
+macro_rules! impl_into_specified_for_nested_witness {
+    ($outer_trait:ident, $outer_type:ident, $inner_trait:ident, $inner_type:ident) => {
+        impl<A: $outer_trait + $inner_trait + SpecifiedAddress> From<$outer_type<$inner_type<A>>>
+            for SpecifiedAddr<A>
+        {
+            fn from(addr: $outer_type<$inner_type<A>>) -> SpecifiedAddr<A> {
+                SpecifiedAddr(addr.into_addr())
+            }
+        }
+    };
+}
+
+/// Implements `TryFrom<$from_ty<A>> for $into_ty<A>`
+macro_rules! impl_try_from_witness {
+    (@inner [$from_ty:ident: $from_trait:ident], [$into_ty:ident: $into_trait:ident]) => {
+        impl<A: $from_trait + $into_trait> TryFrom<$from_ty<A>> for $into_ty<A> {
+            type Error = ();
+            fn try_from(addr: $from_ty<A>) -> Result<$into_ty<A>, ()> {
+                Witness::<A>::from_witness(addr).ok_or(())
+            }
+        }
+    };
+    ([$from_ty:ident: $from_trait:ident], $([$into_ty:ident: $into_trait:ident]),*) => {
+        $(
+            impl_try_from_witness!(@inner [$from_ty: $from_trait], [$into_ty: $into_trait]);
+        )*
+    }
 }
 
 // SpecifiedAddr
 impl_witness!(SpecifiedAddr, "specified", SpecifiedAddress, is_specified);
+impl_try_from_witness!(
+    [SpecifiedAddr: SpecifiedAddress],
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
+);
 
 // UnicastAddr
 impl_witness!(UnicastAddr, "unicast", UnicastAddress, is_unicast);
 impl_into_specified!(UnicastAddr, UnicastAddress, is_unicast);
 impl_nested_witness!(UnicastAddress, UnicastAddr, LinkLocalAddress, LinkLocalAddr, new_linklocal);
+impl_try_from_witness!(
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
+);
 
 // MulticastAddr
 impl_witness!(MulticastAddr, "multicast", MulticastAddress, is_multicast);
@@ -503,6 +583,18 @@ impl_nested_witness!(
     LinkLocalAddress,
     LinkLocalAddr,
     new_linklocal
+);
+impl_into_specified_for_nested_witness!(
+    MulticastAddress,
+    MulticastAddr,
+    LinkLocalAddress,
+    LinkLocalAddr
+);
+impl_try_from_witness!(
+    [MulticastAddr: MulticastAddress],
+    [UnicastAddr: UnicastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress]
 );
 
 // LinkLocalAddr
@@ -516,6 +608,23 @@ impl_nested_witness!(
     MulticastAddr,
     new_multicast
 );
+impl_into_specified_for_nested_witness!(
+    LinkLocalAddress,
+    LinkLocalAddr,
+    UnicastAddress,
+    UnicastAddr
+);
+impl_into_specified_for_nested_witness!(
+    LinkLocalAddress,
+    LinkLocalAddr,
+    MulticastAddress,
+    MulticastAddr
+);
+impl_try_from_witness!(
+    [LinkLocalAddr: LinkLocalAddress],
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress]
+);
 
 // NOTE(joshlf): We provide these type aliases both for convenience and also to
 // steer users towards these types and away from `UnicastAddr<LinkLocalAddr<A>>`
@@ -525,11 +634,40 @@ impl_nested_witness!(
 // wishes to supply `A = LinkLocalAddr<AA>`), and we want to support that use
 // case.
 
+/// An address that can be link-local and unicast.
+///
+/// `LinkLocalUnicastAddress` is a shorthand for `LinkLocalAddress +
+/// UnicastAddress`.
+pub trait LinkLocalUnicastAddress: LinkLocalAddress + UnicastAddress {}
+impl<A: LinkLocalAddress + UnicastAddress> LinkLocalUnicastAddress for A {}
+
+/// An address that can be link-local and multicast.
+///
+/// `LinkLocalMulticastAddress` is a shorthand for `LinkLocalAddress +
+/// MulticastAddress`.
+pub trait LinkLocalMulticastAddress: LinkLocalAddress + MulticastAddress {}
+impl<A: LinkLocalAddress + MulticastAddress> LinkLocalMulticastAddress for A {}
+
 /// A link-local unicast address.
 pub type LinkLocalUnicastAddr<A> = LinkLocalAddr<UnicastAddr<A>>;
 
 /// A link-local multicast address.
 pub type LinkLocalMulticastAddr<A> = LinkLocalAddr<MulticastAddr<A>>;
+
+impl_try_from_witness!(
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
+);
+impl_try_from_witness!(
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress],
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress]
+);
 
 /// A witness type for an address and a scope zone.
 ///

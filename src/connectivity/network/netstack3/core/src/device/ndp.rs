@@ -29,8 +29,8 @@ use core::time::Duration;
 use log::{debug, error, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet};
 use net_types::{
-    LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
-    SpecifiedAddress, Witness,
+    LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
+    SpecifiedAddress, UnicastAddr, Witness,
 };
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use packet_formats::icmp::ndp::options::{NdpOption, PrefixInformation, INFINITE_LIFETIME};
@@ -47,7 +47,7 @@ use zerocopy::ByteSlice;
 use crate::context::{CounterContext, InstantContext, RngContext, StateContext, TimerContext};
 use crate::device::link::{LinkAddress, LinkDevice};
 use crate::device::{
-    AddressConfigurationType, AddressEntry, AddressError, AddressState, DeviceIdContext, Tentative,
+    AddrConfigType, AddressEntry, AddressError, AddressState, DeviceIdContext, Tentative,
 };
 use crate::Instant;
 
@@ -274,7 +274,7 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     fn start_duplicate_address_detection(
         &mut self,
         device_id: Self::DeviceId,
-        tentative_addr: Ipv6Addr,
+        tentative_addr: UnicastAddr<Ipv6Addr>,
     );
 
     /// Cancels the Duplicate Address Detection process.
@@ -292,7 +292,7 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     fn cancel_duplicate_address_detection(
         &mut self,
         device_id: Self::DeviceId,
-        tentative_addr: Ipv6Addr,
+        tentative_addr: UnicastAddr<Ipv6Addr>,
     );
 
     /// Start soliciting routers.
@@ -335,7 +335,11 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     ///
     /// Begins the address resolution process if the link layer address for
     /// `lookup_addr` is not already known.
-    fn lookup(&mut self, device_id: Self::DeviceId, lookup_addr: Ipv6Addr) -> Option<D::Address>;
+    fn lookup(
+        &mut self,
+        device_id: Self::DeviceId,
+        lookup_addr: UnicastAddr<Ipv6Addr>,
+    ) -> Option<D::Address>;
 
     /// Handles a timer firing.
     fn handle_timer(&mut self, id: NdpTimerId<D, Self::DeviceId>);
@@ -345,7 +349,12 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     /// This method only gets called when testing to force a neighbor so link
     /// address lookups completes immediately without doing address resolution.
     #[cfg(test)]
-    fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, net: Ipv6Addr, hw: D::Address);
+    fn insert_static_neighbor(
+        &mut self,
+        device_id: Self::DeviceId,
+        net: UnicastAddr<Ipv6Addr>,
+        hw: D::Address,
+    );
 }
 
 impl<D: LinkDevice, C: NdpContext<D>> NdpHandler<D> for C
@@ -367,7 +376,7 @@ where
     fn start_duplicate_address_detection(
         &mut self,
         device_id: Self::DeviceId,
-        tentative_addr: Ipv6Addr,
+        tentative_addr: UnicastAddr<Ipv6Addr>,
     ) {
         start_duplicate_address_detection(self, device_id, tentative_addr)
     }
@@ -375,7 +384,7 @@ where
     fn cancel_duplicate_address_detection(
         &mut self,
         device_id: Self::DeviceId,
-        tentative_addr: Ipv6Addr,
+        tentative_addr: UnicastAddr<Ipv6Addr>,
     ) {
         cancel_duplicate_address_detection(self, device_id, tentative_addr)
     }
@@ -394,7 +403,11 @@ where
         stop_advertising_interface(self, device_id)
     }
 
-    fn lookup(&mut self, device_id: Self::DeviceId, lookup_addr: Ipv6Addr) -> Option<D::Address> {
+    fn lookup(
+        &mut self,
+        device_id: Self::DeviceId,
+        lookup_addr: UnicastAddr<Ipv6Addr>,
+    ) -> Option<D::Address> {
         lookup(self, device_id, lookup_addr)
     }
 
@@ -403,7 +416,12 @@ where
     }
 
     #[cfg(test)]
-    fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, net: Ipv6Addr, hw: D::Address) {
+    fn insert_static_neighbor(
+        &mut self,
+        device_id: Self::DeviceId,
+        net: UnicastAddr<Ipv6Addr>,
+        hw: D::Address,
+    ) {
         insert_neighbor(self, device_id, net, hw)
     }
 }
@@ -432,7 +450,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn get_link_local_addr(
         &self,
         device_id: Self::DeviceId,
-    ) -> Option<Tentative<LinkLocalAddr<Ipv6Addr>>>;
+    ) -> Option<Tentative<LinkLocalUnicastAddr<Ipv6Addr>>>;
 
     /// Get a non-tentative IPv6 address for this device.
     ///
@@ -444,7 +462,9 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn get_ipv6_addr(&self, device_id: Self::DeviceId) -> Option<Ipv6Addr>;
 
     /// The type of the iterator returned from `get_ipv6_addr_entries`.
-    type AddrEntriesIter: Iterator<Item = AddressEntry<Ipv6Addr, Self::Instant>>;
+    type AddrEntriesIter: Iterator<
+        Item = AddressEntry<Ipv6Addr, Self::Instant, UnicastAddr<Ipv6Addr>>,
+    >;
 
     /// Get all global IPv6 addresses and associated data for this device.
     ///
@@ -461,7 +481,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn ipv6_addr_state(
         &self,
         device_id: Self::DeviceId,
-        address: &Ipv6Addr,
+        address: &UnicastAddr<Ipv6Addr>,
     ) -> Option<AddressState>;
 
     // TODO(joshlf): Use `FrameContext` instead.
@@ -479,7 +499,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
         device_id: Self::DeviceId,
-        next_hop: Ipv6Addr,
+        next_hop: SpecifiedAddr<Ipv6Addr>,
         body: S,
     ) -> Result<(), S>;
 
@@ -491,17 +511,25 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn address_resolved(
         &mut self,
         device_id: Self::DeviceId,
-        address: &Ipv6Addr,
+        address: &UnicastAddr<Ipv6Addr>,
         link_address: D::Address,
     );
 
     /// Notifies the device layer that the link-layer address resolution for the
     /// neighbor in `address` failed.
-    fn address_resolution_failed(&mut self, device_id: Self::DeviceId, address: &Ipv6Addr);
+    fn address_resolution_failed(
+        &mut self,
+        device_id: Self::DeviceId,
+        address: &UnicastAddr<Ipv6Addr>,
+    );
 
     /// Notifies the device layer that a duplicate address has been detected.
     /// The device should want to remove the address.
-    fn duplicate_address_detected(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr);
+    fn duplicate_address_detected(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    );
 
     /// Notifies the device layer that the address is very likely (because DAD
     /// is not reliable) to be unique, it is time to mark it to be permanent.
@@ -510,7 +538,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// Panics if `addr` is not tentative on the devide identified by
     /// `device_id`.
-    fn unique_address_determined(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr);
+    fn unique_address_determined(&mut self, device_id: Self::DeviceId, addr: UnicastAddr<Ipv6Addr>);
 
     /// Set Link MTU.
     ///
@@ -542,7 +570,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn add_slaac_addr_sub(
         &mut self,
         device_id: Self::DeviceId,
-        addr_sub: AddrSubnet<Ipv6Addr>,
+        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         valid_until: Self::Instant,
     ) -> Result<(), AddressError>;
 
@@ -557,7 +585,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// May panic if `addr` is not an address configured via SLAAC on
     /// `device_id`.
-    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &Ipv6Addr);
+    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>);
 
     /// Completely invalidate an address previously configured via SLAAC.
     ///
@@ -565,7 +593,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// May panic if `addr` is not an address configured via SLAAC on
     /// `device_id`.
-    fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &Ipv6Addr);
+    fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>);
 
     /// Update the instant when an address configured via SLAAC is valid until.
     ///
@@ -576,7 +604,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     fn update_slaac_addr_valid_until(
         &mut self,
         device_id: Self::DeviceId,
-        addr: &Ipv6Addr,
+        addr: &UnicastAddr<Ipv6Addr>,
         valid_until: Self::Instant,
     );
 
@@ -633,7 +661,11 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// Panics if `addr` is not tentative on the devide identified by
     /// `device_id`.
-    fn unique_address_determined_wrapper(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr) {
+    fn unique_address_determined_wrapper(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) {
         // Let the device-layer know that `addr` is most likely not already used
         // on the link.
         self.unique_address_determined(device_id, addr);
@@ -1165,14 +1197,14 @@ pub(crate) struct NdpState<D: LinkDevice, Instant> {
     neighbors: NeighborTable<D::Address>,
 
     /// List of default routers, indexed by their link-local address.
-    default_routers: HashSet<LinkLocalAddr<Ipv6Addr>>,
+    default_routers: HashSet<LinkLocalUnicastAddr<Ipv6Addr>>,
 
     /// List of on-link prefixes.
-    on_link_prefixes: HashSet<AddrSubnet<Ipv6Addr>>,
+    on_link_prefixes: HashSet<AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>>,
 
     /// Number of Neighbor Solicitation messages left to send before we can
     /// assume that an IPv6 address is not currently in use.
-    dad_transmits_remaining: HashMap<Ipv6Addr, u8>,
+    dad_transmits_remaining: HashMap<UnicastAddr<Ipv6Addr>, u8>,
 
     /// Number of remaining Router Solicitation messages to send.
     router_solicitations_remaining: u8,
@@ -1268,18 +1300,18 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     // NDP operation data structure helpers.
 
     /// Do we know about the default router identified by `ip`?
-    fn has_default_router(&self, ip: &LinkLocalAddr<Ipv6Addr>) -> bool {
+    fn has_default_router(&self, ip: &LinkLocalUnicastAddr<Ipv6Addr>) -> bool {
         self.default_routers.contains(&ip)
     }
 
     /// Adds a new router to our list of default routers.
-    fn add_default_router(&mut self, ip: LinkLocalAddr<Ipv6Addr>) {
+    fn add_default_router(&mut self, ip: LinkLocalUnicastAddr<Ipv6Addr>) {
         // Router must not already exist if we are adding it.
         assert!(self.default_routers.insert(ip));
     }
 
     /// Removes a router from our list of default routers.
-    fn remove_default_router(&mut self, ip: &LinkLocalAddr<Ipv6Addr>) {
+    fn remove_default_router(&mut self, ip: &LinkLocalUnicastAddr<Ipv6Addr>) {
         // Router must exist if we are removing it.
         assert!(self.default_routers.remove(&ip));
     }
@@ -1289,7 +1321,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     /// # Panics
     ///
     /// Panics if the router has not yet been discovered.
-    fn invalidate_default_router(&mut self, ip: &LinkLocalAddr<Ipv6Addr>) {
+    fn invalidate_default_router(&mut self, ip: &LinkLocalUnicastAddr<Ipv6Addr>) {
         // As per RFC 4861 section 6.3.5:
         // Whenever the Lifetime of an entry in the Default Router List expires,
         // that entry is discarded.  When removing a router from the Default
@@ -1300,13 +1332,13 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
         self.remove_default_router(ip);
 
         // If a neighbor entry exists for the router, unmark it as a router.
-        if let Some(state) = self.neighbors.get_neighbor_state_mut(&ip.get()) {
+        if let Some(state) = self.neighbors.get_neighbor_state_mut(&ip) {
             state.is_router = false;
         }
     }
 
     /// Do we already know about this prefix?
-    fn has_prefix(&self, addr_sub: &AddrSubnet<Ipv6Addr>) -> bool {
+    fn has_prefix(&self, addr_sub: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) -> bool {
         self.on_link_prefixes.contains(addr_sub)
     }
 
@@ -1315,7 +1347,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     /// # Panics
     ///
     /// Panics if the prefix already exists in our list of on-link prefixes.
-    fn add_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr>) {
+    fn add_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) {
         assert!(self.on_link_prefixes.insert(addr_sub));
     }
 
@@ -1324,7 +1356,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     /// # Panics
     ///
     /// Panics if the prefix doesn't exist in our list of on-link prefixes.
-    fn remove_prefix(&mut self, addr_sub: &AddrSubnet<Ipv6Addr>) {
+    fn remove_prefix(&mut self, addr_sub: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) {
         assert!(self.on_link_prefixes.remove(addr_sub));
     }
 
@@ -1333,7 +1365,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     /// # Panics
     ///
     /// Panics if the prefix doesn't exist in our list of on-link prefixes.
-    fn invalidate_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr>) {
+    fn invalidate_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) {
         // As per RFC 4861 section 6.3.5:
         // Whenever the invalidation timer expires for a Prefix List entry, that
         // entry is discarded. No existing Destination Cache entries need be
@@ -1414,23 +1446,24 @@ pub(crate) struct NdpTimerId<D: LinkDevice, DeviceId> {
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub(crate) enum InnerNdpTimerId {
     /// This is used to retry sending Neighbor Discovery Protocol requests.
-    LinkAddressResolution { neighbor_addr: Ipv6Addr },
+    LinkAddressResolution { neighbor_addr: UnicastAddr<Ipv6Addr> },
     /// This is used to resend Duplicate Address Detection Neighbor Solicitation
     /// messages if `DUP_ADDR_DETECTION_TRANSMITS` is greater than one.
-    DadNsTransmit { addr: Ipv6Addr },
+    DadNsTransmit { addr: UnicastAddr<Ipv6Addr> },
     /// Timer to send Router Solicitation messages.
     RouterSolicitationTransmit,
     /// Timer to invalidate a router.
+    ///
     /// `ip` is the identifying IP of the router.
-    RouterInvalidation { ip: LinkLocalAddr<Ipv6Addr> },
+    RouterInvalidation { ip: LinkLocalUnicastAddr<Ipv6Addr> },
     /// Timer to invalidate a prefix.
-    PrefixInvalidation { addr_subnet: AddrSubnet<Ipv6Addr> },
+    PrefixInvalidation { addr_subnet: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> },
     /// Timer to send a Router Advertisement.
     RouterAdvertisementTransmit,
     /// Timer to deprecate an address configured via SLAAC.
-    DeprecateSlaacAddress { addr: Ipv6Addr },
+    DeprecateSlaacAddress { addr: UnicastAddr<Ipv6Addr> },
     /// Timer to invalidate an address configured via SLAAC.
-    InvalidateSlaacAddress { addr: Ipv6Addr },
+    InvalidateSlaacAddress { addr: UnicastAddr<Ipv6Addr> },
     // TODO: The RFC suggests that we SHOULD make a random delay to join the
     // solicitation group. When we support MLD, we probably want one for that.
 }
@@ -1444,14 +1477,14 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
     /// `device_id` and `neighbor_addr`.
     pub(crate) fn new_link_address_resolution(
         device_id: DeviceId,
-        neighbor_addr: Ipv6Addr,
+        neighbor_addr: UnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::LinkAddressResolution { neighbor_addr })
     }
 
     pub(crate) fn new_dad_ns_transmission(
         device_id: DeviceId,
-        tentative_addr: Ipv6Addr,
+        tentative_addr: UnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::DadNsTransmit { addr: tentative_addr })
     }
@@ -1462,14 +1495,14 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
 
     pub(crate) fn new_router_invalidation(
         device_id: DeviceId,
-        ip: LinkLocalAddr<Ipv6Addr>,
+        ip: LinkLocalUnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::RouterInvalidation { ip })
     }
 
     pub(crate) fn new_prefix_invalidation(
         device_id: DeviceId,
-        addr_subnet: AddrSubnet<Ipv6Addr>,
+        addr_subnet: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::PrefixInvalidation { addr_subnet })
     }
@@ -1482,14 +1515,14 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
 
     pub(crate) fn new_deprecate_slaac_address(
         device_id: DeviceId,
-        addr: Ipv6Addr,
+        addr: UnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::DeprecateSlaacAddress { addr })
     }
 
     pub(crate) fn new_invalidate_slaac_address(
         device_id: DeviceId,
-        addr: Ipv6Addr,
+        addr: UnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::InvalidateSlaacAddress { addr })
     }
@@ -1587,7 +1620,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
             send_router_advertisement(
                 ctx,
                 id.device_id,
-                Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+                Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
             );
 
             // Schedule the next Router Advertisement if `id.device_id` is an
@@ -1695,18 +1728,12 @@ fn get_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
 fn lookup<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    lookup_addr: Ipv6Addr,
+    lookup_addr: UnicastAddr<Ipv6Addr>,
 ) -> Option<D::Address>
 where
     D::Address: for<'a> From<&'a MulticastAddr<Ipv6Addr>>,
 {
     trace!("ndp::lookup: {:?}", lookup_addr);
-
-    // If `lookup_addr` is a multicast address, get the corresponding
-    // destination multicast mac address.
-    if let Some(multicast_addr) = MulticastAddr::new(lookup_addr) {
-        return Some(D::Address::from(&multicast_addr));
-    }
 
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
     let ndpstate = ctx.get_state_mut_with(device_id);
@@ -1769,7 +1796,7 @@ where
 fn insert_neighbor<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    net: Ipv6Addr,
+    net: UnicastAddr<Ipv6Addr>,
     hw: D::Address,
 ) {
     // Neighbor `net` should be marked as reachable.
@@ -1865,7 +1892,7 @@ enum NeighborEntryState {
 }
 
 struct NeighborTable<H> {
-    table: HashMap<Ipv6Addr, NeighborState<H>>,
+    table: HashMap<UnicastAddr<Ipv6Addr>, NeighborState<H>>,
 }
 
 impl<H: PartialEq + Debug> NeighborTable<H> {
@@ -1876,7 +1903,12 @@ impl<H: PartialEq + Debug> NeighborTable<H> {
     /// `NeighborEntryState::Stale` if the address was updated. A `false` value
     /// for `is_reachable` does not mean that the neighbor is unreachable, it
     /// just means that we do not know if it is reachable.
-    fn set_link_address(&mut self, neighbor: Ipv6Addr, address: H, is_reachable: bool) {
+    fn set_link_address(
+        &mut self,
+        neighbor: UnicastAddr<Ipv6Addr>,
+        address: H,
+        is_reachable: bool,
+    ) {
         let address = Some(address);
         let neighbor_state = self.table.entry(neighbor).or_insert_with(NeighborState::new);
 
@@ -1899,7 +1931,7 @@ impl<H: PartialEq + Debug> NeighborTable<H> {
 impl<H> NeighborTable<H> {
     /// Create a new incomplete state of a neighbor, setting the transmit
     /// counter to 1.
-    fn add_incomplete_neighbor_state(&mut self, neighbor: Ipv6Addr) {
+    fn add_incomplete_neighbor_state(&mut self, neighbor: UnicastAddr<Ipv6Addr>) {
         let mut state = NeighborState::new();
         state.state = NeighborEntryState::Incomplete { transmit_counter: 1 };
 
@@ -1907,17 +1939,20 @@ impl<H> NeighborTable<H> {
     }
 
     /// Get the neighbor's state, if it exists.
-    fn get_neighbor_state(&self, neighbor: &Ipv6Addr) -> Option<&NeighborState<H>> {
+    fn get_neighbor_state(&self, neighbor: &UnicastAddr<Ipv6Addr>) -> Option<&NeighborState<H>> {
         self.table.get(neighbor)
     }
 
     /// Get a  the neighbor's mutable state, if it exists.
-    fn get_neighbor_state_mut(&mut self, neighbor: &Ipv6Addr) -> Option<&mut NeighborState<H>> {
+    fn get_neighbor_state_mut(
+        &mut self,
+        neighbor: &UnicastAddr<Ipv6Addr>,
+    ) -> Option<&mut NeighborState<H>> {
         self.table.get_mut(neighbor)
     }
 
     /// Delete the neighbor's state, if it exists.
-    fn delete_neighbor_state(&mut self, neighbor: &Ipv6Addr) {
+    fn delete_neighbor_state(&mut self, neighbor: &UnicastAddr<Ipv6Addr>) {
         self.table.remove(neighbor);
     }
 }
@@ -2258,7 +2293,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
             ctx,
             device_id,
             src_ip,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
             RouterSolicitation::default(),
             &[],
         );
@@ -2269,7 +2304,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
             ctx,
             device_id,
             src_ip,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
             RouterSolicitation::default(),
             &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
         );
@@ -2279,7 +2314,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
 fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    tentative_addr: Ipv6Addr,
+    tentative_addr: UnicastAddr<Ipv6Addr>,
 ) {
     let ndp_state = ctx.get_state_mut_with(device_id);
 
@@ -2310,7 +2345,7 @@ fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
 fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    tentative_addr: Ipv6Addr,
+    tentative_addr: UnicastAddr<Ipv6Addr>,
 ) {
     trace!("ndp::cancel_duplicate_address_detection: cancelling duplicate address detection for address {:?} on device {:?}", tentative_addr, device_id);
 
@@ -2331,7 +2366,7 @@ fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
 fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    tentative_addr: Ipv6Addr,
+    tentative_addr: UnicastAddr<Ipv6Addr>,
 ) {
     trace!("do_duplicate_address_detection: tentative_addr {:?}", tentative_addr);
 
@@ -2351,8 +2386,8 @@ fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
         ctx,
         device_id,
         Ipv6::UNSPECIFIED_ADDRESS,
-        tentative_addr.to_solicited_node_address().get(),
-        NeighborSolicitation::new(tentative_addr),
+        tentative_addr.to_solicited_node_address().into_specified(),
+        NeighborSolicitation::new(tentative_addr.into_addr()),
         &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
     );
 
@@ -2365,7 +2400,7 @@ fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
 fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    lookup_addr: Ipv6Addr,
+    lookup_addr: UnicastAddr<Ipv6Addr>,
 ) {
     trace!("send_neighbor_solicitation: lookip_addr {:?}", lookup_addr);
 
@@ -2376,14 +2411,14 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
     if let Some(src_ip) = ctx.get_ipv6_addr(device_id) {
         assert!(src_ip.is_valid_unicast());
         let src_ll = ctx.get_link_layer_addr(device_id);
-        let dst_ip = lookup_addr.to_solicited_node_address().get();
+        let dst_ip = lookup_addr.to_solicited_node_address();
         // TODO(rheacock): Do something if this returns an error?
         let _ = send_ndp_packet::<_, _, &[u8], _>(
             ctx,
             device_id,
             src_ip,
-            dst_ip,
-            NeighborSolicitation::new(lookup_addr),
+            dst_ip.into_specified(),
+            NeighborSolicitation::new(lookup_addr.into_addr()),
             &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
         );
     } else {
@@ -2397,8 +2432,8 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     solicited: bool,
-    device_addr: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    device_addr: SpecifiedAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
 ) {
     debug!("send_neighbor_advertisement from {:?} to {:?}", device_addr, dst_ip);
     debug_assert!(device_addr.is_valid_unicast());
@@ -2418,6 +2453,7 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
     let src_ll = ctx.get_link_layer_addr(device_id);
     let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
     // TODO(rheacock): Do something if this returns an error?
+    let device_addr = device_addr.into_addr();
     let _ = send_ndp_packet::<_, _, &[u8], _>(
         ctx,
         device_id,
@@ -2444,7 +2480,7 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
 fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    dst_ip: Ipv6Addr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
 ) {
     // If we are attempting to send a router advertisement, we need to have a
     // valid link-local address, as per RFC 4861 section 4.2. The call to either
@@ -2505,7 +2541,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // If `dst_ip` is the IPv6 all-nodes multicast address, increment the
     // counter for number of Router Advertisements sent to the IPv6 all-nodes
     // multicast address.
-    if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get() {
+    if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified() {
         ndp_state.all_nodes_transmited_router_advertisements += 1;
     }
 
@@ -2520,7 +2556,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     )
     .is_ok()
     {
-        if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get() {
+        if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified() {
             let now = ctx.now();
             let ndp_state = ctx.get_state_mut_with(device_id);
 
@@ -2542,7 +2578,7 @@ fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
     ctx: &mut C,
     device_id: C::DeviceId,
     src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     message: M,
     options: &[NdpOption],
 ) -> Result<(), ()>
@@ -2591,7 +2627,7 @@ pub(crate) trait NdpPacketHandler<DeviceId> {
 fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    addr: Ipv6Addr,
+    addr: UnicastAddr<Ipv6Addr>,
 ) {
     cancel_duplicate_address_detection(ctx, device_id, addr);
 
@@ -2614,13 +2650,13 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
     match packet {
         NdpPacket::RouterSolicitation(p) => {
-            trace!("receive_ndp_packet_inner: Received NDP RS");
+            trace!("receive_ndp_packet: Received NDP RS");
 
             if !ctx.is_router(device_id) {
                 // Hosts MUST silently discard Router Solicitation messages as
                 // per RFC 4861 section 6.1.1.
                 trace!(
-                    "receive_ndp_packet_inner: device {:?} is not a router, discarding NDP RS",
+                    "receive_ndp_packet: device {:?} is not a router, discarding NDP RS",
                     device_id
                 );
                 return;
@@ -2636,7 +2672,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // is a source link-layer address option in the message, we MUST
                 // silently discard the Router Solicitation message as per RFC
                 // 4861 section 6.1.1.
-                trace!("receive_ndp_packet_inner: source is unspcified but it has the source link-layer address option, discarding NDP RS");
+                trace!("receive_ndp_packet: source is unspcified but it has the source link-layer address option, discarding NDP RS");
                 return;
             }
 
@@ -2649,7 +2685,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // doesn't send Router Advertisements - even in response to
                 // Router Solicitations. See AdvSendAdvertisements in RFC 4861
                 // section 6.2.1 for more details.
-                trace!("receive_ndp_packet_inner: device {:?} is not configured to send Router Advertisements, ignoring NDP RS", device_id);
+                trace!("receive_ndp_packet: device {:?} is not configured to send Router Advertisements, ignoring NDP RS", device_id);
                 return;
             }
 
@@ -2658,7 +2694,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // Set the link address and mark the neighbor entry as stale
                     // if we either create it, or updated an existing one, as
                     // per RFC 4861 section 6.2.6.
-                    ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
+                    ndp_state.neighbors.set_link_address(src_ip, link_addr, false);
                 }
 
                 if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
@@ -2725,7 +2761,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // `delay` time from `now` so let the scheduled Router
                 // Advertisement be the reply to this Router Solicitation
                 // message.
-                trace!("receive_ndp_packet_inner: next scheduled RA will be the response this NDP RS from {:?} on device {:?}", src_ip, device_id);
+                trace!("receive_ndp_packet: next scheduled RA will be the response this NDP RS from {:?} on device {:?}", src_ip, device_id);
                 return;
             }
 
@@ -2745,7 +2781,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             "Failed to calculate instant to send the next Router Advertisement",
                         );
 
-                    trace!("receive_ndp_packet_inner: already sent an RA within MIN_DELAY_BETWEEN_RAS ({:?}), scheduling RA reply for RS from {:?} to be sent at {:?} from device {:?}", MIN_DELAY_BETWEEN_RAS, src_ip, next_instant, device_id);
+                    trace!("receive_ndp_packet: already sent an RA within MIN_DELAY_BETWEEN_RAS ({:?}), scheduling RA reply for RS from {:?} to be sent at {:?} from device {:?}", MIN_DELAY_BETWEEN_RAS, src_ip, next_instant, device_id);
 
                     schedule_next_router_advertisement_instant(ctx, device_id, next_instant);
                     return;
@@ -2755,15 +2791,15 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             // If we haven't scheduled the RA response yet, or an already
             // scheduled RA transmission is too far from now, schedule an RA
             // transmission for after `delay` time.
-            trace!("receive_ndp_packet_inner: scheduling an RA reply for RS from {:?} to be sent at {:?} from device {:?}", src_ip, send_instant, device_id);
+            trace!("receive_ndp_packet: scheduling an RA reply for RS from {:?} to be sent at {:?} from device {:?}", src_ip, send_instant, device_id);
 
             schedule_next_router_advertisement_instant(ctx, device_id, send_instant);
         }
         NdpPacket::RouterAdvertisement(p) => {
-            trace!("receive_ndp_packet_inner: Received NDP RA from router: {:?}", src_ip);
+            trace!("receive_ndp_packet: Received NDP RA from router: {:?}", src_ip);
 
             let src_ip = if let Some(src_ip) =
-                src_ip.into_option().and_then(LinkLocalAddr::from_witness)
+                src_ip.into_option().and_then(LinkLocalUnicastAddr::new)
             {
                 src_ip
             } else {
@@ -2772,7 +2808,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // address as routers must use their link-local address as the
                 // source for Router Advertisements so hosts can uniquely
                 // identify routers, as per RFC 4861 section 6.1.2.
-                trace!("receive_ndp_packet_inner: source is not a link-local address, discarding NDP RA");
+                trace!("receive_ndp_packet: source is not a link-local address, discarding NDP RA");
                 return;
             };
 
@@ -2784,7 +2820,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             if ctx.is_router(device_id) {
                 // TODO(ghanan): Handle receiving Router Advertisements when
                 // this node is a router.
-                trace!("receive_ndp_packet_inner: received NDP RA as a router, discarding NDP RA");
+                trace!("receive_ndp_packet: received NDP RA as a router, discarding NDP RA");
                 return;
             }
 
@@ -2795,12 +2831,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             if let Some(router_lifetime) = ra.router_lifetime() {
                 if ndp_state.has_default_router(&src_ip) {
-                    trace!(
-                        "receive_ndp_packet_inner: NDP RA from an already known router: {:?}",
-                        src_ip
-                    );
+                    trace!("receive_ndp_packet: NDP RA from an already known router: {:?}", src_ip);
                 } else {
-                    trace!("receive_ndp_packet_inner: NDP RA from a new router: {:?}", src_ip);
+                    trace!("receive_ndp_packet: NDP RA from a new router: {:?}", src_ip);
 
                     // TODO(ghanan): Make the number of default routers we store
                     // configurable?
@@ -2808,11 +2841,11 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 };
 
                 // Reset invalidation timeout.
-                trace!("receive_ndp_packet_inner: NDP RA: updating invalidation timer to {:?} for router: {:?}", router_lifetime, src_ip);
+                trace!("receive_ndp_packet: NDP RA: updating invalidation timer to {:?} for router: {:?}", router_lifetime, src_ip);
                 ctx.schedule_timer(router_lifetime.get(), timer_id);
             } else {
                 if ndp_state.has_default_router(&src_ip) {
-                    trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
+                    trace!("receive_ndp_packet: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
 
                     // `invalidate_default_router` may panic if `src_ip` does
                     // not reference a known default router, but we will only
@@ -2825,7 +2858,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // entry as specified in RFC 4861 section 6.3.5.
                     assert!(ctx.cancel_timer(timer_id).is_some());
                 } else {
-                    trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
+                    trace!("receive_ndp_packet: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
                 }
 
                 // As per RFC 4861 section 4.2, a zero-valued router lifetime
@@ -2860,7 +2893,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             //               SHOULD ensure that a new random value gets
             //               re-computed at least once every few hours.
             if let Some(base_reachable_time) = ra.reachable_time() {
-                trace!("receive_ndp_packet_inner: NDP RA: updating base_reachable_time to {:?} for router: {:?}", base_reachable_time, src_ip);
+                trace!("receive_ndp_packet: NDP RA: updating base_reachable_time to {:?} for router: {:?}", base_reachable_time, src_ip);
                 ndp_state.set_base_reachable_time(base_reachable_time.get());
             }
 
@@ -2872,7 +2905,11 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             //               configurable since the RFC does not say we MUST
             //               update the field.
             if let Some(retransmit_timer) = ra.retransmit_timer() {
-                trace!("receive_ndp_packet_inner: NDP RA: updating retrans_timer to {:?} for router: {:?}", retransmit_timer, src_ip);
+                trace!(
+                    "receive_ndp_packet: NDP RA: updating retrans_timer to {:?} for router: {:?}",
+                    retransmit_timer,
+                    src_ip
+                );
                 ndp_state.set_retrans_timer(retransmit_timer.get());
             }
 
@@ -2884,7 +2921,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             //               configurable since the RFC does not say we MUST
             //               update the field.
             if let Some(hop_limit) = ra.current_hop_limit() {
-                trace!("receive_ndp_packet_inner: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
+                trace!("receive_ndp_packet: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
 
                 ctx.set_hop_limit(device_id, hop_limit);
             }
@@ -2904,7 +2941,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         let ndp_state = ctx.get_state_mut_with(device_id);
                         let link_addr = D::Address::from_bytes(&a[..D::Address::BYTES_LENGTH]);
 
-                        trace!("receive_ndp_packet_inner: NDP RA: setting link address for router {:?} to {:?}", src_ip, link_addr);
+                        trace!("receive_ndp_packet: NDP RA: setting link address for router {:?} to {:?}", src_ip, link_addr);
 
                         // Set the link address and mark it as stale if we
                         // either created the neighbor entry, or updated an
@@ -2912,7 +2949,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
                     }
                     NdpOption::MTU(mtu) => {
-                        trace!("receive_ndp_packet_inner: mtu option with mtu = {:?}", mtu);
+                        trace!("receive_ndp_packet: mtu option with mtu = {:?}", mtu);
 
                         // TODO(ghanan): Make updating the MTU from an RA
                         // message configurable.
@@ -2923,18 +2960,21 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             // we know `set_mtu` will not panic.
                             ctx.set_mtu(device_id, mtu);
                         } else {
-                            trace!("receive_ndp_packet_inner: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than Ipv6::MINIMUM_LINK_MTU", src_ip, mtu);
+                            trace!("receive_ndp_packet: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than Ipv6::MINIMUM_LINK_MTU", src_ip, mtu);
                         }
                     }
                     NdpOption::PrefixInformation(prefix_info) => {
                         let ndp_state = ctx.get_state_mut_with(device_id);
 
-                        trace!("receive_ndp_packet_inner: prefix information option with prefix = {:?}", prefix_info);
+                        trace!(
+                            "receive_ndp_packet: prefix information option with prefix = {:?}",
+                            prefix_info
+                        );
 
                         let addr_sub = match prefix_info.addr_subnet() {
                             Ok(a) => a,
                             Err(err) => {
-                                trace!("receive_ndp_packet_inner: malformed prefix information ({:?}), so ignoring", err);
+                                trace!("receive_ndp_packet: malformed prefix information ({:?}), so ignoring", err);
                                 continue;
                             }
                         };
@@ -2944,7 +2984,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             // determination) and RFC 4862 section 5.5.3
                             // (SLAAC), ignore options with the the link-local
                             // prefix.
-                            trace!("receive_ndp_packet_inner: prefix is a link local, so ignoring");
+                            trace!("receive_ndp_packet: prefix is a link local, so ignoring");
                             continue;
                         }
 
@@ -2972,7 +3012,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     ctx.schedule_timer(valid_lifetime.get(), timer_id);
                                 }
                             } else if ndp_state.has_prefix(&addr_sub) {
-                                trace!("receive_ndp_packet_inner: on-link prefix is known and has valid lifetime = 0, so invaliding");
+                                trace!("receive_ndp_packet: on-link prefix is known and has valid lifetime = 0, so invaliding");
 
                                 // If the on-link flag is set, the valid
                                 // lifetime is 0 and the prefix is already
@@ -2991,7 +3031,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 // lifetime is 0 and the prefix is not present
                                 // in our prefix list, ignore the option, as per
                                 // RFC 4861 section 6.3.4.
-                                trace!("receive_ndp_packet_inner: on-link prefix is unknown and is has valid lifetime = 0, so ignoring");
+                                trace!("receive_ndp_packet: on-link prefix is unknown and is has valid lifetime = 0, so ignoring");
                             }
                         }
 
@@ -3001,7 +3041,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 // valid lifetime, silently ignore the Prefix
                                 // Information option, as per RFC 4862 section
                                 // 5.5.3.
-                                trace!("receive_ndp_packet_inner: autonomous prefix's preferred lifetime is greater than valid lifetime, ignoring");
+                                trace!("receive_ndp_packet: autonomous prefix's preferred lifetime is greater than valid lifetime, ignoring");
                                 continue;
                             }
 
@@ -3011,7 +3051,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             ) {
                                 Ok(subnet) => subnet,
                                 Err(err) => {
-                                    trace!("receive_ndp_packet_inner: autonomous prefix {:?} with length {:?} is not valid: {:?}", prefix_info.prefix(), prefix_info.prefix_length(), err);
+                                    trace!("receive_ndp_packet: autonomous prefix {:?} with length {:?} is not valid: {:?}", prefix_info.prefix(), prefix_info.prefix_length(), err);
                                     continue;
                                 }
                             };
@@ -3032,12 +3072,12 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             // prefix.
                             if let Some(entry) = ctx.get_ipv6_addr_entries(device_id).find(|a| {
                                 a.addr_sub().subnet() == subnet
-                                    && a.configuration_type() == AddressConfigurationType::Slaac
+                                    && a.config_type() == AddrConfigType::Slaac
                             }) {
                                 let addr_sub = entry.addr_sub();
                                 let addr = addr_sub.addr();
 
-                                trace!("receive_ndp_packet_inner: autonomous prefix is for an already configured SLAAC address {:?} on device {:?}", addr_sub, device_id);
+                                trace!("receive_ndp_packet: autonomous prefix is for an already configured SLAAC address {:?} on device {:?}", addr_sub, device_id);
 
                                 // We know the call to `unwrap` will not panic
                                 // because `entry` will be an `AddressEntry`
@@ -3059,7 +3099,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 // lifetime of the address is reset to the
                                 // Preferred Lifetime in the received
                                 // advertisement.
-                                trace!("receive_ndp_packet_inner: updating preferred lifetime to {:?} for SLAAC address {:?} on device {:?}", preferred_until, addr, device_id);
+                                trace!("receive_ndp_packet: updating preferred lifetime to {:?} for SLAAC address {:?} on device {:?}", preferred_until, addr, device_id);
 
                                 // Update the preferred lifetime for this
                                 // address.
@@ -3068,21 +3108,17 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 // address was not already assigned to a device.
                                 if let Some(preferred_until_duration) = preferred_until {
                                     if entry.state().is_deprecated() {
-                                        ctx.unique_address_determined(device_id, addr.get());
+                                        ctx.unique_address_determined(device_id, addr);
                                     }
                                     ctx.schedule_timer_instant(
                                         preferred_until_duration,
-                                        NdpTimerId::new_deprecate_slaac_address(
-                                            device_id,
-                                            addr.get(),
-                                        )
-                                        .into(),
+                                        NdpTimerId::new_deprecate_slaac_address(device_id, addr)
+                                            .into(),
                                     );
                                 } else if !entry.state().is_deprecated() {
-                                    ctx.deprecate_slaac_addr(device_id, &addr.get());
+                                    ctx.deprecate_slaac_addr(device_id, &addr);
                                     ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(
-                                        device_id,
-                                        addr.get(),
+                                        device_id, addr,
                                     ));
                                 }
 
@@ -3100,7 +3136,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     // RemainingLifetime, set the valid lifetime
                                     // of the corresponding address to the
                                     // advertised Valid Lifetime.
-                                    trace!("receive_ndp_packet_inner: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
+                                    trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
 
                                     // Set the valid lifetime for this address.
                                     ctx.update_slaac_addr_valid_until(
@@ -3115,8 +3151,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                         .schedule_timer_instant(
                                             valid_until,
                                             NdpTimerId::new_invalidate_slaac_address(
-                                                device_id,
-                                                addr.get()
+                                                device_id, addr
                                             )
                                             .into(),
                                         )
@@ -3145,11 +3180,11 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     //               lifetime in the received
                                     //               option, as per RFC 4862
                                     //               section 5.5.3.e.
-                                    trace!("receive_ndp_packet_inner: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, device_id, valid_for);
+                                    trace!("receive_ndp_packet: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, device_id, valid_for);
                                 } else {
                                     // Otherwise, reset the valid lifetime of
                                     // the corresponding address to 2 hours.
-                                    trace!("receive_ndp_packet_inner: resetting valid lifetime to 2 hrs for SLAAC address {:?} on device {:?}",addr, device_id);
+                                    trace!("receive_ndp_packet: resetting valid lifetime to 2 hrs for SLAAC address {:?} on device {:?}",addr, device_id);
 
                                     // Update the valid lifetime for this address.
                                     let valid_until = now
@@ -3169,8 +3204,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                         .schedule_timer_instant(
                                             valid_until,
                                             NdpTimerId::new_invalidate_slaac_address(
-                                                device_id,
-                                                addr.get()
+                                                device_id, addr
                                             )
                                             .into(),
                                         )
@@ -3192,7 +3226,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 // |    link prefix     |  interface identifier  |
                                 // +---------------------------------------------+
                                 if valid_for == ZERO_DURATION {
-                                    trace!("receive_ndp_packet_inner: autonomous prefix has valid lfietime = 0, ignoring");
+                                    trace!("receive_ndp_packet: autonomous prefix has valid lfietime = 0, ignoring");
                                     continue;
                                 }
 
@@ -3202,7 +3236,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     // equal 128 bits, the Prefix Information
                                     // option MUST be ignored, as per RFC 4862
                                     // section 5.5.3.
-                                    error!("receive_ndp_packet_inner: autonomous prefix length {:?} and interface identifier length {:?} cannot form valid IPv6 address, ignoring", subnet.prefix(), REQUIRED_PREFIX_BITS);
+                                    error!("receive_ndp_packet: autonomous prefix length {:?} and interface identifier length {:?} cannot form valid IPv6 address, ignoring", subnet.prefix(), REQUIRED_PREFIX_BITS);
                                     continue;
                                 }
 
@@ -3222,9 +3256,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 if let Err(err) =
                                     ctx.add_slaac_addr_sub(device_id, address, valid_until)
                                 {
-                                    error!("receive_ndp_packet_inner: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
+                                    error!("receive_ndp_packet: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
                                 } else {
-                                    trace!("receive_ndp_packet_inner: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
+                                    trace!("receive_ndp_packet: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
 
                                     // Set the valid lifetime for this address.
                                     //
@@ -3235,7 +3269,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                             valid_until,
                                             NdpTimerId::new_invalidate_slaac_address(
                                                 device_id,
-                                                address.addr().get()
+                                                address.addr()
                                             )
                                             .into(),
                                         )
@@ -3243,7 +3277,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                                     let timer_id = NdpTimerId::new_deprecate_slaac_address(
                                         device_id,
-                                        address.addr().get(),
+                                        address.addr(),
                                     );
 
                                     // Set the preferred lifetime for this
@@ -3259,10 +3293,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                             )
                                             .is_none()),
                                         None => {
-                                            ctx.deprecate_slaac_addr(
-                                                device_id,
-                                                &address.addr().get(),
-                                            );
+                                            ctx.deprecate_slaac_addr(device_id, &address.addr());
                                             assert!(ctx.cancel_timer(timer_id.into()).is_none());
                                         }
                                     };
@@ -3282,25 +3313,21 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             }
         }
         NdpPacket::NeighborSolicitation(p) => {
-            trace!("receive_ndp_packet_inner: Received NDP NS");
+            trace!("receive_ndp_packet: Received NDP NS");
 
-            let target_address = p.message().target_address();
+            let target_address = try_unit!(UnicastAddr::new(*p.message().target_address()), debug!("receive_ndp_packet: Received NDP neighbor solicitation with non-unicast target address; dropping"));
 
-            // Is `target_address` a valid unicast address, and if so, is it
-            // associated with our device? If not, drop the packet.
-            if !target_address.is_valid_unicast()
-                || ctx.ipv6_addr_state(device_id, target_address).is_none()
-            {
-                // Just ignore packet; either it was not really meant for us or
-                // is malformed.
-                trace!("receive_ndp_packet_inner: Dropping NDP NS packet that is not meant for us or malformed");
+            // Is `target_address` associated with our device? If not, drop the
+            // packet.
+            if ctx.ipv6_addr_state(device_id, &target_address).is_none() {
+                trace!("receive_ndp_packet: Dropping NDP NS packet that is not meant for us");
                 return;
             }
 
             // We know the call to `unwrap` will not panic because we just
             // checked to make sure that `target_address` is associated with
             // `device_id`.
-            let state = ctx.ipv6_addr_state(device_id, target_address).unwrap();
+            let state = ctx.ipv6_addr_state(device_id, &target_address).unwrap();
             if state.is_tentative() {
                 if !src_ip.is_specified() {
                     // If the source address of the packet is the unspecified
@@ -3308,10 +3335,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // the same target address as our `my_addr`. A duplicate
                     // address has been detected.
                     trace!(
-                        "receive_ndp_packet_inner: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, device_id
+                        "receive_ndp_packet: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, device_id
                     );
 
-                    duplicate_address_detected(ctx, device_id, *target_address);
+                    duplicate_address_detected(ctx, device_id, target_address);
                 }
 
                 // `target_address` is tentative on `device_id` so we do not
@@ -3335,30 +3362,30 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // We only update the cache if it is not from an unspecified
                 // address, i.e., it is not a DAD message. (RFC 4861)
                 if let Some(ll) = get_source_link_layer_option(p.body()) {
-                    trace!("receive_ndp_packet_inner: Received NDP NS from {:?} has source link layer option w/ link address {:?}", src_ip, ll);
+                    trace!("receive_ndp_packet: Received NDP NS from {:?} has source link layer option w/ link address {:?}", src_ip, ll);
 
                     // Set the link address and mark it as stale if we either
                     // create the neighbor entry, or updated an existing one, as
                     // per RFC 4861 section 7.2.3.
-                    ctx.get_state_mut_with(device_id).neighbors.set_link_address(
-                        src_ip.get(),
-                        ll,
-                        false,
-                    );
+                    ctx.get_state_mut_with(device_id).neighbors.set_link_address(src_ip, ll, false);
                 }
 
                 trace!(
-                    "receive_ndp_packet_inner: Received NDP NS: sending NA to source of NS {:?}",
+                    "receive_ndp_packet: Received NDP NS: sending NA to source of NS {:?}",
                     src_ip
                 );
 
                 // Finally we ought to reply to the Neighbor Solicitation with a
                 // Neighbor Advertisement.
-                send_neighbor_advertisement(ctx, device_id, true, *target_address, src_ip.get());
-            } else {
-                trace!(
-                    "receive_ndp_packet_inner: Received NDP NS: sending NA to all nodes multicast"
+                send_neighbor_advertisement(
+                    ctx,
+                    device_id,
+                    true,
+                    target_address.into_specified(),
+                    src_ip.into_specified(),
                 );
+            } else {
+                trace!("receive_ndp_packet: Received NDP NS: sending NA to all nodes multicast");
 
                 // Send out Unsolicited Advertisement in response to neighbor
                 // who's performing DAD, as described in RFC 4861 and 4862.
@@ -3366,21 +3393,22 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     ctx,
                     device_id,
                     false,
-                    *target_address,
-                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+                    target_address.into_specified(),
+                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
                 )
             }
         }
         NdpPacket::NeighborAdvertisement(p) => {
-            trace!("receive_ndp_packet_inner: Received NDP NA");
+            trace!("receive_ndp_packet: Received NDP NA");
             let src_ip = try_unit!(src_ip, debug!("receive_ndp_packet: Received NDP packet from the unspecified address; dropping"));
 
             let message = p.message();
-            let target_address = message.target_address();
-            match ctx.ipv6_addr_state(device_id, target_address) {
+            let target_address = try_unit!(UnicastAddr::new(*p.message().target_address()), debug!("receive_ndp_packet: Received NDP neighbor advertisement with non-unicast target address; dropping"));
+
+            match ctx.ipv6_addr_state(device_id, &target_address) {
                 Some(AddressState::Tentative) => {
-                    trace!("receive_ndp_packet_inner: NDP NA has a target address {:?} that is tentative on device {:?}", target_address, device_id);
-                    duplicate_address_detected(ctx, device_id, *target_address);
+                    trace!("receive_ndp_packet: NDP NA has a target address {:?} that is tentative on device {:?}", target_address, device_id);
+                    duplicate_address_detected(ctx, device_id, target_address);
                     return;
                 }
                 Some(AddressState::Assigned) | Some(AddressState::Deprecated) => {
@@ -3389,7 +3417,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     //
                     // TODO(ghanan): Signal to bindings that a duplicate address
                     // is detected?
-                    error!("receive_ndp_packet_inner: NDP NA: A duplicated address {:?} found on device {:?} when we are not in DAD process!", target_address, device_id);
+                    error!("receive_ndp_packet: NDP NA: A duplicated address {:?} found on device {:?} when we are not in DAD process!", target_address, device_id);
                     return;
                 }
                 // Do nothing.
@@ -3401,14 +3429,14 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             let ndp_state = ctx.get_state_mut_with(device_id);
 
             let neighbor_state = if let Some(state) =
-                ndp_state.neighbors.get_neighbor_state_mut(&src_ip.get())
+                ndp_state.neighbors.get_neighbor_state_mut(&src_ip)
             {
                 state
             } else {
                 // If the neighbor is not in the cache, we just ignore the
                 // advertisement, as we're not yet interested in communicating
                 // with it, as per RFC 4861 section 7.2.5.
-                trace!("receive_ndp_packet_inner: Ignoring NDP NA from {:?} does not already exist in our list of neighbors, so discarding", src_ip);
+                trace!("receive_ndp_packet: Ignoring NDP NA from {:?} does not already exist in our list of neighbors, so discarding", src_ip);
                 return;
             };
 
@@ -3422,7 +3450,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 if let Some(address) = target_ll {
                     // Set the IsRouter flag as per RFC 4861 section 7.2.5.
                     trace!(
-                        "receive_ndp_packet_inner: NDP RS from {:?} indicicates it {:?} a router",
+                        "receive_ndp_packet: NDP RS from {:?} indicicates it {:?} a router",
                         src_ip,
                         if message.router_flag() { "is" } else { "isn't" }
                     );
@@ -3439,26 +3467,22 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // state will be set to STALE if the solicited flag is
                     // unset.
                     trace!(
-                        "receive_ndp_packet_inner: Resolving link address of {:?} to {:?}",
+                        "receive_ndp_packet: Resolving link address of {:?} to {:?}",
                         src_ip,
                         address
                     );
-                    ndp_state.neighbors.set_link_address(
-                        src_ip.get(),
-                        address,
-                        message.solicited_flag(),
-                    );
+                    ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
 
                     // Cancel the resolution timeout.
                     ctx.cancel_timer(
-                        NdpTimerId::new_link_address_resolution(device_id, src_ip.get()).into(),
+                        NdpTimerId::new_link_address_resolution(device_id, src_ip).into(),
                     );
 
                     // Send any packets queued for the neighbor awaiting address
                     // resolution.
-                    ctx.address_resolved(device_id, &src_ip.get(), address);
+                    ctx.address_resolved(device_id, &src_ip, address);
                 } else {
-                    trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
+                    trace!("receive_ndp_packet: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
                     return;
                 }
 
@@ -3483,10 +3507,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 //    and MUST NOT update cache.
                 if target_ll.map_or(false, |x| neighbor_state.link_address != Some(x)) {
                     if neighbor_state.is_reachable() {
-                        trace!("receive_ndp_packet_inner: NDP RS from known reachable neighbor {:?} does not have override set, but supplied link addr is different, setting state to stale", src_ip);
+                        trace!("receive_ndp_packet: NDP RS from known reachable neighbor {:?} does not have override set, but supplied link addr is different, setting state to stale", src_ip);
                         neighbor_state.state = NeighborEntryState::Stale;
                     } else {
-                        trace!("receive_ndp_packet_inner: NDP RS from known neighbor {:?} (with reachability unknown) does not have override set, but supplied link addr is different, ignoring", src_ip);
+                        trace!("receive_ndp_packet: NDP RS from known neighbor {:?} (with reachability unknown) does not have override set, but supplied link addr is different, ignoring", src_ip);
                     }
                 }
             }
@@ -3517,26 +3541,26 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 //   the state MUST be set to STALE.
                 // - Otherwise, the state remains the same.
                 if message.solicited_flag() {
-                    trace!("receive_ndp_packet_inner: NDP RS from {:?} is solicited and either has override set, link address isn't provided, or the provided address is not different, updating state to Reachable", src_ip);
+                    trace!("receive_ndp_packet: NDP RS from {:?} is solicited and either has override set, link address isn't provided, or the provided address is not different, updating state to Reachable", src_ip);
                     neighbor_state.state = NeighborEntryState::Reachable;
                 } else if message.override_flag() && target_ll.is_some() && !is_same {
-                    trace!("receive_ndp_packet_inner: NDP RS from {:?} is unsolicited and the link address was updated, updating state to Stale", src_ip);
+                    trace!("receive_ndp_packet: NDP RS from {:?} is unsolicited and the link address was updated, updating state to Stale", src_ip);
 
                     neighbor_state.state = NeighborEntryState::Stale;
                 } else {
-                    trace!("receive_ndp_packet_inner: NDP RS from {:?} is unsolicited and the link address was not updated, doing nothing", src_ip);
+                    trace!("receive_ndp_packet: NDP RS from {:?} is unsolicited and the link address was not updated, doing nothing", src_ip);
                 }
 
                 // Check if the neighbor transitioned from a router -> host.
                 if neighbor_state.is_router && !message.router_flag() {
-                    trace!("receive_ndp_packet_inner: NDP RS from {:?} informed us that it is no longer a router, updating is_router flag", src_ip);
+                    trace!("receive_ndp_packet: NDP RS from {:?} informed us that it is no longer a router, updating is_router flag", src_ip);
                     neighbor_state.is_router = false;
 
-                    if let Some(router_ll) = LinkLocalAddr::from_witness(src_ip) {
+                    if let Some(router_ll) = LinkLocalUnicastAddr::new(src_ip) {
                         // Invalidate the router as a default router if it is
                         // one of our default routers.
                         if ndp_state.has_default_router(&router_ll) {
-                            trace!("receive_ndp_packet_inner: NDP RS from {:?} (known as a default router) informed us that it is no longer a router, invaliding the default router", src_ip);
+                            trace!("receive_ndp_packet: NDP RS from {:?} (known as a default router) informed us that it is no longer a router, invaliding the default router", src_ip);
                             ndp_state.invalidate_default_router(&router_ll);
                         }
                     }
@@ -3592,9 +3616,13 @@ where
 ///
 /// # Panics
 ///
-/// Panics if a valid IPv6 address cannot be formed with the provided prefix and
-/// interface identifier, or if the prefix length is not a multiple of 8 bits.
-fn generate_global_address(prefix: &Subnet<Ipv6Addr>, iid: &[u8]) -> AddrSubnet<Ipv6Addr> {
+/// Panics if a valid IPv6 unicast address cannot be formed with the provided
+/// prefix and interface identifier, or if the prefix length is not a multiple
+/// of 8 bits.
+fn generate_global_address(
+    prefix: &Subnet<Ipv6Addr>,
+    iid: &[u8],
+) -> AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
     if prefix.prefix() % 8 != 0 {
         unimplemented!("generate_global_address: not implemented for when prefix length is not a multiple of 8 bits");
     }
@@ -3624,7 +3652,7 @@ mod tests {
     use packet_formats::icmp::ndp::{
         options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
     };
-    use packet_formats::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
+    use packet_formats::icmp::{IcmpEchoRequest, Icmpv6Packet};
     use packet_formats::testutil::{
         parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
@@ -3643,6 +3671,8 @@ mod tests {
     };
     use crate::{Context, Instant, StackStateBuilder, TimerId, TimerIdInner};
 
+    type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
+
     // We assume Ethernet since that's what all of our tests use.
     impl From<NdpTimerId<EthernetLinkDevice, EthernetDeviceId>> for TimerId {
         fn from(id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>) -> Self {
@@ -3655,12 +3685,12 @@ mod tests {
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
-    fn local_ip() -> SpecifiedAddr<Ipv6Addr> {
-        DUMMY_CONFIG_V6.local_ip
+    fn local_ip() -> UnicastAddr<Ipv6Addr> {
+        UnicastAddr::from_witness(DUMMY_CONFIG_V6.local_ip).unwrap()
     }
 
-    fn remote_ip() -> SpecifiedAddr<Ipv6Addr> {
-        DUMMY_CONFIG_V6.remote_ip
+    fn remote_ip() -> UnicastAddr<Ipv6Addr> {
+        UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap()
     }
 
     fn router_advertisement_message(
@@ -4248,7 +4278,7 @@ mod tests {
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
 
-        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip().get());
+        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip());
 
         // Check that we send the original neighbor solicitation, then resend a
         // few times if we don't receive a response.
@@ -4257,8 +4287,7 @@ mod tests {
 
             assert_eq!(
                 testutil::trigger_next_timer(&mut ctx).unwrap(),
-                NdpTimerId::new_link_address_resolution(dev_id.id().into(), remote_ip().get())
-                    .into()
+                NdpTimerId::new_link_address_resolution(dev_id.id().into(), remote_ip()).into()
             );
         }
         // Check that we hit the timeout after MAX_MULTICAST_SOLICIT.
@@ -4316,7 +4345,7 @@ mod tests {
             device_id,
             local_ip().get(),
             remote_ip().get(),
-            remote_ip(),
+            remote_ip().into_specified(),
             IpProto::Icmpv6,
             body,
             None,
@@ -4421,7 +4450,7 @@ mod tests {
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
 
-        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip().get());
+        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip());
 
         // This should have scheduled a timer
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
@@ -4444,7 +4473,8 @@ mod tests {
         // so they will both give up using that address.
         set_logger_for_test();
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
-        let multicast_addr = mac.to_ipv6_link_local().addr().get().to_solicited_node_address();
+        let ll_addr: Ipv6Addr = mac.to_ipv6_link_local().addr().get();
+        let multicast_addr = ll_addr.to_solicited_node_address();
         let local = DummyEventDispatcherBuilder::default();
         let remote = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(0);
@@ -4560,7 +4590,7 @@ mod tests {
 
         assert_eq!(
             testutil::trigger_next_timer(net.context("local")).unwrap(),
-            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip().get()).into()
+            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip()).into()
         );
 
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
@@ -4654,7 +4684,7 @@ mod tests {
         for _ in 0..3 {
             assert_eq!(
                 testutil::trigger_next_timer(&mut ctx).unwrap(),
-                NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip().get()).into()
+                NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into()
             );
         }
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
@@ -4707,7 +4737,7 @@ mod tests {
         .unwrap();
 
         let expected_timer_id =
-            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip().get()).into();
+            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip()).into();
         // During the first and second period, the remote host is still down.
         assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
         assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
@@ -4757,7 +4787,9 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Send another NS.
@@ -4767,20 +4799,32 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
         run_for(&mut ctx, Duration::from_secs(2));
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_assigned());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
         run_for(&mut ctx, Duration::from_secs(1));
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_assigned());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_assigned());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // No more timers.
@@ -4805,7 +4849,9 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Send another NS.
@@ -4815,26 +4861,38 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
         // Run 1s
         run_for(&mut ctx, Duration::from_secs(1));
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+            .unwrap()
+            .is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
 
         // Remove local ip
-        del_ip_addr(&mut ctx, dev_id, &local_ip()).unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).is_none());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
+        del_ip_addr(&mut ctx, dev_id, &local_ip().into_specified()).unwrap();
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified()).is_none());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
         run_for(&mut ctx, Duration::from_secs(2));
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).is_none());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified()).is_none());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+            .unwrap()
+            .is_assigned());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // No more timers.
@@ -5010,7 +5068,7 @@ mod tests {
             5,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         assert!(
             !StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5058,7 +5116,7 @@ mod tests {
             11,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5100,7 +5158,7 @@ mod tests {
             17,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5137,7 +5195,7 @@ mod tests {
             0,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5178,7 +5236,7 @@ mod tests {
             29,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5220,7 +5278,7 @@ mod tests {
             35,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5264,7 +5322,7 @@ mod tests {
             41,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5326,7 +5384,7 @@ mod tests {
                 0,
             );
             let icmpv6_packet = icmpv6_packet_buf
-                .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+                .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
                 .unwrap();
             assert!(
                 !StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5394,7 +5452,7 @@ mod tests {
             5,
         );
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5426,7 +5484,7 @@ mod tests {
         let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                src_ip.get(),
+                src_ip,
                 config.local_ip,
                 IcmpUnusedCode,
                 RouterAdvertisement::new(1, false, false, 3, 4, 5),
@@ -5434,7 +5492,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
@@ -5507,7 +5565,7 @@ mod tests {
 
         let mut icmpv6_packet_buf = packet_buf(src_ip.get(), config.local_ip.get(), 5781);
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device,
@@ -5529,7 +5587,7 @@ mod tests {
         let mut icmpv6_packet_buf =
             packet_buf(src_ip.get(), config.local_ip.get(), u32::from(Ipv6::MINIMUM_LINK_MTU) - 1);
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device,
@@ -5551,7 +5609,7 @@ mod tests {
         let mut icmpv6_packet_buf =
             packet_buf(src_ip.get(), config.local_ip.get(), Ipv6::MINIMUM_LINK_MTU.into());
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(
             device,
@@ -6035,7 +6093,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &dummy_config.local_ip
+                &dummy_config.local_ip.try_into().unwrap()
             )
             .unwrap(),
             AddressState::Assigned
@@ -6059,7 +6117,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &dummy_config.local_ip
+                &dummy_config.local_ip.try_into().unwrap()
             )
             .unwrap(),
             AddressState::Assigned
@@ -6068,7 +6126,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &dummy_config.remote_ip
+                &dummy_config.remote_ip.try_into().unwrap()
             )
             .unwrap(),
             AddressState::Tentative
@@ -6079,9 +6137,11 @@ mod tests {
         // Disable DAD during DAD.
         ndp_configs.set_dup_addr_detect_transmits(None);
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-        let expected_timer_id =
-            NdpTimerId::new_dad_ns_transmission(device.id().into(), dummy_config.remote_ip.get())
-                .into();
+        let expected_timer_id = NdpTimerId::new_dad_ns_transmission(
+            device.id().into(),
+            dummy_config.remote_ip.try_into().unwrap(),
+        )
+        .into();
         // Allow aleady started DAD to complete (2 more more NS, 3 more timers).
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
@@ -6093,7 +6153,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &dummy_config.remote_ip
+                &dummy_config.remote_ip.try_into().unwrap()
             )
             .unwrap(),
             AddressState::Assigned
@@ -6107,7 +6167,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &dummy_config.local_ip
+                &dummy_config.local_ip.try_into().unwrap()
             )
             .unwrap(),
             AddressState::Assigned
@@ -6116,14 +6176,18 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &dummy_config.remote_ip
+                &dummy_config.remote_ip.try_into().unwrap()
             )
             .unwrap(),
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(&ctx, device.id().into(), &new_ip)
-                .unwrap(),
+            NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
+                &ctx,
+                device.id().into(),
+                &new_ip.try_into().unwrap()
+            )
+            .unwrap(),
             AddressState::Assigned
         );
     }
@@ -6162,7 +6226,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
         );
     }
 
@@ -6201,7 +6265,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
         );
     }
 
@@ -6232,7 +6296,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
         );
     }
 
@@ -6332,7 +6396,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         let (_, _, src_ip, dst_ip, _, message, code) =
@@ -6386,7 +6450,7 @@ mod tests {
         send_router_advertisement::<EthernetLinkDevice, _>(
             &mut ctx,
             device.id().into(),
-            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         let (_, _, src_ip, dst_ip, _, message, code) =
@@ -6995,7 +7059,10 @@ mod tests {
                 &mut ctx,
                 device.id().into(),
             );
-        let neighbor = ndp_state.neighbors.get_neighbor_state_mut(&dummy_config.remote_ip).unwrap();
+        let neighbor = ndp_state
+            .neighbors
+            .get_neighbor_state_mut(&dummy_config.remote_ip.try_into().unwrap())
+            .unwrap();
         assert_eq!(neighbor.link_address.unwrap(), dummy_config.remote_mac);
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
         assert_eq!(neighbor.is_router, false);
@@ -7043,7 +7110,10 @@ mod tests {
                 &mut ctx,
                 device.id().into(),
             );
-        let neighbor = ndp_state.neighbors.get_neighbor_state(&dummy_config.remote_ip).unwrap();
+        let neighbor = ndp_state
+            .neighbors
+            .get_neighbor_state(&dummy_config.remote_ip.try_into().unwrap())
+            .unwrap();
         assert_eq!(neighbor.link_address.unwrap(), dummy_config.remote_mac);
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
         assert_eq!(neighbor.is_router, false);
@@ -7172,7 +7242,7 @@ mod tests {
                     device.id().into(),
                 )
                 .neighbors
-                .get_neighbor_state(&src_ip)
+                .get_neighbor_state(&src_ip.try_into().unwrap())
                 .unwrap();
             assert_eq!(neighbor_state.state, expected_state);
             assert_eq!(neighbor_state.is_router, expected_router);
@@ -7186,7 +7256,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let neighbor_mac = config.remote_mac;
-        let neighbor_ip = neighbor_mac.to_ipv6_link_local().addr().get();
+        let neighbor_ip = neighbor_mac.to_ipv6_link_local().addr();
         let all_nodes_addr = Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
 
         // Should not know about the neighbor yet.
@@ -7195,7 +7265,7 @@ mod tests {
             device.id().into()
         )
         .neighbors
-        .get_neighbor_state(&neighbor_ip)
+        .get_neighbor_state(&neighbor_ip.get())
         .is_none());
 
         // Receiving unsolicited NA from a neighbor we don't care about yet
@@ -7203,7 +7273,7 @@ mod tests {
 
         // Receive the NA.
         let mut buf = neighbor_advertisement_message(
-            neighbor_ip,
+            neighbor_ip.get(),
             all_nodes_addr.get(),
             false,
             false,
@@ -7215,7 +7285,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device,
-            Ipv6SourceAddr::new(neighbor_ip).unwrap(),
+            Ipv6SourceAddr::from_witness(neighbor_ip).unwrap(),
             all_nodes_addr,
             packet.unwrap_ndp(),
         );
@@ -7235,7 +7305,7 @@ mod tests {
 
         // Receive the NA.
         let mut buf = neighbor_advertisement_message(
-            neighbor_ip,
+            neighbor_ip.get(),
             all_nodes_addr.get(),
             false,
             true,
@@ -7247,7 +7317,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device,
-            Ipv6SourceAddr::new(neighbor_ip).unwrap(),
+            Ipv6SourceAddr::from_witness(neighbor_ip).unwrap(),
             all_nodes_addr,
             packet.unwrap_ndp(),
         );
@@ -7274,11 +7344,11 @@ mod tests {
                 device.id().into(),
             )
             .neighbors;
-        neighbors.add_incomplete_neighbor_state(neighbor_ip);
+        neighbors.add_incomplete_neighbor_state(neighbor_ip.get());
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7297,7 +7367,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7316,7 +7386,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             true,
@@ -7335,7 +7405,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7355,7 +7425,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7374,7 +7444,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7392,7 +7462,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7411,7 +7481,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7430,7 +7500,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7449,7 +7519,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut ctx,
-            neighbor_ip,
+            neighbor_ip.get(),
             config.local_ip,
             device,
             false,
@@ -7568,8 +7638,8 @@ mod tests {
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
-        let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
         let mut ndp_configs = NdpConfigurations::default();
@@ -7656,7 +7726,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Tentative);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
@@ -7701,7 +7771,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Receive the same RA.
         //
@@ -7745,7 +7815,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Timers should have been reset.
         let now = ctx.now();
@@ -7792,7 +7862,7 @@ mod tests {
                 .last()
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Deprecated);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Valid lifetime expiration.
         //
@@ -7830,7 +7900,7 @@ mod tests {
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
+        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
 
         // Enable DAD for future IPs.
         let mut ndp_configs = NdpConfigurations::default();
@@ -7935,8 +8005,8 @@ mod tests {
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
-        let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
         let mut ndp_configs = NdpConfigurations::default();
@@ -7988,7 +8058,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Tentative);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
@@ -8041,7 +8111,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         //
         // Receive the same RA, now with preferred_lifetime = 0
@@ -8086,7 +8156,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Deprecated);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Timers should have been reset.
         let now = ctx.now();
@@ -8157,7 +8227,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Deprecated);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Timers should have been reset.
         let now = ctx.now();
@@ -8228,7 +8298,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
@@ -8278,7 +8348,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         //
         // Preferred lifetime expiration.
@@ -8295,7 +8365,7 @@ mod tests {
                 .last()
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Deprecated);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         //
         // Valid lifetime expiration.
@@ -8336,11 +8406,11 @@ mod tests {
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
-        let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Manually give the device the expected address/subnet
-        add_ip_addr_subnet(&mut ctx, device, expected_addr_sub).unwrap();
+        add_ip_addr_subnet(&mut ctx, device, expected_addr_sub.into_witness()).unwrap();
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -8351,7 +8421,7 @@ mod tests {
                 .last()
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
+        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Receive a new RA with new prefix (autonomous).
@@ -8390,7 +8460,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
+        assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
@@ -8414,11 +8484,12 @@ mod tests {
         let prefix_length = 64;
         let mut manual_addr_sub = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         manual_addr_sub[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let manual_addr_sub = Ipv6Addr::new(manual_addr_sub);
-        let manual_addr_sub = AddrSubnet::new(manual_addr_sub, prefix_length + 10).unwrap();
+        let manual_addr_sub = UnicastAddr::new(Ipv6Addr::new(manual_addr_sub)).unwrap();
+        let manual_addr_sub =
+            AddrSubnet::from_witness(manual_addr_sub, prefix_length + 10).unwrap();
         // Manually give the device the expected address but with a different
         // prefix.
-        add_ip_addr_subnet(&mut ctx, device, manual_addr_sub).unwrap();
+        add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.into_witness()).unwrap();
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -8430,7 +8501,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
+        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Receive a new RA with new prefix (autonomous).
@@ -8468,7 +8539,7 @@ mod tests {
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
+        assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
@@ -8490,14 +8561,14 @@ mod tests {
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let manual_addr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        let manual_addr = Ipv6Addr::new(manual_addr);
-        let manual_addr_sub = AddrSubnet::new(manual_addr, prefix_length).unwrap();
+        let manual_addr = UnicastAddr::new(Ipv6Addr::new(manual_addr)).unwrap();
+        let manual_addr_sub = AddrSubnet::from_witness(manual_addr, prefix_length).unwrap();
         let mut slaac_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         slaac_addr[8..].copy_from_slice(&config.local_mac.to_eui64());
         let slaac_addr = Ipv6Addr::new(slaac_addr);
         let slaac_addr_sub = AddrSubnet::new(slaac_addr, prefix_length).unwrap();
         // Manually give the device the expected address with the same prefix.
-        add_ip_addr_subnet(&mut ctx, device, manual_addr_sub).unwrap();
+        add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.into_witness()).unwrap();
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -8508,7 +8579,7 @@ mod tests {
                 .last()
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
+        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Receive a new RA with new prefix (autonomous).
@@ -8546,7 +8617,7 @@ mod tests {
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Manual);
+        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         let entry =
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .last()
@@ -8554,7 +8625,7 @@ mod tests {
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), slaac_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Address invalidation timers were added.
         assert_eq!(ctx.dispatcher().timer_events().count(), 2);
@@ -8630,8 +8701,8 @@ mod tests {
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
-        let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
         assert_eq!(
@@ -8692,7 +8763,7 @@ mod tests {
                 .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state(), AddressState::Tentative);
-        assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
@@ -8756,7 +8827,7 @@ mod tests {
             src_ip: Ipv6Addr,
             dst_ip: SpecifiedAddr<Ipv6Addr>,
             subnet: Subnet<Ipv6Addr>,
-            addr_sub: AddrSubnet<Ipv6Addr>,
+            addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
             preferred_lifetime: u32,
             valid_lifetime: u32,
             expected_valid_lifetime: u32,
@@ -8798,7 +8869,7 @@ mod tests {
                     .unwrap();
             assert_eq!(*entry.addr_sub(), addr_sub);
             assert_eq!(entry.state(), AddressState::Assigned);
-            assert_eq!(entry.configuration_type(), AddressConfigurationType::Slaac);
+            assert_eq!(entry.config_type(), AddrConfigType::Slaac);
             assert_eq!(entry.valid_until().unwrap(), valid_until);
             assert_eq!(
                 ctx.dispatcher()
@@ -8810,7 +8881,7 @@ mod tests {
                         && (*x.1
                             == NdpTimerId::new_deprecate_slaac_address(
                                 device.id().into(),
-                                addr_sub.addr().get()
+                                addr_sub.addr()
                             )
                             .into()))
                     .count(),
@@ -8823,7 +8894,7 @@ mod tests {
                         && (*x.1
                             == NdpTimerId::new_invalidate_slaac_address(
                                 device.id().into(),
-                                addr_sub.addr().get()
+                                addr_sub.addr()
                             )
                             .into()))
                     .count(),
@@ -8845,8 +8916,8 @@ mod tests {
         let subnet = Subnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = Ipv6Addr::new(expected_addr);
-        let expected_addr_sub = AddrSubnet::new(expected_addr, prefix_length).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
         assert_eq!(

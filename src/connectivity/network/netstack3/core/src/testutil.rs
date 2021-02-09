@@ -17,7 +17,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
 };
-use net_types::{SpecifiedAddr, Witness};
+use net_types::{SpecifiedAddr, UnicastAddr, Witness};
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::ip::IpProto;
 use rand::{self, CryptoRng, RngCore, SeedableRng};
@@ -394,7 +394,7 @@ impl<A: IpAddress> DummyEventDispatcherConfig<A> {
 pub(crate) struct DummyEventDispatcherBuilder {
     devices: Vec<(Mac, Option<(IpAddr, SubnetEither)>)>,
     arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
-    ndp_table_entries: Vec<(usize, Ipv6Addr, Mac)>,
+    ndp_table_entries: Vec<(usize, UnicastAddr<Ipv6Addr>, Mac)>,
     // usize refers to index into devices Vec.
     device_routes: Vec<(SubnetEither, usize)>,
     routes: Vec<(SubnetEither, SpecifiedAddr<IpAddr>)>,
@@ -419,9 +419,10 @@ impl DummyEventDispatcherBuilder {
         cfg.remote_ip
             .get()
             .with_v4(|ip| builder.arp_table_entries.push((0, ip, cfg.remote_mac)), ());
-        cfg.remote_ip
-            .get()
-            .with_v6(|ip| builder.ndp_table_entries.push((0, ip, cfg.remote_mac)), ());
+        cfg.remote_ip.get().with_v6(
+            |ip| builder.ndp_table_entries.push((0, UnicastAddr::new(ip).unwrap(), cfg.remote_mac)),
+            (),
+        );
 
         // Even with fixed ipv4 address we can have IPv6 link local addresses
         // pre-cached.
@@ -466,7 +467,12 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Add an NDP table entry for a device's NDP table.
-    pub(crate) fn add_ndp_table_entry(&mut self, device: usize, ip: Ipv6Addr, mac: Mac) {
+    pub(crate) fn add_ndp_table_entry(
+        &mut self,
+        device: usize,
+        ip: UnicastAddr<Ipv6Addr>,
+        mac: Mac,
+    ) {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
@@ -583,7 +589,7 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     // at the same time, which would be required in order to pass them both to
     // `.with`.
     ip.with_v4(|ip| builder.add_arp_table_entry(device, ip, mac), ());
-    ip.with_v6(|ip| builder.add_ndp_table_entry(device, ip, mac), ());
+    ip.with_v6(|ip| builder.add_ndp_table_entry(device, UnicastAddr::new(ip).unwrap(), mac), ());
 }
 
 impl Instant for std::time::Instant {

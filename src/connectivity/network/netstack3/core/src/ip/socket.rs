@@ -9,7 +9,7 @@ use core::marker::PhantomData;
 use core::num::NonZeroU8;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::SpecifiedAddr;
+use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{BufferMut, Serializer};
 use packet_formats::ip::{IpExt, IpProto};
 use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
@@ -382,10 +382,14 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
                 //   host model.
                 // - What about when the socket is bound to a device? How does
                 //   that affect things?
-                if crate::device::get_ip_addr_state(self, dst.device, &local_ip)
-                    .map(|state| !state.is_tentative())
-                    .unwrap_or(false)
-                {
+                //
+                // TODO(fxbug.dev/69196): Give `local_ip` the type
+                // `Option<UnicastAddr<Ipv6Addr>>` instead of doing this dynamic
+                // check here.
+                if let Some(local_ip) = UnicastAddr::from_witness(local_ip).and_then(|local_ip| {
+                    crate::device::get_ip_addr_state(self, dst.device, &local_ip.into_specified())
+                        .and_then(|state| if state.is_tentative() { None } else { Some(local_ip) })
+                }) {
                     (local_ip, dst.device)
                 } else {
                     return Err(NoRouteError);
@@ -404,7 +408,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
                     dst.device,
                     crate::device::list_devices(self)
                         .map(|device_id| {
-                            crate::device::get_ip_addr_subnets(self, device_id)
+                            crate::device::get_ipv6_addr_subnets(self, device_id)
                                 .map(move |a| (a, device_id))
                         })
                         .flatten(),
@@ -416,7 +420,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
                 // `AddrSubnet`s, which guarantee that their addresses are
                 // unicast address in their subnets. That satisfies the
                 // invariant on this field.
-                local_ip,
+                local_ip: local_ip.into_specified(),
                 remote_ip,
                 proto,
                 unroutable_behavior,
@@ -449,12 +453,12 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
 fn select_ipv6_source_address<
     'a,
     Instant: 'a,
-    I: Iterator<Item = (&'a AddressEntry<Ipv6Addr, Instant>, DeviceId)>,
+    I: Iterator<Item = (&'a AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>, DeviceId)>,
 >(
     remote_ip: SpecifiedAddr<Ipv6Addr>,
     outbound_device: DeviceId,
     addresses: I,
-) -> Option<(SpecifiedAddr<Ipv6Addr>, DeviceId)> {
+) -> Option<(UnicastAddr<Ipv6Addr>, DeviceId)> {
     // Source address selection as defined in RFC 6724 Section 5.
     //
     // The algorithm operates by defining a partial ordering on available source
@@ -479,17 +483,17 @@ fn select_ipv6_source_address<
 fn select_ipv6_source_address_cmp<Instant>(
     remote_ip: SpecifiedAddr<Ipv6Addr>,
     outbound_device: DeviceId,
-    a: &AddressEntry<Ipv6Addr, Instant>,
+    a: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
     a_device: &DeviceId,
-    b: &AddressEntry<Ipv6Addr, Instant>,
+    b: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
     b_device: &DeviceId,
 ) -> Ordering {
     // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, 7, and 8.
 
     let a_state = a.state();
-    let a = a.addr_sub().addr();
+    let a = a.addr_sub().addr().into_specified();
     let b_state = b.state();
-    let b = b.addr_sub().addr();
+    let b = b.addr_sub().addr().into_specified();
 
     // Assertions required in order for this implementation to be valid.
 
@@ -762,7 +766,7 @@ mod tests {
     use packet_formats::testutil::parse_ip_packet_in_ethernet_frame;
 
     use super::*;
-    use crate::device::{AddressConfigurationType, AddressState};
+    use crate::device::{AddrConfigType, AddressState};
     use crate::testutil::*;
 
     #[test]
@@ -1133,11 +1137,14 @@ mod tests {
 
         /// Construct a new `AddressEntry` with reasonable defaults for this
         /// test.
-        fn new_addr_entry(addr: Ipv6Addr, state: AddressState) -> AddressEntry<Ipv6Addr, ()> {
+        fn new_addr_entry(
+            addr: Ipv6Addr,
+            state: AddressState,
+        ) -> AddressEntry<Ipv6Addr, (), UnicastAddr<Ipv6Addr>> {
             AddressEntry::new(
                 AddrSubnet::new(addr, 128).unwrap(),
                 state,
-                AddressConfigurationType::Manual,
+                AddrConfigType::Manual,
                 None,
             )
         }

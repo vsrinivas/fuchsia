@@ -15,7 +15,7 @@ use core::time::Duration;
 use log::{debug, error, trace};
 use net_types::ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope, Ipv6SourceAddr};
 use net_types::{
-    LinkLocalAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, SpecifiedAddress, Witness,
+    LinkLocalUnicastAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, SpecifiedAddress, Witness,
 };
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
@@ -69,7 +69,10 @@ pub(crate) trait MldContext<D: LinkDevice>:
     > + FrameContext<EmptyBuf, MldFrameMetadata<<Self as DeviceIdContext<D>>::DeviceId>>
 {
     /// Gets the IPv6 link local address on `device`.
-    fn get_ipv6_link_local_addr(&self, device: Self::DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>>;
+    fn get_ipv6_link_local_addr(
+        &self,
+        device: Self::DeviceId,
+    ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>>;
 
     /// Is MLD enabled for `device`?
     ///
@@ -472,7 +475,7 @@ mod tests {
     struct DummyMldContext {
         groups: MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
         mld_enabled: bool,
-        ipv6_link_local: Option<LinkLocalAddr<Ipv6Addr>>,
+        ipv6_link_local: Option<LinkLocalUnicastAddr<Ipv6Addr>>,
     }
 
     impl Default for DummyMldContext {
@@ -525,7 +528,7 @@ mod tests {
         fn get_ipv6_link_local_addr(
             &self,
             _device: DummyLinkDeviceId,
-        ) -> Option<LinkLocalAddr<Ipv6Addr>> {
+        ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
             self.get_ref().ipv6_link_local
         }
 
@@ -568,7 +571,7 @@ mod tests {
         resp_time: Duration,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) {
-        let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
+        let router_addr: Ipv6Addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
         let mut buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
             group_addr.get(),
             resp_time.try_into().unwrap(),
@@ -597,7 +600,7 @@ mod tests {
     }
 
     fn receive_mld_report(ctx: &mut DummyContext, group_addr: MulticastAddr<Ipv6Addr>) {
-        let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
+        let router_addr: Ipv6Addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
         let mut buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(group_addr)
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<_, &[u8], _>::new(

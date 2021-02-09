@@ -10,7 +10,8 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::ip::{AddrSubnet, IpAddress, Ipv6, Ipv6Addr};
 use crate::{
-    BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress, Witness,
+    BroadcastAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, UnicastAddress,
+    Witness,
 };
 
 /// A media access control (MAC) address.
@@ -81,20 +82,20 @@ impl Mac {
         eui
     }
 
-    /// Returns the link-local IPv6 address and subnet for this MAC address, as
-    /// per [RFC 4862], with the default EUI magic value.
+    /// Returns the link-local unicast IPv6 address and subnet for this MAC
+    /// address, as per [RFC 4862], with the default EUI magic value.
     ///
     /// `mac.to_ipv6_link_local()` is equivalent to
     /// `mac.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)`.
     ///
     /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
     #[inline]
-    pub fn to_ipv6_link_local(self) -> AddrSubnet<Ipv6Addr, LinkLocalAddr<Ipv6Addr>> {
+    pub fn to_ipv6_link_local(self) -> AddrSubnet<Ipv6Addr, LinkLocalUnicastAddr<Ipv6Addr>> {
         self.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)
     }
 
-    /// Returns the link-local IPv6 address and subnet for this MAC address, as
-    /// per [RFC 4862].
+    /// Returns the link-local unicast IPv6 address and subnet for this MAC
+    /// address, as per [RFC 4862].
     ///
     /// `eui_magic` is the two bytes that are inserted between the bytes of the
     /// MAC address to form the identifier. Also see the [`to_ipv6_link_local`]
@@ -110,7 +111,7 @@ impl Mac {
     pub fn to_ipv6_link_local_with_magic(
         self,
         eui_magic: [u8; 2],
-    ) -> AddrSubnet<Ipv6Addr, LinkLocalAddr<Ipv6Addr>> {
+    ) -> AddrSubnet<Ipv6Addr, LinkLocalUnicastAddr<Ipv6Addr>> {
         let mut ipv6_addr = [0; 16];
         ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64_with_magic(eui_magic));
@@ -233,6 +234,12 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
             },
         )))
         .unwrap()
+    }
+}
+
+impl<W: Witness<Mac>> From<W> for Mac {
+    fn from(witness: W) -> Mac {
+        witness.into_addr()
     }
 }
 
