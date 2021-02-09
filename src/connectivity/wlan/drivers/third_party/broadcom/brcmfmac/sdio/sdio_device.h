@@ -29,19 +29,21 @@ class DeviceInspect;
 // This class uses the DDKTL classes to manage the lifetime of a brcmfmac driver instance.
 class SdioDevice : public Device {
  public:
-  // Static factory function for SdioDevice instances. This factory does not return an owned
-  // instance, as on successful invocation the instance will have its lifecycle maanged by the
-  // devhost.
-  static zx_status_t Create(zx_device_t* parent_device);
-
   SdioDevice(const SdioDevice& device) = delete;
   SdioDevice& operator=(const SdioDevice& other) = delete;
+  ~SdioDevice() override;
+
+  // Static factory function for SdioDevice instances. This factory does not return an owned
+  // instance, as on successful invocation the instance will have its lifecycle managed by the
+  // devhost.
+  static zx_status_t Create(zx_device_t* parent_device);
 
   // Virtual state accessor implementation.
   async_dispatcher_t* GetDispatcher() override;
   DeviceInspect* GetInspect() override;
 
   // Trampolines for DDK functions, for platforms that support them
+  void Init(ddk::InitTxn txn) override;
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
@@ -49,7 +51,6 @@ class SdioDevice : public Device {
 
  private:
   explicit SdioDevice(zx_device_t* parent);
-  ~SdioDevice();
 
   std::unique_ptr<async::Loop> async_loop_;
   std::unique_ptr<DeviceInspect> inspect_;

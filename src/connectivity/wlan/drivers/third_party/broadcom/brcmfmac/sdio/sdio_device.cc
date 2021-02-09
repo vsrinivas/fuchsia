@@ -19,6 +19,8 @@
 #include <limits>
 #include <string>
 
+#include <ddktl/init-txn.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
@@ -30,6 +32,14 @@
 
 namespace wlan {
 namespace brcmfmac {
+
+SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
+
+SdioDevice::~SdioDevice() {
+  if (brcmf_bus_) {
+    brcmf_sdio_exit(brcmf_bus_.get());
+  }
+}
 
 // static
 zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
@@ -45,43 +55,48 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  const auto ddk_remover = [](SdioDevice* device) { device->DdkAsyncRemove(); };
-  std::unique_ptr<SdioDevice, decltype(ddk_remover)> device(new SdioDevice(parent_device),
-                                                            ddk_remover);
-  if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
-                                   .set_flags(DEVICE_ADD_INVISIBLE)
-                                   .set_inspect_vmo(inspect->inspector().DuplicateVmo()))) !=
-      ZX_OK) {
-    delete device.release();
-    return status;
-  }
-
+  std::unique_ptr<SdioDevice> device(new SdioDevice(parent_device));
   device->async_loop_ = std::move(async_loop);
   device->inspect_ = std::move(inspect);
 
-  std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_sdio_register(device->drvr(), &bus)) != ZX_OK) {
+  if ((status = device->DdkAdd(
+           ddk::DeviceAddArgs("brcmfmac-wlanphy")
+               .set_inspect_vmo(device->inspect_->inspector().DuplicateVmo()))) != ZX_OK) {
     return status;
   }
-
-  if ((status = brcmf_sdio_load_files(device->drvr(), false)) != ZX_OK) {
-    return status;
-  }
-
-  if ((status = brcmf_bus_started(device->drvr(), false)) != ZX_OK) {
-    return status;
-  }
-
-  device->brcmf_bus_ = std::move(bus);
-
-  device->DdkMakeVisible();
   device.release();  // This now has its lifecycle managed by the devhost.
+
+  // Further initialization is performed in the SdioDevice::Init() DDK hook, invoked by the devhost.
   return ZX_OK;
 }
 
 async_dispatcher_t* SdioDevice::GetDispatcher() { return async_loop_->dispatcher(); }
 
 DeviceInspect* SdioDevice::GetInspect() { return inspect_.get(); }
+
+void SdioDevice::Init(ddk::InitTxn txn) {
+  const zx_status_t status = [this]() {
+    zx_status_t status = ZX_OK;
+
+    std::unique_ptr<brcmf_bus> bus;
+    if ((status = brcmf_sdio_register(drvr(), &bus)) != ZX_OK) {
+      return status;
+    }
+
+    if ((status = brcmf_sdio_load_files(drvr(), false)) != ZX_OK) {
+      return status;
+    }
+
+    if ((status = brcmf_bus_started(drvr(), false)) != ZX_OK) {
+      return status;
+    }
+
+    brcmf_bus_ = std::move(bus);
+    return ZX_OK;
+  }();
+
+  txn.Reply(status);
+}
 
 zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return device_add(zxdev(), args, out_device);
@@ -95,14 +110,6 @@ zx_status_t SdioDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* 
 
 zx_status_t SdioDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
   return device_get_metadata(zxdev(), type, buf, buflen, actual);
-}
-
-SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
-
-SdioDevice::~SdioDevice() {
-  if (brcmf_bus_) {
-    brcmf_sdio_exit(brcmf_bus_.get());
-  }
 }
 
 }  // namespace brcmfmac

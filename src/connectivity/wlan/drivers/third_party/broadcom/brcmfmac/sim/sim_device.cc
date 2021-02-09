@@ -22,19 +22,42 @@
 
 namespace wlan {
 namespace brcmfmac {
+namespace {
 
 constexpr zx_protocol_device_t kSimDeviceOps = {
     .version = DEVICE_OPS_VERSION,
     .release = [](void* ctx) { return static_cast<SimDevice*>(ctx)->DdkRelease(); },
 };
 
+}  // namespace
+
+SimDevice::~SimDevice() {
+  if (brcmf_bus_) {
+    brcmf_sim_exit(brcmf_bus_.get());
+  }
+}
+
 // static
 zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
                               const std::shared_ptr<simulation::Environment>& env,
                               SimDevice** device_out) {
   zx_status_t status = ZX_OK;
-
   auto device = std::make_unique<SimDevice>(parent_device, dev_mgr, env);
+
+  std::unique_ptr<DeviceInspect> inspect;
+  if ((status = DeviceInspect::Create(env->GetDispatcher(), &inspect)) != ZX_OK) {
+    return status;
+  }
+
+  std::unique_ptr<brcmf_bus> bus;
+  if ((status = brcmf_sim_alloc(device->drvr(), &bus, device->fake_dev_mgr_,
+                                device->sim_environ_)) != ZX_OK) {
+    return status;
+  }
+
+  device->inspect_ = std::move(inspect);
+  device->brcmf_bus_ = std::move(bus);
+
   device_add_args_t add_args = {
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = "brcmfmac-wlanphy",
@@ -47,22 +70,7 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
     return status;
   }
 
-  std::unique_ptr<DeviceInspect> inspect;
-  if ((status = DeviceInspect::Create(env->GetDispatcher(), &inspect)) != ZX_OK) {
-    return status;
-  }
-  device->inspect_ = std::move(inspect);
-
-  std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_sim_alloc(device->drvr(), &bus, device->fake_dev_mgr_,
-                                device->sim_environ_)) != ZX_OK) {
-    dev_mgr->DeviceAsyncRemove(device->phy_device_);
-    // Ownership of the device has been transferred to dev_mgr
-    device.release();
-    return status;
-  }
-  device->brcmf_bus_ = std::move(bus);
-
+  // Ownership of the device has been transferred to dev_mgr.
   *device_out = device.release();
   return ZX_OK;
 }
@@ -72,6 +80,11 @@ zx_status_t SimDevice::Init() { return brcmf_sim_register(drvr()); }
 async_dispatcher_t* SimDevice::GetDispatcher() { return sim_environ_->GetDispatcher(); }
 
 DeviceInspect* SimDevice::GetInspect() { return inspect_.get(); }
+
+void SimDevice::Init(ddk::InitTxn txn) {
+  // Not supported.  Manually invoke SimDevice::Init() instead.
+  txn.Reply(ZX_ERR_NOT_SUPPORTED);
+}
 
 zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return fake_dev_mgr_->DeviceAdd(phy_device_, args, out_device);
@@ -88,12 +101,6 @@ zx_status_t SimDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen
 }
 
 brcmf_simdev* SimDevice::GetSim() { return (brcmf_bus_.get())->bus_priv.sim; }
-
-SimDevice::~SimDevice() {
-  if (brcmf_bus_) {
-    brcmf_sim_exit(brcmf_bus_.get());
-  }
-}
 
 }  // namespace brcmfmac
 }  // namespace wlan

@@ -34,6 +34,7 @@ source_set("pcie") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/mmio",
+    "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",

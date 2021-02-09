@@ -44,6 +44,7 @@ source_set("sim_common") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/lib/broadcom",
     "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
     "//zircon/system/public",
   ]

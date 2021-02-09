@@ -8,6 +8,8 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <ddktl/init-txn.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
@@ -36,55 +38,61 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  const auto ddk_remover = [](PcieDevice* device) { device->DdkAsyncRemove(); };
-  std::unique_ptr<PcieDevice, decltype(ddk_remover)> device(new PcieDevice(parent_device),
-                                                            ddk_remover);
-  if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
-                                   .set_flags(DEVICE_ADD_INVISIBLE)
-                                   .set_inspect_vmo(inspect->inspector().DuplicateVmo()))) !=
-      ZX_OK) {
-    delete device.release();
-    return status;
-  }
-
+  std::unique_ptr<PcieDevice> device(new PcieDevice(parent_device));
   device->async_loop_ = std::move(async_loop);
   device->inspect_ = std::move(inspect);
 
-  std::unique_ptr<PcieBus> pcie_bus;
-  if ((status = PcieBus::Create(device.get(), &pcie_bus)) != ZX_OK) {
+  if ((status = device->DdkAdd(
+           ddk::DeviceAddArgs("brcmfmac-wlanphy")
+               .set_inspect_vmo(device->inspect_->inspector().DuplicateVmo()))) != ZX_OK) {
     return status;
   }
-
-  std::unique_ptr<MsgbufProto> msgbuf_proto;
-  if ((status = MsgbufProto::Create(device.get(), pcie_bus->GetDmaBufferProvider(),
-                                    pcie_bus->GetDmaRingProvider(),
-                                    pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
-    return status;
-  }
-
-  device->pcie_bus_ = std::move(pcie_bus);
-  device->msgbuf_proto_ = std::move(msgbuf_proto);
-
-  if ((status = brcmf_attach(device->drvr())) != ZX_OK) {
-    BRCMF_ERR("Failed to attach: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  if ((status = brcmf_bus_started(device->drvr(), false)) != ZX_OK) {
-    BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  // TODO(sheu): make the device visible once higher-level functionality is present.
-  // device->DdkMakeVisible();
-
   device.release();  // This now has its lifecycle managed by the devhost.
+
+  // Further initialization is performed in the PcieDevice::Init() DDK hook, invoked by the devhost.
   return ZX_OK;
 }
 
 async_dispatcher_t* PcieDevice::GetDispatcher() { return async_loop_->dispatcher(); }
 
 DeviceInspect* PcieDevice::GetInspect() { return inspect_.get(); }
+
+void PcieDevice::Init(ddk::InitTxn txn) {
+  const zx_status_t status = [this]() {
+    zx_status_t status = ZX_OK;
+
+    std::unique_ptr<PcieBus> pcie_bus;
+    if ((status = PcieBus::Create(this, &pcie_bus)) != ZX_OK) {
+      return status;
+    }
+
+    std::unique_ptr<MsgbufProto> msgbuf_proto;
+    if ((status = MsgbufProto::Create(this, pcie_bus->GetDmaBufferProvider(),
+                                      pcie_bus->GetDmaRingProvider(),
+                                      pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
+      return status;
+    }
+
+    pcie_bus_ = std::move(pcie_bus);
+    msgbuf_proto_ = std::move(msgbuf_proto);
+
+    if ((status = brcmf_attach(drvr())) != ZX_OK) {
+      BRCMF_ERR("Failed to attach: %s", zx_status_get_string(status));
+      return status;
+    }
+
+    if ((status = brcmf_bus_started(drvr(), false)) != ZX_OK) {
+      BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
+      return status;
+    }
+
+    // TODO(sheu): make the device visible once higher-level functionality is present.
+    // return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
+  }();
+
+  txn.Reply(status);
+}
 
 zx_status_t PcieDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return device_add(zxdev(), args, out_device);

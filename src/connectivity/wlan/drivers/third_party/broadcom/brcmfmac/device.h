@@ -33,7 +33,7 @@ class Device;
 class DeviceInspect;
 class WlanInterface;
 
-class Device : public ::ddk::Device<Device, ddk::Messageable>,
+class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::Messageable>,
                ::llcpp::fuchsia::factory::wlan::Iovar::Interface,
                public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
@@ -48,6 +48,7 @@ class Device : public ::ddk::Device<Device, ddk::Messageable>,
   virtual DeviceInspect* GetInspect() = 0;
 
   // ::ddk::Device implementation.
+  void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
@@ -61,6 +62,7 @@ class Device : public ::ddk::Device<Device, ddk::Messageable>,
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
 
   // Trampolines for DDK functions, for platforms that support them.
+  virtual void Init(ddk::InitTxn txn) = 0;
   virtual zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) = 0;
   virtual void DeviceAsyncRemove(zx_device_t* dev) = 0;
   virtual zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) = 0;

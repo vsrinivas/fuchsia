@@ -136,12 +136,21 @@ wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
 
 }  // namespace
 
+WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
+
+WlanInterface::~WlanInterface() {}
+
 zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev* wdev,
                                   WlanInterface** out_interface) {
   zx_status_t status = ZX_OK;
 
-  const auto ddk_remover = [](WlanInterface* interface) { interface->DdkAsyncRemove(); };
-  std::unique_ptr<WlanInterface, decltype(ddk_remover)> interface(new WlanInterface(), ddk_remover);
+  std::unique_ptr<WlanInterface> interface(new WlanInterface());
+  {
+    std::lock_guard<std::shared_mutex> guard(interface->lock_);
+    interface->device_ = device;
+    interface->wdev_ = wdev;
+  }
+
   device_add_args device_args = {
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = name,
@@ -149,20 +158,12 @@ zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev
       .ops = &kWlanInterfaceDeviceOps,
       .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
       .proto_ops = &wlan_interface_proto_ops,
-      .flags = DEVICE_ADD_INVISIBLE,
   };
   if (device->DeviceAdd(&device_args, &interface->zx_device_) != ZX_OK) {
-    delete interface.release();
     return status;
   }
-  std::lock_guard<std::shared_mutex> guard(interface->lock_);
-  interface->device_ = device;
-  interface->wdev_ = wdev;
-  *out_interface = interface.get();
 
-  device_make_visible(interface->zxdev(), nullptr);
-  interface.release();  // This now has its lifecycle managed by the devhost.
-
+  *out_interface = interface.release();  // This now has its lifecycle managed by the devhost.
   return ZX_OK;
 }
 
@@ -411,10 +412,6 @@ void WlanInterface::WmmStatusReq() {
     brcmf_if_wmm_status_req(wdev_->netdev);
   }
 }
-
-WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
-
-WlanInterface::~WlanInterface() {}
 
 }  // namespace brcmfmac
 }  // namespace wlan

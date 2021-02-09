@@ -16,6 +16,7 @@
 #include <zircon/status.h>
 
 #include <ddktl/fidl.h>
+#include <ddktl/init-txn.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
@@ -38,7 +39,7 @@ constexpr uint16_t kApInterfaceId = 1;
 namespace wlan_llcpp = ::llcpp::fuchsia::factory::wlan;
 
 Device::Device(zx_device_t* parent)
-    : ::ddk::Device<Device, ddk::Messageable>(parent),
+    : ::ddk::Device<Device, ddk::Initializable, ddk::Messageable>(parent),
       brcmf_pub_(std::make_unique<brcmf_pub>()),
       client_interface_(nullptr),
       ap_interface_(nullptr) {
@@ -56,13 +57,15 @@ Device::Device(zx_device_t* parent)
 
 Device::~Device() = default;
 
-void Device::DdkRelease() { delete this; }
+void Device::DdkInit(ddk::InitTxn txn) { Init(std::move(txn)); }
 
 zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   wlan_llcpp::Iovar::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
+
+void Device::DdkRelease() { delete this; }
 
 void Device::Get(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
                  GetCompleter::Sync& _completer) {

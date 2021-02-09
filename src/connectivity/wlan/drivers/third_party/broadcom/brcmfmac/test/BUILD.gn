@@ -31,6 +31,7 @@ source_set("stub_device") {
   public = [ "stub_device.h" ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/ddktl",
     "//zircon/system/public",
   ]
 }

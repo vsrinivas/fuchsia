@@ -31,19 +31,21 @@ class PcieBus;
 // drive the actual chip.
 class PcieDevice : public Device {
  public:
+  PcieDevice(const PcieDevice& device) = delete;
+  PcieDevice& operator=(const PcieDevice& other) = delete;
+  ~PcieDevice() override;
+
   // Static factory function for PcieDevice instances. This factory does not return an owned
   // instance, as on successful invocation the instance will have its lifecycle managed by the
   // devhost.
   static zx_status_t Create(zx_device_t* parent_device);
-
-  PcieDevice(const PcieDevice& device) = delete;
-  PcieDevice& operator=(const PcieDevice& other) = delete;
 
   // Virtual state accessor implementation.
   async_dispatcher_t* GetDispatcher() override;
   DeviceInspect* GetInspect() override;
 
   // Trampolines for DDK functions, for platforms that support them
+  void Init(ddk::InitTxn txn) override;
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
@@ -51,7 +53,6 @@ class PcieDevice : public Device {
 
  private:
   explicit PcieDevice(zx_device_t* parent);
-  ~PcieDevice();
 
   std::unique_ptr<async::Loop> async_loop_;
   std::unique_ptr<DeviceInspect> inspect_;

@@ -31,6 +31,8 @@ class Device;
 
 class WlanInterface {
  public:
+  ~WlanInterface();
+
   // Static factory function.  The returned instance is unowned, since its lifecycle is managed by
   // the devhost.
   static zx_status_t Create(Device* device, const char* name, wireless_dev* wdev,
@@ -83,7 +85,6 @@ class WlanInterface {
 
  private:
   WlanInterface();
-  ~WlanInterface();
 
   zx_device_t* zxdev();
   const zx_device_t* zxdev() const;

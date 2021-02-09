@@ -28,26 +28,26 @@ namespace wlan::brcmfmac {
 
 class SimDevice : public Device {
  public:
+  explicit SimDevice(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
+                     const std::shared_ptr<simulation::Environment>& env)
+      : Device(parent_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
+  SimDevice(const SimDevice& device) = delete;
+  SimDevice& operator=(const SimDevice& other) = delete;
   ~SimDevice() override;
+
   // Static factory function for SimDevice instances.
   static zx_status_t Create(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
                             const std::shared_ptr<simulation::Environment>& env,
                             SimDevice** device_out);
 
-  explicit SimDevice(zx_device_t* parent_device, simulation::FakeDevMgr* dev_mgr,
-                     const std::shared_ptr<simulation::Environment>& env)
-      : Device(parent_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
-
-  SimDevice(const SimDevice& device) = delete;
-  SimDevice& operator=(const SimDevice& other) = delete;
+  // Run the simulator bus initialization.  This is a replacement for the DDK init hook.
+  zx_status_t Init();
 
   async_dispatcher_t* GetDispatcher() override;
   DeviceInspect* GetInspect() override;
 
-  // Run the simulator bus initialization
-  zx_status_t Init();
-
   // Trampolines for DDK functions, for platforms that support them.
+  void Init(ddk::InitTxn txn) override;
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
