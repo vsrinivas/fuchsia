@@ -16,13 +16,14 @@ require (
 	github.com/google/subcommands v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
+	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/kr/fs v0.1.0
 	github.com/kr/pretty v0.1.0
 	github.com/pkg/sftp v1.12.0
 	github.com/smartystreets/assertions v1.2.0 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/pflag v1.0.5
-	go.chromium.org/luci v0.0.0-20200828094204-41b976d93de1
+	go.chromium.org/luci v0.0.0-20210209062837-a3b46505d9a0
 	go.fuchsia.dev/fuchsia/garnet v0.0.0-20200821151753-3226fa91b98e // indirect
 	go.fuchsia.dev/fuchsia/src v0.0.0-20200821151753-3226fa91b98e
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
