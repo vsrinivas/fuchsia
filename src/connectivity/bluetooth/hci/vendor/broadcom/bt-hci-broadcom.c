@@ -17,12 +17,13 @@
 #include <zircon/status.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+
+#include "src/connectivity/bluetooth/hci/vendor/broadcom/bcm_hci_bind.h"
 
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE 2000000
@@ -588,8 +589,4 @@ static zx_driver_ops_t bcm_hci_driver_ops = {
     .bind = bcm_hci_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bcm_hci, bcm_hci_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
-    BI_MATCH_IF(EQ, BIND_SERIAL_VID, PDEV_VID_BROADCOM),
-ZIRCON_DRIVER_END(bcm_hci)
+ZIRCON_DRIVER(bcm_hci, bcm_hci_driver_ops, "zircon", "0.1");
