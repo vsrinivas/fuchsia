@@ -94,3 +94,5 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-057.md
 - title: "FTP-059: Reserved Bits in Vector/String/Array Count Fields"
   path: /docs/contribute/governance/fidl/ftp/ftp-059.md
+- title: "FTP template"
+  path: /docs/contribute/governance/fidl/ftp/TEMPLATE.md

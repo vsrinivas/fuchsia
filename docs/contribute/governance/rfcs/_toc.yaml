@@ -47,3 +47,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0015_cts.md
 - title: "RFC-0016 - Boot time page sizes"
   path: /docs/contribute/governance/rfcs/0016_boot_time_page_sizes.md
+- title: "RFC-0017 - The FTP Process is dead, long live the RFC Process!"
+  path: /docs/contribute/governance/rfcs/0017_folding_ftp_into_rfc.md

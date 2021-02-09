@@ -222,3 +222,16 @@
   reviewers: ['cpu@google.com']
   submitted: '2020-12-02'
   reviewed: '2021-01-12'
+
+- name: 'RFC-0017'
+  title: 'The FTP Process is dead, long live the RFC Process!'
+  short_description: 'Discontinue the FIDL Tuning Process, and consolidate it into the RFC process.'
+  authors: ['pascallouis@google.com']
+  file: '0017_folding_ftp_into_rfc.md'
+  area: ['FIDL','Governance']
+  issue: []
+  gerrit_change_id: ['458035']
+  status: 'Accepted'
+  reviewers: ['vaas@google.com']
+  submitted: '2020-12-14'
+  reviewed: '2020-02-08'

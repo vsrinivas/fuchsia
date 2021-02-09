@@ -93,10 +93,9 @@ Additional details are provided in
 
 ### Design
 
-An FTP (FIDL Tuning Proposal) goes through several stages. These
-stages correspond to the `Status:` field of the heading of the template.
-
-NB: The template is currently Google-internal.
+An FTP (FIDL Tuning Proposal) goes through several stages. These stages
+correspond to the `Status:` field of the heading of the
+[template][ftp-template].
 
 #### Draft
 
@@ -105,7 +104,8 @@ tuning template, and start writing and designing. The proposal should
 address each of the section headings in the template, even if it is
 only to say "Not Applicable".
 
-At this stage they may start soliciting feedback on the draft from impacted parties.
+At this stage they may start soliciting feedback on the draft from impacted
+parties.
 
 #### Comment
 
@@ -145,7 +145,8 @@ What are alternatives to the withdrawn FTP which are promising?
 At this point the FTP, along with all outstanding commentary, is reviewed.
 
 The proposal is reviewed by members of the Fuchsia FIDL team (defined by an
-OWNERS file in the fuchsia.git repository [Location TBD], and unofficially known
+OWNERS file in the [fuchsia.git
+repository](/docs/contribute/governance/fidl/ftp/OWNERS), and unofficially known
 as luthiers), and anyone they see fit to include or to delegate to in the
 process. For example, they may include a particular language expert when making
 a decision about that language's bindings. If necessary, controversial decisions
@@ -230,5 +231,6 @@ proposal was accepted, as being able to point at already considered
 but rejected proposal is a substantial part of the value of this
 process.
 
+<!-- xref -->
 [FIDL]: /docs/development/languages/fidl/README.md
 [tutorial]: /docs/development/languages/fidl/tutorials/overview.md

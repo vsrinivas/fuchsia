@@ -23,7 +23,7 @@ direction of the project.
 
 This section describes the design of the RFC process.
 
-### When to use the process
+### When to use the process {#criteria}
 
 The vast majority of changes to Fuchsia do not require an RFC. Instead, these
 changes can be made using the [code review
@@ -94,7 +94,7 @@ People interact with the RFC process in several roles:
 
 This section describes each step involved in the RFC process.
 
-#### Step 1: Socialize
+#### Step 1: Socialize {#socialize}
 
 The first step in the RFC process is to socialize your idea with the project.
 For example, you might have noticed a problem that you think is important to
@@ -121,7 +121,7 @@ able to point you in a good direction.
 > FTP and CTP process, who have good background and context about these
 > processes.
 
-#### Step 2: Draft
+#### Step 2: Draft {#draft}
 
 Once you have gathered all the background and context you can through
 socialization, you are ready to start the formal part of the RFC process. The
@@ -142,7 +142,7 @@ Do not worry about assigning a number to your RFC at this stage. Instead, use
 > *Suggestion.* Consider marking the CL containing your RFC as a
 > "work-in-progress" until you are ready for feedback.
 
-#### Step 3: Iterate
+#### Step 3: Iterate {#iterate}
 
 Once you have created a CL containing the first draft of your RFC, you are ready
 to iterate on your idea with the appropriate stakeholders. Hopefully you will
@@ -180,7 +180,7 @@ names associated with the new incarnation of the RFC.
 > Code Review tool to [send you an email > notification](https://gerrit-review.googlesource.com/Documentation/user-notify.html)
 > when a CL modifies the `//docs/contribute/governance/rfcs` directory.
 
-#### Step 4: Approve
+#### Step 4: Approve {#approve}
 
 Once the iterations on the RFC are converging, you are ready to move to the
 approval stage, in which the stakeholders sign-off on the RFC by setting the
@@ -206,7 +206,7 @@ After all the stakeholders have weighed in with their Code-Review flags, send an
 email to eng-council@fuchsia.dev to prompt the Eng Council to decide whether to
 accept your RFC.
 
-#### Step 5: Submit
+#### Step 5: Submit {#submit}
 
 If the project decides to accept your RFC, a member of the Eng Council will
 comment on your CL stating that the RFC is accepted and will assign the RFC a

@@ -90,7 +90,7 @@ the balance between short- and long-term considerations in designs.
 The council may delegate part of this responsibility. For example, it oversees
 the [API Council][api-council], which is responsible for Fuchsia’s API surface.
 
-### Engineering review
+### Engineering review {#eng-review}
 
 The council facilitates engineering design reviews. The council establishes the
 norm that engineering design documents should be published as RFCs, including
