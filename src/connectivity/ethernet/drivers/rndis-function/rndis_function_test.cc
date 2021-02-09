@@ -198,8 +198,8 @@ class RndisFunctionTest : public zxtest::Test {
     };
 
     size_t actual;
-    zx_status_t status =
-        device_->UsbFunctionInterfaceControl(&setup, data, length, nullptr, 0, &actual);
+    zx_status_t status = device_->UsbFunctionInterfaceControl(
+        &setup, reinterpret_cast<const uint8_t*>(data), length, nullptr, 0, &actual);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(actual, 0);
   }
@@ -214,8 +214,8 @@ class RndisFunctionTest : public zxtest::Test {
     };
 
     size_t actual;
-    zx_status_t status =
-        device_->UsbFunctionInterfaceControl(&setup, nullptr, 0, data, length, &actual);
+    zx_status_t status = device_->UsbFunctionInterfaceControl(
+        &setup, nullptr, 0, reinterpret_cast<uint8_t*>(data), length, &actual);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_GE(length, actual);
   }

@@ -483,7 +483,8 @@ static void ums_csw_complete(void* ctx, usb_request_t* req) {
 
 static size_t ums_get_descriptors_size(void* ctx) { return sizeof(descriptors); }
 
-static void ums_get_descriptors(void* ctx, void* buffer, size_t buffer_size, size_t* out_actual) {
+static void ums_get_descriptors(void* ctx, uint8_t* buffer, size_t buffer_size,
+                                size_t* out_actual) {
   size_t length = sizeof(descriptors);
   if (length > buffer_size) {
     length = buffer_size;
@@ -492,8 +493,8 @@ static void ums_get_descriptors(void* ctx, void* buffer, size_t buffer_size, siz
   *out_actual = length;
 }
 
-static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
-                               size_t write_size, void* out_read_buffer, size_t read_size,
+static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, const uint8_t* write_buffer,
+                               size_t write_size, uint8_t* out_read_buffer, size_t read_size,
                                size_t* out_read_actual) {
   if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
       setup->bRequest == USB_REQ_GET_MAX_LUN && setup->wValue == 0 && setup->wIndex == 0 &&

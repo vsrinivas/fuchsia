@@ -116,7 +116,8 @@ zx_status_t UsbFunction::Control(const usb_setup_t* setup, const void* write_buf
                                  size_t write_size, void* read_buffer, size_t read_size,
                                  size_t* out_read_actual) {
   if (function_intf_.is_valid()) {
-    return function_intf_.Control(setup, write_buffer, write_size, read_buffer, read_size,
+    return function_intf_.Control(setup, reinterpret_cast<const uint8_t*>(write_buffer), write_size,
+                                  reinterpret_cast<uint8_t*>(read_buffer), read_size,
                                   out_read_actual);
   } else {
     return ZX_ERR_BAD_STATE;

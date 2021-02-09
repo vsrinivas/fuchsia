@@ -57,7 +57,7 @@ static void ReplyQmiMsg(const void* req, uint32_t req_size, void* resp, size_t r
   }
 }
 
-void FakeUsbQmiFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buffer,
+void FakeUsbQmiFunction::UsbFunctionInterfaceGetDescriptors(uint8_t* out_descriptors_buffer,
                                                             size_t descriptors_size,
                                                             size_t* out_descriptors_actual) {
   memcpy(out_descriptors_buffer, &descriptor_, std::min(descriptors_size, descriptor_size_));
@@ -70,11 +70,9 @@ void FakeUsbQmiFunction::QmiCompletionCallback(usb_request_t* req) {
   zxlogf(INFO, "FakeUsbQmiFunction: interrupt sent successfully");
 }
 
-zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
-                                                            const void* write_buffer,
-                                                            size_t write_size,
-                                                            void* out_read_buffer, size_t read_size,
-                                                            size_t* out_read_actual) {
+zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(
+    const usb_setup_t* setup, const uint8_t* write_buffer, size_t write_size,
+    uint8_t* out_read_buffer, size_t read_size, size_t* out_read_actual) {
   zxlogf(INFO, "FakeUsbQmiFunction: received write buffer in endpoint, req_type:x%X",
          setup->bmRequestType);
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {

@@ -177,7 +177,7 @@ void UsbTest::TestBulkInComplete(usb_request_t* req) {
   bulk_in_reqs_.push(std::move(req_managed));
 }
 
-void UsbTest::UsbFunctionInterfaceGetDescriptors(void* buffer, size_t buffer_size,
+void UsbTest::UsbFunctionInterfaceGetDescriptors(uint8_t* buffer, size_t buffer_size,
                                                  size_t* out_actual) {
   size_t length = sizeof(descriptors_);
   if (length > buffer_size) {
@@ -187,9 +187,10 @@ void UsbTest::UsbFunctionInterfaceGetDescriptors(void* buffer, size_t buffer_siz
   *out_actual = length;
 }
 
-zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const void* write_buffer,
-                                                 size_t write_size, void* read_buffer,
-                                                 size_t read_size, size_t* out_read_actual) {
+zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup,
+                                                 const uint8_t* write_buffer, size_t write_size,
+                                                 uint8_t* read_buffer, size_t read_size,
+                                                 size_t* out_read_actual) {
   size_t length = le16toh(setup->wLength);
 
   zxlogf(DEBUG, "%s", __func__);

@@ -57,11 +57,11 @@ protocol UsbFunctionInterface {
     /// TODO(voydanoff) - descriptors will likely vary (different max packet sizes, etc)
     /// depending on whether we are in low/full, high or super speed mode.
     /// We will need to add a usb_speed_t argument to this callback.
-    GetDescriptors() -> (vector<voidptr> descriptors);
+    GetDescriptors() -> ([Buffer] vector<uint8> descriptors);
 
     /// Callback for handling ep0 control requests.
-    Control(zircon.hw.usb.UsbSetup setup, vector<voidptr> write) -> (zx.status status,
-                                                                     vector<voidptr> read);
+    Control(zircon.hw.usb.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
+                                                                     [Buffer] vector<uint8> read);
     /// Called to inform the function driver when the USB device configured state changes.
     /// Called with configured == true in response to a SET_CONFIGURATION control request
     /// that selects a configuration that contains this function. In this case, the function driver

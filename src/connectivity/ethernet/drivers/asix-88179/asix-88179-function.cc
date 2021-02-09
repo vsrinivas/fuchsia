@@ -62,10 +62,10 @@ class FakeUsbAx88179Function : public DeviceType,
 
   // UsbFunctionInterface:
   size_t UsbFunctionInterfaceGetDescriptorsSize();
-  void UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buffer, size_t descriptors_size,
+  void UsbFunctionInterfaceGetDescriptors(uint8_t* out_descriptors_buffer, size_t descriptors_size,
                                           size_t* out_descriptors_actual);
-  zx_status_t UsbFunctionInterfaceControl(const usb_setup_t* setup, const void* write_buffer,
-                                          size_t write_size, void* out_read_buffer,
+  zx_status_t UsbFunctionInterfaceControl(const usb_setup_t* setup, const uint8_t* write_buffer,
+                                          size_t write_size, uint8_t* out_read_buffer,
                                           size_t read_size, size_t* out_read_actual);
   zx_status_t UsbFunctionInterfaceSetConfigured(bool configured, usb_speed_t speed);
   zx_status_t UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t alt_setting);
@@ -203,7 +203,7 @@ void FakeUsbAx88179Function::RequestQueue(usb_request_t* req,
 }
 
 size_t FakeUsbAx88179Function::UsbFunctionInterfaceGetDescriptorsSize() { return descriptor_size_; }
-void FakeUsbAx88179Function::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buffer,
+void FakeUsbAx88179Function::UsbFunctionInterfaceGetDescriptors(uint8_t* out_descriptors_buffer,
                                                                 size_t descriptors_size,
                                                                 size_t* out_descriptors_actual) {
   memcpy(out_descriptors_buffer, &descriptor_, std::min(descriptors_size, descriptor_size_));
@@ -211,8 +211,8 @@ void FakeUsbAx88179Function::UsbFunctionInterfaceGetDescriptors(void* out_descri
 }
 
 zx_status_t FakeUsbAx88179Function::UsbFunctionInterfaceControl(
-    const usb_setup_t* setup, const void* write_buffer, size_t write_size, void* out_read_buffer,
-    size_t read_size, size_t* out_read_actual) {
+    const usb_setup_t* setup, const uint8_t* write_buffer, size_t write_size,
+    uint8_t* out_read_buffer, size_t read_size, size_t* out_read_actual) {
   if (out_read_actual) {
     *out_read_actual = 0;
   }

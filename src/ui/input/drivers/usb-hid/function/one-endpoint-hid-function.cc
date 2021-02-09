@@ -62,7 +62,8 @@ size_t FakeUsbHidFunction::UsbFunctionInterfaceGetDescriptorsSize(void* ctx) {
   return func->descriptor_size_;
 }
 
-void FakeUsbHidFunction::UsbFunctionInterfaceGetDescriptors(void* ctx, void* out_descriptors_buffer,
+void FakeUsbHidFunction::UsbFunctionInterfaceGetDescriptors(void* ctx,
+                                                            uint8_t* out_descriptors_buffer,
                                                             size_t descriptors_size,
                                                             size_t* out_descriptors_actual) {
   FakeUsbHidFunction* func = static_cast<FakeUsbHidFunction*>(ctx);
@@ -71,11 +72,9 @@ void FakeUsbHidFunction::UsbFunctionInterfaceGetDescriptors(void* ctx, void* out
   *out_descriptors_actual = func->descriptor_size_;
 }
 
-zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceControl(void* ctx, const usb_setup_t* setup,
-                                                            const void* write_buffer,
-                                                            size_t write_size,
-                                                            void* out_read_buffer, size_t read_size,
-                                                            size_t* out_read_actual) {
+zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceControl(
+    void* ctx, const usb_setup_t* setup, const uint8_t* write_buffer, size_t write_size,
+    uint8_t* out_read_buffer, size_t read_size, size_t* out_read_actual) {
   FakeUsbHidFunction* func = static_cast<FakeUsbHidFunction*>(ctx);
 
   if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE)) {

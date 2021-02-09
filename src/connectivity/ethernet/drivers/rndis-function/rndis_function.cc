@@ -18,7 +18,7 @@
 
 size_t RndisFunction::UsbFunctionInterfaceGetDescriptorsSize() { return sizeof(descriptors_); }
 
-void RndisFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buffer,
+void RndisFunction::UsbFunctionInterfaceGetDescriptors(uint8_t* out_descriptors_buffer,
                                                        size_t descriptors_size,
                                                        size_t* out_descriptors_actual) {
   memcpy(out_descriptors_buffer, &descriptors_,
@@ -551,9 +551,9 @@ void RndisFunction::Reset() {
 }
 
 zx_status_t RndisFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
-                                                       const void* write_buffer, size_t write_size,
-                                                       void* out_read_buffer, size_t read_size,
-                                                       size_t* out_read_actual) {
+                                                       const uint8_t* write_buffer,
+                                                       size_t write_size, uint8_t* out_read_buffer,
+                                                       size_t read_size, size_t* out_read_actual) {
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
       setup->bRequest == USB_CDC_SEND_ENCAPSULATED_COMMAND) {
     if (out_read_actual) {

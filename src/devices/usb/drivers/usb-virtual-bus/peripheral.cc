@@ -28,7 +28,7 @@ void TestFunction::CompletionCallback(usb_request_t* req) {
 
 size_t TestFunction::UsbFunctionInterfaceGetDescriptorsSize() { return descriptor_size_; }
 
-void TestFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buffer,
+void TestFunction::UsbFunctionInterfaceGetDescriptors(uint8_t* out_descriptors_buffer,
                                                       size_t descriptors_size,
                                                       size_t* out_descriptors_actual) {
   memcpy(out_descriptors_buffer, &descriptor_, std::min(descriptors_size, descriptor_size_));
@@ -36,9 +36,9 @@ void TestFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buff
 }
 
 zx_status_t TestFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
-                                                      const void* write_buffer, size_t write_size,
-                                                      void* out_read_buffer, size_t read_size,
-                                                      size_t* out_read_actual) {
+                                                      const uint8_t* write_buffer,
+                                                      size_t write_size, uint8_t* out_read_buffer,
+                                                      size_t read_size, size_t* out_read_actual) {
   if (out_read_actual) {
     *out_read_actual = 0;
   }

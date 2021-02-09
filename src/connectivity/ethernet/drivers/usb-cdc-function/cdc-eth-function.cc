@@ -580,14 +580,15 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
 
 static size_t cdc_get_descriptors_size(void* ctx) { return sizeof(descriptors); }
 
-static void cdc_get_descriptors(void* ctx, void* buffer, size_t buffer_size, size_t* out_actual) {
+static void cdc_get_descriptors(void* ctx, uint8_t* buffer, size_t buffer_size,
+                                size_t* out_actual) {
   const size_t length = std::min(sizeof(descriptors), buffer_size);
   memcpy(buffer, &descriptors, length);
   *out_actual = length;
 }
 
-static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
-                               size_t write_size, void* out_read_buffer, size_t read_size,
+static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const uint8_t* write_buffer,
+                               size_t write_size, uint8_t* out_read_buffer, size_t read_size,
                                size_t* out_read_actual) {
   if (out_read_actual != NULL) {
     *out_read_actual = 0;

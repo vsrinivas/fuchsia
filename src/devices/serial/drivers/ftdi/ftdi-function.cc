@@ -50,12 +50,12 @@ class FakeFtdiFunction : public DeviceType {
 
   static size_t UsbFunctionInterfaceGetDescriptorsSize(void* ctx);
 
-  static void UsbFunctionInterfaceGetDescriptors(void* ctx, void* out_descriptors_buffer,
+  static void UsbFunctionInterfaceGetDescriptors(void* ctx, uint8_t* out_descriptors_buffer,
                                                  size_t descriptors_size,
                                                  size_t* out_descriptors_actual);
   static zx_status_t UsbFunctionInterfaceControl(void* ctx, const usb_setup_t* setup,
-                                                 const void* write_buffer, size_t write_size,
-                                                 void* out_read_buffer, size_t read_size,
+                                                 const uint8_t* write_buffer, size_t write_size,
+                                                 uint8_t* out_read_buffer, size_t read_size,
                                                  size_t* out_read_actual);
   static zx_status_t UsbFunctionInterfaceSetConfigured(void* ctx, bool configured,
                                                        usb_speed_t speed);
@@ -180,7 +180,8 @@ size_t FakeFtdiFunction::UsbFunctionInterfaceGetDescriptorsSize(void* ctx) {
   return func->descriptor_size_;
 }
 
-void FakeFtdiFunction::UsbFunctionInterfaceGetDescriptors(void* ctx, void* out_descriptors_buffer,
+void FakeFtdiFunction::UsbFunctionInterfaceGetDescriptors(void* ctx,
+                                                          uint8_t* out_descriptors_buffer,
                                                           size_t descriptors_size,
                                                           size_t* out_descriptors_actual) {
   FakeFtdiFunction* func = static_cast<FakeFtdiFunction*>(ctx);
@@ -189,11 +190,9 @@ void FakeFtdiFunction::UsbFunctionInterfaceGetDescriptors(void* ctx, void* out_d
   *out_descriptors_actual = func->descriptor_size_;
 }
 
-zx_status_t FakeFtdiFunction::UsbFunctionInterfaceControl(void* ctx, const usb_setup_t* setup,
-                                                          const void* write_buffer,
-                                                          size_t write_size, void* out_read_buffer,
-                                                          size_t read_size,
-                                                          size_t* out_read_actual) {
+zx_status_t FakeFtdiFunction::UsbFunctionInterfaceControl(
+    void* ctx, const usb_setup_t* setup, const uint8_t* write_buffer, size_t write_size,
+    uint8_t* out_read_buffer, size_t read_size, size_t* out_read_actual) {
   if (out_read_actual) {
     *out_read_actual = 0;
   }
