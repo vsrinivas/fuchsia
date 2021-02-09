@@ -8,6 +8,33 @@
 
 namespace analytics::core_dev_tools {
 
-bool IsRunByBot() { return std::getenv("SWARMING_BOT_ID"); }
+namespace {
+
+constexpr const char* const kBotEnvironments[] = {
+    "TF_BUILD",            // Azure
+    "bamboo.buildKey",     // Bamboo
+    "BUILDKITE",           // BUILDKITE
+    "CIRCLECI",            // Circle
+    "CIRRUS_CI",           // Cirrus
+    "CODEBUILD_BUILD_ID",  // Codebuild
+    "SWARMING_BOT_ID",     // Fuchsia
+    "GITHUB_ACTIONS",      // GitHub Actions
+    "GITLAB_CI",           // GitLab
+    "HEROKU_TEST_RUN_ID",  // Heroku
+    "BUILD_ID",            // Hudson & Jenkins
+    "TEAMCITY_VERSION",    // Teamcity
+    "TRAVIS",              // Travis
+};
+
+}  // namespace
+
+bool IsRunByBot() {
+  for (const char* env : kBotEnvironments) {
+    if (std::getenv(env)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 }  // namespace analytics::core_dev_tools
