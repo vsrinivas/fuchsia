@@ -21,6 +21,7 @@
 #include <mutex>
 #include <thread>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -33,7 +34,6 @@
 #include "parser.h"
 #include "registers.h"
 #include "secmem_session.h"
-#include "src/media/drivers/amlogic_decoder/amlogic_video_bind.h"
 #include "stream_buffer.h"
 #include "video_decoder.h"
 #include "watchdog.h"

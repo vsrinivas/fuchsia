@@ -6,11 +6,10 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-
-#include "src/media/drivers/amlogic_decoder/amlogic_video_bind.h"
 
 extern zx_status_t amlogic_video_init(void** out_ctx);
 extern zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
@@ -21,4 +20,10 @@ static zx_driver_ops_t amlogic_video_driver_ops = {
     // process
 };
 
-ZIRCON_DRIVER(amlogic_video, amlogic_video_driver_ops, "zircon", "0.1");
+// clang-format off
+ZIRCON_DRIVER_BEGIN(amlogic_video, amlogic_video_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_COMPOSITE, 1),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_VIDEO),
+ZIRCON_DRIVER_END(amlogic_video);
+// clang-format on

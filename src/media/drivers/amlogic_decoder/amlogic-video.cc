@@ -18,6 +18,7 @@
 #include <optional>
 #include <thread>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>

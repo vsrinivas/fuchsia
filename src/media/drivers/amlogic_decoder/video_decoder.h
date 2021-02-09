@@ -17,6 +17,7 @@
 
 #include <functional>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -27,7 +28,6 @@
 #include "macros.h"
 #include "pts_manager.h"
 #include "registers.h"
-#include "src/media/drivers/amlogic_decoder/amlogic_video_bind.h"
 #include "video_frame.h"
 
 #include <src/media/lib/metrics/metrics.cb.h>
