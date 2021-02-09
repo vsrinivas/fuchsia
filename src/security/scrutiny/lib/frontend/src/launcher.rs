@@ -6,7 +6,7 @@ use {
     crate::{config::Config, scrutiny::Scrutiny},
     anyhow::Result,
     scrutiny_plugins::{
-        core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, sys_realm::SysRealmPlugin,
+        core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, sys::SysRealmPlugin,
         toolkit::ToolkitPlugin, verify::VerifyPlugin,
     },
 };
