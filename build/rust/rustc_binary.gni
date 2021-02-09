@@ -9,10 +9,17 @@ import("//build/rust/rustc_test.gni")
 # Parameters
 #
 #   output_name (optional)
+#     Name of the output file. Also used as the crate name of the binary,
+#     except the crate name has dashes replaced with underscores.
+#
+#     Defaults to an underscore-translated version of target name
+#     (see http://fxbug.dev/64100).
+#
 #   name (optional, deprecated)
-#     Name of the crate as defined in its manifest file. If not specified, it is
-#     assumed to be the same as the target name.  All dashes will be replaced
-#     with underscores in the binary name: <name_underscored>
+#     Deprecated version of output_name.  If not specified, it is
+#     assumed to be the same as the target name.  Unlike output_name, all
+#     dashes will be replaced with underscores in both the output file name
+#     and the crate name.
 #
 #   output_dir (optional)
 #     Directory that the resulting binary should be placed in.
@@ -194,14 +201,6 @@ template("rustc_binary") {
     source_root = invoker.source_root
   }
 
-  # built-in gn rules do not support dashes
-  crate_name = string_replace(package_name, "-", "_")
-
-  if (defined(invoker.output_name)) {
-    assert(invoker.output_name == crate_name,
-           "output_name doesn't work yet, use name instead; fxbug.dev/64100")
-  }
-
   # enable these features for the target
   features = []
   if (defined(invoker.features)) {
@@ -232,8 +231,16 @@ template("rustc_binary") {
 
   executable(target_name) {
     crate_root = source_root
-    output_name = crate_name
-    crate_name = crate_name
+
+    # rustc does not support dashes in crate names
+    crate_name = string_replace(package_name, "-", "_")
+
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    } else {
+      output_name = crate_name
+    }
+
     rustflags = features
 
     configs = []
