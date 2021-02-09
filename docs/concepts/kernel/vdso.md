@@ -119,7 +119,7 @@ presence of attributes after the system call name:
 
 * `vdsocall` entries are simply declarations for the public API. These
   functions are implemented by normal, hand-written C++ code found in
-  [the kernel source](/zircon/kernel/lib/userabi/vdso/). Those source
+  [`system/ulib/zircon/`](/zircon/system/ulib/zircon/). Those source
   files `#include "private.h"` and then define the C++ function for the
   system call with its name prefixed by `_zx_`. Finally, they use the
   `VDSO_INTERFACE_FUNCTION` macro on the system call's name prefixed by

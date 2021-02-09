@@ -3,54 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/sdk/sdk_noop_atom.gni")
-import("//build/toolchain/elfabi_shared_library.gni")
-import("//build/unification/global_variables.gni")
 
-# The vDSO ABI is provided at link time by a stub.  The actual runtime image
-# comes from the kernel and is not part of the build or SDK for userland at
-# all.  The kernel's internal build of the vDSO verifies that the ABI matches.
-if (is_fuchsia && toolchain.base_environment != "kernel") {
-  elfabi_shared_library("zircon") {
-    # TODO(mcgrathr): The ABIs are identical across machines, but the .tbe file
-    # insists on embedding "Arch:".  llvm-elfabi should get features to allow
-    # emitting a file without arch tag and to specify --target= to set the
-    # arch/class/data of an ELF stub when the .tbe file doesn't say.
-    abi = "zircon-$current_cpu.tbe"
-    public_deps = [ ":headers" ]
-  }
-} else {
-  # References from other environments only get the headers.  This
-  # makes it easy to have "//src/zircon/lib/zircon" deps in common
-  # libraries that need to link against it in userland but that in
-  # other contexts like kernel or userboot are just using the headers.
-  group("zircon") {
-    public_deps = [ ":headers" ]
-  }
-}
-
-group("headers") {
-  public_deps = [
-    ":zircon-headers",
-    "//zircon/vdso:public($default_toolchain)",
-  ]
-  public_configs = [ "//zircon/vdso:public.config($default_toolchain)" ]
-  if (!is_fuchsia) {
-    public_deps += [ "//zircon/system/public" ]
-  }
-}
-
-# These headers can be used in host binaries.
-source_set("zircon-headers") {
-  configs = []
-  public = [
-    "include/zircon/exception.h",
-    "include/zircon/status.h",
-  ]
-  public_configs = [ ":zircon-headers.config" ]
-}
-
-config("zircon-headers.config") {
-  include_dirs = [ "include" ]
+# Depending on this will ensure your binaries will be linked against
+# the Zircon VDSO, a.k.a. libzircon.so.
+# See (fxbug.dev/60613) for details.
+group("zircon") {
+  deps = [ "//zircon/system/ulib/zircon" ]
 }
 
 # The zircon library is not a real SDK atom since it is provided

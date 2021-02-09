@@ -1712,6 +1712,7 @@ template("variant_target") {
   # files. Please keep them in sync, see:
   #   //build/toolchain/variant_shared_library_redirect.gni
   #   //zircon/system/ulib/c/libc_toolchain.gni
+  #   //zircon/system/ulib/zircon/vdso_toolchain.gni
   target_variant = false
   if (select_variant_canonical != []) {
     # See if there is a selector that matches this target.

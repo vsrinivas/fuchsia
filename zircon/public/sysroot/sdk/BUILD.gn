@@ -26,8 +26,8 @@ version_content = {
   debug_libs = []
 }
 
-import("//src/zircon/lib/zircon/sysroot_entries.gni")
 import("//zircon/system/ulib/c/sysroot_entries.gni")
+import("//zircon/system/ulib/zircon/sysroot_entries.gni")
 
 # Turn the information from Zircon into a set of copy() rules for the
 # sysroot while filling in $version_content.

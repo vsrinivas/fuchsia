@@ -8,20 +8,25 @@ import("//zircon/vdso/vdso.gni")
 # (a.k.a. libzircon.so). More details about how these are used are in
 # //zircon/system/ulib/c/sysroot_entries.gni.
 
+import("vdso_toolchain.gni")
+sysroot_vdso_stripped = zircon_vdso_stripped
+sysroot_vdso_unstripped = zircon_vdso_unstripped
+sysroot_vdso_target = zircon_vdso_target
+
+_rebased_vdso_stripped = rebase_path(sysroot_vdso_stripped, root_build_dir)
+_rebased_vdso_unstripped = rebase_path(sysroot_vdso_unstripped, root_build_dir)
+
 _vdso_generated_headers_dep = "//zircon/vdso:public($default_toolchain)"
 _gen_include_dir =
     get_label_info(_vdso_generated_headers_dep, "root_gen_dir") + "/include"
 
 _rebased_include_dir =
-    rebase_path("//src/zircon/lib/zircon/include", root_build_dir)
+    rebase_path("//zircon/system/ulib/zircon/include", root_build_dir)
 _rebased_gen_include_dir = rebase_path(_gen_include_dir, root_build_dir)
-
-_vdso_link_label = "//src/zircon/lib/zircon:zircon.stub($default_toolchain)"
-_vdso_link = get_label_info(_vdso_link_label, "root_out_dir") + "/libzircon.so"
 
 sysroot_vdso_entries = [
   {
-    vdso = _vdso_link
+    vdso = _rebased_vdso_unstripped
   },
   {
     include_dirs = []
@@ -64,9 +69,15 @@ sysroot_vdso_entries = [
   },
   {
     sdk = {
-      source = _vdso_link
+      source = _rebased_vdso_unstripped
       link = "lib/libzircon.so"
-      deps = [ _vdso_link_label ]
+      deps = [ sysroot_vdso_target ]
+    }
+  },
+  {
+    sdk = {
+      source = _rebased_vdso_unstripped
+      debug = "debug/libzircon.so"
     }
   },
 ]

@@ -68,9 +68,9 @@ foreach(src, src_storage_types) {
       testonly = true
       sources = [ "copy-tests.cc" ]
       deps = [
-        "//src/zircon/lib/zircon",
         "//third_party/googletest:gtest",
         "//zircon/system/ulib/zbitl",
+        "//zircon/system/ulib/zircon",
       ]
       defines = [
         "SRC_STORAGE_TYPE=${src}",

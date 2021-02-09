@@ -20,7 +20,7 @@ zx_library("sync") {
     "mutex.c",
   ]
   deps = [
-    "//src/zircon/lib/zircon",
+    "//zircon/system/ulib/zircon",
     "//zircon/system/ulib/zircon-internal",
   ]
 

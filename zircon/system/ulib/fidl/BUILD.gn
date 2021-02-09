@@ -46,8 +46,8 @@ zx_library("fidl_base") {
   ]
   deps = [
     "//sdk/lib/stdcompat",
-    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fit",
+    "//zircon/system/ulib/zircon",
   ]
 
   all_dependent_configs = [ ":fidl-tracing-config" ]
@@ -64,7 +64,7 @@ zx_library("fidl") {
   ]
   deps = [
     ":fidl_base",
-    "//src/zircon/lib/zircon",
+    "//zircon/system/ulib/zircon",
   ]
   public_deps = [ ":fidl_base" ]
 }
@@ -147,11 +147,11 @@ if (is_fuchsia) {
     ]
     deps = [
       ":fidl",
-      "//src/zircon/lib/zircon",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fit",
       "//zircon/system/ulib/sync",
+      "//zircon/system/ulib/zircon",
       "//zircon/system/ulib/zxc",
     ]
   }
@@ -186,14 +186,14 @@ if (is_fuchsia) {
     ]
     public_deps = [
       "//sdk/lib/stdcompat",
-      "//src/zircon/lib/zircon:headers",
+      "//zircon/system/ulib/zircon:headers",
       "//zircon/system/ulib/zxc:headers",
     ]
     deps = [
       ":fidl_base",
-      "//src/zircon/lib/zircon",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fit",
+      "//zircon/system/ulib/zircon",
       "//zircon/system/ulib/zxc",
     ]
   }

@@ -31,7 +31,11 @@ toolchain = {
     environment = "unknown"
   }
 
-  base_environment = get_path_info(environment, "name")
+  # The `base_environment` key corresponds to the base runtime environment,
+  # which is exactly the same as `environment` except for fuzzing environments
+  # as defined by the Zircon builds. In the Fuchsia build, fuzzing is implemented
+  # by variants instead, so copying the value of `environment` should be enough.
+  base_environment = environment
 
   # The `shlib` key is defined when there is a companion toolchain that
   # generates shared-library binaries for the current toolchain. It is not

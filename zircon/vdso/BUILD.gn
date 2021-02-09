@@ -46,8 +46,8 @@ assert(current_toolchain == default_toolchain)
 # seen as <zircon/...>.
 group("public") {
   visibility = [
-    "//src/zircon/lib/zircon/*",
     "//zircon/public/sysroot/*",
+    "//zircon/system/ulib/zircon/*",
   ]
   public_configs = [ ":public.config" ]
   public_deps = [ ":generate" ]
@@ -55,10 +55,7 @@ group("public") {
 
 public_gen_dir = "$root_gen_dir/include/zircon/syscalls"
 config("public.config") {
-  visibility = [
-    ":public",
-    "//zircon/kernel/lib/userabi/vdso/*",
-  ]
+  visibility = [ ":public" ]
   include_dirs = [ "$root_gen_dir/include" ]
 }
 
@@ -67,8 +64,8 @@ config("public.config") {
 group("private") {
   visibility = [
     "//zircon/kernel/lib/syscalls/*",
-    "//zircon/kernel/lib/userabi/*",
     "//zircon/system/ulib/syscalls-headers/*",
+    "//zircon/system/ulib/zircon/*",
   ]
   public_configs = [ ":private.config" ]
   public_deps = [ ":generate" ]

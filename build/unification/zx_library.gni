@@ -49,6 +49,12 @@ import("//build/unification/global_variables.gni")
 #   Because the Fuchsia build doesn't support :headers sub-targets in
 #   non-kernel libraries for several technical reasons.
 #
+#   Similarly, any deps or public_deps entry to
+#   //zircon/system/ulib/zircon will be replaced by the proper dependency
+#   required to access Zircon headers and, for Fuchsia user binaries, the
+#   link-time VDSO. This feature will be removed once the VDSO is built
+#   with the Fuchsia build.
+#
 # Parameters
 #
 #   kernel
@@ -300,6 +306,31 @@ template("zx_library") {
     lib_libs = []
     if (defined(invoker.libs)) {
       lib_dirs = invoker.libs
+    }
+
+    if (lib_deps + [ "//zircon/system/ulib/zircon" ] -
+        [ "//zircon/system/ulib/zircon" ] != lib_deps) {
+      lib_deps -= [ "//zircon/system/ulib/zircon" ]
+      if (is_fuchsia) {
+        lib_deps += [ "//src/zircon/lib/zircon" ]
+      } else {
+        lib_public_deps += [
+          "//zircon/system/public",
+          "//zircon/system/ulib/zircon:zircon-headers",
+        ]
+      }
+    }
+    if (lib_public_deps + [ "//zircon/system/ulib/zircon" ] -
+        [ "//zircon/system/ulib/zircon" ] != lib_public_deps) {
+      lib_public_deps -= [ "//zircon/system/ulib/zircon" ]
+      if (is_fuchsia) {
+        lib_deps += [ "//src/zircon/lib/zircon" ]
+      } else {
+        lib_public_deps += [
+          "//zircon/system/public",
+          "//zircon/system/ulib/zircon:zircon-headers",
+        ]
+      }
     }
 
     if (!is_fuchsia) {

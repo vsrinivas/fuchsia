@@ -24,8 +24,8 @@ zx_library("bitmap") {
       "//zircon/system/ulib/zx:headers",
     ]
     deps = [
-      "//src/zircon/lib/zircon",
       "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zircon",
       "//zircon/system/ulib/zx",
     ]
   }

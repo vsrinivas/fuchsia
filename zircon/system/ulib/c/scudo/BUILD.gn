@@ -21,8 +21,8 @@ scudo_common_vars = {
 
   configs = [ ":common.config" ]
   deps = [
-    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon",
   ]
 }
 

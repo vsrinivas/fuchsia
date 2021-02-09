@@ -9,7 +9,7 @@ zx_library("elfload") {
   sdk_headers = [ "elfload/elfload.h" ]
   sdk_migrated = true
   sources = [ "elf-load.c" ]
-  deps = [ "//src/zircon/lib/zircon" ]
+  deps = [ "//zircon/system/ulib/zircon" ]
 }
 
 group("tests") {

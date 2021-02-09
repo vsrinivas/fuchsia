@@ -68,6 +68,6 @@ zx_library("zx") {
     "vmar.cc",
     "vmo.cc",
   ]
-  deps = [ "//src/zircon/lib/zircon" ]
-  public_deps = [ "//src/zircon/lib/zircon:headers" ]
+  deps = [ "//zircon/system/ulib/zircon" ]
+  public_deps = [ "//zircon/system/ulib/zircon:headers" ]
 }

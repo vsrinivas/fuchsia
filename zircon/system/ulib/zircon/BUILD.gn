@@ -1,8 +1,6 @@
-# Copyright 2019 The Fuchsia Authors
-#
-# Use of this source code is governed by a MIT-style
-# license that can be found in the LICENSE file or at
-# https://opensource.org/licenses/MIT
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
@@ -27,17 +25,21 @@ if (current_toolchain == default_toolchain) {
       with_shared = false
       is_pic_default = true
 
-      configs = [ "//zircon/kernel/lib/userabi/vdso:user.vdso.config" ]
+      configs = [ "//zircon/system/ulib/zircon:user.vdso.config" ]
 
       exclude_variant_tags = [
         # The vDSO can't use instrumentation runtimes.
         "instrumented",
+
+        # The vDSO cannot be built with GCC.
+        "gcc",
       ]
     }
   }
 }
 
 if (toolchain.environment == "user.vdso") {
+  # The following are needed by the zircon_toolchain_suite() definition above.
   config("user.vdso.config") {
     configs = [
       # This is mostly like other user code.
@@ -55,9 +57,46 @@ if (toolchain.environment == "user.vdso") {
 
   group("user.vdso.config_deps") {
   }
+}
 
-  shared_library("zircon") {
-    visibility = [ ":*" ]
+if (toolchain.environment != "user.vdso") {
+  # Even non-user environments can see the headers.
+  import("vdso_toolchain.gni")
+  group("headers") {
+    public_deps = [ ":headers($zircon_vdso_toolchain)" ]
+  }
+
+  if (toolchain.base_environment == "user") {
+    # Other userland environments redirect to pick up the real library.
+    group("zircon") {
+      public_deps = [ ":zircon($zircon_vdso_toolchain)" ]
+    }
+  } else {
+    # References from other environments only get the headers.  This
+    # makes it easy to have "//zircon/system/ulib/zircon" deps in common
+    # libraries that need to link against it in userland but that in
+    # other contexts like kernel or userboot are just using the headers.
+    group("zircon") {
+      public_deps = [ ":headers" ]
+    }
+  }
+
+  # Publish headers to the GN build so that they may be used in host binaries.
+  source_set("zircon-headers") {
+    sources = [
+      "include/zircon/exception.h",
+      "include/zircon/status.h",
+    ]
+    public_configs = [ ":zircon-headers.config" ]
+  }
+
+  config("zircon-headers.config") {
+    include_dirs = [ "include" ]
+  }
+} else {  # toolchain.environment == "user.vdso"
+  zx_library("zircon") {
+    shared = true
+    static = false
 
     sources = [
       "data.S",
@@ -82,13 +121,16 @@ if (toolchain.environment == "user.vdso") {
 
     deps = [
       ":syscall-asm",
-      "//src/zircon/lib/zircon:headers",
       "//zircon/kernel/lib/syscalls:headers",
       "//zircon/kernel/lib/userabi:headers",
       "//zircon/system/ulib/affine",
     ]
+    public_deps = [ "//zircon/vdso:public($default_toolchain)" ]
 
-    configs += [ "//zircon/vdso:public.config($default_toolchain)" ]
+    # The line above doesn't work in the Fuchsia build because its
+    # default toolchain does not propagate configs. Adding the config
+    # manually works-around the issue.
+    public_configs = [ "//zircon/vdso:public.config($default_toolchain)" ]
 
     # Instruct the linker to preserve the hidden alternate entry points.
     # Note, "./" makes GN realize this is a file rather than a -l switch.
@@ -102,8 +144,8 @@ if (toolchain.environment == "user.vdso") {
       "-Wl,-e,_zx_process_exit",
     ]
 
-    # This ensures that the vDSO is never installed into filesystem images
-    # since it's materialized at runtime by the kernel.
+    # This ensures that the vDSO is never installed into Fuchsia packages
+    # or bootfs filesystems, since it will be hard-coded into the kernel.
     metadata = {
       distribution_entries_barrier = []
       distribution_entries = []
@@ -111,77 +153,17 @@ if (toolchain.environment == "user.vdso") {
   }
 
   source_set("syscall-asm") {
-    visibility = [ ":*" ]
-
     sources = [
       "syscalls-$zircon_cpu.S",
       "zx_futex_wake_handle_close_thread_exit-$zircon_cpu.S",
       "zx_vmar_unmap_handle_close_thread_exit-$zircon_cpu.S",
     ]
     deps = [
-      "//src/zircon/lib/zircon:headers",
+      ":headers",
       "//zircon/kernel/lib/syscalls",
     ]
-  }
-} else {
-  # The vDSO can't use any interesting variants like instrumentation.
-  # It uses gcc if the kernel uses gcc, otherwise the default.
-  if (is_gcc == "gcc") {
-    vdso_variant = "-gcc"
-  } else {
-    vdso_variant = ""
-  }
-
-  vdso_label = ":zircon(:user.vdso_${current_cpu}${vdso_variant})"
-
-  if (is_kernel) {
-    # Make sure the vDSO that goes into the kernel matches the ABI
-    # that userland links against.
-    abi_tbe = "//src/zircon/lib/zircon/zircon-$current_cpu.tbe"
-
-    vdso_out_dir = get_label_info(vdso_label, "root_out_dir")
-    vdso_tbe = "$vdso_out_dir/libzircon.so.tbe"
-
-    action("verify-abi") {
-      visibility = [ ":*" ]
-
-      deps = [
-        "//src/zircon/lib/zircon",
-        vdso_label,
-      ]
-
-      sources = [
-        abi_tbe,
-        vdso_tbe,
-      ]
-      outputs = [ "$target_out_dir/$target_name.ok" ]
-
-      script = "verify-abi.sh"
-
-      # This uses absolute paths so the "cp IMPL ABI" message has easily and
-      # universally cut&pastable paths.
-      args = rebase_path(sources + outputs)
-
-      metadata = {
-        link_output_barrier = []
-      }
-    }
-
-    # This is how the kernel depends on the built vDSO to embed the image, via
-    # the link_output_rspfile() metadata protocol.
-    group("vdso") {
-      visibility = [ "//zircon/kernel/lib/userabi/*" ]
-      public_deps = [
-        ":verify-abi",
-        vdso_label,
-      ]
-    }
-  } else {
-    # This is how userboot depends on the built vDSO to extract addresses,
-    # via the link_output_rspfile() metadata protocol.
-    group("vdso") {
-      visibility = [ "//zircon/kernel/lib/userabi/*" ]
-      public_deps = [ vdso_label ]
+    if (toolchain.base_environment == "user") {
+      configs -= [ "//build/config/zircon:user" ]
     }
   }
 }

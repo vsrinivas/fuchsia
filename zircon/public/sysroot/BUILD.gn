@@ -99,6 +99,7 @@ sysroot_dir += "/sysroot"
 
 if (current_toolchain != sysroot_toolchain) {
   import("//zircon/system/ulib/c/libc_toolchain.gni")
+  import("//zircon/system/ulib/zircon/vdso_toolchain.gni")
   import("cpp.gni")
   import("go.gni")
   import("rust.gni")
@@ -141,13 +142,14 @@ if (current_toolchain != sysroot_toolchain) {
     _libc_target = sysroot_libc_target
     _libc_file = rebase_path(sysroot_libc_unstripped, root_build_dir)
 
-    _vdso_target = "//src/zircon/lib/zircon:zircon.stub($default_toolchain)"
-    _vdso_path = get_label_info(_vdso_target, "root_out_dir") + "/libzircon.so"
+    _vdso_target = "$zircon_vdso_label($zircon_vdso_toolchain)"
+    _vdso_file = rebase_path(zircon_vdso_unstripped, root_build_dir)
 
     _crt1_file = rebase_path(sysroot_crt1_obj, root_build_dir)
 
     if (defined(invoker.absolute_stub_paths) && invoker.absolute_stub_paths) {
       _libc_file = rebase_path(_libc_file, "", root_build_dir)
+      _vdso_file = rebase_path(_vdso_file, "", root_build_dir)
       _crt1_file = rebase_path(_crt1_file, "", root_build_dir)
     }
 
@@ -214,9 +216,9 @@ if (current_toolchain != sysroot_toolchain) {
     _sysroot_deps += [ ":${prefix}_libc" ]
 
     # Generate a linker file redirecting to the Zircon VDSO
-    copy("${prefix}_libzircon") {
+    generated_file("${prefix}_libzircon") {
       outputs = [ "$_sysroot_dir/lib/libzircon.so" ]
-      sources = [ _vdso_path ]
+      contents = [ "INPUT($_vdso_file)" ]
       deps = [ _vdso_target ]
     }
     _sysroot_deps += [ ":${prefix}_libzircon" ]
@@ -317,8 +319,8 @@ if (current_toolchain != sysroot_toolchain) {
   # Build the common sysroot headers in a specialized toolchain() instance,
   # since this GN operation is pretty slow. The end result is either symlinked
   # or copied to other toolchain sysroots (see _create_sysroot() above).
-  import("//src/zircon/lib/zircon/sysroot_entries.gni")
   import("//zircon/system/ulib/c/sysroot_entries.gni")
+  import("//zircon/system/ulib/zircon/sysroot_entries.gni")
   sysroot_entries =
       sysroot_uninstrumented_libc_entries + sysroot_instrumented_libc_entries +
       sysroot_crt1_entries + sysroot_vdso_entries

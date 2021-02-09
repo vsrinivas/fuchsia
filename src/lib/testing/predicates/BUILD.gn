@@ -16,7 +16,7 @@ source_set("predicates") {
     "//third_party/googletest:gtest",
 
     # "status.h" has #include <zircon/status.h>.
-    "//src/zircon/lib/zircon:zircon-headers",
+    "//zircon/system/ulib/zircon:zircon-headers",
   ]
 }
 

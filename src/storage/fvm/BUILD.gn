@@ -60,7 +60,7 @@ static_library("fvm") {
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
-    public_deps += [ "//src/zircon/lib/zircon:zircon-headers" ]
+    public_deps += [ "//zircon/system/ulib/zircon:zircon-headers" ]
   }
 
   public_configs = [
