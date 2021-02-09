@@ -122,7 +122,7 @@ pub use diagnostics_hierarchy::{
 };
 pub use testing::{assert_inspect_tree, tree_assertion};
 
-pub use crate::error::Error;
+pub use {crate::error::Error, crate::state::Stats};
 
 pub mod component;
 mod error;
@@ -213,6 +213,14 @@ impl Inspector {
     /// [`defalt maximum size`][constants::DEFAULT_VMO_SIZE_BYTES].
     pub fn new() -> Self {
         Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES)
+    }
+
+    /// Returns statistics about the current inspect state.
+    pub fn stats(&self) -> Option<Stats> {
+        self.root_node
+            .inner
+            .inner_ref()
+            .and_then(|inner_ref| inner_ref.state.try_lock().ok().map(|state| state.stats()))
     }
 
     /// True if the Inspector was created successfully (it's not No-Op)

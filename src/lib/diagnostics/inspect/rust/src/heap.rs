@@ -37,6 +37,16 @@ impl Heap {
         Ok(heap)
     }
 
+    /// Returns the current size of this heap in bytes.
+    pub fn current_size(&self) -> usize {
+        self.current_size_bytes
+    }
+
+    /// Returns the maximum size of this heap in bytes.
+    pub fn maximum_size(&self) -> usize {
+        self.mapping.len()
+    }
+
     /// Allocates a new block of the given `min_size`.
     pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Arc<Mapping>>, Error> {
         let min_fit_order = utils::fit_order(min_size);

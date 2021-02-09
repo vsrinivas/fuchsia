@@ -7,10 +7,11 @@ use {
     anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
-        component, health::Reporter, ExponentialHistogramParams, HistogramProperty, Node,
-        NumericProperty, UintExponentialHistogramProperty, UintProperty,
+        component, health::Reporter, ExponentialHistogramParams, HistogramProperty, Inspector,
+        Node, NumericProperty, UintExponentialHistogramProperty, UintProperty,
     },
     fuchsia_zircon::{self as zx, Duration},
+    futures::FutureExt,
     lazy_static::lazy_static,
     parking_lot::Mutex,
     std::collections::BTreeMap,
@@ -61,6 +62,20 @@ pub fn root() -> &'static Node {
 }
 
 pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Error> {
+    component::inspector().root().record_lazy_child("inspect_stats", move || {
+        async move {
+            let inspector = Inspector::new();
+            if let Some(stats) = component::inspector().stats() {
+                inspector.root().record_uint("maximum_size", stats.maximum_size as u64);
+                inspector.root().record_uint("current_size", stats.maximum_size as u64);
+                inspector
+                    .root()
+                    .record_uint("total_dynamic_children", stats.total_dynamic_children as u64);
+            }
+            Ok(inspector)
+        }
+        .boxed()
+    });
     component::inspector().serve(service_fs)?;
     Ok(())
 }

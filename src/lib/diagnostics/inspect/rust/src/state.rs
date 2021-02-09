@@ -271,6 +271,19 @@ impl State {
     }
 }
 
+/// Statistics about the current inspect state.
+#[derive(Debug, Eq, PartialEq)]
+pub struct Stats {
+    /// Number of lazy links (lazy children and values) that have been added to the state.
+    pub total_dynamic_children: usize,
+
+    /// Maximum size of the vmo backing inspect.
+    pub maximum_size: usize,
+
+    /// Current size of the vmo backing inspect.
+    pub current_size: usize,
+}
+
 pub struct LockedStateGuard<'a> {
     header: &'a Block<Arc<Mapping>>,
     inner_lock: MutexGuard<'a, InnerState>,
@@ -283,6 +296,15 @@ impl<'a> LockedStateGuard<'a> {
     ) -> Result<Self, Error> {
         header.lock_header()?;
         Ok(Self { header, inner_lock })
+    }
+
+    /// Returns statistics about the current inspect state.
+    pub fn stats(&self) -> Stats {
+        Stats {
+            total_dynamic_children: self.inner_lock.callbacks.len(),
+            current_size: self.inner_lock.heap.current_size(),
+            maximum_size: self.inner_lock.heap.maximum_size(),
+        }
     }
 
     /// Returns a reference to the lazy callbacks map.
@@ -1330,6 +1352,28 @@ mod tests {
             .unwrap();
         let content_block = state_guard.heap().get_block(4).unwrap();
         assert_eq!(content_block.name_contents().unwrap(), "link-name-1");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn stats() {
+        // Intialize state and create a link block.
+        let state = get_state(12288);
+        let mut state_guard = state.try_lock().expect("lock state");
+        let _block1 = state_guard
+            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, || {
+                async move {
+                    let inspector = Inspector::new();
+                    inspector.root().record_uint("a", 1);
+                    Ok(inspector)
+                }
+                .boxed()
+            })
+            .unwrap();
+        let _block2 = state_guard.create_uint_metric("test", 3, 0).unwrap();
+        assert_eq!(
+            state_guard.stats(),
+            Stats { total_dynamic_children: 1, maximum_size: 12288, current_size: 4096 }
+        )
     }
 
     fn get_state(size: usize) -> State {
