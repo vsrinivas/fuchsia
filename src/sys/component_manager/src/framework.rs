@@ -406,7 +406,10 @@ mod tests {
     };
 
     struct RealmCapabilityTest {
-        builtin_environment: Option<Arc<BuiltinEnvironment>>,
+        // This field is never read, but must be kept around for the below tests to function
+        // properly. Without it things like the `Realm` service cannot be mocked for the test.
+        _builtin_environment: Option<Arc<BuiltinEnvironment>>,
+
         mock_runner: Arc<MockRunner>,
         component: Option<Arc<ComponentInstance>>,
         realm_proxy: fsys::RealmProxy,
@@ -480,7 +483,7 @@ mod tests {
                 .detach();
             }
             RealmCapabilityTest {
-                builtin_environment: Some(builtin_environment),
+                _builtin_environment: Some(builtin_environment),
                 mock_runner,
                 component: Some(component),
                 realm_proxy,
@@ -495,7 +498,7 @@ mod tests {
 
         fn drop_component(&mut self) {
             self.component = None;
-            self.builtin_environment = None;
+            self._builtin_environment = None;
         }
 
         fn event_stream(&mut self) -> Option<&mut EventStream> {
