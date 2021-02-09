@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -25,14 +24,6 @@ executable("sim_add_test") {
   ]
 }
 
-unittest_package("sim_device_test") {
-  package_name = "sim_device_test"
-
+fuchsia_unittest_package("sim_device_test") {
   deps = [ ":sim_add_test" ]
-
-  tests = [
-    {
-      name = "sim_add_test"
-    },
-  ]
 }

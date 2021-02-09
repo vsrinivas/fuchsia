@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("assoc_unittests") {
   output_name = "assoc_unittests"
@@ -85,35 +83,32 @@ executable("probe_unittests") {
   ]
 }
 
-unittest_package("wlan-sim-fake-ap-test") {
-  deps = [
-    ":assoc_unittests",
-    ":auth_unittests",
-    ":beacon_unittests",
-    ":data_unittests",
-    ":probe_unittests",
-  ]
+fuchsia_unittest_component("assoc_unittests_comp") {
+  deps = [ ":assoc_unittests" ]
+}
 
-  tests = [
-    {
-      name = "assoc_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "auth_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "beacon_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "data_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "probe_unittests"
-      environments = basic_envs
-    },
+fuchsia_unittest_component("auth_unittests_comp") {
+  deps = [ ":auth_unittests" ]
+}
+
+fuchsia_unittest_component("beacon_unittests_comp") {
+  deps = [ ":beacon_unittests" ]
+}
+
+fuchsia_unittest_component("data_unittests_comp") {
+  deps = [ ":data_unittests" ]
+}
+
+fuchsia_unittest_component("probe_unittests_comp") {
+  deps = [ ":probe_unittests" ]
+}
+
+fuchsia_test_package("wlan-sim-fake-ap-test") {
+  test_components = [
+    ":assoc_unittests_comp",
+    ":auth_unittests_comp",
+    ":beacon_unittests_comp",
+    ":data_unittests_comp",
+    ":probe_unittests_comp",
   ]
 }

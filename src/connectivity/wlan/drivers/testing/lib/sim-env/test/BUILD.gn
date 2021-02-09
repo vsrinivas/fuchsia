@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("event_unittests") {
   output_name = "event_unittests"
@@ -82,35 +80,32 @@ executable("trans_time_tests") {
   ]
 }
 
-unittest_package("wlan-sim-env-test") {
-  deps = [
-    ":event_unittests",
-    ":frame_ie_tests",
-    ":location_tests",
-    ":rx_tests",
-    ":trans_time_tests",
-  ]
+fuchsia_unittest_component("event_unittests_comp") {
+  deps = [ ":event_unittests" ]
+}
 
-  tests = [
-    {
-      name = "event_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "rx_tests"
-      environments = basic_envs
-    },
-    {
-      name = "frame_ie_tests"
-      environments = basic_envs
-    },
-    {
-      name = "location_tests"
-      environments = basic_envs
-    },
-    {
-      name = "trans_time_tests"
-      environments = basic_envs
-    },
+fuchsia_unittest_component("frame_ie_tests_comp") {
+  deps = [ ":frame_ie_tests" ]
+}
+
+fuchsia_unittest_component("location_tests_comp") {
+  deps = [ ":location_tests" ]
+}
+
+fuchsia_unittest_component("rx_tests_comp") {
+  deps = [ ":rx_tests" ]
+}
+
+fuchsia_unittest_component("trans_time_tests_comp") {
+  deps = [ ":trans_time_tests" ]
+}
+
+fuchsia_test_package("wlan-sim-env-test") {
+  test_components = [
+    ":event_unittests_comp",
+    ":frame_ie_tests_comp",
+    ":location_tests_comp",
+    ":rx_tests_comp",
+    ":trans_time_tests_comp",
   ]
 }
