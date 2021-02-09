@@ -6,7 +6,7 @@ import("//build/fidl/fidl.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 fidl("bindingstest") {
   experimental_flags = [ "enable_handle_rights" ]
@@ -39,15 +39,11 @@ go_test("component_test") {
   ]
 }
 
-unittest_package("lib-component-go-unittests") {
+fuchsia_unittest_package("lib-component-go-unittests") {
   deps = [ ":component_test" ]
-
-  tests = [
-    {
-      name = "component_test"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 group("tests") {

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("backoff") {
   sources = [
@@ -35,15 +35,8 @@ executable("backoff_unittests") {
   ]
 }
 
-unittest_package("backoff_tests") {
+fuchsia_unittest_package("backoff_tests") {
   deps = [ ":backoff_unittests" ]
-
-  tests = [
-    {
-      name = "backoff_unittests"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

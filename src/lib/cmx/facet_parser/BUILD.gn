@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -43,13 +43,10 @@ executable("cmx_facet_parser_unittest") {
   ]
 }
 
-test_package("cmx_facet_parser_tests") {
+fuchsia_unittest_package("cmx_facet_parser_tests") {
+  manifest = "meta/cmx_facet_parser_unittest.cmx"
   deps = [ ":cmx_facet_parser_unittest" ]
-
-  tests = [
-    {
-      name = "cmx_facet_parser_unittest"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }

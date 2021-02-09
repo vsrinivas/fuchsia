@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("cutex") {
   name = "cutex"
@@ -32,15 +32,8 @@ rustc_library("cutex") {
   ]
 }
 
-test_package("cutex-tests") {
+fuchsia_unittest_package("cutex-tests") {
   deps = [ ":cutex_test" ]
-
-  tests = [
-    {
-      name = "cutex_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

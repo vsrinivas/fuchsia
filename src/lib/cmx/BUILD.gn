@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/fuzzing/fuzzer.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -62,14 +62,12 @@ executable("cmx_unittests") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test_package("cmx_tests") {
+fuchsia_unittest_package("cmx_tests") {
+  manifest = "meta/cmx_unittests.cmx"
   deps = [ ":cmx_unittests" ]
-  tests = [
-    {
-      name = "cmx_unittests"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 fuzzers_package("cmx_fuzzers") {
