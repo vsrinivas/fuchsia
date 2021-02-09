@@ -560,6 +560,8 @@ class Device
     return device_controller_.NewRequest(dispatcher);
   }
 
+  bool DriverLivesInSystemStorage() const;
+
  private:
   void HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);

@@ -120,7 +120,7 @@ TEST_F(MultipleDeviceTestCase, ConcurrentSuspend) {
       DoSuspendWithCallback(flags, [&second_suspend_status](zx_status_t completion_status) {
         second_suspend_status = completion_status;
       }));
-  ASSERT_EQ(second_suspend_status, ZX_ERR_ALREADY_EXISTS);
+  ASSERT_EQ(second_suspend_status, ZX_ERR_UNAVAILABLE);
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(child_index)->controller_remote, ZX_OK, txid));
@@ -527,4 +527,85 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   local.reset();
   coordinator_loop()->RunUntilIdle();
   ASSERT_FALSE(devfs_has_watchers(root_node));
+}
+
+// Check that UnregisterSystemStorageForShutdown works when no system devices exist.
+TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_NoSystemDevices) {
+  bool finished = false;
+  zx_status_t remove_status;
+  coordinator().suspend_handler().UnregisterSystemStorageForShutdown([&](zx_status_t status) {
+    finished = true;
+    remove_status = status;
+  });
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_TRUE(finished);
+  ASSERT_EQ(remove_status, ZX_OK);
+}
+
+// Check that UnregisterSystemStorageForShutdown removes system devices but not boot devices.
+TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_DevicesRemoveCorrectly) {
+  // Create a system device.
+  size_t system_device_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "system-1", 0 /* protocol id */,
+                                     "/system/driver/my-device.so", &system_device_index));
+  fbl::RefPtr<Device> system_device = device(system_device_index)->device;
+
+  // Create a child of the system device that lives in boot.
+  size_t child_boot_device_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(system_device, "boot-1", 0 /* protocol id */,
+                                     "/boot/driver/my-device.so", &child_boot_device_index));
+  fbl::RefPtr<Device> child_boot_device = device(child_boot_device_index)->device;
+
+  // Create a child of the system device that lives in system.
+  size_t child_system_device_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(system_device, "system-2", 0 /* protocol id */,
+                                     "/system/driver/my-device.so", &child_system_device_index));
+  fbl::RefPtr<Device> child_system_device = device(child_system_device_index)->device;
+
+  // Create a boot device.
+  size_t boot_device_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "boot-2", 0 /* protocol id */,
+                                     "/boot/driver/my-device.so", &boot_device_index));
+  fbl::RefPtr<Device> boot_device = device(boot_device_index)->device;
+
+  // Create a child of the boot that lives in system.
+  size_t boot_child_system_device_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "system-3", 0 /* protocol id */,
+                                     "/system/driver/my-device.so",
+                                     &boot_child_system_device_index));
+  fbl::RefPtr<Device> boot_child_system_device = device(boot_child_system_device_index)->device;
+
+  coordinator_loop()->RunUntilIdle();
+
+  bool finished = false;
+  zx_status_t remove_status;
+  coordinator().suspend_handler().UnregisterSystemStorageForShutdown([&](zx_status_t status) {
+    finished = true;
+    remove_status = status;
+  });
+  coordinator_loop()->RunUntilIdle();
+
+  // Respond to Suspends. Go children then parents.
+  ASSERT_NO_FATAL_FAILURES(
+      CheckSuspendReceivedAndReply(device(boot_child_system_device_index)->controller_remote,
+                                   DEVICE_SUSPEND_FLAG_REBOOT, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceivedAndReply(
+      device(child_system_device_index)->controller_remote, DEVICE_SUSPEND_FLAG_REBOOT, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceivedAndReply(
+      device(child_boot_device_index)->controller_remote, DEVICE_SUSPEND_FLAG_REBOOT, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceivedAndReply(
+      device(system_device_index)->controller_remote, DEVICE_SUSPEND_FLAG_REBOOT, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  // Check that the callback was called.
+  ASSERT_TRUE(finished);
+  ASSERT_EQ(remove_status, ZX_OK);
+
+  // Check that our devices were suspended.
+  ASSERT_EQ(system_device->state(), Device::State::kSuspended);
+  ASSERT_EQ(child_boot_device->state(), Device::State::kSuspended);
+  ASSERT_EQ(child_system_device->state(), Device::State::kSuspended);
+  ASSERT_EQ(boot_child_system_device->state(), Device::State::kSuspended);
 }

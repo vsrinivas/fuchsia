@@ -103,9 +103,15 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
     return;
   }
 
-  // A suspend is already in progress.
-  if (InSuspend()) {
-    LOGF(ERROR, "Aborting system-suspend, a system suspend is already in progress");
+  // We shouldn't have two tasks in progress at the same time.
+  if (AnyTasksInProgress()) {
+    LOGF(ERROR, "Aborting system-suspend, there's a task in progress.");
+    callback(ZX_ERR_UNAVAILABLE);
+  }
+
+  // The system is already suspended.
+  if (flags_ == Flags::kSuspend) {
+    LOGF(ERROR, "Aborting system-suspend, the system is already suspended");
     if (callback) {
       callback(ZX_ERR_ALREADY_EXISTS);
     }
@@ -133,8 +139,8 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
       return;  // Suspend failed to complete.
     }
     LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", sflags_);
-    if (task_.get() != nullptr) {
-      DumpSuspendTaskDependencies(task_.get());
+    if (suspend_task_.get() != nullptr) {
+      DumpSuspendTaskDependencies(suspend_task_.get());
     }
     if (suspend_fallback_) {
       SuspendFallback(coordinator_->root_resource(), sflags_);
@@ -180,7 +186,7 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
   // We don't need to suspend anything except sys_device and it's children,
   // since we do not run suspend hooks for children of test or misc
 
-  task_ = SuspendTask::Create(coordinator_->sys_device(), sflags_, std::move(completion));
+  suspend_task_ = SuspendTask::Create(coordinator_->sys_device(), sflags_, std::move(completion));
   LOGF(INFO, "Successfully created suspend task on device 'sys'");
 }
 
@@ -202,4 +208,40 @@ void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callba
       (*callback_ptr)(ZX_OK);
     }
   }
+}
+
+void SuspendHandler::UnregisterSystemStorageForShutdown(SuspendCallback callback) {
+  // We shouldn't have two tasks in progress at the same time.
+  if (AnyTasksInProgress()) {
+    LOGF(ERROR, "Aborting UnregisterSystemStorageForShutdown, there's a task in progress.");
+    callback(ZX_ERR_UNAVAILABLE);
+  }
+
+  // Only set flags_ if we are going from kRunning -> kStorageSuspend. It's possible that
+  // flags are kSuspend here but Suspend() is calling us first to clean up the filesystem drivers.
+  if (flags_ == Flags::kRunning) {
+    flags_ = Flags::kStorageSuspend;
+  }
+
+  SuspendMatchingTask::Match match = [](const Device& device) {
+    return device.DriverLivesInSystemStorage();
+  };
+
+  unregister_system_storage_task_ = SuspendMatchingTask::Create(
+      coordinator_->sys_device(), DEVICE_SUSPEND_FLAG_REBOOT, std::move(match),
+      [this, callback = std::move(callback)](zx_status_t status) mutable {
+        unregister_system_storage_task_ = nullptr;
+        callback(status);
+      });
+}
+
+bool SuspendHandler::AnyTasksInProgress() {
+  if (suspend_task_.get() != nullptr && !suspend_task_->is_completed()) {
+    return true;
+  }
+  if (unregister_system_storage_task_.get() != nullptr &&
+      !unregister_system_storage_task_->is_completed()) {
+    return true;
+  }
+  return false;
 }

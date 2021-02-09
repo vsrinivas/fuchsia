@@ -1713,6 +1713,17 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
               });
               return ZX_ERR_ASYNC;
             },
+        .UnregisterSystemStorageForShutdown =
+            [](void* ctx, fidl_txn_t* txn) {
+              auto* async_txn = fidl_async_txn_create(txn);
+              static_cast<Coordinator*>(ctx)->suspend_handler().UnregisterSystemStorageForShutdown(
+                  [async_txn](zx_status_t status) {
+                    fuchsia_device_manager_AdministratorUnregisterSystemStorageForShutdown_reply(
+                        fidl_async_txn_borrow(async_txn), status);
+                    fidl_async_txn_complete(async_txn, true);
+                  });
+              return ZX_ERR_ASYNC;
+            },
     };
 
     zx_status_t status =

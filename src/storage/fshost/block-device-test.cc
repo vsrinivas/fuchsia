@@ -51,8 +51,8 @@ class BlockDeviceTest : public testing::Test {
     // Initialize FilesystemMounter.
     fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request;
     fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request;
-    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
-                                  watcher_),
+    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                  zx::channel(), nullptr, watcher_),
               ZX_OK);
 
     // Fshost really likes mounting filesystems at "/fs".

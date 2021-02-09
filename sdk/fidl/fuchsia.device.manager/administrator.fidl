@@ -21,4 +21,18 @@ protocol Administrator {
     /// Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     /// combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     Suspend(uint32 flags) -> (zx.status status);
+
+    // TODO(fxbug.dev/68529): Remove this API.
+    /// This is a temporary API until DriverManager can ensure that base drivers
+    /// will be shut down automatically before fshost exits. This will happen
+    /// once drivers-as-components is implemented.
+    /// In the meantime, this API should only be called by fshost, and it must
+    /// be called before fshost exits. This function iterates over the devices
+    /// and suspends any device whose driver lives in storage. This API must be
+    /// called by fshost before it shuts down. Otherwise the devices that live
+    /// in storage may page fault as it access memory that should be provided by
+    /// the exited fshost. This function will not return until the devices are
+    /// suspended. If there are no devices that live in storage, this function
+    /// will immediatetly return.
+    UnregisterSystemStorageForShutdown() -> (zx.status status);
 };

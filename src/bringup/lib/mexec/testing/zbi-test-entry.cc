@@ -36,6 +36,11 @@ struct FakeDeviceAdmin : public devmgr::Administrator::Interface {
   void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
     completer.Reply(flags == devmgr::SUSPEND_FLAG_MEXEC ? ZX_OK : ZX_ERR_INVALID_ARGS);
   }
+
+  void UnregisterSystemStorageForShutdown(
+      UnregisterSystemStorageForShutdownCompleter::Sync& completer) override {
+    completer.Reply(ZX_OK);
+  }
 };
 
 }  // namespace

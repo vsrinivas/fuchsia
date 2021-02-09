@@ -123,6 +123,7 @@
                 "fuchsia.boot.Items",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.device.manager.Administrator",
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],

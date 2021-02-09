@@ -47,6 +47,7 @@ source_set("lib") {
     "package_resolver.cc",
     "resume_task.cc",
     "suspend_handler.cc",
+    "suspend_matching_task.cc",
     "suspend_task.cc",
     "system_instance.cc",
     "system_instance.h",

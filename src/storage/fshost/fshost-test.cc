@@ -112,15 +112,43 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 
+class FakeDriverManagerAdmin final
+    : public llcpp::fuchsia::device::manager::Administrator::Interface {
+ public:
+  void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
+    completer.Reply(ZX_OK);
+  }
+
+  void UnregisterSystemStorageForShutdown(
+      UnregisterSystemStorageForShutdownCompleter::Sync& completer) override {
+    unregister_was_called_ = true;
+    completer.Reply(ZX_OK);
+  }
+
+  bool UnregisterWasCalled() { return unregister_was_called_; }
+
+ private:
+  std::atomic<bool> unregister_was_called_ = false;
+};
+
 // Test that the manager performs the shutdown procedure correctly with respect to externally
 // observable behaviors.
 TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  FakeDriverManagerAdmin driver_admin;
+  auto admin_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::device::manager::Administrator>();
+  ASSERT_TRUE(admin_endpoints.is_ok());
+  ASSERT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin)
+                  .is_ok());
+
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_OK(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
+  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher));
 
   // The manager should not have exited yet: No one has asked for the shutdown.
   EXPECT_FALSE(manager.IsShutdown());
@@ -133,6 +161,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   });
   manager.WaitForShutdown();
   EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
+  EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 
   // It's an error if shutdown gets called twice, but we expect the callback to still get called
   // with the appropriate error message since the shutdown function has no return value.
@@ -150,11 +179,20 @@ TEST(FsManagerTestCase, LifecycleStop) {
   zx_status_t status = zx::channel::create(0, &lifecycle_request, &lifecycle);
   ASSERT_OK(status);
 
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  FakeDriverManagerAdmin driver_admin;
+  auto admin_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::device::manager::Administrator>();
+  ASSERT_TRUE(admin_endpoints.is_ok());
+  ASSERT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin)
+                  .is_ok());
+
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_OK(
-      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
+  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher));
 
   // The manager should not have exited yet: No one has asked for an unmount.
   EXPECT_FALSE(manager.IsShutdown());
@@ -171,6 +209,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
 
   // Now we expect a shutdown signal.
   manager.WaitForShutdown();
+  EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
 class MockDirectoryAdminOpener : public fio::DirectoryAdmin::TypedChannelInterface {
@@ -221,7 +260,6 @@ class MockDirectoryAdminOpener : public fio::DirectoryAdmin::TypedChannelInterfa
   void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}
   void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
   void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {}
-
 
   // Test fields used for validation.
   uint32_t saved_open_flags = 0;

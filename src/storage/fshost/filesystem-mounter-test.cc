@@ -33,8 +33,8 @@ class FilesystemMounterHarness : public testing::Test {
     if (!watcher_) {
       watcher_.emplace(manager_, &config_);
       zx::channel dir_request, lifecycle_request;
-      EXPECT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
-                                    *watcher_),
+      EXPECT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                    zx::channel(), nullptr, *watcher_),
                 ZX_OK);
     }
     return manager_;

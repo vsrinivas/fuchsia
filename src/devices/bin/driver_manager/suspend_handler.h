@@ -7,6 +7,7 @@
 
 #include <fuchsia/fshost/llcpp/fidl.h>
 
+#include "suspend_matching_task.h"
 #include "suspend_task.h"
 
 using SuspendCallback = fit::callback<void(zx_status_t)>;
@@ -14,14 +15,19 @@ using SuspendCallback = fit::callback<void(zx_status_t)>;
 class SuspendHandler {
  public:
   enum class Flags : uint32_t {
+    // The system is running, nothing is suspended.
     kRunning = 0u,
+    // The entire system is suspended or in the middle of being suspended.
     kSuspend = 1u,
+    // The devices whose's drivers live in storage are suspended or in the middle of being
+    // suspended.
+    kStorageSuspend = 2u,
   };
 
   // Create a SuspendHandler. `coordinator` is a weak pointer that must outlive `SuspendHandler`.
   SuspendHandler(Coordinator* coordinator, bool suspend_fallback, zx::duration suspend_timeout);
 
-  bool InSuspend() const { return flags_ == SuspendHandler::Flags::kSuspend; }
+  bool InSuspend() const { return flags_ != SuspendHandler::Flags::kRunning; }
 
   void Suspend(uint32_t flags, SuspendCallback callback);
 
@@ -32,12 +38,17 @@ class SuspendHandler {
   // consider thread safety when refactoring.
   void ShutdownFilesystems(fit::callback<void(zx_status_t)> callback);
 
+  // Suspend all of the devices where the device driver lives in storage. This should be called
+  // by fshost as it is shutting down.
+  void UnregisterSystemStorageForShutdown(SuspendCallback callback);
+
   // For testing only: Set the fshost admin client.
   void set_fshost_admin_client(fidl::Client<llcpp::fuchsia::fshost::Admin> client) {
     fshost_admin_client_ = std::move(client);
   }
 
  private:
+  bool AnyTasksInProgress();
   void SuspendAfterFilesystemShutdown();
 
   Coordinator* coordinator_;
@@ -45,7 +56,10 @@ class SuspendHandler {
   zx::duration suspend_timeout_;
 
   SuspendCallback suspend_callback_;
-  fbl::RefPtr<SuspendTask> task_;
+  fbl::RefPtr<SuspendTask> suspend_task_;
+
+  fbl::RefPtr<SuspendMatchingTask> unregister_system_storage_task_;
+
   std::unique_ptr<async::TaskClosure> suspend_watchdog_task_;
   fidl::Client<llcpp::fuchsia::fshost::Admin> fshost_admin_client_;
 

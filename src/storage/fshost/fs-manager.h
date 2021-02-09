@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FS_MANAGER_H_
 #define SRC_STORAGE_FSHOST_FS_MANAGER_H_
 
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/process/lifecycle/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -48,6 +49,7 @@ class FsManager {
   zx_status_t Initialize(
       fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
       fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
+      fidl::ClientEnd<::llcpp::fuchsia::device::manager::Administrator> driver_admin,
       std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
 
   // TODO(fxbug.dev/39588): delete this
@@ -136,6 +138,11 @@ class FsManager {
   };
   std::map<MountPoint, MountNode> mount_nodes_;
 
+  // Tell driver_manager to remove all drivers living in storage. This must be called before
+  // shutting down. `callback` will be called once all drivers living in storage have been
+  // unbound and removed.
+  void RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback);
+
   // The Root VFS manages the following filesystems:
   // - The global root filesystem (including the mount points)
   // - "/tmp"
@@ -176,6 +183,7 @@ class FsManager {
   std::mutex lock_;
   bool shutdown_called_ TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
+  fidl::Client<llcpp::fuchsia::device::manager::Administrator> driver_admin_;
 };
 
 }  // namespace devmgr

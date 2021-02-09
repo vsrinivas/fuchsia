@@ -173,6 +173,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(
 zx_status_t FsManager::Initialize(
     fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
     fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
+    fidl::ClientEnd<::llcpp::fuchsia::device::manager::Administrator> driver_admin,
     std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
   zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
@@ -221,6 +222,10 @@ zx_status_t FsManager::Initialize(
       return status;
     }
   }
+  if (driver_admin.is_valid()) {
+    driver_admin_ = fidl::Client<llcpp::fuchsia::device::manager::Administrator>(
+        std::move(driver_admin), global_loop_->dispatcher());
+  }
   return ZX_OK;
 }
 
@@ -257,6 +262,32 @@ zx_status_t FsManager::ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory
   return root_vfs_->ServeDirectory(global_root_, std::move(server), rights);
 }
 
+void FsManager::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
+  // If we don't have a connection to Driver Manager, just return ZX_OK.
+  if (driver_admin_.get() == nullptr) {
+    callback(ZX_OK);
+    return;
+  }
+
+  auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
+  auto res = driver_admin_->UnregisterSystemStorageForShutdown(
+      [callback_ptr](llcpp::fuchsia::device::manager::Administrator::
+                         UnregisterSystemStorageForShutdownResponse* res) {
+        if (res->status != ZX_OK) {
+          FX_LOGS(ERROR) << "RemoveSystemDevices returned error: "
+                         << zx_status_get_string(res->status);
+        }
+        if (*callback_ptr) {
+          (*callback_ptr)(res->status);
+        }
+      });
+  if (res.status() != ZX_OK) {
+    if (*callback_ptr) {
+      (*callback_ptr)(res.status());
+    }
+  }
+}
+
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   std::lock_guard guard(lock_);
   if (shutdown_called_) {
@@ -266,12 +297,16 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   }
   shutdown_called_ = true;
 
-  async::PostTask(global_loop_->dispatcher(), [this, callback = std::move(callback)]() {
+  async::PostTask(global_loop_->dispatcher(), [this, callback = std::move(callback)]() mutable {
     FX_LOGS(INFO) << "filesystem shutdown initiated";
-    zx_status_t status = root_vfs_->UninstallAll(zx::time::infinite());
-    callback(status);
-    sync_completion_signal(&shutdown_);
-    // after this signal, FsManager can be destroyed.
+    RemoveSystemDrivers([this, callback = std::move(callback)](zx_status_t status) mutable {
+      FX_LOGS(INFO) << "RemoveSystemDrivers returned: " << zx_status_get_string(status);
+
+      status = root_vfs_->UninstallAll(zx::time::infinite());
+      callback(status);
+      sync_completion_signal(&shutdown_);
+      // after this signal, FsManager can be destroyed.
+    });
   });
 }
 

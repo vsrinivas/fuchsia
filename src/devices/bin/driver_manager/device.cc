@@ -1086,3 +1086,13 @@ void Device::AddCompositeDevice(
     completer.Reply(std::move(response));
   }
 }
+
+bool Device::DriverLivesInSystemStorage() const {
+  const std::string kSystemPrefix = "/system/";
+
+  if (libname().size() < kSystemPrefix.size()) {
+    return false;
+  }
+  return (kSystemPrefix.compare(0, kSystemPrefix.size() - 1, libname().c_str(),
+                                kSystemPrefix.size() - 1) == 0);
+}
