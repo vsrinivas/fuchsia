@@ -116,10 +116,8 @@ group("bluetooth_core") {
 }
 
 group("bluetooth_drivers") {
-  testonly = true
   public_deps = [
     "//src/connectivity/bluetooth/core/bt-host",
-    "//src/connectivity/bluetooth/hci/emulator",
     "//src/connectivity/bluetooth/hci/passthrough",
     "//src/connectivity/bluetooth/hci/vendor/atheros",
     "//src/connectivity/bluetooth/hci/vendor/intel",
