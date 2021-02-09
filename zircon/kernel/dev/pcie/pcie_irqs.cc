@@ -434,6 +434,12 @@ zx_status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // MSIs require bus mastering be enabled.
+  if ((res = EnableBusMasterLocked(true)) && res != ZX_OK) {
+    LTRACEF("Failed to enable bus mastering for MSI (%d)\n", res);
+    goto bailout;
+  }
+
   // If we support PVM, make sure that we are completely masked before
   // attempting to allocate the block of IRQs.
   bool initially_masked;

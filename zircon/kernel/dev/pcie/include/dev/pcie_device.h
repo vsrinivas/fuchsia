@@ -389,8 +389,8 @@ class PcieDevice {
   // Top level internal IRQ support.
   zx_status_t QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
                                              pcie_irq_mode_caps_t* out_caps) const;
-  zx_status_t GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const;
-  zx_status_t SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs);
+  zx_status_t GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const __TA_REQUIRES(dev_lock_);
+  zx_status_t SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs) __TA_REQUIRES(dev_lock_);
   zx_status_t RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
   zx_status_t MaskUnmaskIrqLocked(uint irq_id, bool mask);
 
@@ -414,7 +414,7 @@ class PcieDevice {
   void FreeMsiBlock();
   void SetMsiMultiMessageEnb(uint requested_irqs);
   void LeaveMsiIrqMode();
-  zx_status_t EnterMsiIrqMode(uint requested_irqs);
+  zx_status_t EnterMsiIrqMode(uint requested_irqs) __TA_REQUIRES(dev_lock_);
 
   void MsiIrqHandler(pcie_irq_handler_state_t& hstate);
   static interrupt_eoi MsiIrqHandlerThunk(void* arg);
