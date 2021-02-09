@@ -18,7 +18,12 @@ const testserverUrl =
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
-  FlutterDriver browser;
+
+  final newTabFinder = find.text('NEW TAB');
+  final indexTabFinder = find.text('Localhost');
+  final nextTabFinder = find.text('Next Page');
+  final popupTabFinder = find.text('Popup Page');
+  final videoTabFinder = find.text('Video Test');
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -28,30 +33,29 @@ void main() {
     await ermine.setUp();
 
     // Starts hosting a local http website.
-    // TODO(fxb/69256): Replace `ermine.launch(testserverUrl)` with
-    // `ermine.component.launch(testserverUrl)`
-    await ermine.launch(testserverUrl);
-
-    final runningComponents = await ermine.component.list();
-    expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 1);
-
-    // Launches a browser.
-    browser = await ermine.launchAndWaitForSimpleBrowser();
+    // ignore: unawaited_futures
+    ermine.component.launch(testserverUrl);
   });
 
   tearDownAll(() async {
-    // Stops the server.
+    // Closes the test server.
+    // simple-browser is launched via [Component.launch()] since it does not
+    // have a view. Therefore, it cannot be closed with ermine's flutter driver.
+    // For this reason, we have to explicitly stop the http server to avoid
+    // HttpException which occurs in case the test is torn down still having it
+    // running.
+    // TODO(fxb/69291): Remove this workaround once we can properly close hidden
+    // components
+    FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
     await browser.requestData('http://127.0.0.1:8080/stop');
 
-    // Closes all views.
     await ermine.driver.requestData('closeAll');
-    await ermine.driver.waitForAbsent(find.text('ermine_testserver.cmx'));
-    await ermine.driver.waitForAbsent(find.text('simple_browser'));
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
 
     final runningComponents = await ermine.component.list();
-    expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 0);
     expect(
         runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
+    expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 0);
 
     await ermine.tearDown();
 
@@ -59,14 +63,11 @@ void main() {
     sl4f?.close();
   });
 
-  // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input
-  test(
-      'Simple browser\'s page and history navigation features '
-      'should work correctly.', () async {
-    final newTabFinder = find.text('NEW TAB');
-    final indexTabFinder = find.text('Localhost');
-    final nextTabFinder = find.text('Next Page');
-    final popupTabFinder = find.text('Popup Page');
+  // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input once
+  // fxb/69277 is fixed.
+  test('Should be able to do page and history navigation.', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchAndWaitForSimpleBrowser();
 
     // Access to the website.
     await browser.requestData('http://127.0.0.1:8080/index.html');
@@ -133,16 +134,24 @@ void main() {
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
     expect(await browser.getText(popupTabFinder), isNotNull);
+
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    final runningComponents = await ermine.component.list();
+    expect(
+        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
   });
 
-  test('Simple browser should be able to play videos on web pages.', () async {
+  test('Should be able to play videos on web pages.', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchAndWaitForSimpleBrowser();
+
     // Access to video.html where the following video is played:
     // experiences/bin/ermine_testserver/public/simple_browser_test/sample_video.mp4
     // It shows the violet-colored background for the first 3 seconds then shows
     // the fuchsia-colored background for another 3 seconds.
     await browser.requestData('http://127.0.0.1:8080/video.html');
 
-    final videoTabFinder = find.text('Video Test');
     await browser.waitFor(videoTabFinder, timeout: _timeout);
 
     expect(await browser.getText(videoTabFinder), isNotNull);
@@ -161,5 +170,67 @@ void main() {
 
     final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
     expect(diff, 1, reason: 'The screenshots are more similar than expected.');
+
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    final runningComponents = await ermine.component.list();
+    expect(
+        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
   });
+
+  test('Should be able to switch, rearrange, and close tabs', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchAndWaitForSimpleBrowser();
+
+    // TODO(fxb/69334): Get rid of the space in the hint text.
+    const newTabHintText = '     SEARCH';
+    const indexUrl = 'http://127.0.0.1:8080/index.html';
+    const nextUrl = 'http://127.0.0.1:8080/next.html';
+    const popupUrl = 'http://127.0.0.1:8080/popup.html';
+
+    // Opens index.html in the second tab leaving the first tab as an empty tab.
+    await browser.requestData(indexUrl);
+    await browser.waitFor(indexTabFinder, timeout: _timeout);
+
+    // Opens next.html in the third tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
+    await browser.requestData(nextUrl);
+    await browser.waitFor(nextTabFinder, timeout: _timeout);
+
+    // Opens popup.html in the forth tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
+    await browser.requestData(popupUrl);
+    await browser.waitFor(popupTabFinder, timeout: _timeout);
+
+    // Should have 4 tabs and the Popup Page should be focused.
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+    expect(await browser.getText(nextTabFinder), isNotNull);
+    expect(await browser.getText(popupTabFinder), isNotNull);
+    expect(await browser.getText(find.text(popupUrl)), isNotNull);
+
+    // The second tab should be focused when tapped.
+    await browser.tap(indexTabFinder);
+    await browser.waitFor(find.text(indexUrl));
+    expect(await browser.getText(find.text(indexUrl)), isNotNull);
+
+    // The thrid tab should be focused when tapped.
+    await browser.tap(nextTabFinder);
+    await browser.waitFor(find.text(nextUrl));
+    expect(await browser.getText(find.text(nextUrl)), isNotNull);
+
+    // TODO(fxb/68719): Test tab rearranging.
+    // TODO(fxb/68719): Test tab closing.
+
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    final runningComponents = await ermine.component.list();
+    expect(
+        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
+  });
+
+  // TODO(fxb/68720): Test web editing
+  // TODO(fxb/68716): Test audio playing
 }

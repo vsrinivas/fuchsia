@@ -77,8 +77,11 @@ class Localhost {
       final fileName = req.uri.path.substring(1); // eleminates '/'
 
       if (fileName == _stopKeyword) {
+        req.response
+          ..headers.contentType = ContentType.text
+          ..write('Stopped the server.');
+        await req.response.close();
         stopServer();
-        return;
       }
 
       final targetFile = _pages[fileName];

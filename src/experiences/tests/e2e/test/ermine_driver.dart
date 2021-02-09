@@ -133,11 +133,9 @@ class ErmineDriver {
 
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.
   ///
-  /// Expands the browser to the full-screen size by default after launching.
-  /// Set [fullscreen] to false if you do not want it.
-  /// After launching a browser, expands it to the full-screen size by default.
-  /// Also, it opens another new tab as soon as the browser is launched,
-  /// unless you set [openNewTab] to false.
+  /// Opens another new tab as soon as the browser is launched, unless you set
+  /// [openNewTab] to false. Likewise, set [fullscreen] to false if you do not
+  /// want the browser to expand its size to full-screen upon its launch.
   Future<FlutterDriver> launchAndWaitForSimpleBrowser({
     bool openNewTab = true,
     bool fullscreen = true,
