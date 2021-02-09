@@ -27,7 +27,6 @@ zx_library("fit") {
     "lib/fit/sequencer.h",
     "lib/fit/single_threaded_executor.h",
     "lib/fit/storage_internal.h",
-    "lib/fit/string_view.h",
     "lib/fit/thread_checker.h",
     "lib/fit/thread_safety.h",
     "lib/fit/traits.h",
