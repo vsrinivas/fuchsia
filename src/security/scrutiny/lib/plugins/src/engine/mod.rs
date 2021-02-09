@@ -9,7 +9,7 @@ use {
         collector::{CollectorListController, CollectorSchedulerController},
         controller::ControllerListController,
         health::HealthController,
-        model::ModelStatsController,
+        model::{ModelEnvironmentController, ModelStatsController},
         plugin::PluginListController,
     },
     scrutiny::engine::{
@@ -43,6 +43,7 @@ impl EnginePlugin {
                 controllers! {
                     "/engine/health/status" => HealthController::default(),
                     "/engine/plugin/list" => PluginListController::new(manager),
+                    "/engine/model/environment" => ModelEnvironmentController::default(),
                     "/engine/model/stats" => ModelStatsController::default(),
                     "/engine/collector/list" => CollectorListController::new(scheduler.clone()),
                     "/engine/controller/list" => ControllerListController::new(dispatcher),
@@ -143,6 +144,13 @@ mod tests {
         assert_eq!(stats.manifests, 0);
         assert_eq!(stats.zbi_sections, 0);
         assert_eq!(stats.bootfs_files, 0);
+    }
+
+    #[test]
+    fn test_model_env_controller() {
+        let model = data_model();
+        let model_stats = ModelEnvironmentController::default();
+        assert_eq!(model_stats.query(model.clone(), json!("")).is_ok(), true);
     }
 
     #[test]

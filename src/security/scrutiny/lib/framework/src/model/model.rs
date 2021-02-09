@@ -24,6 +24,7 @@ use {
 /// `DataCollectors` should retrieve information for the current model. This is
 /// important to allow collectors to dynamically change their collection source
 /// based on configuration such as where the build directory is located etc.
+#[derive(Serialize, Deserialize)]
 pub struct ModelEnvironment {
     pub uri: String,
     pub build_path: PathBuf,

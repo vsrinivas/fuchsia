@@ -80,3 +80,25 @@ impl DataController for ModelStatsController {
             .build()
     }
 }
+
+/// Displays model environment information.
+#[derive(Default)]
+pub struct ModelEnvironmentController {}
+
+impl DataController for ModelEnvironmentController {
+    fn query(&self, model: Arc<DataModel>, _query: Value) -> Result<Value> {
+        Ok(serde_json::to_value(model.env())?)
+    }
+
+    fn description(&self) -> String {
+        "Returns the data model environment.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("engine.model.env - Lists the model environment")
+            .summary("engine.model.env")
+            .description("Lists important data about the model environment.")
+            .build()
+    }
+}
