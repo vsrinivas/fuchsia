@@ -14,9 +14,9 @@ pub type InspectableRepositoryConfig =
 
 pub struct InspectableRepositoryConfigWatcher {
     mirror_configs_node: inspect::Node,
-    mirror_configs_states: Vec<MirrorConfigInspectState>,
+    _mirror_configs_states: Vec<MirrorConfigInspectState>,
     root_keys_node: inspect::Node,
-    root_keys_properties: Vec<inspect::StringProperty>,
+    _root_keys_properties: Vec<inspect::StringProperty>,
     update_package_url_property: inspect::StringProperty,
     _node: inspect::Node,
 }
@@ -26,9 +26,9 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
         let repo_config_node = node.create_child(name);
         let mut ret = Self {
             root_keys_node: repo_config_node.create_child("root_keys"),
-            root_keys_properties: vec![],
+            _root_keys_properties: vec![],
             mirror_configs_node: repo_config_node.create_child("mirrors"),
-            mirror_configs_states: vec![],
+            _mirror_configs_states: vec![],
             update_package_url_property: repo_config_node
                 .create_string("update_package_url", format!("{:?}", config.update_package_url())),
             _node: repo_config_node,
@@ -39,7 +39,7 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
 
     fn watch(&mut self, config: &Arc<RepositoryConfig>) {
         self.update_package_url_property.set(&format!("{:?}", config.update_package_url()));
-        self.root_keys_properties = config
+        self._root_keys_properties = config
             .root_keys()
             .iter()
             .enumerate()
@@ -47,7 +47,7 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
                 self.root_keys_node.create_string(&i.to_string(), format!("{:?}", root_key))
             })
             .collect();
-        self.mirror_configs_states = config
+        self._mirror_configs_states = config
             .mirrors()
             .iter()
             .enumerate()
