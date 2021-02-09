@@ -49,7 +49,7 @@ zx_library("ngunwind") {
   sdk_migrated = true
 
   configs += [ ":private_config" ]
-  deps = [ "//zircon/system/ulib/zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
   sources = [
     "src/dwarf/Gexpr.c",
     "src/dwarf/Gfde.c",

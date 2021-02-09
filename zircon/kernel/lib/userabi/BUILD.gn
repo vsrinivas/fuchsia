@@ -31,10 +31,7 @@ zx_library("userabi") {
     ]
   } else {
     # Our own embedded "user" code needs some shared headers.
-    visibility = [
-      "./*",
-      "//zircon/system/ulib/zircon/*",
-    ]
+    visibility = [ "./*" ]
   }
 }
 
@@ -162,15 +159,10 @@ template("rodso") {
   }
 }
 
-group("userland-vdso") {
-  visibility = [ ":*" ]
-  public_deps = [ "//zircon/system/ulib/zircon($default_toolchain)" ]
-}
-
 rodso("vdso") {
   visibility = [ "./*" ]
   name = "VDSO"
-  deps = [ ":userland-vdso" ]
+  deps = [ "vdso" ]
 }
 
 if (is_kernel) {

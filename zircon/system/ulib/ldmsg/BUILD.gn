@@ -9,7 +9,7 @@ zx_library("ldmsg") {
   sdk_headers = [ "ldmsg/ldmsg.h" ]
   sdk_migrated = true
   sources = [ "ldmsg.c" ]
-  deps = [ "//zircon/system/ulib/zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
 
   # It uses <string.h> for memcpy.
   deps += [ "//zircon/system/ulib/c:headers" ]

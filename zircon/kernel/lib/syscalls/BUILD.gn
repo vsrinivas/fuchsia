@@ -7,10 +7,7 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("syscalls") {
-  visibility = [
-    "//zircon/kernel/*",
-    "//zircon/system/ulib/zircon:*",
-  ]
+  visibility = [ "//zircon/kernel/*" ]
 
   # This can be used for headers only by the vDSO and test code.
   kernel = true

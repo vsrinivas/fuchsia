@@ -8,7 +8,7 @@ source_set("kernel-unittests") {
   testonly = true
   sources = [ "kernel-unittests.cc" ]
   deps = [
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/zircon",
   ]
 }

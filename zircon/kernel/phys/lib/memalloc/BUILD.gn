@@ -20,8 +20,8 @@ zx_library("memalloc") {
   sources = [ "allocator.cc" ]
 
   deps = [
+    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zircon",
     "//zircon/system/ulib/zxc",
   ]
   if (is_kernel) {
@@ -33,7 +33,7 @@ zx_library("memalloc") {
     "//zircon/system/ulib/fbl:headers",
 
     # <lib/memalloc.h> has #include <zx/status.h>.
-    "//zircon/system/ulib/zircon:headers",
+    "//src/zircon/lib/zircon:headers",
 
     # <lib/memalloc.h> has #include <lib/zx/status.h>.
     "//zircon/system/ulib/zxc:headers",
