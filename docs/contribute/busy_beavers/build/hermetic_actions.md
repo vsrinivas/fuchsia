@@ -15,7 +15,7 @@ declared outputs are hermetic to the build system.
 Today we don't have a fully hermetic build, but rather we have dozens of actions
 and tools that read/write files that are not in their declared inputs/outputs.
 This keeps us from ever fully relying on incremental rebuilds in production,
-forcing us to do full clean builds which are ~10x slower.
+forcing us to do full clean builds, which are ~10x slower.
 
 Furthermore, these non-hermetic actions often manifest themselves as incoherent
 behavior from the build system that engineers run into and waste their time

@@ -7,7 +7,7 @@ futex - A primitive for creating userspace synchronization tools.
 ## SYNOPSIS
 
 A **futex** is a Fast Userspace muTEX. It is a low level
-synchronization primitive which is a building block for higher level
+synchronization primitive that is a building block for higher level
 APIs such as `pthread_mutex_t` and `pthread_cond_t`.
 
 Futexes are designed to not enter the kernel or allocate kernel
@@ -43,7 +43,7 @@ All of these share a `value_ptr` parameter, which is the virtual
 address of an aligned userspace integer. This virtual address is the
 information used in kernel to track what futex given threads are
 waiting on. The kernel does not currently modify the value of
-`*value_ptr` (but see below for future operations which might do
+`*value_ptr` (but see below for future operations that might do
 so). It is up to userspace code to correctly atomically modify this
 value across threads in order to build mutexes and so on.
 
@@ -54,7 +54,7 @@ See the [`zx_futex_wait()`], [`zx_futex_wake()`], [`zx_futex_requeue()`], and
 
 Futex objects do not have any rights associated with them.
 
-There are only 2 primitive operations which userspace code can perform on a
+There are only 2 primitive operations that userspace code can perform on a
 futex: waiting and waking (requeue is a combination of the two).  Because
 futexes are strictly a process local concept, revoking access to either of these
 operations would make the futex functionally worthless.
@@ -96,7 +96,7 @@ priority will relax back to its base priority.
 
 Signaling of the owner of a futex is the responsibility of the userspace code,
 as is applying the ownership concept properly when constructing a specific type
-of synchronization object which needs priority inheritance behavior.
+of synchronization object that needs priority inheritance behavior.
 
 Zircon futexes have at most a single owner.  Multiple ownership of futexes for
 the purpose of priority inheritance is not supported.  The owner of a futex may
@@ -112,12 +112,12 @@ the futex should be, or **ZX_HANDLE_INVALID** if there should be no owner.
 + Passing a valid handle to a thread to indicate the futex owner is the
   responsibility of the userspace code.  Passing an invalid handle, or a handle
   to a non-thread object will result in the wait/requeue operation failing.
-+ Threads which have not been started yet may not own a futex.  Any attempt to
-  assign ownership of a futex to a thread which has not yet been started will
++ Threads that have not been started yet may not own a futex.  Any attempt to
+  assign ownership of a futex to a thread that has not yet been started will
   result in the wait/requeue operation failing.
-+ Threads which have exited may not be the owner of a futex.  If a thread exits
++ Threads that have exited may not be the owner of a futex.  If a thread exits
   while it owns a futex, the futex will reset to being owned by no one.  If a
-  user attempts assign ownership of a futex to a thread which has exited, the
+  user attempts assign ownership of a futex to a thread that has exited, the
   wait/requeue operation will behave as if ZX_HANDLE_INVALID had been passed as
   the new futex owner.
 + If the wait/requeue operation succeeds, the owner of the target futex will

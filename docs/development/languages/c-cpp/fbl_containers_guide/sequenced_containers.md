@@ -7,9 +7,9 @@ Sequenced containers are containers where the enumeration order of elements is
 determined by by how a user specifically added and removed elements to and from
 the container. `fbl::` defines two types of sequenced containers.
 
-* `SinglyLinkedList` is a sequenced container which supports forward-only
+* `SinglyLinkedList` is a sequenced container that supports forward-only
   iteration.
-* `DoublyLinkedList` is a sequenced container which supports bi-directional
+* `DoublyLinkedList` is a sequenced container that supports bi-directional
   iteration.
 
 The main differences between how sequenced containers and associative containers
@@ -88,7 +88,7 @@ position either immediately before (`insert`) or immediately after
 (`insert_after`) the iterator. Either `begin()` or `end()` may be provided as
 the iterator for `insert`, which is functionally equivalent to saying simply
 `push_front` or `push_back`. It is an error to call `insert_after` with an
-iterator which does not reference an element, therefor `insert_after` will only
+iterator that does not reference an element, therefor `insert_after` will only
 accept a container's `begin()` when the container is non-empty, and will never
 accept `end()`. Continuing the previous example:
 
@@ -165,8 +165,8 @@ object (when using managed pointers) to the user in the process. In the event
 that there is no element at the specified position, `nullptr` is returned
 instead. In the specific case of `erase_next`, it is illegal to pass an invalid
 iterator. The iterator *must* refer to at least some element in the container.
-Finally, the erase operation works with either a iterator to an element which is
-a member of the list, or with a `T&` style reference to the object itself.
+Finally, the erase operation works with either a iterator to an element, which
+is a member of the list, or with a `T&` style reference to the object itself.
 Objects do not have to be discovered using iterators in order to be directly
 erased.
 
@@ -183,7 +183,7 @@ queue_like.pop_back();
 // Begin refers to the "-1" element, so erase_next will remove the "100" element
 queue_like.erase_next(queue_like.begin());
 
-// remove all of the elements in the list which are not in ascending order,
+// remove all of the elements in the list that are not in ascending order,
 // relative to the previous element. Hold a reference to element 200 as we pass
 // it.
 fbl::RefPtr<Obj> e200;

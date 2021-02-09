@@ -85,7 +85,7 @@ the I2C (`i2c_match[]`) device and the two GPIOs (`fault_gpio_match[]` and
 `enable_gpio_match[]`).
 
 These instructions are then placed into an array of structures
-(`device_fragment_part_t`) which defines each fragment:
+(`device_fragment_part_t`), which defines each fragment:
 
 ![Figure: Binding instructions gathered into a fragment
 array](images/composite-fragment.png)

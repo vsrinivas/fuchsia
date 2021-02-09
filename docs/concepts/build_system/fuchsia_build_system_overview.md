@@ -13,7 +13,7 @@ Ninja.
 ## Getting started
 
 If you are unfamiliar with Fuchsia's build system and GN, see [Using GN
-build][gn-preso] which outlines the basic principles of the GN build system.
+build][gn-preso], which outlines the basic principles of the GN build system.
 
 ## Boards and Products
 

@@ -7,7 +7,7 @@ process - Process abstraction
 ## SYNOPSIS
 
 A zircon process is an instance of a program in the traditional
-sense: a set of instructions which will be executed by one or more
+sense: a set of instructions that will be executed by one or more
 threads, along with a collection of resources.
 
 ## DESCRIPTION
@@ -18,7 +18,7 @@ The process object is a container of the following resources:
 + [Virtual Memory Address Regions](vm_address_region.md)
 + [Threads](thread.md)
 
-In general, it is associated with code which it is executing until it is
+In general, it is associated with code, which it is executing until it is
 forcefully terminated or the program exits.
 
 Processes are owned by [jobs](job.md) and allow an application that is

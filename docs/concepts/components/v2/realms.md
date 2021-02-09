@@ -130,7 +130,7 @@ routed from the collection as a whole. TODO: service directories as an example
 
 ### Component collections {#collections}
 
-A *collection* is a container for [dynamic children](#dynamic-children) which
+A *collection* is a container for [dynamic children](#dynamic-children) that
 may be created and destroyed at runtime using the
 [Realm](#the-realm-framework-service) framework service.
 

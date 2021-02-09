@@ -123,7 +123,7 @@ The current flow is shown in [Figure 2](#fig-2), and the proposed alternative in
 
 Several new FVM operations must be implemented and integrated into the Software
 Delivery (SWD) stack. These APIs are used to drive a state machine ([Figure
-4](#fig-4)) which ultimately switches the system between partitions.
+4](#fig-4)), which ultimately switches the system between partitions.
 
 {#fig-4}
 ![Snapshot state machine](0005_blobfs_snapshots_fig_4.png)
@@ -184,11 +184,11 @@ metadata therein.**
 
 #### ListSnapshotPartitions
 
-**Queries FVM for partitions which are configured for snapshotting.**
+**Queries FVM for partitions that are configured for snapshotting.**
 
 #### QuerySnapshotPartition
 
-**Queries FVM for information about pair of partitions which supports
+**Queries FVM for information about the of partitions that supports
 snapshotting.**
 
 *   Identifies the state of the A/B partitions, such as which is active.
@@ -203,7 +203,7 @@ Note that failures may be voluntary (where the system actively decides to cancel
 an ongoing update) or involuntary (where the system fails due to external
 factors, such as losing power). Both cases must be considered.
 
-Note that blobfs has a journalling mechanism which protects against metadata
+Note that blobfs has a journalling mechanism that protects against metadata
 corruption in cases of involuntary failure during modification. No additional
 work is required to make blobfs robust to involuntary failures during
 modification.
@@ -231,7 +231,7 @@ Equivalent to State 1.
 
 ### Supporting ephemeral packages
 
-Ephemeral packages are those which are not included in the base set of packages
+Ephemeral packages are those that are not included in the base set of packages
 for a given system version.
 
 This proposal imposes few additional restrictions on ephemeral packages; the
@@ -243,7 +243,7 @@ snapshot is aborted while the new base partition was being prepared.
 Ephemeral packages may persist across updates, since those written before the
 update begins into the active partition will be copied into the inactive
 partition when TakeSnapshot is called, and after that point, all ephemeral
-packages are written into the new partition which is readable and writable to
+packages are written into the new partition, which is readable and writable to
 the system (and will become the new active partition after the update
 completes).
 
@@ -277,7 +277,7 @@ Region           | Description                                                  
 ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 Superblock       | What you’d expect.                                                                                                                                            |
 Partition table  | An array of entries, one for each partition, containing things like name of partition, type, etc.                                                             |
-Slice allocation | An array of entries, one for each allocatable slice which indicates which partition it is allocated to (if any) and the logical offset within that partition. |
+Slice allocation | An array of entries, one for each allocatable slice that indicates which partition it is allocated to (if any) and the logical offset within that partition. |
 
 To facilitate the proposal, additional metadata is required to record slice
 types for extents, so something like the following needs to be stored somewhere:
@@ -314,7 +314,7 @@ With this structure, the extents for Blobfs would be:
 ]
 ```
 
-Some state is required which indicates which of the two partitions is currently
+Some state is required, to indicates which of the two partitions is currently
 writable, whether both partitions are active (or just one) and which partition
 should be considered bootable &nbsp;{#back-4}[\[4\]](#footnote-4).
 
@@ -336,7 +336,7 @@ format under this proposal.
 *   The block allocation map cannot change, because it is a structure shared
     between both active/inactive partitions. (Given how simple the allocation
     map is, this seems perfectly acceptable.)
-*   The active partition cannot overwrite any extents which are also allocated
+*   The active partition cannot overwrite any extents that are also allocated
     by the inactive partition. However, this is fairly simple to deal with: if
     the internal format of some data in an extent needs to change, the system
     can simply allocate new extents and move the data over, during the
@@ -344,8 +344,8 @@ format under this proposal.
 
 ## Implementation
 
-The implementation will require the following changes which are roughly
-dependent on the changes that proceed them:
+The implementation will require the following changes, which are roughly
+dependent on the changes that preceed them:
 
 1.  Changes to FVM, and partition set up.
 1.  Changes to Blobfs allocation.
@@ -406,8 +406,8 @@ it has some significant downsides:
     *   This is currently a _soft_ constraint on our system updates, which are
         budgeted to only use 50% of the available Blobfs space, but the A/B
         proposal would make this a hard constraint.
-    *   Engineering builds already exceed the 50% budget, so already do not
-        support upgradess which modify many files. Engineers rely heavily on the
+    *   Engineering builds already exceed the 50% budget, so they do not
+        support upgrades that modify many files. Engineers rely heavily on the
         ability to do incremental, small updates; breaking this workflow is a
         non-starter.
 *   There is no mechanism to share files between the partitions, thus making
@@ -418,7 +418,7 @@ it has some significant downsides:
 ### Full FVM Snapshot Feature
 
 There are challenges with developing a full FVM snapshot feature. Traditional
-snapshot mechanisms are typically dynamic in nature which means that metadata
+snapshot mechanisms are typically dynamic in nature, which means that metadata
 needs to be updated as writes arrive. Furthermore, there is a mismatch between
 FVM’s slice size (currently 1 MiB, soon to be 32 KiB) and Blobfs’s block size (8
 KiB). Addressing this would involve a substantial increase in complexity to FVM

@@ -6,7 +6,7 @@
 ## Summary
 
 This RFC introduces a new mode to `zx_channel_write`, `zx_channel_write_etc`,
-`zx_channel_call` and `zx_channel_call_etc` which copies input data from
+`zx_channel_call` and `zx_channel_call_etc` that copies input data from
 multiple memory regions rather than from a single contiguous buffer. This
 improves performance for certain users / clients by allowing message data to be
 directly copied from multiple userspace objects without an intermediate

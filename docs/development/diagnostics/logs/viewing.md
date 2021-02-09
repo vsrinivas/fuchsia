@@ -5,7 +5,7 @@ Logs are primarily consumed in either an interactive ("online") context with a l
 
 ## Ordering
 
-All logs have a timestamp attached which is read from the [monotonic clock] when recording the
+All logs have a timestamp attached, which is read from the [monotonic clock] when recording the
 message. There are many ways that a `LogSink` can receive messages in a different order than
 indicated by their timestamps.
 
@@ -18,7 +18,7 @@ alert their users when messages are received without a strictly linear ordering 
 
 ## Online
 
-Because there are two buffers which store logs, there are two main ways to view them when you have a
+Because there are two buffers that store logs, there are two main ways to view them when you have a
 live device. For more information about where logs are stored on-device, see [Concepts: Storage].
 
 ### syslog and kernel log
@@ -54,7 +54,7 @@ With a running device available, run `fx log -h` to see the options for modifyin
 
 #### `fx test`
 
-Under the hood, `fx test` calls `run-test-component` which collects isolated `stdout`, `stderr`, and
+Under the hood, `fx test` calls `run-test-component`, which collects isolated `stdout`, `stderr`, and
 `LogSink` connections from test components, printing the output inline and preventing them showing
 up in the global log buffers.
 
@@ -93,7 +93,7 @@ resulting output would be:
 
 ## Offline: CQ/GI
 
-When running tests, a [Swarming] bot invokes [botanist] which collects several output streams to be
+When running tests, a [Swarming] bot invokes [botanist], which collects several output streams to be
 presented in the web UI. The `stdout` & `stderr` of botanist are what's presented in the "swarming task
 UI".
 

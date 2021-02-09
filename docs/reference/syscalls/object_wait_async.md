@@ -22,7 +22,7 @@ zx_status_t zx_object_wait_async(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_object_wait_async()` is a non-blocking syscall which causes packets to be
+`zx_object_wait_async()` is a non-blocking syscall that causes packets to be
 enqueued on *port* when the object specified by *handle* has one or more of the
 specified [signals] asserted. Use [`zx_port_wait()`] to retrieve the packets.
 

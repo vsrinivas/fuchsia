@@ -21,7 +21,7 @@ zx_status_t zx_interrupt_create(zx_handle_t src_obj,
 
 ## DESCRIPTION
 
-`zx_interrupt_create()` creates an interrupt object which represents a physical
+`zx_interrupt_create()` creates an interrupt object that represents a physical
 or virtual interrupt.
 
 If *options* is **ZX_INTERRUPT_VIRTUAL**, *src_obj* and *src_num* are ignored and

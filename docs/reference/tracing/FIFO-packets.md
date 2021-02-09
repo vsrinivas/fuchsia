@@ -45,7 +45,7 @@ Note: This request is only used in streaming mode.
 
 This packet is sent from trace providers to the trace manager in streaming
 mode. Notifies the trace manager that a buffer is full and needs saving.
-The `data32` field contains the wrap count which is the number of times
+The `data32` field contains the wrap count, which is the number of times
 writing has switched from one buffer to the next. The buffer that needs saving
 is `(data32 & 1)`. The `data64` field contains the offset of the end of
 data written to the durable buffer.

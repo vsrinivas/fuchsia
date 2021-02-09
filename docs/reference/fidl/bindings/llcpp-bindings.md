@@ -155,7 +155,7 @@ Example usage:
 Flexible enums are implemented as a `class` instead of an `enum class`, with the
 following methods:
 
-* `constexpr LocationType()`: Default constructor which initializes the enum to
+* `constexpr LocationType()`: Default constructor, which initializes the enum to
   an unspecified unknown value.
 * `constexpr LocationType(uint32_t value)`: Explicit constructor that takes in a
   value of the underlying type of the enum.
@@ -422,7 +422,7 @@ multi-threaded dispatcher.
 ##### Creation
 
 A client is created with a client-end `zx::channel`, an `async_dispatcher_t*` and an optional
-shared pointer on an [`AsyncEventHandler`](#async-event-handlers) which defines the methods to be
+shared pointer on an [`AsyncEventHandler`](#async-event-handlers) that defines the methods to be
 called when a FIDL event is received or when the client is unbound. If the virtual for a particular
 event is not overriden, the event is ignored.
 
@@ -465,7 +465,7 @@ user code).
 
 Note: If you shutdown the dispatcher while there are any active bindings, the
 unbound hook may be executed on the thread executing shutdown. As such, you must
-not take any locks which could be taken by hooks provided to `fidl::Client` APIs
+not take any locks that could be taken by hooks provided to `fidl::Client` APIs
 while executing `async::Loop::Shutdown()/async_loop_shutdown()`. (You should
 probably ensure that no locks are held around shutdown anyway since it joins all
 dispatcher threads, which may take locks in user code).
@@ -812,7 +812,7 @@ following members:
 
 * `virtual Unbound(::fidl::UnbindInfo info) {}`: method called when the client has been unbound.
 
-To be able to handle events and unbound, a class which inherits from `AsyncEventHandler` must be
+To be able to handle events and unbound, a class that inherits from `AsyncEventHandler` must be
 defined.
 
 #### Sync client {#sync-event-handlers}
@@ -829,7 +829,7 @@ this example, it consists of the following member:
   The status to be returned by `HandleOneEvent` if an unknown event is found.
   This method should be overriden only if a specific status is needed.
 
-To be able to handle events, a class which inherits from `SyncEventHandler` must be
+To be able to handle events, a class that inherits from `SyncEventHandler` must be
 defined. This class must define the virtual methods for the events it wants to handle. All the
 other events are ignored. Then an instance of this class must be allocated.
 
@@ -859,7 +859,7 @@ provided (instead of the pure virtual).
 ##### Sending events using a server binding object {#bound-event-sending}
 
 When binding a server implementation to a channel, calling `fidl::BindServer`
-will return a `fidl::ServerBindingRef<Protocol>` which is the means by which you
+will return a `fidl::ServerBindingRef<Protocol>`, which is the means by which you
 may interact safely with a server binding. This class allows access to an event
 sender interface through the following operators:
 
@@ -1061,7 +1061,7 @@ The primary object is decoded in place within the provided buffer. This is also
 the case of all the secondary objects. That means that the provided buffer must
 be kept alive while the decoded value is used.
 
-For FIDL types which allow handles, the handles can be specified during
+For FIDL types that allow handles, the handles can be specified during
 construction after the bytes (the same way bytes are specified).
 
 ### Persistence

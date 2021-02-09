@@ -156,7 +156,7 @@ The "set" command sets a value:
 [zxdb] breakpoint 1 set enabled=false
 ```
 
-Some settings are hierarchical. A thread inherits settings from its process which in turn inherits
+Some settings are hierarchical. A thread inherits settings from its process, which in turn inherits
 settings from the global scope. The "get" command with no context or parameters will list the
 global settings and the ones for the current process and thread. You can set a global setting to
 apply to all threads and processes without specific overrides, or override a specific context:

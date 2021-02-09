@@ -20,7 +20,7 @@ zx_status_t zx_task_create_exception_channel(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_task_create_exception_channel()` creates a channel which will receive
+`zx_task_create_exception_channel()` creates a channel that will receive
 exceptions from the thread, process, or job.
 
 *handle* is the thread, process, or job handle to receive exceptions from.

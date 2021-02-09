@@ -65,7 +65,7 @@ Prints usage information about `list`.
 
 ### `list-files [<paths...>]`
 
-Lists all files which contain inspect data under the given `paths`. This will
+Lists all files that contain inspect data under the given `paths`. This will
 only list files for v1 components given that v2 components are not mapped to the
 filesystem at the moment.
 

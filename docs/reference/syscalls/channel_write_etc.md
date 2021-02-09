@@ -71,14 +71,14 @@ opposite end of the channel.
 It is invalid to include *handle* (the handle of the channel being written to) in the
 *handles* array (the handles being sent in the message).
 
-The maximum number of handles which may be sent in a message is **ZX_CHANNEL_MAX_MSG_HANDLES**,
+The maximum number of handles that may be sent in a message is **ZX_CHANNEL_MAX_MSG_HANDLES**,
 which is 64.
 
-The maximum number of bytes which may be sent in a message is **ZX_CHANNEL_MAX_MSG_BYTES**,
+The maximum number of bytes that may be sent in a message is **ZX_CHANNEL_MAX_MSG_BYTES**,
 which is 65536.
 
 Messages are drained by [`zx_channel_read()`] or [`zx_channel_read_etc()`]. Failure to drain the
-messages in a timely fashion can cause excessive kernel memory to be used which might generate an
+messages in a timely fashion can cause excessive kernel memory to be used, which might generate an
 exception. See [ipc limits](/docs/concepts/kernel/ipc_limits.md) for details.
 
 ### ZX_CHANNEL_WRITE_USE_IOVEC option

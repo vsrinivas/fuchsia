@@ -60,8 +60,8 @@ For each handle the tool prints the handle value, the koid of the object it
 points to, the related koid (rkoid) if the object has a related object, the
 rights of the handle and the type of object.
 
-In the example above, it shows 38 unique handles which map to 36 unique objects;
-3 of the handles point to the same "log" object with koid 1129.
+In the example above, it shows 38 unique handles, which map to 36 unique
+objects; 3 of the handles point to the same "log" object with koid 1129.
 
 It should be noted that not all alive objects might be displayed by the tool.
 For example, a thread can be alive even if there are not handles open to it and

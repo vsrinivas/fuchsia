@@ -33,7 +33,7 @@ basemgr --session_shell=dev_session_shell --session_shell_args=--root_module=hel
 
 # Basics
 
-A flutter module is a flutter app which uses ModuleDriver.
+A flutter module is a flutter app that uses ModuleDriver.
 
 Below we reproduce the contents of `main()` from that example:
 

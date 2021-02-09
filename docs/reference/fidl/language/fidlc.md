@@ -15,8 +15,8 @@ each file:
    its constructor. This class exposes a `Lex()` method, which returns the next [`Token`](#token)
    in the file; it can be called repeatedly to get the sequence of `Token`s in the file.
 3. The compiler uses the `Lexer` to initialize a [`Parser`](#parsing) and then calls the `Parse()`
-   method which constructs a parse tree. The code refers to parse trees as a raw AST. This function
-   returns a `raw::File` which is the class representing the root node of the raw AST.
+   method, which constructs a parse tree. The code refers to parse trees as a raw AST. This function
+   returns a `raw::File`, which is the class representing the root node of the raw AST.
 4. Once the compiler has parsed each file into a parse tree, it then groups the parse trees into a
    single AST (referred to in the code as a flat AST) for each library. The root of this flat AST
    is a `flat::Library`.
@@ -26,12 +26,12 @@ each file:
      `flat::Constant`. The converted `flat::` AST nodes are then stored under a single
      `flat::Library`. Initially these flat AST nodes contain the same information as the raw AST
      nodes, but they also contain fields such as a `value` field for values and a `typeshape` field
-     for types which are later set during the compilation step.
+     for types that are later set during the compilation step.
 5. Once the AST has been fully initialized, the compiler evaluates constants and determines the
    memory alignment and size information for the declared types.
 
 Note: One of the key distinction between raw and flat ASTs is that each raw tree represents a
-single file, whereas each flat tree represents a single FIDL library which may contain multiple
+single file, whereas each flat tree represents a single FIDL library that may contain multiple
 files.
 
 Finally, we end up with a flat AST that is processed and ready for backend generation either to C
@@ -150,7 +150,7 @@ public:
 }
 ```
 
-The method starts by creating a new `ASTScope` which initializes the `SourceElement` that will
+The method starts by creating a new `ASTScope`, which initializes the `SourceElement` that will
 later be used to create the returned node by pushing it onto `active_ast_scopes_`. The start of
 the `SourceElement` gets set to the first token that is consumed and the end gets set in the call
 to `GetSourceElement()` before returning.
@@ -316,7 +316,7 @@ are two types of `Decl`s:
   gets set during compilation.
 
 `TypeDecl`s representing an aggregate type (e.g. structs, tables, and unions) also
-have a static `Shape()` method which contains the logic for determining the `Typeshape`
+have a static `Shape()` method, which contains the logic for determining the `Typeshape`
 of that given type.
 
 ### FieldShape {#fieldshape}
@@ -338,7 +338,7 @@ and `end_` `Token`. All parser tree ("raw" AST) nodes inherit from this class.
 
 ### SourceFile {#sourcefile}
 
-Wrapper around a file which is responsible for owning the data in that file. Also see [Virtual
+Wrapper around a file, which is responsible for owning the data in that file. Also see [Virtual
 SourceFile](#virtualsourcefile)
 
 ### SourceLocation {#sourcelocation}
@@ -357,9 +357,9 @@ A token is essentially a lexeme (in the form of a [`SourceLocation`](#sourceloca
 `location_` attribute), enhanced with two other pieces information that are useful to the parser
 during the later stages of compilation:
 
-* `previous_end_`. A `SourceLocation` which starts at the end of the previous token and ends at the
+* `previous_end_`. A `SourceLocation`, which starts at the end of the previous token and ends at the
    start of this token. It contains data that is uninteresting to the parser such as whitespace.
-*  A kind and subkind which together classifies the lexeme. The possible kinds are:
+*  A kind and subkind that, together, classify the lexeme. The possible kinds are:
    * The special characters such as `Kind::LeftParen`, `Kind::Dot`, `Kind::Comma`, etc...
    * String and numeric constants
    * Identifiers. Tokens that are keywords (e.g. `const`, `struct`) are considered identifiers, but
@@ -371,8 +371,8 @@ during the later stages of compilation:
 
 A struct representing an instance of a type. For example, the `vector<int32>:10?` type corresponds
 to an instance of the `VectorType` `TypeDecl` with `max_size_ = 10` and `maybe_arg_type` set to the
-`Type` corresponding to `int32`. Built-in types all have a static `Shape()` method which will
-return the `Typeshape` given the parameters for an instance of that type. User defined types (e.g.
+`Type` corresponding to `int32`. Built-in types all have a static `Shape()` method that
+returns the `Typeshape` given the parameters for an instance of that type. User defined types (e.g.
 structs or unions) will all have a type of `IdentifierType` - the corresponding
 [`TypeDecl`](#typedecl), like `Struct` provides the static `Shape()` method instead.
 

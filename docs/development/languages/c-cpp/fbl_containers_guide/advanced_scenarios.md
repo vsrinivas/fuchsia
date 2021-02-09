@@ -2,7 +2,7 @@
 
 By default, most of the behavior of intrusive containers in `fbl::` are designed
 to provide as much safety as possible at compile time, typically by disallowing
-use patterns which might easily lead to mistakes at compile time.
+use patterns that might easily lead to mistakes at compile time.
 
 That said, there are certain advanced scenarios where a user may choose to
 bypass these compile time safeties in order to deliberately permit certain
@@ -21,7 +21,7 @@ This section of the guide will show you how to:
 ## Controlling advanced options with `fbl::NodeOptions` {#node-options}
 
 In order to control some advanced options at compile time, node state objects
-(as well as their associated mix-ins) can take a bit-flag style constant which
+(as well as their associated mix-ins) can take a bit-flag style constant, which
 can be used to change specific behaviors. Options may be combined using the `|`
 operator. By default, options are the second template parameter of either a
 `NodeState` or `Listable`/`Containable` type, and the third template parameter
@@ -80,7 +80,7 @@ when destroyed.
 Worse, if you attempt to remove the object by calling
 `the_list.erase(another_object)`, you are attempting to erase an object from a
 container in an incoherent state. In this case, the prev and next pointers of
-another object point to the first object in the list, the object which used to
+another object point to the first object in the list, the object that used to
 be after `begin()` at the start of the example, but the next pointer of
 `*begin()` is pointing to `the_obj`, and likewise for the prev pointer of the
 next object in the sequence. While the specific behavior will vary on the type
@@ -176,7 +176,7 @@ PointList CloneList(const PointList& list) {
 
 ## Allowing objects tracked by `unique_ptr` to exist in multiple containers {#multiple-unique}
 
-Usually, it would be a mistake to define an object which can exist in
+Usually, it would be a mistake to define an object that can exist in
 multiple containers concurrently, while tracking those objects in their
 containers using `unique_ptr` semantics. In theory, it should be impossible
 for two different containers to track the same object at the same time,
@@ -206,8 +206,8 @@ class Obj : public fbl::ContainableBaseClasses<
   fbl::TaggedSinglyLinkedListable<Obj*, Tag2>> { /* ... */ };
 ```
 
-There are, however, legitimate uses for types which can exist in multiple
-containers which are managed using `std::unique_ptr`s.
+There are, however, legitimate uses for types that can exist in multiple
+containers, which are managed using `std::unique_ptr`s.
 
 First, you may have a situation where an object can exist in two different types
 of data structure (perhaps a list and a tree), but never the same data structure
@@ -218,7 +218,7 @@ A second reason you might want to allow this is because you have an object whose
 life is tracked by a container using `std::unique_ptr`, but for which you want
 to allow objects to exist in containers on a temporary basis in order to more
 easily implement some sort of algorithm. Perhaps a set of objects needs to be
-filtered into a temporary list and then passed to a function which will operate
+filtered into a temporary list and then passed to a function that will operate
 on the filtered set.  Or, perhaps they need to be placed into a temporary
 WAVLTree with a custom sorting/keys in order to check for duplicates.
 
@@ -278,7 +278,7 @@ build.
 
 What if you had a situation where you didn't care that your objects still
 thought that they were in a container when they destructed? Perhaps you
-allocated a contiguous slab of memory and carved it up into object which you
+allocated a contiguous slab of memory and carved it up into object that you
 then placed onto a free list. If you want to free your slab of memory, and you
 know that all of the objects have been returned to the free list, then why
 bother walking the list to zero out all of the linked list bookkeeping? This
@@ -290,7 +290,7 @@ present in the node state object are skipped, and a method on the container
 called `clear_unsafe()` becomes available for use. `clear_unsafe()` will simply
 reset the container to its original empty state making no effort to clean up
 the objects' node states. This is a simple O(1) operation. Attempting to call
-`clear_unsafe()` on a container which uses a node state object without this flag
+`clear_unsafe()` on a container that uses a node state object without this flag
 will trigger a `static_assert`. Here is a simple example of what this would
 look like:
 
@@ -363,13 +363,13 @@ zx_status_t DeinitSlab() {
 ## Directly removing objects from whatever container instance they are in. {#direct-remove}
 
 In general, even though it is sometimes possible, it is not considered best
-practice to design code which needs to remove objects directly from a container
+practice to design code that needs to remove objects directly from a container
 without having a reference to the container itself. As a design principle, users
 of intrusive containers should always be aware of which container types and
 instances objects exist in at all times. Still, sometimes direct removal might
 be the easiest and best option available.
 
-Containers which track size by default might require an O(n) traversal of the
+Containers that track size by default might require an O(n) traversal of the
 data structure in order to find the container to update the bookkeeping if nodes
 are removed from the container without knowledge of the container instance.
 Therefore, these containers do not support direct removal. Other container
@@ -386,9 +386,9 @@ from when inheritance produces ambiguity, or using the top level
 `fbl::RemoveFromContaier<Tag>(obj_ref)` call when using the
 `ContainableBaseClasses` helper. See [`InContainer()`](membership_tests.md#single-container)
 
-Consider the following use case. You have a bunch of jobs which needs to be
+Consider the following use case. You have a bunch of jobs that need to be
 processed by several stages of a pipeline. The pipeline stages each have a
-queue of pending work which threads take jobs from, process, and then queue
+queue of pending work that threads take jobs from, process, and then queue
 to the next stage of a pipeline.
 
 If you want to cancel a job while it is in flight, how do you easily know which

@@ -3,7 +3,7 @@
 ## Overview
 
 The Validator program sends FIDL commands to control a "puppet" program, which
-invokes library functionality to modify some state which the Validator then
+invokes library functionality to modify some state that the Validator then
 evaluates. For more information about the Inspect Validator, see the
 [README](README.md).
 
@@ -32,7 +32,7 @@ require puppet code architecture modifications.)
 ## Serving FIDL
 
 The `main()` function performs boilerplate to serve a single FIDL client
-through `run_driver_service()` which receives either `Initialize` or `Act`
+through `run_driver_service()`, which receives either `Initialize` or `Act`
 events from the FIDL stream. `Act` events are unpacked by the `Actor` object
 which maintains the state necessary to control the Inspect library.
 
@@ -64,21 +64,21 @@ fully hermetic.
 ### Dependencies and names
 
 [Validator's BUILD.gn file](/src/diagnostics/validator/inspect/BUILD.gn#21)
-defines a `validator_bin` target which is used by the
+defines a `validator_bin` target, which is used by the
 [Rust puppet's BUILD.gn file](/src/diagnostics/validator/inspect/lib/rust/BUILD.gn#33)
 as a dependency to the `test_package()` named `inspect_validator_test_rust`
 which is the test that exercises the Rust puppet.
 
 The Rust puppet itself is
 [built as a standard rustc_binary](/src/diagnostics/validator/inspect/lib/rust/BUILD.gn#10).
-That build rule produces two names, `inspect_validator_rust_puppet_bin` which
+That build rule produces two names, `inspect_validator_rust_puppet_bin`, which
 is included in the deps of the `test_package()` rule, and
-`inspect_validator_rust_puppet` which is included in the binaries of the
+`inspect_validator_rust_puppet`, which is included in the binaries of the
 `test_package()`.
 
 The `validator_bin` target from the
 [Validator's Build.gn file](/src/diagnostics/validator/inspect/BUILD.gn#21)
-has a name of `validator` which is referred to in the `tests` of the
+has a name of `validator`, which is referred to in the `tests` of the
 `test_package()`.
 
 ### CQ/CI

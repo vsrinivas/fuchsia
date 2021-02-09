@@ -20,7 +20,7 @@ interpreter that is intalled as part of a Fuchsia source checkout.
 
 ### Other scripts
 
-Scripts which are invoked directly should use `python` in the shebang and be
+Scripts that are invoked directly should use `python` in the shebang and be
 compatible with both 2 and 3: `#!/usr/bin/env python`.
 
 Developers working on Fuchsia modules may use various platforms. Some platforms

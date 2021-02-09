@@ -33,14 +33,14 @@ overview of clock objects.
 
 The following options are defined for clock objects:
 
-+ **ZX_CLOCK_OPT_MONOTONIC** : When set, creates a clock object which is
++ **ZX_CLOCK_OPT_MONOTONIC** : When set, creates a clock object that is
   guaranteed to never run backwards. Monotonic clocks must always move forward.
-+ **ZX_CLOCK_OPT_CONTINUOUS** : When set, creates a clock which is guaranteed to
++ **ZX_CLOCK_OPT_CONTINUOUS** : When set, creates a clock that is guaranteed to
   never jump either forwards or backwards. Continuous clocks may only be
   maintained using frequency adjustments and are, by definition, also monotonic.
   Attempting to create a clock object with the **ZX_CLOCK_OPT_CONTINUOUS** option
   specified, but without the **ZX_CLOCK_OPT_MONOTONIC** option specified is an
-  error which will be signalled with **ZX_ERR_INVALID_ARGS**.
+  error, which will be signalled with **ZX_ERR_INVALID_ARGS**.
 + **ZX_CLOCK_OPT_AUTO_START** : When set, creates a clock that is started
   automatically for the user. You don't need to call zx_clock_update() to start
   the clock running. Initially, the clock will be a clone of clock monotonic,

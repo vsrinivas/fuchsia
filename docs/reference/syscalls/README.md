@@ -233,8 +233,8 @@
 ## Syscall generation
 
 Syscall support is generated from `//zircon/vdso`. The FIDL files in that
-directory are first run through `fidlc` which produces an intermediate format.
-That intermediate format is consumed by [kazoo](/zircon/tools/kazoo) which
+directory are first run through `fidlc`, which produces an intermediate format.
+That intermediate format is consumed by [kazoo](/zircon/tools/kazoo), which
 produces output for both the kernel and userspace in a variety of languages.
 This output includes C or C++ headers for both the kernel and userspace, syscall
 entry points, other language bindings, and so on.

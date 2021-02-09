@@ -12,17 +12,17 @@ single story.
 A module is given access to two services provided by the modular framework in
 its incoming namespace:
 
-*   `fuchsia.modular.ComponentContext` which gives the agent access to
+*   `fuchsia.modular.ComponentContext`, which gives the agent access to
     functionality that is shared across components run under the modular
     framework (e.g. modules, shells, agents).
-*   `fuchsia.modular.ModuleContext` which gives modules access to module
+*   `fuchsia.modular.ModuleContext`, which gives modules access to module
     specific functionality.
 
 A module is expected to provide three services to the modular framework in its
 outgoing namespace:
 
-*   `fuchsia.ui.app.ViewProvider` which is used to display the module's UI.
-*   `fuchsia.modular.Lifecycle` which allows the framework to signal the module
+*   `fuchsia.ui.app.ViewProvider`, which is used to display the module's UI.
+*   `fuchsia.modular.Lifecycle`, which allows the framework to signal the module
     to terminate gracefully.
 
 ## Lifecycle

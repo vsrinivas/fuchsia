@@ -66,7 +66,7 @@ You can also enable asan by using the variant flag.
 You can build for all targets with `fx multi` and using a file that contains all
 the specifications to build. The output for each target is found in
 `$FUCHSIA_DIR/out/<product>.<board>.variant`. An example of a multi build spec
-is <code>[bringup-cq](/tools/devshell/lib/multi-specs/bringup-cq)</code> which
+is <code>[bringup-cq](/tools/devshell/lib/multi-specs/bringup-cq)</code>, which
 approximates what is built for a CQ test.
 
 Please build for all targets before submitting to ensure builds work on all
@@ -161,13 +161,13 @@ the device.
 
 The Zircon build creates a bootfs image containing necessary userspace
 components for the system to boot (the device manager, some device drivers,
-etc). The kernel is capable of including a second bootfs image which is provided
+etc). The kernel is capable of including a second bootfs image, which is provided
 by QEMU or the bootloader as a ramdisk image.
 
 To create such a bootfs image, use the zbi tool that's generated as part of the
 build. It can assemble a bootfs image for either source directories (in which
 case every file in the specified directory and its subdirectories are included)
-or via a manifest file which specifies on a file-by-file basis which files to
+or via a manifest file that specifies, on a file-by-file basis, which files to
 include.
 
 ```none
@@ -193,7 +193,7 @@ other systems, zirconboot may be the only option for network booting.
 ### Via Gigaboot
 
 The [GigaBoot20x6](/src/firmware/gigaboot) bootloader speaks a simple network
-boot protocol (over IPV6 UDP) which does not require any special host
+boot protocol (over IPV6 UDP), which does not require any special host
 configuration or privileged access to use.
 
 It does this by taking advantage of IPV6 Link Local Addressing and Multicast,

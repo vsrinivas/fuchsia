@@ -39,7 +39,7 @@ They are C ELF ABI functions of the form `zx_noun_verb()` or
 `zx_noun_verb_direct-object()`.
 
 The system calls are defined in a customized form of FIDL in [//zircon/vdso](/zircon/vdso/).
-Those definitions are first processed by `fidlc`, and then by `kazoo` which takes the IR
+Those definitions are first processed by `fidlc`, and then by `kazoo`, which takes the IR
 representation from `fidlc` and outputs various formats that are used as glue in the VDSO, kernel,
 etc.
 
@@ -144,7 +144,7 @@ and [`zx_socket_write()`](/docs/reference/syscalls/socket_write.md).
 ## Objects and Signals
 
 Objects may have up to 32 signals (represented by the zx_signals_t type and the ZX_*_SIGNAL_*
-defines) which represent a piece of information about their current state.  Channels and Sockets,
+defines), which represent a piece of information about their current state.  Channels and Sockets,
 for example, may be READABLE or WRITABLE.  Processes or Threads may be TERMINATED.  And so on.
 
 Threads may wait for signals to become active on one or more Objects.
@@ -209,7 +209,7 @@ entire address space.  This space can be carved up via the
 [`zx_vmar_map()`](/docs/reference/syscalls/vmar_map.md) and
 [`zx_vmar_allocate()`](/docs/reference/syscalls/vmar_allocate.md) interfaces.
 [`zx_vmar_allocate()`](/docs/reference/syscalls/vmar_allocate.md) can be used to generate new
-VMARs (called subregions or children) which can be used to group together
+VMARs (called subregions or children), which can be used to group together
 parts of the address space.
 
 See: [`zx_vmar_map()`](/docs/reference/syscalls/vmar_map.md),

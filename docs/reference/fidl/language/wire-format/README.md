@@ -97,10 +97,10 @@ does not contain pointers (memory addresses) or handles (capabilities).
 
 During **encoding**...
 
-*   All pointers to sub-objects within the message are replaced with flags which
+*   All pointers to sub-objects within the message are replaced with flags that
     indicate whether their referent is present or not-present,
 *   All handles within the message are extracted to an associated **handle
-    vector** and replaced with flags which indicate whether their referent is
+    vector** and replaced with flags that indicate whether their referent is
     present or not-present.
 
 The resulting **encoded message** and **handle vector** can then be sent to
@@ -485,7 +485,7 @@ The header has the following form:
     * `txid`s with the high bit set are reserved for use by
       [**zx_channel_write()**][channel write]
     * `txid`s with the high bit unset are reserved for use by userspace
-    * A value of `0` for `txid` is reserved for messages which do not
+    * A value of `0` for `txid` is reserved for messages that do not
       require a response from the other side.
     Note: For more details on `txid` allocation, see
     [**zx_channel_call()**][channel call].
@@ -533,7 +533,7 @@ in order to invoke the method.
 The server sends method response messages to the client to indicate completion
 of a method invocation and to provide a (possibly empty) result.
 
-Only two-way method requests which are defined to provide a (possibly empty) result
+Only two-way method requests that are defined to provide a (possibly empty) result
 in the protocol declaration will elicit a method response.
 One-way method requests must not produce a method response.
 
@@ -609,14 +609,14 @@ used to indicate normal connection closure. The message is otherwise empty.
 
 `alignof(T)` denotes the alignment factor in bytes to store an object of type **T**.
 
-FIDL primitive types are stored at offsets in the message which are a multiple
+FIDL primitive types are stored at offsets in the message that are a multiple
 of their size in bytes. Thus for primitives **T**, `alignof(T) ==
 sizeof(T)`. This is called *natural alignment*. It has the
 nice property of satisfying typical alignment requirements of modern CPU
 architectures.
 
 FIDL complex types, such as structs and arrays, are stored at offsets in the
-message which are a multiple of the maximum alignment factor of all of their
+message that are a multiple of the maximum alignment factor of all of their
 fields. Thus for complex types **T**, `alignof(T) ==
 max(alignof(F:T))` over all fields **F** in **T**. It has the nice
 property of satisfying typical C structure packing requirements (which can be
@@ -627,8 +627,8 @@ plus padding up to the type's alignment factor.
 FIDL primary and secondary objects are aligned at 8-byte offsets within the
 message, regardless of their contents. The primary object of a FIDL message
 starts at offset 0. Secondary objects, which are the only possible referent of
-pointers within the message, always start at offsets which are a multiple of 8.
-(So all pointers within the message point at offsets which are a multiple of 8.)
+pointers within the message, always start at offsets that are a multiple of 8.
+(So all pointers within the message point at offsets that are a multiple of 8.)
 
 FIDL in-line objects (complex types embedded within primary or secondary
 objects) are aligned according to their type. They are not forced to 8 byte

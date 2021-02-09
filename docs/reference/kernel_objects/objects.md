@@ -59,10 +59,10 @@ any LK-level objects.
 
 ## Kernel object lifetime
 Kernel objects are ref-counted. Most kernel objects are born during a syscall
-and are held alive at refcount = 1 by the handle which binds the handle value
+and are held alive at refcount = 1 by the handle, which binds the handle value
 given as the output of the syscall. The handle object is held alive as long it
 is attached to a handle table. Handles are detached from the handle table
-closing them (for example via `sys_close()`) which decrements the refcount of
+closing them (for example via `sys_close()`), which decrements the refcount of
 the kernel object. Usually, when the last handle is closed the kernel object
 refcount will reach 0 which causes the destructor to be run.
 

@@ -33,7 +33,7 @@ specific registers used for the first two arguments of a function call
 before the thread is started.  All other registers are zero upon start.
 
 The first argument (*arg1*) is a handle, which will be transferred from
-the process of the caller to the process which is being started, and an
+the process of the caller to the process being started, and an
 appropriate handle value will be placed in arg1 for the newly started
 thread. If `zx_process_start()` returns an error, *arg1* is closed rather
 than transferred to the process being started.

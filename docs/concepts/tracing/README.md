@@ -97,7 +97,7 @@ See [`fuchsia.tracing.controller`](https://fuchsia.dev/reference/fidl/fuchsia.tr
 The trace manager is a system service that coordinates registration of
 trace providers and locates the data from each trace provider. There is
 only one trace manager in Fuchsia. It ensures that tracing proceeds in
-an orderly manner and isolates components which offer trace providers
+an orderly manner and isolates components that offer trace providers
 from trace clients. The trace manager assigns a VMO for every registered
 trace provider.
 

@@ -146,7 +146,7 @@ of the [Rust](/src/lib/diagnostics/reader/rust) client library.
 A message with dropped logs in the errors may or may not have a `payload` associated, depending on
 where the message was dropped.
 
-When a producing component overflows its log socket, it increments a counter which is used on
+When a producing component overflows its log socket, it increments a counter that is used on
 subsequent successful sends to populate a field in the log metadata. The Archivist tracks this
 metadata but isn't able to learn about a component dropping log records except through later log
 records from that component. The metadata is passed on to clients in the same form, as an error
@@ -158,7 +158,7 @@ again.
 
 ## Legacy APIs
 
-Archivist serves the `fuchsia.logger.Log` protocol which allows clients to read logs in a text
+Archivist serves the `fuchsia.logger.Log` protocol that allows clients to read logs in a text
 format. This API is superceded by `fuchsia.diagnostics.ArchiveAccessor` and will be deleted in the
 future.
 

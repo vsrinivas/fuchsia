@@ -115,14 +115,14 @@ AVB algorithm type.Supported options:
 From //build/images/vbmeta.gni:33
 
 ### avb_atx_metadata
-AVB metadata which will be used to validate public key
+AVB metadata that will be used to validate public key
 
 **Current value (from the default):** `""`
 
 From //build/images/vbmeta.gni:24
 
 ### avb_key
-a key which will be used to sign VBMETA and images for AVB
+a key that will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
@@ -400,7 +400,7 @@ From //build/board.gni:28
 List of paths to board-specific tools to include in the build output.
 
 Most development tools can just be used in-tree and do not need to be
-included here. This arg is only meant for tools which may need to be
+included here. This arg is only meant for tools that may need to be
 distributed along with the build files, for example tools for flashing
 from SoC recovery mode.
 
@@ -706,7 +706,7 @@ From //build/images/args.gni:97
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
 
-Dart analyzer uses a lot of memory which may cause issues when building
+Dart analyzer uses a lot of memory, which may cause issues when building
 with many parallel jobs e.g. when using goma. To avoid out-of-memory
 errors we explicitly reduce the number of jobs.
 
@@ -800,7 +800,7 @@ Non-product JIT
 From //build/dart/config.gni:18
 
 ### dart_force_product
-Forces all Dart apps to build in product mode which is a
+Forces all Dart apps to build in product mode, which is a
 stripped down version of the VM running in AOT mode.
 
 **Current value (from the default):** `false`
@@ -1155,7 +1155,7 @@ From //build/testing/flutter_driver.gni:9
 
 ### flutter_force_product
 If set to true, will force the runenrs to be built in
-product mode which means they will not have an exposed vm service
+product mode, which means they will not have an exposed vm service
 
 **Current value (from the default):** `false`
 
@@ -1192,7 +1192,7 @@ From //src/fonts/build/font_args.gni:12
 
 ### format_minfs_on_corruption
 If format_minfs_on_corruption is true (the default), fshost formats minfs partition on finding
-it corrupted.  Set to false to keep the devices in a corrupted state which might be of help to
+it corrupted.  Set to false to keep the devices in a corrupted state, which might be of help to
 debug issues.
 
 **Current value (from the default):** `true`
@@ -3654,7 +3654,7 @@ List of arguments to populate /boot/config/devmgr in the Zedboot image.
 From //build/images/zedboot/zedboot_args.gni:7
 
 ### zircon_a_partition
-Arguments to `fx flash` script (along with any `firmware_prebuilts` which
+Arguments to `fx flash` script (along with any `firmware_prebuilts` that
 specify a partition).
 
 If `fvm_partition` is provided, the flash script will flash the full OS,

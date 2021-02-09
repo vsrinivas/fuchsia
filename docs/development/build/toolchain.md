@@ -134,7 +134,7 @@ optimized compiler intended to ship to users.
 
 Setting up these compilers requires a lot of options. To simplify the
 configuration the Fuchsia Clang build settings are contained in CMake
-cache files which are part of the Clang codebase (`Fuchsia.cmake` and
+cache files, which are part of the Clang codebase (`Fuchsia.cmake` and
 `Fuchsia-stage2.cmake`).
 
 In the following CMake invocations, `${CLANG_TOOLCHAIN_PREFIX}` refers to the directory
@@ -296,7 +296,7 @@ various libraries from the toolchain are located.
 Note: If you make another change to Clang after building Fuchsia with a previous
 version of Clang, re-running `fx build` may not always guarantee that all necessary
 targets will be built with the new Clang. For this case, should instead run `fx
-clean-build` which will rebuild everything but definitely use the new Clang.
+clean-build`, which will rebuild everything but definitely use the new Clang.
 
 ## Developing Clang
 
@@ -385,7 +385,7 @@ cmake -GNinja \
 
 Normally you would run Ninja at this point but we want to build
 everything using a sanitized version of libc++ but if we build now it
-will use libc++ from `${CLANG_TOOLCHAIN_PREFIX}` which isn't sanitized.
+will use libc++ from `${CLANG_TOOLCHAIN_PREFIX}`, which isn't sanitized.
 So first we build just the cxx and cxxabi targets. These will be used in
 place of the ones from `${CLANG_TOOLCHAIN_PREFIX}` when tools
 dynamically link against libcxx

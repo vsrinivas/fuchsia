@@ -362,8 +362,8 @@ After any needed `local_font_bundle`s, font `packages`, and/or
 A `font_collection` traverses the transitive closure all of the font assets,
 packages, and groups that it contains. It collects their
 [GN metadata](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_metadata)
-to build lists of which fonts are available as local files and which as font
-packages.
+to build lists of fonts that map to font packages in local
+files.
 
 The template passes this information to the font manifest generator
 ([GN template](/src/fonts/build/font_manifest.gni),

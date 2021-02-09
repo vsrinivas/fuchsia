@@ -28,7 +28,7 @@ port it is bound to.
 
 Virtual interrupts behave as edge interrupts.
 
-This syscall only operates on interrupts which are bound to a port.  Interrupts
+This syscall only operates on interrupts bound to a port.  Interrupts
 being waited upon with [`zx_interrupt_wait()`] do not need to be re-armed with this
 call -- it happens automatically when [`zx_interrupt_wait()`] is called.
 

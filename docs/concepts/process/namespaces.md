@@ -5,7 +5,7 @@ Namespaces are the backbone of file access and service discovery in Fuchsia.
 ## Definition
 
 A namespace is a composite hierarchy of files, directories, sockets, services,
-devices, and other named objects which are provided to a component by its
+devices, and other named objects provided to a component by its
 environment.
 
 Let's unpack that a little bit.
@@ -13,7 +13,7 @@ Let's unpack that a little bit.
 **Objects are named**: The namespace contains _objects_ which can be enumerated
 and accessed by name, much like listing a directory or opening a file.
 
-**Composite hierarchy**: The namespace is a _tree_ of objects which has been
+**Composite hierarchy**: The namespace is a _tree_ of objects that has been
 assembled by _combining_ together subtrees of objects from other namespaces
 into a composite structure where each part has been assigned a path prefix
 by convention.
@@ -22,8 +22,8 @@ by convention.
 tailored to meet its own needs.  It can also publish objects of its own
 to be included in other namespaces.
 
-**Constructed by the environment**: The environment which instantiates a
-component is responsible for constructing an appropriate namespace for that
+**Constructed by the environment**: The environment, which instantiates a
+component, is responsible for constructing an appropriate namespace for that
 component within that scope.
 
 Namespaces can also be created and used independently from components although
@@ -33,7 +33,7 @@ this document focuses on typical component-bound usage.
 
 You have probably already spent some time exploring a Fuchsia namespace;
 they are everywhere.  If you type `ls /` at a command-line shell prompt
-you will see a list of some of the objects which are accessible from the
+you will see a list of some of the objects that are accessible from the
 shell's namespace.
 
 Unlike other operating systems, Fuchsia does not have a "root filesystem".
@@ -45,7 +45,7 @@ This has some interesting implications:
 - There is no global "root" namespace.
 - There is no concept of "running in a chroot-ed environment" because every
   component [effectively has its own private "root"](/docs/concepts/filesystems/dotdot.md).
-- Components receive namespaces which are tailored to their specific needs.
+- Components receive namespaces tailored to their specific needs.
 - Object paths may not be meaningful across namespace boundaries.
 - A process may have access to several distinct namespaces at once.
 - The mechanisms used to control access to files can also be used to control
@@ -56,11 +56,11 @@ This has some interesting implications:
 The items within a namespace are called objects.  They come in various flavors,
 including:
 
-- Files: objects which contain binary data
-- Directories: objects which contain other objects
-- Sockets: objects which establish connections when opened, like named pipes
-- Services: objects which provide FIDL services when opened
-- Devices: objects which provide access to hardware resources
+- Files: objects that contain binary data
+- Directories: objects that contain other objects
+- Sockets: objects that establish connections when opened, like named pipes
+- Services: objects that provide FIDL services when opened
+- Devices: objects that provide access to hardware resources
 
 ### Accessing Objects
 
@@ -73,11 +73,11 @@ You can also create new objects out of thin air by implementing the
 appropriate FIDL protocols.
 
 Given an object's channel, you can open a channel for one of its sub-objects
-by sending it a FIDL message which includes an object relative path expression
+by sending it a FIDL message that includes an object relative path expression
 which identifies the desired sub-object.  This is much like opening files
 in a directory.
 
-Notice that you can only access objects which are reachable from the ones
+Notice that you can only access objects that are reachable from the ones
 you already have access to.  There is no ambient authority.
 
 We will now define how object names and paths are constructed.
@@ -147,8 +147,8 @@ method.  See [FIDL Protocols](/docs/concepts/fidl/overview.md).
 ### Client Interpreted Path Expressions
 
 A client interpreted path expression is a generalization of object relative
-path expressions which includes optional features which may be emulated
-by client code to enhance compatibility with programs which expect a rooted
+path expressions, but includes optional features that may be emulated
+by client code to enhance compatibility with programs that expect a rooted
 file-like interface.
 
 Technically these features are beyond the scope of the Fuchsia namespace
@@ -158,7 +158,7 @@ protocol itself but they are often used so we describe them here.
   This namespace is denoted `/`.
 - A client may construct paths relative to its designated root namespace
   by prepending a single `/`.
-- A client may construct paths which traverse upwards from containers using
+- A client may construct paths that traverse upwards from containers using
   `..` path segments by folding segments together (assuming the container's
   path is known) through a process known as client-side "canonicalization".
 - These features may be combined together.
@@ -178,12 +178,12 @@ in file manipulation APIs such as `open()`, `stat()`, `unlink()`, etc.
 ## Namespace Transfer
 
 When a component is instantiated in an environment (e.g. its process is
-started), it receives a table which maps one or more namespace path prefixes
+started), it receives a table that maps one or more namespace path prefixes
 to object handles.
 
 The path prefixes in the table encode the intended significance of their
 associated objects by convention.  For example, the `pkg` prefix should
-be associated with a directory object which contains the component's own
+be associated with a directory object, which contains the component's own
 binaries and assets.
 
 More on this in the next section.
@@ -204,13 +204,13 @@ the component type you are implementing._
 
 ### Typical Objects
 
-There are some typical objects which a component namespace might contain:
+There are some typical objects that a component namespace might contain:
 
 - Read-only executables and assets from the component's package.
 - Private local persistent storage.
 - Private temporary storage.
 - Services offered to the component by the system, the component framework,
-  or by the client which started it.
+  or by the client that started it.
 - Device nodes (for drivers and privileged components).
 - Configuration information.
 
@@ -233,22 +233,22 @@ There are some typical objects which a component namespace might contain:
 
 ## Namespace Participants
 
-Here is some more information about a few abstractions which interact with
+Here is some more information about a few abstractions that interact with
 and support the Fuchsia namespace protocol.
 
 ### Filesystems
 
 Filesystems make files available in namespaces.
 
-A filesystem is simply a component which publishes file-like objects which
-are included in someone else's namespace.
+A filesystem is simply a component that publishes file-like objects
+from someone else's namespace.
 
 ### Services
 
 Services live in namespaces.
 
-A service is a well-known object which provides an implementation of a FIDL
-protocol which can be discovered using the namespace.
+A service is a well-known object that provides an implementation of a FIDL
+protocol, which can be discovered using the namespace.
 
 A service name corresponds to a path within the `svc` branch of the namespace
 from which a component can access an implementation of the service.
@@ -261,12 +261,12 @@ For example, the name of the default Fuchsia logging service is
 
 Components consume and extend namespaces.
 
-A component is an executable program object which has been instantiated
+A component is an executable program object that has been instantiated
 within some environment and given a namespace.
 
 A component participates in the Fuchsia namespace in two ways:
 
-1. It can use objects from the namespace which it received from its environment,
+1. It can use objects from the namespace received from its environment,
    notably to access its own package contents and incoming services.
 
 2. It can publish objects through its environment in the form of a namespace,
@@ -279,7 +279,7 @@ A component participates in the Fuchsia namespace in two ways:
 Environments construct namespaces.
 
 An environment is a container of components.  Each environment is responsible
-for _constructing_ the namespace which its components will receive.
+for _constructing_ the namespace for its components.
 
 The environment decides what objects a component may access and how the
 component's request for services by name will be bound to specific

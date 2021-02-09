@@ -1,6 +1,6 @@
 # Iterators
 
-So far, examples which have been presented have shown many uses of `fbl::`
+So far, examples that have been presented have shown many uses of `fbl::`
 iterators. Iterators in `fbl::` use an API very similar to the API used in the
 `std::` containers, so hopefully this will feel very familiar to you.  It is,
 however, worth taking a small amount of time to mention the things that all
@@ -74,9 +74,9 @@ singly linked list buckets do not.
 
 Advancing an iterator past the end of a container gives `container.end()`.
 Attempting to advance further is legal, but does not change the value of the
-iterator. Backing up a bi-directional iterator which is currently set to
-`container.end()` using the `--` operator will produce an iterator which points
-to the last element in the list, _however backing up an iterator which has been
+iterator. Backing up a bi-directional iterator that is currently set to
+`container.end()` using the `--` operator will produce an iterator that points
+to the last element in the list, _however backing up an iterator that has been
 default initialized does not_. Instead, executing either `++` or `--` on a
 default initialized leaves the iterator in the default initialized state.
 Finally, backing up an iterator whose value is equal to `container.begin()` will
@@ -99,8 +99,8 @@ the build.
 
 Because of the intrusive nature of the containers, it is possible to create a
 container iterator using an existing reference to an object. For example, given
-a tree of objects ordered by key, a function which returns a reference to the
-object which comes before an object in key sequence could be written by saying
+a tree of objects ordered by key, a function that takes an object, and returns a
+reference to the object before it, in key sequence, could be written by saying
 something like:
 
 ```
@@ -124,7 +124,7 @@ container's `end()` method..
 
 ## iterator::CopyPointer()
 
-Finally, `fbl::` iterators provide a method called `CopyPointer` which can be
+Finally, `fbl::` iterators provide a method called `CopyPointer`, which can be
 used to produce a copy of the pointer type being used by the container. For
 containers of raw pointers, this is nothing special. It is simply a `T*` copy of the
 pointer to the object. In fact, `iter.CopyPointer() == &(*iter)` should always

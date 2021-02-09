@@ -7,7 +7,7 @@ by the regular Fuchsia build rules, such as those in
 
 We have established some conventions for packaging resources (i.e. localized
 assets). The schema is intended to be extensible to other asset types, and also
-to be able to support _combinations_ of asset types which are sometimes useful
+to be able to support _combinations_ of asset types, which are sometimes useful
 to have when expressing more complex relationships between device and locale (a
 Hebrew icon version for a 200dpi display).  All paths below are relative to the
 package's data directory and are found under `/pkg/data` on a running system.

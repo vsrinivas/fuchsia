@@ -18,7 +18,7 @@ zx_status_t zx_interrupt_wait(zx_handle_t handle, zx_time_t* out_timestamp);
 
 ## DESCRIPTION
 
-`zx_interrupt_wait()` is a blocking syscall which causes the caller to
+`zx_interrupt_wait()` is a blocking syscall that causes the caller to
 wait until an interrupt is triggered.  It can only be used on interrupt
 objects that have not been bound to a port with [`zx_interrupt_bind()`]
 

@@ -143,7 +143,7 @@ Before you run `clang-tidy`, you must:
 
 Once the compilation database and generated headers are present, you can run the `run-clang-tidy.py`
 script to start the `clang-tidy` tool. The script handles handles parallelization and deduplication
-of errors which is necessary when the same header is included in multiple source files. When you
+of errors, which is necessary when the same header is included in multiple source files. When you
 use this script, you must also pass the `clang-tidy` and `clang-apply-replacements` binaries from
 the distributed Fuchsia toolchain to make sure the correct ones are used.
 

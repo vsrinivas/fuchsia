@@ -7,9 +7,9 @@ size specific of a container. Specifically, the associative containers always
 track the number of elements in the container, while the sequenced containers do
 not by default.
 
-In order to prevent any surprises which may occur from encountering an
-unexpected `O(n)` call to a `size()` method on a container, the sequenced
-containers do not have a method called `size()` which can be called. More
+In order to prevent any surprises, which may occur from encountering an
+unexpected `O(n)` call to a `size()` method on a container, the API for
+sequenced containers does not include a `size()` method. More
 accurately, attempting to call size() will trigger a `static_assert` and fail to
 compile.
 

@@ -1,7 +1,7 @@
 # Lifecycle checks
 
 To assist developers in catching some simple mistakes, there are a couple of
-checks which are run by `fbl::` containers when node state structure and
+checks run by `fbl::` containers when node state structure and
 containers are destroyed. They are implemented using `ZX_DEBUG_ASSERT` and are
 therefor only present when debug asserts are enabled.
 

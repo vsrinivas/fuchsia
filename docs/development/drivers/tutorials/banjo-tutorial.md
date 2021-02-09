@@ -138,7 +138,7 @@ The file is relatively long, so we'll look at it in several parts.
 
 ### Boilerplate
 
-The first part has some boilerplate which we'll show without further comment:
+The first part has some boilerplate, which we'll show without further comment:
 
 ```c
 [01] // Copyright 2018 The Fuchsia Authors. All rights reserved.
@@ -361,7 +361,7 @@ The two class declarations are wrapped in the DDK namespace:
 ### The I2cProtocolClient wrapper class
 
 The `I2cProtocolClient` class is a simple wrapper around the `i2c_protocol_t`
-structure (defined in the C include file, line `[41]` which we discussed in
+structure (defined in the C include file, line `[41]`, which we discussed in
 [Protocol structures](#protocol-structures), above).
 
 ```c++

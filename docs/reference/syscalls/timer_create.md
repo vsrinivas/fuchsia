@@ -24,7 +24,7 @@ zx_status_t zx_timer_create(uint32_t options,
 when a specified point in time has been reached. The only valid
 *clock_id* is **ZX_CLOCK_MONOTONIC**.
 
-The *options* value specifies the coalescing behavior which
+The *options* value specifies the coalescing behavior, which
 controls whether the system can fire the time earlier or later
 depending on other pending timers.
 

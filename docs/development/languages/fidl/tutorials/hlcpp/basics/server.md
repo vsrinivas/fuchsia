@@ -233,7 +233,7 @@ Next, the code defines a handler for incoming requests from a client:
   `Echo` binding.
 * Once this happens, the `Binding` starts handling messages on the channel
   according to the `Echo` protocol. This is an example of [protocol request
-  pipelining][pipeline] which is explored in a [later tutorial][pipeline-tut].
+  pipelining][pipeline], which is explored in a [later tutorial][pipeline-tut].
 
 ### Register the protocol request handler
 

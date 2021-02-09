@@ -8,7 +8,7 @@ _To be added..._
 
 ## Working with packages
 
-The majority of these instructions rely on the `pm` tool which is available
+The majority of these instructions rely on the `pm` tool, which is available
 in `//tools`.
 
 This document describes the various steps to build and install a package:

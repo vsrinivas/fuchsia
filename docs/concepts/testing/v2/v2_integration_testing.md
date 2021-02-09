@@ -32,7 +32,7 @@ components:
 - **hello-world-integration-test-component** - Main entry point
 - **hello-world** - Component under test
 - **hello-world-integration-test-driver** - Test driver
-- **archivist-for-embedding** - Helper component which provides services to
+- **archivist-for-embedding** - Helper component that provides services to
   other components.
 
 `hello-world-integration-test-component` has two children:
@@ -40,7 +40,7 @@ components:
 - **hello-world-integration-test-driver**
 - **archivist-for-embedding**
 
-This is a simple component realm which launches
+This is a simple component realm that launches
 `hello-world-integration-test-driver` and offers it the helper services.
 
 Finally, note that all components under test are included in the test's own

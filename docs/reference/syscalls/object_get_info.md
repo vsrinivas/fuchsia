@@ -126,7 +126,7 @@ typedef struct zx_info_handle_extended {
     // The object type: channel, event, socket, etc.
     zx_obj_type_t type;
 
-    // The handle value which is only valid for the process which
+    // The handle value, which is only valid for the process that
     // was passed to ZX_INFO_HANDLE_TABLE.
     zx_handle_t handle_value;
 
@@ -688,7 +688,7 @@ Some VMOs are mapped, some are pointed to by handles, and some are both.
 
 Note: The same VMO may appear multiple times due to multiple mappings or
 handles, or because a handle to the VMO has been removed and then readded
-concurrently with this call. VMOs can change as the target process runs which
+concurrently with this call. VMOs can change as the target process runs, which
 may result in the same VMO having different values each time it appears. The
 caller must resolve any duplicate values.
 

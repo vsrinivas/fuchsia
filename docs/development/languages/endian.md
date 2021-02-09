@@ -36,7 +36,7 @@ that platform in order to do this.
 
 Many modules do not need to do anything about endian issues; their data will only be interpreted by a single CPU running Fuchsia.
 
-For those which might be ported to other OS's, or whose data might be exported by any channel:
+For those that might be ported to other OS's, or whose data might be exported by any channel:
 
 Suggested style in C or C++ is to add
 

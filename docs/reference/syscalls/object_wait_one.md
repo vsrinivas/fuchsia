@@ -21,7 +21,7 @@ zx_status_t zx_object_wait_one(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_object_wait_one()` is a blocking syscall which causes the caller to wait
+`zx_object_wait_one()` is a blocking syscall that causes the caller to wait
 until either the *deadline* passes or the object to which *handle* refers
 asserts at least one [signal][signals] specified by the bitmask *signals*. If
 the object is already asserting at least one of the specified *signals*, the

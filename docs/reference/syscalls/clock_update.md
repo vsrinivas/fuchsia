@@ -45,7 +45,7 @@ the lifetime of the clock.
 
 In order to update a clock, a user fills out the fields of a
 `zx_clock_update_args_v1_t` structure that they wish to adjust, then passes the
-structure to the update call, setting the bits in `options` which indicate which
+structure to the update call, setting the bits in `options` that indicate which
 of these fields are valid and should be set. Defined `options` bits are
 
 + **ZX_CLOCK_UPDATE_OPTION_VALUE_VALID**
@@ -110,7 +110,7 @@ On success, returns **ZX_OK**.
 ## ERRORS
 
  - **ZX_ERR_BAD_HANDLE** : *handle* is either an invalid handle, or a handle to
-   an object type which is not **ZX_OBJ_TYPE_CLOCK**.
+   an object type that is not **ZX_OBJ_TYPE_CLOCK**.
  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_WRITE** right.
  - **ZX_ERR_INVALID_ARGS** : The update request made is incompatible with the
    properties of the clock. See the **DESCRIPTION** section for details of

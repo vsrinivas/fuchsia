@@ -339,7 +339,7 @@ Note: The `MakeMove` method above returns a bool representing success, and a
 nullable response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
 instead.
 
-FIDL generates a `TicTacToeWithCtx` interface which is used by clients when
+FIDL generates a `TicTacToeWithCtx` interface, which is used by clients when
 proxying calls to the server, and by the server for implementing the protocol:
 
 ```golang
@@ -397,7 +397,7 @@ An example of a Go FIDL server can be found in [//examples/fidl/go/server][examp
 `TicTacToeWithCtxInterface` provides methods for handling events:
 
 * `func (p *TicTacToeWithCtxInterface) ExpectOnOpponentMove(ctx_ fidl.Context)
-  (GameState, error)`: Event handler for `OnOppponentMove` which takes a
+  (GameState, error)`: Event handler for `OnOppponentMove`, which takes a
   `Context` and returns the event parameters.
 
 Calling any of the event handler methods will read the next buffered event or
@@ -483,7 +483,7 @@ The generated code is identical except for the method ordinals.
 #### Transitional {#transitional}
 
 In order to support the `[Transitional]` attribute in Go, FIDL generates a
-`TicTacToeWithCtxTransitionalBase` type which provides default implementations
+`TicTacToeWithCtxTransitionalBase` type, which provides default implementations
 for every method marked as `[Transitional]`. Server implementations that embed
 `TicTacToeWithCtxTransitionalBase` will continue to build a new transitional
 method is added.

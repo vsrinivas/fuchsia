@@ -29,7 +29,7 @@ explicitly suspend a thread with the `pause` command:
 ```
 
 > When a thread is paused the debugger will show the current source code
-> location. Often threads will be in a system call which will resolve to the
+> location. Often threads will be in a system call that will resolve to the
 > location in the assembly-language macro file that generated the system call
 > as shown in the above example.
 
@@ -150,7 +150,7 @@ When a thread is suspended (see “Threads” above) you can control its executi
 
 `step` / `s`: Advances to the next line. If a function call happens before the next line, that
 function will be stepped into and execution will stop at the beginning of it. You can also supply an
-argument which is a substring to match of a specific function call. Function names not containing
+argument, which is a substring to match of a specific function call. Function names not containing
 this substring will be skipped and only matching ones will be stepped into:
 
 ```

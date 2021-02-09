@@ -7,7 +7,7 @@ undefined behavior include:
 
 *   Using misaligned or null pointer.
 *   Signed integer overflow.
-*   Conversion to, from, or between floating-point types which would overflow
+*   Conversion to, from, or between floating-point types that would overflow
     the destination.
 
 To catch these issues at scale, we introduced support for

@@ -24,7 +24,7 @@ zx_status_t zx_interrupt_bind(zx_handle_t handle,
 `zx_interrupt_bind()` binds or unbinds an interrupt object to a port.
 
 An interrupt object may only be bound to a single port and may only be bound once.
-The interrupt can only bind to a port which is created with **ZX_PORT_BIND_TO_INTERRUPT**
+The interrupt can only bind to a port created with **ZX_PORT_BIND_TO_INTERRUPT**
 option.
 
 When a bound interrupt object is triggered, a **ZX_PKT_TYPE_INTERRUPT** packet will

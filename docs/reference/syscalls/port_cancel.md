@@ -20,7 +20,7 @@ zx_status_t zx_port_cancel(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_port_cancel()` is a non-blocking syscall which cancels
+`zx_port_cancel()` is a non-blocking syscall that cancels
 pending [`zx_object_wait_async()`] calls done with *source* and *key*.
 
 When this call succeeds no new packets from the object pointed by

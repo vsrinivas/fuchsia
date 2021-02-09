@@ -102,7 +102,7 @@ The library provides implementations of `Inspect` for several types:
   arrays and histograms
 - Other `Inspect` types. [See the section on nesting](#inspect-nesting).
 
-If you add a type which isn't `Inspect`, you get a compiler error:
+If you add a type that isn't `Inspect`, you get a compiler error:
 
 ```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/compiler_errors.rs" region_tag="derive_inspect_unwrapped" adjust_indentation="auto" %}

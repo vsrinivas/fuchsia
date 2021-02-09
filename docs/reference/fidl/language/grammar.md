@@ -190,7 +190,7 @@ limits this to unsigned integer types, see [primitives].
 The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar, but the compiler limits this to:
 
 * A `NUMERIC-LITERAL` in the context of an `enum`;
-* A `NUMERIC-LITERAL` which must be a power of two, in the context of a `bits`.
+* A `NUMERIC-LITERAL`, which must be a power of two, in the context of a `bits`.
 
 ### NOTE 5
 The `protocol-method` error stanza allows the more liberal `type-constructor`

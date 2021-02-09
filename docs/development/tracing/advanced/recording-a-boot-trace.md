@@ -48,7 +48,7 @@ The third important thing to note is that in this example we just want
 to grab the current contents of the trace buffer, and aren't interested
 in tracing anything more. That is why a duration of one second is used.
 Ideally we would pass `--duration=0s` but `traceutil` currently interprets
-that as requesting the default which is ten seconds.
+that as requesting the default, which is ten seconds.
 
 The `--stream` arg just says to send the results directly to the development
 host instead of first writing them to disk on the target.
@@ -63,7 +63,7 @@ The choice of data to collect is controlled with the `ktrace.grpmask=0xNNN'
 command line option. The 0xNNN value is a bit mask of *KTRACE\_GRP\_\**
 values from
 //zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace.h.
-The default is 0xfff which enables all trace categories (or groups in
+The default is 0xfff, which enables all trace categories (or groups in
 ktrace parlance).
 
 For more information on Zircon command line options see

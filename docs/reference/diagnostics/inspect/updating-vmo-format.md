@@ -185,7 +185,7 @@ This section describes how to make your new type readable.
 1. Update the actual reader in [/zircon/system/ulib/inspect/reader.cc][reader-cc]:
    1. Update `InnerScanBlocks` to dispatch your type.
       If you are creating a new Property, you  may only have to add  your `BlockType`.
-   1. If you need a custom parser, implement `InnerParseMyFoo` which takes
+   1. If you need a custom parser, implement `InnerParseMyFoo`, which takes
       a parent (if needed) and the pointer to the scanned block.
 
 ### Implement tests {#implement-tests}

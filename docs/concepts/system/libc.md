@@ -9,7 +9,7 @@ environment for C programs. Many systems also define other
 platform-specific interfaces in the same library. Many of these
 interfaces are the preferred way for userspace to access kernel
 functionality. For example, Posix-y systems have an `open` function in
-their libc which calls an `open` system call. Sometimes these are
+their libc, which calls an `open` system call. Sometimes these are
 cross-platform standards, such as pthreads. Others are interfaces to
 kernel-specific functionality, such as `epoll` or `kqueue`. In any
 case, this library is present on the system itself and is a stable
@@ -23,7 +23,7 @@ call a Zircon `open` syscall. Secondly, Fuchsia implements some parts
 of Posix, but omits large parts of the Posix model. Most conspicuously
 absent are signals, fork, and exec. Third, Fuchsia does not require
 that programs use libc's ABI. Programs are free to use their own libc,
-or to do without. However, Fuchsia does provide a libc.so which
+or to do without. However, Fuchsia does provide a libc.so that
 programs can dynamically link, which provides implementations both of
 the C standard library and of the parts of Posix Fuchsia supports, as
 typical Posix systems do.

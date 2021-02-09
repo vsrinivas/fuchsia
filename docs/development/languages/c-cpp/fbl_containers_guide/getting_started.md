@@ -16,7 +16,7 @@ demonstration of:
 ## A simple example
 
 Let's start with a simple example and go from there.  In this example, an object
-will be defined which can exist in a doubly linked list, tracked using
+will be defined that can exist in a doubly linked list, tracked using
 `std::unique_ptr<>`.  A list of these objects will be:
 
 1. Populated
@@ -28,7 +28,7 @@ will be defined which can exist in a doubly linked list, tracked using
 #include <stdint.h>
 #include <fbl/intrusive_double_list.h>
 
-// An object which holds an immutable int and can exist on a doubly linked list
+// An object that holds an immutable int and can exist on a doubly linked list
 // managed using a std::unique_ptr
 class MyObject : public fbl::DoublyLinkedListable<std::unique_ptr<MyObject>> {
  public:
@@ -50,14 +50,14 @@ void DoThings() {
     list.push_back(std::make_unique<MyObject>(rand()));
   }
 
-  // print out any members of the list which are even
+  // print out any members of the list that are even
   for (const auto& obj : list) {
     if (!(obj.val() % 2)) {
       printf("Even Object %d\n", obj.val());
     }
   }
 
-  // Remove any objects which are divisible by 7 and give them to someone else.
+  // Remove any objects that are divisible by 7 and give them to someone else.
   for (auto iter = list.begin(); iter != list.end(); ) {
     auto consider = iter++;
     if (!(consider->val() % 7)) {
@@ -67,7 +67,7 @@ void DoThings() {
 
   // Destroy the rest of the object by forcing the list to release its unique
   // references to the objects. We could also simply let the list leave the
-  // scope of the function which would do the same.
+  // scope of the function, which would do the same.
   list.clear();
 }
 ```
@@ -81,7 +81,7 @@ explicitly supported pointer types. When the type of a `fbl::` list is defined,
 it is defined as a list of a specific pointer type to an object type. In this
 example, a `std::unique_ptr<>` was chosen meaning that the unique reference to
 the object may be held locally, or held by the list, but it cannot be held by
-both at the same time. There are currently 3 different pointer types which
+both at the same time. There are currently 3 different pointer types that
 `fbl::` containers allow:
 
 * `T*` : A raw pointer type with no managed RAII semantics.
@@ -95,7 +95,7 @@ pointer is being used to manage lifetime via the first template argument of the
 container type. When managed pointer types are used, containers always take
 ownership of a reference when the object is added to the container, and give
 back ownership of that reference when the object is removed from the container.
-The exception to this rule is `clear()` which drops all references.
+The exception to this rule is `clear()`, which drops all references.
 
 "Raw" pointers have no special ownership semantics, meaning that it is entirely
 up to the user to ensure that objects are kept alive while in a container, and
@@ -127,8 +127,8 @@ accidentally triggering the copy constructor of your object.
 `fbl::` container iterators also support the standard pre-fix and post-fix forms
 of the `++` operator, which you can see being used to optionally remove elements
 from the list as you iterate. The post-fix form is used in this example so that
-`consider` becomes the element which may chosen for removal, while `iter`
-becomes a pointer to the next element in the list which needs to be considered.
+`consider` becomes the element that may chosen for removal, while `iter`
+becomes a pointer to the next element in the list that needs to be considered.
 
 Iterators act like unmanaged pointers to the elements while they are in the
 list. The underlying object may be accessed in all the standard ways, using

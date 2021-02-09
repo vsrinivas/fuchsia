@@ -13,7 +13,7 @@ In order to ensure that `unsafe` invariants are not broken by future editors,
 each usage of `unsafe` must be accompanied by a clear, concise comment
 explaining what assumptions are being made.
 
-Where possible, package up unsafety into a single function or module which
+Where possible, package up unsafety into a single function or module that
 provides a safe abstraction to the outside world. FFI calls should usually
 be exposed through a safe function whose only purpose is to provide a safe
 wrapper around the function in question. These functions should contain

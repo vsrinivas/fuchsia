@@ -229,7 +229,7 @@ protocol's non phrase they are defined in, e.g. `Loader.Load`, `Getter.Get`,
 or `ProcessStopper`, the unqualified verb phrase should be used, i.e.
 `JobCreator.Create` or `ProcessStopper.Stop`.
 
-Protocols which are single method but intend to evolve to multi-method overtime
+Protocols that are single method but intend to evolve to multi-method overtime
 do not necessarily need to follow this naming convention, i.e if there is a
 known extension of the protocol for which the recommended naming is not
 appropriate, then choosing another name early on might be preferred. When in
@@ -431,7 +431,7 @@ overviews:
 #### Non flow-through comments
 
 If your comments are meant for library authors, use the simpler comments `//`
-(two forward slashes) which do not flow-through to the target language.
+(two forward slashes), which do not flow-through to the target language.
 
 When deciding what should be a regular `///` comment versus a non flow-through
 comment, keep in mind the following.

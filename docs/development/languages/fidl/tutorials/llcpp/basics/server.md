@@ -219,9 +219,9 @@ The server then registers the Echo protocol using `ougoing.svc_dir()->AddEntry()
 ```
 
 The call to `AddEntry` installs a handler for the name of the FIDL protocol
-(`llcpp::fuchsia::examples::Echo::Name` which is the string
+(`llcpp::fuchsia::examples::Echo::Name`, which is the string
 `"fuchsia.examples.Echo"`). The handler will call the lambda function that we
-created, and this lambda function will call `server.Bind()` with the `fidl::ServerEnd<llcpp::fuchsia::examples::Echo>` which internally wraps a
+created, and this lambda function will call `server.Bind()` with the `fidl::ServerEnd<llcpp::fuchsia::examples::Echo>`, which internally wraps a
 `zx::channel`, that represents a request from a client.
 
 When a client requests access to `/svc/fuchsia.examples.Echo`, this function

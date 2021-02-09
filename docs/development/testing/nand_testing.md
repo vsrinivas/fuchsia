@@ -31,7 +31,7 @@ dump` to inspect the device tree.
 
 ## Protocol testing
 
-`nand-test` is an integration test which performs basic tests of nand protocol
+`nand-test` is an integration test that performs basic tests of nand protocol
 drivers.
 
 For example, this command will test an existing ram-nand device making sure the

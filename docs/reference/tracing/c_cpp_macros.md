@@ -71,7 +71,7 @@ you must use an encoding macro.
   <tr>
     <td><code>TA_CHAR_ARRAY</code></td>
     <td><p><b>Required for C++</b></p>
-      <p>A character array with a length which is copied rather than cached.</p>
+      <p>A character array with a length, which is copied rather than cached.</p>
       <p>This macro takes two arguments. The first argument is a pointer to
       the character array. The second argument is the length of the array.</p>
     </td>
@@ -79,19 +79,19 @@ you must use an encoding macro.
   <tr>
     <td><code>TA_STRING</code></td>
     <td><p><b>Optional for C++</b></p>
-      <p>A NULL terminated dynamic string which is copied rather than cached.</p>
+      <p>A NULL terminated dynamic string, which is copied rather than cached.</p>
     </td>
   <tr>
   <tr>
     <td><code>TA_STRING_LITERAL</code></td>
     <td><p><b>Required for C++</b></p>
-      <p>A NULL terminated dynamic string which is cached.</p>
+      <p>A NULL terminated dynamic string, which is cached.</p>
     </td>
   <tr>
   <tr>
     <td><code>TA_POINTER</code></td>
     <td><p><b>Optional for C++</b></p>
-      <p>A pointer value which records the memory address
+      <p>A pointer value that records the memory address
        and not the target.</p>
     </td>
   <tr>
@@ -221,7 +221,7 @@ but show the use of a well defined type, a type macro, and a discouraged example
 
  The arguments to this event are numeric samples are typically represented by
  the visualizer as a stacked area chart.  The id serves to distinguish multiple
- instances of counters which share the same category and name within the
+ instances of counters that share the same category and name within the
  same process.
 
  1 to 15 numeric arguments can be associated with the event, each of which is
@@ -242,9 +242,9 @@ but show the use of a well defined type, a type macro, and a discouraged example
 ## TRACE_DURATION {#TRACE_DURATION}
 
 ```
- Writes a duration event which ends when the current scope exits.
+ Writes a duration event that ends when the current scope exits.
 
- Durations describe work which is happening synchronously on one thread.
+ Durations describe work that is happening synchronously on one thread.
  They can be nested to represent a control flow stack.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -268,7 +268,7 @@ but show the use of a well defined type, a type macro, and a discouraged example
  Writes a duration begin event only.
  This event must be matched by a duration end event with the same category and name.
 
- Durations describe work which is happening synchronously on one thread.
+ Durations describe work that is happening synchronously on one thread.
  They can be nested to represent a control flow stack.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -290,7 +290,7 @@ but show the use of a well defined type, a type macro, and a discouraged example
 ```
  Writes a duration end event only.
 
- Durations describe work which is happening synchronously on one thread.
+ Durations describe work that is happening synchronously on one thread.
  They can be nested to represent a control flow stack.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -314,9 +314,9 @@ but show the use of a well defined type, a type macro, and a discouraged example
  This event may be followed by async instant events and must be matched by
  an async end event with the same category, name, and id.
 
- Asynchronous events describe work which is happening asynchronously and which
+ Asynchronous events describe work that is happening asynchronously and that
  may span multiple threads.  Asynchronous events do not nest.  The id serves
- to correlate the progress of distinct asynchronous operations which share
+ to correlate the progress of distinct asynchronous operations that share
  the same category and name within the same process.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -341,9 +341,9 @@ but show the use of a well defined type, a type macro, and a discouraged example
 ```
  Writes an asynchronous instant event with the specified id.
 
- Asynchronous events describe work which is happening asynchronously and which
+ Asynchronous events describe work that is happening asynchronously and that
  may span multiple threads.  Asynchronous events do not nest.  The id serves
- to correlate the progress of distinct asynchronous operations which share
+ to correlate the progress of distinct asynchronous operations that share
  the same category and name within the same process.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -368,9 +368,9 @@ but show the use of a well defined type, a type macro, and a discouraged example
 ```
  Writes an asynchronous end event with the specified id.
 
- Asynchronous events describe work which is happening asynchronously and which
+ Asynchronous events describe work that is happening asynchronously and that
  may span multiple threads.  Asynchronous events do not nest.  The id serves
- to correlate the progress of distinct asynchronous operations which share
+ to correlate the progress of distinct asynchronous operations that share
  the same category and name within the same process.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -399,12 +399,12 @@ but show the use of a well defined type, a type macro, and a discouraged example
 
  Flow events describe control flow handoffs between threads or across processes.
  They are typically represented as arrows in a visualizer.  Flow arrows are
- from the end of the duration event which encloses the beginning of the flow
- to the beginning of the duration event which encloses the next step or the
- end of the flow.  The id serves to correlate flows which share the same
+ from the end of the duration event that encloses the beginning of the flow
+ to the beginning of the duration event that encloses the next step or the
+ end of the flow.  The id serves to correlate flows that share the same
  category and name across processes.
 
- This event must be enclosed in a duration event which represents where
+ This event must be enclosed in a duration event that represents where
  the flow handoff occurs.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -431,12 +431,12 @@ but show the use of a well defined type, a type macro, and a discouraged example
 
  Flow events describe control flow handoffs between threads or across processes.
  They are typically represented as arrows in a visualizer.  Flow arrows are
- from the end of the duration event which encloses the beginning of the flow
- to the beginning of the duration event which encloses the next step or the
- end of the flow.  The id serves to correlate flows which share the same
+ from the end of the duration event that encloses the beginning of the flow
+ to the beginning of the duration event that encloses the next step or the
+ end of the flow.  The id serves to correlate flows that share the same
  category and name across processes.
 
- This event must be enclosed in a duration event which represents where
+ This event must be enclosed in a duration event that represents where
  the flow handoff occurs.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -463,12 +463,12 @@ but show the use of a well defined type, a type macro, and a discouraged example
 
  Flow events describe control flow handoffs between threads or across processes.
  They are typically represented as arrows in a visualizer.  Flow arrows are
- from the end of the duration event which encloses the beginning of the flow
- to the beginning of the duration event which encloses the next step or the
- end of the flow.  The id serves to correlate flows which share the same
+ from the end of the duration event that encloses the beginning of the flow
+ to the beginning of the duration event that encloses the next step or the
+ end of the flow.  The id serves to correlate flows that share the same
  category and name across processes.
 
- This event must be enclosed in a duration event which represents where
+ This event must be enclosed in a duration event that represents where
  the flow handoff occurs.
 
  0 to 15 arguments can be associated with the event, each of which is used
@@ -495,8 +495,8 @@ but show the use of a well defined type, a type macro, and a discouraged example
  Here metadata includes timestamp, thread and process information, and arguments,
  which is what most event records contain.
 
- Blobs which exceed |TRACE_ENCODED_RECORD_MAX_TOTAL_LENGTH| will be silently
- ignored, as will blobs which cannot fit within the remaining space in the
+ Blobs that exceed |TRACE_ENCODED_RECORD_MAX_TOTAL_LENGTH| will be silently
+ ignored, as will blobs that cannot fit within the remaining space in the
  trace buffer.
 
  |category_literal| and |name_literal| must be null-terminated static string constants.
@@ -512,8 +512,8 @@ but show the use of a well defined type, a type macro, and a discouraged example
  additional metadata. This means timestamp, thread and process information,
  and arguments are not included with the record.
 
- Blobs which exceed |TRACE_ENCODED_RECORD_MAX_TOTAL_LENGTH| will be silently
- ignored, as will blobs which cannot fit within the remaining space in the
+ Blobs that exceed |TRACE_ENCODED_RECORD_MAX_TOTAL_LENGTH| will be silently
+ ignored, as will blobs that cannot fit within the remaining space in the
  trace buffer.
 
  |category_literal| and |name_literal| must be null-terminated static string constants.

@@ -150,7 +150,7 @@ wrapper of **fidl_string**. Does not own the memory of the contents.
 
 `fidl::StringView` may be constructed by supplying the pointer and number of
 UTF-8 bytes (excluding trailing `\0`) separately. Alternatively, one could pass
-a C++ string literal, or any value which implements `[const] char* data()`
+a C++ string literal, or any value that implements `[const] char* data()`
 and `size()`. The string view would borrow the contents of the container.
 
 It is memory layout compatible with **fidl_string**.
@@ -163,7 +163,7 @@ Holds a reference to a variable-length vector of elements stored within the
 buffer. C++ wrapper of **fidl_vector**. Does not own the memory of elements.
 
 `fidl::VectorView` may be constructed by supplying the pointer and number of
-elements separately. Alternatively, one could pass any value which supports
+elements separately. Alternatively, one could pass any value that supports
 [`std::data`](https://en.cppreference.com/w/cpp/iterator/data), such as a
 standard container, or an array. The vector view would borrow the contents of
 the container.

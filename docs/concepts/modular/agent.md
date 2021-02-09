@@ -15,10 +15,10 @@ modules, shells, and other agents).
 An agent is given access to two services provided by the modular framework in
 its incoming namespace:
 
-*   `fuchsia.modular.ComponentContext` which gives the agent access to
+*   `fuchsia.modular.ComponentContext`, which gives the agent access to
     functionality that is shared across components run under the modular
     framework (e.g. modules, shells, agents).
-*   `fuchsia.modular.AgentContext` which gives agents access to agent specific
+*   `fuchsia.modular.AgentContext`, which gives agents access to agent specific
     functionality.
 
 An agent is expected to provide the following services to the modular framework in its

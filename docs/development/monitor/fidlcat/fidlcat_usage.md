@@ -31,7 +31,7 @@ The default display for fidlcat is:
 
 We have the following information:
 
--   **echo_client_cpp_synchronous**: the name of the application which has
+-   **echo_client_cpp_synchronous**: the name of the application that has
     generated this display.
 
 -   **180768**: the process koid.
@@ -52,7 +52,7 @@ We have the following information:
     -   The value of the parameter (the color depends on the parameter type).
 
 -   all the complex input parameters. Here we display a FIDL message. This is a
-    request which is sent by our application.
+    request, which is sent by our application.
 
 The display stops here. It will resume when the system call returns (sometimes
 it can be a very long time). For one thread, there will be no other display
@@ -182,7 +182,7 @@ linked. That means that a write on one handle will result on a read on the other
 handle.
 
 We use handle **0163b42b** in the **Directory.Open** message. That means that
-the associated handle (**0243b493**) is the handle which controls the directory
+the associated handle (**0243b493**) is the handle that controls the directory
 we just opened.
 
 When we receive **Node.OnOpen** on **0243b493** we know that it's a response to
@@ -268,7 +268,7 @@ By default, fidlcat only displays the zx_channel syscalls.
 
 You can display all the syscalls and choose which ones you want to display.
 
-The **--syscalls** option let you define a regular expression which selects the
+The **--syscalls** option let you define a regular expression that selects the
 syscalls to decode and display.
 
 It can be passed multiple times.
@@ -276,7 +276,7 @@ It can be passed multiple times.
 To display all the syscalls, use: **--syscalls=".\*"**
 
 The **--exclude-syscalls** flag lets you exclude some syscalls selected by
-**--syscalls**. It's a regular expression which selects the syscalls to not
+**--syscalls**. It's a regular expression that selects the syscalls to not
 decode and display.
 
 It can be passed multiple times.

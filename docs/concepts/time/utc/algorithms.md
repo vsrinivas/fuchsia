@@ -476,7 +476,7 @@ be in the process of slewing.
 
 Units | Value | Rationale
 ------|-------|-----------
-Nanoseconds | 5400,000,000,000 (i.e. 1.5 hours) | The typical interval between time samples is tens of minutes. A 90 minute maximum implies a correction received in one time sample may result in a slew that spans the next handful of samples (each of these samples could also cause a modification of the slew) which feels appropriate. 90 minutes is long enough to achieve meaningful time corrections but short enough that any user-visible abnormalities associated with a slew or time error are not present over multiple hours. When combined with MAX_RATE_CORRECTION this value ensures a 1 second error may be removed by slewing. This is desirable to elegantly handle leap seconds and potential artifacts from time sources that only receive integer seconds.
+Nanoseconds | 5400,000,000,000 (i.e. 1.5 hours) | The typical interval between time samples is tens of minutes. A 90 minute maximum implies a correction received in one time sample may result in a slew that spans the next handful of samples (each of these samples could also cause a modification of the slew), which feels appropriate. 90 minutes is long enough to achieve meaningful time corrections but short enough that any user-visible abnormalities associated with a slew or time error are not present over multiple hours. When combined with MAX_RATE_CORRECTION this value ensures a 1 second error may be removed by slewing. This is desirable to elegantly handle leap seconds and potential artifacts from time sources that only receive integer seconds.
 
 ### PREFERRED_RATE_CORRECTION
 

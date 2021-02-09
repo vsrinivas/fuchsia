@@ -7,7 +7,7 @@ The Validator architecture includes:
 
 * A set of tests to validate functionality.
 * A FIDL protocol to invoke operations to be tested.
-* One or more puppet programs which receive FIDL commands and invoke library
+* One or more puppet programs, which receive FIDL commands and invoke library
 calls.
 * A reference implementation or simulation of the desired behavior.
 * Analysis of puppet results, comparison to local results, and reporting.

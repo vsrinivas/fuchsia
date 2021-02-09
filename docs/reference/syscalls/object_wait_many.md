@@ -20,7 +20,7 @@ zx_status_t zx_object_wait_many(zx_wait_item_t* items,
 
 ## DESCRIPTION
 
-`zx_object_wait_many()` is a blocking syscall which causes the caller to wait
+`zx_object_wait_many()` is a blocking syscall that causes the caller to wait
 until either the *deadline* passes or at least one object referred to in
 *items* has a specified [signal][signals] asserted. If an object is already
 asserting at least one of the specified signals, the wait ends immediately with

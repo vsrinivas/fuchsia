@@ -33,8 +33,8 @@ exceptions, etc., and the library itself is large). There are a number
 of useful constructs in the standard library that we would wish to use,
 like type traits and unique pointers. However, C++ standard libraries
 are not really to be consumed piecemeal like this. So we built a
-library which provides similar constructs named fbl. This library
-also includes constructs not present in the standard library but which
+library that provides similar constructs named fbl. This library
+also includes constructs not present in the standard library but
 are useful library code for kernel and device driver environments (for
 instance, slab allocation).
 

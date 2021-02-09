@@ -9,7 +9,6 @@ boot.
 
 This document addresses the problem of how to identify individual packages
 using **fuchsia-pkg** URLs.
-
 ## Goals
 
  * Encode stable identifiers for packages in the form of a URL under the
@@ -56,7 +55,7 @@ Consequently, we may eschew concerns related to localization of names.
 The repository's root role (a quorum of one or more public/private key pairs)
 establishes a chain of trust such that package authenticity, integrity, and
 freshness can be verified cryptographically.  The root role signs keys for more
-limited roles which are then used to sign package metadata and the targets
+limited roles, which are then used to sign package metadata and the targets
 themselves. See [here][TUF Security] and [here][TUF METADATA] for more details.
 
 To verify that a package is authentic, we must also verify that the repository
@@ -90,10 +89,10 @@ total maximum length of a hostname is 253 characters including the dots.
 
 ### Package name {#package-name}
 
-A package name is a symbolic label which identifies a logical collection of
+A package name is a symbolic label that identifies a logical collection of
 software artifacts (files), independent of any particular variant or revision
 of those artifacts.  The package name is used to locate package metadata within
-a repository.  Package metadata must be signed by a role which is trusted by
+a repository.  Package metadata must be signed by a role that is trusted by
 the repository root.
 
 A package name consists of a sequence of up to 100 of the following latin-1
@@ -122,7 +121,7 @@ A package variant is a symbolic label for a sequence of package updates.
 Different variants of the same package may receive different updates, at
 different rates, and/or with different content.  The package variant is used to
 locate metadata for a sequence of package updates within a repository.  Variant
-metadata must be signed by a role which is trusted by the role which signed the
+metadata must be signed by a role that is trusted by the role that signed the
 package's metadata.
 
 A package variant consists of a sequence of up to 100 of the following latin-1
@@ -166,7 +165,7 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 
 ### Resource paths {#resource-paths}
 
-A resource path is a UTF-8 string which identifies a resource within a package.
+A resource path is a UTF-8 string that identifies a resource within a package.
 This is a file path, consisting of a sequence of single `/` delimited
 path segments, each of which is a non-empty sequence of non-zero UTF-8
 characters not equal to `.`, `..`, or `/`.
@@ -257,7 +256,7 @@ missing, the **package resolver** fetches the resources from the newest revision
 of the package variant available to the client.
 
 Although a repository hostname is included in the URL, it is safe to fetch
-resources from any replica of the repository which satisfies the same
+resources from any replica of the repository that satisfies the same
 cryptographic chain of trust.  The problem of locating an appropriate mirror is
 beyond the scope of this document.
 

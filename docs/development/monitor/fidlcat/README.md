@@ -105,7 +105,7 @@ fx fidlcat --remote-name=echo_client
 All three options --remote-pid, --remote-name and run can be used together.
 However, run must always be the last one.
 
-When --remote-name and run are used together, only processes which match
+When --remote-name and run are used together, only processes that match
 --remote-name are monitored.
 
 Examples (echo_server is launched by echo_client):
@@ -150,7 +150,7 @@ fx fidlcat --remote-name=echo --extra-name=appmgr run echo_client_cpp.cmx
 
 You have two input options:
 
- * --from=device This is the default option which monitors in real time a device.
+ * --from=device This is the default option, which monitors a device in real time.
 
  * --from=&lt;path&gt; With this option, fidlcat replay a previously saved session.
 
@@ -214,7 +214,7 @@ tools/fidlcat --connect [$(fx get-device-addr)]:8080 <other args>
 
 ## Read the guide
 
-The [fidlcat guide](fidlcat_usage.md) describes all the flags which modify the
+The [fidlcat guide](fidlcat_usage.md) describes all the flags that modify the
 output. It also gives some examples of display interpretation.
 
 ## Where is the code?

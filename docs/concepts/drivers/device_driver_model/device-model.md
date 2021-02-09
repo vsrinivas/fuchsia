@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In Fuchsia, device drivers are implemented as ELF shared libraries (DSOs) which are
+In Fuchsia, device drivers are implemented as ELF shared libraries (DSOs), which are
 loaded into Driver Host processes. The Driver Manager process,
 contains the Device Coordinator which keeps track of drivers and devices, manages
 the discovery of drivers, the creation and direction of Driver Host processes, and

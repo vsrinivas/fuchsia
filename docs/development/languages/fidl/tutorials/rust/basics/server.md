@@ -195,7 +195,7 @@ The implementation consists of the following elements:
 
   This implementation handles `EchoString` requests by echoing the input back, and it handles
   `SendString` requests by sending an `OnString` event. Since `SendString` is a fire and forget
-  method, the request enum variant comes with a [control handle][control-handle] which can be used
+  method, the request enum variant comes with a [control handle][control-handle], which can be used
   to communicate back to the server.
 
   In both cases, errors from sending messages back to the client are propagated by adding context
@@ -229,7 +229,7 @@ connect to a protocol matching the specified name.
    ```rust
    // Import the Fuchsia async runtime in order to run the async main function
    use fuchsia_async as fasync;
-   // ServiceFs is a filesystem which is used to connect clients to the Echo service
+   // ServiceFs is a filesystem used to connect clients to the Echo service
    use fuchsia_component::server::ServiceFs;
    ```
 1. Add them as build dependencies to the `rustc_binary` target. The full target looks like:

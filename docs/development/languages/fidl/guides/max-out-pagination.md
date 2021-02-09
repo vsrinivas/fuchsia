@@ -4,7 +4,7 @@ Author: pascallouis@google.com
 
 This document describes the best ways to calculate the size both in terms of
 bytes and handles of elements as they are added to a vector. This should be
-done in order to maximize the number of elements which can be batched at once
+done in order to maximize the number of elements that can be batched at once
 while satisfying the kernel caps on channel writes.
 
 ## Summary
@@ -43,7 +43,7 @@ Since `bt.PeerId` is a `struct{uint64}` ([defined here][bt-peer-id]) it is a
 fixed 8 bytes, and therefore the `removed` vector’s content is the number of
 elements *  8 bytes.
 
-Next, we need to estimate the size of `Peer` which is [defined as a
+Next, we need to estimate the size of `Peer`, which is [defined as a
 table][bts-peer]. Tables are essentially a [vector of envelopes][fidl-table-t],
 where each envelope then points to the field content. Estimating the size must
 be done in two steps:
@@ -74,12 +74,12 @@ Enqueue(vector<Command> cmds);
 A request or response is preceded by a header, i.e. a fixed 16 bytes or
 `sizeof(fidl_message_header_t)` from [zircon/fidl.h][fidl-message-header-t].
 Then, the vector has a 16 bytes header `sizeof(fidl_vector_t)`, followed by the
-content of the vector which are the actual commands. As a result, before you
+content of the vector, which are the actual commands. As a result, before you
 account for the size of each individual command, there is a fixed size of 32
 bytes.
 
 A [command][scenic-command] is a [union][fidl-wire-format-union] that has a 24
-bytes header (i.e. `sizeof(fidl_xunion_t)`) followed by the content which is 8
+bytes header (i.e. `sizeof(fidl_xunion_t)`) followed by the content, which is 8
 bytes aligned.
 
 The size of a `Command` union content depends on the variant selected. This

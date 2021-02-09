@@ -272,7 +272,7 @@ the component manager.
 ### Offering parent hub
 
 In this example, the parent component instance passes its view of the hub to
-`hub_client` which then maps it as `/parent_hub` in its namespace. `hub_client`
+`hub_client`, which then maps it as `/parent_hub` in its namespace. `hub_client`
 can inspect information about its parent and siblings through `/parent_hub`.
 
 In the parent component manifest:

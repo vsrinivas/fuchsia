@@ -20,7 +20,7 @@ limit) so the full FIFO capacity can be used for FIFO records of arbitrary sizes
 ## Motivation
 
 This proposal is motivated by the desire to add a field to an existing FIFO record used in the
-block stack; the field in question is a trace identifier which will be used to support
+block stack; the field in question is a trace identifier, which will be used to support
 cross-process tracing of block IO. Adding this field changes the size of the FIFO records from
 `32` bytes to `40` bytes.
 

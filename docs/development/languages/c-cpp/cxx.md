@@ -241,9 +241,9 @@ on the syscall interface because the syscall interface is not available within
 the kernel.  Similarly, FBL cannot depend on C library features that are not
 available in the kernel.
 
-1. [system/ulib/fbl](/zircon/system/ulib/fbl) which is usable from both
+1. [system/ulib/fbl](/zircon/system/ulib/fbl), which is usable from both
    kernel and userspace.
-2. [kernel/lib/fbl](/zircon/kernel/lib/fbl) which is usable only from
+2. [kernel/lib/fbl](/zircon/kernel/lib/fbl), which is usable only from
     the kernel.
 
 Note: Some FBL interfaces below that overlap with standard C++ library

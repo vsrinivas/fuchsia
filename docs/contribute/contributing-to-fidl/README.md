@@ -182,7 +182,7 @@ change, https://fuchsia-review.googlesource.com/c/fuchsia/+/284569.
 
 #### Multi-step change
 
-When executing a change which requires multiple steps across various
+When executing a change that requires multiple steps across various
 repositories, for instance to soft transition APIs defined in one repository and
 used in others, it is preferred to reference the last step taken, and the next
 step to be taken so that reviewers and those looking at the log can understand
@@ -202,7 +202,7 @@ further remove ambiguity around the application or interpretation of guidelines.
 
 #### Comments
 
-Comments must respect 80 columns line size limit, unlike code which can extend
+Comments must respect 80 columns line size limit, unlike code, which can extend
 to 100 lines size limit.
 
 ##### Lambda captures
@@ -606,7 +606,7 @@ For example, you can `grep` for `fidlgen_dart`:
 fx ninja -C out/default -t targets all | grep -e 'fidlgen_dart:'
 ```
 
-This example outputs a list of ninja targets which includes `host_x64/fidlgen_dart`. Therefore, to
+This example outputs a list of ninja targets, including `host_x64/fidlgen_dart`. Therefore, to
 build `fidlgen_dart` run the following ninja command:
 
 ```sh

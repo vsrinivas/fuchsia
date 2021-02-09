@@ -49,9 +49,9 @@ class Obj : public fbl::WAVLTreeContainable<Obj*>  {
 using ObjSortedByAwesomness = fbl::WAVLTree<uint32_t, Obj*>;
 ```
 
-Here, a container has been defined which is keyed using 32 bit unsigned integers,
+Here, a container has been defined, which is keyed using 32 bit unsigned integers,
 and which will end up holding a collection of `Obj`s sorted by ascending
-awesomeness. There are rules which need to be obeyed.
+awesomeness. There are rules that need to be obeyed.
 
 1. The `GetKey` method needs to be `const`.
 2. Whenever an object is in the associative container, the `GetKey` method must
@@ -74,7 +74,7 @@ order. What if you wanted to take more control of this? What if your type was
 not copyable, or if you wanted to sort in descending instead of ascending order?
 
 For this, you can use custom key traits class. As with custom node traits, you
-need to define a struct or class which exposes three public static methods which
+need to define a struct or class that exposes three public static methods, which
 can be used to fetch a key from an object, and to compare those keys. Here is
 an example:
 
@@ -125,7 +125,7 @@ The traits tell the container both where to find the key, as well as how to
 order the keys. In this example, a constant reference to the `Endpoint` in
 `GetKey` is returned instead of a copy, avoiding the issue that `Endpoint`s are
 move-only.  Additionally, the sense of the `LessThan` operation is inverted,
-resulting in a tree which holds objects in descending `Endpoint` order instead
+resulting in a tree that holds objects in descending `Endpoint` order instead
 of ascending. The `LessThan` and `EqualTo` operations defined by the user are
 required to be deterministic, transitive, and commutative. In other words:
 
@@ -247,7 +247,7 @@ during an insert operation, it will trigger a `ZX_DEBUG_ASERT` or result in
 undefined behavior of debug asserts are not enabled.
 
 So, how can insertion in an environment where collisions _might_ take place be
-handled? Two methods are provided which allow us to efficiently control the
+handled? Two methods are provided that allow us to efficiently control the
 behavior of insertion when a collision occurs. They are:
 
 * `insert_or_find`
@@ -255,8 +255,8 @@ behavior of insertion when a collision occurs. They are:
 
 If no collision occurs, then these are both the equivalent of a simple insert.
 Otherwise, `insert_or_find` will not perform the insertion and can return an
-iterator to the object which your insert collided with if desired.  The function
-returns a bool which indicates a successful insert (no collision) when true.
+iterator to the object that your insert collided with if desired.  The function
+returns a bool, which indicates a successful insert (no collision) when true.
 
 `insert_or_replace` will simply replace the element in the container and give
 back to you a reference to the object you collided with, or a `nullptr` version
@@ -343,7 +343,7 @@ mix-in and may be invoked from the `UpdateAwesomness()` by simply saying
 `InContainer()`.
 
 Also that there is no need to find the object in the tree before removing it.
-Given a reference to the object which is to be updated, it is already known
+Given a reference to the object to be updated, it is already known
 where the object is in the container's internal structure because of the
 intrusive nature of the container.
 

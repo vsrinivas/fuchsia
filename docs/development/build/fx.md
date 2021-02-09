@@ -40,7 +40,7 @@ supported methods:
 Caution: It is not recommended (though presently works) to copy `fx` to other places,
 such as `~/bin/fx` (as this could one day break), or to add
 `$FUCHSIA_DIR/scripts` to your `$PATH` (as reviewers of code in `//scripts`)
-do not block the addition of files in that directory which could lead to
+do not block the addition of files in that directory, which could lead to
 unpredictable behaviors (for example, that directory contains binaries with
 generic names like "bootstrap" which may unintentionally override the
 behavior of other systems).

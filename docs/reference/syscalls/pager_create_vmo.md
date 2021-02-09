@@ -27,7 +27,7 @@ Creates a VMO owned by a pager object. *size* will be rounded up to the next pag
 boundary, and *options* must be zero or **ZX_VMO_RESIZABLE**.
 
 On success, the returned vmo has the same rights as a vmo created with [`zx_vmo_create()`], as well
-as having the same behavior with respect to **ZX_VMO_ZERO_CHILDREN**. Syscalls which operate on VMOs
+as having the same behavior with respect to **ZX_VMO_ZERO_CHILDREN**. Syscalls that operate on VMOs
 require an explicit flag to allow blocking IPC to the userspace pager service; beyond this, whether
 or not a VMO is owned by a pager does not affect the semantics of syscalls.
 

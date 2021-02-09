@@ -186,7 +186,7 @@ Example usage:
 [Flexible][lang-flexible] enums are implemented as a `class` instead of an `enum
 class`, with the following methods:
 
-* `constexpr LocationType()`: Default constructor which initializes the enum to
+* `constexpr LocationType()`: Default constructor, which initializes the enum to
   an unspecified unknown value.
 * `constexpr LocationType(uint32_t value)`: Explicit constructor that takes in a
   value of the underlying type of the enum.
@@ -263,7 +263,7 @@ enum Tag : fidl_xunion_tag_t {
 
 Each member of `Tag` has a value matching its [ordinal][union-lexicon] specified
 in the `union` definition. Reserved fields do not have any generated code. In
-addition, there is an `Invalid` field which is the initial value used for a
+addition, there is an `Invalid` field, which is the initial value used for a
 `JsonValue` that has no variant set yet.
 
 `JsonValue` provides the following methods:
@@ -327,7 +327,7 @@ When a FIDL message containing a union with an unknown variant is decoded into
 `JsonValue::Ordinal()` returns the unknown ordinal.
 
 A flexible `JsonValue` type will have extra methods for interacting with unknown
-data which will depend on whether the type is a
+data that will depend on whether the type is a
 [value or resource type][lang-resource]. Value types will not have
 unknown data methods that reference `zx::handle`.
 
@@ -438,7 +438,7 @@ nullable response value. This is considered un-idiomatic, you should use an [err
 instead.
 
 FIDL generates a `TicTacToe` class, which acts as an entry point for interacting
-with the protocol and defines the interface of the service which is used by
+with the protocol and defines the interface of the service used by
 clients to proxy calls to the server, and for the server for implementing the
 protocol. Synchronous clients use a different virtual interface, `TicTacToe_Sync`.
 

@@ -57,7 +57,7 @@ out parameter.
 ## ERRORS
 
  - **ZX_ERR_BAD_HANDLE** : *handle* is either an invalid handle, or a handle to
-   an object type which is not **ZX_OBJ_TYPE_CLOCK**.
+   an object type that is not **ZX_OBJ_TYPE_CLOCK**.
  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_READ** right.
  - **ZX_ERR_INVALID_ARGS** : The version of the details structure signaled by
    `options` is invalid, or the pointer of the structure passed via `details` is bad.

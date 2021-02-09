@@ -43,7 +43,7 @@ more memory for page tables. Valid values range from 0-36, with default being 30
 Controls blobfs' eviction strategy for pager-backed blobs with no open handles or
 VMO clones. If unset, an internally defined system default is used.
 
-Blobs which are not pager-backed are not affected by this knob.
+Blobs that are not pager-backed are not affected by this knob.
 
 The following values are supported:
 
@@ -806,7 +806,7 @@ It may be set to:
 "any", in which case the first volume of the appropriate type will be used.
 "local" in which the first volume that's non-removable of the appropriate type
   will be used.
-"none" (default) which avoids mounting anything.
+"none" (default), which avoids mounting anything.
 
 A "/system" ramdisk provided by bootdata always supersedes this option.
 
@@ -852,7 +852,7 @@ topological path for a device can be determined from the shell by running the
 `lsdev` command on the ethernet class device (e.g., `/dev/class/ethernet/000`).
 
 This is useful for configuring network booting for a device with multiple
-ethernet ports which may be enumerated in a non-deterministic order.
+ethernet ports, which may be enumerated in a non-deterministic order.
 
 ## netsvc.all-features=\<bool>
 

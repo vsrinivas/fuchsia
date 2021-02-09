@@ -15,10 +15,10 @@ Typical protocols used for components that require networking are
 * [`fuchsia.net.NameLookup`] for resolving hostnames (`getaddrinfo`).
 * [`fuchsia.device.NameProvider`] to get the device name (`uname`).
 
-POSIX sockets are provided by [libc] and [fdio] through `socket` calls which
+POSIX sockets are provided by [libc] and [fdio] through `socket` calls that
 require the [`fuchsia.posix.socket.Provider`] capability.
 
-Address resolution is similarly provided by [libc] through `getaddrinfo` which
+Address resolution is similarly provided by [libc] through `getaddrinfo`, which
 requires the [`fuchsia.net.NameLookup`] capability.
 
 [`fuchsia.posix.socket.Provider`]: https://fuchsia.dev/reference/fidl/fuchsia.posix.socket#Provider

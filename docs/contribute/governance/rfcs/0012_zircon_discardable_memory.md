@@ -37,7 +37,7 @@ they should be freeing; the kernel has a better picture of global memory usage
 on the system, and it can also take into consideration other forms of
 reclaimable memory, e.g. user pager backed memory that can be evicted.
 
-This RFC proposes a mechanism using which the kernel will directly be able
+This RFC proposes a mechanism by which the kernel will directly be able
 to reclaim userspace memory buffers under memory pressure. There are a few
 advantages to this approach:
 - It allows for greater control over how much memory is evicted; the kernel can
@@ -104,7 +104,7 @@ support this feature.
 - The `ZX_VMO_OP_TRY_LOCK` operation will attempt to lock the VMO and can fail.
   It will succeed if the kernel has not discarded the VMO, and fail with
   `ZX_ERR_NOT_AVAILABLE` if the kernel has discarded it. In case of failure, the
-  client is expected to try again with `ZX_VMO_OP_LOCK` which is guaranteed to
+  client is expected to try again with `ZX_VMO_OP_LOCK`, which is guaranteed to
   succeed as long as the arguments passed in are valid. The `ZX_VMO_OP_TRY_LOCK`
   operation is provided as a lightweight option to try locking the VMO without
   having to set up the buffer argument. Clients can also choose to not take any
@@ -336,7 +336,7 @@ decommit pages, a subsequent unlocked access would simply result in a zero page
 being silently handed to the client. This could either go undetected, or result
 in more subtle errors due to unexpected zero pages.
 
-We could also model the same behavior in the kernel via another mechanism which
+We could also model the same behavior in the kernel via another mechanism that
 tracks the discarded state of the VMO, but the logic would likely look very
 similar to a resize to zero. Implementing a discard as a resize allows us to use
 existing logic that gives us the desired behavior for free.

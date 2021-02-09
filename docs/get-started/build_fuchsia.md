@@ -33,7 +33,7 @@ In this example:
   * `core` is a product with the minimum feature set for Fuchsia, which includes
      common network capabilities.
   * `qemu-x64` is the board, which refers to the x64 architecture on the
-     Fuchsia Emulator (FEMU) which is based on the open source emulator, QEMU.
+     Fuchsia Emulator (FEMU), which is based on the open source emulator, QEMU.
 
 For a Fuchsia device with the core set of Fuchsia features, the build configuration is
 

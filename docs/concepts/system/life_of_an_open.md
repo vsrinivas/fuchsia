@@ -1,7 +1,7 @@
 # Life of an 'Open'
 
 To provide an end-to-end picture of filesystem access on Fuchsia, this document
-dives into the details of each layer which is used when doing something as
+dives into the details of each layer used when doing something as
 simple as opening a file. It’s important to note: all of these layers exist in
 userspace; even when interacting with filesystem servers and drivers, the kernel
 is merely used to pass messages from one component to another.
@@ -74,11 +74,11 @@ accomplished? The program has the following tools:
 
   * One or more **handles** representing a connection to the CWD
   * [zx_channel_write](/docs/reference/syscalls/channel_write.md):
-    A system call which can send bytes and handles (over a channel)
+    A system call that can send bytes and handles (over a channel)
   * [zx_channel_read](/docs/reference/syscalls/channel_read.md):
-    A system call which can receive bytes and handles (over a channel)
+    A system call that can receive bytes and handles (over a channel)
   * [zx_object_wait_one](/docs/reference/syscalls/object_wait_one.md):
-    A system call which can wait for a handle to be readable / writable
+    A system call that can wait for a handle to be readable / writable
 
 Using these primitives, the client can write a message to the filesystem server
 on the CWD handle, which the server can read and then respond to with a
@@ -105,7 +105,7 @@ the “arg” field of the FIDL structure. However, if the operation was changed
 altered.
 
 Exact byte agreement at this layer is critical, as it allows communication
-between drastically different runtimes: **processes which understand FIDL can
+between drastically different runtimes: **processes that understand FIDL can
 communicate easily between C, C++, Go, Rust, Dart programs (and others)
 transparently.**
 
@@ -126,7 +126,7 @@ is actually opened. This behavior is critical for interaction with services
 (which will be described in more detail in the “ServiceFS” section).
 
 To recap, an “open” call has gone through the standard library, acted on the
-“CWD” fdio object, which transformed the request into a FIDL message which is
+“CWD” fdio object, which transformed the request into a FIDL message, which is
 sent to the server using the `zx_channel_write` system call. The client can
 optionally wait for the server’s response using `zx_object_wait_one`, or continue
 processing asynchronously. Either way, a channel has been created, where
@@ -153,15 +153,15 @@ receiving handle, which in this case was the “current working directory”
 handle. When server objects (files, directories, services, etc) are opened,
 their handles are registered with a server-side Zircon **port** that waits for
 their underlying handles to be **readable** (implying a message has arrived) or
-**closed** (implying they will never receive more messages). This object which
-dispatches incoming requests to appropriate handles is known as the dispatcher;
-it is responsible for redirecting incoming messages to a callback function,
+**closed** (implying they will never receive more messages). This object, which
+dispatches incoming requests to appropriate handles, is known as the dispatcher.
+It is responsible for redirecting incoming messages to a callback function,
 along with some previously-supplied “iostate” representing the open connection.
 
 For C++ filesystems using libfs, this callback function is called
 `vfs_handler`, and it receives a couple key pieces of information:
 
-  * The FIDL message which was provided by the client (or artificially constructed
+  * The FIDL message, provided by the client (or artificially constructed
     by the server to appear like a “close” message, if the handle was closed)
   * The I/O state representing the current connection to the handle (passed as the
     “iostate” field, mentioned earlier).
@@ -170,7 +170,7 @@ For C++ filesystems using libfs, this callback function is called
 
   * The seek pointer within the file (or within the directory, if readdir has been used)
   * The flags used to open the underlying resource
-  * The Vnode which represents the underlying object (and may be shared between
+  * The Vnode, which represents the underlying object (and may be shared between
     multiple clients, or multiple file descriptors)
 
 This handler function, equipped with this information, acts as a large
@@ -181,7 +181,7 @@ depending on the “operation” field provided by the client. In the open case,
 
 ### VFS Layer
 
-In Fuchsia, the “VFS layer” is a filesystem-independent library of code which
+In Fuchsia, the “VFS layer” is a filesystem-independent library of code, which
 may dispatch and interpret server-side messages, and call operations in the
 underlying filesystem where appropriate. Notably, this layer is completely
 optional -- if a filesystem server does not want to link against this library,
@@ -193,7 +193,7 @@ two well-known implementations exist: one written in C++ within the
 and another written in Go in the
 [rpc package of ThinFS](/src/lib/thinfs/zircon/rpc/rpc.go).
 
-The VFS layer defines the interface of operations which may be routed to the
+The VFS layer defines the interface of operations that may be routed to the
 underlying filesystem, including:
 
   * Read/Write to a Vnode

@@ -100,7 +100,7 @@ for those products. -->
 ### Choose devices to drive
 
 Now that you have a build recipe, you can move on to creating the [bind
-rules][driver-binding] which the driver manager uses to decide whether a driver
+rules][driver-binding], which the driver manager uses to decide whether a driver
 can be used with a device.
 
 1. In `src/graphics/display/drivers/fancy-display`, create `fancy-display.bind`:

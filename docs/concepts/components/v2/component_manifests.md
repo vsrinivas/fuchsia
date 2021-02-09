@@ -13,7 +13,7 @@ Component declarations contain:
     [component collections][doc-collections].
 -   [Routing rules](#capability-routing) that describe how capabilities are
     used, exposed, and offered between components.
--   [Freeform data ("facets")](#facet-metadata) which is ignored by the
+-   [Freeform data ("facets")](#facet-metadata), which is ignored by the
     component framework but can be interpreted by third parties.
 
 ## Manifests and declarations {#manifests-and-declarations}

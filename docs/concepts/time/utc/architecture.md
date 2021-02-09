@@ -22,7 +22,7 @@ synchronization and the basic relationships between them.
 The kernel defines the concept of a
 [clock object](/docs/reference/kernel_objects/clock.md) that may be used to
 track the progress of time. Each clock object is a one dimensional affine
-transformation of the clock monotonic reference timeline which may be adjusted
+transformation of the clock monotonic reference timeline, which may be adjusted
 by a userspace component (the "clock maintainer"), and observed by many other
 userspace components (the “clients”).
 

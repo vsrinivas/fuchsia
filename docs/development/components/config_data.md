@@ -5,10 +5,10 @@
 Base: A collection of software that constitutes the core of the system and is
 updated atomically as part of a system update.
 
-Component: A unit of execution started by the component framework which
+Component: A unit of execution started by the component framework that
 constructs its sandbox environment.
 
-Package: A unit of distribution in Fuchsia which is a collection of files.
+Package: A unit of distribution in Fuchsia that is a collection of files.
 See [the Fuchsia package manager](/src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package){:.external}.
 
 ## Scope
@@ -16,7 +16,7 @@ See [the Fuchsia package manager](/src/sys/pkg/bin/pm/README.md#structure-of-a-f
 This document describes how to provide product-specific configuration data to
 components on a Fuchsia system. The mechanism described here is designed for
 use with components that are part of Base. This mechanism **is** **not**
-suitable for things which are not components.
+suitable for things that are not components.
 
 ## Overview
 

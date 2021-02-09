@@ -39,7 +39,7 @@ Requires the **ZX_RIGHT_WRITE** right.
 
 **ZX_VMO_OP_DECOMMIT** - Release a range of pages previously committed to the VMO from *offset*
 to *offset*+*size*, which resets that range's bytes to 0. Requires the **ZX_RIGHT_WRITE** right.
-This is only supported for vmos created from [`zx_vmo_create()`] which do not have non-slice
+This is only supported for vmos created from [`zx_vmo_create()`], which do not have non-slice
 children, and for slice children of such vmos. Provided range must be page aligned.
 
 **ZX_VMO_OP_ZERO** - Resets the range of bytes in the VMO from *offset* to *offset*+*size* to

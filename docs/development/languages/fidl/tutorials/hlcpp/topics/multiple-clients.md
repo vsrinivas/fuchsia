@@ -34,8 +34,8 @@ first client. To support multiple clients, keep track of multiple
 ```
 
 A binding set also simplifies the code since it no longer
-needs to create a custom handler. The binding set has a `GetHandler` method which
-returns a handler that creates a new `Binding` and stores it in a vector.
+needs to create a custom handler. The binding set has a `GetHandler` method,
+which returns a handler that creates a new `Binding` and stores it in a vector.
 
 To use `fidl::BindingSet`, include `lib/fidl/cpp/binding_set.h`.
 

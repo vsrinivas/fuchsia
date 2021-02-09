@@ -4,7 +4,7 @@ Inclusivity is central to Fuchsia's culture, and our values include treating
 each other with dignity. As such, it’s important that everyone can contribute
 without facing the harmful effects of bias and discrimination.  However, terms
 in our codebase, UIs, and documentation can perpetuate that discrimination.
-This document sets forth guidance which aims to address disrespectful
+This document sets forth guidance that aims to address disrespectful
 terminology in code and documentation.
 
 ## Policy

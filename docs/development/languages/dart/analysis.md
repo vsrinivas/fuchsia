@@ -13,7 +13,7 @@ out/<build-type>/gen/path/to/package/package.analyzer.sh
 Running this script will perform an analysis of the target's sources.
 Note that other templates usually define a Dart library they build upon. For
 example, a _flutter_app_ `//foo/bar` will yield a `//foo/bar:bar_dart_library`
-target which can also be analyzed.
+target that can also be analyzed.
 
 As with standard Dart packages, analysis options are defined in an
 `analysis_options.yaml` file, which must be placed at the package root.

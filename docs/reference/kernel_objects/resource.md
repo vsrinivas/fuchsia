@@ -23,7 +23,7 @@ is granted access to. The range covers *base* up to but not including *base* +
 **ZX_RSRC_KIND_ROOT**, **ZX_RSRC_KIND_MMIO**, **ZX_RSRC_KIND_IOPORT**,
 **ZX_RSRC_KIND_IRQ**, **ZX_RSRC_KIND_SMC**, and **ZX_RSRC_KIND_SYSTEM**.
 
-The system resource is a special case which contains other resources which all have *len*
+The system resource is a special case that contains other resources, all of which have *len*
 one. These resources each have their own base within the system resource. Valid *base*
 values for the system resource are **ZX_RSRC_SYSTEM_HYPERVISOR_BASE**,
 **ZX_RSRC_SYSTEM_VMEX_BASE**, **ZX_RSRC_SYSTEM_DEBUG_BASE**,**ZX_RSRC_SYSTEM_INFO_BASE**,

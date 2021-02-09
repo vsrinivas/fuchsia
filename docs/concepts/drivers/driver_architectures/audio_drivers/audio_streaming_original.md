@@ -85,7 +85,7 @@ In order to actually send or receive audio information on the stream, the
 specific format to be used must first be set. The response to a successful
 `SetFormat` operation will contain a new "ring-buffer" channel. The ring-buffer
 channel may be used to request a shared buffer from the stream (delivered in the
-form of a [VMO](/docs/reference/kernel_objects/vm_object.md)) which may be mapped into the address
+form of a [VMO](/docs/reference/kernel_objects/vm_object.md)), which may be mapped into the address
 space of the application and used to send or receive audio data as appropriate.
 Generally, the operations conducted over the ring buffer channel include:
 
@@ -756,7 +756,7 @@ cohort of synchronized devices).
 > clock' instead of the `zx_clock_get_monotonic()` clock. If the stream clock is
 > made to count in audio frames since start, then this `start_time` can be
 > replaced with the terms for a segment of a piecewise linear transformation
-> which can be subsequently updated through notifications sent by the driver in the
+> that can be subsequently updated through notifications sent by the driver in the
 > case that the audio hardware clock is rooted in a different oscillator from
 > the system's tick counter. Clients can then use this transformation either to
 > control the rate of consumption of input streams, or to determine where to

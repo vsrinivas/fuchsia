@@ -16,7 +16,7 @@ Control of what to trace is provided by a kernel command-line parameter
 `ktrace.grpmask`. The value is specified as 0xNNN and is a bitmask
 of tracing groups to enable. See the **KTRACE\_GRP\_\** values in
 `system/ulib/zircon-internal/include/lib/zircon-internal/ktrace.h`.
-The default is 0xfff which traces everything.
+The default is 0xfff, which traces everything.
 
 What to trace can also be controlled by the `ktrace` command-line utility,
 described below.

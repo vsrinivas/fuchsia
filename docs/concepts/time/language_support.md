@@ -59,7 +59,7 @@ contains the number of nanoseconds since the system was powered on. See
 
 ### UTC time
 
-UTC time on Fuchsia is represented as a signed 64 bit integer which contains
+UTC time on Fuchsia is represented as a signed 64 bit integer that contains
 the number of nanoseconds since the Unix epoch (January 1st, 1970).
 
 Operations on the UTC clock require obtaining a handle to the UTC clock

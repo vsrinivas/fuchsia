@@ -28,7 +28,7 @@ It is RECOMMENDED to namespace machine-generated code to avoid clashing with
 user-defined symbols. This can be implement using scoping constructs provided by
 the language, like namespaces in C++, modules in Rust, or packages in Go and
 Dart. If the generated scope can have a name, it SHOULD be named using
-components of the FIDL library name which contains the definitions for the
+components of the name of the FIDL library that contains the definitions for the
 generated code, which allows each FIDL library to exist in a unique scope. In
 cases where scoping is not possible and the namespace is shared, some processing
 of the generated names (see [Naming](#naming)) may be necessary.
@@ -99,7 +99,7 @@ It is RECOMMENDED to support the following operators over generated values:
 * bitwise exclusive-or, i.e `^`
 * bitwise not, i.e `~`
 
-To provide bitwise operations which always result in valid bits values,
+To provide bitwise operations that always result in valid bits values,
 implementations of bitwise not should further mask the resulting value with the
 mask of all values. In pseudo code:
 
@@ -407,7 +407,7 @@ components of a message are assembled into a contiguous chunk of memory (called
 "linearization"). The downside of such an approach is that it makes the bindings
 more rigid: changes to the FIDL wire format become more complex to implement.
 
-The [LLCPP bindings][llcpp] are the only binding which take this
+The [LLCPP bindings][llcpp] are the only binding that take this
 approach.
 
 ### Equality comparison

@@ -42,7 +42,7 @@ For example:
 1. Use UTC time to timestamp an on-device event that will be read by some
    server. In this case monotonic time would not work since the server probably
    does not know when the Fuchsia device last powered on. Using local time would
-   require that the device and server agree on the timezone which would be error
+   require that the device and server agree on the timezone, which would be error
    prone.
 1. Use local time to display the current time to the user as an analog clock
    face. Local time is most natural time standard for users so no other time

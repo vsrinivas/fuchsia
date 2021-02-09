@@ -6,8 +6,8 @@ directly by developers.
 
 The main entry point for the ingestion process is a file at
 `//meta/manifest.json`.
-As with every metadata file in the IDK, the manifest follows a JSON schema which
-is included under `//meta/schemas/manifest.json`.
+As with every metadata file in the IDK, the manifest follows the JSON schema
+at `//meta/schemas/manifest.json`.
 
 This file contains a list of all the elements included in this IDK, represented
 by the path to their respective metadata file.
@@ -25,7 +25,7 @@ instead of raw JSON representations.
 
 The metadata schemas will evolve over time.
 In order to allow consumers of that metadata to adjust to schema changes, the
-main metadata file contains a property named `schema_version` which is an opaque
+main metadata file contains a property named `schema_version`, which is an opaque
 version identifier for these schemas.
 This version identifier will be modified every time the metadata schemas evolve
 in a way that requires the attention of a developer.

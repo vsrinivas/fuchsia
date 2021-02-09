@@ -53,7 +53,7 @@ returns with **ZX_ERR_CANCELED**.
 
 ## User Signals
 
-There are eight User Signals (**ZX_USER_SIGNAL_0** through **ZX_USER_SIGNAL_7**) which may
+There are eight User Signals (**ZX_USER_SIGNAL_0** through **ZX_USER_SIGNAL_7**), which may
 asserted or deasserted using the [`zx_object_signal()`] and [`zx_object_signal_peer()`] syscalls,
 provided the handle has the appropriate rights (**ZX_RIGHT_SIGNAL** or **ZX_RIGHT_SIGNAL_PEER**,
 respectively).  These User Signals are always initially inactive, and are only modified by

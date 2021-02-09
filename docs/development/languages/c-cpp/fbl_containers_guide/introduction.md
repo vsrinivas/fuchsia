@@ -8,15 +8,15 @@ This document will:
 1. [Define what an intrusive container is.](#what-is-an-intrusive-container)
 2. [Compare the differences between intrusive and non-intrusive containers.](#intrusive-vs-not)
 3. [Discuss the similarities and differences between `fbl::` and `std::` containers.](#fbl-vs-std)
-4. [Introduce some basic terminology which will be used throughout this guide.](#terminology)
+4. [Introduce some basic terminology that will be used throughout this guide.](#terminology)
 
 ## What is an intrusive container? {#what-is-an-intrusive-container}
 
-An intrusive container is a data structure which can be used to hold a
+An intrusive container is a data structure that can be used to hold a
 collection of objects where the bookkeeping used to track membership in the
 container is stored in the objects themselves instead of holding the object
 alongside of the bookkeeping in a structure. To highlight the distinction,
-consider a structure which defines a point in a 2-dimensional coordinate system.
+consider a structure that defines a point in a 2-dimensional coordinate system.
 
 ```cpp
 struct Point {
@@ -95,8 +95,8 @@ intrusive lists, but not more.
 The primary advantage of an intrusive container approach to tracking objects is
 the lack of allocations when adding/removing elements to/from a container. In
 some (usually specialized) environments, heap interactions can introduce a
-potential failure path which would ideally not exist. Additionally,
-interactions with heaps usually involve interactions with locks/mutexes which
+potential failure path, which would ideally not exist. Additionally,
+interactions with heaps usually involve interactions with locks/mutexes, which
 could result in involuntary blocking. This might introduce undesirable timing
 indeterminism, or in some cases may even not be an option if the code is running
 in a context in which blocking is not allowed.
@@ -144,13 +144,13 @@ Non-intrusive:
 - Cons
   - Requires independent allocation management of the bookkeeping, usually on
   every add or remove operation. This management frequently implies hidden heap
-  interactions which can introduce overhead, timing uncertainty, and additional
+  interactions, which can introduce overhead, timing uncertainty, and additional
   complexity as users need to manage potential failure paths.
 
   - Finding the location of an object in container A provides no information
   about the location of the object in container B. For example, finding an
-  object which is contained in a `std::map` with an O(log n) operation does not
-  help me to locate the same object which is simultaneously contained in a
+  object contained in a `std::map` with an O(log n) operation does not
+  help me to locate the same object that is simultaneously contained in a
   `std::deque`. If I want to remove the object from the `std::deque`, I must find
   it there with a separate O(n) operation first.
 
@@ -173,7 +173,7 @@ Intrusive:
 
   - The ability to be contained is a fundamental property of the object. In
   order to change the number or types of the containers an object may exist in,
-  the definition of the object itself must be changed and all of the code which
+  the definition of the object itself must be changed, and all of the code that
   depends on that definition must be re-compiled.
 
   - Only objects themselves can be tracked. Primitive data types do not have
@@ -209,7 +209,7 @@ types defined by `fbl::` and one composed container type. They are:
 * `fbl::HashTable<>`
 
 `fbl::HashTable<>` is considered to be a composed container type as it offers a
-fixed bucket count hash table which resolves collision using chaining where the
+fixed bucket count hash table that resolves collision using chaining where the
 bucket type may be either `fbl::SinglyLinkedList<>` or
 `fbl::DoublyLinkedList<>`. Please refer to [Setting up build
 dependencies](getting_started.md#build-dependencies) for details on which files
@@ -217,13 +217,13 @@ need to be included in order to use the various container types.
 
 ## Terminology {#terminology}
 
-Here are some terms and their definitions which will be used throughout this
+Here are some definitions of terms used throughout this
 guide.
 
-* Container : An object which tracks a collection of references to objects using
+* Container : An object that tracks a collection of references to objects using
   a specific algorithm.
-* Node or Node Storage : The set of data which serve as the bookkeeping which
+* Node or Node Storage : The set of data that provides the bookkeeping that
   allows an object to exist in a specific container type.
-* Listable, Containable, Mix-in : An object which can be used as a base class to
+* Listable, Containable, Mix-in : An object that can be used as a base class to
   allow an object to be easily stored in a container of a specific type.
 * Raw pointer : A non-managed `T*`-style pointer to an object.

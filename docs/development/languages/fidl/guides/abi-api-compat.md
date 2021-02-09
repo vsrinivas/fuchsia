@@ -1,6 +1,6 @@
 # FIDL binary-compatibility (ABI) and source-compatibility (API) guide
 
-Many changes to the Fuchsia platform involve changing FIDL APIs which have
+Many changes to the Fuchsia platform involve changing FIDL APIs that have
 already been published. Unless managed carefully, these changes risk breaking
 existing usages. Failed changes manifest in the following ways:
 
@@ -17,7 +17,7 @@ to avoid runtime validation issues. Binary-compatibility indicates that two
 peers have the same understanding of how to read or write the data, though these
 two peers may disagree on which values are deemed valid. As an example, a
 `uint32` is binary-compatible with a `enum : uint32`, even though the enum has
-runtime validation which restricts the domain to only the specific values
+runtime validation that restricts the domain to only the specific values
 identified by the enum members.
 
 ## Which changes to a FIDL API are safe?
@@ -34,7 +34,7 @@ migrated. See [safely removing members](#safely-removing-members) for more
 information on the most common soft transition pattern.
 
 Note: Source-compatibility guarantees are only guaranteed under "normal"
-circumstances. It is possible to write code which causes these guarantees to be
+circumstances. It is possible to write code that causes these guarantees to be
 violated, e.g. static asserts.
 
 ### Safe changes to members
@@ -42,7 +42,7 @@ violated, e.g. static asserts.
 Aside from a declaration's name and attributes, all changes to its contract are
 expressed in terms of changes to the declaration's members. This relationship
 also means incompatible changes to a declaration become incompatible changes to
-all the FIDL libraries which depend on that declaration, not just direct
+all the FIDL libraries that depend on that declaration, not just direct
 consumers of the original library's generated bindings.
 
 All operations are safe to perform if you are certain that all consumers can be
@@ -299,7 +299,7 @@ It is not source-compatible to rename a bits member.
 
 It is safe to update the value of a `const` declaration. In rare circumstances,
 such a change could cause source-compatibility issues if the constant is used in
-static asserts which would fail with the updated value.
+static asserts that would fail with the updated value.
 
 ## Modifiers {#modifiers}
 
@@ -339,7 +339,7 @@ Changing a bits declaration from `flexible` to `strict` is:
   * Transitions from `flexible` to `strict` will require removing usages of
     [`flexible`-only APIs][bindings-ref].
   * In Rust, certain methods are provided for both strict and flexible bits, but
-    usages for strict bits cause a deprecation warning during compation which
+    usages for strict bits cause a deprecation warning during compation, which
     could become errors if using `-Dwarning` or `#![deny(warnings)]`.
   * In HLCPP, the bit mask is a `const` in the top level library namespace for
     strict bits, but a `static const` member of the generated class for flexible
@@ -473,7 +473,7 @@ runtime validation issues.
 When relaxing a constraint, all readers must transition ahead of writers to
 avoid values being rejected at runtime. Conversely, when tightening a
 constraint, all writers must transition ahead of readers to avoid emitting
-values which would then be rejected at runtime.
+values that would then be rejected at runtime.
 
 For instance:
 
@@ -481,7 +481,7 @@ For instance:
   `vector<T>:256` relaxes a constraints, i.e. move values will be allowed. As a
   result, readers must be transitioned ahead of writers.
 * Restricting an optional handle `handle?` to be required `handle` tightens a
-  constraint, optional handles which were accepted before will no longer be. As
+  constraint, optional handles that were accepted before will no longer be. As
   a result, writers must be transitioned ahead of readers.
 
 **API**
@@ -503,7 +503,7 @@ soon to be removed member (resp. variant) by a default case.
 
 Note: A union tag is the discriminator indicating which variant is currently
 held by the union (see [lexicon][lexicon-tag]). This is often an enum in
-languages which do not support ADTs like C++.
+languages that do not support ADTs like C++.
 
 <!-- xrefs -->
 [bindings-ref]: /docs/reference/fidl/bindings/overview.md

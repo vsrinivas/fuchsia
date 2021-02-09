@@ -115,7 +115,7 @@ to the server.
   channel.
 * The returned end of the channel is passed to `sys::ServiceDirectory::Connect()`.
   * Analogous to the call to `context->out()->AddPublicService()` on the server
-    side, `Connect` has an implicit second parameter here which is the protocol
+    side, `Connect` has an implicit second parameter here, which is the protocol
     name (`"fuchsia.examples.Echo"`). This is where the input to the handler
     defined in the [previous tutorial][server-tut-handler] comes from: the
     client passes it in to `Connect`, which then passes it to the handler.

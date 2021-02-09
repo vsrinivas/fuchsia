@@ -51,7 +51,7 @@ The TLS ABI makes use of a few terms:
   * TLS Region: This is a contiguous region of memory unique to each
     thread. `$tp` will point to some point in this region. It contains the
     TLS segment of every module in Static TLS set as well as some
-    implementation-private data which is sometimes called the TCB (Thread
+    implementation-private data, which is sometimes called the TCB (Thread
     Control Block). On AArch64 a 16-byte reserved space starting at `$tp` is
     also sometimes called the TCB. We will refer to this space as the "ABI TCB"
     in this doc.
@@ -119,7 +119,7 @@ associated with this symbol. Specifically it is passed the pointer to the first
 and the second entry comes right after it. For a given symbol `S`, the first
 entry, denoted `GOT_S[0]`, must contain the Module ID of the module in which
 `S` was defined. The second entry, denoted `GOT_S[1]`, must contain offset into
-TLS Block which is the same as the offset of the symbol in the `PT_TLS` segment
+TLS Block, which is the same as the offset of the symbol in the `PT_TLS` segment
 of the associated module. The pointer to `S` is then computed using
 `__tls_get_addr(GOT_S)`. The implementation of `__tls_get_addr` will be
 discussed later.
@@ -200,8 +200,8 @@ their `DF_STATIC_TLS` flag set.
 Initial Exec is the default when compiling without `-fPIC`.
 
 The compiler emits code without even calling `__tls_get_addr` for this access
-model. It does so using a single GOT entry which we'll denote `GOT_s` for symbol
-`s` which the compiler emits relocations for to ensure that
+model. It does so using a single GOT entry, which we'll denote `GOT_s` for symbol
+`s`, for which the compiler emits relocations, to ensure that
 
 ```
 extern thread_local int a;
@@ -225,7 +225,7 @@ value.
 ###### Local Exec ######
 
 This is the fastest access model and can only be used if the symbol is in the
-first TLS block which is the TLS block of the main executable. In practice only
+first TLS block, which is the TLS block of the main executable. In practice only
 the main executable can use this access mode because any shared library can't
 (and normally wouldn't need to) know if it is accessing something from the main
 executable. The linker will relax `initial-exec` to `local-exec`. The compiler
@@ -273,7 +273,7 @@ said the broad strokes here are widely similar across different libc
 implementations including musl and glibc.
 
 The actual implementation of all of this introduces a few more details. Namely
-the so-called "DTV" (Dynamic Thread Vector) (denoted `dtv` in this doc) which
+the so-called "DTV" (Dynamic Thread Vector) (denoted `dtv` in this doc), which
 indexes TLS blocks by module ID. The following diagram shows what the initial
 executable set looks like. In Fuchsia's implementation we actually store a
 bunch of meta information in a thread descriptor struct along with the

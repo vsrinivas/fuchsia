@@ -21,7 +21,7 @@ To do this, we need some way to implement an "address space clone" operation,
 which when given:
 
 - A process root VMAR
-- Some handles which refer to VMOs mapped in the address space
+- Some handles that refer to VMOs mapped in the address space
 
 will return:
 

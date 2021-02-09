@@ -22,7 +22,7 @@ Tip: To start a headless emulator, run `fx emu --headless --software-gpu -N`.
 
 Your device must be running a `core`
 [product configuration](/docs/concepts/build_system/boards_and_products.md)
-or a product configuration which extends `core` (such as `workstation`).
+or a product configuration that extends `core` (such as `workstation`).
 
 Optionally, you can run `fx log`, which will provide some additional information
 about the interactions between `ffx` and your Fuchsia target device.

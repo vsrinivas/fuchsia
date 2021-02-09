@@ -30,7 +30,7 @@ To add extra logging for input event dispatch, modify the
 ```
 
 Each service instance of `Scenic` (or `Root Presenter`) must be
-modified, unless you know which service is invoked first.
+modified, unless you know that service is invoked first.
 
 In most ways, this is identical to modifying a
 <code>[sysmgr](/src/sys/sysmgr/sysmgr-configuration.md)</code> services

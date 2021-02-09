@@ -52,7 +52,7 @@ fields will be ignored and overwritten with the actual values for the thread.
 
 ### ZX_THREAD_STATE_SINGLE_STEP
 
-The buffer must point to a `zx_thread_state_single_step_t` value which
+The buffer must point to a `zx_thread_state_single_step_t` value, which
 may contain either 0 (normal running), or 1 (single stepping enabled).
 
 ## RIGHTS

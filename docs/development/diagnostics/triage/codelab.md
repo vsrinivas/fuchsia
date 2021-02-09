@@ -39,7 +39,7 @@ fx triage
 ```
 
 This command downloads a fresh `snapshot.zip` file using the `fx snapshot`
-command. This command runs the default rules which are located in the source
+command. This command runs the default rules, which are located in the source
 tree:
 
 *   `//src/diagnostics/config/triage/*.triage`
@@ -204,7 +204,7 @@ section for more information.
 
 ### Add an action
 
-In the "act" part of the config file, add an action which prints a warning when
+In the "act" part of the config file, add an action that prints a warning when
 the disk is 98% full. Use the following lines:
 
 ```json5
@@ -378,11 +378,11 @@ test: {
 
 ### annotations.json
 
-The snapshot contains a file `annotations.json` which contains information on
+The snapshot contains a file `annotations.json`, which contains information on
 the build, board, uptime, and so on.
 
 Values can be fetched from this file by using the function `Annotation()` with a
-single string parameter which is a key of the JSON object in the file. For
+single string parameter, which is a key of the JSON object in the file. For
 example,
 
 ```json5
@@ -467,7 +467,7 @@ the "--config" command line argument.
 #### Tests and namespaces
 
 Tests use only the metrics within the file where the test occurs, plus the
-values supplied by the test. An expression (eval or test trigger) which uses
+values supplied by the test. An expression (eval or test trigger) that uses
 namespaced values like "a::b" must have those values supplied by an "a::b" entry
 in the test's values.
 

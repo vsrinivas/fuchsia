@@ -75,8 +75,8 @@ is as follows:
 This list tracks the reasons for which we disabled in particular [checks]:
 
  - `clang-diagnostic-unused-command-line-argument` - ninja-generated compilation
-    database contains the linker argument which ends up unused and triggers this
-    warning for every file
+    database contains the linker argument, which ends up unused and triggers
+    this warning for every file
  - `misc-noexcept*` - Fuchsia doesn't use C++ exceptions
  - `misc-non-private-member-variables-in-classes` - We don't allow classes/structs
    with a mix of private and public members, but all public is fine.

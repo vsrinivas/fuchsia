@@ -213,7 +213,7 @@ There are some examples available:
   - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning-cube#meta/spinning_cube.cmx`
 
 * **simplest_app**
-  - An application which changes background color with every user touch input, which uses root
+  - An application that changes background color with every user touch input, which uses root
     presenter for its implementation of `BaseView`. It tracks input callbacks from Scenic and draws
     elements using `scenic::Material`.
   - **Source:** [`//src/ui/examples/simplest_app`](/src/ui/examples/simplest_app)
@@ -221,7 +221,7 @@ There are some examples available:
   - **Package URI:** `fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx`
 
 * **yuv_to_image_pipe**
-  - An application which updates the scene using an ImagePipe.
+  - An application that updates the scene using an ImagePipe.
   - **Source:** [`//src/ui/examples/yuv_to_image_pipe`](/src/ui/examples/yuv_to_image_pipe)
   - **Build dependency:** `//src/ui/examples:yuv_to_image_pipe`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx`

@@ -179,7 +179,7 @@ To identify your RFC, you need to edit the
 <pre class="prettyprint">
 - name: 'RFC-NNNN'
   title: 'zx_channel_iovec_t support for zx_channel_write and zx_channel_call'
-  short_description: 'This RFC introduces a new mode to zx_channel_write and zx_channel_call which copies input data from multiple memory regions rather than from a single contiguous buffer.'
+  short_description: 'This RFC introduces a new mode to zx_channel_write and zx_channel_call that copies input data from multiple memory regions rather than from a single contiguous buffer.'
   authors: ['bprosnitz@google.com']
   file: '0010_channel_iovec.md'
   area: ['Zircon']
@@ -336,7 +336,7 @@ After you receive a final status from the Eng Council, do the following:
    ```
    - name: 'RFC-0010'
      title: 'zx_channel_iovec_t support for zx_channel_write and zx_channel_call'
-     short_description: 'This RFC introduces a new mode to zx_channel_write and zx_channel_call which copies input data from multiple memory regions rather than from a single contiguous buffer.'
+     short_description: 'This RFC introduces a new mode to zx_channel_write and zx_channel_call that copies input data from multiple memory regions rather than from a single contiguous buffer.'
      authors: ['bprosnitz@google.com']
      file: '0010_channel_iovec.md'
      area: ['Zircon']

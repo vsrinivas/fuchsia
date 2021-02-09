@@ -150,7 +150,7 @@ of the similarities and differences between the C and C++ bindings.
 ### Goals
 
  * Support encoding and decoding FIDL objects with C11.
- * Generate headers which are compatible with C11 and C++14.
+ * Generate headers that are compatible with C11 and C++14.
  * Small, fast, efficient.
  * Depend only on a small subset of the standard library.
  * Minimize code expansion through table-driven encoding and decoding.
@@ -179,12 +179,12 @@ of the similarities and differences between the C and C++ bindings.
 ### Encoding Tables
 
 To avoid generating any non-inline code whatsoever, the C language bindings
-instead produce encoding tables which describe how objects are encoded.
+instead produce encoding tables that describe how objects are encoded.
 
 ### Introspection Tables
 
 To allow for objects to be introspected (eg. printed), the C language bindings
-produce introspection tables which describe the name and type signature of each
+produce introspection tables that describe the name and type signature of each
 method of each protocol and data structure.
 
 Although small, introspection tables will be stripped out by the linker if
@@ -192,7 +192,7 @@ unused.
 
 ### Mapping FIDL Types to C Types
 
-This is the mapping from FIDL types to C types which the code generator
+This is the mapping from FIDL types to C types that the code generator
 produces.
 
 | FIDL                                           | C Type                     |
@@ -438,7 +438,7 @@ Result is...
         [wire format][wire-format])
 
 This function is effectively a simple interpreter of the contents of the
-type. Unless the object encoding includes internal references which
+type. Unless the object encoding includes internal references that
 must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
@@ -496,7 +496,7 @@ Result is...
     *   **bytes** contains an invalid union field, according to **type**
     *   a required pointer reference in **bytes** is `FIDL_ALLOC_ABSENT`.
     *   a required handle reference in **bytes** is `ZX_HANDLE_INVALID`.
-    *   **bytes** contains an optional pointer reference which is marked
+    *   **bytes** contains an optional pointer reference that is marked
         as `FIDL_ALLOC_ABSENT` but has size > 0.
     *   a bounded string or vector in **bytes** is too large, according to
         **type**
@@ -508,7 +508,7 @@ Result is...
         [wire format][wire-format])
 
 This function is effectively a simple interpreter of the contents of the
-type. Unless the object encoding includes internal references which
+type. Unless the object encoding includes internal references that
 must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
@@ -538,7 +538,7 @@ If anything other than `ZX_OK` is returned, **error_msg_out** will be set.
 Result is the same as for **fidl_encode()** above.
 
 This function is effectively a simple interpreter of the contents of the
-type. Unless the object encoding includes internal references which
+type. Unless the object encoding includes internal references that
 must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
@@ -586,7 +586,7 @@ altogether (or do it manually).
 The client performs the following operations to receive a message through a
 channel.
 
-*   Obtain a buffer large enough to hold the largest possible message which can
+*   Obtain a buffer large enough to hold the largest possible message that can
     be received by this protocol. (May dynamically allocate the buffer after
     getting the incoming message size from the channel.)
 *   Call **zx_channel_read()** to read the message into the buffer and its

@@ -5,7 +5,7 @@
 A runner is a protocol that provides a runtime environment for components; in
 other words, a runner actually *runs* a component. Some example runners are:
 
--   The component manager comes with an built in [ELF runner][elf-runner] which
+-   The component manager comes with an built in [ELF runner][elf-runner], which
     launches binaries using the ELF file format.
 -   The Dart AOT runner provides a runtime for Dart programs, such as a VM.
 -   The Chromium web runner provides a runtime for components implemented as web

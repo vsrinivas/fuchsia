@@ -8,7 +8,7 @@ Boot the target system with networking support:
   * AEMU: `fx emu -N`
   * QEMU: `fx qemu -N`
 
-(If using x64 with an emulator on a Linux host, we also recommend the "-k" flag which will make it
+(If using x64 with an emulator on a Linux host, we also recommend the "-k" flag, which will make it
 run faster).
 
 To manually validate network connectivity run `fx shell` or `fx get-device-addr`.
@@ -206,5 +206,5 @@ the `+=`:
 
 If your build produces DWARF symbols with absolute file paths the files must be in that location on
 the local system. Absolute file paths in the symbols are not affected by the build search path.
-Clang users should use the `-fdebug-prefix-map` which will also help with build hermeticity.
+Clang users should use the `-fdebug-prefix-map`, which will also help with build hermeticity.
 

@@ -1,7 +1,7 @@
 # Using cargo on Fuchsia
 
 Many tools in the Rust ecosystem assume you are using cargo. For tools like
-this which don't have a counterpart in our build, there is a utility for
+this, which don't have a counterpart in our build, there is a utility for
 generating `Cargo.toml` files. You can run cargo itself (`cargo check` for
 instance) using it.
 

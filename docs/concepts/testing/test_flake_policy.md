@@ -51,7 +51,7 @@ One should prioritize, above all else, removing the test from the commit
 queue. This can be achieved in the following ways:
 
 -   If the flake has been prompted by a recent patch: Submitting a revert of a
-    patch which triggers this flake.
+    patch that triggers this flake.
 -   [Disable the test](/docs/development/testing/faq.md#disable-test).
 
 The above mechanisms are recommended because they remove the flaky test and

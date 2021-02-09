@@ -176,7 +176,7 @@ response is received and return the response object. These are suffixed with
 
 In the synchronous case, a [result object][resultof] is returned, since the
 method call can fail. In the asynchronous or fire-and-forget case, a lightweight
-status object is returned which communicates any synchronous errors. The
+status object is returned, which communicates any synchronous errors. The
 response callback takes the response message pointer as argument directly, since
 the handler is only called in the case of a successful method call.
 

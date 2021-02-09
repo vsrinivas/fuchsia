@@ -12,7 +12,7 @@ TODO
 
 The thread object is the construct that represents a time-shared CPU execution
 context. Thread objects live associated to a particular
-[Process Object](process.md) which provides the memory and the handles to other
+[Process Object](process.md), which provides the memory and the handles to other
 objects necessary for I/O and computation.
 
 ### Lifetime

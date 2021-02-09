@@ -882,7 +882,7 @@ The steps are:
     `multi_device_ops` instead of the base version.
     The name of each sub-device is simply the ASCII representation of the device number.
     Note that we store the device number index `i` (0 .. 15) in `devno` as context
-    (we have an array of contexts called `multi_devices` which we'll see shortly).
+    (we have an array of contexts called `multi_devices`, which we'll see shortly).
     We also illustrate allocating each sub-device dynamically, rather than
     allocating its space in the parent's structure.
     This is a more realistic use-case for "hot-plug" devices &mdash; you don't

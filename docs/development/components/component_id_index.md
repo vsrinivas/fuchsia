@@ -11,7 +11,7 @@ architecture.
 ## Scope
 
 This document describes how to define an index that maps instance ids to
-monikers for components which use isolated-persistent-storage.
+monikers, for components that use isolated-persistent-storage.
 
 ## Overview
 
@@ -26,7 +26,7 @@ When the component runtime discovers an instance ID -> moniker mapping, it
 automatically moves the component instance's existing storage directory to be
 keyed under its instance ID.
 
-Only components which use storage capabilities must to be included in the
+Only components that use storage capabilities must to be included in the
 index. The following class of components should not be included in the
 index:
 
@@ -203,7 +203,7 @@ This section describes how to include the component ID index in a system
 assembly.
 
 A system assembly should include a component ID index if it contains components
-which use isolated storage. Any product which builds on top of the `core`
+which use isolated storage. Any product that builds on top of the `core`
 product already includes a component ID index in its assembly, so the following
 instructions may not be necessary.
 
@@ -221,7 +221,7 @@ they carry the same information.
 
 To include a `component_id_index_config()` target in a system assembly:
 
-**a)** Define it with a dependency on any `component_id_index()` targets which
+**a)** Define it with a dependency on any `component_id_index()` targets
 you want included in the system. For example, `//build/images:universe_packages`
 is a good dependency candidate because it transitively includes all
 `component_id_index()` specified in the build.

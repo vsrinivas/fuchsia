@@ -22,7 +22,7 @@ which was meant to enforce a common structure of C++ code and headers in
 Zircon. Over time they've evolved to carry other logic, such as for publishing
 artifacts to the SDK, that is also achieved by other templates, and hence is
 duplicate and may be confusing. Finally, some of the most common use cases can
-be achieved with standard GN target types which are more familiar and well
+be achieved with standard GN target types, which are more familiar and well
 documented.
 
 ## Technical background

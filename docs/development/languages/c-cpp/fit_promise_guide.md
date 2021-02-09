@@ -6,7 +6,7 @@ asynchronous operations.
 `fit::promise<>`
 [[1](/zircon/system/ulib/fit/include/lib/fit/promise.h)]
 makes this a bit easier. This guide covers common problems in asynchronous
-control flow programming and offers common usage patterns which solve those
+control flow programming and offers common usage patterns that solve those
 problems in the `fit::promise<>` library.
 
 ## What makes asynchronous code challenging?
@@ -28,7 +28,7 @@ problems:
 
 ## Terminology
 * `fit::promise<>` is a move-only object made up of a collection of lambdas or
-  callbacks that describes an asynchronous task which eventually produces a
+  callbacks that describes an asynchronous task that eventually produces a
   value or an error.
 * a *handler function* is a callback provided at promise creation.
 * a *continuation function* is a callback provided to various *methods of
@@ -200,7 +200,7 @@ syntactically (through the use of consecutive `.then()`, `.and_then()` and
 `.or_else()` calls).
 
 Instead of returning a `fit::result<...>` (using `fit::ok` or `fit::error`),
-the handler function may return a new promise which will be evaluated after the
+the handler function may return a new promise, which will be evaluated after the
 handler function returns.
 
 ```cpp
@@ -385,8 +385,8 @@ auto a = fit::make_promise([] {
 
 ### Handlers / continuation functions can return `fit::result<>` or a new `fit::promise<>`, not both
 
-You may wish to write a handler which return a `fit::promise<>` in one
-conditional branch and a `fit::ok()` or `fit::error()` in another. This is
+You may wish to write a handler that can return a `fit::promise<>` in one
+conditional branch, and a `fit::ok()` or `fit::error()` in another. This is
 illegal because there is no way for the compiler to cast a `fit::result<>` to a
 `fit::promise<>`.
 

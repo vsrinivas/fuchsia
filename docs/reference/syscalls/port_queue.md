@@ -22,7 +22,7 @@ zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet);
 `zx_port_queue()` queues a user *packet* to the port specified by *handle*.
 
 User packets are drained by [`zx_port_wait()`]. Failure to drain packets in a
-timely fashion can cause excessive kernel memory to be used which might generate
+timely fashion can cause excessive kernel memory to be used, which might generate
 an exception. See [ipc limits](/docs/concepts/kernel/ipc_limits.md) for details.
 
 ```

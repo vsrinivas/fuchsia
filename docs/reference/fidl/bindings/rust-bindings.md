@@ -65,7 +65,7 @@ advantage of Rust’s ownership model. When making a request with a parameter of
 type `T`, the [proxied function call](#protocols-client) does not need to take
 ownership of `T` so the FIDL toolchain needs to generate a borrowed version of
 `T`. Borrowed versions often use `&mut` since the type `T` may contain handles,
-in which case the FIDL bindings zero out the handles when encoding which
+in which case the FIDL bindings zero out the handles when encoding, which
 modifies the input. Using `&mut` instead of taking ownership allows callers to
 reuse the input value if it does not contain handles.
 
@@ -486,7 +486,7 @@ generates a `TicTacToeSynchronousProxy` struct with the following methods:
 * `make_move(&mut self, mut row: u8, mut col: u8, __deadline: zx::Time) ->
   Result<(bool, Option<Box<GameState>>), fidl::Error>`: Proxy method for a two
   way method. It takes the request parameters as arguments followed by a
-  deadline parameter which dictates how long the method call will wait for a
+  deadline parameter, which dictates how long the method call will wait for a
   response (or `zx::Time::INFINITE` to block indefinitely). It returns a
   `Result` of the [response parameters](#request-response-event-parameters).
 
@@ -518,7 +518,7 @@ One such enum is generated for each protocol.
 
 #### Request responder {#request-responder}
 
-Each two way method has a corresponding generated responder type which the
+Each two way method has a corresponding generated responder type, which the
 server uses to respond to a request. In this example, which only has one two way
 method, the FIDL toolchain generates `TicTacToeMakeMoveResponder`, which
 provides the following methods:

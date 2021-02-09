@@ -19,9 +19,9 @@ The following files are involved in testing a USB Device driver. All three of
 these files should be stored in the same directory:
 
 * `{driver}.cc`: the USB device driver that will be tested.
-* `{driver}-function.cc`: A USB function driver which fakes the underlying
+* `{driver}-function.cc`: A USB function driver that fakes the underlying
    USB device hardware.
-* `{driver}-test.cc`: The test program which sets up the driver and runs tests.
+* `{driver}-test.cc`: The test program, which sets up the driver and runs tests.
 
 The usb-virtual-bus connects the USB Peripheral bus to the USB bus, as seen
 in the below graphic:

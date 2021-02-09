@@ -8,7 +8,7 @@ clock - Kernel object used to track the progress of time.
 
 A clock is a one dimensional affine transformation of the
 [clock monotonic](/docs/reference/syscalls/clock_get_monotonic.md) reference
-timeline which may be atomically adjusted by a clock maintainer, and observed by
+timeline, which may be atomically adjusted by a clock maintainer, and observed by
 clients.
 
 ## DESCRIPTION
@@ -22,11 +22,11 @@ be changed afterwards. Currently, three clock properties are defined.
 
 When set, the clock is guaranteed to have monotonic behavior. This is to say
 that any sequence of observations of the clock is guaranteed to produce a
-sequence of times which are always greater than or equal to the previous
+sequence of times that are always greater than or equal to the previous
 observations. A monotonic clock can never go backwards, although it _can_ jump
 forwards. Formally:
 
-Given a clock _C_, Let C(x) be the function which maps from the reference
+Given a clock _C_, Let C(x) be the function that maps from the reference
 timeline _C's_ timeline. C(x) is a piecewise linear function made up of all the
 affine transformation segments over all time as determined  by _C's_ maintainer.
 _C_ is monotonic if and only if:
@@ -52,7 +52,7 @@ _C<sub>i</sub>(R<sub>i + 1</sub>) = C<sub>i + 1</sub>(R<sub>i + 1</sub>)_
 
 The backstop time of a clock represents the minimum value that a clock may ever
 be set to. Since clocks can only tick forwards, and never backwards, it is
-impossible for an observer of a clock to ever receive a value which is less than
+impossible for an observer of a clock to ever receive a value that is less than
 the backstop time configured by a clock's creator.
 
 A backstop time may be provided via the `zx_create_args_v1_t` structure at
@@ -60,7 +60,7 @@ creation time. Otherwise, it will default to 0.
 
 During clock update operations, any attempt to set the clock's value to
 something less than the backstop time will fail with **ZX_ERR_INVALID_ARGS**. A
-clock which has not been initially set will always report the backstop time
+clock that has not been initially set will always report the backstop time
 configured for the clock. Backtop times may never be less than the default
 value of zero.
 
@@ -124,7 +124,7 @@ the details structure returned to callers will include:
   clock.
 + The last time the clock was updated as defined by the clock monotonic
   reference timeline.
-+ An observation of the system tick counter which was taken during the
++ An observation of the system tick counter, which was taken during the
   observation of the clock.
 + All of the static properties of the clock defined at creation time.
 + A generation nonce.
@@ -156,7 +156,7 @@ clock's maintainer, which **must** include a set-value operation. The clock
 will begin running at that point with a rate equal to the reference clock plus
 the deviation from nominal specified by the maintainer.
 
-Clocks also have a **ZX_CLOCK_STARTED** signal which may be used by users to
+Clocks also have a **ZX_CLOCK_STARTED** signal, which may be used by users to
 know when the clock has actually been started. Initially, this signal is not
 set, but it becomes set after the first successful update operation. Once
 started, a clock will never stop and the **ZX_CLOCK_STARTED** signal will always
@@ -170,7 +170,7 @@ after creation, subject to the limitations imposed by rights, the
 configured backstop time.
 
 If a clock is created with the **ZX_CLOCK_OPT_AUTO_START** options, it cannot be
-configured with a backstop time which is greater than the current clock
+configured with a backstop time that is greater than the current clock
 monotonic time. If this was allowed, this would result in a state where a
 clock's current time is set to a time before its backstop time.
 
@@ -215,7 +215,7 @@ it believes that the clock's actual value is somewhere in the range `[ X-E, X+E 
 
 The level of confidence in this estimate is _not_ specified by the kernel APIs.
 It is possible that some clock maintainers are using a strict bound, while
-others are using a bound which is not provable but provides "high confidence",
+others are using a bound that is not provable but provides "high confidence",
 while others still might have little to no confidence in their estimates.
 
 In the case that a user needs to understand the objective quality of the error

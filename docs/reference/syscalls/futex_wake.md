@@ -31,7 +31,7 @@ set to nothing, regardless of the wake count.  In order to transfer ownership of
 a futex, use the [`zx_futex_wake_single_owner()`] variant instead.
 [`zx_futex_wake_single_owner()`] will attempt to wake exactly one thread from the
 futex wait queue.  If there is at least one thread to wake, the owner of the
-futex will be set to the thread which was woken.  Otherwise, the futex will have
+futex will be set to the thread that was woken.  Otherwise, the futex will have
 no owner.
 
 See *Ownership and Priority Inheritance* in [futex](/docs/reference/kernel_objects/futex.md) for

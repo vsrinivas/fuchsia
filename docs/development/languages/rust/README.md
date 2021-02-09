@@ -2,7 +2,7 @@
 
 ## Build
 
-There are four GN target templates which should be used for Rust projects:
+There are four GN target templates that should be used for Rust projects:
 
 - [`rustc_library`][target-library-rustc] defines a library and optionally a
   unit test target. The library can be depended on by other targets.
@@ -52,7 +52,7 @@ on adding and running tests.
 ## Procedural macros
 
 Procedural macro targets are executed on the host at compile time. Therefore,
-they cannot depend on other crates which are only available on device, e.g.
+they cannot depend on other crates that are only available on device, e.g.
 zircon.
 
 Negative tests, e.g. asserting that a macro fails to compile with a specific

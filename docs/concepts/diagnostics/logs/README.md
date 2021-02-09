@@ -35,7 +35,7 @@ when messages are rolled out of their buffers.
 
 There are two in-memory stores for logs on a Fuchsia device:
 
-*   The "klog" or [debuglog] which is a [128kb buffer in the kernel].
+*   The "klog" or [debuglog], which is a [128kb buffer in the kernel].
 *   The "syslog" which is a [4MB buffer in the Archivist] that runs as a
     singleton in `sys`.
 

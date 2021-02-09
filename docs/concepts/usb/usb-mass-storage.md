@@ -31,7 +31,7 @@ when the device acknowledges the write.
 
 The core device serves as the interface between the block device and the USB
 stack. The core accepts requests from the block device, and converts them into
-USB requests which are eventually sent to hardware through the USB stack. For
+USB requests, which are eventually sent to hardware through the USB stack. For
 each request, the following steps are performed:
 
 *   Request is added to a queue.

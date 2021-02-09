@@ -88,7 +88,7 @@ Note the following details:
 *   This example defines an `executable()`, which is used to build a C++
     program. This is for illustrative purposes - a component can launch all
     sorts of programs.
-*   This example defines a `fuchsia_component()` which depends on the
+*   This example defines a `fuchsia_component()`, which depends on the
     `executable()`. The component definition attaches a manifest, which
     references the executable to be launched under the given package path
     `bin/my_program`.
@@ -325,7 +325,7 @@ group("tests") {
 
 Note the following details:
 
-*   This example defines `"my-test-component"` which is assumed to implement a
+*   This example defines `"my-test-component"`, which is assumed to implement a
     test. Commonly this is done using some testing framework such as C++
     Googletest, Rust Cargo test, etc'.
 *   To launch this test, you can use [`fx test`][fx-test].
@@ -404,7 +404,7 @@ This is slightly more verbose but achieves the same outcome.
 #### Dart and Flutter tests
 
 Dart and Flutter tests differ slightly in that they need to be built with a
-`flutter_test_component()` which collects all of the test mains into a single
+`flutter_test_component()`, which collects all of the test mains into a single
 main invocation. The `flutter_test_component()` can then be used by the
 `fuchsia_test_package()`.
 

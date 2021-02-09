@@ -5,7 +5,7 @@ ask for confirmation before executing. Run at your own risk.
 
 ## Protocol testing
 
-`blktest` is an integration which may be used to check adherence to the block protocol.
+`blktest` is an integration that may be used to check adherence to the block protocol.
 
 ```shell
 $ blktest -d /dev/class/block/000
@@ -25,7 +25,7 @@ $ /boot/test/fs/fs-test -d /dev/class/block/000 -f minfs
 
 ## Correctness testing
 
-`iochk` is a tool which pseudorandomly reads and writes to a block device to check for errors.
+`iochk` is a tool that pseudorandomly reads and writes to a block device to check for errors.
 
 ```shell
 $ iochk -bs 32k -t 8 /dev/class/block/000
@@ -33,7 +33,7 @@ $ iochk -bs 32k -t 8 /dev/class/block/000
 
 ## Performance testing
 
-`iotime` is a benchmarking tool which tests the read and write performance of block devices.
+`iotime` is a benchmarking tool that tests the read and write performance of block devices.
 
 ```shell
 $ iotime read fifo /dev/class/block/000 64m 4k

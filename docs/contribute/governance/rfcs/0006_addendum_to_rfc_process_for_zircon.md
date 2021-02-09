@@ -45,7 +45,7 @@ that meet the following criteria must use RFC process:
 
  * *Significant changes of performance or memory use.* Sometimes when additional
     security, monitoring or features are added, there is a corresponding decrease in
-    performance or higher memory use which need to be vetted via this process.
+    performance, or higher memory use, which need to be vetted via this process.
 
  * *Favoring a single platform.* Zircon strives to have an equal baseline of features
     and services across all supported architectures and boards. Changes that leverage
@@ -77,7 +77,7 @@ serves as documentation for the RFC process as it applies to Zircon.
 
 ## Drawbacks, Alternatives, and Unknowns
 
-The Fuchsia RFC process introduces friction which might slow down the pace of making and
+The Fuchsia RFC process introduces friction that might slow down the pace of making and
 executing decisions. The criteria in the ["when to use the process" section](/docs/contribute/governance/rfcs/0001_rfc_process.md#when-to-use-the-process)
 attempts to mitigate this by scoping the process to consequential situations but such
 scoping is bound to have false positives and false negatives.

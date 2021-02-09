@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `mkinstaller` script produces a bootable disk image from a build which can be used to
+The `mkinstaller` script produces a bootable disk image from a build, which can be used to
 install Fuchsia to a target machine. It supports creating installation images
 for x64 EFI-based devices (the x64 product configuration), and coreboot-based devices
 (the chromebook-x64 configuration), depending on what has been built.

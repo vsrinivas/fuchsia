@@ -135,7 +135,7 @@ with members of the Fuchsia FIDL team.
 
 The rationale should be actionable in the following two ways.
 
-What did the author learn through the FTP process which would have led them to
+What did the author learn through the FTP process that would have led them to
 propose an alternative design?
 
 What are alternatives to the withdrawn FTP which are promising?

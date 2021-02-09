@@ -43,7 +43,7 @@ debuglog to the system log.
 Components that want to send their standard streams to the debuglog gain access through the
 [`fuchsia.boot.WriteOnlyLog`] protocol.
 
-Most logs which are written to debuglog handles are written through stdio forwarding.
+Most logs written to debuglog handles are written through stdio forwarding.
 
 ## Standard streams: `stdout` and `stderr`
 

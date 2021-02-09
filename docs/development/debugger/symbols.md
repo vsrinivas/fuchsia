@@ -10,7 +10,7 @@ and the debugger can not show it. If you need to see it, use a less-optimized bu
 
 _Unavailable_ indicates that the variable is not valid at the current address, but that its value
 is known at other addresses. In optimized code, the compiler will often re-use registers, clobbering
-previous values which become unavailable.
+previous values, which become unavailable.
 
 You can see the valid ranges for a variable with the "sym-info" command:
 

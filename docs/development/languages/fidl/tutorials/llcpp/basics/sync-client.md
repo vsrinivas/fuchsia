@@ -147,7 +147,7 @@ The client object allows handling events by specifying an
 events of the protocol, plus a `Unknown` handler for when an unknown event
 is received.
 
-The code defines a handler which prints the contents of an `OnString` event,
+The code defines a handler, which prints the contents of an `OnString` event,
 then calls `client.HandleOneEvent()` to block until an event is received. If an
 unknown event is received, its return value becomes the return value of the
 `HandleOneEvent` call:

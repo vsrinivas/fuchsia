@@ -21,7 +21,7 @@ including some of its design goals, requirements, and workflow.
   transitions for each FIDL type, taking into account ABI and API compatibility
 * [Maxing Out Pagination][pagination] &mdash; help on determining how much data
    can fit into a single message
-* [C Family Binding Comparison][c-family] &mdash; how to decide which binding
+* [C Family Binding Comparison][c-family] &mdash; how to decide, which binding
   (HLCPP, LLCPP, or C) to use
 
 ## References

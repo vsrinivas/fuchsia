@@ -64,7 +64,7 @@ The `Scenic` FIDL protocol is Scenic's front door.  Each instance of the
 protocol represents a Scenic instance. Each Scenic instance is an isolated
 rendering context with its own content, render targets, and scheduling loop.
 
-The `Scenic` protocol allows a client to create a [`Session`](#session) which
+The `Scenic` protocol allows a client to create a [`Session`](#session), which
 is the communication channel used to publish graphical content to this instance.
 
 A single Scenic instance can update, animate, and render multiple

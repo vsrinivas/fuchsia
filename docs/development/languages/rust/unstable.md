@@ -21,7 +21,7 @@ advantages. Each feature has an [associated tracking issue on the
 Fuchsia currently builds using a pinned revision of upstream Rust's master branch.
 We mirror Rust into [this repository][third_party/rust]. The version used to compile
 Fuchsia is set [in the `prebuilts` manifest][prebuilts]. The latest revision of
-Rust which can be set in `prebuilts` is the most recently completed build [here][rust builder].
+Rust that can be set in `prebuilts` is the most recently completed build [here][rust builder].
 We currently update the Rust version fairly often to pick up new changes we upstream,
 such as changes to syscalls used by the standard library.
 

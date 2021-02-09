@@ -88,7 +88,7 @@ the standards describe the level of testing expected for code contributions and
 the balance between short- and long-term considerations in designs.
 
 The council may delegate part of this responsibility. For example, it oversees
-the [API Council][api-council] which is responsible for Fuchsia’s API surface.
+the [API Council][api-council], which is responsible for Fuchsia’s API surface.
 
 ### Engineering review
 

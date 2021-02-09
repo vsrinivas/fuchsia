@@ -10,7 +10,7 @@ Acquire the current time.
 
 `zx_clock_adjust` is currently **DEPRECATED**. Do not make use of it in any new
 code. See the [ALTERNATIVES](#alternatives) section of this page for the
-updated way to fetch the values which used to be accessible via
+updated way to fetch the values that used to be accessible via
 `zx_clock_get()`.
 
 ## SYNOPSIS
@@ -53,7 +53,7 @@ On success, `zx_clock_get()` returns **ZX_OK**.
 ## ALTERNATIVES {#alternatives}
 
 `zx_clock_get()` has been **deprecated**. Refer to the instructions below on how
-to gain access to the timelines which had been accessible via calls to
+to gain access to the timelines that had been accessible via calls to
 `zx_clock_get()`.
 
 1. [`ZX_CLOCK_MONOTONIC`](#alternative-zx-clock-monotonic)
@@ -64,7 +64,7 @@ to gain access to the timelines which had been accessible via calls to
 
 `zx_clock_get(ZX_CLOCK_MONOTONIC, out_ptr)` has been replaced with calls to
 [`zx_clock_get_monotonic()`](clock_get_monotonic.md). Unlike `zx_clock_get`,
-`zx_clock_get_monotonic` is almost always implemented in a way which does not
+`zx_clock_get_monotonic` is almost always implemented in a way that does not
 need an actual syscall (which can provide a performance benefit) and it cannot
 ever return an error (which can help to simplify code). For example:
 
@@ -82,10 +82,10 @@ zx_time_t now = zx_clock_get_monotonic();
 
 ### `ZX_CLOCK_UTC` {#alternative-zx-clock-utc}
 
-Supplying a clock which provides an accurate representation of the UTC timeline
-is no longer a feature which is provided directly by the kernel. Instead, it
+Supplying a clock that provides an accurate representation of the UTC timeline
+is no longer a feature provided directly by the kernel. Instead, it
 has become the responsibility of the Component Manager to distribute a handle to
-a [kernel clock object](../kernel_objects/clock.md) to processes which
+a [kernel clock object](../kernel_objects/clock.md) to processes that
 are permitted to access UTC. This clock handle (when available) is used by the
 various runtimes to implement their version of access to UTC. In addition, some
 runtimes may provide direct access to this clock handle allowing the user to get
@@ -155,7 +155,7 @@ access to UTC.
 ### `ZX_CLOCK_THREAD` {#alternative-zx-clock-thread}
 
 The `ZX_CLOCK_THREAD` clock was never really a clock at all. Instead it
-provided access to value which was a property of a thread object, specifically
+provided access to value that was a property of a thread object, specifically
 the cumulative runtime of the calling thread.
 
 Moving forward, this value can be accessed for any thread using
@@ -163,7 +163,7 @@ Moving forward, this value can be accessed for any thread using
 [`ZX_INFO_THREAD_STATS`](object_get_info.md#zx-info-thread-stats).
 Users will need to have access to the handle thread they wish to query, and that
 handle will need to have `ZX_RIGHT_INSPECT` rights set on it. This is generally
-the case for threads in a process which have been created by the user.
+the case for threads in a process created by the user.
 
 Here is an example of how to query this value for the current thread running in
 the C/C++ runtime. The specific API for obtaining access to the current

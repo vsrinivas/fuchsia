@@ -103,7 +103,7 @@ Where *condition* is one of
   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,
   **ZX_POL_NEW_PORT**, **ZX_POL_NEW_SOCKET**, **ZX_POL_NEW_FIFO**,
   and any future **ZX_NEW** policy. This will include any new
-  kernel objects which do not require a parent object for creation.
+  kernel objects that do not require a parent object for creation.
 
 Where *policy* for **ZX_JOB_POL_BASIC_V1** or *action* for **ZX_JOB_POL_BASIC_V2**
 is one of

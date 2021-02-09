@@ -22,7 +22,7 @@ Test components are components that implement a test suite.
 Test packages can also contain other components that are not the test itself,
 but participate in the test. For instance:
 
-- A package may contain a single test component which implements a unit test
+- A package may contain a single test component, which implements a unit test
   that exercises some business logic.
 - A package may contain a test component and a second component that implements
   a service. The test component may then act as a client of the second

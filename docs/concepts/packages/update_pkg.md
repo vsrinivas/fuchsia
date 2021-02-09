@@ -42,7 +42,7 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
     Firmware image. For example: `firmware`, `firmware_bl2`, `firmware_full`. Each device
     supports a custom set of firmware types, and unsupported types are ignored. This serves
     two main purposes:
-    * 1. We can specify multiple pieces of firmware, for example devices which have multiple
+    * 1. We can specify multiple pieces of firmware, for example devices, which have multiple
       bootloader stages.
     * 2. Provides a simple and safe way to transition to new firmware types; it's just a matter of
       adding the backend paver logic and then putting the new file in the update package.
@@ -72,7 +72,7 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
     Metadata files present in all packages
 *   `update_mode.json`
     Optional. If the file is not present, the update mode is normal. The other option is
-    ForceRecovery which writes a recovery image and reboots into it. Any other update-mode
+    ForceRecovery, which writes a recovery image and reboots into it. Any other update-mode
     is invalid.
     For example:
         ```

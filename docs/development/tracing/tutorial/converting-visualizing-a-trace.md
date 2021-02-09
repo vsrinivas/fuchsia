@@ -159,7 +159,7 @@ you can see the overall CPU usage on all CPU cores.
 
 The region marked by the green circle shows the program execution.
 
-In this example, you can see 10 invocations of the `du` program which is
+In this example, you can see 10 invocations of the `du` program, which is
 expected since the trace was recorded during a loop of `du`. Therefore,
 you can see 10 different `du` process IDs, one after the other.
 

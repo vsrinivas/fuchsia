@@ -34,7 +34,7 @@ On success, returns **ZX_OK** along with the clock's current time in the *now* o
 ## ERRORS
 
  - **ZX_ERR_BAD_HANDLE** : *handle* is either an invalid handle, or a handle to
-   an object type which is not **ZX_OBJ_TYPE_CLOCK**.
+   an object type that is not **ZX_OBJ_TYPE_CLOCK**.
  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_READ** right.
 
 ## SEE ALSO

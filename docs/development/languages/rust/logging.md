@@ -139,7 +139,7 @@ warn!("something happened: {}", 2);  // maps to WARN
 error!("something happened: {}", 1); // maps to ERROR
 ```
 
-The `fuchsia_syslog` crate also offers macros like `fx_log_info!` which allow manually specifying
+The `fuchsia_syslog` crate also offers macros like `fx_log_info!`, which allow manually specifying
 the tag of a message.
 
 ## Standard streams

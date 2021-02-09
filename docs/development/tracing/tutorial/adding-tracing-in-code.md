@@ -62,7 +62,7 @@ is in your code, then the tracing macros don't generate any code:
 Make sure that you define the `NTRACE` macro before the `#include`statement.
 
 In this example, the `rx_count` and `tx_count` fields are used only with
-tracing, so if `NTRACE` is asserted which indicates that tracing is disabled,
+tracing, so if `NTRACE` is asserted, which indicates that tracing is disabled,
 the fields don't take up space in the `my_statistics_t` structure.
 
 * {C and C++}

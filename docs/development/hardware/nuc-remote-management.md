@@ -20,7 +20,7 @@ configuration.
 The Intel AMT serial-over-LAN and vPro KVM needs to be enabled before
 use. These are enabled using the `wsman` command-line utility.
 
-These instructions assume you have set the `AMT_HOST` variable which
+These instructions assume you have set the `AMT_HOST` variable, which
 contains the IPv4 address you configured in the Intel ME settings,
 In these instructions, `AMT_PASSWORD` is the Intel ME password and `VNC_PASSWORD`
 is the VNC password.

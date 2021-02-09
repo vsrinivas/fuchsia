@@ -169,7 +169,7 @@ information. However, information such as identifiers and source code snippets m
 be missing, since the system only stores the bind program bytecode, not the
 source code.
 
-The trace shows the outcome of each statement which was reached while executing
+The trace shows the outcome of each statement that was reached while executing
 the bind program:
 
 - The device has the USB device protocol, so the first condition statement is

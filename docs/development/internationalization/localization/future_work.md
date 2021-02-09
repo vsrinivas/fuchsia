@@ -6,7 +6,7 @@ has a long history and a very well known set of issues that need resolving.  We
 adopted a development approach where we tackle only the issues that the
 Platform will need in the short term, such as the development of features for
 the use of the Accessibility manager (a11y) and the Screen Reader.  As result,
-there are issues which we deliberately deferred to until there are subsystems
+there are issues that we deliberately deferred, until there are subsystems
 that will need to use them.
 
 This section lists such known, but as of yet unimplemented pieces of work, as a
@@ -35,7 +35,7 @@ The future work is classified roughly by area.
 
 1. The loaded messages are stored on the heap and can be written to.  This
    presents a potential security risk.  A better approach would be to load the
-   messages into a continuous memory region which would subsequently be marked
+   messages into a continuous memory region that would subsequently be marked
    as read-only.  This would prevent any attacks that try to exploit the
    fundamental type-unsafety of the formatting API and confuse it into
    revealing information it is not meant to reveal.

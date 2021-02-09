@@ -22,7 +22,7 @@ stored in the trace buffer by reading everything up to the last well-formed
 record.
 
 As the trace progresses, the trace manager aggregates records from all
-trace providers which are participating in trace collection and concatenates
+trace providers participating in trace collection, and concatenates
 them together with some special metadata records to form a trace archive.
 
 Once the trace completes, tools such as the `trace` command-line program
@@ -62,16 +62,16 @@ The Fuchsia trace format has the following encoding primitives:
 
 Each record is constructed as a sequence of atoms.
 
-Each atom is written with 8 byte alignment and has a size which is also a
+Each atom is written with 8 byte alignment and has a size that is also a
 multiple of 8 bytes so as to preserve alignment.
 
 There are two kinds of atoms:
 
-- **Word**: A 64-bit value which may be further subdivided into bit fields.
+- **Word**: A 64-bit value that may be further subdivided into bit fields.
   Words are stored in machine word order (little-endian on all currently
   supported architectures).
 - **Stream**: A sequence of bytes padded with zeros to the next 8 byte
-  boundary.  Streams are stored in byte order.  Streams which are an exact
+  boundary.  Streams are stored in byte order.  Streams that are an exact
   multiple of 8 bytes long are not padded (there is no zero terminator).
 
 **Fields** are subdivisions of 64-bit **Words**, denoted
@@ -90,12 +90,12 @@ the record format.
 A trace record is a binary encoded piece of trace information consisting of
 a sequence of [atoms](#atoms).
 
-All records include a header word which contains the following basic
+All records include a header word that contains the following basic
 information:
 
-- **Record type**: A 4-bit field which identifies the type of the record
+- **Record type**: A 4-bit field that identifies the type of the record
   and the information it contains. See [Record Types](#record-types).
-- **Record size**: Typically, a 12-bit field which indicates the number of words
+- **Record size**: Typically, a 12-bit field that indicates the number of words
   (multiples of 8 byte units) within the record _including the record
   header itself_.  The maximum possible size of a record is 4095 words
   (32760 bytes).  Very simple records may be just 1 word (8 bytes) long.
@@ -109,10 +109,10 @@ Records are always a multiple of 8 bytes in length and are stored with
 
 A trace archive is a sequence of trace records, concatenated end to end,
 which stores information collected by trace providers while a trace is
-running together with metadata records which identify and delimit sections
+running together with metadata records that identify and delimit sections
 of the trace produced by each trace provider.
 
-Trace archives are intended to be read sequentially since records which
+Trace archives are intended to be read sequentially since records that
 appear earlier in the trace may influence the interpretation of records
 which appear later in the trace.  The trace system provides tools for
 extracting information from trace archives and converting it into other
@@ -182,7 +182,7 @@ Thereafter, any **pointer arguments** which refer to the same pointer will
 be associated with the referent's annotations.
 
 This makes it easy to associate human-readable labels and other information
-with objects which appear later in the trace.
+with objects that appear later in the trace.
 
 ### Kernel object information {#kernel-object-information}
 
@@ -195,7 +195,7 @@ Thereafter, any **kernel object Id arguments** which refer to the same koid will
 be associated with the referent's annotations.
 
 This makes it easy to associate human-readable labels and other information
-with objects which appear later in the trace.
+with objects that appear later in the trace.
 
 In particular, this is how the tracing system associates names with process
 and thread koids.
@@ -249,7 +249,7 @@ followed by a bullet-point description of its contents.
 
 ### Record header {#record-header}
 
-All records include this header which specifies the record's type and size
+All records include this header that specifies the record's type and size
 together with 48 bits of data whose usage varies by record type.
 
 ##### Format
@@ -278,7 +278,7 @@ _header word_
 
 ### Metadata record (record type = 0) {#metadata-record}
 
-Provides metadata about trace data which follows.
+Provides metadata about trace data that follows.
 
 This record type is reserved for use by the _trace manager_ when generating
 trace archives.  It must not be emitted by trace providers themselves.
@@ -301,10 +301,10 @@ _header word_
 
 #### Provider info metadata (metadata type = 1) {#provider-info-metadata}
 
-This metadata identifies a trace provider which has contributed information to
+This metadata identifies a trace provider that has contributed information to
 the trace.
 
-All data which follows until the next **provider section metadata** or
+All data that follows until the next **provider section metadata** or
 **provider info metadata** is encountered must have been collected from the
 same provider.
 
@@ -327,10 +327,10 @@ _provider name stream_
 
 #### Provider section metadata (metadata type = 2) {#provider-section-metadata}
 
-This metadata delimits sections of the trace which have been obtained from
+This metadata delimits sections of the trace that have been obtained from
 different providers.
 
-All data which follows until the next **provider section metadata** or
+All data that follows until the next **provider section metadata** or
 **provider info metadata** is encountered is assumed to have been collected
 from the same provider.
 
@@ -425,7 +425,7 @@ _header word_
 
 ### Initialization record (record type = 1) {#initialization-record}
 
-Provides parameters needed to interpret the records which follow.  In absence
+Provides parameters needed to interpret the records that follow.  In absence
 of this record, the reader may assume that 1 tick is 1 nanosecond.
 
 ##### Format
@@ -446,12 +446,12 @@ _tick multiplier word_
 
 Registers a string in the string table, assigning it a string index in the
 range `0x0001` to `0x7fff`.  The registration replaces any prior registration
-for the given string index when interpreting the records which follow.
+for the given string index when interpreting the records that follow.
 
-String records which attempt to set a value for string index `0x0000` must be
+String records that attempt to set a value for string index `0x0000` must be
 ignored since this value is reserved to represent the empty string.
 
-String records which contain empty strings must be tolerated but they're
+String records that contain empty strings must be tolerated but they're
 pointless since the empty string can simply be encoded as zero in a string ref.
 
 ##### Format
@@ -480,7 +480,7 @@ prior registration for the given thread index when interpreting the records
 which follow.
 
 Thread index `0x00` is reserved to denote the use of an inline thread id in
-a thread ref.  Thread records which attempt to set a value for this value
+a thread ref.  Thread records that attempt to set a value for this value
 must be ignored.
 
 ##### Format
@@ -623,7 +623,7 @@ _end time word_
 
 #### Async begin event (event type = 5) {#async-begin-event}
 
-Marks the beginning of an operation which may span threads.  Must be matched
+Marks the beginning of an operation that may span threads.  Must be matched
 by an **async end event** using the same async correlation id.
 
 ##### Format
@@ -636,7 +636,7 @@ _async correlation word_
 
 #### Async instant Event (event type = 6) {#async-instant-event}
 
-Marks a moment within an operation which may span threads. Must appear
+Marks a moment within an operation that may span threads. Must appear
 between **async begin event** and **async end event** using the same async
 correlation id.
 
@@ -650,7 +650,7 @@ _async correlation word_
 
 #### Async end event (event type = 7) {#async-end-event}
 
-Marks the end of an operation which may span threads.
+Marks the end of an operation that may span threads.
 
 ##### Format
 
@@ -662,8 +662,8 @@ _async correlation word_
 
 #### Flow begin event (event type = 8) {#flow-begin-event}
 
-Marks the beginning of an operation which results in a sequence of actions
-which may span multiple threads or abstraction layers. Must be matched by a
+Marks the beginning of an operation, which results in a sequence of actions
+that may span multiple threads or abstraction layers. Must be matched by a
 **flow end event** using the same flow correlation id. This can be envisioned
 as an arrow between duration events.
 
@@ -839,12 +839,12 @@ helps trace consumers correlate relationships among kernel objects.
 Note: This information may not always be available.
 
 - `"process"`: for `ZX_OBJ_TYPE_THREAD` objects, specifies the koid of the
-  process which contains the thread
+  process that contains the thread
 
 ### Context switch record (record type = 8) {#context-switch-record}
 
 Describes a context switch during which a CPU handed off control from an
-outgoing thread to an incoming thread which resumes execution.
+outgoing thread to an incoming thread that resumes execution.
 
 The record specifies the new state of the outgoing thread following the
 context switch. By definition, the new state of the incoming thread is
@@ -1083,7 +1083,7 @@ There are the following argument types:
 
 ### Argument header {#argument-header}
 
-All arguments include this header which specifies the argument's type,
+All arguments include this header, which specifies the argument's type,
 name, and size together with 32 bits of data whose usage varies by
 argument type.
 
@@ -1104,7 +1104,7 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 
 ### Null argument (argument type = 0) {#null-argument}
 
-Represents an argument which appears in name only without a value.
+Represents an argument that appears in name only, without a value.
 
 ##### Format
 

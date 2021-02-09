@@ -8,14 +8,14 @@
 This RFC proposes adding a new topic - `ZX_INFO_KMEM_STATS_EXTENDED`, to the
 `zx_object_get_info()` syscall. The new topic will return a single record of
 type `zx_info_kmem_stats_extended_t`, a struct consisting of all the fields in
-`zx_info_kmem_stats_t`, plus some additional fields which are more expensive to
+`zx_info_kmem_stats_t`, plus some additional fields that are more expensive to
 collect.
 
 ## Motivation
 
 The `ZX_INFO_KMEM_STATS` topic does not expose any metrics for the amount of
 memory that can be reclaimed by the kernel under memory pressure. There is
-currently only a counter for `free_bytes` which is the amount of physical free
+currently only a counter for `free_bytes`, which is the amount of physical free
 memory on the system. This number alone is not very useful, and can be
 misleading.  In practice the amount of memory "available" is more than free
 memory, because the kernel can reclaim memory by evicting pages under memory

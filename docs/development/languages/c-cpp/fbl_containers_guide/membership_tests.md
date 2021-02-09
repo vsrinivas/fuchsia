@@ -1,6 +1,6 @@
 # Testing an object for membership in a container
 
-Because node storage is a property of the objects which exist in containers, the
+Because node storage is a property of the objects that exist in containers, the
 objects themselves can be examined in order to check to see if the object is
 currently contained with in a container or not. This check is always a quick
 O(1) operation.
@@ -11,11 +11,11 @@ in.
 
 ## Testing single-container objects using mix-ins {#single-container}
 
-All node state classes provide a public `InContainer()` method which may be used
+All node state classes provide a public `InContainer()` method, which may be used
 to test to see if the node state instance is currently a member of its
-container, as do the `Listable` or `Containable` mix-ins which objects typically
+container, as do the `Listable` or `Containable` mix-ins that objects typically
 derive from. Because the objects derive from the mix-in, they also expose this
-method, so testing an object which uses mix-ins, and can only be a member of
+method, so testing an object that uses mix-ins, and can only be a member of
 single container, for container membership is as simple as calling
 `InContainer()` on the object.
 
@@ -39,7 +39,7 @@ delete the_obj;
 
 When an object can be a member of multiple containers because it derives from
 multiple mix-ins, things can become a bit more complicated. The object itself
-now has multiple implementations of `InContainer()` which it inherited from the
+now has multiple implementations of `InContainer()`, which it inherited from the
 mix-ins, so callers need to be specific about which one they want to call.
 While this is certainly possible, the syntax is awkward, it may benefit from
 being wrapped up in custom methods on the object. For example:
@@ -72,7 +72,7 @@ void test(const Obj& obj) {
 Using the `ContainableBaseClasses` for existing in multiple containers
 simultaneously can make this a lot easier as it allows tags to be used in order
 to select the container that you want to test for membership. `fbl::` provides
-a standalone `InContainer` function which may be used  along with tags to more
+a standalone `InContainer` function, which may be used  along with tags to more
 easily test for membership. Let's look at the previous example, but this time
 using `ContainableBaseClasses`.
 

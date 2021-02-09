@@ -53,7 +53,7 @@ pub struct ExampleCommand {}
 
 This uses the [argh](https://docs.rs/argh/0.1.3/argh/) crate and more
 documentation can be found [here](https://docs.rs/argh/0.1.3/argh/). This
-struct has been decorated by the `ffx_command` attribute which signifies that
+struct has been decorated by the `ffx_command` attribute that signifies that
 your plugin should run when someone types the following command:
 
 ```sh

@@ -5,7 +5,7 @@ users must explicitly add storage for the container bookkeeping to the object
 itself.  This section will show you the details of how you can control which
 container(s) your object are allowed to exist in. It will:
 
-1. Demonstrate the simple case of an object which may exist in a single
+1. Demonstrate the simple case of an object that may exist in a single
    container.
 1. Show two ways to allow for membership in multiple containers simultaneously.
 1. Show how to take complete manual control of bookkeeping storage in your
@@ -135,7 +135,7 @@ Note that when an object is found in the set of active objects, it is checked to
 make sure it is not _already_ in the pending queue before attempting to append
 it to the pending queue. `FooObj`s can exist in both the pending queue and the
 active set at the same time, but they cannot exist in the pending queue twice.
-Attempting to put an object which into an instance of `ContainerTypeA` when the
+Attempting to put an object into an instance of `ContainerTypeA` when the
 object is _already_ in an instance of `ContainerTypeA` (either the same instance
 or a different one) will trigger a ZX_DEBUG_ASSERT if asserts are enabled, or
 end up corrupting the program state otherwise. It is *very important* to make
@@ -152,15 +152,15 @@ One last thing to point out about this example. When it is time to put a
 `FooObj` into the pending queue, a new instance of a `fbl::RefPtr` to the object
 instance needs to be provided to `push_back`. This can be obtained by calling
 the `CopyPointer` method of the iterator, which will invoke the copy constructor
-of the underlying pointer type giving us a new reference to the object which can
-be used. For raw pointers, this is a no-op. For unique_ptrs, this is illegal
+of the underlying pointer type, giving us a new reference to the object.
+For raw pointers, this is a no-op. For unique_ptrs, this is illegal
 and will fail to compile.
 
 ## Multiple container membership using ContainableBaseClasses
 
 What should you do if your object needs to exist in multiple containers of the
 same fundamental type at the same time? The easiest thing that can be done is to
-make use of `fbl::ContainableBaseClasses`, along with type tags which can be
+make use of `fbl::ContainableBaseClasses`, along with type tags, which can be
 used to identify the different containers your object can exist in. Here is a
 re-implementation of the previous example, but this time with the addition of
 another list that the objects can exist in.
@@ -200,7 +200,7 @@ The example starts by defining 3 different types ("tags") that will be used to
 identify the different containers to be used concurrently with `FooObj`s. These
 types don't actually _do_ anything, they are simply empty structures. You will
 never instantiate any of them. Their purpose is only to be a unique type
-which the compiler can use to understand which list type is paired with which
+that the compiler can use to understand which list type is paired with which
 node state.  In this example, the node state held by the
 `TaggedDoublyLinkedListable` with the `ProcessPendingTag` is the node state used
 by the `g_process_pending_foos` list.
@@ -263,7 +263,7 @@ class Foo :
 Finally, there is one last option for controlling container membership for objects.
 This option is the lowest level option, and the most work to write, understand,
 and maintain. It only should be used in situations where specific technical
-requirements force you to do so. Here are some of the reasons which might
+requirements force you to do so. Here are some of the reasons that might
 justify the use of explicit nodes and custom traits in order to control
 container membership for your object.
 
@@ -284,17 +284,17 @@ surprisingly, their names are:
 * `DoublyLinkedListNodeState<PtrType>`
 * `WAVLTreeNodeState<PtrType>`
 
-These are the structures which hold the actual bookkeeping used by the
+These are the structures that hold the actual bookkeeping used by the
 container's data structure.  In order to make use of them, you will need to:
 
 1. [Add the appropriate instances of the node state types to your object.](#adding-node-state)
-2. [Define a trait class which will be used by containers in order access the
+2. [Define a trait class, which will be used by containers in order access the
    bookkeeping.](#defining-node-state-trait-accessors)
 3. [Define a container type, specifying the appropriate trait class to link the
    container type to the bookkeeping in your class it is supposed to make use
    of.](#defining-container-types)
 
-Here is an example of an object which can exist in two doubly linked lists using
+Here is an example of an object that can exist in two doubly linked lists using
 explicit nodes and custom traits:
 
 ```cpp
@@ -339,14 +339,14 @@ doubly linked lists at the same time.
 
 The pointer type used for tracking needs to be specified for the node and needs
 to match that of the container.  In this example, `foo_list_node_` is a node
-state object which can be used by lists which track their objects using raw
-pointers, while `bar_list_node_` is a node state object which can be used by
-lists which track their objects using `fbl::RefPtr<>`s. It is best practice to
+state object that can be used by lists to track their objects using raw
+pointers, while `bar_list_node_` is a node state object that can be used by
+lists to track their objects using `fbl::RefPtr<>`s. It is best practice to
 make these node state objects private members of your class.
 
 ### Defining node state trait classes {#defining-node-state-trait-accessors}
 
-These lines declare two "trait" classes which are used to tell a container type
+These lines declare two "trait" classes used to tell a container type
 how to access their associated node bookkeeping.
 
 ```cpp
@@ -364,7 +364,7 @@ how to access their associated node bookkeeping.
 ```
 
 These classes have no member variable or methods, merely a single static method
-named `node_state` which takes a mutable reference to your object type, and
+named `node_state`, which takes a mutable reference to your object type, and
 returns a mutable reference to the proper node state bookkeeping instance in
 your object.  These classes will never be instantiated, they only are used to
 define, at compile time, the relationship of a type of a container to the proper
@@ -383,9 +383,9 @@ lines take care of that task.
 
 ### Defining container type and specifying the node state storage they should use {#defining-container-types}
 
-Finally, you will need to define the container types which may be used with your
+Finally, you will need to define the container types that may be used with your
 object and make those types available to the users of your object.  In this
-example, these are the lines which take care of that task.
+example, these are the lines that take care of that task.
 
 ```cpp
  public:
@@ -396,7 +396,7 @@ example, these are the lines which take care of that task.
 Note that we have used one of the specialized `using` aliases for
 `DoublyLinkedList`, specifically `DoublyLinkedListCustomTraits`.  This alias
 simple re-arranges the ordering of template parameters so that the second
-parameter passed to the list type defines the trait class which will be used by
+parameter passed to the list type defines the trait class that will be used by
 the list to find the appropriate node state bookkeeping storage.
 
 Both the trait classes and the node state storage are private members of `Obj`,

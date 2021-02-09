@@ -19,11 +19,11 @@ zx_status_t zx_pager_detach_vmo(zx_handle_t pager, zx_handle_t vmo);
 ## DESCRIPTION
 
 Detaching *vmo* from *pager* causes the kernel to stop queuing page requests for the vmo. Subsequent
-accesses which would have generated page requests will instead fail.
+accesses that would have generated page requests will instead fail.
 
 No new **ZX_PAGER_VMO_READ** requests will be generated after detaching, but some requests may
 still be in flight. The pager service is free to ignore these requests, as the kernel will resume and
-fault the threads which generated these requests. The final request the pager service will
+fault the threads that generated these requests. The final request the pager service will
 receive is a **ZX_PAGER_VMO_COMPLETE** request.
 
 The kernel is free to evict clean pages from deregistered vmos.

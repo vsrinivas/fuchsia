@@ -97,7 +97,7 @@ that meet the following criteria must use RFC process:
 
  * *Significant changes of performance or memory use.* Sometimes when additional
     security, monitoring or features are added, there is a corresponding decrease in
-    performance or higher memory use which need to be vetted via this process.
+    performance or higher memory use that need to be vetted via this process.
 
  * *Favoring a single platform.* Zircon strives to have an equal baseline of features
     and services across all supported architectures and boards. Changes that leverage

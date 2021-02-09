@@ -70,7 +70,7 @@ int Example::IncreaseFoo(int by) {
 }
 ```
 
-Note that for annotations which allow sets of mutex objects, one may either
+Note that for annotations, which allow sets of mutex objects, one may either
 apply the annotation multiple times, or provided a comma separated list to the
 annotation.  In other words, the following two declarations are equivalent.
 

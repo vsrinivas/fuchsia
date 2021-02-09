@@ -21,7 +21,7 @@ zx_status_t zx_port_wait(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_port_wait()` is a blocking syscall which causes the caller to wait until at least
+`zx_port_wait()` is a blocking syscall, which causes the caller to wait until at least
 one packet is available.
 
 Upon return, if successful *packet* will contain the earliest (in FIFO order)
@@ -35,7 +35,7 @@ waiting forever.  A value in the past will result in an immediate timeout,
 unless a packet is already available for reading.
 
 Unlike [`zx_object_wait_one()`] and [`zx_object_wait_many()`] only one
-waiting thread is released (per available packet) which makes ports
+waiting thread is released (per available packet), which makes ports
 amenable to be serviced by thread pools.
 
 There are two classes of packets: packets queued by userspace with [`zx_port_queue()`]
