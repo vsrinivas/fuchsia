@@ -4,9 +4,10 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/build/fuchsia_shell_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
@@ -52,26 +53,22 @@ if (is_host) {
   }
 }
 
-test_package("devicetree-test-package") {
-  deps = [ ":devicetree-tests" ]
-  package_name = "devicetree-test"
-  tests = [
-    {
-      name = "devicetree-tests"
+resource("dtb_resources") {
+  sources = dtb_sources
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-      # The test requires that a ZBI item of type ZBI_TYPE_DEVICETREE exists,
-      # which is true in the case of the arm64 qemu-boot-shim.
-      environments = [ emu_env ]
-    },
+fuchsia_unittest_package("devicetree-test-package") {
+  package_name = "devicetree-test"
+  deps = [
+    ":devicetree-tests",
+    ":dtb_resources",
   ]
-  resources = []
-  foreach(dtb, dtb_sources) {
-    resources += [
-      {
-        path = dtb
-        dest = get_path_info(dtb, "file")
-      },
-    ]
+  manifest = "meta/devicetree-tests.cmx"
+  test_specs = {
+    # The test requires that a ZBI item of type ZBI_TYPE_DEVICETREE exists,
+    # which is true in the case of the arm64 qemu-boot-shim.
+    environments = [ emu_env ]
   }
 }
 
@@ -88,14 +85,8 @@ executable("devicetree-extract") {
   ]
 }
 
-package("devicetree-extract-package") {
+fuchsia_shell_package("devicetree-extract-package") {
   testonly = true
   deps = [ ":devicetree-extract" ]
   package_name = "devicetree-extract"
-  binaries = [
-    {
-      name = "devicetree-extract"
-      shell = true
-    },
-  ]
 }
