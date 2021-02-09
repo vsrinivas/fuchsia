@@ -48,14 +48,83 @@ TEST(StructuredLogging, PaddedWritePadsWithZeroes) {
   // 'h' written to byte 0 | 'i' written to byte 1
   // Bytes get reversed due to endianness so they are flipped
   // when combined.
-  WritePaddedInternal(buffer, "hi", 2);
+  WritePaddedInternal(buffer, "hi", ByteOffset::Unbounded(2));
   ASSERT_EQ(buffer[0], static_cast<uint64_t>(26984));
   ASSERT_EQ(buffer[1], fives);
   buffer[0] = fives;
   buffer[1] = fives;
-  WritePaddedInternal(buffer, "", 0);
+  WritePaddedInternal(buffer, "", ByteOffset::Unbounded(0));
   ASSERT_EQ(buffer[0], fives);
   ASSERT_EQ(buffer[1], fives);
+}
+
+TEST(ByteOffset, FromBuffer) {
+  ByteOffset offset = ByteOffset::FromBuffer(5, 10);
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(5));
+  ASSERT_EQ(offset.capacity(), static_cast<size_t>(10));
+}
+
+TEST(ByteOffset, Unbounded) {
+  ByteOffset offset = ByteOffset::Unbounded(13);
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(13));
+  ASSERT_EQ(offset.capacity(), static_cast<size_t>(-1));
+}
+
+TEST(ByteOffset, Addition) {
+  ByteOffset offset = ByteOffset::Unbounded(13);
+  offset = offset + 1;
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(14));
+}
+
+TEST(WordOffset, FromByteOffset) {
+  WordOffset<uint64_t> offset =
+      WordOffset<uint64_t>::FromByteOffset(ByteOffset::FromBuffer(8, 256));
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(1));
+  ASSERT_EQ(offset.capacity(), static_cast<size_t>(32));
+}
+
+TEST(WordOffset, ToByteOffset) {
+  WordOffset<uint64_t> offset =
+      WordOffset<uint64_t>::FromByteOffset(ByteOffset::FromBuffer(8, 256));
+  ASSERT_EQ(offset.ToByteOffset().unsafe_get(), static_cast<size_t>(8));
+  ASSERT_EQ(offset.ToByteOffset().capacity(), static_cast<size_t>(256));
+}
+
+TEST(WordOffset, Addition) {
+  WordOffset<uint64_t> offset =
+      WordOffset<uint64_t>::FromByteOffset(ByteOffset::FromBuffer(8, 256));
+  offset = offset + 1;
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(2));
+  offset = offset + WordOffset<uint64_t>::FromByteOffset(ByteOffset::Unbounded(16));
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(4));
+}
+
+TEST(WordOffset, Begin) {
+  WordOffset<uint64_t> offset =
+      WordOffset<uint64_t>::FromByteOffset(ByteOffset::FromBuffer(8, 256));
+  offset = offset.begin();
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(0));
+  ASSERT_EQ(offset.capacity(), static_cast<size_t>(32));
+}
+
+TEST(WordOffset, Reset) {
+  WordOffset<uint64_t> offset =
+      WordOffset<uint64_t>::FromByteOffset(ByteOffset::FromBuffer(8, 256));
+  offset.reset();
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(0));
+  ASSERT_EQ(offset.capacity(), static_cast<size_t>(32));
+}
+
+TEST(WordOffset, InBounds) {
+  WordOffset<uint64_t> offset = WordOffset<uint64_t>::FromByteOffset(ByteOffset::FromBuffer(8, 16));
+  ASSERT_TRUE(offset.in_bounds(WordOffset<uint64_t>::FromByteOffset(ByteOffset::Unbounded(0))));
+  ASSERT_FALSE(offset.in_bounds(WordOffset<uint64_t>::FromByteOffset(ByteOffset::Unbounded(8))));
+}
+
+TEST(WordOffset, Invalid) {
+  WordOffset<uint64_t> offset = WordOffset<uint64_t>::invalid();
+  ASSERT_EQ(offset.capacity(), static_cast<size_t>(0));
+  ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(0));
 }
 
 TEST(StructuredLogging, Overflow) {

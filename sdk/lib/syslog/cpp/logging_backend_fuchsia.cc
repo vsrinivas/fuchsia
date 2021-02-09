@@ -48,29 +48,27 @@ static thread_local zx_koid_t tid = GetCurrentThreadKoid();
 template <typename T>
 class DataSlice {
  public:
-  DataSlice(T* ptr, size_t size) : ptr_(ptr), size_(size) {}
+  DataSlice(T* ptr, WordOffset<T> slice) : ptr_(ptr), slice_(slice) {}
 
-  T& operator[](size_t offset) {
-    assert(offset < size_);
+  T& operator[](WordOffset<T> offset) {
+    offset.AssertValid();
     return ptr_[offset];
   }
 
-  const T& operator[](size_t offset) const {
-    assert(offset < size_);
-    return ptr_[offset];
-  }
+  const T& operator[](WordOffset<T> offset) const { return ptr_[offset.unsafe_get()]; }
 
-  size_t size() { return size_; }
+  WordOffset<T> slice() { return slice_; }
 
   T* data() { return ptr_; }
 
  private:
   T* ptr_;
-  size_t size_;
+  WordOffset<T> slice_;
 };
 
 static DataSlice<const char> SliceFromString(const std::string& string) {
-  return DataSlice<const char>(string.data(), string.size());
+  return DataSlice<const char>(
+      string.data(), WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(string.size())));
 }
 
 template <typename T, size_t size>
@@ -80,25 +78,24 @@ static DataSlice<const T> SliceFromArray(const T (&array)[size]) {
 
 template <size_t size>
 static DataSlice<const char> SliceFromArray(const char (&array)[size]) {
-  return DataSlice<const char>(array, size - 1);
+  return DataSlice<const char>(
+      array, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(size - 1)));
 }
 
 static constexpr int WORD_SIZE = sizeof(log_word_t);  // See sdk/lib/syslog/streams/cpp/encode.cc
 class DataBuffer {
  public:
   static constexpr auto kBufferSize = (1 << 15) / WORD_SIZE;
-  void Write(const log_word_t* data, size_t length) {
-    assert(cursor_ + length < kBufferSize);
-    for (size_t i = 0; i < length; i++) {
-      buffer_[cursor_ + i] = data[i];
+  void Write(const log_word_t* data, WordOffset<log_word_t> length) {
+    for (size_t i = 0; i < length.unsafe_get(); i++) {
+      buffer_[cursor_.unsafe_get() + i] = data[i];
     }
-    cursor_ += length;
+    cursor_ = cursor_ + length;
   }
 
-  size_t WritePadded(const void* msg, size_t length) {
-    assert(cursor_ + length < kBufferSize);
-    auto retval = WritePaddedInternal(buffer_ + cursor_, msg, length);
-    cursor_ += retval;
+  WordOffset<log_word_t> WritePadded(const void* msg, const ByteOffset& length) {
+    auto retval = WritePaddedInternal(&buffer_[cursor_.unsafe_get()], msg, length);
+    cursor_ = cursor_ + retval;
     return retval;
   }
 
@@ -106,31 +103,37 @@ class DataBuffer {
   void Write(const T& data) {
     static_assert(sizeof(T) >= sizeof(log_word_t));
     static_assert(alignof(T) >= sizeof(log_word_t));
-    Write(reinterpret_cast<const log_word_t*>(&data), sizeof(T) / sizeof(log_word_t));
+    Write(reinterpret_cast<const log_word_t*>(&data), cursor_ + (sizeof(T) / sizeof(log_word_t)));
   }
 
   DataSlice<log_word_t> GetSlice() { return DataSlice<log_word_t>(buffer_, cursor_); }
 
  private:
-  size_t cursor_ = 0;
+  WordOffset<log_word_t> cursor_;
   log_word_t buffer_[kBufferSize];
 };
 
 struct RecordState {
+  RecordState()
+      : arg_size(WordOffset<log_word_t>::FromByteOffset(
+            ByteOffset::FromBuffer(0, sizeof(LogBuffer::data)))),
+        current_key_size(ByteOffset::FromBuffer(0, sizeof(LogBuffer::data))),
+        cursor(WordOffset<log_word_t>::FromByteOffset(
+            ByteOffset::FromBuffer(0, sizeof(LogBuffer::data)))) {}
   // Header of the record itself
   uint64_t* header;
   syslog::LogSeverity log_severity;
   ::fuchsia::diagnostics::Severity severity;
   // arg_size in words
-  size_t arg_size = 0;
+  WordOffset<log_word_t> arg_size;
   zx_handle_t socket = ZX_HANDLE_INVALID;
   // key_size in bytes
-  size_t current_key_size = 0;
+  ByteOffset current_key_size;
   // Header of the current argument being encoded
   uint64_t* current_header_position = 0;
   uint32_t dropped_count = 0;
   // Current position (in 64-bit words) into the buffer.
-  size_t cursor = 0;
+  WordOffset<log_word_t> cursor;
   // True if encoding was successful, false otherwise
   bool encode_success = true;
   static RecordState* CreatePtr(LogBuffer* buffer) {
@@ -148,30 +151,30 @@ static_assert(std::alignment_of<RecordState>() == sizeof(uint64_t));
 class ExternalDataBuffer {
  public:
   explicit ExternalDataBuffer(LogBuffer* buffer)
-      : buffer_(&buffer->data[0]),
-        capacity_((sizeof(buffer->data) - sizeof(buffer->record_state))),
-        cursor_(RecordState::CreatePtr(buffer)->cursor) {}
+      : buffer_(&buffer->data[0]), cursor_(RecordState::CreatePtr(buffer)->cursor) {}
 
-  ExternalDataBuffer(log_word_t* data, size_t length, size_t& cursor)
-      : buffer_(data), capacity_(length), cursor_(cursor) {}
-  __WARN_UNUSED_RESULT bool Write(const log_word_t* data, size_t length) {
-    if (cursor_ + length >= capacity_) {
+  ExternalDataBuffer(log_word_t* data, size_t length, WordOffset<log_word_t>& cursor)
+      : buffer_(data), cursor_(cursor) {}
+  __WARN_UNUSED_RESULT bool Write(const log_word_t* data, WordOffset<log_word_t> length) {
+    if (!cursor_.in_bounds(length)) {
       return false;
     }
-    for (size_t i = 0; i < length; i++) {
-      buffer_[cursor_ + i] = data[i];
+    for (size_t i = 0; i < length.unsafe_get(); i++) {
+      buffer_[(cursor_ + i).unsafe_get()] = data[i];
     }
-    cursor_ += length;
+    cursor_ = cursor_ + length;
     return true;
   }
 
-  __WARN_UNUSED_RESULT bool WritePadded(const void* msg, size_t word_count, size_t* written) {
+  __WARN_UNUSED_RESULT bool WritePadded(const void* msg, const ByteOffset& byte_count,
+                                        WordOffset<log_word_t>* written) {
     assert(written != nullptr);
-    if (cursor_ + word_count >= capacity_) {
+    WordOffset<log_word_t> word_count = cursor_.begin().AddPadded(byte_count);
+    if (!cursor_.in_bounds(word_count)) {
       return false;
     }
-    auto retval = WritePaddedInternal(buffer_ + cursor_, msg, word_count);
-    cursor_ += retval;
+    auto retval = WritePaddedInternal(buffer_ + cursor_.unsafe_get(), msg, byte_count);
+    cursor_ = cursor_ + retval;
     *written = retval;
     return true;
   }
@@ -180,20 +183,20 @@ class ExternalDataBuffer {
   __WARN_UNUSED_RESULT bool Write(const T& data) {
     static_assert(sizeof(T) >= sizeof(log_word_t));
     static_assert(alignof(T) >= sizeof(log_word_t));
-    return Write(reinterpret_cast<const log_word_t*>(&data), sizeof(T) / sizeof(log_word_t));
+    return Write(reinterpret_cast<const log_word_t*>(&data),
+                 WordOffset<log_word_t>::FromByteOffset(
+                     ByteOffset::Unbounded((sizeof(T) / sizeof(log_word_t)) * sizeof(log_word_t))));
   }
 
-  uint64_t* data() { return buffer_ + cursor_; }
+  uint64_t* data() { return buffer_ + cursor_.unsafe_get(); }
 
   DataSlice<log_word_t> GetSlice() { return DataSlice<log_word_t>(buffer_, cursor_); }
 
  private:
   // Start of buffer
   log_word_t* buffer_ = nullptr;
-  // Capacity (in words)
-  __UNUSED size_t capacity_ = 0;
   // Current location in buffer (in words)
-  size_t& cursor_;
+  WordOffset<log_word_t>& cursor_;
 };
 
 template <typename T>
@@ -209,55 +212,59 @@ class Encoder {
     state.encode_success &= buffer_->Write(timestamp);
   }
 
-  void FlushPreviousArgument(RecordState& state) { state.arg_size = 0; }
+  void FlushPreviousArgument(RecordState& state) { state.arg_size.reset(); }
 
   void AppendArgumentKey(RecordState& state, DataSlice<const char> key) {
     FlushPreviousArgument(state);
     auto header_position = buffer_->data();
     log_word_t empty_header = 0;
     state.encode_success &= buffer_->Write(empty_header);
-    size_t s_size = 0;
-    state.encode_success &= buffer_->WritePadded(key.data(), key.size(), &s_size);
+    WordOffset<log_word_t> s_size =
+        WordOffset<log_word_t>::FromByteOffset(ByteOffset::Unbounded(0));
+    state.encode_success &= buffer_->WritePadded(key.data(), key.slice().ToByteOffset(), &s_size);
     state.arg_size = s_size + 1;  // offset by 1 for the header
-    state.current_key_size = key.size();
+    state.current_key_size = key.slice().ToByteOffset();
     state.current_header_position = header_position;
   }
 
   uint64_t ComputeArgHeader(RecordState& state, int type, uint64_t value_ref = 0) {
-    return ArgumentFields::Type::Make(type) | ArgumentFields::SizeWords::Make(state.arg_size) |
-           ArgumentFields::NameRefVal::Make(state.current_key_size) |
-           ArgumentFields::NameRefMSB::Make(state.current_key_size > 0 ? 1 : 0) |
+    return ArgumentFields::Type::Make(type) |
+           ArgumentFields::SizeWords::Make(state.arg_size.unsafe_get()) |
+           ArgumentFields::NameRefVal::Make(state.current_key_size.unsafe_get()) |
+           ArgumentFields::NameRefMSB::Make(state.current_key_size.unsafe_get() > 0 ? 1 : 0) |
            ArgumentFields::ValueRef::Make(value_ref) | ArgumentFields::Reserved::Make(0);
   }
 
   void AppendArgumentValue(RecordState& state, int64_t value) {
     int type = 3;
     state.encode_success &= buffer_->Write(value);
-    state.arg_size++;
+    state.arg_size = state.arg_size + 1;
     *state.current_header_position = ComputeArgHeader(state, type);
   }
 
   void AppendArgumentValue(RecordState& state, uint64_t value) {
     int type = 4;
     state.encode_success &= buffer_->Write(value);
-    state.arg_size++;
+    state.arg_size = state.arg_size + 1;
     *state.current_header_position = ComputeArgHeader(state, type);
   }
 
   void AppendArgumentValue(RecordState& state, double value) {
     int type = 5;
     state.encode_success &= buffer_->Write(value);
-    state.arg_size++;
+    state.arg_size = state.arg_size + 1;
     *state.current_header_position = ComputeArgHeader(state, type);
   }
 
   void AppendArgumentValue(RecordState& state, DataSlice<const char> string) {
     int type = 6;
-    size_t written = 0;
-    state.encode_success &= buffer_->WritePadded(string.data(), string.size(), &written);
-    state.arg_size += written;
-    *state.current_header_position =
-        ComputeArgHeader(state, type, string.size() > 0 ? (1 << 15) | string.size() : 0);
+    WordOffset<log_word_t> written =
+        WordOffset<log_word_t>::FromByteOffset(ByteOffset::Unbounded(0));
+    state.encode_success &=
+        buffer_->WritePadded(string.data(), string.slice().ToByteOffset(), &written);
+    state.arg_size = state.arg_size + written;
+    *state.current_header_position = ComputeArgHeader(
+        state, type, string.slice().unsafe_get() > 0 ? (1 << 15) | string.slice().unsafe_get() : 0);
   }
 
   void End(RecordState& state) {
@@ -296,7 +303,7 @@ class LogState {
 
   template <typename T>
   void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                const char* tag, const char* condition, const T& msg) const;
+                const char* msg, const char* condition, const T& value) const;
   const std::string* tags() const { return tags_; }
   size_t tag_count() const { return num_tags_; }
   // Allowed to be const because descriptor_ is mutable
@@ -382,15 +389,21 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
-  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
-  encoder.AppendArgumentValue(*state, DataSlice<const char>(value, strlen(value)));
+  encoder.AppendArgumentKey(
+      *state, DataSlice<const char>(
+                  key, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(strlen(key)))));
+  encoder.AppendArgumentValue(
+      *state, DataSlice<const char>(value, WordOffset<const char>::FromByteOffset(
+                                               ByteOffset::Unbounded(strlen(value)))));
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
-  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentKey(
+      *state, DataSlice<const char>(
+                  key, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(strlen(key)))));
   encoder.AppendArgumentValue(*state, value);
 }
 
@@ -398,7 +411,9 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
-  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentKey(
+      *state, DataSlice<const char>(
+                  key, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(strlen(key)))));
   encoder.AppendArgumentValue(*state, value);
 }
 
@@ -406,7 +421,9 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
-  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentKey(
+      *state, DataSlice<const char>(
+                  key, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(strlen(key)))));
   encoder.AppendArgumentValue(*state, value);
 }
 
@@ -425,8 +442,8 @@ bool FlushRecord(LogBuffer* buffer) {
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
-  auto status =
-      zx_socket_write(state->socket, 0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
+  auto status = zx_socket_write(state->socket, 0, slice.data(),
+                                slice.slice().ToByteOffset().unsafe_get(), nullptr);
   if (status != ZX_OK) {
     AddDropped(state->dropped_count + 1);
   }
