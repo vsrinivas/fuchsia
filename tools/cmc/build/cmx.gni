@@ -93,13 +93,11 @@ template("cmx_include") {
     outputs = [ output ]
 
     args = [
-      "include",
-      rebase_path(invoker.manifest, root_build_dir),
-      "--output",
-      rebase_path(output, root_build_dir),
-      "--includepath",
-      rebase_path("//", root_build_dir),
-    ]
+             "include",
+             rebase_path(invoker.manifest, root_build_dir),
+             "--output",
+             rebase_path(output, root_build_dir),
+           ] + include_paths
 
     if (defined(depfile)) {
       args += [

@@ -4,9 +4,10 @@
 
 use crate::cml::{self, CapabilityClause};
 use crate::error::Error;
+use crate::include;
 use crate::one_or_many::OneOrMany;
 use crate::translate;
-use crate::util::write_depfile;
+use crate::util;
 use crate::validate;
 use cm_types as cm;
 use cml::EventModesClause;
@@ -26,7 +27,8 @@ pub fn compile(
     file: &PathBuf,
     output: &PathBuf,
     depfile: Option<PathBuf>,
-    includepath: PathBuf,
+    includepath: &PathBuf,
+    includeroot: &PathBuf,
 ) -> Result<(), Error> {
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
@@ -43,21 +45,22 @@ pub fn compile(
         ))),
     }?;
 
-    let document = validate::parse_cml(file.as_path(), Some(&includepath))?;
-    let mut out_data = compile_cml(&document)?;
+    let mut document = util::read_cml(&file)?;
+    let includes = include::transitive_includes(&file, &includepath, &includeroot)?;
+    for include in &includes {
+        let mut include_document = util::read_cml(&include)?;
+        document.merge_from(&mut include_document, &include)?;
+    }
+    validate::validate_cml(&document, &file)?;
 
+    let mut out_data = compile_cml(&document)?;
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
     out_file.write(&encode_persistent(&mut out_data)?)?;
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        write_depfile(
-            &depfile_path,
-            Some(&output.to_path_buf()),
-            &document.includes(),
-            &includepath,
-        )?;
+        util::write_depfile(&depfile_path, Some(&output.to_path_buf()), &includes)?;
     }
 
     Ok(())
@@ -1077,12 +1080,13 @@ mod tests {
     fn compile_test(
         in_path: PathBuf,
         out_path: PathBuf,
-        include_path: Option<PathBuf>,
+        includepath: Option<PathBuf>,
         input: serde_json::value::Value,
         expected_output: fsys::ComponentDecl,
     ) -> Result<(), Error> {
         File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
-        compile(&in_path, &out_path.clone(), None, include_path.unwrap_or(PathBuf::new()))?;
+        let includepath = includepath.unwrap_or(PathBuf::new());
+        compile(&in_path, &out_path.clone(), None, &includepath, &includepath)?;
         let mut buffer = Vec::new();
         fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
         let output: fsys::ComponentDecl = decode_persistent(&buffer).unwrap();
@@ -2960,7 +2964,13 @@ mod tests {
         });
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
-            let result = compile(&tmp_in_path, &tmp_out_path.clone(), None, PathBuf::new());
+            let result = compile(
+                &tmp_in_path,
+                &tmp_out_path.clone(),
+                None,
+                &PathBuf::new(),
+                &PathBuf::new(),
+            );
             assert_matches!(
                 result,
                 Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""

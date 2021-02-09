@@ -26,23 +26,19 @@ pub fn merge_includes(
     output: Option<&PathBuf>,
     depfile: Option<&PathBuf>,
     includepath: &PathBuf,
+    includeroot: &PathBuf,
 ) -> Result<(), Error> {
-    let includes = transitive_includes(&file, &includepath)?;
+    let includes = transitive_includes(&file, &includepath, &includeroot)?;
     let mut v: Value = json_or_json5_from_file(&file)?;
     v.as_object_mut().and_then(|v| v.remove("include"));
 
     for include in &includes {
-        let path = includepath.join(&include);
-        let mut includev: Value = json_or_json5_from_file(&path).map_err(|e| {
-            Error::parse(
-                format!("Couldn't read include {}: {}", &path.display(), e),
-                None,
-                Some(&file),
-            )
+        let mut includev: Value = json_or_json5_from_file(&include).map_err(|e| {
+            Error::parse(format!("Couldn't read include {:?}: {}", &include, e), None, Some(&file))
         })?;
         includev.as_object_mut().and_then(|v| v.remove("include"));
         merge_json(&mut v, &includev).map_err(|e| {
-            Error::parse(format!("Failed to merge with {:?}: {}", path, e), None, Some(&file))
+            Error::parse(format!("Failed to merge with {:?}: {}", include, e), None, Some(&file))
         })?;
     }
 
@@ -60,7 +56,7 @@ pub fn merge_includes(
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        write_depfile(depfile_path, output, &includes, includepath)?;
+        write_depfile(depfile_path, output, &includes)?;
     }
 
     Ok(())
@@ -78,6 +74,7 @@ pub fn check_includes(
     depfile: Option<&PathBuf>,
     stamp: Option<&PathBuf>,
     includepath: &PathBuf,
+    includeroot: &PathBuf,
 ) -> Result<(), Error> {
     if let Some(path) = fromfile {
         let reader = BufReader::new(fs::File::open(path)?);
@@ -98,13 +95,15 @@ pub fn check_includes(
         return Ok(());
     }
 
-    let actual = transitive_includes(&file, &includepath)?;
-    for expected in expected_includes {
+    let actual = transitive_includes(&file, &includepath, &includeroot)?;
+    for expected in
+        expected_includes.iter().map(|i| canonicalize_include(&i, &includepath, &includeroot))
+    {
         if !actual.contains(&expected) {
             return Err(Error::Validate {
                 schema_name: None,
                 err: format!(
-                    "{:?} must include {}.\nSee: {}",
+                    "{:?} must include {:?}.\nSee: {}",
                     &file, &expected, CHECK_INCLUDES_URL
                 ),
                 filename: file.to_str().map(String::from),
@@ -114,45 +113,53 @@ pub fn check_includes(
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        write_depfile(depfile_path, stamp, &actual, includepath)?;
+        write_depfile(depfile_path, stamp, &actual)?;
     }
 
     Ok(())
 }
 
-/// Returns all includes of a file relative to `includepath`.
+/// Returns all includes of a document.
 /// Follows transitive includes.
 /// Detects cycles.
 /// Includes are returned in sorted order.
-pub fn transitive_includes(file: &PathBuf, includepath: &PathBuf) -> Result<Vec<String>, Error> {
+/// Includes are returned as canonicalized paths.
+pub fn transitive_includes(
+    file: &PathBuf,
+    includepath: &PathBuf,
+    includeroot: &PathBuf,
+) -> Result<Vec<PathBuf>, Error> {
     fn helper(
-        file: &PathBuf,
         includepath: &PathBuf,
+        includeroot: &PathBuf,
         doc: &Value,
-        entered: &mut HashSet<String>,
-        exited: &mut HashSet<String>,
+        entered: &mut HashSet<PathBuf>,
+        exited: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         if let Some(includes) = doc.get("include").and_then(|v| v.as_array()) {
-            for include in includes.into_iter().filter_map(|v| v.as_str().map(String::from)) {
+            for include in includes
+                .into_iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .map(|i| canonicalize_include(&i, &includepath, &includeroot))
+            {
                 // Avoid visiting the same include more than once
                 if !entered.insert(include.clone()) {
                     if !exited.contains(&include) {
                         return Err(Error::parse(
-                            format!("Includes cycle at {}", include),
+                            format!("Includes cycle at {:?}", include),
                             None,
-                            Some(&file),
+                            None,
                         ));
                     }
                 } else {
-                    let path = includepath.join(&include);
-                    let include_doc = json_or_json5_from_file(&path).map_err(|e| {
+                    let include_doc = json_or_json5_from_file(&include).map_err(|e| {
                         Error::parse(
-                            format!("Couldn't read include {}: {}", &path.display(), e),
+                            format!("Couldn't read include {:?}: {}", &include, e),
                             None,
-                            Some(&file),
+                            None,
                         )
                     })?;
-                    helper(&file, &includepath, &include_doc, entered, exited)?;
+                    helper(&includepath, &includeroot, &include_doc, entered, exited)?;
                     exited.insert(include);
                 }
             }
@@ -160,13 +167,24 @@ pub fn transitive_includes(file: &PathBuf, includepath: &PathBuf) -> Result<Vec<
         Ok(())
     }
 
-    let root = json_or_json5_from_file(&file)?;
     let mut entered = HashSet::new();
     let mut exited = HashSet::new();
-    helper(&file, &includepath, &root, &mut entered, &mut exited)?;
+    let doc = json_or_json5_from_file(&file)?;
+    helper(&includepath, &includeroot, &doc, &mut entered, &mut exited)?;
     let mut includes = Vec::from_iter(exited);
     includes.sort();
     Ok(includes)
+}
+
+/// Resolves an include to a canonical path.
+/// Includes that start with "//" are resolved at `includeroot`.
+/// Otherwise they are resolved at `includepath`.
+fn canonicalize_include(include: &String, includepath: &PathBuf, includeroot: &PathBuf) -> PathBuf {
+    if include.starts_with("//") {
+        includeroot.join(&include[2..])
+    } else {
+        includepath.join(&include)
+    }
 }
 
 #[cfg(test)]
@@ -180,10 +198,14 @@ mod tests {
     use tempfile::TempDir;
 
     struct TestContext {
-        tmpdir_path: PathBuf,
+        // Root of source tree
+        root_path: PathBuf,
+        // Root of includes
+        include_path: PathBuf,
+        // Various inputs and outputs
+        fromfile: PathBuf,
         depfile: PathBuf,
         stamp: PathBuf,
-        fromfile: PathBuf,
         output: PathBuf,
         _tmpdir: TempDir,
     }
@@ -192,28 +214,43 @@ mod tests {
         fn new() -> Self {
             let tmpdir = TempDir::new().unwrap();
             let tmpdir_path = tmpdir.path();
+            let include_path = tmpdir_path.join("includes");
+            fs::create_dir(&include_path).unwrap();
             Self {
+                root_path: tmpdir_path.to_path_buf(),
+                include_path: include_path,
                 depfile: tmpdir_path.join("depfile"),
                 stamp: tmpdir_path.join("stamp"),
                 fromfile: tmpdir_path.join("fromfile"),
                 output: tmpdir_path.join("out"),
-                tmpdir_path: tmpdir_path.to_path_buf(),
                 _tmpdir: tmpdir,
             }
         }
 
-        fn new_path(&self, name: &str) -> PathBuf {
-            self.tmpdir_path.join(name)
-        }
-
-        fn new_file(&self, name: &str, contents: impl Display) -> PathBuf {
-            let path = self.new_path(name);
+        fn new_include(&self, name: &str, contents: impl Display) -> PathBuf {
+            let path = self.include_path.join(name);
             File::create(&path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
             path
         }
 
+        fn new_file(&self, name: &str, contents: impl Display) -> PathBuf {
+            let path = self.root_path.join(name);
+            File::create(&path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
+            return path;
+        }
+
+        fn new_dir(&self, name: &str) {
+            fs::create_dir_all(self.root_path.join(name)).unwrap();
+        }
+
         fn merge_includes(&self, file: &PathBuf) -> Result<(), Error> {
-            super::merge_includes(file, Some(&self.output), Some(&self.depfile), &self.tmpdir_path)
+            super::merge_includes(
+                file,
+                Some(&self.output),
+                Some(&self.depfile),
+                &self.include_path,
+                &self.root_path,
+            )
         }
 
         fn check_includes(
@@ -228,7 +265,8 @@ mod tests {
                 fromfile,
                 Some(&self.depfile),
                 Some(&self.stamp),
-                &self.tmpdir_path,
+                &self.include_path,
+                &self.root_path,
             )
         }
 
@@ -271,7 +309,7 @@ mod tests {
                 }
             }),
         );
-        let shard_path = ctx.new_file(
+        let shard_path = ctx.new_include(
             "shard.cmx",
             json!({
                 "sandbox": {
@@ -299,7 +337,8 @@ mod tests {
             "some.cml",
             "{include: [\"shard.cml\"], program: {binary: \"bin/hello_world\"}}",
         );
-        let shard_path = ctx.new_file("shard.cml", "{use: [{ protocol: [\"fuchsia.foo.Bar\"]}]}");
+        let shard_path =
+            ctx.new_include("shard.cml", "{use: [{ protocol: [\"fuchsia.foo.Bar\"]}]}");
         ctx.merge_includes(&cml_path).unwrap();
 
         ctx.assert_output_eq(json!({
@@ -314,9 +353,43 @@ mod tests {
     }
 
     #[test]
+    fn test_include_absolute() {
+        let ctx = TestContext::new();
+        ctx.new_dir("path/to");
+        let cmx_path = ctx.new_include(
+            "some.cmx",
+            json!({
+                "include": ["//path/to/shard.cmx"],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        let shard_path = ctx.new_file(
+            "path/to/shard.cmx",
+            json!({
+                "sandbox": {
+                    "services": ["fuchsia.foo.Bar"]
+                }
+            }),
+        );
+        ctx.merge_includes(&cmx_path).unwrap();
+
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "sandbox": {
+                "services": ["fuchsia.foo.Bar"]
+            }
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard_path]);
+    }
+
+    #[test]
     fn test_include_multiple_shards() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": ["shard1.cmx", "shard2.cmx"],
@@ -325,7 +398,7 @@ mod tests {
                 }
             }),
         );
-        let shard1_path = ctx.new_file(
+        let shard1_path = ctx.new_include(
             "shard1.cmx",
             json!({
                 "sandbox": {
@@ -333,7 +406,7 @@ mod tests {
                 }
             }),
         );
-        let shard2_path = ctx.new_file(
+        let shard2_path = ctx.new_include(
             "shard2.cmx",
             json!({
                 "sandbox": {
@@ -357,7 +430,7 @@ mod tests {
     #[test]
     fn test_include_recursively() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": ["shard1.cmx"],
@@ -366,7 +439,7 @@ mod tests {
                 }
             }),
         );
-        let shard1_path = ctx.new_file(
+        let shard1_path = ctx.new_include(
             "shard1.cmx",
             json!({
                 "include": ["shard2.cmx"],
@@ -375,7 +448,7 @@ mod tests {
                 }
             }),
         );
-        let shard2_path = ctx.new_file(
+        let shard2_path = ctx.new_include(
             "shard2.cmx",
             json!({
                 "sandbox": {
@@ -399,7 +472,7 @@ mod tests {
     #[test]
     fn test_include_nothing() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": [],
@@ -421,7 +494,7 @@ mod tests {
     #[test]
     fn test_no_includes() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "program": {
@@ -442,7 +515,7 @@ mod tests {
     #[test]
     fn test_invalid_include() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": ["doesnt_exist.cmx"],
@@ -460,13 +533,13 @@ mod tests {
     #[test]
     fn test_include_detect_cycle() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some1.cmx",
             json!({
                 "include": ["some2.cmx"],
             }),
         );
-        ctx.new_file(
+        ctx.new_include(
             "some2.cmx",
             json!({
                 "include": ["some1.cmx"],
@@ -486,25 +559,25 @@ mod tests {
         //  \ /
         //   D
         let ctx = TestContext::new();
-        let a_path = ctx.new_file(
+        let a_path = ctx.new_include(
             "a.cmx",
             json!({
                 "include": ["b.cmx", "c.cmx"],
             }),
         );
-        ctx.new_file(
+        ctx.new_include(
             "b.cmx",
             json!({
                 "include": ["d.cmx"],
             }),
         );
-        ctx.new_file(
+        ctx.new_include(
             "c.cmx",
             json!({
                 "include": ["d.cmx"],
             }),
         );
-        ctx.new_file("d.cmx", json!({}));
+        ctx.new_include("d.cmx", json!({}));
         let result = ctx.merge_includes(&a_path);
         assert_matches!(result, Ok(()));
     }
@@ -512,7 +585,7 @@ mod tests {
     #[test]
     fn test_expect_nothing() {
         let ctx = TestContext::new();
-        let cmx1_path = ctx.new_file(
+        let cmx1_path = ctx.new_include(
             "some1.cmx",
             json!({
                 "program": {
@@ -524,7 +597,7 @@ mod tests {
         // Don't generate depfile (or delete existing) if no includes found
         ctx.assert_no_depfile();
 
-        let cmx2_path = ctx.new_file(
+        let cmx2_path = ctx.new_include(
             "some2.cmx",
             json!({
                 "include": [],
@@ -535,7 +608,7 @@ mod tests {
         );
         assert_matches!(ctx.check_includes(&cmx2_path, vec![]), Ok(()));
 
-        let cmx3_path = ctx.new_file(
+        let cmx3_path = ctx.new_include(
             "some3.cmx",
             json!({
                 "include": [ "foo.cmx" ],
@@ -550,7 +623,7 @@ mod tests {
     #[test]
     fn test_expect_something_present() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": [ "foo.cmx", "bar.cmx" ],
@@ -559,8 +632,8 @@ mod tests {
                 }
             }),
         );
-        let foo_path = ctx.new_file("foo.cmx", json!({}));
-        let bar_path = ctx.new_file("bar.cmx", json!({}));
+        let foo_path = ctx.new_include("foo.cmx", json!({}));
+        let bar_path = ctx.new_include("bar.cmx", json!({}));
         assert_matches!(ctx.check_includes(&cmx_path, vec!["bar.cmx".into()]), Ok(()));
         // Note that inputs are sorted to keep depfile contents stable,
         // so bar.cmx comes before foo.cmx.
@@ -570,7 +643,7 @@ mod tests {
     #[test]
     fn test_expect_something_missing() {
         let ctx = TestContext::new();
-        let cmx1_path = ctx.new_file(
+        let cmx1_path = ctx.new_include(
             "some1.cmx",
             json!({
                 "include": [ "foo.cmx", "bar.cmx" ],
@@ -579,12 +652,12 @@ mod tests {
                 }
             }),
         );
-        ctx.new_file("foo.cmx", json!({}));
-        ctx.new_file("bar.cmx", json!({}));
+        ctx.new_include("foo.cmx", json!({}));
+        ctx.new_include("bar.cmx", json!({}));
         assert_matches!(ctx.check_includes(&cmx1_path, vec!["qux.cmx".into()]),
                         Err(Error::Validate { filename, .. }) if filename == cmx1_path.to_str().map(String::from));
 
-        let cmx2_path = ctx.new_file(
+        let cmx2_path = ctx.new_include(
             "some2.cmx",
             json!({
                 // No includes
@@ -600,7 +673,7 @@ mod tests {
     #[test]
     fn test_expect_something_transitive() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": [ "foo.cmx" ],
@@ -609,15 +682,15 @@ mod tests {
                 }
             }),
         );
-        ctx.new_file("foo.cmx", json!({"include": [ "bar.cmx" ]}));
-        ctx.new_file("bar.cmx", json!({}));
+        ctx.new_include("foo.cmx", json!({"include": [ "bar.cmx" ]}));
+        ctx.new_include("bar.cmx", json!({}));
         assert_matches!(ctx.check_includes(&cmx_path, vec!["bar.cmx".into()]), Ok(()));
     }
 
     #[test]
     fn test_expect_fromfile() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_file(
+        let cmx_path = ctx.new_include(
             "some.cmx",
             json!({
                 "include": [ "foo.cmx", "bar.cmx" ],
@@ -626,8 +699,8 @@ mod tests {
                 }
             }),
         );
-        ctx.new_file("foo.cmx", json!({}));
-        ctx.new_file("bar.cmx", json!({}));
+        ctx.new_include("foo.cmx", json!({}));
+        ctx.new_include("bar.cmx", json!({}));
 
         let mut fromfile = LineWriter::new(File::create(ctx.fromfile.clone()).unwrap());
         writeln!(fromfile, "foo.cmx").unwrap();

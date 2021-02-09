@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{cml, error::Error, include, one_or_many::OneOrMany, util},
+    crate::{cml, error::Error, one_or_many::OneOrMany, util},
     cm_json::{JsonSchema, CMX_SCHEMA},
     cm_types::Name,
     directed_graph::{self, DirectedGraph},
@@ -15,7 +15,7 @@ use {
         hash::Hash,
         io::Read,
         iter,
-        path::{Path, PathBuf},
+        path::Path,
     },
     valico::json_schema,
 };
@@ -40,24 +40,14 @@ pub fn validate<P: AsRef<Path>>(
     Ok(())
 }
 
-/// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
-pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Document, Error> {
-    let mut document: cml::Document = util::read_cml(file)?;
-
-    if let Some(include_path) = includepath {
-        for include in include::transitive_includes(&file.into(), include_path)? {
-            let include_path = include_path.join(&include);
-            let mut include_document = util::read_cml(&include_path)?;
-            document.merge_from(&mut include_document, &include_path)?;
-        }
-    }
-
+/// Validates a given cml.
+pub fn validate_cml(document: &cml::Document, file: &Path) -> Result<(), Error> {
     let mut ctx = ValidationContext::new(&document);
     let mut res = ctx.validate();
     if let Err(Error::Validate { filename, .. }) = &mut res {
         *filename = Some(file.to_string_lossy().into_owned());
     }
-    res.and(Ok(document))
+    res
 }
 
 /// Read in and parse a single manifest file, and return an Error if the given file is not valid.
@@ -92,7 +82,8 @@ fn validate_file<P: AsRef<Path>>(
             }
         }
         Some("cml") => {
-            parse_cml(file, None)?;
+            let document = util::read_cml(file)?;
+            validate_cml(&document, &file)?;
         }
         _ => {
             return Err(Error::invalid_args(BAD_EXTENSION));

@@ -139,16 +139,14 @@ template("cmc_check_includes") {
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
-      "--stamp",
-      rebase_path(outputs[0], root_build_dir),
-      "check-includes",
-      rebase_path(invoker.manifest, root_build_dir),
-      "--fromfile",
-      rebase_path(inputs[1], root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
-      "--includepath",
-      rebase_path("//", root_build_dir),
-    ]
+             "--stamp",
+             rebase_path(outputs[0], root_build_dir),
+             "check-includes",
+             rebase_path(invoker.manifest, root_build_dir),
+             "--fromfile",
+             rebase_path(inputs[1], root_build_dir),
+             "--depfile",
+             rebase_path(depfile, root_build_dir),
+           ] + include_paths
   }
 }

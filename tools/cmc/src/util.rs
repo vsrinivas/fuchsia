@@ -44,10 +44,9 @@ pub fn json_or_json5_from_file(file: &PathBuf) -> Result<Value, Error> {
 pub fn write_depfile(
     depfile: &PathBuf,
     output: Option<&PathBuf>,
-    includes: &Vec<String>,
-    includepath: &PathBuf,
+    inputs: &Vec<PathBuf>,
 ) -> Result<(), Error> {
-    if output.is_none() || includes.is_empty() {
+    if output.is_none() || inputs.is_empty() {
         // A non-existent depfile is the same as an empty depfile
         if depfile.exists() {
             // Delete stale depfile
@@ -57,10 +56,7 @@ pub fn write_depfile(
         let depfile_contents = format!(
             "{}:{}\n",
             output_path.display(),
-            &includes
-                .iter()
-                .map(|i| format!(" {}", includepath.join(i).display()))
-                .collect::<String>()
+            &inputs.iter().map(|i| format!(" {}", i.display())).collect::<String>()
         );
         fs::OpenOptions::new()
             .create(true)
@@ -112,8 +108,8 @@ mod tests {
         let tmp_path = tmp_dir.path();
         let depfile = tmp_path.join("foo.d");
         let output = tmp_path.join("foo.cml");
-        let includes = vec!["bar.cml".to_string(), "qux.cml".to_string()];
-        write_depfile(&depfile, Some(&output), &includes, &tmp_path.to_path_buf()).unwrap();
+        let includes = vec![tmp_path.join("bar.cml"), tmp_path.join("qux.cml")];
+        write_depfile(&depfile, Some(&output), &includes).unwrap();
 
         let mut depfile_contents = String::new();
         File::open(&depfile).unwrap().read_to_string(&mut depfile_contents).unwrap();

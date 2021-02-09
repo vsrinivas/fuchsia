@@ -61,14 +61,12 @@ template("cm") {
     depfile = "${target_out_dir}/${target_name}.d"
 
     args = [
-      "compile",
-      rebase_path(inputs[0], root_build_dir),
-      "--output",
-      rebase_path(compiled_output, root_build_dir),
-      "--includepath",
-      rebase_path("//", root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
-    ]
+             "compile",
+             rebase_path(inputs[0], root_build_dir),
+             "--output",
+             rebase_path(compiled_output, root_build_dir),
+             "--depfile",
+             rebase_path(depfile, root_build_dir),
+           ] + include_paths
   }
 }

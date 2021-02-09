@@ -154,3 +154,13 @@ template("cmc_validate_references") {
     }
   }
 }
+
+# Common cmc arguments
+include_paths = [
+  "--includeroot",
+  rebase_path("//", root_build_dir),
+  "--includepath",
+
+  # TODO(shayba): agree on a base include path for Fuchsia tree
+  rebase_path("//", root_build_dir),
+]

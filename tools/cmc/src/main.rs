@@ -41,8 +41,14 @@ fn run_cmc() -> Result<(), Error> {
             reference::validate(&component_manifest, &package_manifest, gn_label.as_ref())?
         }
         opts::Commands::Merge { files, output, fromfile } => merge::merge(files, output, fromfile)?,
-        opts::Commands::Include { file, output, depfile, includepath } => {
-            include::merge_includes(&file, output.as_ref(), depfile.as_ref(), &includepath)?
+        opts::Commands::Include { file, output, depfile, includepath, includeroot } => {
+            include::merge_includes(
+                &file,
+                output.as_ref(),
+                depfile.as_ref(),
+                &includepath,
+                &includeroot,
+            )?
         }
         opts::Commands::CheckIncludes {
             file,
@@ -50,6 +56,7 @@ fn run_cmc() -> Result<(), Error> {
             fromfile,
             depfile,
             includepath,
+            includeroot,
         } => include::check_includes(
             &file,
             expected_includes,
@@ -57,6 +64,7 @@ fn run_cmc() -> Result<(), Error> {
             depfile.as_ref(),
             opt.stamp.as_ref(),
             &includepath,
+            &includeroot,
         )?,
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
             if inplace {
@@ -64,8 +72,8 @@ fn run_cmc() -> Result<(), Error> {
             }
             format::format(&file, pretty, cml, output)?;
         }
-        opts::Commands::Compile { file, output, depfile, includepath } => {
-            compile::compile(&file, &output.unwrap(), depfile, includepath)?
+        opts::Commands::Compile { file, output, depfile, includepath, includeroot } => {
+            compile::compile(&file, &output.unwrap(), depfile, &includepath, &includeroot)?
         }
     }
     if let Some(stamp_path) = opt.stamp {
