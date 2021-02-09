@@ -21,6 +21,8 @@
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
+
 namespace amlogic_cpu {
 
 // This subclass of Bind is only used to test the binding of AmlCpu. DeviceAdd is overridden
@@ -47,33 +49,16 @@ class Bind : public fake_ddk::Bind {
   std::vector<std::unique_ptr<AmlCpu>> devices_;
 };
 
-// Fake platform device that exposes CPU version via MMIO.
-class FakePDev : public ddk::PDevProtocol<FakePDev> {
+// Fake MMIO  that exposes CPU version.
+class FakeMmio {
  public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {
+  FakeMmio() {
     regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegCount);
     mmio_ = std::make_unique<ddk_fake::FakeMmioRegRegion>(regs_.get(), sizeof(uint32_t), kRegCount);
     (*mmio_)[kCpuVersionOffset].SetReadCallback([]() { return kCpuVersion; });
   }
 
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
-    EXPECT_EQ(index, 0);
-    out_mmio->offset = reinterpret_cast<size_t>(this);
-    return ZX_OK;
-  }
-
-  // Not needed by this test
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
   ddk::MmioBuffer mmio() { return ddk::MmioBuffer(mmio_->GetMmioBuffer()); }
 
@@ -85,7 +70,6 @@ class FakePDev : public ddk::PDevProtocol<FakePDev> {
   // AmlCpu calls FakeMmioRegRegion::Read32.
   constexpr static uint64_t kCpuVersion = 43;
 
-  pdev_protocol_t proto_;
   std::unique_ptr<ddk_fake::FakeMmioReg[]> regs_;
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
 };
@@ -296,13 +280,13 @@ class FakeThermalDevice : public ddk::ThermalProtocol<FakeThermalDevice, ddk::ba
 class AmlCpuBindingTest : public zxtest::Test {
  public:
   AmlCpuBindingTest() {
+    pdev_.set_mmio(0, mmio_.mmio_info());
+
     static constexpr size_t kNumBindFragments = 2;
 
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
                                                   kNumBindFragments);
-    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[0] = pdev_.fragment();
     fragments[1].name = "thermal";
     fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
         ZX_PROTOCOL_THERMAL,
@@ -314,7 +298,8 @@ class AmlCpuBindingTest : public zxtest::Test {
 
  protected:
   Bind ddk_;
-  FakePDev pdev_;
+  fake_pdev::FakePDev pdev_;
+  FakeMmio mmio_;
   FakeThermalDevice thermal_device_;
 };
 
@@ -482,7 +467,7 @@ TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
 // Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.
 zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
                                         std::optional<MmioBuffer>* mmio, uint32_t cache_policy) {
-  auto* test_harness = reinterpret_cast<amlogic_cpu::FakePDev*>(pdev_mmio.offset);
+  auto* test_harness = reinterpret_cast<amlogic_cpu::FakeMmio*>(pdev_mmio.offset);
   mmio->emplace(test_harness->mmio());
   return ZX_OK;
 }
