@@ -4,13 +4,14 @@
 
 //! Type-safe bindings for Zircon threads.
 
+use crate::object_get_info;
 use crate::ok;
-use crate::{
-    object_get_info, AsHandleRef, Handle, HandleBased, HandleRef, ObjectQuery, Profile, Status,
-    Topic,
-};
-
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Profile, Status};
+use crate::{ObjectQuery, Topic};
 use fuchsia_zircon_sys as sys;
+
+#[cfg(target_arch = "x86_64")]
+use crate::{object_set_property, Property, PropertyQuery, PropertyQuerySet};
 
 /// An object representing a Zircon thread.
 ///
@@ -109,6 +110,14 @@ impl Thread {
         ok(status)
     }
 }
+
+#[cfg(target_arch = "x86_64")]
+unsafe_handle_properties!(object: Thread,
+    props: [
+        {query_ty: REGISTER_GS, tag: RegisterGsTag, prop_ty: usize, set: set_register_gs},
+        {query_ty: REGISTER_FS, tag: RegisterFsTag, prop_ty: usize, set: set_register_fs},
+    ]
+);
 
 #[cfg(test)]
 mod tests {
