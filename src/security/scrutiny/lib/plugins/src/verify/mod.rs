@@ -54,14 +54,12 @@ mod tests {
         fidl::encoding::encode_persistent,
         fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
+        scrutiny_testing::fake::*,
         serde_json::json,
-        tempfile::tempdir,
     };
 
     fn data_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        fake_data_model()
     }
 
     fn new_child_decl(name: String, url: String) -> ChildDecl {

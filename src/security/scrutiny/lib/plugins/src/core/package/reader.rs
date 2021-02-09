@@ -129,40 +129,11 @@ impl PackageReader for PackageServerReader {
 mod tests {
     use {
         super::*,
+        crate::core::package::test_utils::MockPackageGetter,
         fuchsia_archive::write,
         std::collections::BTreeMap,
-        std::io::{Cursor, Error, ErrorKind, Read},
-        std::sync::RwLock,
+        std::io::{Cursor, Read},
     };
-
-    struct MockPackageGetter {
-        bytes: RwLock<Vec<Vec<u8>>>,
-    }
-
-    impl MockPackageGetter {
-        fn new() -> Self {
-            Self { bytes: RwLock::new(Vec::new()) }
-        }
-
-        fn append_bytes(&self, byte_vec: Vec<u8>) {
-            self.bytes.write().unwrap().push(byte_vec);
-        }
-    }
-
-    impl PackageGetter for MockPackageGetter {
-        fn read_raw(&self, _path: &str) -> std::io::Result<Vec<u8>> {
-            let mut borrow = self.bytes.write().unwrap();
-            {
-                if borrow.len() == 0 {
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "No more byte vectors left to return. Maybe append more?",
-                    ));
-                }
-                Ok(borrow.remove(0))
-            }
-        }
-    }
 
     #[test]
     fn read_package_definition_ignores_invalid_files() {

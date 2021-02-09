@@ -95,7 +95,7 @@ impl DefaultComponentRequest {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, serde_json::json, tempfile::tempdir};
+    use {super::*, scrutiny_testing::fake::*, serde_json::json};
 
     fn make_component(id: i32, url: &str, version: i32, inferred: bool) -> Component {
         Component { id: id, url: url.to_string(), version: version, inferred: inferred }
@@ -103,9 +103,7 @@ mod tests {
 
     #[test]
     fn default_component_request_component_id_int() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
@@ -119,9 +117,7 @@ mod tests {
 
     #[test]
     fn default_component_request_component_id_string() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
@@ -135,9 +131,7 @@ mod tests {
 
     #[test]
     fn default_component_request_component_url() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
         components.push(comp.clone());
@@ -150,9 +144,7 @@ mod tests {
 
     #[test]
     fn default_component_request_component_nothing_fails() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
         components.push(comp.clone());
@@ -163,9 +155,7 @@ mod tests {
 
     #[test]
     fn default_component_request_component_id_fails_if_not_available() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
         components.push(comp.clone());

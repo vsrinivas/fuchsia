@@ -132,14 +132,15 @@ mod tests {
         crate::core::{
             package::{
                 collector::{self, PackageDataCollector},
-                test_utils::{self, MockPackageReader},
+                getter::PackageGetter,
+                test_utils::{self, MockPackageGetter, MockPackageReader},
             },
             util::{
                 jsons::{Custom, FarPackageDefinition, Signed, TargetsJson},
                 types::{ComponentV1Manifest, PackageDefinition},
             },
         },
-        scrutiny::model::{collector::DataCollector, controller::DataController},
+        scrutiny::model::controller::DataController,
         serde_json,
         std::{
             collections::{HashMap, HashSet},
@@ -424,8 +425,9 @@ mod tests {
 
         // With all the data created, send it to the PackageDataCollector
         let (_unknown, model) = test_utils::create_model();
-        let pkg_collector = PackageDataCollector::new_with_reader(Box::new(mock));
-        pkg_collector.collect(Arc::clone(&model)).unwrap();
+        let pkg_collector = PackageDataCollector::default();
+        let pkg_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        pkg_collector.collect_with_reader(Box::new(mock), pkg_getter, Arc::clone(&model)).unwrap();
 
         // Now run the model through our data controller
         let sys_realm = FindSysRealmComponents {};
@@ -501,8 +503,11 @@ mod tests {
         mock_reader.append_target(TargetsJson { signed: Signed { targets } });
 
         let (_unused, model) = test_utils::create_model();
-        let pkg_collector = PackageDataCollector::new_with_reader(Box::new(mock_reader));
-        pkg_collector.collect(Arc::clone(&model)).unwrap();
+        let pkg_collector = PackageDataCollector::default();
+        let pkg_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        pkg_collector
+            .collect_with_reader(Box::new(mock_reader), pkg_getter, Arc::clone(&model))
+            .unwrap();
 
         let sys_realm = FindSysRealmComponents {};
         let actual_sys_realm = serde_json::from_value::<Vec<ComponentManifest>>(

@@ -34,14 +34,13 @@ mod tests {
         crate::toolkit::controller::{
             fvm::FvmExtractRequest, package::PackageExtractRequest, zbi::ZbiExtractRequest,
         },
+        scrutiny_testing::fake::*,
         tempfile::tempdir,
     };
 
     #[test]
     fn test_zbi_extractor_empty_zbi() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let zbi_controller = ZbiExtractController::default();
         let input_dir = tempdir().unwrap();
         let input_path = input_dir.path().join("empty-zbi");
@@ -58,9 +57,7 @@ mod tests {
 
     #[test]
     fn test_package_extractor_invalid_url() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let package_controller = PackageExtractController::default();
         let output_dir = tempdir().unwrap();
         let output_path = output_dir.path();
@@ -75,9 +72,7 @@ mod tests {
 
     #[test]
     fn test_fvm_extractor_empty_fvm() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let fvm_controller = FvmExtractController::default();
         let input_dir = tempdir().unwrap();
         let input_path = input_dir.path().join("empty-fvm");

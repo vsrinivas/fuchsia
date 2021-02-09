@@ -92,13 +92,11 @@ pub mod tests {
         cm_rust::{ChildDecl, NativeIntoFidl},
         fidl::encoding::encode_persistent,
         fidl_fuchsia_sys2::StartupMode,
-        tempfile::tempdir,
+        scrutiny_testing::fake::*,
     };
 
     fn data_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        fake_data_model()
     }
 
     fn new_child_decl(name: String, url: String) -> ChildDecl {

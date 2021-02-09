@@ -4,6 +4,7 @@
 
 use {
     crate::core::{
+        package::getter::PackageGetter,
         package::reader::PackageReader,
         util::{
             jsons::{ServicePackageDefinition, TargetsJson},
@@ -11,13 +12,43 @@ use {
         },
     },
     anyhow::{anyhow, Result},
-    scrutiny::model::model::DataModel,
+    scrutiny::model::model::{DataModel, ModelEnvironment},
+    std::io::{Error, ErrorKind},
     std::{
         collections::HashMap,
         sync::{Arc, RwLock},
     },
     tempfile::tempdir,
 };
+
+pub struct MockPackageGetter {
+    bytes: RwLock<Vec<Vec<u8>>>,
+}
+
+impl MockPackageGetter {
+    pub fn new() -> Self {
+        Self { bytes: RwLock::new(Vec::new()) }
+    }
+
+    pub fn append_bytes(&self, byte_vec: Vec<u8>) {
+        self.bytes.write().unwrap().push(byte_vec);
+    }
+}
+
+impl PackageGetter for MockPackageGetter {
+    fn read_raw(&self, _path: &str) -> std::io::Result<Vec<u8>> {
+        let mut borrow = self.bytes.write().unwrap();
+        {
+            if borrow.len() == 0 {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    "No more byte vectors left to return. Maybe append more?",
+                ));
+            }
+            Ok(borrow.remove(0))
+        }
+    }
+}
 
 pub struct MockPackageReader {
     targets: RwLock<Vec<TargetsJson>>,
@@ -172,7 +203,9 @@ pub fn create_svc_pkg_def_with_array(
 
 pub fn create_model() -> (String, Arc<DataModel>) {
     let store_dir = tempdir().unwrap();
+    let build_dir = tempdir().unwrap();
     let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+    let build_path = build_dir.into_path();
     let uri_clone = uri.clone();
-    (uri, Arc::new(DataModel::connect(uri_clone).unwrap()))
+    (uri_clone, Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap()))
 }

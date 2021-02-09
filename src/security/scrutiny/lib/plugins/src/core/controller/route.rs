@@ -156,8 +156,8 @@ mod tests {
     use {
         super::*,
         crate::core::collection::{Component, Route},
+        scrutiny_testing::fake::*,
         serde_json::json,
-        tempfile::tempdir,
     };
 
     fn empty_value() -> Value {
@@ -174,9 +174,7 @@ mod tests {
 
     #[test]
     fn routes_controller_returns_all_routes() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);
@@ -205,9 +203,7 @@ mod tests {
 
     #[test]
     fn uses_controller_known_id_returns_all_dependency_ids() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);
@@ -239,9 +235,7 @@ mod tests {
 
     #[test]
     fn uses_controller_unknown_id_returns_err() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);
@@ -268,9 +262,7 @@ mod tests {
 
     #[test]
     fn uses_controller_known_id_no_dependencies_returns_empty() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);
@@ -300,9 +292,7 @@ mod tests {
 
     #[test]
     fn used_controller_known_id_returns_all_dependency_ids() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);
@@ -334,9 +324,7 @@ mod tests {
 
     #[test]
     fn used_controller_unknown_id_returns_err() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);
@@ -362,9 +350,7 @@ mod tests {
 
     #[test]
     fn used_controller_known_id_no_dependencies_returns_empty() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, false);

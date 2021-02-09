@@ -201,7 +201,7 @@ impl CollectorScheduler {
 }
 #[cfg(test)]
 mod tests {
-    use {super::*, std::sync::Barrier, tempfile::tempdir};
+    use {super::*, crate::model::model::ModelEnvironment, std::sync::Barrier, tempfile::tempdir};
 
     struct MockCollector {
         barrier_pre: Arc<Barrier>,
@@ -230,8 +230,10 @@ mod tests {
     /// Utility function to create a temporary collector.
     fn create_scheduler() -> CollectorScheduler {
         let store_dir = tempdir().unwrap();
+        let build_tmp_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let build_path = build_tmp_dir.into_path();
+        let model = Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap());
         CollectorScheduler::new(model)
     }
 

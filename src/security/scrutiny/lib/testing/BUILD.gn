@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
+
+if (is_host) {
+  rustc_library("testing") {
+    name = "scrutiny_testing"
+    with_unit_tests = true
+    edition = "2018"
+    visibility = [ "//src/security/scrutiny/*" ]
+    deps = [
+      "//src/security/scrutiny/lib/framework",
+      "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:uuid",
+    ]
+
+    sources = [
+      "src/fake/mod.rs",
+      "src/lib.rs",
+    ]
+  }
+}

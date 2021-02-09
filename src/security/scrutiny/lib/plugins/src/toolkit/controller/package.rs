@@ -11,7 +11,7 @@ use {
         model::controller::{ConnectionMode, DataController, HintDataType},
         model::model::*,
     },
-    scrutiny_utils::{env, usage::*},
+    scrutiny_utils::usage::*,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::fs::{self, File},
@@ -36,7 +36,7 @@ pub struct PackageExtractController {}
 
 impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let fuchsia_build_dir = env::fuchsia_build_dir()?;
+        let fuchsia_build_dir = model.env().build_path();
         let blob_dir = fuchsia_build_dir.join(BLOBS_PATH);
 
         let request: PackageExtractRequest = serde_json::from_value(query)?;

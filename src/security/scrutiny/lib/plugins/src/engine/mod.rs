@@ -78,9 +78,9 @@ mod tests {
         scrutiny::model::collector::DataCollector,
         scrutiny::model::model::DataModel,
         scrutiny::plugin,
+        scrutiny_testing::fake::*,
         serde_json::json,
         std::boxed::Box,
-        tempfile::tempdir,
         uuid::Uuid,
     };
 
@@ -94,9 +94,7 @@ mod tests {
     }
 
     fn data_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        fake_data_model()
     }
 
     fn dispatcher(model: Arc<DataModel>) -> Arc<RwLock<ControllerDispatcher>> {
@@ -130,8 +128,12 @@ mod tests {
         let model_stats = ModelStatsController::default();
         assert_eq!(model_stats.query(model.clone(), json!("")).is_ok(), true);
         model
-            .set(Components::new(vec![Component { id: 1, url: "".to_string(), version: 1, inferred: true }],
-            ))
+            .set(Components::new(vec![Component {
+                id: 1,
+                url: "".to_string(),
+                version: 1,
+                inferred: true,
+            }]))
             .unwrap();
         let response = model_stats.query(model.clone(), json!("")).unwrap();
         let stats: ModelStats = serde_json::from_value(response).unwrap();

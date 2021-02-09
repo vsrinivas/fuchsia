@@ -1,21 +1,40 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
+// Copyright 2020 The Fuchsia Authors. All rights reserved.  Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
     super::error::ModelError,
-    crate::model::collection::DataCollection,
-    crate::store::embedded::EmbeddedStore,
-    crate::store::store::Store,
+    crate::{
+        model::collection::DataCollection,
+        store::{embedded::EmbeddedStore, store::Store},
+    },
     anyhow::{Error, Result},
     serde::{Deserialize, Serialize},
     serde_json,
-    std::any::Any,
-    std::boxed::Box,
-    std::collections::HashMap,
-    std::sync::{Arc, Mutex},
+    std::{
+        any::Any,
+        boxed::Box,
+        collections::HashMap,
+        path::PathBuf,
+        sync::{Arc, Mutex},
+    },
     uuid::Uuid,
 };
+
+/// The ModelEnvironment specifies the runtime configuration that defines where
+/// `DataCollectors` should retrieve information for the current model. This is
+/// important to allow collectors to dynamically change their collection source
+/// based on configuration such as where the build directory is located etc.
+pub struct ModelEnvironment {
+    pub uri: String,
+    pub build_path: PathBuf,
+}
+
+impl ModelEnvironment {
+    /// Helper function to return a clone of the build path.
+    pub fn build_path(&self) -> PathBuf {
+        self.build_path.clone()
+    }
+}
 
 /// The DataModel is the public facing data abstraction which acts as the
 /// driver for the underlying data store. It is the job of the data model to
@@ -23,16 +42,17 @@ use {
 /// that is expected by the application.
 pub struct DataModel {
     collections: Mutex<HashMap<Uuid, Arc<dyn Any + 'static + Send + Sync>>>,
+    environment: ModelEnvironment,
     store: Mutex<Box<dyn Store>>,
 }
 
 impl DataModel {
     /// Connects to the internal data store and setups everything.
-    pub fn connect(uri: String) -> Result<Self> {
+    pub fn connect(environment: ModelEnvironment) -> Result<Self> {
         let store: Mutex<Box<dyn Store>> =
-            DataModel::setup_schema(Box::new(EmbeddedStore::connect(uri)?))?;
+            DataModel::setup_schema(Box::new(EmbeddedStore::connect(environment.uri.clone())?))?;
 
-        Ok(Self { collections: Mutex::new(HashMap::new()), store })
+        Ok(Self { collections: Mutex::new(HashMap::new()), environment, store })
     }
 
     /// Verifies the underlying data model is running the correct current
@@ -126,6 +146,12 @@ impl DataModel {
         let mut store = self.store.lock().unwrap();
         collections.remove(&uuid);
         store.remove(&uuid)
+    }
+
+    /// Returns an immutable reference to the ModelEnvironment which can be
+    /// retrieved by `DataControllers` and `DataControllers`.
+    pub fn env(&self) -> &ModelEnvironment {
+        &self.environment
     }
 }
 

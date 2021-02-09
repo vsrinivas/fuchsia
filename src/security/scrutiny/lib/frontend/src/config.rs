@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde::{Deserialize, Serialize};
+use {
+    scrutiny_utils::env::fuchsia_build_dir,
+    serde::{Deserialize, Serialize},
+    std::path::{Path, PathBuf},
+};
 
 /// The Scrutiny Configuration determines how the framework runtime will be setup
 /// when it launches. This includes determining what features the runtime will
@@ -145,11 +149,20 @@ pub enum LoggingVerbosity {
 pub struct ModelConfig {
     /// Path to the model data.
     pub path: String,
+    /// Path to the Fuchsia build directory.
+    pub build_path: PathBuf,
 }
 
 impl ModelConfig {
+    /// By default the ModelConfig will attempt to retrieve the build dir
+    /// from the environment. If this fails it simply sets the environment
+    /// to an empty environment.
     pub fn default() -> ModelConfig {
-        ModelConfig { path: "/tmp/scrutiny/".to_string() }
+        ModelConfig {
+            path: "/tmp/scrutiny/".to_string(),
+            build_path: fuchsia_build_dir()
+                .unwrap_or_else(|_| Path::new("").to_path_buf()),
+        }
     }
     pub fn minimal() -> ModelConfig {
         ModelConfig::default()

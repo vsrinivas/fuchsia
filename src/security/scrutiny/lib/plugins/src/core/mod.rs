@@ -20,7 +20,7 @@ plugin!(
     CorePlugin,
     PluginHooks::new(
         collectors! {
-            "PackageDataCollector" => PackageDataCollector::new().unwrap(),
+            "PackageDataCollector" => PackageDataCollector::default(),
         },
         controllers! {
             "/component" => ComponentGraphController::default(),
@@ -30,7 +30,7 @@ plugin!(
             "/component/manifest" => ComponentManifestGraphController::default(),
             "/packages" => PackagesGraphController::default(),
             "/routes" => RoutesGraphController::default(),
-            "/blob" => BlobController::new(),
+            "/blob" => BlobController::default(),
             "/sysmgr/services" => SysmgrServicesController::default(),
             "/zbi/sections" => ZbiSectionsController::default(),
             "/zbi/bootfs" => BootfsPathsController::default(),

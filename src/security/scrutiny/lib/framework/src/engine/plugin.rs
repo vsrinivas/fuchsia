@@ -79,7 +79,7 @@ mod tests {
         super::*,
         crate::model::collector::DataCollector,
         crate::model::controller::DataController,
-        crate::model::model::DataModel,
+        crate::model::model::{DataModel, ModelEnvironment},
         anyhow::Result,
         serde_json::{json, value::Value},
         std::sync::Arc,
@@ -117,8 +117,10 @@ mod tests {
 
     fn test_model() -> Arc<DataModel> {
         let store_dir = tempdir().unwrap();
+        let build_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        let build_path = build_dir.into_path();
+        Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap())
     }
 
     #[test]

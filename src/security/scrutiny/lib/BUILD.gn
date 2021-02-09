@@ -10,6 +10,7 @@ group("lib") {
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/frontend",
       "//src/security/scrutiny/lib/plugins",
+      "//src/security/scrutiny/lib/testing",
       "//src/security/scrutiny/lib/utils",
     ]
   }

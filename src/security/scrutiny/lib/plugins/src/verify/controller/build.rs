@@ -50,14 +50,12 @@ impl DataController for VerifyBuildController {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::core::collection::Zbi, scrutiny_utils::zbi::ZbiSection, serde_json::json,
-        std::collections::HashMap, tempfile::tempdir,
+        super::*, crate::core::collection::Zbi, scrutiny_testing::fake::*,
+        scrutiny_utils::zbi::ZbiSection, serde_json::json, std::collections::HashMap,
     };
 
     fn data_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        fake_data_model()
     }
 
     fn zbi() -> Zbi {

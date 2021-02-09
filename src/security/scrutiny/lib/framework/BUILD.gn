@@ -23,7 +23,6 @@ if (is_host) {
       "//third_party/rust_crates:uuid",
     ]
     test_deps = [ "//third_party/rust_crates:tempfile" ]
-
     sources = [
       "src/engine/dispatcher.rs",
       "src/engine/hook.rs",

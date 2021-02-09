@@ -41,15 +41,13 @@ impl DataController for PackagesGraphController {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::core::collection::Package, serde_json::json, std::collections::HashMap,
-        tempfile::tempdir,
+        super::*, crate::core::collection::Package, scrutiny_testing::fake::*, serde_json::json,
+        std::collections::HashMap,
     };
 
     #[test]
     fn packages_test() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let packages_controller = PackagesGraphController::default();
         let mut packages = Packages::default();
         packages.push(Package {

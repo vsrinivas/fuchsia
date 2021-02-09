@@ -136,8 +136,8 @@ mod tests {
     use {
         super::*,
         crate::core::collection::{Component, Manifest},
+        scrutiny_testing::fake::*,
         serde_json::json,
-        tempfile::tempdir,
     };
 
     fn empty_value() -> Value {
@@ -158,9 +158,7 @@ mod tests {
 
     #[test]
     fn components_controller_returns_all_components() {
-        let store_dir = tempdir().unwrap();
-        let url = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(url).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
@@ -180,9 +178,7 @@ mod tests {
 
     #[test]
     fn component_id_controller_known_id_returns_component() {
-        let store_dir = tempdir().unwrap();
-        let url = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(url).unwrap());
+        let model = fake_data_model();
 
         let comp_1 = make_component(1, "fake_url", 0, false);
         let comp_2 = make_component(2, "fake_url_2", 0, true);
@@ -210,9 +206,7 @@ mod tests {
 
     #[test]
     fn component_id_controller_unknown_id_returns_err() {
-        let store_dir = tempdir().unwrap();
-        let url = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(url).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
@@ -230,9 +224,7 @@ mod tests {
 
     #[test]
     fn component_raw_manifest_controller_known_id_returns_manifest() {
-        let store_dir = tempdir().unwrap();
-        let url = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(url).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
@@ -256,9 +248,7 @@ mod tests {
 
     #[test]
     fn component_raw_manifest_controller_unknown_id_returns_err() {
-        let store_dir = tempdir().unwrap();
-        let url = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(url).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
@@ -281,9 +271,7 @@ mod tests {
 
     #[test]
     fn component_raw_manifest_controller_string_id_returns_manifest() {
-        let store_dir = tempdir().unwrap();
-        let url = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(url).unwrap());
+        let model = fake_data_model();
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);

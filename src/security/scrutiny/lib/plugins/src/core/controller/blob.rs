@@ -4,12 +4,12 @@
 
 use {
     crate::core::{package::artifact::ArtifactGetter, package::getter::PackageGetter},
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
-    scrutiny_utils::{env, usage::UsageBuilder},
+    scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::sync::Arc,
@@ -30,35 +30,21 @@ struct BlobResponse {
 }
 
 #[derive(Default)]
-pub struct BlobController {
-    getter: Option<ArtifactGetter>,
-}
-
-impl BlobController {
-    pub fn new() -> Self {
-        if let Ok(fuchsia_build_dir) = env::fuchsia_build_dir() {
-            let repository_path = fuchsia_build_dir.join(REPOSITORY_PATH);
-            Self { getter: Some(ArtifactGetter::new(&repository_path)) }
-        } else {
-            Self { getter: None }
-        }
-    }
-}
+pub struct BlobController {}
 
 impl DataController for BlobController {
-    fn query(&self, _: Arc<DataModel>, query: Value) -> Result<Value> {
-        if let Some(blob_getter) = &self.getter {
-            let req: BlobRequest = serde_json::from_value(query)?;
-            let data = blob_getter.read_raw(&format!("blobs/{}", req.merkle))?;
-            let resp = BlobResponse {
-                merkle: req.merkle.clone(),
-                encoding: "base64".to_string(),
-                data: base64::encode(&data),
-            };
-            Ok(serde_json::to_value(resp)?)
-        } else {
-            return Err(anyhow!("Unable to retrieve blobs, failed to construct getter."));
-        }
+    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
+        let repository_path = model.env().build_path().join(REPOSITORY_PATH);
+        let blob_getter = ArtifactGetter::new(&repository_path);
+
+        let req: BlobRequest = serde_json::from_value(query)?;
+        let data = blob_getter.read_raw(&format!("blobs/{}", req.merkle))?;
+        let resp = BlobResponse {
+            merkle: req.merkle.clone(),
+            encoding: "base64".to_string(),
+            data: base64::encode(&data),
+        };
+        Ok(serde_json::to_value(resp)?)
     }
 
     fn description(&self) -> String {
@@ -85,14 +71,12 @@ impl DataController for BlobController {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tempfile::tempdir};
+    use {super::*, scrutiny_testing::fake::*};
 
     #[test]
     fn test_blob_controller_bad_merkle() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
-        let blob_controller = BlobController::new();
+        let model = fake_data_model();
+        let blob_controller = BlobController::default();
         let request = BlobRequest { merkle: "invalid_merkle".to_string() };
         let query = serde_json::to_value(request).unwrap();
         let response = blob_controller.query(model, query);

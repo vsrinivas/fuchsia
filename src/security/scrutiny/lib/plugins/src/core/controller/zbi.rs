@@ -102,13 +102,11 @@ impl DataController for ZbiSectionsController {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, serde_json::json, std::collections::HashMap, tempfile::tempdir};
+    use {super::*, scrutiny_testing::fake::*, serde_json::json, std::collections::HashMap};
 
     #[test]
     fn bootfs_returns_files() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let mut zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "".to_string() };
         zbi.bootfs.insert("foo".to_string(), vec![]);
         model.set(zbi).unwrap();
@@ -121,9 +119,7 @@ mod tests {
 
     #[test]
     fn zbi_cmdline() {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let model = fake_data_model();
         let zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "foo".to_string() };
         model.set(zbi).unwrap();
         let controller = ZbiCmdlineController::default();

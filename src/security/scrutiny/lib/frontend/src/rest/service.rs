@@ -169,14 +169,13 @@ impl RestService {
 
 #[cfg(test)]
 mod tests {
-
     use {
         super::*,
         anyhow::Result,
         scrutiny::{model::controller::DataController, model::model::DataModel},
+        scrutiny_testing::fake::*,
         serde_json::value::Value,
         std::io,
-        tempfile::tempdir,
         uuid::Uuid,
     };
 
@@ -198,14 +197,8 @@ mod tests {
         }
     }
 
-    fn test_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
-    }
-
     fn setup_dispatcher() -> Arc<RwLock<ControllerDispatcher>> {
-        let data_model = test_model();
+        let data_model = fake_data_model();
         let mut dispatcher = ControllerDispatcher::new(data_model);
         let echo = Arc::new(EchoController::default());
         let error = Arc::new(ErrorController::default());

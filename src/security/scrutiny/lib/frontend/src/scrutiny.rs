@@ -18,13 +18,16 @@ use {
             dispatcher::ControllerDispatcher, manager::PluginManager, plugin::Plugin,
             scheduler::CollectorScheduler,
         },
-        model::model::DataModel,
+        model::model::{DataModel, ModelEnvironment},
     },
     simplelog::{Config as SimpleLogConfig, LevelFilter, WriteLogger},
-    std::env,
-    std::fs::File,
-    std::io::{self, BufRead, BufReader, ErrorKind},
-    std::sync::{Arc, Mutex, RwLock},
+    std::{
+        env,
+        fs::File,
+        io::{self, BufRead, BufReader, ErrorKind},
+        path::Path,
+        sync::{Arc, Mutex, RwLock},
+    },
 };
 
 const FUCHSIA_DIR: &str = "FUCHSIA_DIR";
@@ -62,7 +65,10 @@ impl Scrutiny {
             SimpleLogConfig::default(),
             File::create(config.runtime.logging.path.clone()).unwrap(),
         );
-        let model = Arc::new(DataModel::connect(config.runtime.model.path.clone())?);
+        let model = Arc::new(DataModel::connect(ModelEnvironment {
+            uri: config.runtime.model.path.clone(),
+            build_path: config.runtime.model.build_path.clone(),
+        })?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let visualizer = if let Some(server_config) = &config.runtime.server {
             Some(Arc::new(RwLock::new(Visualizer::new(
@@ -92,6 +98,13 @@ impl Scrutiny {
                     .short("c")
                     .help("Run a single command")
                     .value_name("command")
+                    .takes_value(true),
+            )
+            .arg(
+                Arg::with_name("build")
+                    .short("b")
+                    .help("Optionally set a custom path to the Fuchsia build directory.")
+                    .value_name("build")
                     .takes_value(true),
             )
             .arg(
@@ -166,6 +179,9 @@ impl Scrutiny {
             _ => LoggingVerbosity::Off,
         };
         config.runtime.model.path = args.value_of("model").unwrap().to_string();
+        if let Some(build_path) = args.value_of("build") {
+            config.runtime.model.build_path = Path::new(build_path).to_path_buf();
+        }
         if let Some(server_config) = &mut config.runtime.server {
             if let Ok(port) = args.value_of("port").unwrap().parse::<u16>() {
                 server_config.port = port;
@@ -312,5 +328,15 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.runtime.server.unwrap().visualizer_path, "test_viz".to_string());
+    }
+
+    #[test]
+    fn scrutiny_build_arg() {
+        let result = Scrutiny::args_inline(
+            vec!["scrutiny", "-b", "/foo/bar"].into_iter().map(String::from).collect(),
+        )
+        .unwrap();
+        let path = Path::new("/foo/bar");
+        assert_eq!(result.runtime.model.build_path, path.to_path_buf());
     }
 }

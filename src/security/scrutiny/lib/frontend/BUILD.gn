@@ -13,6 +13,7 @@ if (is_host) {
     deps = [
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/plugins",
+      "//src/security/scrutiny/lib/utils",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:log",
@@ -28,6 +29,7 @@ if (is_host) {
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     test_deps = [
+      "//src/security/scrutiny/lib/testing",
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:uuid",
     ]

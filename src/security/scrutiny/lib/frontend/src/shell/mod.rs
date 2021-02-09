@@ -380,7 +380,7 @@ mod tests {
             controller::{DataController, HintDataType},
             model::DataModel,
         },
-        tempfile::tempdir,
+        scrutiny_testing::fake::*,
         uuid::Uuid,
     };
 
@@ -397,9 +397,7 @@ mod tests {
     }
 
     fn test_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        fake_data_model()
     }
 
     #[test]

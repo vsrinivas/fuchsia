@@ -142,7 +142,10 @@ impl ControllerDispatcher {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::controller::DataController, serde_json::json, tempfile::tempdir};
+    use {
+        super::*, crate::model::controller::DataController, crate::model::model::ModelEnvironment,
+        serde_json::json, tempfile::tempdir,
+    };
 
     struct FakeController {
         pub result: String,
@@ -183,8 +186,10 @@ mod tests {
 
     fn test_model() -> Arc<DataModel> {
         let store_dir = tempdir().unwrap();
+        let build_tmp_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        Arc::new(DataModel::connect(uri).unwrap())
+        let build_path = build_tmp_dir.into_path();
+        Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap())
     }
 
     #[test]
