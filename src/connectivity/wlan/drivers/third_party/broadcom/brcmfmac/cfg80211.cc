@@ -2367,17 +2367,19 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   struct escan_info* escan = &cfg->escan_info;
   zx_status_t err = ZX_OK;
 
-  brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
+  if (brcmf_test_and_set_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
+    BRCMF_INFO("A scan abort is already in progress.");
+    return ZX_OK;
+  }
+
   if (cfg->scan_request) {
     escan->escan_state = WL_ESCAN_STATE_IDLE;
     if ((err = brcmf_abort_escan(escan->ifp)) != ZX_OK) {
-      brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
       BRCMF_ERR("Abort scan failed -- error: %s", zx_status_get_string(err));
-      return err;
     }
   }
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
-  return ZX_OK;
+  return err;
 }
 
 // Abort scanning immediately and inform SME right away

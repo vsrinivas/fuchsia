@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wifi/wifi-config.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
@@ -10,7 +12,8 @@ constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
-constexpr uint64_t kDefaultScanId = 0x112233;
+constexpr uint64_t kFirstScanId = 0x112233;
+constexpr uint64_t kSecondScanId = 0x112234;
 
 class ScanTest;
 
@@ -39,7 +42,7 @@ class ScanTest : public SimTest {
   ScanTestIfc client_ifc_;
   ScanTestIfc softap_ifc_;
 
-  enum {NOT_STARTED, STARTED, DONE} ap_start_progress_ = NOT_STARTED;
+  enum { NOT_STARTED, STARTED, DONE } ap_start_progress_ = NOT_STARTED;
 };
 
 void ScanTestIfc::OnScanEnd(const wlanif_scan_end_t* end) {
@@ -71,16 +74,11 @@ void ScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
   // Verify that Start AP has been called
   ASSERT_NE(ap_start_progress_, NOT_STARTED);
 
-  // Scan should have been cancelled by Start AP request
-  EXPECT_EQ(end->code, WLAN_SCAN_RESULT_INTERNAL_ERROR);
-
   // Verify that the state of the Start AP operation lines up with our expectations
   EXPECT_EQ(ap_start_progress_ == STARTED, brcmf_is_ap_start_pending(simdev->drvr->config));
 }
 
-void ScanTest::OnStartConf(const wlanif_start_confirm_t* resp) {
-  ap_start_progress_ = DONE;
-}
+void ScanTest::OnStartConf(const wlanif_start_confirm_t* resp) { ap_start_progress_ = DONE; }
 
 void ScanTest::StartAp() {
   ap_start_progress_ = STARTED;
@@ -106,19 +104,66 @@ TEST_F(ScanTest, ScanApStartInterference) {
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
 
-  env_->ScheduleNotification(
-      std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanId, false), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false),
+                             zx::msec(10));
   env_->ScheduleNotification(std::bind(&ScanTest::StartAp, this), zx::msec(200));
 
   static constexpr zx::duration kTestDuration = zx::sec(100);
   env_->Run(kTestDuration);
 
   // Scan should have been cancelled by AP start operation
-  EXPECT_NE(client_ifc_.ScanResultCode(kDefaultScanId), std::nullopt);
+  auto result = client_ifc_.ScanResultCode(kFirstScanId);
+  EXPECT_NE(result, std::nullopt);
+  EXPECT_EQ(*result, WLAN_SCAN_RESULT_INTERNAL_ERROR);
 
   // Make sure the AP iface started successfully.
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
+}
+
+TEST_F(ScanTest, ScanAbortFailure) {
+  Init();
+
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(60));
+
+  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
+
+  // Return an error on scan abort request from firmware.
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SCAN, ZX_ERR_IO_REFUSED, BCME_OK,
+                                     client_ifc_.iface_id_);
+
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ScanTest::StartAp, this), zx::msec(200));
+
+  static constexpr zx::duration kFirstRunDuration = zx::sec(50);
+  env_->Run(kFirstRunDuration);
+
+  // The first scan should be done because the abort is failed
+  auto first_result = client_ifc_.ScanResultCode(kFirstScanId);
+  EXPECT_NE(first_result, std::nullopt);
+  EXPECT_EQ(*first_result, WLAN_SCAN_RESULT_SUCCESS);
+
+  // Make sure the AP iface started successfully.
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
+
+  env_->ScheduleNotification(
+      std::bind(&SimInterface::StartScan, &client_ifc_, kSecondScanId, false), zx::msec(10));
+
+  // Run the test for another 50 seconds.
+  static constexpr zx::duration kSecondRunDuration = zx::sec(50);
+  env_->Run(kSecondRunDuration);
+
+  // The second scan should also be successfully done without being blocked by the remaining
+  // BRCMF_SCAN_STATUS_ABORT bit.
+  auto second_result = client_ifc_.ScanResultCode(kSecondScanId);
+  EXPECT_NE(second_result, std::nullopt);
+  EXPECT_EQ(*second_result, WLAN_SCAN_RESULT_SUCCESS);
 }
 
 }  // namespace wlan::brcmfmac
