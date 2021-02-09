@@ -35,23 +35,19 @@ class Mixer {
     // This method resets the long-running and per-Mix position counters and is called upon a
     // destination discontinuity. If a next_dest_frame value is provided, set next_frac_source_frame
     // based on the dest_frames_to_frac_source_frames transform. Pre-setting next_src_pos_modulo
-    // here is only helpful for very high resolution scenarios (and is speculative at best); we base
-    // it on rate_modulo and denominator, not the dest-to-source transform.
+    // here would only be helpful for very high resolution scenarios.
     void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
       bookkeeping.Reset();
 
       next_dest_frame = target_dest_frame;
       next_frac_source_frame =
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
-      if (bookkeeping.denominator) {
-        next_src_pos_modulo =
-            (target_dest_frame * bookkeeping.rate_modulo) % bookkeeping.denominator;
-      }
+      next_src_pos_modulo = 0;
       src_pos_error = zx::duration(0);
       initial_position_is_set = true;
     }
 
-    // Only called by custom code when debugging, so can remain at INFO severity.
+    // Used by custom code when debugging.
     std::string PositionsToString(std::string tag = "") {
       return tag + ": next_dst " + std::to_string(next_dest_frame) + ", next_frac_src " +
              std::to_string(next_frac_source_frame.raw_value()) + ", next_src_pos_mod " +
@@ -60,26 +56,37 @@ class Mixer {
     }
 
     // From their current values, advance the long-running positions by a number of dest frames.
-    // Advancing by a negative number of frames should be infrequent, but we do support it.
+    // Advancing by a negative number of frames should be infrequent, but we do support it for now.
     void AdvanceRunningPositionsBy(int32_t dest_frames, Bookkeeping& bookkeeping) {
       next_dest_frame += dest_frames;
       int64_t source_frame_delta = static_cast<int64_t>(bookkeeping.step_size) * dest_frames;
 
-      if (bookkeeping.denominator) {
-        // mod next_src_pos_modulo up into range if advance was negative. This is more clear (avoids
-        // the error-prone negative modulo!) at negligible CPU cost.
-        int64_t src_pos_modulo_delta = static_cast<int64_t>(bookkeeping.rate_modulo) * dest_frames;
-        while (src_pos_modulo_delta < 0) {
-          --source_frame_delta;
-          src_pos_modulo_delta += bookkeeping.denominator;
-        }
-        next_src_pos_modulo += src_pos_modulo_delta;
+      if (bookkeeping.denominator()) {
+        // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
+        __int128_t denominator_128 = bookkeeping.denominator();
+        __int128_t src_pos_modulo_delta =
+            static_cast<__int128_t>(bookkeeping.rate_modulo()) * dest_frames;
+        __int128_t next_src_pos_modulo_128 = next_src_pos_modulo + src_pos_modulo_delta;
+        __int128_t src_pos_modulo_128 = bookkeeping.src_pos_modulo + src_pos_modulo_delta;
 
-        // mod next_src_pos_modulo back down into range.
-        if (next_src_pos_modulo >= bookkeeping.denominator) {
-          source_frame_delta += (next_src_pos_modulo / bookkeeping.denominator);
-          next_src_pos_modulo %= bookkeeping.denominator;
+        // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
+        //
+        // If advance was negative, mod the potentially-negative pos_modulo values up into range.
+        // Negative modulo is error-prone and potentially-undefined-behavior; avoiding it is more
+        // clear at little additional CPU cost (any negative position advance should be small).
+        while (next_src_pos_modulo_128 < 0) {
+          --source_frame_delta;
+          next_src_pos_modulo_128 += denominator_128;
         }
+        while (src_pos_modulo_128 < 0) {
+          src_pos_modulo_128 += denominator_128;
+        }
+        // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
+
+        // mod these back down into range.
+        source_frame_delta += static_cast<int64_t>(next_src_pos_modulo_128 / denominator_128);
+        next_src_pos_modulo = static_cast<uint64_t>(next_src_pos_modulo_128 % denominator_128);
+        bookkeeping.src_pos_modulo = static_cast<uint64_t>(src_pos_modulo_128 % denominator_128);
       }
       next_frac_source_frame += Fixed::FromRaw(source_frame_delta);
     }
@@ -186,13 +193,13 @@ class Mixer {
     // subsequent denominator) expresses leftover precision. When non-zero, rate_modulo and
     // denominator express a fractional value of the step_size unit that src position should
     // advance, for each dest frame.
-    uint64_t rate_modulo = 0;
+    uint64_t rate_modulo() const { return rate_modulo_; }
 
     // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
     // precedent rate_modulo) expresses leftover precision. When non-zero, rate_modulo and
     // denominator express a fractional value of the step_size unit that src position should
     // advance, for each dest frame.
-    uint64_t denominator = 0;
+    uint64_t denominator() const { return denominator_; }
 
     // If frac_src_offset cannot perfectly express the source's position, this parameter (along with
     // denominator) expresses any leftover precision. When present, src_pos_modulo and denominator
@@ -205,6 +212,39 @@ class Mixer {
       src_pos_modulo = 0;
       gain.CompleteSourceRamp();
     }
+
+    void SetRateModuloAndDenominator(uint64_t rate_mod, uint64_t denom,
+                                     SourceInfo* info = nullptr) {
+      FX_CHECK(denom > 0);
+      FX_CHECK(rate_mod < denom);
+      if (denom == 1) {
+        src_pos_modulo = 0;
+        if (info != nullptr) {
+          info->next_src_pos_modulo = 0;
+        }
+        denominator_ = 1;
+        rate_modulo_ = 0;
+        return;
+      }
+
+      if (denom != denominator_) {
+        __uint128_t temp = (static_cast<__uint128_t>(src_pos_modulo) * denom) / denominator_;
+        src_pos_modulo = static_cast<uint64_t>(temp);
+
+        if (info != nullptr) {
+          __uint128_t temp =
+              (static_cast<__uint128_t>(info->next_src_pos_modulo) * denom) / denominator_;
+          info->next_src_pos_modulo = static_cast<uint64_t>(temp);
+        }
+
+        denominator_ = denom;
+      }
+      rate_modulo_ = rate_mod;
+    }
+
+   private:
+    uint64_t rate_modulo_ = 0;
+    uint64_t denominator_ = 1;
   };
 
   virtual ~Mixer() = default;
@@ -281,6 +321,17 @@ class Mixer {
   // subframes to int frames), as this was never intended to be fractional.
   //
   // TODO(fxbug.dev/37356): Make frac_src_frames and frac_src_offset typesafe
+  //
+  // Within Mix(), the following dest/source/rate constraints are enforced:
+  //  * frac_src_frames cannot exceed INT32_MAX
+  //                    must be purely integral (no fractional value)
+  //                    must equal/exceed 1 frame
+  //  * frac_src_offset cannot exceed frac_src_frames
+  //                    cannot be less than -pos_filter_width
+  //  * dest_offset     cannot exceed dest_frames
+  //  * step_size       must exceed zero
+  //  * denominator     must exceed both rate_modulo and source_position_modulo,
+  //                    or must be zero
   virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
                    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) = 0;
   //

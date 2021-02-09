@@ -19,6 +19,7 @@
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
 namespace {
@@ -317,8 +318,8 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   auto frac_source_for_final_mix_job_frame =
       Fixed::FromRaw(frac_source_for_first_mix_job_frame.raw_value() +
                      (bookkeeping.step_size * dest_frames_left +
-                      (bookkeeping.rate_modulo * dest_frames_left + bookkeeping.src_pos_modulo) /
-                          bookkeeping.denominator) -
+                      (bookkeeping.rate_modulo() * dest_frames_left + bookkeeping.src_pos_modulo) /
+                          bookkeeping.denominator()) -
                      1);
 
   // The above two calculated values characterize our demand. Now reason about our supply.
@@ -520,7 +521,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     info.clock_mono_to_frac_source_frames = TimelineFunction();
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = 0;
-    bookkeeping.rate_modulo = 0;  // we need not also clear rate_mod and pos_mod
+    bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
 
     return;
   }
@@ -541,10 +542,10 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from reference time to destination frames (based on dest frame rate).
   FX_DCHECK(cur_mix_job_.dest_ref_clock_to_frac_dest_frame.rate().reference_delta());
-  if (cur_mix_job_.dest_ref_clock_to_frac_dest_frame.rate().subject_delta() == 0) {
+  if (cur_mix_job_.dest_ref_clock_to_frac_dest_frame.subject_delta() == 0) {
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = 0;
-    bookkeeping.rate_modulo = 0;  // we need not also clear rate_mod and pos_mod
+    bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
 
     return;
   }
@@ -666,38 +667,21 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   SetStepSize(info, bookkeeping, frac_src_frames_per_dest_frame);
 }
 
+// From a TimelineRate, calculate the [step_size, denominator, rate_modulo] used by Mixer::Mix()
 void MixStage::SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                            TimelineRate& frac_src_frames_per_dest_frame) {
-  // SetStepSize
-  //
-  // Convert the TimelineRate into [step_size, denominator, rate_modulo] as usual.
-  FX_DCHECK(frac_src_frames_per_dest_frame.reference_delta());
-  int64_t tmp_step_size = frac_src_frames_per_dest_frame.Scale(1);
+  bookkeeping.step_size = static_cast<uint32_t>(frac_src_frames_per_dest_frame.Scale(1));
 
-  FX_DCHECK(tmp_step_size >= 0);
-  FX_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
+  // Now that we have a new step_size, generate new rate_modulo and denominator values to
+  // account for step_size's limitations.
+  auto new_rate_modulo = frac_src_frames_per_dest_frame.subject_delta() -
+                         (frac_src_frames_per_dest_frame.reference_delta() * bookkeeping.step_size);
+  auto new_denominator = frac_src_frames_per_dest_frame.reference_delta();
 
-  auto old_denominator = bookkeeping.denominator;
-  bookkeeping.step_size = static_cast<uint32_t>(tmp_step_size);
-  bookkeeping.denominator = frac_src_frames_per_dest_frame.reference_delta();
-  bookkeeping.rate_modulo = frac_src_frames_per_dest_frame.subject_delta() -
-                            (bookkeeping.denominator * bookkeeping.step_size);
-
-  // If the denominator is changing, update the source position modulos.
-  if (old_denominator != bookkeeping.denominator) {
-    // Reinterpret previous per-job and long-running src_pos_mod values for the new denominator
-    if (bookkeeping.src_pos_modulo) {
-      __uint128_t tmp_src_pos_modulo =
-          static_cast<__uint128_t>(bookkeeping.src_pos_modulo) * bookkeeping.denominator;
-      bookkeeping.src_pos_modulo = tmp_src_pos_modulo / old_denominator;
-    }
-    if (info.next_src_pos_modulo) {
-      __uint128_t tmp_next_src_pos_modulo =
-          static_cast<__uint128_t>(info.next_src_pos_modulo) * bookkeeping.denominator;
-      info.next_src_pos_modulo = tmp_next_src_pos_modulo / old_denominator;
-    }
-  }
-  // Otherwise, preserve the previous source position modulo values
+  // Reduce this fraction before setting it.
+  TimelineRate reduced_rate{new_rate_modulo, new_denominator};
+  bookkeeping.SetRateModuloAndDenominator(reduced_rate.subject_delta(),
+                                          reduced_rate.reference_delta(), &info);
 }
 
 }  // namespace media::audio

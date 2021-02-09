@@ -49,6 +49,10 @@ constexpr bool kTraceComputation = false;
 float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients,
                                      uint32_t frac_offset, float* center) {
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
+  if constexpr (kTraceComputation) {
+    FX_LOGS(INFO) << "For frac_offset " << std::hex << frac_offset << " ("
+                  << (static_cast<float>(frac_offset) / frac_size_) << "):";
+  }
 
   float result = 0.0f;
 
@@ -67,8 +71,8 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = (*sample_ptr) * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
-      FX_LOGS(INFO) << "Adding src[" << -source_idx << "] " << (*sample_ptr) << " x "
-                    << coefficient_ptr[source_idx] << " = " << contribution;
+      FX_LOGS(INFO) << "Adding src[" << -static_cast<ssize_t>(source_idx) << "] " << (*sample_ptr)
+                    << " x " << coefficient_ptr[source_idx] << " = " << contribution;
     }
     result += contribution;
     --sample_ptr;

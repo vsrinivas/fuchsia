@@ -30,6 +30,10 @@ class PositionManager {
   static void DisplayUpdate(const PositionManager& pos_mgr,
                             uint32_t frac_bits = media::audio::kPtsFractionalBits);
 
+  static void CheckPositions(uint32_t dest_frames, uint32_t* dest_offset,
+                             uint32_t frac_source_frames, int32_t* frac_source_offset_ptr,
+                             Fixed pos_filter_width, Mixer::Bookkeeping* info);
+
   // Establish the parameters for this source and dest
   void SetSourceValues(const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset);
   void SetDestValues(float* dest, uint32_t dest_frames, uint32_t* dest_offset);
@@ -74,7 +78,9 @@ class PositionManager {
   void UpdateOffsets() {
     *frac_src_offset_ptr_ = frac_src_offset_;
     *dest_offset_ptr_ = dest_offset_;
-    *src_pos_modulo_ptr_ = src_pos_modulo_;
+    if (using_modulo_) {
+      *src_pos_modulo_ptr_ = src_pos_modulo_;
+    }
   }
 
   // Is there NOT enough remaining source data to produce another output frame?
@@ -84,21 +90,26 @@ class PositionManager {
   uint32_t dest_offset() const { return dest_offset_; }
 
  private:
-  uint32_t num_src_chans_;
-  uint32_t num_dest_chans_;
-  uint32_t positive_width_;
-  uint32_t negative_width_;
-  uint32_t frac_bits_;
-  uint32_t frac_size_;
-  uint32_t frac_mask_;
-  uint32_t min_frac_src_frames_;
+  static inline void CheckSourcePositions(uint32_t frac_source_frames,
+                                          int32_t* frac_source_offset_ptr, Fixed pos_filter_width);
+  static inline void CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset);
+  static inline void CheckRateValues(uint32_t step_size, uint64_t rate_modulo, uint64_t denominator,
+                                     uint64_t* source_position_modulo_ptr);
+
+  const uint32_t num_src_chans_;
+  const uint32_t num_dest_chans_;
+  const uint32_t positive_width_;
+  const uint32_t negative_width_;
+  const uint32_t frac_bits_;
+  const uint32_t frac_size_;
+  const uint32_t min_frac_src_frames_;
 
   void* src_void_ = nullptr;
+  // TODO(fxbug.dev/37356): Make frac_src_frames and frac_src_offset typesafe
   uint32_t frac_src_frames_ = 0;
   int32_t* frac_src_offset_ptr_ = nullptr;
   int32_t frac_src_offset_ = 0;
-  int32_t frac_src_end_ = 0;
-  // TODO(fxbug.dev/37356): Make frac_src_frames and frac_src_offset typesafe
+  int32_t frac_src_end_ = 0;  // the last sampleable fractional frame of this source region
 
   float* dest_ = nullptr;
   uint32_t dest_frames_ = 0;
@@ -140,7 +151,7 @@ inline int32_t PositionManager::AdvanceFrame() {
   ++dest_offset_;
   frac_src_offset_ += step_size_;
 
-  if constexpr (UseModulo) {
+  if (UseModulo && using_modulo_) {
     src_pos_modulo_ += rate_modulo_;
     if (src_pos_modulo_ >= denominator_) {
       ++frac_src_offset_;

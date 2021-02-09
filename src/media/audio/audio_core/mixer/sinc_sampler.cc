@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/mixer/channel_strip.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/filter.h"
@@ -19,10 +20,10 @@ namespace media::audio::mixer {
 // Note that this value directly determines the maximum downsampling ratio: the ratio's numerator is
 // (kDataCacheLength/28). For example, if kDataCacheLength is 280, max downsampling ratio is 10:1.
 //
-// Using 'audio_fidelity_tests --profile', the performance of various lengths was measured. The
-// length 680 had better performance than other measured lengths (280, 560, 640, 700, 720, 1000,
-// 1344), presumably because of cache/locality effects. This length allows a downsampling ratio
-// greater than 24:1 -- even with 192kHz input hardware, we can produce 8kHz streams to capturers.
+// 'audio_fidelity_tests --profile' measured the performance of various lengths. Length 680 had
+// better performance than other measured lengths (280, 560, 640, 700, 720, 1000, 1344), presumably
+// because of cache/locality effects. This length allows a downsampling ratio greater than 24:1 --
+// even with 192kHz input hardware, we can produce 8kHz streams to capturers.
 static constexpr size_t kDataCacheLength = 680;
 
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
@@ -42,8 +43,9 @@ class SincSamplerImpl : public SincSampler {
     num_prev_frames_needed_ = RightIdx(neg_filter_width().raw_value());
     total_frames_needed_ = num_prev_frames_needed_ + RightIdx(pos_filter_width().raw_value());
 
-    FX_DCHECK(kDataCacheLength > total_frames_needed_)
-        << "source rate " << source_frame_rate << ", dest rate " << dest_frame_rate;
+    FX_CHECK(kDataCacheLength > total_frames_needed_)
+        << "Data cache (len " << kDataCacheLength << ") must be at least " << total_frames_needed_
+        << " to support SRC ratio " << source_frame_rate << "/" << dest_frame_rate;
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
@@ -126,14 +128,13 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   int32_t frac_src_off = *frac_src_offset;
   position_.SetSourceValues(src_void, frac_src_frames, frac_src_offset);
   position_.SetDestValues(dest, dest_frames, dest_offset);
-  position_.SetRateValues(info->step_size, info->rate_modulo, info->denominator,
+  position_.SetRateValues(info->step_size, info->rate_modulo(), info->denominator(),
                           &info->src_pos_modulo);
 
   const uint32_t src_frames = frac_src_frames >> kPtsFractionalBits;
   uint32_t next_cache_idx_to_fill = 0;
   int32_t next_src_idx_to_copy =
       RightIdx(frac_src_off - static_cast<int32_t>(neg_filter_width().raw_value()));
-  int32_t src_offset = frac_src_off >> kPtsFractionalBits;
 
   // Do we need previously-cached values?
   if (next_src_idx_to_copy < 0) {
@@ -146,6 +147,9 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   if (!position_.FrameCanBeMixed()) {
     if (position_.SourceIsConsumed()) {
       const auto frames_needed = src_frames - next_src_idx_to_copy;
+      if (frac_src_off > 0) {
+        working_data_.ShiftBy(RightIdx(frac_src_off));
+      }
 
       // Calculate/store the last few source frames to the start of the channel_strip for next time
       PopulateFramesToChannelStrip(src_void, next_src_idx_to_copy, frames_needed, &working_data_,
@@ -208,7 +212,6 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       working_data_.ShiftBy(num_frames_to_shift);
 
       cache_center_idx -= num_frames_to_shift;
-      src_offset += num_frames_to_shift;
       next_cache_idx_to_fill = kDataCacheLength - num_frames_to_shift;
     }
   } else {
@@ -224,6 +227,9 @@ template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) {
+  TRACE_DURATION("audio", "SincSamplerImpl::Mix", "source_rate", source_rate_, "dest_rate",
+                 dest_rate_, "source_chans", SrcChanCount, "dest_chans", DestChanCount);
+
   auto info = &bookkeeping();
 
   // For now, we continue to use this proliferation of template specializations, largely to keep the

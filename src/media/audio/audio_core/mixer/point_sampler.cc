@@ -12,7 +12,7 @@
 #include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/audio_core/mixer/position_manager.h"
 
 namespace media::audio::mixer {
 
@@ -72,20 +72,10 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   using DM = DestMixer<ScaleType, DoAccumulate>;
 
   auto dest_off = *dest_offset_ptr;
-  FX_CHECK(dest_off < dest_frames);
-
-  FX_CHECK((frac_src_frames & kPtsFractionalMask) == 0);
-  FX_CHECK(frac_src_frames <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-
-  auto frac_src_offset = *frac_src_offset_ptr;
-  FX_CHECK(frac_src_offset + kPositiveFilterWidth >= 0)
-      << std::hex << "frac_src_offset: 0x" << frac_src_offset;
-  FX_CHECK(frac_src_offset <= static_cast<int32_t>(frac_src_frames))
-      << std::hex << "frac_src_offset: 0x" << frac_src_offset << ", frac_src_frames: 0x"
-      << frac_src_frames;
 
   const auto* src = static_cast<const SrcSampleType*>(src_void);
 
+  auto frac_src_offset = *frac_src_offset_ptr;
   const auto src_offset =
       static_cast<uint32_t>(frac_src_offset + kPositiveFilterWidth) >> kPtsFractionalBits;
   auto frames_to_mix =
@@ -143,6 +133,8 @@ bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   TRACE_DURATION("audio", "PointSamplerImpl::Mix");
 
   auto info = &bookkeeping();
+  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, frac_src_frames,
+                                  frac_src_offset_ptr, pos_filter_width(), info);
 
   if (info->gain.IsUnity()) {
     return accumulate
@@ -187,20 +179,10 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
   using DM = DestMixer<ScaleType, DoAccumulate>;
 
   auto dest_off = *dest_offset_ptr;
-  FX_CHECK(dest_off < dest_frames);
-
-  FX_CHECK((frac_src_frames & kPtsFractionalMask) == 0);
-  FX_CHECK(frac_src_frames <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-
-  auto frac_src_offset = *frac_src_offset_ptr;
-  FX_CHECK(frac_src_offset + kPositiveFilterWidth >= 0)
-      << std::hex << "frac_src_offset: 0x" << frac_src_offset;
-  FX_CHECK(frac_src_offset <= static_cast<int32_t>(frac_src_frames))
-      << std::hex << "frac_src_offset: 0x" << frac_src_offset << ", frac_src_frames: 0x"
-      << frac_src_frames;
 
   const auto* src = static_cast<const SrcSampleType*>(src_void);
 
+  auto frac_src_offset = *frac_src_offset_ptr;
   const auto src_offset =
       static_cast<uint32_t>(frac_src_offset + kPositiveFilterWidth) >> kPtsFractionalBits;
   auto frames_to_mix =
@@ -253,6 +235,8 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
   TRACE_DURATION("audio", "NxNPointSamplerImpl::Mix");
 
   auto info = &bookkeeping();
+  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, frac_src_frames,
+                                  frac_src_offset_ptr, pos_filter_width(), info);
 
   if (info->gain.IsUnity()) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest, dest_frames, dest_offset_ptr, src,

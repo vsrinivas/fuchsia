@@ -336,8 +336,8 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
 
   auto& info = mixer->bookkeeping();
   info.step_size = (source_rate * Mixer::FRAC_ONE) / dest_rate;
-  info.denominator = dest_rate;
-  info.rate_modulo = (source_rate * Mixer::FRAC_ONE) - (info.step_size * dest_rate);
+  info.SetRateModuloAndDenominator((source_rate * Mixer::FRAC_ONE) - (info.step_size * dest_rate),
+                                   dest_rate);
 
   float gain_db;
   bool source_mute = false;

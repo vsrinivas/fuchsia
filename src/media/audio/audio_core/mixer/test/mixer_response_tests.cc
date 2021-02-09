@@ -241,8 +241,8 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
   // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
   auto& info = mixer->bookkeeping();
   info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
-  info.rate_modulo = (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames);
-  info.denominator = num_dest_frames;
+  info.SetRateModuloAndDenominator(
+      (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames), num_dest_frames);
 
   bool use_full_set = FrequencySet::UseFullFrequencySet;
   // kReferenceFreqs[] contains the full set of test frequencies (47). kSummaryIdxs is a subset of
@@ -877,8 +877,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
   auto& info = mixer->bookkeeping();
   info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
-  info.rate_modulo = (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames);
-  info.denominator = num_dest_frames;
+  info.SetRateModuloAndDenominator(
+      (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames), num_dest_frames);
   info.src_pos_modulo = 0;
 
   uint32_t dest_frames, dest_offset = 0;
@@ -974,5 +974,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
     }
   }
 }
+
+// TODO(fxbug.dev/69307): reenable cross-talk tests, to replace the recently-removed NxN tests
 
 }  // namespace media::audio::test

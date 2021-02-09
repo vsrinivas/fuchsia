@@ -666,17 +666,19 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   }
 }
 
-// When micro-SRC makes a rate change, we take particular care to preserve our source stream's
-// position. Specifically, a component of position beyond what we capture by our Fixed data type is
-// kept in [src_pos_modulo, rate_modulo, denominator, next_src_pos_modulo] (in Bookkeeping x3 and
-// SourceInfo respectively). If a rate adjustment occurs but denominator is unchanged, then
-// src_pos_modulo and next_src_pos_modulo need not change. If denominator DOES change, then
-// src_pos_modulo and next_src_pos_modulo are scaled, from the old denominator to the new one.
+// When micro-SRC makes a rate change, we preserve our source position. Specifically, a component of
+// position beyond what we capture by frac_src_pos is kept in [src_pos_modulo, rate_modulo,
+// denominator, next_src_pos_modulo], in Bookkeeping x3 and SourceInfo respectively. If rate
+// adjustment occurs and denominator changes, then src_pos_modulo and next_src_pos_modulo are scaled
+// from the old denominator to the new one.
 TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   auto audio_clock = context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic());
+  constexpr uint32_t dest_frames_per_mix = 12;
 
-  auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  // We set our timeline slow by 1 frac-frame per nsec.
+  auto nsec_to_frac_src =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(kDefaultFormat.frames_per_second()).raw_value() - 1, zx::sec(1).to_nsecs())));
   std::shared_ptr<PacketQueue> packet_queue =
       std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(audio_clock));
 
@@ -684,49 +686,50 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   auto& info = mixer->source_info();
   auto& bookkeeping = mixer->bookkeeping();
 
-  constexpr zx::duration kMixDuration = zx::msec(1);
-  constexpr uint32_t dest_frames_per_mix = 48;
+  bookkeeping.SetRateModuloAndDenominator(76543, 98765);
+  info.next_src_pos_modulo = 12345;
+  bookkeeping.src_pos_modulo = 23456;
 
-  //
-  // Position accounting is reset before the first mix; preexisting values should not persist.
-  info.next_src_pos_modulo = 2;
-  bookkeeping.src_pos_modulo = 4;
-  bookkeeping.denominator = 2;
+  // The first mix resets position, so the above will be overwritten and we'll advance from zero.
   mix_stage_->ReadLock(Fixed(0), dest_frames_per_mix);
 
-  // Long-running source position advances normally; src_pos_modulos are reset.
-  EXPECT_EQ(info.next_frac_source_frame, Fixed(dest_frames_per_mix));
-  EXPECT_EQ(info.next_src_pos_modulo, 0u);
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 0u);
-  EXPECT_EQ(bookkeeping.denominator, 1u);
+  // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
+  EXPECT_EQ(bookkeeping.rate_modulo(), kDefaultFormat.frames_per_second() - 1);
+  EXPECT_EQ(bookkeeping.denominator(), kDefaultFormat.frames_per_second());
+  // next_src_pos_modulo should show that we lose 1 src_pos_modulo per dest frame.
+  EXPECT_EQ(bookkeeping.denominator() - info.next_src_pos_modulo, dest_frames_per_mix);
+  // ... which also means we'll be one frac-frame behind.
+  EXPECT_EQ(Fixed(info.next_dest_frame), Fixed(info.next_frac_source_frame + Fixed::FromRaw(1)));
+  // At this point we expect long-running and current src_pos_modulo to be exactly equal.
+  EXPECT_EQ(info.next_src_pos_modulo, bookkeeping.src_pos_modulo)
+      << info.next_src_pos_modulo << " (current pos_mod) should equal "
+      << bookkeeping.src_pos_modulo << "(long-running pos_mod)";
 
-  //
-  // If denominator is not changing, src_pos_modulo will be unchanged.
-  bookkeeping.src_pos_modulo = 4;
-  context().clock_manager()->AdvanceMonoTimeBy(kMixDuration);
+  // Src_pos_modulos (long-running and current) advance at the same rate, regardless of rate_modulo
+  // and denominator values. To observe src_pos_modulo scaling as denominator changes, we set them
+  // exactly denominator/2 apart. We shouldn't predict our new src_pos_modulo or denominator values
+  // (micro-SRC PID coefficients can change), but we know that for any denominator, the
+  // src_pos_modulo values should still be denominator/2 apart.
+  bookkeeping.src_pos_modulo = 0;
+  info.next_src_pos_modulo = bookkeeping.denominator() / 2;
   mix_stage_->ReadLock(Fixed(dest_frames_per_mix), dest_frames_per_mix);
 
-  // Long-running source position advances normally, no change to src_pos_modulo.
-  EXPECT_EQ(info.next_frac_source_frame, Fixed(dest_frames_per_mix * 2));
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 4u);
+  uint64_t src_pos_diff = info.next_src_pos_modulo > bookkeeping.src_pos_modulo
+                              ? info.next_src_pos_modulo - bookkeeping.src_pos_modulo
+                              : bookkeeping.src_pos_modulo - info.next_src_pos_modulo;
 
-  //
-  // If the denominator is changing, existing values for src_pos_modulo and next_src_pos_modulo are
-  // scaled to the new denominator (by multipling by new denom, dividing by old denom).
-  info.next_src_pos_modulo = 2;
-  bookkeeping.src_pos_modulo = 4;
-  bookkeeping.denominator = 2;
-  context().clock_manager()->AdvanceMonoTimeBy(kMixDuration);
-  mix_stage_->ReadLock(Fixed(dest_frames_per_mix * 2), dest_frames_per_mix);
+  // We include the "+1" possibility because theoretically a TLRate-reduced denominator might be
+  // odd. If src_pos_modulo is larger than next_src_pos_modulo after second mix, we may need this.
+  EXPECT_TRUE((src_pos_diff == bookkeeping.denominator() / 2) ||
+              (src_pos_diff == bookkeeping.denominator() / 2 + 1));
 
-  // Denominator changes from 2 to 1, so src_pos_modulo is scaled from 4 to 2. next_src_pos_modulo
-  // is scaled from 2 to 1, then reduced (because denominator == 1), after which next_src_pos_modulo
-  // is zero and next_frac_source_frame is incremented by one sub-frame.
-  EXPECT_EQ(info.next_frac_source_frame.raw_value(),
-            Fixed(dest_frames_per_mix * 3).raw_value() + 1);
-  EXPECT_EQ(info.next_src_pos_modulo, 0u);
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 2u);
-  EXPECT_EQ(bookkeeping.denominator, 1u);
+  // If denominator becomes zero, src_pos_modulos will also be zero even if we didn't correctly
+  // scale src_pos_modulo -- this wouldn't be a failure, but it would be an untested feature. Should
+  // never happen, but if a future micro-SRC design causes this then the test must be reworked.
+  if (bookkeeping.denominator() == 0) {
+    FX_LOGS(WARNING) << "Post-micro-SRC denom is miraculously 0; pos_mod scaling is untestable";
+    GTEST_SKIP();
+  }
 }
 
 // This is a regression test for fxbug.dev/67996.
@@ -761,9 +764,7 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
       TimelineFunction(3582737759, 0, 8192000, 999);
   mixer->source_info().next_frac_source_frame = Fixed::FromRaw(2414202275419);
   mixer->bookkeeping().step_size = Fixed(1).raw_value();
-  mixer->bookkeeping().rate_modulo = 0;
-  mixer->bookkeeping().denominator = 1;
-  mixer->bookkeeping().src_pos_modulo = 0;
+  mixer->bookkeeping().SetRateModuloAndDenominator(0, 1);
 
   char payload[10 * kDefaultNumChannels * sizeof(float)];
   ReadableStream::Buffer buffer(Fixed::FromRaw(2414204747776), Fixed(10), payload, true,

@@ -214,6 +214,8 @@ class AudioResult {
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUp2;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUp3;
 
+  // TODO(fxbug.dev/69307): reenable cross-talk (formerly NxN) frequency response tests
+
   // Signal-to-Noise-And-Distortion (SINAD)
   // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of received reference frequency
   // (nominally 1kHz), compared to power of all OTHER frequencies (combined via root-sum-square).
@@ -254,6 +256,8 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp3;
 
+  // TODO(fxbug.dev/69307): reenable cross-talk (formerly NxN) sinad tests
+
   // Phase Response
   // What is the delay, from input to output, of various frequencies as signals go through our
   // resamplers? This characteristic of a system is called its phase response. Zero delay (phase
@@ -286,6 +290,8 @@ class AudioResult {
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUp1;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUp2;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUp3;
+
+  // TODO(fxbug.dev/69307): reenable cross-talk (formerly NxN) phase response tests
 
   //
   //

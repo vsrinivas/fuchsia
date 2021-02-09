@@ -37,7 +37,7 @@ TEST(PositionManagerTest, FirstSourceFrame) {
   EXPECT_EQ(pos_mgr.FirstSourceFrame<float>(), expected_source_frame_float);
 }
 
-// Produce the frame pointer (in source format) for the first frame in the source buffer.
+// Produce the frame pointer (in source format) for the last frame in the source buffer.
 TEST(PositionManagerTest, LastSourceFrame) {
   constexpr auto src_chans = 3u;
   mixer::PositionManager pos_mgr(src_chans, 2u, 0, 0);
@@ -48,7 +48,7 @@ TEST(PositionManagerTest, LastSourceFrame) {
   float src[src_chans * src_frames];
   const auto src_void = static_cast<void*>(src);
 
-  constexpr auto src_offset = -130;
+  constexpr auto src_offset = 0;
   int32_t frac_src_off = src_offset * Mixer::FRAC_ONE;
 
   pos_mgr.SetSourceValues(src_void, frac_source_frames, &frac_src_off);
@@ -133,12 +133,14 @@ TEST(PositionManagerTest, CurrentDestFrame) {
 TEST(PositionManagerTest, UpdateOffsets) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
-  void* src_void = nullptr;
+  float input;
+  void* src_void = static_cast<void*>(&input);
   auto frac_source_frames = Mixer::FRAC_ONE;
   int32_t frac_src_off = 0;
   pos_mgr.SetSourceValues(src_void, frac_source_frames, &frac_src_off);
 
-  float* dest = nullptr;
+  float data;
+  float* dest = &data;
   auto dest_frames = 1u;
   uint32_t dest_offset = 0u;
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
@@ -156,6 +158,14 @@ TEST(PositionManagerTest, UpdateOffsets) {
 
   EXPECT_EQ(frac_src_off, 0);
   EXPECT_EQ(dest_offset, 0u);
+  EXPECT_EQ(src_position_modulo, 72ul);
+
+  src_position_modulo = 0;
+  pos_mgr.SetRateValues(step_size, 1, 2, &src_position_modulo);
+
+  src_position_modulo = 72;
+  pos_mgr.UpdateOffsets();
+
   EXPECT_EQ(src_position_modulo, 0ul);
 }
 
@@ -194,7 +204,7 @@ TEST(PositionManagerTest, AdvanceFrame_Basic) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto src_position_modulo = 0ul;
-  pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 0, &src_position_modulo);
+  pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 1, &src_position_modulo);
 
   int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
   auto received_frac_src_off = pos_mgr.AdvanceFrame();
@@ -215,7 +225,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceReachesEnd) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto src_position_modulo = 0ul;
-  pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 0, &src_position_modulo);
+  pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 1, &src_position_modulo);
 
   int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
   auto received_frac_src_off = pos_mgr.AdvanceFrame();
@@ -304,7 +314,7 @@ TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
 
   auto src_position_modulo = 0ul;
-  pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 0, &src_position_modulo);
+  pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 1, &src_position_modulo);
 
   auto received_frac_src_off = pos_mgr.AdvanceFrame();
 
@@ -377,14 +387,14 @@ TEST(PositionManagerTest, AdvanceFrame_NoRateValues) {
 TEST(PositionManagerTest, AdvanceToEnd_Dest) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
-  int16_t src[11];
+  int16_t src[12];
   const uint32_t frac_src_frames = std::size(src) * Mixer::FRAC_ONE;
-  int32_t frac_src_off = -1;
+  int32_t frac_src_off = Mixer::FRAC_ONE - 1;
   pos_mgr.SetSourceValues(static_cast<void*>(src), frac_src_frames, &frac_src_off);
 
   float dest[5];
   auto dest_offset = 0u;
-  pos_mgr.SetDestValues(dest, 5, &dest_offset);
+  pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto src_position_modulo = 1ul;
   auto denominator = 2ul;
@@ -395,7 +405,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_TRUE(frac_src_off == (10 * Mixer::FRAC_ONE) - 6);
+  EXPECT_TRUE(frac_src_off == (11 * Mixer::FRAC_ONE) - 6);
   EXPECT_EQ(dest_offset, 5u);
   EXPECT_EQ(src_position_modulo, 1ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
@@ -414,7 +424,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
   pos_mgr.SetDestValues(dest, 10, &dest_offset);
 
   auto src_position_modulo = 0ul;
-  pos_mgr.SetRateValues(Mixer::FRAC_ONE >> 1, 0, 0, &src_position_modulo);
+  pos_mgr.SetRateValues(Mixer::FRAC_ONE >> 1, 0, 1, &src_position_modulo);
 
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd();
   EXPECT_EQ(num_src_frames_skipped, 5u);
@@ -431,13 +441,13 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
 TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE >> 1);
 
-  int16_t src[10];
-  int32_t frac_src_off = -1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 * Mixer::FRAC_ONE, &frac_src_off);
+  int16_t src[11];
+  int32_t frac_src_off = Mixer::FRAC_ONE - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), std::size(src) * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[6];
   auto dest_offset = 0u;
-  pos_mgr.SetDestValues(dest, 6, &dest_offset);
+  pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
@@ -449,7 +459,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_TRUE(frac_src_off == 10 * Mixer::FRAC_ONE);
+  EXPECT_TRUE(frac_src_off == 11 * Mixer::FRAC_ONE);
   EXPECT_EQ(dest_offset, 5u);
   EXPECT_EQ(src_position_modulo, 0ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
@@ -459,13 +469,13 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
 TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE >> 1);
 
-  int16_t src[10];
-  int32_t frac_src_off = -1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 * Mixer::FRAC_ONE, &frac_src_off);
+  int16_t src[11];
+  int32_t frac_src_off = Mixer::FRAC_ONE - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), std::size(src) * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[6];
   auto dest_offset = 0u;
-  pos_mgr.SetDestValues(dest, 6, &dest_offset);
+  pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
@@ -477,36 +487,45 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_TRUE(frac_src_off == 10 * Mixer::FRAC_ONE);
+  EXPECT_TRUE(frac_src_off == 11 * Mixer::FRAC_ONE);
   EXPECT_EQ(dest_offset, 5u);
   EXPECT_EQ(src_position_modulo, 4ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 }
 
-TEST(PositionManagerTest, AdvanceToEnd_TemplateNoModulo) {
-  mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE >> 1);
+// If the template parameter to AdvanceToEnd is <false>, then even a non-zero rate_modulo should not
+// affect source position and src_pos_modulo should be unchanged.
+TEST(PositionManagerTest, AdvanceToEnd_TemplateFalseShouldNotUseRateModulo) {
+  mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
-  int16_t src[10];
-  int32_t frac_src_off = -1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 * Mixer::FRAC_ONE, &frac_src_off);
+  int16_t src[11];
+  int32_t frac_src_off = Mixer::FRAC_ONE - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), std::size(src) * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[7];
   auto dest_offset = 0u;
-  pos_mgr.SetDestValues(dest, 7, &dest_offset);
+  pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
   auto src_position_modulo = 20ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE << 1, rate_modulo, denominator, &src_position_modulo);
 
+  // pos_width 0, neg_width 0.5
+  // step_size 2.0, src_pos 0.999 of 11, dest_pos 0 of 7
+  // ignoring rate_modulo, we should take 6 steps, ending at src_pos 12.999, dest_pos 6
+  // after only 5 steps, src_pos is 10.999 and (with pos_width of 0) can be advanced one more.
+  // if we erroneously do incorporate rate_modulo, this will be enough to tip src_pos to 11.000,
+  // and we would stop after an advance of only 5 dest frames.
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd<false>();
   EXPECT_EQ(num_src_frames_skipped, 12u);
 
+  // This will be overwritten by the previously-provided unchanged value.
   src_position_modulo = 42;
   pos_mgr.UpdateOffsets();
 
-  EXPECT_TRUE(frac_src_off == (12 * Mixer::FRAC_ONE) - 1);
+  EXPECT_TRUE(frac_src_off == (13 * Mixer::FRAC_ONE) - 1) << std::hex << frac_src_off;
   EXPECT_EQ(dest_offset, 6u);
   EXPECT_EQ(src_position_modulo, 20ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());

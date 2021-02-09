@@ -4,11 +4,13 @@
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
 
 #include <iterator>
+#include <memory>
 
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/mixer/filter.h"
+#include "src/media/audio/lib/format/constants.h"
 
 namespace media::audio::mixer {
 namespace {
@@ -158,8 +160,8 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
 
   auto& info = mixer->bookkeeping();
   info.step_size = (Mixer::FRAC_ONE * kSourceRate) / kDestRate;
-  info.rate_modulo = Mixer::FRAC_ONE * kSourceRate - (info.step_size * kDestRate);
-  info.denominator = kDestRate;
+  info.SetRateModuloAndDenominator(Mixer::FRAC_ONE * kSourceRate - (info.step_size * kDestRate),
+                                   kDestRate);
   info.src_pos_modulo = 0;
 
   // Mix the first half of the destination
@@ -206,8 +208,8 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
 
   auto& info = mixer->bookkeeping();
   info.step_size = (Mixer::FRAC_ONE * kSourceRate) / kDestRate;
-  info.rate_modulo = Mixer::FRAC_ONE * kSourceRate - info.step_size * kDestRate;
-  info.denominator = kDestRate;
+  info.SetRateModuloAndDenominator(Mixer::FRAC_ONE * kSourceRate - info.step_size * kDestRate,
+                                   kDestRate);
   info.src_pos_modulo = 0;
 
   // Mix the first half of the destination
@@ -229,6 +231,110 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {
     EXPECT_NEAR(dest[idx], 1.0f, 0.001f);
   }
+}
+
+// Based on sinc coefficients and our arbitrary near-zero source position of -1/128.
+constexpr float kSource[] = {
+    1330.113831,                                             // These values were chosen so
+    -1330.113831, 1330.113831,  -1330.113831, 1330.113831,   // that if these first 13 values
+    -1330.113831, 1330.113831,  -1330.113831, 1330.113831,   // are ignored, we expect
+    -1330.113831, 1330.113831,  -1330.113831, 1330.113831,   // kValueWithoutPreviousFrames
+    -10.0010101,                                             //
+    268.8840529,  -268.8840529, 268.8840529,  -268.8840529,  // If they are NOT ignored,
+    268.8840529,  -268.8840529, 268.8840529,  -268.8840529,  // then we expect the result
+    268.8840529,  -268.8840529, 268.8840529,  -268.8840529,  // kValueWithPreviousFrames.
+    268.8840529,
+};
+constexpr int64_t kMixOneFrameSourceOffset = Fixed(1).raw_value() / 128;
+constexpr float kValueWithoutPreviousFrames = -15.0;
+constexpr float kValueWithPreviousFrames = 10.0;
+
+// Mix a single frame of output based on kSource[0]. Producing a frame for position 0 requires
+// neg_width previous frames, kSource[0] itself, and pos_width frames beyond kSource[0].
+float MixOneFrame(std::unique_ptr<Mixer>& mixer, int32_t frac_source_offset) {
+  auto neg_width = mixer->neg_filter_width().Floor();
+  auto pos_width = mixer->pos_filter_width().Floor();
+  EXPECT_NE(Fixed(pos_width).raw_value() + 1, mixer->neg_filter_width().raw_value())
+      << "This test assumes SincSampler is symmetric, and that negative width includes a fraction";
+
+  float dest;
+  uint32_t dest_offset = 0;
+  uint32_t frac_source_frames = Fixed(pos_width + 1).raw_value();
+
+  bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_width]),
+                                       frac_source_frames, &frac_source_offset, false);
+  EXPECT_TRUE(source_is_consumed);
+  EXPECT_EQ(dest_offset, 1u) << "No output frame was produced";
+
+  return dest;
+}
+
+// Mix a single frame, without any previously-cached data.
+TEST(SincSamplerTest, SamplingValues_MixOne_NoCache) {
+  auto mixer = SelectSincSampler(1, 44100, fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100);
+
+  // Mix a single frame at approx position 0. (We use a slightly non-zero value because at true 0,
+  // only source[0] itself is used anyway.) In this case we have not provided previous frames.
+  float dest = MixOneFrame(mixer, -kMixOneFrameSourceOffset);
+
+  // If we incorrectly shifted/retained even a single frame of the above data, this won't match.
+  EXPECT_FLOAT_EQ(dest, kValueWithoutPreviousFrames);
+}
+
+// Mix a single frame, with previously-cached data.
+TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
+  auto mixer = SelectSincSampler(1, 44100, fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100);
+  auto neg_width = mixer->neg_filter_width().Floor();
+
+  // Now, populate the cache with previous frames, instead of using default (silence) values.
+  // Based on the outparam value of frac_source_offset, we know the cache is populated with
+  // neg_width frames, which is ideal for mixing a subsequent source buffer starting at src_pos 0.
+  float dest;
+  uint32_t dest_offset = 0;
+  uint32_t frac_source_frames = Fixed(neg_width).raw_value();
+  int32_t frac_source_offset = frac_source_frames - kMixOneFrameSourceOffset;
+
+  bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[0]), frac_source_frames,
+                                       &frac_source_offset, false);
+  EXPECT_TRUE(source_is_consumed);
+  EXPECT_EQ(frac_source_offset, frac_source_frames - kMixOneFrameSourceOffset);
+  EXPECT_EQ(dest_offset, 0u) << "Unexpectedly produced output " << dest;
+
+  // Mix a single frame at approx position 0. (We use a slightly non-zero value because at true 0,
+  // only the frame value itself is used anyway.) In this case we HAVE provided previous frames.
+  dest = MixOneFrame(mixer, -kMixOneFrameSourceOffset);
+
+  // If we incorrectly shifted/retained even a single frame of the above data, this won't match.
+  EXPECT_FLOAT_EQ(dest, kValueWithPreviousFrames);
+}
+
+// Mix a single frame, after feeding the cache with previous data, one frame at a time.
+// Specifying frac_source_offset >= 0 guarantees that the cached source data will be shifted
+// appropriately, so that subsequent Mix() calls can correctly use that data.
+TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
+  auto mixer = SelectSincSampler(1, 44100, fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100);
+  auto neg_width = mixer->neg_filter_width().Floor();
+
+  // Now, populate the cache with previous data, one frame at a time.
+  float dest;
+  uint32_t dest_offset = 0;
+  const uint32_t frac_source_frames = Fixed(1).raw_value();
+  int32_t frac_source_offset = frac_source_frames - kMixOneFrameSourceOffset;
+
+  for (auto neg_idx = 0u; neg_idx < neg_width; ++neg_idx) {
+    bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_idx]),
+                                         frac_source_frames, &frac_source_offset, false);
+    EXPECT_TRUE(source_is_consumed);
+    EXPECT_EQ(frac_source_offset, frac_source_frames - kMixOneFrameSourceOffset);
+    EXPECT_EQ(dest_offset, 0u) << "Unexpectedly produced output " << dest;
+  }
+
+  // Mix a single frame at approx position 0. (We use a slightly non-zero value because at true 0,
+  // only the frame value itself is used anyway.) In this case we HAVE provided previous frames.
+  dest = MixOneFrame(mixer, -kMixOneFrameSourceOffset);
+
+  // If we incorrectly shifted/retained even a single frame of the above data, this won't match.
+  EXPECT_FLOAT_EQ(dest, kValueWithPreviousFrames);
 }
 
 }  // namespace

@@ -44,8 +44,7 @@ TEST(SourceInfoTest, Defaults) {
 TEST(SourceInfoTest, ResetPositions) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
-  bookkeeping.rate_modulo = 5;
-  bookkeeping.denominator = 7;
+  bookkeeping.SetRateModuloAndDenominator(5, 7);
 
   auto& info = mixer.source_info();
   info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u, 1u));
@@ -60,8 +59,8 @@ TEST(SourceInfoTest, ResetPositions) {
   EXPECT_EQ(info.next_dest_frame, 100);
   // Calculated directly from the TimelineFunction
   EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(1700));
-  // Calculated from rate_modulo and deominator, starting at zero. (100*5)%7 = 3.
-  EXPECT_EQ(info.next_src_pos_modulo, 3ull);
+  // Cleared by ResetPositions()
+  EXPECT_EQ(info.next_src_pos_modulo, 0ull);
   EXPECT_EQ(info.src_pos_error, zx::duration(0));
 }
 
@@ -69,8 +68,7 @@ TEST(SourceInfoTest, ResetPositions) {
 TEST(SourceInfoTest, UnaffectedByBookkeepingReset) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
-  bookkeeping.rate_modulo = 5;
-  bookkeeping.denominator = 7;
+  bookkeeping.SetRateModuloAndDenominator(5, 7);
   bookkeeping.src_pos_modulo = 3u;
 
   auto& info = mixer.source_info();
@@ -93,8 +91,7 @@ TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
   bookkeeping.step_size = Mixer::FRAC_ONE + 2;
-  bookkeeping.rate_modulo = 2;
-  bookkeeping.denominator = 5;
+  bookkeeping.SetRateModuloAndDenominator(2, 5);
   bookkeeping.src_pos_modulo = 3;
 
   auto& info = mixer.source_info();
@@ -105,8 +102,7 @@ TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
 
   info.AdvanceRunningPositionsTo(11, bookkeeping);
 
-  // These should be unchanged
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 3u);
+  // This should be unchanged
   EXPECT_EQ(info.src_pos_error, zx::duration(-17));
 
   // These should be updated
@@ -119,6 +115,9 @@ TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
   EXPECT_EQ(info.next_dest_frame, 11u);
   EXPECT_EQ(info.next_frac_source_frame, Fixed(12) + Fixed::FromRaw(21));
   EXPECT_EQ(info.next_src_pos_modulo, 4ull);
+  // Starts at position modulo 3 (out of 5). Advance by 9 with rate_modulo 2.
+  // Position mod: expect 3 + (9 * 2) = 21, %5 becomes position modulo 1.
+  EXPECT_EQ(bookkeeping.src_pos_modulo, 1u);
 }
 
 // Also validate AdvanceRunningPositions for negative offsets.
@@ -126,8 +125,7 @@ TEST(SourceInfoTest, NegativeAdvanceRunningPositionBy) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
   bookkeeping.step_size = Mixer::FRAC_ONE + 2;
-  bookkeeping.rate_modulo = 2;
-  bookkeeping.denominator = 5;
+  bookkeeping.SetRateModuloAndDenominator(2, 5);
 
   auto& info = mixer.source_info();
   info.next_dest_frame = 12;
