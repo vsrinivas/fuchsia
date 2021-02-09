@@ -228,6 +228,14 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 		}
 	}
 
+	if staticSpec.EnableGoCache {
+		vars["gocache_dir"] = filepath.Join(contextSpec.CacheDir, "go_cache")
+	}
+
+	if staticSpec.EnableRustCache {
+		vars["rust_incremental"] = filepath.Join(contextSpec.CacheDir, "rust_cache")
+	}
+
 	var normalArgs []string
 	var importArgs []string
 	for _, arg := range staticSpec.GnArgs {

@@ -95,4 +95,10 @@ message Static {
 
   // Host-only targets to build.
   repeated string host_labels = 20;
+
+  // Whether to use a go cache when building.
+  bool enable_go_cache = 21;
+
+  // Whether to use a rust cache when building.
+  bool enable_rust_cache = 22;
 }
