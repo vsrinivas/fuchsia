@@ -329,7 +329,7 @@ func main() {
 	efiStart, end = optimalBlockAlign(end, uint64(*efiSize), logical, physical, optimal)
 	// compute the size of the fat geometry that fits within the well-aligned GPT
 	// partition that was computed above.
-	*efiSize = fitFAT(int64((end-1)-efiStart) * int64(logical))
+	*efiSize = fitFAT(int64((end)-efiStart) * int64(logical))
 	// efiEnd is the last sector of viable fat geometry, which may be different
 	// from end, which is the last sector of the gpt partition.
 	efiEnd := efiStart + (uint64(*efiSize) / logical) - 1
@@ -443,8 +443,7 @@ func main() {
 		if *fvmSize == 0 {
 			end = g.Primary.LastUsableLBA
 		}
-		end++
-		*fvmSize = int64((end - fvmStart) * logical)
+		*fvmSize = int64((end + 1 - fvmStart) * logical)
 
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaFVM,
