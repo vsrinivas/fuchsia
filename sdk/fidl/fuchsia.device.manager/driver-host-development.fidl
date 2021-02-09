@@ -10,7 +10,6 @@ using zx;
 /// This interface should only be used for development and disabled in release builds.
 [Discoverable]
 protocol DriverHostDevelopment {
-    // TODO(fxbug.dev/68309): Currently unimplemented.
     /// Restart all Driver Hosts containing the driver specified by `driver path`.
     /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
     RestartDriverHosts(string:DEVICE_PATH_MAX driver_path) -> () error zx.status;

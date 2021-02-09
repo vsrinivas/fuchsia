@@ -20,6 +20,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <utility>
@@ -235,6 +236,11 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
       const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
       llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc);
 
+  // Implementation of fuchsia::device::manager::DriverHostDevelopment FIDL protocol.
+  // Restart all Driver Hosts conatining a driver specified by |driver_path|.
+  void RestartDriverHosts(fidl::StringView driver_path,
+                          RestartDriverHostsCompleter::Sync& completer) override;
+
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
   void HandleNewDevice(const fbl::RefPtr<Device>& dev);
@@ -418,9 +424,9 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                  size_t buflen, size_t* size);
 
-  // TODO(fxbug.dev/68309): Currently unimplemented.
-  void RestartDriverHosts(::fidl::StringView driver_path_view,
-                          RestartDriverHostsCompleter::Sync& completer) override;
+  // Schedule unbind and remove tasks for all devices in |driver_host|.
+  // Used as part of RestartDriverHosts().
+  void ScheduleUnbindRemoveAllDevices(fbl::RefPtr<DriverHost> driver_host);
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

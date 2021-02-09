@@ -57,6 +57,7 @@
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "lib/zx/time.h"
 #include "package_resolver.h"
+#include "src/devices/bin/driver_manager/unbind_task.h"
 #include "src/devices/lib/log/log.h"
 #include "vmo_writer.h"
 
@@ -1863,7 +1864,29 @@ std::string Coordinator::GetFragmentDriverPath() const {
   return config_.path_prefix + "driver/fragment.so";
 }
 
-void Coordinator::RestartDriverHosts(::fidl::StringView driver_path_view,
-                                     RestartDriverHostsCompleter::Sync& completer) {
+void Coordinator::RestartDriverHosts(fidl::StringView driver_path_view,
+                                 RestartDriverHostsCompleter::Sync& completer) {
+  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+
+  // Find devices containing the driver.
+  for (auto& dev : devices_) {
+    // Call remove on the device's driver host if it contains the driver.
+    if (dev.libname().compare(driver_path) == 0) {
+      LOGF(INFO, "Device %s found in restart driver hosts.", dev.name().data());
+      LOGF(INFO, "Shutting down host: %d.", dev.host()->koid());
+
+      // Unbind and Remove all the devices in the Driver Host.
+      ScheduleUnbindRemoveAllDevices(dev.host());
+    }
+  }
+
   completer.ReplySuccess();
+}
+
+void Coordinator::ScheduleUnbindRemoveAllDevices(const fbl::RefPtr<DriverHost> driver_host) {
+  for (auto& dev: driver_host->devices()) {
+    // This will also call on all the children of the device.
+    dev.CreateUnbindRemoveTasks(
+      UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .driver_host_requested = false});
+  }
 }
