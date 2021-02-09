@@ -698,8 +698,8 @@ zx_status_t UsbPeripheral::DeviceStateChanged() {
 }
 
 zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
-                                                  const void* write_buffer, size_t write_size,
-                                                  void* read_buffer, size_t read_size,
+                                                  const uint8_t* write_buffer, size_t write_size,
+                                                  uint8_t* read_buffer, size_t read_size,
                                                   size_t* out_read_actual) {
   uint8_t request_type = setup->bmRequestType;
   uint8_t direction = request_type & USB_DIR_MASK;

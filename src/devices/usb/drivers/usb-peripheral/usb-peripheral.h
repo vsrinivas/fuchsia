@@ -107,8 +107,8 @@ class UsbPeripheral : public UsbPeripheralType,
   void DdkRelease();
 
   // UsbDciInterface implementation.
-  zx_status_t UsbDciInterfaceControl(const usb_setup_t* setup, const void* write_buffer,
-                                     size_t write_size, void* out_read_buffer, size_t read_size,
+  zx_status_t UsbDciInterfaceControl(const usb_setup_t* setup, const uint8_t* write_buffer,
+                                     size_t write_size, uint8_t* out_read_buffer, size_t read_size,
                                      size_t* out_read_actual);
   void UsbDciInterfaceSetConnected(bool connected);
   void UsbDciInterfaceSetSpeed(usb_speed_t speed);

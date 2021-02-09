@@ -195,9 +195,11 @@ void UsbVirtualBus::HandleControl(Request request) {
     }
 
     if ((setup->bmRequestType & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
-      status = dci_intf_.Control(setup, nullptr, 0, buffer, length, &actual);
+      status =
+          dci_intf_.Control(setup, nullptr, 0, reinterpret_cast<uint8_t*>(buffer), length, &actual);
     } else {
-      status = dci_intf_.Control(setup, buffer, length, nullptr, 0, nullptr);
+      status =
+          dci_intf_.Control(setup, reinterpret_cast<uint8_t*>(buffer), length, nullptr, 0, nullptr);
     }
   } else {
     status = ZX_ERR_UNAVAILABLE;

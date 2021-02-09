@@ -300,7 +300,8 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
     if (length == 0) {
       status = dci_intf_->Control(setup, nullptr, 0, nullptr, 0, out_actual);
     } else if (is_in) {
-      status = dci_intf_->Control(setup, nullptr, 0, buffer, length, out_actual);
+      status = dci_intf_->Control(setup, nullptr, 0, reinterpret_cast<uint8_t*>(buffer), length,
+                                  out_actual);
     } else {
       status = ZX_ERR_NOT_SUPPORTED;
     }

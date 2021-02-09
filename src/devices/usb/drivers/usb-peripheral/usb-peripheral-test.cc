@@ -193,7 +193,8 @@ TEST_F(UsbPeripheralHarness, AddsCorrectSerialNumberMetadata) {
   setup.bmRequestType = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_STANDARD;
   setup.bRequest = USB_REQ_GET_DESCRIPTOR;
   size_t actual;
-  ASSERT_OK(client_.Control(&setup, nullptr, 0, &serial, sizeof(serial), &actual));
+  ASSERT_OK(client_.Control(&setup, nullptr, 0, reinterpret_cast<uint8_t*>(&serial), sizeof(serial),
+                            &actual));
   ASSERT_EQ(serial[0], sizeof(kSerialNumber) * 2);
   ASSERT_EQ(serial[1], USB_DT_STRING);
   for (size_t i = 0; i < sizeof(kSerialNumber) - 1; i++) {
@@ -210,7 +211,8 @@ TEST_F(UsbPeripheralHarness, WorksWithVendorSpecificCommandWhenConfigurationIsZe
   setup.bmRequestType = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_VENDOR;
   setup.bRequest = USB_REQ_GET_DESCRIPTOR;
   size_t actual;
-  ASSERT_EQ(client_.Control(&setup, nullptr, 0, &serial, sizeof(serial), &actual),
+  ASSERT_EQ(client_.Control(&setup, nullptr, 0, reinterpret_cast<uint8_t*>(&serial), sizeof(serial),
+                            &actual),
             ZX_ERR_BAD_STATE);
   DestroyDevices(root_device_.get());
 }

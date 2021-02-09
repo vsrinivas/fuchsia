@@ -35,8 +35,8 @@ protocol UsbDci {
 [BanjoLayout = "ddk-interface"]
 protocol UsbDciInterface {
     /// Callback for handling ep0 control requests.
-    Control(zircon.hw.usb.UsbSetup setup, vector<voidptr> write) -> (zx.status status,
-                                                                     vector<voidptr> read);
+    Control(zircon.hw.usb.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
+                                                                     [Buffer] vector<uint8> read);
     /// Notifies change in USB connected state.
     SetConnected(bool connected) -> ();
     /// Notifies current USB speed..

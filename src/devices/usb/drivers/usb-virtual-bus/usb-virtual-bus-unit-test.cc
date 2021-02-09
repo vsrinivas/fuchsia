@@ -40,8 +40,8 @@ class FakeDci : public ddk::UsbDciInterfaceProtocol<FakeDci> {
 
   // UsbDciInterface implementation.
   // This will block until the test calls |CompleteControlRequest|.
-  zx_status_t UsbDciInterfaceControl(const usb_setup_t* setup, const void* write_buffer,
-                                     size_t write_size, void* out_read_buffer, size_t read_size,
+  zx_status_t UsbDciInterfaceControl(const usb_setup_t* setup, const uint8_t* write_buffer,
+                                     size_t write_size, uint8_t* out_read_buffer, size_t read_size,
                                      size_t* out_read_actual) {
     sync_completion_signal(&control_start_sync_);
     sync_completion_wait(&control_complete_sync_, ZX_TIME_INFINITE);
