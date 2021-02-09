@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/iterator/allocated-node-iterator.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -15,7 +16,9 @@
 namespace blobfs {
 
 AllocatedNodeIterator::AllocatedNodeIterator(NodeFinder* finder, Inode* inode)
-    : finder_(finder), inode_(inode) {}
+    : finder_(finder), inode_(inode) {
+  ZX_ASSERT(finder_ && inode_);
+}
 
 bool AllocatedNodeIterator::Done() const {
   return extent_index_ + NodeExtentCount() >= inode_->extent_count;
@@ -26,6 +29,10 @@ zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
 
   auto next_node = finder_->GetNode(NextNodeIndex());
   if (next_node.is_error()) {
+    FX_LOGS(ERROR) << "GetNode(" << NextNodeIndex() << ") failed: " << next_node.status_value();
+    if (inode_) {
+      FX_LOGS(ERROR) << "Inode: " << *inode_;
+    }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   ExtentContainer* next = next_node->AsExtentContainer();
@@ -33,6 +40,7 @@ zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
   ZX_DEBUG_ASSERT(next != nullptr);
   bool is_container = next->header.IsAllocated() && next->header.IsExtentContainer();
   if (!is_container) {
+    FX_LOGS(ERROR) << "Next node " << NextNodeIndex() << " invalid: " << *next;
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   extent_index_ += NodeExtentCount();
