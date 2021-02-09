@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 hwreg_asm_header("test-header") {
@@ -18,14 +18,9 @@ test("hwreg-asm-header-test") {
   deps = [ ":test-header" ]
 }
 
-test_package("hwreg-asm-header-test-package") {
-  deps = [ ":hwreg-asm-header-test" ]
+fuchsia_unittest_package("hwreg-asm-header-test-package") {
   package_name = "hwreg-asm-header-test"
-  tests = [
-    {
-      name = "hwreg-asm-header-test"
-    },
-  ]
+  deps = [ ":hwreg-asm-header-test" ]
 }
 
 group("tests") {
