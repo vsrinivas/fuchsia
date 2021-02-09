@@ -79,21 +79,21 @@ class FakeSerialImpl : public ddk::SerialImplAsyncProtocol<FakeSerialImpl, ddk::
       // Simply reset the state, no advanced state machine.
       set_state_and_notify(0);
     }
-    callback(cookie, ZX_OK, buf, out_actual);
+    callback(cookie, ZX_OK, reinterpret_cast<uint8_t*>(buf), out_actual);
   }
 
   void SerialImplAsyncCancelAll() {
     // Not needed for this test driver
   }
 
-  void SerialImplAsyncWriteAsync(const void* buf_buffer, size_t buf_size,
+  void SerialImplAsyncWriteAsync(const uint8_t* buf_buffer, size_t buf_size,
                                  serial_impl_async_write_async_callback callback, void* cookie) {
     if (!(state_ & SERIAL_STATE_WRITABLE)) {
       callback(cookie, ZX_ERR_SHOULD_WAIT);
       return;
     }
 
-    const char* buffer = static_cast<const char*>(buf_buffer);
+    const char* buffer = reinterpret_cast<const char*>(buf_buffer);
     size_t i;
 
     for (i = 0; i < kBufferLength; ++i) {

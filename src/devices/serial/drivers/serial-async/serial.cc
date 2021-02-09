@@ -42,7 +42,7 @@ void SerialDevice::Read(ReadCompleter::Sync& completer) {
   }
   read_completer_ = completer.ToAsync();
   serial_.ReadAsync(
-      [](void* ctx, zx_status_t status, const void* buffer, size_t length) {
+      [](void* ctx, zx_status_t status, const uint8_t* buffer, size_t length) {
         if (status) {
           auto completer = std::move(static_cast<SerialDevice*>(ctx)->read_completer_);
           static_cast<SerialDevice*>(ctx)->read_completer_.reset();

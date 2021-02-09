@@ -48,7 +48,7 @@ class AmlUart : public DeviceType,
   zx_status_t SerialImplAsyncEnable(bool enable);
   void SerialImplAsyncCancelAll();
   void SerialImplAsyncReadAsync(serial_impl_async_read_async_callback callback, void* cookie);
-  void SerialImplAsyncWriteAsync(const void* buf_buffer, size_t buf_size,
+  void SerialImplAsyncWriteAsync(const uint8_t* buf_buffer, size_t buf_size,
                                  serial_impl_async_write_async_callback callback, void* cookie);
 
   zx_status_t Init();

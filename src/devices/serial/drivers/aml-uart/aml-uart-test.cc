@@ -301,7 +301,7 @@ TEST_F(AmlUartHarness, SerialImplReadAsync) {
   for (size_t i = 0; i < kDataLen; i++) {
     context.data[i] = static_cast<uint8_t>(i);
   }
-  auto cb = [](void* ctx, zx_status_t status, const void* buffer, size_t bufsz) {
+  auto cb = [](void* ctx, zx_status_t status, const uint8_t* buffer, size_t bufsz) {
     auto context = static_cast<Context*>(ctx);
     EXPECT_EQ(bufsz, kDataLen);
     EXPECT_EQ(memcmp(buffer, context->data, bufsz), 0);
@@ -362,7 +362,7 @@ TEST_F(AmlUartHarness, SerialImplAsyncReadDoubleCallback) {
   for (size_t i = 0; i < kDataLen; i++) {
     context.data[i] = static_cast<uint8_t>(i);
   }
-  auto cb = [](void* ctx, zx_status_t status, const void* buffer, size_t bufsz) {
+  auto cb = [](void* ctx, zx_status_t status, const uint8_t* buffer, size_t bufsz) {
     auto context = static_cast<Context*>(ctx);
     EXPECT_EQ(bufsz, kDataLen);
     EXPECT_EQ(memcmp(buffer, context->data, bufsz), 0);

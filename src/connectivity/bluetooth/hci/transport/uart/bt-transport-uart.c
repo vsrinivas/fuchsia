@@ -370,7 +370,7 @@ static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t l
   hci->cur_uart_packet_type = packet_type;
 }
 
-static void hci_read_complete(void* context, zx_status_t status, const void* buffer,
+static void hci_read_complete(void* context, zx_status_t status, const uint8_t* buffer,
                               size_t length) {
   hci_t* hci = context;
 

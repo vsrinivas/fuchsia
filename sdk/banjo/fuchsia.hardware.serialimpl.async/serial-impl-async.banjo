@@ -24,13 +24,13 @@ protocol SerialImplAsync {
     /// if the write completes immediately.
     /// ZX_ERR_NOT_SUPPORTED will be returned if a read is already pending.
     [Async]
-    ReadAsync() -> (zx.status s, vector<voidptr> buf);
+    ReadAsync() -> (zx.status s, [Buffer] vector<uint8> buf);
     /// Queues a packet for transmission. It is an error to queue
     /// more than one transmit at a time. The callback will be invoked
     /// on the interrupt thread, or the calling thread if data is available.
     /// ZX_ERR_NOT_SUPPORTED will be returned if a write is already pending.
     [Async]
-    WriteAsync(vector<voidptr> buf) -> (zx.status s);
+    WriteAsync([Buffer] vector<uint8> buf) -> (zx.status s);
     /// Immediately cancels all outstanding asynchronous I/O
     CancelAll() -> ();
 };

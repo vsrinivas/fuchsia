@@ -14,9 +14,9 @@ extern "C" {
 void serial_write_complete(void* ptr, zx_status_t status);
 
 // defined in rust
-void serial_read_complete(void* ptr, zx_status_t status, const void* buffer, size_t length);
+void serial_read_complete(void* ptr, zx_status_t status, const uint8_t* buffer, size_t length);
 
-void serial_write_async(void* serial, const void* buffer, size_t length, void* ptr) {
+void serial_write_async(void* serial, const uint8_t* buffer, size_t length, void* ptr) {
   serial_impl_async_write_async((serial_impl_async_protocol_t*)serial, buffer, length,
                                 serial_write_complete, ptr);
 }

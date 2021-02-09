@@ -407,7 +407,7 @@ fit::closure AmlUart::MakeReadCallbackLocked(zx_status_t status, void* buf, size
     return []() {};
   }
   auto callback = [cb = read_callback_, cookie = read_cookie_, status, buf, len]() {
-    cb(cookie, status, buf, len);
+    cb(cookie, status, reinterpret_cast<uint8_t*>(buf), len);
   };
   read_callback_ = nullptr;
   read_cookie_ = nullptr;
@@ -424,7 +424,7 @@ fit::closure AmlUart::MakeWriteCallbackLocked(zx_status_t status) {
   return callback;
 }
 
-void AmlUart::SerialImplAsyncWriteAsync(const void* buf, size_t length,
+void AmlUart::SerialImplAsyncWriteAsync(const uint8_t* buf, size_t length,
                                         serial_impl_async_write_async_callback callback,
                                         void* cookie) {
   fbl::AutoLock lock(&write_lock_);
@@ -433,7 +433,7 @@ void AmlUart::SerialImplAsyncWriteAsync(const void* buf, size_t length,
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
-  write_buffer_ = static_cast<const uint8_t*>(buf);
+  write_buffer_ = buf;
   write_size_ = length;
   write_callback_ = callback;
   write_cookie_ = cookie;
