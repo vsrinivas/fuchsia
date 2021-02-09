@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -48,12 +48,7 @@ test("procfs_cpp_unittests") {
   ]
 }
 
-test_package("procfs-cpp-tests") {
+fuchsia_unittest_package("procfs-cpp-tests") {
   deps = [ ":procfs_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "procfs_cpp_unittests"
-    },
-  ]
+  manifest = "meta/procfs_cpp_unittests.cmx"
 }

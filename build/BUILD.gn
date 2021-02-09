@@ -197,7 +197,6 @@ group("deprecated_package") {
     "//sdk/lib/media/cpp/*",
     "//sdk/lib/modular/cpp/*",
     "//sdk/lib/modular/testing/cpp/*",
-    "//sdk/lib/procfs/cpp/*",
     "//sdk/lib/svc/*",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner/*",
     "//sdk/lib/sys/cpp/testing/examples/*",
