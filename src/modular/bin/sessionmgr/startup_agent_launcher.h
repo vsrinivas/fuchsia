@@ -21,6 +21,7 @@
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {
 
@@ -28,6 +29,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
  public:
   // |context| is not owned and must outlive this instance.
   StartupAgentLauncher(
+      const ModularConfigAccessor* config_accessor,
       fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
       fidl::InterfaceRequestHandler<fuchsia::modular::SessionRestartController>
           session_restart_controller_connector,
@@ -90,6 +92,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
   fidl::InterfacePtr<fuchsia::intl::PropertyProvider> property_provider_;
 
+  const ModularConfigAccessor* config_accessor_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
       puppet_master_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::SessionRestartController>)>

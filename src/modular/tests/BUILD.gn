@@ -49,6 +49,26 @@ fuchsia_unittest_component("agent-services-test") {
   deps = [ ":agent_services_test" ]
 }
 
+executable("agent_restart_test") {
+  testonly = true
+
+  sources = [ "agent_restart_test.cc" ]
+
+  deps = [
+    ":fuchsia.testing.modular",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_component("agent-restart-test") {
+  manifest = "meta/agent_restart_test.cmx"
+  deps = [ ":agent_restart_test" ]
+}
+
 executable("agent_session_restart_test") {
   testonly = true
 
@@ -371,6 +391,7 @@ fuchsia_package_with_single_component("module_with_fake_runner") {
 
 fuchsia_test_package("modular_integration_tests") {
   test_components = [
+    ":agent-restart-test",
     ":agent-services-test",
     ":agent-session-restart-test",
     ":basemgr-test",

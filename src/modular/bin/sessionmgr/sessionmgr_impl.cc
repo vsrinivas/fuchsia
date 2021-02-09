@@ -224,6 +224,7 @@ void SessionmgrImpl::InitializeStartupAgentLauncher(
   FX_DCHECK(puppet_master_impl_);
 
   startup_agent_launcher_ = std::make_unique<StartupAgentLauncher>(
+      &config_accessor_,
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         puppet_master_impl_->Connect(std::move(request));
       },

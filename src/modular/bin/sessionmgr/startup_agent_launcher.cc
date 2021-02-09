@@ -40,6 +40,7 @@ void StartupAgentLauncher::SessionAgentData::ConnectOrQueueServiceRequest(
 }
 
 StartupAgentLauncher::StartupAgentLauncher(
+    const ModularConfigAccessor* config_accessor,
     fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
     fidl::InterfaceRequestHandler<fuchsia::modular::SessionRestartController>
         session_restart_controller_connector,
@@ -47,7 +48,8 @@ StartupAgentLauncher::StartupAgentLauncher(
     fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
     fuchsia::sys::ServiceList additional_services_for_agents,
     fit::function<bool()> is_terminating_cb)
-    : puppet_master_connector_(std::move(puppet_master_connector)),
+    : config_accessor_(config_accessor),
+      puppet_master_connector_(std::move(puppet_master_connector)),
       session_restart_controller_connector_(std::move(session_restart_controller_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       element_manager_connector_(std::move(element_manager_connector)),
@@ -115,7 +117,10 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
   //
   // It is also because of this delay that we must queue any pending service
   // connection requests until we can restart.
-  agent_data->controller.set_error_handler([this, agent_runner, url](zx_status_t status) {
+  bool disable_agent_restarts =
+      config_accessor_->sessionmgr_config().disable_agent_restart_on_crash();
+  agent_data->controller.set_error_handler([this, agent_runner, url,
+                                            disable_agent_restarts](zx_status_t status) {
     auto it = session_agents_.find(url);
     FX_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
     if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
@@ -127,16 +132,25 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
     auto& agent_data = it->second;
     agent_data.services.Unbind();
     agent_data.controller.Unbind();
+
+    if (disable_agent_restarts) {
+      FX_LOGS(INFO) << "Not restarting " << url << " because agent restarts are disabled via "
+                    << "ModularConfig.sessionmgr_config.disable_agent_restarts_on_crash";
+      session_agents_.erase(it);
+      return;
+    }
+
     if (agent_data.restart.ShouldRetry()) {
       FX_LOGS(INFO) << "Restarting " << url << "...";
       StartSessionAgent(agent_runner, url);
-    } else {
-      FX_LOGS(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
-                       << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
-      // Erase so that incoming connection requests fail fast rather than
-      // enqueue forever.
-      session_agents_.erase(it);
+      return;
     }
+
+    FX_LOGS(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
+                     << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
+    // Erase so that incoming connection requests fail fast rather than
+    // enqueue forever.
+    session_agents_.erase(it);
   });
 }
 

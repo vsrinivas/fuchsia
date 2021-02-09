@@ -15,9 +15,6 @@
 
 namespace {
 
-const std::string kTestAgentUrl("fuchsia-pkg://fuchsia.com/fake_agent#meta/fake_agent.cmx");
-const std::string kTestServiceName(fuchsia::testing::modular::TestProtocol::Name_);
-
 class AgentSessionRestartTest : public modular_testing::TestHarnessFixture {
  protected:
   AgentSessionRestartTest() {}
@@ -32,7 +29,7 @@ class AgentSessionRestartTest : public modular_testing::TestHarnessFixture {
   }
 };
 
-// Test that an Agent can use the SessionRestartController protocol to restart the session.
+// Session agents are restarted on crash.
 TEST_F(AgentSessionRestartTest, AgentCanRestartSession) {
   auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
