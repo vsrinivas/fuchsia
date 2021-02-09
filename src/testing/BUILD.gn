@@ -17,6 +17,7 @@ group("tests") {
   deps = [
     "emulator:tests",
     "fuzzing:tests",
+    "host-target-testing:tests",
     "loadbench:tests",
     "sl4f:tests",
     "system-metrics-logger:tests",

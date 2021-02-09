@@ -11,13 +11,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/omaha"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/zbi"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/omaha"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/updater"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
 )
 
 type InstallerMode = string

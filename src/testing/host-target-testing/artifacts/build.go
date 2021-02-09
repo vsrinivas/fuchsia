@@ -15,11 +15,11 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/paver"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/zbi"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/paver"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/util"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 

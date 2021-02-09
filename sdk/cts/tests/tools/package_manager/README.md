@@ -20,7 +20,7 @@ Relevant code paths with unit and integration tests:
 ```
 //src/sys/pkg/tests/amberctl
 //src/sys/pkg/tests/pkgctl
-//src/sys/pkg/testing/host-target-testing/packages
+//src/testing/host-target-testing/packages
 ```
 
 ### What unique coverage does this E2E test provide?

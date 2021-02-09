@@ -10,9 +10,9 @@ import (
 	"os"
 	"os/exec"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/sl4f"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 

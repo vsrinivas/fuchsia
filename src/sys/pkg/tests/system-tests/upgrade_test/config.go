@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
 
 	systemTestConfig "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/config"
 )

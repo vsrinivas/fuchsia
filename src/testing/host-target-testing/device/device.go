@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/sl4f"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"

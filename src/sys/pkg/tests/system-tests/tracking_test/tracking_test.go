@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/pave"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/sl4f"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/updater"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/util"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
