@@ -20,12 +20,12 @@ namespace linux_runner {
 class LinuxComponent : public fuchsia::sys::ComponentController,
                        public fuchsia::ui::app::ViewProvider {
  public:
-  using TerminationCallback = fit::function<void(const LinuxComponent*)>;
+  using TerminationCallback = fit::function<void(uint32_t)>;
   static std::unique_ptr<LinuxComponent> Create(
       TerminationCallback termination_callback, fuchsia::sys::Package package,
       fuchsia::sys::StartupInfo startup_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      fuchsia::ui::app::ViewProviderPtr remote_view_provider);
+      fuchsia::ui::app::ViewProviderPtr remote_view_provider, uint32_t id);
 
   ~LinuxComponent();
 
@@ -36,11 +36,12 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   sys::OutgoingDirectory outgoing_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_bindings_;
   fuchsia::ui::app::ViewProviderPtr remote_view_provider_;
+  const uint32_t id_;
 
   LinuxComponent(TerminationCallback termination_callback, fuchsia::sys::Package package,
                  fuchsia::sys::StartupInfo startup_info,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-                 fuchsia::ui::app::ViewProviderPtr remote_view_provider);
+                 fuchsia::ui::app::ViewProviderPtr remote_view_provider, uint32_t id);
 
   // |fuchsia::sys::ComponentController|
   void Kill() override;

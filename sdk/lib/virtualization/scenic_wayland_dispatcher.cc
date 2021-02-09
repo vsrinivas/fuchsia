@@ -35,7 +35,12 @@ fuchsia::virtualization::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartB
     // channel along.
     services->Connect(dispatcher_.NewRequest());
     services->Connect(view_producer_.NewRequest());
-    view_producer_.events().OnNewView = fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
+    view_producer_.events().OnNewView =
+        fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView1);
+    view_producer_.events().OnNewView2 =
+        fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
+    view_producer_.events().OnShutdownView =
+        fit::bind_member(this, &ScenicWaylandDispatcher::OnShutdownView);
   }
 
   return dispatcher_.get();
@@ -51,10 +56,18 @@ void ScenicWaylandDispatcher::Reset(zx_status_t status) {
   }
 }
 
-void ScenicWaylandDispatcher::OnNewView(
+// Deprecated. TODO(reveman): Remove when no longer used.
+void ScenicWaylandDispatcher::OnNewView1(
     fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view) {
-  listener_(std::move(view));
+  listener_(std::move(view), 0);
 }
+
+void ScenicWaylandDispatcher::OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view,
+                                        uint32_t id) {
+  listener_(std::move(view), id);
+}
+
+void ScenicWaylandDispatcher::OnShutdownView(uint32_t id) { shutdown_listener_(id); }
 
 fuchsia::sys::LauncherPtr ScenicWaylandDispatcher::ConnectToLauncher() const {
   fuchsia::sys::LauncherPtr launcher;

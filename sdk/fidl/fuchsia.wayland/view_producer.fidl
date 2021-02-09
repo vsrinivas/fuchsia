@@ -9,5 +9,6 @@ using fuchsia.ui.app;
 [Discoverable]
 protocol ViewProducer {
     -> OnNewView(fuchsia.ui.app.ViewProvider view_provider);
+    -> OnNewView2(fuchsia.ui.app.ViewProvider view_provider, uint32 id);
+    -> OnShutdownView(uint32 id);
 };
-

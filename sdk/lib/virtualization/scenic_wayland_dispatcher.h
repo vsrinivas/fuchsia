@@ -19,10 +19,15 @@ namespace guest {
 // This class is not thread-safe.
 class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
  public:
-  using ViewListener = fit::function<void(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>)>;
+  using ViewListener =
+      fit::function<void(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>, uint32_t)>;
+  using ShutdownViewListener = fit::function<void(uint32_t)>;
 
-  ScenicWaylandDispatcher(sys::ComponentContext* context, ViewListener listener = nullptr)
-      : context_(context), listener_(std::move(listener)){};
+  explicit ScenicWaylandDispatcher(sys::ComponentContext* context, ViewListener listener = nullptr,
+                                   ShutdownViewListener shutdown_listener = nullptr)
+      : context_(context),
+        listener_(std::move(listener)),
+        shutdown_listener_(std::move(shutdown_listener)) {}
 
   // |fuchsia::virtualization::WaylandDispatcher|
   void OnNewConnection(zx::channel channel);
@@ -34,7 +39,9 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
  private:
   fuchsia::sys::LauncherPtr ConnectToLauncher() const;
 
-  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
+  void OnNewView1(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
+  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
+  void OnShutdownView(uint32_t id);
   void Reset(zx_status_t status);
 
   fuchsia::virtualization::WaylandDispatcher* GetOrStartBridge();
@@ -42,6 +49,7 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   sys::ComponentContext* context_;
 
   ViewListener listener_;
+  ShutdownViewListener shutdown_listener_;
   fidl::Binding<fuchsia::virtualization::WaylandDispatcher> bindings_{this};
   fuchsia::sys::ComponentControllerPtr bridge_;
   fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;

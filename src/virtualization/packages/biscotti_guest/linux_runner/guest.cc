@@ -133,7 +133,8 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config,
       executor_(async_),
       config_(config),
       guest_env_(std::move(env)),
-      wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView)) {
+      wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView),
+                          fit::bind_member(this, &Guest::OnShutdownView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   executor_.schedule_task(Start());
 }
@@ -718,11 +719,12 @@ void Guest::Launch(AppLaunchRequest request) {
   if (request.application.resolved_url == kLinuxUriScheme) {
     auto it = background_views_.begin();
     if (it == background_views_.end()) {
-      pending_views_.push_back(std::move(request));
+      dispatched_requests_.push_back(std::move(request));
       return;
     }
     FX_LOGS(INFO) << "Found background view";
-    CreateComponent(std::move(request), it->Bind());
+    uint32_t id = it->first;
+    CreateComponent(std::move(request), it->second.Bind(), id);
     background_views_.erase(it);
     return;
   }
@@ -763,32 +765,46 @@ void Guest::LaunchApplication(AppLaunchRequest app) {
   }
 
   FX_LOGS(INFO) << "Application launched successfully";
-  pending_views_.push_back(std::move(app));
+  dispatched_requests_.push_back(std::move(app));
 }
 
-void Guest::OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider) {
+void Guest::OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider,
+                      uint32_t id) {
   TRACE_DURATION("linux_runner", "Guest::OnNewView");
   // TODO: This currently just pops a component request off the queue to
   // associate with the new view. This is obviously racy but will work until
   // we can pipe though a startup id to provide a more accurate correlation.
-  auto it = pending_views_.begin();
-  if (it == pending_views_.end()) {
-    background_views_.push_back(std::move(view_provider));
+  auto it = dispatched_requests_.begin();
+  if (it == dispatched_requests_.end()) {
+    background_views_.push_back({id, std::move(view_provider)});
     return;
   }
-  CreateComponent(std::move(*it), std::move(view_provider));
-  pending_views_.erase(it);
+  CreateComponent(std::move(*it), std::move(view_provider), id);
+  dispatched_requests_.erase(it);
+}
+
+void Guest::OnShutdownView(uint32_t id) {
+  TRACE_DURATION("linux_runner", "Guest::OnShutdownView");
+  auto it = std::remove_if(background_views_.begin(), background_views_.end(),
+                           [id](const BackgroundView& view) { return view.first == id; });
+  if (it != background_views_.end()) {
+    background_views_.erase(it, background_views_.end());
+  } else {
+    OnComponentTerminated(id);
+  }
 }
 
 void Guest::CreateComponent(AppLaunchRequest request,
-                            fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider) {
+                            fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider,
+                            uint32_t id) {
   TRACE_DURATION("linux_runner", "Guest::CreateComponent");
-  auto component = LinuxComponent::Create(
-      fit::bind_member(this, &Guest::OnComponentTerminated), std::move(request.application),
-      std::move(request.startup_info), std::move(request.controller_request), view_provider.Bind());
-  components_.insert({component.get(), std::move(component)});
+  auto component =
+      LinuxComponent::Create(fit::bind_member(this, &Guest::OnComponentTerminated),
+                             std::move(request.application), std::move(request.startup_info),
+                             std::move(request.controller_request), view_provider.Bind(), id);
+  components_.insert({id, std::move(component)});
 }
 
-void Guest::OnComponentTerminated(const LinuxComponent* component) { components_.erase(component); }
+void Guest::OnComponentTerminated(uint32_t id) { components_.erase(id); }
 
 }  // namespace linux_runner

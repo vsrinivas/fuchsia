@@ -15,21 +15,22 @@ std::unique_ptr<LinuxComponent> LinuxComponent::Create(
     TerminationCallback termination_callback, fuchsia::sys::Package package,
     fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-    fuchsia::ui::app::ViewProviderPtr remote_view_provider) {
+    fuchsia::ui::app::ViewProviderPtr remote_view_provider, uint32_t id) {
   FX_DCHECK(remote_view_provider) << "Missing remote_view_provider";
   return std::unique_ptr<LinuxComponent>(new LinuxComponent(
       std::move(termination_callback), std::move(package), std::move(startup_info),
-      std::move(controller), std::move(remote_view_provider)));
+      std::move(controller), std::move(remote_view_provider), id));
 }
 
 LinuxComponent::LinuxComponent(
     TerminationCallback termination_callback, fuchsia::sys::Package package,
     fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> application_controller_request,
-    fuchsia::ui::app::ViewProviderPtr remote_view_provider)
+    fuchsia::ui::app::ViewProviderPtr remote_view_provider, uint32_t id)
     : termination_callback_(std::move(termination_callback)),
       application_controller_(this),
-      remote_view_provider_(std::move(remote_view_provider)) {
+      remote_view_provider_(std::move(remote_view_provider)),
+      id_(id) {
   application_controller_.set_error_handler([this](zx_status_t status) { Kill(); });
 
   auto& launch_info = startup_info.launch_info;
@@ -45,7 +46,7 @@ LinuxComponent::~LinuxComponent() = default;
 void LinuxComponent::Kill() {
   application_controller_.events().OnTerminated(0, fuchsia::sys::TerminationReason::EXITED);
 
-  termination_callback_(this);
+  termination_callback_(id_);
   // WARNING: Don't do anything past this point as this instance may have been
   // collected.
 }

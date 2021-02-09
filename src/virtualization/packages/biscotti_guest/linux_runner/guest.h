@@ -132,10 +132,11 @@ class Guest : public vm_tools::StartupListener::Service,
                                vm_tools::EmptyMessage* response) override;
 
   void LaunchApplication(AppLaunchRequest request);
-  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
+  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
+  void OnShutdownView(uint32_t id);
   void CreateComponent(AppLaunchRequest request,
-                       fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
-  void OnComponentTerminated(const LinuxComponent* component);
+                       fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
+  void OnComponentTerminated(uint32_t id);
 
   async_dispatcher_t* async_;
   async::Executor executor_;
@@ -155,11 +156,12 @@ class Guest : public vm_tools::StartupListener::Service,
   std::deque<AppLaunchRequest> pending_requests_;
   // Requests that have been dispatched to the container, but have not yet been
   // associated with a wayland ViewProvider.
-  std::deque<AppLaunchRequest> pending_views_;
+  std::deque<AppLaunchRequest> dispatched_requests_;
   // Views launched in the background (ex: not using garcon). These can be
   // returned by requesting a null app URI (linux://).
-  std::deque<fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>> background_views_;
-  std::unordered_map<const LinuxComponent*, std::unique_ptr<LinuxComponent>> components_;
+  using BackgroundView = std::pair<uint32_t, fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>;
+  std::deque<BackgroundView> background_views_;
+  std::unordered_map<uint32_t, std::unique_ptr<LinuxComponent>> components_;
 
   // A flow ID used to track the time from the time the VM is created until
   // the time the guest has reported itself as ready via the VmReady RPC in the
