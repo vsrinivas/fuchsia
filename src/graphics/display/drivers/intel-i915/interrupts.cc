@@ -158,7 +158,7 @@ zx_status_t Interrupts::SetInterruptCallback(const zx_intel_gpu_core_interrupt_t
   return ZX_OK;
 }
 
-zx_status_t Interrupts::Init() {
+zx_status_t Interrupts::Init(bool start_thread) {
   ddk::MmioBuffer* mmio_space = controller_->mmio_space();
 
   // Disable interrupts here, re-enable them in ::FinishInit()
@@ -166,28 +166,27 @@ zx_status_t Interrupts::Init() {
   interrupt_ctrl.set_enable_mask(0);
   interrupt_ctrl.WriteTo(mmio_space);
 
-  uint32_t irq_cnt = 0;
-  zx_status_t status = pci_query_irq_mode(controller_->pci(), ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
-  if (status != ZX_OK || !irq_cnt) {
-    zxlogf(ERROR, "Failed to find interrupts (%d %d)", status, irq_cnt);
+  ddk::PciProtocolClient pci(controller_->pci());
+
+  // Assume that PCI will enable bus mastering as required for MSI interrupts.
+  zx_status_t status = pci.ConfigureIrqMode(1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to configure irq mode (%d)", status);
     return ZX_ERR_INTERNAL;
   }
 
-  if ((status = pci_set_irq_mode(controller_->pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
-    zxlogf(ERROR, "Failed to set irq mode (%d)", status);
-    return status;
-  }
-
-  if ((status = pci_map_interrupt(controller_->pci(), 0, irq_.reset_and_get_address()) != ZX_OK)) {
+  if ((status = pci.MapInterrupt(0, &irq_) != ZX_OK)) {
     zxlogf(ERROR, "Failed to map interrupt (%d)", status);
     return status;
   }
 
-  status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to create irq thread");
-    irq_.reset();
-    return status;
+  if (start_thread) {
+    status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to create irq thread");
+      irq_.reset();
+      return status;
+    }
   }
 
   Resume();

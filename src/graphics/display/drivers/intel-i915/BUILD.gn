@@ -64,7 +64,10 @@ test("intel-i915-test") {
     "//build/unification/config:zircon-migrated",
     "//build/config:all_source",
   ]
-  sources = [ "intel-i915-test.cc" ]
+  sources = [
+    "intel-i915-test-interrupts.cc",
+    "intel-i915-test.cc",
+  ]
   deps = [
     ":common_srcs",
     "//src/devices/sysmem/testing/mock-sysmem",

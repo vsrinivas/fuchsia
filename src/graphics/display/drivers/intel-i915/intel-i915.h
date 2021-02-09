@@ -160,6 +160,7 @@ class Controller : public DeviceType,
   const dpll_state_t* GetDpllState(registers::Dpll dpll);
 
   void SetMmioForTesting(ddk::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
+  void SetPciForTesting(pci_protocol_t pci) { pci_ = pci; }
 
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
 

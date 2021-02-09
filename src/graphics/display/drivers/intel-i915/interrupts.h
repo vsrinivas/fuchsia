@@ -6,7 +6,8 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTERRUPTS_H_
 
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
-#include <lib/zx/handle.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -23,7 +24,7 @@ class Interrupts {
   Interrupts(Controller* controller);
   ~Interrupts();
 
-  zx_status_t Init();
+  zx_status_t Init(bool start_thread = true);
   void FinishInit();
   void Resume();
   void Destroy();
@@ -43,7 +44,7 @@ class Interrupts {
   mtx_t lock_;
 
   // Initialized by |Init|.
-  zx::handle irq_;
+  zx::interrupt irq_;
   thrd_t irq_thread_;  // Valid while irq_ is valid.
 
   zx_intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
