@@ -38,6 +38,8 @@ bool FakeDdkSysmem::Init() {
   };
   ddk_.SetMetadata(&metadata, sizeof(metadata));
 
+  pdev_.UseFakeBti();
+
   fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
   protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
   protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};

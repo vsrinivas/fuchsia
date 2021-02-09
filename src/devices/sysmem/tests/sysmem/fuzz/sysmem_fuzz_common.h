@@ -8,12 +8,12 @@
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 
-#include <src/devices/sysmem/drivers/sysmem/device.h>
-#include <src/devices/sysmem/drivers/sysmem/driver.h>
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
+#include "src/devices/sysmem/drivers/sysmem/device.h"
+#include "src/devices/sysmem/drivers/sysmem/driver.h"
 
 using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
                                                llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
@@ -50,34 +50,6 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   pbus_protocol_t proto_;
 };
 
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
- public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
-
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
-    return fake_bti_create(out_bti->reset_and_get_address());
-  }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
- private:
-  pdev_protocol_t proto_;
-};
-
 class FakeDdkSysmem {
  public:
   ~FakeDdkSysmem();
@@ -91,7 +63,7 @@ class FakeDdkSysmem {
   sysmem_driver::Device sysmem_{fake_ddk::kFakeParent, &sysmem_ctx_};
 
   FakePBus pbus_;
-  FakePDev pdev_;
+  fake_pdev::FakePDev pdev_;
   // ddk must be destroyed before sysmem because it may be executing messages against sysmem on
   // another thread.
   fake_ddk::Bind ddk_;

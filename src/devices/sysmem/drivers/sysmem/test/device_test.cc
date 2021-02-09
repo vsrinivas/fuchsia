@@ -9,7 +9,6 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
@@ -23,6 +22,7 @@
 #include "../device.h"
 #include "../driver.h"
 #include "../logical_buffer_collection.h"
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
 namespace sysmem_driver {
 namespace {
@@ -58,34 +58,6 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
  private:
   pbus_protocol_t proto_;
   uint32_t registered_proto_id_ = 0;
-};
-
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
- public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
-
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
-    return fake_bti_create(out_bti->reset_and_get_address());
-  }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
- private:
-  pdev_protocol_t proto_;
 };
 
 TEST(Device, OverrideCommandLine) {
@@ -138,6 +110,7 @@ TEST(Device, OverrideCommandLine) {
 class FakeDdkSysmem : public zxtest::Test {
  public:
   void SetUp() override {
+    pdev_.UseFakeBti();
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
     protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
     ddk_.SetProtocols(std::move(protocols));
@@ -170,7 +143,7 @@ class FakeDdkSysmem : public zxtest::Test {
   sysmem_driver::Driver sysmem_ctx_;
   sysmem_driver::Device sysmem_{fake_ddk::kFakeParent, &sysmem_ctx_};
 
-  FakePDev pdev_;
+  fake_pdev::FakePDev pdev_;
   // ddk must be destroyed before sysmem because it may be executing messages against sysmem on
   // another thread.
   fake_ddk::Bind ddk_;
@@ -179,6 +152,7 @@ class FakeDdkSysmem : public zxtest::Test {
 class FakeDdkSysmemPbus : public FakeDdkSysmem {
  public:
   void SetUp() override {
+    pdev_.UseFakeBti();
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
     protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
     protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
