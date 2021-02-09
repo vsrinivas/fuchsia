@@ -17,6 +17,7 @@ zx_library("stdcompat") {
   sdk_publishable = true
   sdk_headers = [
     "lib/stdcompat/bit.h",
+    "lib/stdcompat/iterator.h",
     "lib/stdcompat/memory.h",
     "lib/stdcompat/optional.h",
     "lib/stdcompat/source_location.h",

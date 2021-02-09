@@ -5,6 +5,7 @@
   "pkg/stdcompat/include/lib/stdcompat/internal/exception.h": "36e3245793a2229c969370af46d7f692",
   "pkg/stdcompat/include/lib/stdcompat/internal/storage.h": "49ddf504b1b4a507bb845b56e2a8057f",
   "pkg/stdcompat/include/lib/stdcompat/internal/utility.h": "ee663b83ac9c07383027e9b6e947fab4",
+  "pkg/stdcompat/include/lib/stdcompat/iterator.h": "ac26332107319318ed440452fcb1309f",
   "pkg/stdcompat/include/lib/stdcompat/memory.h": "50b4b57209ddb5ed9d7ebebc04203c3c",
   "pkg/stdcompat/include/lib/stdcompat/optional.h": "6eabd20f0d9121b2d2e8263fa90b800b",
   "pkg/stdcompat/include/lib/stdcompat/source_location.h": "b9d7911760e33ad247dcf2424eef9595",
