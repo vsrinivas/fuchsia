@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -65,7 +65,7 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
     Ok(())
 }
 
-fn build_decl() -> fsys::ComponentDecl {
+fn build_decl() -> fmem::Data {
     let mut component_decl = fsys::ComponentDecl::EMPTY;
     component_decl.program = Some(fsys::ProgramDecl {
         info: Some(fdata::Dictionary {
@@ -95,7 +95,7 @@ fn build_decl() -> fsys::ComponentDecl {
         target_name: Some("fidl.test.components.Trigger".to_string()),
         ..fsys::ExposeProtocolDecl::EMPTY
     })]);
-    component_decl
+    fmem::Data::Bytes(fidl::encoding::encode_persistent(&mut component_decl).expect("encoded"))
 }
 
 #[fasync::run_singlethreaded]

@@ -11,7 +11,7 @@ use {
             environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
             policy::ScopedPolicyChecker,
-            resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
+            resolver::{ResolvedComponent, Resolver, ResolverError, ResolverFut, ResolverRegistry},
             runner::{Runner, RunnerError},
         },
     },
@@ -144,7 +144,10 @@ impl MockResolver {
         MockResolver { components: HashMap::new() }
     }
 
-    async fn resolve_async(&self, component_url: String) -> Result<fsys::Component, ResolverError> {
+    async fn resolve_async(
+        &self,
+        component_url: String,
+    ) -> Result<ResolvedComponent, ResolverError> {
         const NAME_PREFIX: &str = "test:///";
         debug_assert!(component_url.starts_with(NAME_PREFIX), "invalid component url");
         let (_, name) = component_url.split_at(NAME_PREFIX.len());
@@ -154,11 +157,10 @@ impl MockResolver {
         ))?;
         let fsys_decl =
             fsys::ComponentDecl::try_from(decl.clone()).expect("decl failed conversion");
-        Ok(fsys::Component {
-            resolved_url: Some(format!("test:///{}_resolved", name)),
-            decl: Some(fsys_decl),
+        Ok(ResolvedComponent {
+            resolved_url: format!("test:///{}_resolved", name),
+            decl: fsys_decl,
             package: None,
-            ..fsys::Component::EMPTY
         })
     }
 

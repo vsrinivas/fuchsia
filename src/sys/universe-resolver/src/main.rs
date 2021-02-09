@@ -6,6 +6,7 @@ use {
     anyhow::{self, Context},
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_mem as fmem,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy, UpdatePolicy},
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_async as fasync,
@@ -73,15 +74,23 @@ async fn resolve_component(
     let cm_file = io_util::directory::open_file(&package_dir, cm_path, fio::OPEN_RIGHT_READABLE)
         .await
         .map_err(ResolverError::ComponentNotFound)?;
-    let component_decl =
-        io_util::file::read_fidl(&cm_file).await.map_err(ResolverError::InvalidManifest)?;
+
+    let (status, buffer) =
+        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
+    Status::ok(status).map_err(ResolverError::VmoFailure)?;
+    let data = match buffer {
+        Some(buffer) => fmem::Data::Buffer(*buffer),
+        None => fmem::Data::Bytes(
+            io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
+        ),
+    };
 
     let package_dir = ClientEnd::new(
         package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
     Ok(fsys::Component {
         resolved_url: Some(component_url.into()),
-        decl: Some(component_decl),
+        decl: Some(data),
         package: Some(fsys::Package {
             package_url: Some(package_url.root_url().to_string()),
             package_dir: Some(package_dir),
@@ -118,24 +127,30 @@ async fn resolve_package(
 enum ResolverError {
     #[error("invalid component URL: {}", .0)]
     InvalidUrl(#[from] PkgUrlParseError),
-    #[error("invalid component manifest: {}", .0)]
-    InvalidManifest(#[source] anyhow::Error),
     #[error("component not found: {}", .0)]
     ComponentNotFound(#[source] io_util::node::OpenError),
     #[error("failed to communicate with package resolver: {}", .0)]
     PackageResolverFidlError(#[source] fidl::Error),
     #[error("package resolver returned an error: {}", .0)]
     PackageResolverError(#[source] Status),
+    #[error("read manifest error: {}", .0)]
+    ReadManifest(#[source] io_util::file::ReadError),
+    #[error("IO error: {}", .0)]
+    IOError(#[source] fidl::Error),
+    #[error("failed to get manifest VMO: {}", .0)]
+    VmoFailure(#[source] Status),
 }
 
 impl ResolverError {
     fn as_zx_status(&self) -> i32 {
         match self {
             Self::InvalidUrl(_) => Status::INVALID_ARGS.into_raw(),
-            Self::InvalidManifest(_) => Status::IO_INVALID.into_raw(),
             Self::ComponentNotFound(_) => Status::NOT_FOUND.into_raw(),
             Self::PackageResolverFidlError(_) => Status::INTERNAL.into_raw(),
             Self::PackageResolverError(s) => s.into_raw(),
+            Self::ReadManifest(_) => Status::IO.into_raw(),
+            Self::IOError(_) => Status::IO.into_raw(),
+            Self::VmoFailure(s) => s.into_raw(),
         }
     }
 }
@@ -146,11 +161,15 @@ mod tests {
         super::*,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
         fidl_fuchsia_pkg::PackageResolverRequest,
+        fuchsia_zircon::Vmo,
         futures::join,
         matches::assert_matches,
         vfs::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static, path::Path, pseudo_directory,
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            file::{pcb::asynchronous::read_only_static, vmo::asynchronous::NewVmo},
+            path::Path,
+            pseudo_directory,
         },
     };
 
@@ -264,7 +283,7 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Ok(_)
+                Ok(fsys::Component { decl: Some(fmem::Data::Bytes(_)), .. })
             );
         };
         join!(server, client);
@@ -320,13 +339,19 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn resolve_component_fails_with_bad_manifest() {
+    async fn resolve_component_succeeds_with_vmo_manifest() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let server = async move {
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
-                    "test.cm" => read_only_static(b"foo"),
+                    "test.cm" => vfs::file::vmo::read_only(|| async move {
+                        let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::EMPTY.clone())
+                            .expect("failed to encode ComponentDecl FIDL");
+                        let capacity = cm_bytes.len() as u64;
+                        let vmo = Vmo::create(capacity)?;
+                        Ok(NewVmo { vmo, size: capacity, capacity })
+                    }),
                 },
             };
             while let Some(request) = server.try_next().await.unwrap() {
@@ -348,7 +373,7 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Err(ResolverError::InvalidManifest(_))
+                Ok(fsys::Component { decl: Some(fmem::Data::Buffer(_)), .. })
             );
         };
         join!(server, client);

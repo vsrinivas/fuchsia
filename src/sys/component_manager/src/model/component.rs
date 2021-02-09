@@ -19,6 +19,7 @@ use {
             exposed_dir::ExposedDir,
             hooks::{Event, EventPayload, Hooks},
             namespace::IncomingNamespace,
+            resolver::ResolvedComponent,
             routing::{self, RoutingError},
             runner::{NullRunner, RemoteRunner, Runner},
         },
@@ -121,19 +122,14 @@ pub struct Package {
     pub package_dir: Arc<DirectoryProxy>,
 }
 
-impl TryFrom<fsys::Component> for Component {
+impl TryFrom<ResolvedComponent> for Component {
     type Error = ModelError;
 
-    fn try_from(component: fsys::Component) -> Result<Self, Self::Error> {
-        let decl = component.decl.as_ref().ok_or(ModelError::ComponentInvalid)?.clone();
+    fn try_from(component: ResolvedComponent) -> Result<Self, Self::Error> {
         let decl: cm_rust::ComponentDecl =
-            decl.try_into().map_err(|_| ModelError::ComponentInvalid)?;
+            component.decl.try_into().map_err(|_| ModelError::ComponentInvalid)?;
         let package = component.package.map(|p| p.try_into()).transpose()?;
-        Ok(Self {
-            resolved_url: component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
-            decl,
-            package,
-        })
+        Ok(Self { resolved_url: component.resolved_url, decl, package })
     }
 }
 

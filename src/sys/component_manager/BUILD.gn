@@ -23,6 +23,7 @@ template("component_manager") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

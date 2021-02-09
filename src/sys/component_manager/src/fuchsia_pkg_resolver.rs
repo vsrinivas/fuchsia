@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::resolver::{Resolver, ResolverError, ResolverFut},
+    crate::model::resolver::{ResolvedComponent, Resolver, ResolverError, ResolverFut},
     anyhow::format_err,
     cm_fidl_validator,
     fidl::endpoints::{ClientEnd, Proxy},
@@ -36,7 +36,7 @@ impl FuchsiaPkgResolver {
     async fn resolve_async<'a>(
         &'a self,
         component_url: &'a str,
-    ) -> Result<fsys::Component, ResolverError> {
+    ) -> Result<ResolvedComponent, ResolverError> {
         // Parse URL.
         let fuchsia_pkg_url = PkgUrl::parse(component_url)
             .map_err(|e| ResolverError::url_parse_error(component_url, e))?;
@@ -86,11 +86,10 @@ impl FuchsiaPkgResolver {
             package_dir: Some(package_dir),
             ..fsys::Package::EMPTY
         };
-        Ok(fsys::Component {
-            resolved_url: Some(component_url.to_string()),
-            decl: Some(component_decl),
+        Ok(ResolvedComponent {
+            resolved_url: component_url.to_string(),
+            decl: component_decl,
             package: Some(package),
-            ..fsys::Component::EMPTY
         })
     }
 }
@@ -220,8 +219,8 @@ mod tests {
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
         // the resolver returned the right package dir.
-        let fsys::Component { resolved_url, decl, package, .. } = component;
-        assert_eq!(resolved_url.unwrap(), url);
+        let ResolvedComponent { resolved_url, decl, package, .. } = component;
+        assert_eq!(resolved_url, url);
 
         let info = Some(fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
@@ -253,7 +252,7 @@ mod tests {
             environments: None,
             ..fsys::ComponentDecl::EMPTY
         };
-        assert_eq!(decl.unwrap(), expected_decl);
+        assert_eq!(decl, expected_decl);
 
         let fsys::Package { package_url, package_dir, .. } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");

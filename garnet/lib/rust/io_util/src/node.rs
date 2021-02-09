@@ -7,7 +7,7 @@
 use {
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileObject, FileProxy,
-        NodeInfo, NodeProxy,
+        NodeInfo, NodeProxy, Vmofile,
     },
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
@@ -100,7 +100,8 @@ impl Kind {
 
     fn expect_file(info: NodeInfo) -> Result<(), Kind> {
         match info {
-            NodeInfo::File(FileObject { event: _, stream: None }) => Ok(()),
+            NodeInfo::File(FileObject { event: _, stream: None })
+            | NodeInfo::Vmofile(Vmofile { .. }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }

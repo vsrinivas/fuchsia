@@ -11,7 +11,7 @@ use {
     anyhow::Error,
     clonable_error::ClonableError,
     cm_rust::ResolverRegistration,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
     futures::future::{self, BoxFuture},
     std::{collections::HashMap, path::PathBuf, sync::Arc},
@@ -26,7 +26,17 @@ pub trait Resolver {
     fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a>;
 }
 
-pub type ResolverFut<'a> = BoxFuture<'a, Result<fsys::Component, ResolverError>>;
+pub type ResolverFut<'a> = BoxFuture<'a, Result<ResolvedComponent, ResolverError>>;
+
+/// The response returned from a Resolver. This struct is derived from the FIDL
+/// [`fuchsia.sys2.Component`][fidl_fuchsia_sys2::Component] table, except that
+/// the opaque binary ComponentDecl has been deserialized and validated.
+#[derive(Debug)]
+pub struct ResolvedComponent {
+    pub resolved_url: String,
+    pub decl: fsys::ComponentDecl,
+    pub package: Option<fsys::Package>,
+}
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
 #[derive(Default)]
@@ -115,17 +125,20 @@ impl Resolver for RemoteResolver {
             )
             .await
             .map_err(ResolverError::routing_error)?;
-            let (status, component) = proxy
-                .resolve(component_url)
-                .await
-                .map_err(ResolverError::unknown_resolver_error)?;
+            let (status, component) =
+                proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)?;
             let status = Status::from_raw(status);
             match status {
                 Status::OK => {
-                    let decl = component.decl.as_ref().ok_or(ResolverError::RemoteInvalidData)?;
-                    cm_fidl_validator::validate(decl)
-                        .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
-                    Ok(component)
+                    let decl_buffer: fmem::Data =
+                        component.decl.ok_or(ResolverError::RemoteInvalidData)?;
+                    Ok(ResolvedComponent {
+                        resolved_url: component
+                            .resolved_url
+                            .ok_or(ResolverError::RemoteInvalidData)?,
+                        decl: read_and_validate_manifest(component_url, decl_buffer).await?,
+                        package: component.package,
+                    })
                 }
                 Status::INVALID_ARGS => {
                     Err(ResolverError::url_parse_error(component_url, RemoteError(status)))
@@ -140,6 +153,30 @@ impl Resolver for RemoteResolver {
             }
         })
     }
+}
+
+async fn read_and_validate_manifest(
+    component_url: &str,
+    data: fmem::Data,
+) -> Result<fsys::ComponentDecl, ResolverError> {
+    let bytes = match data {
+        fmem::Data::Bytes(bytes) => bytes,
+        fmem::Data::Buffer(buffer) => {
+            let mut contents = Vec::<u8>::new();
+            contents.resize(buffer.size as usize, 0);
+            buffer.vmo.read(&mut contents, 0).map_err(|status| ResolverError::ManifestIO {
+                url: component_url.to_string(),
+                status,
+            })?;
+            contents
+        }
+        _ => return Err(ResolverError::RemoteInvalidData),
+    };
+    let component_decl: fsys::ComponentDecl = fidl::encoding::decode_persistent(&bytes)
+        .map_err(|err| ResolverError::manifest_invalid(component_url.to_string(), err))?;
+    cm_fidl_validator::validate(&component_decl)
+        .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+    Ok(component_decl)
 }
 
 /// Errors produced by `Resolver`.
@@ -165,6 +202,8 @@ pub enum ResolverError {
         #[source]
         err: ClonableError,
     },
+    #[error("failed to read manifest for url \"{}\": {}", url, status)]
+    ManifestIO { url: String, status: Status },
     #[error("Model not available.")]
     ModelAccessError,
     #[error("scheme not registered")]
@@ -183,6 +222,8 @@ pub enum ResolverError {
     RemoteInvalidData,
     #[error("an unknown error ocurred with the resolver: {}", .0)]
     UnknownResolverError(#[source] ClonableError),
+    #[error("an error occurred sending a FIDL request to the remote resolver: {}", .0)]
+    FidlError(#[source] ClonableError),
 }
 
 impl ResolverError {
@@ -217,6 +258,10 @@ impl ResolverError {
     pub fn unknown_resolver_error(err: impl Into<Error>) -> ResolverError {
         ResolverError::UnknownResolverError(err.into().into())
     }
+
+    pub fn fidl_error(err: impl Into<Error>) -> ResolverError {
+        ResolverError::FidlError(err.into().into())
+    }
 }
 
 #[derive(Error, Clone, Debug)]
@@ -235,9 +280,9 @@ mod tests {
     impl Resolver for MockOkResolver {
         fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
             assert_eq!(self.expected_url, component_url);
-            Box::pin(future::ok(fsys::Component {
-                resolved_url: Some(self.resolved_url.clone()),
-                decl: Some(fsys::ComponentDecl {
+            Box::pin(future::ok(ResolvedComponent {
+                resolved_url: self.resolved_url.clone(),
+                decl: fsys::ComponentDecl {
                     program: None,
                     uses: None,
                     exposes: None,
@@ -248,9 +293,8 @@ mod tests {
                     collections: None,
                     environments: None,
                     ..fsys::ComponentDecl::EMPTY
-                }),
+                },
                 package: None,
-                ..fsys::Component::EMPTY
             }))
         }
     }
@@ -289,10 +333,10 @@ mod tests {
 
         // Resolve known scheme that returns success.
         let component = registry.resolve("foo://url").await.unwrap();
-        assert_eq!("foo://resolved", component.resolved_url.unwrap());
+        assert_eq!("foo://resolved", component.resolved_url);
 
         // Resolve a different scheme that produces an error.
-        let expected_res: Result<fsys::Component, ResolverError> =
+        let expected_res: Result<ResolvedComponent, ResolverError> =
             Err(ResolverError::component_not_available("bar://url", format_err!("not available")));
         assert_eq!(
             format!("{:?}", expected_res),
@@ -300,7 +344,7 @@ mod tests {
         );
 
         // Resolve an unknown scheme
-        let expected_res: Result<fsys::Component, ResolverError> =
+        let expected_res: Result<ResolvedComponent, ResolverError> =
             Err(ResolverError::SchemeNotRegistered);
         assert_eq!(
             format!("{:?}", expected_res),
@@ -308,7 +352,7 @@ mod tests {
         );
 
         // Resolve an URL lacking a scheme.
-        let expected_res: Result<fsys::Component, ResolverError> =
+        let expected_res: Result<ResolvedComponent, ResolverError> =
             Err(ResolverError::url_parse_error("xxx", url::ParseError::RelativeUrlWithoutBase));
         assert_eq!(format!("{:?}", expected_res), format!("{:?}", registry.resolve("xxx").await),);
     }

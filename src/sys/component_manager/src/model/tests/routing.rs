@@ -29,7 +29,8 @@ use {
     cm_rust::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{self as echo},
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
@@ -3653,7 +3654,12 @@ async fn use_resolver_from_parent_environment() {
                         Status::OK.into_raw(),
                         fsys::Component {
                             resolved_url: Some("test://b".into()),
-                            decl: Some(default_component_decl().native_into_fidl()),
+                            decl: Some(fmem::Data::Bytes(
+                                fidl::encoding::encode_persistent(
+                                    &mut default_component_decl().native_into_fidl(),
+                                )
+                                .unwrap(),
+                            )),
                             package: None,
                             ..fsys::Component::EMPTY
                         },
@@ -3736,7 +3742,12 @@ async fn use_resolver_from_grandparent_environment() {
                         Status::OK.into_raw(),
                         fsys::Component {
                             resolved_url: Some("test://c".into()),
-                            decl: Some(default_component_decl().native_into_fidl()),
+                            decl: Some(fmem::Data::Bytes(
+                                fidl::encoding::encode_persistent(
+                                    &mut default_component_decl().native_into_fidl(),
+                                )
+                                .unwrap(),
+                            )),
                             package: None,
                             ..fsys::Component::EMPTY
                         },
@@ -3810,7 +3821,12 @@ async fn resolver_is_not_available() {
                         Status::OK.into_raw(),
                         fsys::Component {
                             resolved_url: Some("test://b".into()),
-                            decl: Some(default_component_decl().native_into_fidl()),
+                            decl: Some(fmem::Data::Bytes(
+                                fidl::encoding::encode_persistent(
+                                    &mut default_component_decl().native_into_fidl(),
+                                )
+                                .unwrap(),
+                            )),
                             package: None,
                             ..fsys::Component::EMPTY
                         },
@@ -3882,15 +3898,18 @@ async fn resolver_component_decl_is_validated() {
                         Status::OK.into_raw(),
                         fsys::Component {
                             resolved_url: Some("test://b".into()),
-                            decl: Some(fsys::ComponentDecl {
-                                exposes: Some(vec![fsys::ExposeDecl::Protocol(
-                                    fsys::ExposeProtocolDecl {
-                                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                                        ..fsys::ExposeProtocolDecl::EMPTY
-                                    },
-                                )]),
-                                ..fsys::ComponentDecl::EMPTY
-                            }),
+                            decl: Some(fmem::Data::Bytes({
+                                let mut fidl = fsys::ComponentDecl {
+                                    exposes: Some(vec![fsys::ExposeDecl::Protocol(
+                                        fsys::ExposeProtocolDecl {
+                                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                                            ..fsys::ExposeProtocolDecl::EMPTY
+                                        },
+                                    )]),
+                                    ..fsys::ComponentDecl::EMPTY
+                                };
+                                fidl::encoding::encode_persistent(&mut fidl).unwrap()
+                            })),
                             package: None,
                             ..fsys::Component::EMPTY
                         },

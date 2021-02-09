@@ -6,6 +6,7 @@ use {
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -75,15 +76,23 @@ async fn resolve_component(
     let cm_file = io_util::directory::open_file(&package_dir, cm_path, fio::OPEN_RIGHT_READABLE)
         .await
         .map_err(ResolverError::ComponentNotFound)?;
-    let component_decl =
-        io_util::file::read_fidl(&cm_file).await.map_err(ResolverError::InvalidManifest)?;
+
+    let (status, buffer) =
+        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
+    Status::ok(status).map_err(ResolverError::VmoFailure)?;
+    let data = match buffer {
+        Some(buffer) => fmem::Data::Buffer(*buffer),
+        None => fmem::Data::Bytes(
+            io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
+        ),
+    };
 
     let package_dir = ClientEnd::new(
         package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
     Ok(fsys::Component {
         resolved_url: Some(component_url.into()),
-        decl: Some(component_decl),
+        decl: Some(data),
         package: Some(fsys::Package {
             package_url: Some(package_url.root_url().to_string()),
             package_dir: Some(package_dir),
@@ -119,12 +128,16 @@ enum ResolverError {
     InvalidUrl(#[from] PkgUrlParseError),
     #[error("the hostname refers to an unsupported repo")]
     UnsupportedRepo,
-    #[error("invalid component manifest: {}", .0)]
-    InvalidManifest(#[source] anyhow::Error),
     #[error("component not found: {}", .0)]
     ComponentNotFound(#[source] io_util::node::OpenError),
     #[error("package not found: {}", .0)]
     PackageNotFound(#[source] io_util::node::OpenError),
+    #[error("read manifest error: {}", .0)]
+    ReadManifest(#[source] io_util::file::ReadError),
+    #[error("IO error: {}", .0)]
+    IOError(#[source] fidl::Error),
+    #[error("failed to get manifest VMO: {}", .0)]
+    VmoFailure(#[source] Status),
 }
 
 impl ResolverError {
@@ -132,9 +145,11 @@ impl ResolverError {
         match self {
             Self::InvalidUrl(_) => Status::INVALID_ARGS.into_raw(),
             Self::UnsupportedRepo => Status::NOT_SUPPORTED.into_raw(),
-            Self::InvalidManifest(_) => Status::IO_INVALID.into_raw(),
             Self::ComponentNotFound(_) => Status::NOT_FOUND.into_raw(),
             Self::PackageNotFound(_) => Status::NOT_FOUND.into_raw(),
+            Self::ReadManifest(_) => Status::IO.into_raw(),
+            Self::IOError(_) => Status::IO.into_raw(),
+            Self::VmoFailure(s) => s.into_raw(),
         }
     }
 }
@@ -266,24 +281,24 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn fails_to_resolve_component_invalid_manifest() {
+    async fn resolves_component_vmo_manifest() {
         let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/bad.cm", &pkgfs_dir)
+            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/vmo.cm", &pkgfs_dir)
                 .await,
-            Err(ResolverError::InvalidManifest(_))
+            Ok(fsys::Component { decl: Some(fmem::Data::Buffer(_)), .. })
         );
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn resolves_component_successfully() {
+    async fn resolves_component_file_manifest() {
         fuchsia_syslog::init().unwrap();
         fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
         let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &pkgfs_dir)
                 .await,
-            Ok(_)
+            Ok(fsys::Component { decl: Some(fmem::Data::Bytes(_)), .. })
         );
     }
 
@@ -306,11 +321,11 @@ mod tests {
                                             MockDir::new()
                                                 .add_entry(
                                                     "foo.cm",
-                                                    Arc::new(MockFile::new(cm_bytes)),
+                                                    Arc::new(MockFile::new(cm_bytes.clone())),
                                                 )
                                                 .add_entry(
-                                                    "bad.cm",
-                                                    Arc::new(MockFile::new(b"foo".to_vec())),
+                                                    "vmo.cm",
+                                                    Arc::new(MockFile::new_vmo_backed(cm_bytes)),
                                                 ),
                                         ),
                                     ),

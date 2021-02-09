@@ -14,13 +14,14 @@
 use {
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest,
-        FileMarker, FileObject, FileRequest, NodeInfo, NodeMarker,
+        self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest, NodeInfo,
+        NodeMarker,
     },
     fuchsia_async::Task,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{Status, Vmo},
     futures::prelude::*,
     std::{collections::HashMap, path::Path, sync::Arc},
+    vfs::directory::entry::DirectoryEntry,
 };
 
 /// All nodes (directories, files, etc) implement this.
@@ -97,44 +98,47 @@ impl Entry for DirectoryProxy {
 }
 
 pub struct MockFile {
-    contents: Vec<u8>,
+    file: Arc<dyn DirectoryEntry>,
 }
 
 impl MockFile {
     pub fn new(contents: Vec<u8>) -> Self {
-        MockFile { contents }
+        Self {
+            file: vfs::file::pcb::read_only(move || {
+                let contents = contents.clone();
+                async move { Ok(contents) }
+            }),
+        }
     }
 
-    async fn serve(self: Arc<Self>, object: ServerEnd<FileMarker>) {
-        let mut stream = object.into_stream().unwrap();
-        // If we can't send an event, the client closed their connection. This is not an error.
-        let _ = stream.control_handle().send_on_open_(
-            Status::OK.into_raw(),
-            Some(&mut NodeInfo::File(FileObject { event: None, stream: None })),
-        );
-        let mut counter: usize = 0;
-        while let Ok(Some(request)) = stream.try_next().await {
-            match request {
-                FileRequest::Read { count, responder, .. } => {
-                    let bytes = std::cmp::min(count as usize, self.contents.len() - counter);
-                    responder
-                        .send(Status::OK.into_raw(), &self.contents[counter..counter + bytes])
-                        .expect("failed to send response");
-                    counter += bytes;
+    pub fn new_vmo_backed(contents: Vec<u8>) -> Self {
+        Self {
+            file: vfs::file::vmo::read_only(move || {
+                let contents = contents.clone();
+                async move {
+                    let capacity = contents.len() as u64;
+                    let vmo = Vmo::create(capacity)?;
+                    vmo.write(&contents, 0)?;
+                    Ok(vfs::file::vmo::asynchronous::NewVmo { vmo, size: capacity, capacity })
                 }
-                _ => panic!("unsupported request"),
-            }
+            }),
         }
     }
 }
 
 impl Entry for MockFile {
-    fn open(self: Arc<Self>, _flags: u32, _mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
+    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
         if !path.is_empty() {
             send_error(object, Status::BAD_PATH);
             return;
         }
-        Task::local(self.clone().serve(ServerEnd::new(object.into_channel()))).detach();
+        self.file.clone().open(
+            vfs::execution_scope::ExecutionScope::new(),
+            flags,
+            mode,
+            vfs::path::Path::empty(),
+            object.into_channel().into(),
+        );
     }
 }
 

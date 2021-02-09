@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    cm_fidl_validator, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    anyhow::{Context, Error},
+    cm_fidl_validator, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
     log::*,
     std::{collections::HashMap, sync::Arc},
@@ -62,7 +63,7 @@ impl Registry {
                             zx::Status::OK.into_raw(),
                             fsys::Component {
                                 resolved_url: Some(component_url),
-                                decl: Some(decl.clone()),
+                                decl: Some(encode(decl.clone())?),
                                 package: None,
                                 ..fsys::Component::EMPTY
                             },
@@ -83,4 +84,11 @@ impl Registry {
         }
         Ok(())
     }
+}
+
+fn encode(mut component_decl: fsys::ComponentDecl) -> Result<fmem::Data, Error> {
+    Ok(fmem::Data::Bytes(
+        fidl::encoding::encode_persistent(&mut component_decl)
+            .context("failed to encode ComponentDecl")?,
+    ))
 }
