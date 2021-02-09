@@ -66,7 +66,8 @@ otError SpinelFidlInterface::SendFrame(uint8_t *aFrame, uint16_t aLength) {
 }
 
 void SpinelFidlInterface::WriteToRxFrameBuffer(std::vector<uint8_t> vec) {
-  mReceiveFrameBuffer.Clear();
+  // Discard any previous frame that wasn't saved.
+  mReceiveFrameBuffer.DiscardFrame();
   if (mReceiveFrameBuffer.CanWrite(vec.size())) {
     for (uint32_t i = 0; i < vec.size(); i++) {
       // This will not fail, since the available buffer size has been checked
