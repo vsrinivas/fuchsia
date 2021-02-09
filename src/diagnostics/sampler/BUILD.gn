@@ -23,6 +23,8 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//src/diagnostics/control:controller-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -51,6 +53,7 @@ rustc_library("lib") {
 
   sources = [
     "src/config.rs",
+    "src/diagnostics.rs",
     "src/executor.rs",
     "src/lib.rs",
   ]

@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
+    crate::{
+        config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
+        diagnostics::*,
+    },
     anyhow::{format_err, Context, Error},
     diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     diagnostics_reader::{ArchiveReader, Inspect},
@@ -12,6 +15,8 @@ use {
     },
     fuchsia_async::{self as fasync, futures::StreamExt},
     fuchsia_component::client::connect_to_service,
+    fuchsia_inspect::{self as inspect, NumericProperty},
+    fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
     futures::{channel::oneshot, future::join_all, select, stream::FuturesUnordered},
     itertools::Itertools,
@@ -25,6 +30,7 @@ use {
 
 pub struct TaskCancellation {
     senders: Vec<oneshot::Sender<()>>,
+    _sampler_executor_stats: Arc<SamplerExecutorStats>,
     execution_context: fasync::Task<Vec<ProjectSampler>>,
 }
 
@@ -174,6 +180,7 @@ impl RebootSnapshotProcessor {
 /// Owner of the sampler execution context.
 pub struct SamplerExecutor {
     project_samplers: Vec<ProjectSampler>,
+    sampler_executor_stats: Arc<SamplerExecutorStats>,
 }
 
 impl SamplerExecutor {
@@ -187,11 +194,52 @@ impl SamplerExecutor {
 
         let minimum_sample_rate_sec = sampler_config.minimum_sample_rate_sec;
 
+        let sampler_executor_stats = Arc::new(
+            SamplerExecutorStats::new()
+                .with_inspect(inspect::component::inspector().root(), "sampler_executor_stats")
+                .unwrap_or_else(|e| {
+                    warn!(
+                        concat!("Failed to attach inspector to SamplerExecutorStats struct: {:?}",),
+                        e
+                    );
+                    SamplerExecutorStats::default()
+                }),
+        );
+
+        sampler_executor_stats
+            .total_project_samplers_configured
+            .add(sampler_config.project_configs.len() as u64);
+
+        let mut project_to_stats_map: HashMap<u32, Arc<ProjectSamplerStats>> = HashMap::new();
+
         // TODO(42067): Create only one ArchiveReader for each unique poll rate so we
         // can avoid redundant snapshots.
         let project_sampler_futures =
             sampler_config.project_configs.into_iter().map(|project_config| {
-                ProjectSampler::new(project_config, logger_factory.clone(), minimum_sample_rate_sec)
+                let project_sampler_stats =
+                    project_to_stats_map.entry(project_config.project_id).or_insert(Arc::new(
+                        ProjectSamplerStats::new()
+                            .with_inspect(
+                                &sampler_executor_stats.inspect_node,
+                                format!("project_{:?}", project_config.project_id,),
+                            )
+                            .unwrap_or_else(|e| {
+                                warn!(
+                                    concat!(
+                                "Failed to attach inspector to ProjectSamplerStats struct: {:?}",
+                            ),
+                                    e
+                                );
+                                ProjectSamplerStats::default()
+                            }),
+                    ));
+
+                ProjectSampler::new(
+                    project_config,
+                    logger_factory.clone(),
+                    minimum_sample_rate_sec,
+                    project_sampler_stats.clone(),
+                )
             });
 
         let mut project_samplers: Vec<ProjectSampler> = Vec::new();
@@ -204,12 +252,18 @@ impl SamplerExecutor {
             }
         }
 
-        Ok(SamplerExecutor { project_samplers })
+        Ok(SamplerExecutor { project_samplers, sampler_executor_stats })
     }
 
     /// Turn each ProjectSampler plan into an fasync::Task which executes its associated plan,
     /// and process errors if any tasks exit unexpectedly.
     pub fn execute(self) -> TaskCancellation {
+        // Take ownership of the inspect struct so we can give it to the execution context. We do this
+        // so that the execution context can return the struct when its halted by reboot, which allows inspect
+        // properties to survive through the reboot flow.
+        let task_cancellation_owned_stats = self.sampler_executor_stats.clone();
+        let execution_context_owned_stats = self.sampler_executor_stats.clone();
+
         let (senders, mut spawned_tasks): (Vec<oneshot::Sender<()>>, FuturesUnordered<_>) = self
             .project_samplers
             .into_iter()
@@ -227,12 +281,15 @@ impl SamplerExecutor {
                         // TODO(42067): Consider restarting the failed sampler depending on
                         // failure mode.
                         warn!("A spawned sampler has failed: {:?}", e);
+                        execution_context_owned_stats.errorfully_exited_samplers.add(1);
                     }
                     Ok(ProjectSamplerTaskExit::RebootTriggered(sampler)) => {
                         healthily_exited_samplers.push(sampler);
+                        execution_context_owned_stats.reboot_exited_samplers.add(1);
                     }
                     Ok(ProjectSamplerTaskExit::WorkCompleted) => {
-                        info!("A sampler completed its workload, and exited.")
+                        info!("A sampler completed its workload, and exited.");
+                        execution_context_owned_stats.healthily_exited_samplers.add(1);
                     }
                 }
             }
@@ -240,7 +297,11 @@ impl SamplerExecutor {
             healthily_exited_samplers
         });
 
-        TaskCancellation { execution_context, senders }
+        TaskCancellation {
+            execution_context,
+            senders,
+            _sampler_executor_stats: task_cancellation_owned_stats,
+        }
     }
 }
 
@@ -257,6 +318,10 @@ pub struct ProjectSampler {
     // The frequency with which we snapshot Inspect properties
     // for this project.
     poll_rate_sec: i64,
+    // Inspect stats on a node namespaced by this project's associated id.
+    // It's an arc since a single project can have multiple samplers at
+    // different frequencies, but we want a single project to have one node.
+    project_sampler_stats: Arc<ProjectSamplerStats>,
 }
 
 pub enum ProjectSamplerTaskExit {
@@ -281,6 +346,7 @@ impl ProjectSampler {
         config: ProjectConfig,
         logger_factory: Arc<LoggerFactoryProxy>,
         minimum_sample_rate_sec: i64,
+        project_sampler_stats: Arc<ProjectSamplerStats>,
     ) -> Result<ProjectSampler, Error> {
         let project_id = config.project_id;
         let poll_rate_sec = config.poll_rate_sec;
@@ -302,6 +368,9 @@ impl ProjectSampler {
             .map(|metric_config| (metric_config.selector.clone(), metric_config))
             .collect::<HashMap<String, MetricConfig>>();
 
+        project_sampler_stats.project_sampler_count.add(1);
+        project_sampler_stats.metrics_configured.add(metric_transformation_map.len() as u64);
+
         let (logger_proxy, server_end) =
             fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
 
@@ -315,6 +384,7 @@ impl ProjectSampler {
             metric_cache: HashMap::new(),
             cobalt_logger: logger_proxy,
             poll_rate_sec,
+            project_sampler_stats,
         })
     }
 
@@ -506,6 +576,8 @@ impl ProjectSampler {
             };
 
             self.cobalt_logger.log_cobalt_event(&mut cobalt_event).await?;
+
+            self.project_sampler_stats.cobalt_logs_sent.add(1);
         }
 
         Ok(())

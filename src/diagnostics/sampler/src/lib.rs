@@ -4,13 +4,16 @@
 use {
     anyhow::{Context, Error},
     argh::FromArgs,
-    fidl_fuchsia_hardware_power_statecontrol as reboot,
+    fidl_fuchsia_hardware_power_statecontrol as reboot, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    futures::TryStreamExt,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::{self as inspect, health::Reporter},
+    futures::{StreamExt, TryStreamExt},
     log::{info, warn},
 };
 
 pub mod config;
+mod diagnostics;
 mod executor;
 
 /// The name of the subcommand and the logs-tag.
@@ -26,6 +29,18 @@ pub struct Args {
 }
 
 pub async fn main(opt: Args) -> Result<(), Error> {
+    // Serve inspect.
+    let mut service_fs = ServiceFs::new();
+    service_fs.take_and_serve_directory_handle()?;
+    inspect::component::inspector().serve(&mut service_fs)?;
+    fasync::Task::spawn(async move {
+        service_fs.collect::<()>().await;
+    })
+    .detach();
+
+    // Starting service.
+    inspect::component::health().set_starting_up();
+
     match config::SamplerConfig::from_directory(opt.minimum_sample_rate_sec, "/config/data/metrics")
     {
         Ok(sampler_config) => {
@@ -44,12 +59,14 @@ pub async fn main(opt: Args) -> Result<(), Error> {
                     .register(reboot_watcher_client)
                     .context("Providing the reboot register with callback channel.")?;
             }
+
             let sampler_executor = executor::SamplerExecutor::new(sampler_config).await?;
 
             // Trigger the project samplers and returns a TaskCancellation struct used to trigger
             // reboot shutdown of lapis.
             let task_canceller = sampler_executor.execute();
 
+            inspect::component::health().set_ok();
             reboot_watcher(reboot_watcher_request_stream, task_canceller).await;
             Ok(())
         }
