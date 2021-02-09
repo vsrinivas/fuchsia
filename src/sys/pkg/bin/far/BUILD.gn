@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
 import("//build/sdk/sdk_host_tool.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "far"
@@ -23,15 +23,8 @@ sdk_host_tool("bin_sdk") {
   deps = [ ":bin" ]
 }
 
-package("far") {
+fuchsia_shell_package("far") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      shell = true
-      name = "far"
-    },
-  ]
 }
 
 install_host_tools("host") {

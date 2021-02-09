@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "fake-channel-control"
+  output_name = "fake-channel-control"
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
@@ -21,18 +21,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("fake-channel-control") {
+fuchsia_package_with_single_component("fake-channel-control") {
+  manifest = "meta/fake-channel-control.cmx"
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "fake_channel_control"
-      dest = "fake-channel-control"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/fake-channel-control.cmx")
-      dest = "fake-channel-control.cmx"
-    },
-  ]
 }
