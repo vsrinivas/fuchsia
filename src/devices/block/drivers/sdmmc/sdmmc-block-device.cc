@@ -394,7 +394,7 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
       zxlogf(DEBUG, "sdmmc: do_txn vmo map error %d", st);
       return st;
     }
-    req->virt_buffer = mapper.start();
+    req->virt_buffer = reinterpret_cast<uint8_t*>(mapper.start());
     req->virt_size = length;
   }
 
@@ -528,7 +528,8 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .blocksize = FRAME_SIZE,
       .use_dma = sdmmc_.UseDma(),
       .dma_vmo = sdmmc_.UseDma() ? request.tx_frames.vmo.get() : ZX_HANDLE_INVALID,
-      .virt_buffer = sdmmc_.UseDma() ? nullptr : tx_frames_mapper.start(),
+      .virt_buffer =
+          reinterpret_cast<uint8_t*>(sdmmc_.UseDma() ? nullptr : tx_frames_mapper.start()),
       .buf_offset = request.tx_frames.offset,
   };
   if ((status = sdmmc_.host().Request(&write_tx_frames)) != ZX_OK) {
@@ -558,7 +559,8 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .blocksize = FRAME_SIZE,
       .use_dma = sdmmc_.UseDma(),
       .dma_vmo = sdmmc_.UseDma() ? request.rx_frames.vmo.get() : ZX_HANDLE_INVALID,
-      .virt_buffer = sdmmc_.UseDma() ? nullptr : rx_frames_mapper.start(),
+      .virt_buffer =
+          reinterpret_cast<uint8_t*>(sdmmc_.UseDma() ? nullptr : rx_frames_mapper.start()),
       .buf_offset = request.rx_frames.offset,
   };
   if ((status = sdmmc_.host().Request(&read_rx_frames)) != ZX_OK) {

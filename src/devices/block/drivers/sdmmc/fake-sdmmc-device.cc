@@ -277,7 +277,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_
       .blocksize = static_cast<uint16_t>(req->blocksize),
       .use_dma = false,
       .dma_vmo = ZX_HANDLE_INVALID,
-      .virt_buffer = linear_vmo.start(),
+      .virt_buffer = reinterpret_cast<uint8_t*>(linear_vmo.start()),
       .virt_size = linear_vmo.size(),
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
