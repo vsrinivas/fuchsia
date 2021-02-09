@@ -4,7 +4,10 @@ raggi@google.com
 mangini@google.com
 per-file add-update-source,run,build-push,push-package,serve,serve-updates,lib/updates.sh = computerdruid@google.com,etryzelaar@google.com,galbanum@google.com,kevinwells@google.com
 per-file fdt,tests/subcommands/fx_fdt_test = shrike@google.com,abbogart@google.com,dragonbear@google.com
-per-file klog,log,symbolize = dangyi@google.com,frousseau@google.com
+
+per-file symbolize = dangyi@google.com,frousseau@google.com
+# per-file-COMPONENT symbolize = Tools>symbolize
+
 per-file report-bug=gboone@google.com
 # per-file-COMPONENT report-bug=Tools>fx
 
