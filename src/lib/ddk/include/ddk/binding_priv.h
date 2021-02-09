@@ -288,26 +288,49 @@ static_assert(offsetof(zircon_driver_note_t, payload) == sizeof(zircon_driver_no
 // type's alignment, so we have to explicitly set the alignment of the
 // object to defeat any compiler default over-alignment.
 
-#define ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, BindCount)      \
-  const zx_driver_ops_t* __zircon_driver_ops__ __EXPORT = &(Ops);                  \
-  zx_driver_rec_t __zircon_driver_rec__ __EXPORT = {                               \
-      /* .ops = */ &(Ops),                                                         \
-      /* .driver = */ NULL,                                                        \
-      /* .log_flags = */ 0,                                                        \
-  };                                                                               \
-  extern const struct zircon_driver_note __zircon_driver_note__ __EXPORT;          \
-  alignas(4) __SECTION(".note.zircon.driver." #Driver)                             \
-      ZIRCON_DRIVER_NOTE_ASAN const struct zircon_driver_note {                    \
-    zircon_driver_note_t note;                                                     \
-    zx_bind_inst_t binding[BindCount];                                             \
-  } __zircon_driver_note__ = {                                                     \
-      /* .note = */ {                                                              \
-          ZIRCON_DRIVER_NOTE_HEADER_INIT(__zircon_driver_note__),                  \
-          ZIRCON_DRIVER_NOTE_PAYLOAD_INIT(Driver, VendorName, Version, BindCount), \
-      },                                                                           \
-      /* .binding = */ {
-#define ZIRCON_DRIVER_END_PRIV(Driver) \
-  }                                    \
+// C macro for driver binding rules. Unlike the old bytecode format, the
+// instructions in the new format are not represented by three uint32 integers.
+// To support both formats simultaneously, |binding| is used for the old
+// bytecode instructions while |bytecode| is used for the new bytecode
+// instructions.
+#define ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, BytecodeVersion, BindCount, \
+                                 ByteCount)                                                    \
+  const zx_driver_ops_t* __zircon_driver_ops__ __EXPORT = &(Ops);                              \
+  zx_driver_rec_t __zircon_driver_rec__ __EXPORT = {                                           \
+      /* .ops = */ &(Ops),                                                                     \
+      /* .driver = */ NULL,                                                                    \
+      /* .log_flags = */ 0,                                                                    \
+  };                                                                                           \
+  extern const struct zircon_driver_note __zircon_driver_note__ __EXPORT;                      \
+  alignas(4) __SECTION(".note.zircon.driver." #Driver)                                         \
+      ZIRCON_DRIVER_NOTE_ASAN const struct zircon_driver_note {                                \
+    zircon_driver_note_t note;                                                                 \
+    zx_bind_inst_t binding[BindCount];                                                         \
+    uint8_t bytecode[ByteCount];                                                               \
+  } __zircon_driver_note__ = {                                                                 \
+      /* .note = */ {                                                                          \
+          ZIRCON_DRIVER_NOTE_HEADER_INIT(__zircon_driver_note__),                              \
+          ZIRCON_DRIVER_NOTE_PAYLOAD_INIT(Driver, VendorName, Version, BindCount),             \
+      },
+
+// C macros for the old bytecode. |bindings| will be populated while
+// |bytecode| is left empty.
+// TODO(fxb/69360): Delete this once the the old bytecode is removed.
+#define ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, BindCount) \
+  ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 1, BindCount, 0) /* .binding = */ {
+#define ZIRCON_DRIVER_END_PRIV_V1(Driver) \
+  }                                       \
+  , /* .bytecode = */ {}                  \
+  }
+
+// C macros for the new bytecode. |bindings| is left empty while |bytecode| is
+// populated.
+#define ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, BindCount, ByteCount) \
+  ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 2, BindCount, 0)               \
+  /* .binding = */ {}, /* .bytecode = */ {
+#define ZIRCON_DRIVER_END_PRIV_V2(Driver) \
+  }                                       \
+  ,                                       \
   }
 
 // TODO: if we moved the Ops from the BEGIN() to END() macro we

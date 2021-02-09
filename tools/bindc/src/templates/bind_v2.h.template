@@ -6,5 +6,5 @@
 
 // clang-format off
 #define ZIRCON_DRIVER(Driver, Ops, VendorName, Version) \
-  ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, {bind_count}) {binding} \
-  ZIRCON_DRIVER_END_PRIV(Driver)
+  ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, {byte_count}) {binding} \
+  ZIRCON_DRIVER_END_PRIV_V2(Driver)

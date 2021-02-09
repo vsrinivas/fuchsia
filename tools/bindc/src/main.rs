@@ -145,13 +145,25 @@ fn write_bind_template<'a>(
     let bind_count = bind_program.instructions.len();
     let binding = encode_to_string(bind_program, use_new_bytecode)?;
     let mut output = String::new();
-    output
-        .write_fmt(format_args!(
-            include_str!("templates/bind.h.template"),
-            bind_count = bind_count,
-            binding = binding,
-        ))
-        .context("Failed to format output")?;
+    if use_new_bytecode {
+        // TODO(fxb/69361): Encoding the new bytecode to string is
+        // currently unimplemented.
+        output
+            .write_fmt(format_args!(
+                include_str!("templates/bind_v2.h.template"),
+                byte_count = 0,
+                binding = binding,
+            ))
+            .context("Failed to format output")?;
+    } else {
+        output
+            .write_fmt(format_args!(
+                include_str!("templates/bind_v1.h.template"),
+                bind_count = bind_count,
+                binding = binding,
+            ))
+            .context("Failed to format output")?;
+    }
     Ok(output)
 }
 
@@ -464,7 +476,9 @@ mod tests {
 
         let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
         let template = write_bind_template(bind_program, false).unwrap();
-        assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 0)"));
+        assert!(
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 0)")
+        );
     }
 
     #[test]
@@ -488,7 +502,9 @@ mod tests {
             symbol_table: HashMap::new(),
         };
         let template = write_bind_template(bind_program, false).unwrap();
-        assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 1)"));
+        assert!(
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 1)")
+        );
         assert!(template.contains("{0x1000000,0x0,0x0}"));
     }
 
@@ -519,7 +535,9 @@ mod tests {
             symbol_table: HashMap::new(),
         };
         let template = write_bind_template(bind_program, false).unwrap();
-        assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 2)"));
+        assert!(
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 2)")
+        );
         assert!(template.contains("{0x20000002,0x0,0x0}"));
     }
 

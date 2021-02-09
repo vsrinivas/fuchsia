@@ -24,7 +24,8 @@ if (host_toolchain == current_toolchain) {
     sources = [ "src/main.rs" ]
 
     inputs = [
-      "src/templates/bind.h.template",
+      "src/templates/bind_v1.h.template",
+      "src/templates/bind_v2.h.template",
       "src/templates/fidl.template",
     ]
   }
