@@ -133,6 +133,7 @@ impl NetworkSelector {
 
             scan::perform_scan(
                 iface_manager,
+                self.saved_network_manager.clone(),
                 None,
                 self.generate_scan_result_updater(),
                 scan::LocationSensorUpdater {},
@@ -293,7 +294,7 @@ async fn load_saved_networks(
 /// Return the security types of scan results that could match the provided security type of a
 /// saved network config. For example, a network config saved as WPA could be used to connect to
 /// a network seen as WPA2 or WPA3 in addition to WPA.
-fn upgrade_security(security: &config_management::SecurityType) -> Vec<types::SecurityType> {
+pub fn upgrade_security(security: &config_management::SecurityType) -> Vec<types::SecurityType> {
     match security {
         config_management::SecurityType::Wpa => {
             vec![types::SecurityType::Wpa2, types::SecurityType::Wpa3]

@@ -287,6 +287,7 @@ async fn handle_client_request_scan(
 
     scan::perform_scan(
         iface_manager,
+        saved_networks.clone(),
         Some(output_iterator),
         network_selector.generate_scan_result_updater(),
         scan::LocationSensorUpdater {},

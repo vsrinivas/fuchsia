@@ -31,12 +31,29 @@ pub const PROB_HIDDEN_IF_SEEN_PASSIVE: f32 = 0.05;
 /// If we have connected to a network from a passive scan, we will never scan for it.
 pub const PROB_HIDDEN_IF_CONNECT_PASSIVE: f32 = 0.0;
 /// If we connected to a network after we had to scan actively to find it, it is likely hidden.
-pub const PROB_HIDDEN_IF_CONNECT_ACTIVE: f32 = 0.9;
+pub const PROB_HIDDEN_IF_CONNECT_ACTIVE: f32 = 0.95;
 /// Default probability that we will actively scan for the network if we haven't seen it in any
 /// passive scan.
-pub const PROB_HIDDEN_DEFAULT: f32 = 0.333;
+pub const PROB_HIDDEN_DEFAULT: f32 = 0.9;
+/// The lowest we will set the probability for actively scanning for a network.
+pub const PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE: f32 = 0.25;
+/// How much we will lower the probability of scanning for an active network if we don't see the
+/// network in an active scan.
+pub const PROB_HIDDEN_INCREMENT_NOT_SEEN_ACTIVE: f32 = 0.14;
 
 pub type SaveError = fidl_policy::NetworkConfigChangeError;
+
+/// In-memory history of things that we need to know to calculated hidden network probability.
+#[derive(Clone, Debug, PartialEq)]
+struct HiddenProbabilityStats {
+    pub connected_active: bool,
+}
+
+impl HiddenProbabilityStats {
+    fn new() -> Self {
+        HiddenProbabilityStats { connected_active: false }
+    }
+}
 
 /// History of connects, disconnects, and connection strength to estimate whether we can establish
 /// and maintain connection with a network and if it is weakening. Used in choosing best network.
@@ -98,6 +115,7 @@ impl ConnectFailureList {
 }
 
 /// Used to allow hidden probability calculations to make use of what happened most recently
+#[derive(Clone, Copy)]
 pub enum HiddenProbEvent {
     /// We just saw the network in a passive scan
     SeenPassive,
@@ -105,6 +123,8 @@ pub enum HiddenProbEvent {
     ConnectPassive,
     /// We just connected to the network after needing an active scan to see it.
     ConnectActive,
+    /// We just actively scanned for the network and did not see it.
+    NotSeenActive,
 }
 
 /// Saved data for networks, to remember how to connect to a network and determine if we should.
@@ -121,6 +141,8 @@ pub struct NetworkConfig {
     /// this number to probabilistically perform an active scan for the network. This is persisted
     /// to maintain consistent behavior between reboots. 0 means not hidden.
     pub hidden_probability: f32,
+    /// Data that we use to calculate hidden_probability.
+    hidden_probability_stats: HiddenProbabilityStats,
     /// Used to estimate quality to determine whether we want to choose this network.
     pub perf_stats: PerformanceStats,
 }
@@ -141,6 +163,7 @@ impl NetworkConfig {
             credential,
             has_ever_connected,
             hidden_probability: PROB_HIDDEN_DEFAULT,
+            hidden_probability_stats: HiddenProbabilityStats::new(),
             perf_stats: PerformanceStats::new(),
         })
     }
@@ -162,7 +185,23 @@ impl NetworkConfig {
                 }
             }
             HiddenProbEvent::ConnectActive => {
+                self.hidden_probability_stats.connected_active = true;
                 self.hidden_probability = PROB_HIDDEN_IF_CONNECT_ACTIVE;
+            }
+            HiddenProbEvent::NotSeenActive => {
+                // If we have previously required an active scan to connect this network, we are
+                // confident that it is hidden and don't care about this event.
+                if self.hidden_probability_stats.connected_active {
+                    return;
+                }
+                // The probability will not be changed if already lower than the threshold.
+                if self.hidden_probability <= PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE {
+                    return;
+                }
+                // If we failed to find the network in an active scan, lower the probability but
+                // not below a certain threshold.
+                let new_prob = self.hidden_probability - PROB_HIDDEN_INCREMENT_NOT_SEEN_ACTIVE;
+                self.hidden_probability = new_prob.max(PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE);
             }
         }
     }
@@ -450,6 +489,7 @@ mod tests {
                 credential: credential,
                 has_ever_connected: false,
                 hidden_probability: PROB_HIDDEN_DEFAULT,
+                hidden_probability_stats: HiddenProbabilityStats::new(),
                 perf_stats: PerformanceStats::new()
             }
         );
@@ -474,6 +514,7 @@ mod tests {
                 credential: credential,
                 has_ever_connected: false,
                 hidden_probability: PROB_HIDDEN_DEFAULT,
+                hidden_probability_stats: HiddenProbabilityStats::new(),
                 perf_stats: PerformanceStats::new()
             }
         );
@@ -499,6 +540,7 @@ mod tests {
                 credential: credential,
                 has_ever_connected: false,
                 hidden_probability: PROB_HIDDEN_DEFAULT,
+                hidden_probability_stats: HiddenProbabilityStats::new(),
                 perf_stats: PerformanceStats::new()
             }
         );
@@ -767,6 +809,85 @@ mod tests {
         // If we require an active scan to connect to a network, raise probability as if the
         // network has become hidden.
         network_config.update_hidden_prob(HiddenProbEvent::ConnectActive);
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_ACTIVE);
+    }
+
+    #[test]
+    fn test_hidden_prob_calc_not_seen_in_active_scan_lowers_prob() {
+        // Test that updating hidden probability after not seeing the network in a directed active
+        // scan lowers the hidden probability
+        let mut network_config = NetworkConfig::new(
+            NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
+            Credential::None,
+            false,
+        )
+        .expect("Failed to create network config");
+
+        network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
+        let expected_prob = PROB_HIDDEN_DEFAULT - PROB_HIDDEN_INCREMENT_NOT_SEEN_ACTIVE;
+        assert_eq!(network_config.hidden_probability, expected_prob);
+
+        // If we update hidden probability again, the probability should lower again.
+        network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
+        let expected_prob = expected_prob - PROB_HIDDEN_INCREMENT_NOT_SEEN_ACTIVE;
+        assert_eq!(network_config.hidden_probability, expected_prob);
+    }
+
+    #[test]
+    fn test_hidden_prob_calc_not_seen_in_active_scan_does_not_lower_past_threshold() {
+        let mut network_config = NetworkConfig::new(
+            NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
+            Credential::None,
+            false,
+        )
+        .expect("Failed to create network config");
+
+        // If hidden probability is slightly above the minimum from not seing the network in an
+        // active scan, it should not be lowered past the minimum.
+        network_config.hidden_probability = PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE + 0.01;
+        network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE);
+
+        // If hidden probability is at the minimum, it should not be lowered.
+        network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE);
+    }
+
+    #[test]
+    fn test_hidden_prob_calc_not_seen_in_active_scan_does_not_change_if_lower_than_threshold() {
+        let mut network_config = NetworkConfig::new(
+            NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
+            Credential::None,
+            false,
+        )
+        .expect("Failed to create network config");
+
+        // If the hidden probability is lower than the minimum of not seeing the network in an,
+        // active scan, which could happen after seeing it in a passive scan, the hidden
+        // probability will not lower from this event.
+        let prob_before_update = PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE - 0.1;
+        network_config.hidden_probability = prob_before_update;
+        network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
+        assert_eq!(network_config.hidden_probability, prob_before_update);
+    }
+
+    #[test]
+    fn test_hidden_prob_calc_not_seen_active_after_active_connect() {
+        // Test the specific case where we fail to see the network in an active scan after we
+        // previously connected to the network after an active scan was required.
+        let mut network_config = NetworkConfig::new(
+            NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
+            Credential::None,
+            false,
+        )
+        .expect("Failed to create network config");
+
+        network_config.update_hidden_prob(HiddenProbEvent::ConnectActive);
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_ACTIVE);
+
+        // If we update the probability after a not-seen-in-active-scan, the probability should
+        // still reflect that we think the network is hidden after the connect.
+        network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
         assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_ACTIVE);
     }
 }
