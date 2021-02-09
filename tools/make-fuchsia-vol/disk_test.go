@@ -102,7 +102,7 @@ func TestDiskLayoutAllExplicit(t *testing.T) {
 		fvmSize:    2 * MEGABYTE,
 	}
 
-	layout := createPartitionTable(&info, &sizes, true, false, false)
+	layout := createPartitionTable(&info, &sizes, true, false, false, false)
 
 	checkPartitionLayout(t, sizes, layout, info)
 }
@@ -123,7 +123,7 @@ func TestDiskLayoutFvmFill(t *testing.T) {
 		fvmSize:    0,
 	}
 
-	layout := createPartitionTable(&info, &sizes, true, false, false)
+	layout := createPartitionTable(&info, &sizes, true, false, false, false)
 
 	checkPartitionLayout(t, sizes, layout, info)
 }
@@ -145,7 +145,7 @@ func TestDiskLayoutSmallerPartitions(t *testing.T) {
 		fvmSize:    2 * KILOBYTE,
 	}
 
-	layout := createPartitionTable(&info, &sizes, true, false, false)
+	layout := createPartitionTable(&info, &sizes, true, false, false, false)
 
 	checkPartitionLayout(t, sizes, layout, info)
 }
@@ -166,7 +166,7 @@ func TestDiskLayoutNoAbr(t *testing.T) {
 		fvmSize:    0,
 	}
 
-	layout := createPartitionTable(&info, &sizes, false, false, false)
+	layout := createPartitionTable(&info, &sizes, false, false, false, false)
 
 	checkPartitionLayout(t, sizes, layout, info)
 }
@@ -187,7 +187,7 @@ func TestDiskLayoutNoFvm(t *testing.T) {
 		fvmSize:    0,
 	}
 
-	layout := createPartitionTable(&info, &sizes, true, false, true)
+	layout := createPartitionTable(&info, &sizes, true, false, true, false)
 
 	checkPartitionLayout(t, sizes, layout, info)
 }
@@ -208,7 +208,28 @@ func TestDiskLayoutNoAbrAndNoFvm(t *testing.T) {
 		fvmSize:    0,
 	}
 
-	layout := createPartitionTable(&info, &sizes, false, false, true)
+	layout := createPartitionTable(&info, &sizes, false, false, true, false)
+
+	checkPartitionLayout(t, sizes, layout, info)
+}
+
+func TestDiskLayoutSparseFvm(t *testing.T) {
+	info := diskInfo{
+		physical: 4096,
+		logical:  512,
+		optimal:  0,
+		diskSize: 512 * MEGABYTE,
+		gpt:      gpt.GPT{},
+	}
+
+	sizes := partitionSizes{
+		efiSize:    2 * MEGABYTE,
+		abrSize:    2 * MEGABYTE,
+		vbmetaSize: 2 * MEGABYTE,
+		fvmSize:    34 * MEGABYTE,
+	}
+
+	layout := createPartitionTable(&info, &sizes, true, false, false, true)
 
 	checkPartitionLayout(t, sizes, layout, info)
 }

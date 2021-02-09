@@ -157,7 +157,7 @@ func prepareDisk(disk string) diskInfo {
 	}
 }
 
-func createPartitionTable(disk *diskInfo, sizes *partitionSizes, abr, verbose, ramdiskOnly bool) partitionLayout {
+func createPartitionTable(disk *diskInfo, sizes *partitionSizes, abr, verbose, ramdiskOnly, sparseFvm bool) partitionLayout {
 	lbaSize := disk.diskSize / disk.logical
 	disk.gpt.MBR = mbr.NewProtectiveMBR(lbaSize)
 	disk.gpt.Primary.Partitions = []gpt.PartitionEntry{}
@@ -285,10 +285,17 @@ func createPartitionTable(disk *diskInfo, sizes *partitionSizes, abr, verbose, r
 		}
 		sizes.fvmSize = (end + 1 - fvmStart) * disk.logical
 
+		guid := gpt.GUIDFuchsiaFVM
+		name := gpt.NewPartitionName("FVM")
+		if sparseFvm {
+			guid = gpt.GUIDFuchsiaInstaller
+			name = gpt.NewPartitionName("storage-sparse")
+		}
+
 		disk.gpt.Primary.Partitions = append(disk.gpt.Primary.Partitions, gpt.PartitionEntry{
-			PartitionTypeGUID:   gpt.GUIDFuchsiaFVM,
+			PartitionTypeGUID:   guid,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("FVM"),
+			PartitionName:       name,
 			StartingLBA:         fvmStart,
 			EndingLBA:           end,
 		})
@@ -430,7 +437,11 @@ func writeDisk(disk string, partitions partitionLayout, diskInfo diskInfo, sizes
 		if *verbose {
 			log.Print("Populating FVM in GPT image")
 		}
-		fvm(disk, int64(fvmStart), int64(sizes.fvmSize), "create", "--blob", *blob, "--data", *data)
+		if *useSparseFvm {
+			partitionCopy(f, int64(fvmStart), *fvmSize, *sparseFvm)
+		} else {
+			fvm(disk, int64(fvmStart), int64(sizes.fvmSize), "create", "--blob", *blob, "--data", *data)
+		}
 	}
 
 	// Keep the file open so that OSX doesn't try to remount the disk while tools are working on it.

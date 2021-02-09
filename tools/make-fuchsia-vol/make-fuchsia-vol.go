@@ -31,9 +31,11 @@ var (
 	cmdline    = flag.String("cmdline", "", "path to command line file (if exists)")
 	zedboot    = flag.String("zedboot", "", "path to zedboot.zbi (default: zircon-r from image manifests)")
 
-	ramdiskOnly = flag.Bool("ramdisk-only", false, "ramdisk-only mode - only write an ESP partition")
-	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
-	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
+	ramdiskOnly  = flag.Bool("ramdisk-only", false, "ramdisk-only mode - only write an ESP partition")
+	blob         = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
+	data         = flag.String("data", "", "path to data partition image (not used with ramdisk)")
+	useSparseFvm = flag.Bool("use-sparse-fvm", false, "if true, use sparse fvm instead of full fvm")
+	sparseFvm    = flag.String("sparse-fvm", "", "path to sparse FVM image (default: storage-sparse from image manifests)")
 
 	abr        = flag.Bool("abr", true, "add Zircon-{A,B,R} partitions")
 	zirconA    = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
@@ -125,7 +127,7 @@ func main() {
 		vbmetaSize: uint64(*vbmetaSize),
 		fvmSize:    uint64(*fvmSize),
 	}
-	partitions := createPartitionTable(&diskInfo, &sizes, *abr, *verbose, *ramdiskOnly)
+	partitions := createPartitionTable(&diskInfo, &sizes, *abr, *verbose, *ramdiskOnly, *useSparseFvm)
 	writeDisk(disk, partitions, diskInfo, sizes, bootMode)
 }
 
@@ -203,7 +205,19 @@ func initArguments() BootPartition {
 		}
 	}
 
-	if !*ramdiskOnly {
+	if *useSparseFvm {
+		if *sparseFvm == "" {
+			needFuchsiaBuildDir()
+			*sparseFvm = filepath.Join(*fuchsiaBuildDir, getImage("blk_storage-sparse"))
+		}
+		stat, err := os.Stat(*sparseFvm)
+		if err != nil {
+			log.Fatalf("sparse fvm error: %s\n", err)
+		}
+		*fvmSize = stat.Size()
+	}
+
+	if !*ramdiskOnly && !*useSparseFvm {
 		if *blob == "" {
 			needFuchsiaBuildDir()
 			*blob = filepath.Join(*fuchsiaBuildDir, getImage("blk_blob"))
