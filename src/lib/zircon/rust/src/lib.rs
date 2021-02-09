@@ -306,6 +306,15 @@ pub fn object_set_property<P: PropertyQuerySet>(
     ok(status)
 }
 
+/// Retrieve the system memory page size in bytes.
+///
+/// Wraps the
+/// [zx_system_get_page_size](https://fuchsia.dev/fuchsia-src/reference/syscalls/system_get_page_size.md)
+/// syscall.
+pub fn system_get_page_size() -> u32 {
+    unsafe { sys::zx_system_get_page_size() }
+}
+
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
