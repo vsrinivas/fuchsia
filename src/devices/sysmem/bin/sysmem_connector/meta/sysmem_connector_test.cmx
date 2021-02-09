@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/sysmem_connector_test"
+        "binary": "bin/sysmem_connector_test"
     },
     "sandbox": {
         "dev": [

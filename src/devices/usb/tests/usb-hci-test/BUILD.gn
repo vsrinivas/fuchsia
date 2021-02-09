@@ -8,6 +8,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("usb_hci_test_bind") {
   rules = "usb_hci_test.bind"
@@ -29,22 +30,20 @@ group("tests") {
   ]
 }
 
-test_package("usb-hci-test-package") {
+fuchsia_unittest_package("usb-hci-test-package") {
+  manifest = "meta/usb-hci-test.cmx"
   deps = [ ":usb-hci-test" ]
 
-  tests = [
-    {
-      name = "usb-hci-test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-          tags = [ "usb-compliance-tests" ]
-        },
-      ]
-    },
-  ]
+  test_specs = {
+    environments = [
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "usb-compliance-tests" ]
+      },
+    ]
+  }
 }
 
 # Each e2e test must run in its own executable.

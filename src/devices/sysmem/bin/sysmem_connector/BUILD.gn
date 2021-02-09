@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("sysmem_connector_executable") {
   output_name = "sysmem_connector"
@@ -23,21 +22,9 @@ executable("sysmem_connector_executable") {
   ]
 }
 
-package("sysmem_connector") {
+fuchsia_package_with_single_component("sysmem_connector") {
+  manifest = "meta/sysmem_connector.cmx"
   deps = [ ":sysmem_connector_executable" ]
-
-  binaries = [
-    {
-      name = "sysmem_connector"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/sysmem_connector.cmx")
-      dest = "sysmem_connector.cmx"
-    },
-  ]
 }
 
 executable("sysmem_connector_test_executable") {
@@ -58,12 +45,7 @@ executable("sysmem_connector_test_executable") {
   ]
 }
 
-test_package("sysmem_connector_test") {
+fuchsia_unittest_package("sysmem_connector_test") {
+  manifest = "meta/sysmem_connector_test.cmx"
   deps = [ ":sysmem_connector_test_executable" ]
-
-  tests = [
-    {
-      name = "sysmem_connector_test"
-    },
-  ]
 }
