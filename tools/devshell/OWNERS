@@ -1,4 +1,5 @@
 abarth@google.com
+gboone@google.com
 raggi@google.com
 mangini@google.com
 per-file add-update-source,run,build-push,push-package,serve,serve-updates,lib/updates.sh = computerdruid@google.com,etryzelaar@google.com,galbanum@google.com,kevinwells@google.com
