@@ -69,6 +69,7 @@ source_set("test-libs") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/bus/testing/fake-pdev",
     "//src/devices/lib/dma-buffer",
     "//src/devices/lib/mmio",
     "//src/devices/lib/synchronous-executor",

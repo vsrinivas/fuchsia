@@ -15,9 +15,9 @@
 #include <fake-dma-buffer/fake-dma-buffer.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 
-namespace usb_xhci {
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
-const zx::bti kFakeBti(42);
+namespace usb_xhci {
 
 struct FakeTRB;
 struct FakePhysAddr {
@@ -66,9 +66,9 @@ struct FakeTRB : TRB {
   zx_paddr_t prev = 0;
 };
 
-class FakeDevice : public ddk::PDevProtocol<FakeDevice> {
+class FakeDevice {
  public:
-  FakeDevice() : pdev_({&pdev_protocol_ops_, this}) {
+  FakeDevice() {
     constexpr auto kHcsParams2 = 2;
     constexpr auto kHccParams1 = 4;
     constexpr auto kXecp = 320;
@@ -205,36 +205,13 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice> {
 
     region_.emplace(regs_, sizeof(uint32_t), std::size(regs_));
     // Control register
-    zx::interrupt::create(zx::resource(ZX_HANDLE_INVALID), 0, ZX_INTERRUPT_VIRTUAL, &irq_);
   }
 
-  const pdev_protocol_t* pdev() const { return &pdev_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
-    out_mmio->offset = reinterpret_cast<size_t>(this);
-    return ZX_OK;
-  }
+  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
   ddk::MmioBuffer mmio() { return ddk::MmioBuffer(region_->GetMmioBuffer()); }
 
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    irq_signaller_ = zx::unowned_interrupt(irq_);
-    *out_irq = std::move(irq_);
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
-    *out_bti = zx::bti(kFakeBti.get());
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+  void set_irq_signaller(zx::unowned_interrupt signaller) { irq_signaller_ = std::move(signaller); }
 
   void SetDoorbellCallback(fit::function<void(uint8_t, uint8_t)> callback) {
     doorbell_callback_ = std::move(callback);
@@ -245,8 +222,6 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice> {
  private:
   ddk_fake::FakeMmioReg regs_[2048];
   std::optional<ddk_fake::FakeMmioRegRegion> region_;
-  pdev_protocol_t pdev_;
-  zx::interrupt irq_;
   zx::unowned_interrupt irq_signaller_;
   bool driver_owned_controller_ = false;
   bool controller_enabled_ = false;
@@ -426,17 +401,18 @@ class XhciHarness : public zxtest::Test {
   }
 
   void SetDoorbellListener(fit::function<void(uint8_t, uint8_t)> listener) {
-    pdev_.SetDoorbellCallback(std::move(listener));
+    fake_device_.SetDoorbellCallback(std::move(listener));
   }
 
-  FakeTRB* crcr() { return pdev_.crcr(); }
+  FakeTRB* crcr() { return fake_device_.crcr(); }
 
   virtual ~XhciHarness() {}
 
  protected:
   std::unique_ptr<UsbXhci> device_;
   Ddk ddk_;
-  FakeDevice pdev_;
+  FakeDevice fake_device_;
+  fake_pdev::FakePDev pdev_;
 
  private:
   std::vector<uint8_t> slot_freelist_;
@@ -447,11 +423,12 @@ class XhciHarness : public zxtest::Test {
 class XhciMmioHarness : public XhciHarness {
  public:
   void SetUp() override {
-    zx::interrupt interrupt;
-    ASSERT_OK(zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+    pdev_.set_mmio(0, fake_device_.mmio_info());
+    fake_device_.set_irq_signaller(pdev_.CreateVirtualInterrupt(0));
+    pdev_.UseFakeBti();
     {
       fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-      protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.pdev()->ops, pdev_.pdev()->ctx}};
+      protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
       ddk_.SetProtocols(std::move(protocols));
     }
     auto dev = std::make_unique<UsbXhci>(fake_ddk::kFakeParent, ddk_fake::CreateBufferFactory());
