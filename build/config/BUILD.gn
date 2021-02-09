@@ -109,6 +109,10 @@ config("rust_v0_symbol_mangling") {
   }
 }
 
+config("rust_allow_unknown_lints") {
+  rustflags = [ "-Aunknown-lints" ]
+}
+
 # TODO(fxbug.dev/67118) remove this allowance
 config("rust_allow_redundant_semicolons") {
   rustflags = [ "-Aredundant-semicolons" ]
@@ -117,6 +121,11 @@ config("rust_allow_redundant_semicolons") {
 # TODO(fxbug.dev/68148) remove this allowance
 config("rust_allow_unused_extern_crates") {
   rustflags = [ "-Aunused-extern-crates" ]
+}
+
+# TODO(fxbug.dev/69442) remove this allowance
+config("rust_allow_legacy_derive_helpers") {
+  rustflags = [ "-Alegacy-derive-helpers" ]
 }
 
 config("language") {
