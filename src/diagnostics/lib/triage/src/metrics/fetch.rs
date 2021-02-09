@@ -488,7 +488,7 @@ mod test {
     fn require_missing(value: MetricValue, message: &'static str) {
         match value {
             MetricValue::Missing(_) => {}
-            _ => assert!(false, message),
+            _ => assert!(false, "{}", message),
         }
     }
 

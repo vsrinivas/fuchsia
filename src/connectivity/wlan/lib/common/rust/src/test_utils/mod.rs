@@ -20,7 +20,7 @@ pub trait ExpectWithin: Future + Sized {
         msg: S,
     ) -> OnTimeout<Self, Box<dyn FnOnce() -> Self::Output>> {
         let msg = msg.clone().to_string();
-        self.on_timeout(duration.after_now(), Box::new(move || panic!(msg)))
+        self.on_timeout(duration.after_now(), Box::new(move || panic!("{}", msg)))
     }
 }
 

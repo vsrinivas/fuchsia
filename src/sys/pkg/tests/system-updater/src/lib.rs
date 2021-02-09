@@ -330,7 +330,7 @@ impl TestEnv {
         match fs::read(self.misc_path.join("ota/current_channel.json")) {
             Ok(bytes) => assert_eq!(bytes, expected.unwrap()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => assert_eq!(expected, None),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 

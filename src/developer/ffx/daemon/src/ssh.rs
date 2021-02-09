@@ -75,8 +75,8 @@ mod test {
         let result = build_ssh_command(addrs, vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
 
-        assert!(dbgstr.contains(&format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path)), dbgstr);
-        assert!(dbgstr.contains(&ip.to_string()), dbgstr);
+        assert!(dbgstr.contains(&format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path)), "{}", dbgstr);
+        assert!(dbgstr.contains(&ip.to_string()), "{}", dbgstr);
         Ok(())
     }
 }

@@ -169,7 +169,8 @@ pub fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg
     assert_variant!(
         stream.try_next(),
         Ok(None) | Err(..),
-        format!("error, receiver not empty: {}", error_msg)
+        "error, receiver not empty: {}",
+        error_msg
     );
 }
 

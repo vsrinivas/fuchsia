@@ -23,18 +23,14 @@ pub struct MockInputTarball {
 
 impl MockInputTarball {
     pub fn new() -> MockInputTarball {
-        MockInputTarball {
-            files: RefCell::new(HashMap::new()),
-        }
+        MockInputTarball { files: RefCell::new(HashMap::new()) }
     }
 
     pub fn add(&self, path: &str, content: &str) {
         assert!(
-            self.files
-                .borrow_mut()
-                .insert(path.to_owned(), content.to_owned())
-                .is_none(),
-            format!("Path already added: {}", path)
+            self.files.borrow_mut().insert(path.to_owned(), content.to_owned()).is_none(),
+            "Path already added: {}",
+            path
         );
     }
 }
@@ -47,9 +43,7 @@ impl InputTarball<String> for MockInputTarball {
         self.files
             .borrow_mut()
             .get_mut(path)
-            .ok_or_else(|| Error::ArchiveFileNotFound {
-                name: path.to_owned(),
-            })
+            .ok_or_else(|| Error::ArchiveFileNotFound { name: path.to_owned() })
             .map(|file_path| -> Result<()> { reader(file_path) })?
     }
 
@@ -69,16 +63,11 @@ pub struct MockOutputTarball {
 
 impl MockOutputTarball {
     pub fn new() -> MockOutputTarball {
-        MockOutputTarball {
-            files: HashMap::new(),
-        }
+        MockOutputTarball { files: HashMap::new() }
     }
 
     pub fn assert_has_file(&self, path: &str) {
-        assert!(
-            self.files.contains_key(path),
-            format!("File not found: {}", path)
-        );
+        assert!(self.files.contains_key(path), "File not found: {}", path);
     }
 
     pub fn get_content(&self, path: &str) -> &String {

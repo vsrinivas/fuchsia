@@ -87,7 +87,7 @@ async fn run_launcher_service(mut stream: LauncherRequestStream) -> Result<(), E
                             .unwrap();
                     }
                     _ => {
-                        panic!(format!("got unrecognized URL: {}", launch_info.url));
+                        panic!("got unrecognized URL: {}", launch_info.url);
                     }
                 }
             }

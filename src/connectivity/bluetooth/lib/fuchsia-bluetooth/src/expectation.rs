@@ -551,7 +551,7 @@ macro_rules! over {
 macro_rules! assert_satisfies {
     ($subject:expr, $pred:expr) => {
         if let Err(msg) = $pred.assert_satisfied($subject) {
-            panic!(msg.0)
+            panic!("{}", msg.0)
         }
     };
 }

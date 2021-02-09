@@ -58,7 +58,7 @@ mod tests {
         env::set_var("FUCHSIA_DIR", link_path);
 
         let fuchsia_root = get_fuchsia_root();
-        assert!(fuchsia_root.is_ok(), fuchsia_root);
+        assert!(fuchsia_root.is_ok(), "{:?}", fuchsia_root);
         assert_eq!(fuchsia_root.unwrap(), subdir_path);
     }
 }

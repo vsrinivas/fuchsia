@@ -146,7 +146,7 @@ mod tests {
         let mut results = results::Results::new();
         run_all_puppets(vec!["a".to_owned()], &mut results).await;
         assert!(results.failed());
-        assert!(results.to_json().contains("URL may be invalid"), results.to_json());
+        assert!(results.to_json().contains("URL may be invalid"), "{}", results.to_json());
     }
 
     #[fasync::run_singlethreaded(test)]

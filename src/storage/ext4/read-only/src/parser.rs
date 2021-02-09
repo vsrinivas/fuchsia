@@ -579,7 +579,7 @@ mod tests {
                     EntryType::Directory => {
                         if path != vec!["inner"] && path != vec!["lost+found"] {
                             // These should be the only possible directories.
-                            assert!(false, format!("Unexpected path {:?}", path));
+                            assert!(false, "Unexpected path {:?}", path);
                         }
                     }
                     _ => {

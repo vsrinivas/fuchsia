@@ -645,7 +645,8 @@ fn test_no_jitter_at_max_load() {
     }
     assert!(
         throttling_started,
-        format!("CPU throttling did not begin within {} iterations", max_iterations)
+        "CPU throttling did not begin within {} iterations",
+        max_iterations
     );
 
     // Iterated one more time, and make sure the clock speed is still reduced.

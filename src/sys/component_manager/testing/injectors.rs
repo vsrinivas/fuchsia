@@ -244,7 +244,7 @@ impl<M: ServiceMarker, T: ProtocolInjector<Marker = M> + 'static + Sync + Send> 
                     return;
                 }
             }
-            panic!(e);
+            panic!("{}", e);
         }
     }
 }

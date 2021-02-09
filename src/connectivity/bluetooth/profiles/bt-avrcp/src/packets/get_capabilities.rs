@@ -321,7 +321,7 @@ mod tests {
             0x02, // len
             0x01, 0x02, // two events
         ]);
-        assert!(resp.is_ok(), format!("unable to decode {:?}", resp.err()));
+        assert!(resp.is_ok(), "unable to decode {:?}", resp.err());
         assert_eq!(resp.unwrap().event_ids(), &[0x01, 0x02]);
     }
 

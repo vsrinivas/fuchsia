@@ -665,10 +665,7 @@ async fn pcapng_packet_headers_test() -> Result {
         // All the payload is there.
         assert_eq!(packet.len(), PAYLOAD_LENGTH);
         // Payoad is all zeros.
-        assert!(
-            packet.iter().all(|b| *b == 0),
-            format!("payload should be all zeroes, got: {:?}", packet)
-        );
+        assert!(packet.iter().all(|b| *b == 0), "payload should be all zeroes, got: {:?}", packet);
     }
 
     assert!((buf_mut.is_empty()));

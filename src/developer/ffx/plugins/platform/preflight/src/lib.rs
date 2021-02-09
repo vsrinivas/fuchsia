@@ -251,14 +251,19 @@ mod test {
         let result = run_preflight_checks(&mut buf, &checks, &config).await;
         let output = String::from_utf8(buf)?;
         // Check for the various output strings.
-        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), output);
-        assert!(output.contains("This check passed!"), output);
-        assert!(output.contains("Oh no..."), output);
+        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), "{:?}", output);
+        assert!(output.contains("This check passed!"), "{:?}", output);
+        assert!(output.contains("Oh no..."), "{:?}", output);
         match result {
             Err(error) => {
-                assert!(error.to_string().contains(SOME_CHECKS_FAILED_FATAL), error.to_string());
+                assert!(
+                    error.to_string().contains(SOME_CHECKS_FAILED_FATAL),
+                    "{}",
+                    error.to_string()
+                );
                 assert!(
                     !error.to_string().contains(SOME_CHECKS_FAILED_RECOVERABLE),
+                    "{}",
                     error.to_string()
                 );
                 Ok(())
@@ -279,15 +284,20 @@ mod test {
         let result = run_preflight_checks(&mut buf, &checks, &config).await;
         let output = String::from_utf8(buf)?;
         // Check for the various output strings.
-        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), output);
-        assert!(output.contains("This check passed!"), output);
-        assert!(output.contains("We will get through this."), output);
-        assert!(output.contains("Take a deep breath and try again."), output);
+        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), "{:?}", output);
+        assert!(output.contains("This check passed!"), "{:?}", output);
+        assert!(output.contains("We will get through this."), "{:?}", output);
+        assert!(output.contains("Take a deep breath and try again."), "{:?}", output);
         match result {
             Err(error) => {
-                assert!(!error.to_string().contains(SOME_CHECKS_FAILED_FATAL), error.to_string());
+                assert!(
+                    !error.to_string().contains(SOME_CHECKS_FAILED_FATAL),
+                    "{}",
+                    error.to_string()
+                );
                 assert!(
                     error.to_string().contains(SOME_CHECKS_FAILED_RECOVERABLE),
+                    "{}",
                     error.to_string()
                 );
                 Ok(())

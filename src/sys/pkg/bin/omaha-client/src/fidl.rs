@@ -884,7 +884,7 @@ mod tests {
     ) -> M::Proxy {
         let (proxy, stream) = create_proxy_and_stream::<M>().unwrap();
         fasync::Task::local(
-            FidlServer::handle_client(fidl, service(stream)).unwrap_or_else(|e| panic!(e)),
+            FidlServer::handle_client(fidl, service(stream)).unwrap_or_else(|e| panic!("{}", e)),
         )
         .detach();
         proxy

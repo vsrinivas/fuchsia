@@ -651,17 +651,15 @@ impl ThermalPolicy {
     ) -> ThermalLoad {
         debug_assert!(
             error_integral >= error_integral_min,
-            format!(
-                "error_integral ({}) less than error_integral_min ({})",
-                error_integral, error_integral_min
-            )
+            "error_integral ({}) less than error_integral_min ({})",
+            error_integral,
+            error_integral_min
         );
         debug_assert!(
             error_integral <= error_integral_max,
-            format!(
-                "error_integral ({}) greater than error_integral_max ({})",
-                error_integral, error_integral_max
-            )
+            "error_integral ({}) greater than error_integral_max ({})",
+            error_integral,
+            error_integral_max
         );
 
         if error_integral < error_integral_min {

@@ -284,7 +284,7 @@ mod tests {
         mock_metrics.expect_log_throttle_end_shutdown(Seconds(10.0).into());
         match executor.run_until_stalled(&mut Box::pin(node.poll_temperature())) {
             futures::task::Poll::Ready(result) => assert!(result.is_ok()),
-            e => panic!(e),
+            e => panic!("{:?}", e),
         };
 
         // Ensure the expected call was received

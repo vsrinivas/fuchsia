@@ -1142,7 +1142,8 @@ mod tests {
             let tree_selector = create_tree_selector(node_path, property);
             assert!(
                 validate_tree_selector(&tree_selector).is_err(),
-                format!("Failed to validate tree selector: {:?}", tree_selector)
+                "Failed to validate tree selector: {:?}",
+                tree_selector
             );
         }
 
@@ -1150,7 +1151,8 @@ mod tests {
             let tree_selector = create_tree_selector(node_path, property);
             assert!(
                 validate_tree_selector(&tree_selector).is_err(),
-                format!("Failed to validate tree selector: {:?}", tree_selector)
+                "Failed to validate tree selector: {:?}",
+                tree_selector
             );
         }
     }
@@ -1179,7 +1181,8 @@ mod tests {
 
             assert!(
                 validate_component_selector(&component_selector).is_err(),
-                format!("Failed to validate component selector: {:?}", component_selector)
+                "Failed to validate component selector: {:?}",
+                component_selector
             );
         }
     }
@@ -1205,7 +1208,9 @@ mod tests {
             let parsed_selector = Arc::new(parse_selector(selector).unwrap());
             assert!(
                 match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
-                format!("Selector {:?} failed to match {:?}", selector, moniker)
+                "Selector {:?} failed to match {:?}",
+                selector,
+                moniker
             );
         }
 
@@ -1220,7 +1225,9 @@ mod tests {
             let parsed_selector = Arc::new(parse_selector(selector).unwrap());
             assert!(
                 !match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
-                format!("Selector {:?} matched {:?}, but was expected to fail", selector, moniker)
+                "Selector {:?} matched {:?}, but was expected to fail",
+                selector,
+                moniker
             );
         }
     }

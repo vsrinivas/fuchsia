@@ -1472,7 +1472,7 @@ async fn main() {
         Err(e) => {
             let err_str = format!("fatal error running main: {:?}", e);
             error!("{}", err_str);
-            panic!(err_str);
+            panic!("{}", err_str);
         }
     }
 }

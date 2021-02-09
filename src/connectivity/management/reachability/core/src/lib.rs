@@ -790,7 +790,7 @@ mod tests {
         );
         assert_eq!(info, want, "no previous state, just add it");
         let (result, message) = verify_time(info, want);
-        assert!(result, message);
+        assert!(result, "{}", message);
 
         let mut info = ReachabilityInfo::new(
             PortType::Ethernet,
@@ -845,7 +845,7 @@ mod tests {
         assert_eq!(updated, [Proto::IPv4].iter().cloned().collect(), "An IPv4 change.");
         assert_eq!(info, want, "IPv4 has now a previouse state, IPv6 has not changed.");
         let (result, message) = verify_time(info, want);
-        assert!(result, message);
+        assert!(result, "{}", message);
     }
 
     #[test]

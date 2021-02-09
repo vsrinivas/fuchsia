@@ -332,7 +332,7 @@ pub mod test {
                 assert_eq!(output, expected_output);
             }
             Err(e) => {
-                panic!(format!("{:#?}", e));
+                panic!("{:#?}", e);
             }
         }
     }

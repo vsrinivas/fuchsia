@@ -59,20 +59,22 @@ pub async fn version_cmd<W: Write, O: Offset + Display>(
     writeln!(w, "{}", format_version_info("ffx", version_info, cmd.verbose, &tz))?;
 
     if cmd.verbose {
-        let daemon_version_info =
-            match timeout(Duration::from_millis(DEFAULT_DAEMON_TIMEOUT_MS), proxy.get_version_info())
-                .await
-            {
-                Ok(Ok(v)) => v,
-                Err(_) => {
-                    writeln!(w, "Timed out trying to get daemon version info")?;
-                    return Ok(());
-                }
-                Ok(Err(e)) => {
-                    writeln!(w, "Failed to get daemon version info:\n{}", e)?;
-                    return Ok(());
-                }
-            };
+        let daemon_version_info = match timeout(
+            Duration::from_millis(DEFAULT_DAEMON_TIMEOUT_MS),
+            proxy.get_version_info(),
+        )
+        .await
+        {
+            Ok(Ok(v)) => v,
+            Err(_) => {
+                writeln!(w, "Timed out trying to get daemon version info")?;
+                return Ok(());
+            }
+            Ok(Err(e)) => {
+                writeln!(w, "Failed to get daemon version info:\n{}", e)?;
+                return Ok(());
+            }
+        };
 
         writeln!(w, "\n{}", format_version_info("daemon", &daemon_version_info, true, &tz))?;
     }
@@ -182,16 +184,13 @@ mod test {
 
         if output_lines.len() != expected_lines.len() {
             println!("FULL OUTPUT: \n{}\n", output);
-            assert!(
-                false,
-                format!("{} lines =/= {} lines", output_lines.len(), expected_lines.len())
-            );
+            assert!(false, "{} lines =/= {} lines", output_lines.len(), expected_lines.len());
         }
 
         for (out_line, expected_line) in output_lines.iter().zip(expected_lines) {
             if !expected_line.is_empty() {
                 if !out_line.contains(&expected_line) {
-                    assert!(false, format!("'{}' does not contain '{}'", out_line, expected_line));
+                    assert!(false, "'{}' does not contain '{}'", out_line, expected_line);
                 }
             }
         }

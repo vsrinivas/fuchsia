@@ -348,8 +348,8 @@ mod tests {
             .contains("\"metrics\":[{\"step_index\":42,\"trial_name\":\"FooTrial\",\"metrics\":"));
         assert!(json.contains("\"step_name\":\"BarStep\""));
         assert!(json.contains(
-            "\"MyBlock(UNUSED)\":{\"count\":1,\"header_bytes\":8,\"data_bytes\":0,\"total_bytes\":16,\"data_percent\":0}"), json);
+            "\"MyBlock(UNUSED)\":{\"count\":1,\"header_bytes\":8,\"data_bytes\":0,\"total_bytes\":16,\"data_percent\":0}"), "{}", json);
         assert!(json.contains(
-            "\"MyBlock\":{\"count\":2,\"header_bytes\":16,\"data_bytes\":8,\"total_bytes\":32,\"data_percent\":25}"), json);
+            "\"MyBlock\":{\"count\":2,\"header_bytes\":16,\"data_bytes\":8,\"total_bytes\":32,\"data_percent\":25}"), "{}", json);
     }
 }

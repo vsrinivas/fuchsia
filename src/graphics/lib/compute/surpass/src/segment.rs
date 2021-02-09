@@ -295,10 +295,7 @@ mod tests {
 
     macro_rules! assert_approx {
         ( $left:expr, $right:expr ) => {{
-            assert!(
-                ($left - $right).abs() <= ::std::f32::EPSILON,
-                format!("{:?} != {:?}", $left, $right),
-            );
+            assert!(($left - $right).abs() <= ::std::f32::EPSILON, "{:?} != {:?}", $left, $right,);
         }};
     }
 

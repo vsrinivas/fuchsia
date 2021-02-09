@@ -120,7 +120,7 @@ mod test {
                     }))
                     .unwrap();
             }
-            _ => assert!(false, format!("got unexpected {:?}", req)),
+            _ => assert!(false, "got unexpected {:?}", req),
         })
     }
 

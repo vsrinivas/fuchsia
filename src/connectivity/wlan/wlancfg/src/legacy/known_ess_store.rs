@@ -246,7 +246,8 @@ mod tests {
         assert!(
             e.to_string().contains("Failed to rename")
                 && e.to_string().contains("into /dev/null/foo"),
-            format!("error message was: {}", e)
+            "error message was: {}",
+            e
         );
     }
 

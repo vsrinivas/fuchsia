@@ -154,7 +154,7 @@ fn assert_error_kind_helper<T: Debug>(
 macro_rules! assert_error_kind {
     ($result:expr, $expected:expr) => {{
         assert_error_kind_helper($result, stringify!($result), $expected)
-            .unwrap_or_else(|err_string| panic!(err_string))
+            .unwrap_or_else(|err_string| panic!("{}", err_string))
     }};
     ($result:expr, $expected:expr,) => {{
         assert_error_kind!($result, $expected)

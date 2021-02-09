@@ -366,7 +366,8 @@ Warnings
 [WARNING]: my_component.cmx crashed at 1h1m1.124s [3661.124]
 "#
             ),
-            format!("not found in:\n{}", result)
+            "not found in:\n{}",
+            result
         );
     }
 

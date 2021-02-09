@@ -381,7 +381,8 @@ macro_rules! open_get_vmo_file_proxy_assert_ok {
             let info = *info.expect("Empty NodeInfo");
             assert!(
                 matches!(info, NodeInfo::Vmofile(Vmofile { .. })),
-                format!("Expected Vmofile but got {:?}", info)
+                "Expected Vmofile but got {:?}",
+                info
             );
         })
     }};
@@ -491,7 +492,8 @@ macro_rules! clone_get_vmo_file_proxy_assert_ok {
             let info = *info.expect("Empty NodeInfo");
             assert!(
                 matches!(info, NodeInfo::Vmofile(Vmofile { .. })),
-                format!("Expected Vmofile but got {:?}", info)
+                "Expected Vmofile but got {:?}",
+                info
             );
         })
     }};

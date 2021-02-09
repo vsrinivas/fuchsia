@@ -80,7 +80,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
         if let ServiceFsNode::Directory(Directory::Local { children }) = self {
             children
         } else {
-            panic!(NOT_A_DIR)
+            panic!("{}", NOT_A_DIR)
         }
     }
 
@@ -88,7 +88,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
         if let ServiceFsNode::Directory(Directory::Local { children }) = self {
             children
         } else {
-            panic!(NOT_A_DIR)
+            panic!("{}", NOT_A_DIR)
         }
     }
 

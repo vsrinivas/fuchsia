@@ -562,25 +562,23 @@ mod test {
             let state = self.state_manager.lock().await;
             assert!(
                 state.kill_results.is_empty(),
-                format!("too few calls to kill_all. remaining entries: {:?}", state.kill_results)
+                "too few calls to kill_all. remaining entries: {:?}",
+                state.kill_results
             );
             assert!(
                 state.daemons_running_results.is_empty(),
-                format!(
-                    "too few calls to is_running. remaining entries: {:?}",
-                    state.daemons_running_results
-                )
+                "too few calls to is_running. remaining entries: {:?}",
+                state.daemons_running_results
             );
             assert!(
                 state.spawn_results.is_empty(),
-                format!("too few calls to spawn. remaining entries: {:?}", state.spawn_results)
+                "too few calls to spawn. remaining entries: {:?}",
+                state.spawn_results
             );
             assert!(
                 state.find_and_connect_results.is_empty(),
-                format!(
-                    "too few calls to find_and_connect. remaining entries: {:?}",
-                    state.find_and_connect_results
-                )
+                "too few calls to find_and_connect. remaining entries: {:?}",
+                state.find_and_connect_results
             );
         }
     }
@@ -624,7 +622,7 @@ mod test {
         fasync::Task::spawn(
             stream
                 .try_for_each(move |r| f(r).map(Ok))
-                .unwrap_or_else(|e| panic!(format!("failed to handle request: {:?}", e))),
+                .unwrap_or_else(|e| panic!("failed to handle request: {:?}", e)),
         )
         .detach();
     }
@@ -642,7 +640,7 @@ mod test {
                     responder.send(&mut vec![].drain(..)).unwrap();
                 }
                 _ => {
-                    assert!(false, format!("got unexpected request: {:?}", req));
+                    assert!(false, "got unexpected request: {:?}", req);
                 }
             }
         })
@@ -750,7 +748,7 @@ mod test {
                         }
                     }
                     _ => {
-                        assert!(false, format!("got unexpected request: {:?}", req));
+                        assert!(false, "got unexpected request: {:?}", req);
                     }
                 }
             }
@@ -772,7 +770,7 @@ mod test {
                         // Do nothing
                     }
                     _ => {
-                        assert!(false, format!("got unexpected request: {:?}", req));
+                        assert!(false, "got unexpected request: {:?}", req);
                     }
                 }
             }
@@ -795,7 +793,7 @@ mod test {
                         panic!("unexpected daemon call");
                     }
                     _ => {
-                        assert!(false, format!("got unexpected request: {:?}", req));
+                        assert!(false, "got unexpected request: {:?}", req);
                     }
                 }
             }

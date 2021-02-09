@@ -229,10 +229,10 @@ mod tests {
     #[inline]
     fn assert_close_enough(left: (f32, f32), right: (f32, f32)) {
         const EPSILON: f32 = 0.0001;
-        assert!(left.0 > right.0 - EPSILON, format!("Left: {:?} Right: {:?}", left, right));
-        assert!(left.0 < right.0 + EPSILON, format!("Left: {:?} Right: {:?}", left, right));
-        assert!(left.1 > right.1 - EPSILON, format!("Left: {:?} Right: {:?}", left, right));
-        assert!(left.1 < right.1 + EPSILON, format!("Left: {:?} Right: {:?}", left, right));
+        assert!(left.0 > right.0 - EPSILON, "Left: {:?} Right: {:?}", left, right);
+        assert!(left.0 < right.0 + EPSILON, "Left: {:?} Right: {:?}", left, right);
+        assert!(left.1 > right.1 - EPSILON, "Left: {:?} Right: {:?}", left, right);
+        assert!(left.1 < right.1 + EPSILON, "Left: {:?} Right: {:?}", left, right);
     }
 
     #[inline]
