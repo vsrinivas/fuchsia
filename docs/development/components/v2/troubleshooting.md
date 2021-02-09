@@ -251,16 +251,21 @@ result in the test failing to run.
 If this happens, you'll see an error like the following from `fx test`:
 
 ```
-Test suite encountered error trying to run tests: Error getting test cases: The test protocol was
-closed. This may mean `/svc/fuchsia.test.Suite` was not configured properly. Refer to
-https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test
+Test suite encountered error trying to run tests: getting test cases
+Caused by:
+    The test protocol was closed. This may mean `fuchsia.test.Suite` was not configured correctly.
+    Refer to: https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test
 ```
 
-Misconfigurations can happen in a few ways:
+Misconfigurations can happen in a few test-specific ways:
 
 - [The test failed to expose `fuchsia.test.Suite` to test manager](#troubleshoot-test-root)
 - [The test driver failed to expose `fuchsia.test.Suite` to the root](#troubleshoot-test-routing)
 - [The test driver does not use a test runner](#troubleshoot-test-runner)
+
+If you're still seeing the same error after trying the preceding solutions, consider following
+[the troubleshooting steps for using capabilities](#troubleshoot-use). The troubleshooting steps may
+help fix issues from routing the `fuchsia.test.Suite` capability in integration tests.
 
 ### The test failed to expose `fuchsia.test.Suite` to test manager {#troubleshoot-test-root}
 
