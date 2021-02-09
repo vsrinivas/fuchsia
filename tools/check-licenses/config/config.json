@@ -188,10 +188,6 @@
     {
       "projectRoot": "zircon/third_party/ulib/musl/third_party",
       "licenseLocation": "../COPYRIGHT"
-    },
-    {
-      "projectRoot": "zircon/third_party/scudo",
-      "licenseLocation": "src/LICENSE.TXT"
     }
   ],
   "flutterLicenses": [

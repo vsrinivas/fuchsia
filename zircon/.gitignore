@@ -1,8 +1,2 @@
 /prebuilt/downloads/
 /prebuilt/config.gni
-/third_party/lz4
-/third_party/zstd
-/third_party/rapidjson
-/third_party/scudo/gwp_asan
-/third_party/scudo/src
-/third_party/llvm-libc
