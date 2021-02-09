@@ -97,22 +97,16 @@ impl ConnectedPeers {
         peer: &DetachableWeak<PeerId, Peer>,
         negotiation: CodecNegotiation,
     ) -> Result<(), anyhow::Error> {
-        let remote_streams = {
-            let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-            if strong.streaming_active() {
-                return Ok(());
-            }
-            strong.collect_capabilities()
+        let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
+        if strong.streaming_active() {
+            return Ok(());
         }
-        .await?;
+        let remote_streams = strong.collect_capabilities().await?;
 
         let (negotiated, remote_seid) =
             negotiation.select(&remote_streams).ok_or(format_err!("No compatible stream found"))?;
 
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        if strong.streaming_active() {
-            return Ok(());
-        }
         strong.stream_start(remote_seid, negotiated).await.map_err(Into::into)
     }
 
@@ -490,79 +484,6 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
     }
 
-    fn expect_peer_discovery(
-        exec: &mut fasync::Executor,
-        requests: &mut avdtp::RequestStream,
-    ) -> (avdtp::StreamEndpointId, avdtp::StreamEndpointId) {
-        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
-        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
-        match exec.run_until_stalled(&mut requests.next()) {
-            Poll::Ready(Some(Ok(avdtp::Request::Discover { responder }))) => {
-                let endpoints = vec![
-                    avdtp::StreamInformation::new(
-                        remote_sbc_seid.clone(),
-                        false,
-                        avdtp::MediaType::Audio,
-                        avdtp::EndpointType::Source,
-                    ),
-                    avdtp::StreamInformation::new(
-                        remote_aac_seid.clone(),
-                        false,
-                        avdtp::MediaType::Audio,
-                        avdtp::EndpointType::Source,
-                    ),
-                ];
-                responder.send(&endpoints).expect("response succeeds");
-            }
-            x => panic!("Expected a discovery request to be sent after delay, got {:?}", x),
-        };
-        (remote_sbc_seid, remote_aac_seid)
-    }
-
-    #[test]
-    fn streaming_start_configure_while_discovery() {
-        let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
-        let id = PeerId(1);
-        let (remote, channel) = Channel::create();
-        let remote = avdtp::Peer::new(remote);
-
-        let delay = zx::Duration::from_seconds(1);
-
-        let mut remote_requests = remote.take_request_stream();
-
-        // This starts the task in the background waiting.
-        assert!(peers.connected(id, channel, Some(delay)).is_ok());
-        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-
-        // The delay expires, and the discovery is start!
-        exec.set_fake_time(fasync::Time::after(delay) + zx::Duration::from_micros(1));
-        exec.wake_expired_timers();
-        expect_peer_discovery(&mut exec, &mut remote_requests);
-
-        // The remote peer doesn't need to actually open, Set Configuration is enough of a signal.
-        let seid: avdtp::StreamEndpointId = SBC_SEID.try_into().expect("seid to be okay");
-        let config_caps = &[ServiceCapability::MediaTransport, sbc_codec.clone()];
-        let set_config_fut = remote.set_configuration(&seid, &seid, config_caps);
-        pin_mut!(set_config_fut);
-        match exec.run_until_stalled(&mut set_config_fut) {
-            Poll::Ready(Ok(())) => {}
-            x => panic!("Expected set config to be ready and Ok, got {:?}", x),
-        };
-
-        // Can finish the collection process, but not attempt to configure or start a stream.
-        loop {
-            match exec.run_until_stalled(&mut remote_requests.next()) {
-                Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { responder, .. }))) => {
-                    responder
-                        .send(&vec![avdtp::ServiceCapability::MediaTransport, sbc_codec.clone()])
-                        .expect("respond succeeds");
-                }
-                Poll::Ready(x) => panic!("Got unexpected request: {:?}", x),
-                Poll::Pending => break,
-            }
-        }
-    }
-
     #[test]
     fn connect_initiation_uses_negotiation() {
         let (mut exec, mut peers, _stream, sbc_codec, aac_codec) = setup_negotiation_test();
@@ -587,19 +508,48 @@ mod tests {
 
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
+        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
+        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
+
         // Should discover remote streams, negotiate, and start.
-        let (peer_aac_seid, peer_sbc_seid) = expect_peer_discovery(&mut exec, &mut remote_requests);
+        match exec.run_until_stalled(&mut remote_requests.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::Discover { responder }))) => {
+                let endpoints = vec![
+                    avdtp::StreamInformation::new(
+                        remote_sbc_seid.clone(),
+                        false,
+                        avdtp::MediaType::Audio,
+                        avdtp::EndpointType::Source,
+                    ),
+                    avdtp::StreamInformation::new(
+                        remote_aac_seid.clone(),
+                        false,
+                        avdtp::MediaType::Audio,
+                        avdtp::EndpointType::Source,
+                    ),
+                ];
+                responder.send(&endpoints).expect("response succeeds");
+            }
+            x => panic!("Expected a discovery request to be sent after delay, got {:?}", x),
+        };
+
         for _twice in 1..=2 {
             match exec.run_until_stalled(&mut remote_requests.next()) {
                 Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder }))) => {
-                    let codec = match stream_id {
-                        id if id == peer_sbc_seid => sbc_codec.clone(),
-                        id if id == peer_aac_seid => aac_codec.clone(),
-                        x => panic!("Got unexpected get_capabilities seid {:?}", x),
-                    };
-                    responder
-                        .send(&vec![avdtp::ServiceCapability::MediaTransport, codec])
-                        .expect("respond succeeds");
+                    if stream_id == remote_sbc_seid {
+                        responder.send(&vec![
+                            avdtp::ServiceCapability::MediaTransport,
+                            sbc_codec.clone(),
+                        ])
+                    } else if stream_id == remote_aac_seid {
+                        responder.send(&vec![
+                            avdtp::ServiceCapability::MediaTransport,
+                            aac_codec.clone(),
+                        ])
+                    } else {
+                        responder.reject(avdtp::ErrorCode::BadAcpSeid)
+                    }
+                    .expect("respond succeeds");
                 }
                 x => panic!("Expected a ready get capabilities request, got {:?}", x),
             };
@@ -613,7 +563,7 @@ mod tests {
                 responder,
             }))) => {
                 // Should set the aac stream, matched with local AAC seid.
-                assert_eq!(peer_aac_seid, local_stream_id);
+                assert_eq!(remote_aac_seid, local_stream_id);
                 let local_aac_seid: avdtp::StreamEndpointId = AAC_SEID.try_into().unwrap();
                 assert_eq!(local_aac_seid, remote_stream_id);
                 responder.send().expect("response sends");
