@@ -14,7 +14,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <ktl/popcount.h>
+#include <ktl/bit.h>
 #include <object/thread_dispatcher.h>
 
 KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")

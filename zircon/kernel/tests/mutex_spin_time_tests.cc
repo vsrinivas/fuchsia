@@ -14,7 +14,7 @@
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <ktl/atomic.h>
-#include <ktl/popcount.h>
+#include <ktl/bit.h>
 
 #include "tests.h"
 

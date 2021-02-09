@@ -10,11 +10,22 @@ zx_library("ktl") {
   kernel = true
   static = false
 
-  sources = [ "dummy-new.cc" ]
+  sources = [
+    "dummy-new.cc",
+    "popcount.cc",
+  ]
 
   public_configs = [ ":ktl.config" ]
 
-  deps = [ "//zircon/kernel/lib/libc" ]
+  deps = [
+    "//sdk/lib/stdcompat",
+    "//zircon/kernel/lib/libc",
+  ]
+
+  public_deps = [
+    # <ktl/bit.h> has #include <lib/stdcompat/bit.h>.
+    "//sdk/lib/stdcompat:headers",
+  ]
 }
 
 config("ktl.config") {
@@ -22,8 +33,8 @@ config("ktl.config") {
     ":*",
 
     # TODO(fxbug.dev/44971): Referenced in environment configs.
-    "//build/config/fuchsia:*",
-    "//build/config/sanitizers:*",
+    "//build/config/*",
+    "//sdk/lib/stdcompat/*",
     "//third_party/zstd/*",
     "//zircon/kernel/*",
     "//zircon/system/ulib/*",

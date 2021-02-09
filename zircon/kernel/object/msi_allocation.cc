@@ -11,8 +11,8 @@
 #include <trace.h>
 
 #include <fbl/ref_counted.h>
+#include <ktl/bit.h>
 #include <ktl/move.h>
-#include <ktl/popcount.h>
 #include <object/msi_allocation.h>
 
 KCOUNTER(msi_create_count, "msi.create")

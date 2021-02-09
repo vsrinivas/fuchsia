@@ -22,7 +22,7 @@
 #include <kernel/thread.h>
 #include <ktl/array.h>
 #include <ktl/atomic.h>
-#include <ktl/popcount.h>
+#include <ktl/bit.h>
 #include <ktl/unique_ptr.h>
 
 #include "zircon/time.h"

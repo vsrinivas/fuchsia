@@ -10,90 +10,44 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <zircon/compiler.h>
 
-/* routines for dealing with power of 2 values for efficiency
- * Considers 0 to be a power of 2 */
-__CONSTEXPR static inline __ALWAYS_INLINE bool ispow2(uint val) { return ((val - 1) & val) == 0; }
+#include <ktl/bit.h>
 
-// Compute log2(|val|), rounded as requested by |ceiling|.  We define
-// log2(0) to be 0.
-__CONSTEXPR static inline __ALWAYS_INLINE uint _log2_uint(uint val, bool ceiling) {
-  if (val == 0)
-    return 0;
-
-  uint log2 = (uint)(sizeof(val) * CHAR_BIT) - 1 - __builtin_clz(val);
-
-  if (ceiling && val - (1u << log2) > 0) {
-    ++log2;
-  }
-
-  return log2;
-}
+constexpr bool ispow2(uint val) { return val == 0 || cpp20::has_single_bit(val); }
 
 // Compute floor(log2(|val|)), or 0 if |val| is 0
-__CONSTEXPR static inline __ALWAYS_INLINE uint log2_uint_floor(uint val) {
-  return _log2_uint(val, false);
+template <typename T>
+constexpr T log2_floor(T val) {
+  return val == 0 ? 0 : cpp20::bit_width(val) - 1;
 }
+constexpr uint log2_uint_floor(uint val) { return log2_floor(val); }
+constexpr ulong log2_ulong_floor(ulong val) { return log2_floor(val); }
 
 // Compute ceil(log2(|val|)), or 0 if |val| is 0
-__CONSTEXPR static inline __ALWAYS_INLINE uint log2_uint_ceil(uint val) {
-  return _log2_uint(val, true);
-}
-
-// Compute log2(|val|), rounded as requested by |ceiling|.  We define
-// log2(0) to be 0.
-__CONSTEXPR static inline __ALWAYS_INLINE uint _log2_ulong(ulong val, bool ceiling) {
-  if (val == 0)
-    return 0;
-
-  uint log2 = (uint)(sizeof(val) * CHAR_BIT) - 1 - __builtin_clzl(val);
-
-  if (ceiling && val - (1ul << log2) > 0) {
+template <typename T>
+constexpr T log2_ceil(T val) {
+  T log2 = log2_floor(val);
+  if (val != 0 && val != (static_cast<T>(1) << log2)) {
     ++log2;
   }
-
   return log2;
 }
+constexpr uint log2_uint_ceil(uint val) { return log2_ceil(val); }
+constexpr ulong log2_ulong_ceil(ulong val) { return log2_ceil(val); }
 
-// Compute floor(log2(|val|)), or 0 if |val| is 0
-__CONSTEXPR static inline __ALWAYS_INLINE uint log2_ulong_floor(ulong val) {
-  return _log2_ulong(val, false);
+template <typename T>
+constexpr T valpow2(T valp2) {
+  return static_cast<T>(1) << valp2;
 }
 
-// Compute ceil(log2(|val|)), or 0 if |val| is 0
-__CONSTEXPR static inline __ALWAYS_INLINE uint log2_ulong_ceil(ulong val) {
-  return _log2_ulong(val, true);
-}
+constexpr uint divpow2(uint val, uint divp2) { return val >> divp2; }
 
-template<typename T>
-__CONSTEXPR static inline __ALWAYS_INLINE T valpow2(T valp2) { return static_cast<T>(1) << valp2; }
+constexpr uint modpow2(uint val, uint modp2) { return val & ((1U << modp2) - 1); }
 
-__CONSTEXPR static inline __ALWAYS_INLINE uint divpow2(uint val, uint divp2) {
-  return val >> divp2;
-}
+constexpr uint64_t modpow2_u64(uint64_t val, uint modp2) { return val & ((1U << modp2) - 1); }
 
-__CONSTEXPR static inline __ALWAYS_INLINE uint modpow2(uint val, uint modp2) {
-  return val & ((1U << modp2) - 1);
-}
-
-__CONSTEXPR static inline __ALWAYS_INLINE uint64_t modpow2_u64(uint64_t val, uint modp2) {
-  return val & ((1U << modp2) - 1);
-}
-
-// Cribbed from:
-// http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-// Returns 0 if given 0 (i.e. considers 0 to be a power of 2 greater than
-// 2^31).
-__CONSTEXPR static inline __ALWAYS_INLINE uint32_t round_up_pow2_u32(uint32_t v) {
-  v--;
-  v |= v >> 1;
-  v |= v >> 2;
-  v |= v >> 4;
-  v |= v >> 8;
-  v |= v >> 16;
-  v++;
-  return v;
+constexpr uint32_t round_up_pow2_u32(uint32_t v) {
+  return (v == 0 || v > (1u << 31)) ? 0u : cpp20::bit_ceil(v);
 }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_POW2_H_

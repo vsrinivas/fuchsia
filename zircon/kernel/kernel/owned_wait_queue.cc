@@ -15,7 +15,7 @@
 #include <kernel/scheduler.h>
 #include <kernel/wait_queue_internal.h>
 #include <ktl/algorithm.h>
-#include <ktl/popcount.h>
+#include <ktl/bit.h>
 #include <ktl/type_traits.h>
 
 // Notes on the defined kernel counters.

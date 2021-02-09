@@ -7,7 +7,7 @@
 #include <lib/unittest/unittest.h>
 
 #include <fbl/macros.h>
-#include <ktl/popcount.h>
+#include <ktl/bit.h>
 
 #include "tests.h"
 
