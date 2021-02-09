@@ -8,8 +8,10 @@
 #include <lib/sync/completion.h>
 #include <lib/syslog/logger.h>
 
+#include <map>
 #include <optional>
 #include <set>
+#include <utility>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -90,6 +92,9 @@ class Bind {
 
   // Sets data returned by DeviceGetMetadata(). If used, the provided
   // pointer must remain valid until the call to DeviceGetMetadata().
+  void SetMetadata(uint32_t type, const void* data, size_t data_length);
+
+  // Deprecated variant of above.
   void SetMetadata(const void* data, size_t data_length);
 
   // Sets an optional list of protocols that the ddk should return for the
@@ -209,8 +214,12 @@ class Bind {
   const void* metadata_ = nullptr;
 
   int get_metadata_calls_ = 0;
-  size_t get_metadata_length_ = 0;
-  const void* get_metadata_ = nullptr;
+
+  std::map<uint32_t, std::pair<const void*, size_t>> get_metadata_;
+
+  // Old values for deprecated method.
+  size_t get_metadata_length_old_ = 0;
+  const void* get_metadata_old_ = nullptr;
 
   zx_off_t size_ = 0;
 

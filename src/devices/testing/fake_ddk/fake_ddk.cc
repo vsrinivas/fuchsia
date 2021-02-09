@@ -103,9 +103,13 @@ void Bind::SetFragments(fbl::Array<FragmentEntry>&& fragments) {
 
 void Bind::SetSize(zx_off_t size) { size_ = size; }
 
+void Bind::SetMetadata(uint32_t type, const void* data, size_t data_length) {
+  get_metadata_[type] = std::make_pair(data, data_length);
+}
+
 void Bind::SetMetadata(const void* data, size_t data_length) {
-  get_metadata_ = data;
-  get_metadata_length_ = data_length;
+  get_metadata_old_ = data;
+  get_metadata_length_old_ = data_length;
 }
 
 void Bind::StartUnbindIfNeeded() {
@@ -231,23 +235,43 @@ zx_status_t Bind::DeviceAddMetadata(zx_device_t* device, uint32_t type, const vo
 
 zx_status_t Bind::DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
                                     size_t* actual) {
-  if (get_metadata_ == nullptr) {
-    return ZX_ERR_BAD_STATE;
+  get_metadata_calls_++;
+
+  auto itr = get_metadata_.find(type);
+  if (itr != get_metadata_.end()) {
+    auto [metadata, size] = itr->second;
+    *actual = size;
+    if (buflen < size) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    memcpy(buf, metadata, size);
+    return ZX_OK;
   }
-  *actual = get_metadata_length_;
-  if (buflen < get_metadata_length_) {
+
+  // Fallback to old mechanism
+  if (get_metadata_old_ == nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  *actual = get_metadata_length_old_;
+  if (buflen < get_metadata_length_old_) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  memcpy(buf, get_metadata_, get_metadata_length_);
-  get_metadata_calls_++;
+  memcpy(buf, get_metadata_old_, get_metadata_length_old_);
   return ZX_OK;
 }
 
 zx_status_t Bind::DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) {
-  if (get_metadata_ == nullptr) {
+  auto itr = get_metadata_.find(type);
+  if (itr != get_metadata_.end()) {
+    auto [_, size] = itr->second;
+    *out_size = size;
+    return ZX_OK;
+  }
+  if (get_metadata_old_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  *out_size = get_metadata_length_;
+  *out_size = get_metadata_length_old_;
   return ZX_OK;
 }
 

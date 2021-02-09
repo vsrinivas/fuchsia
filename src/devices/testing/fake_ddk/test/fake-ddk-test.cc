@@ -34,6 +34,48 @@ TEST(FakeDdk, InspectVmoLeak) {
   EXPECT_EQ(1u, count.handle_count);
 }
 
+TEST(FakeDdk, SetMetadata) {
+  fake_ddk::Bind bind;
+
+  // Can't get metadata to begin.
+  char buf[10] = {};
+  size_t actual = 0;
+  size_t size = 0;
+  ASSERT_NE(device_get_metadata(nullptr, 42, buf, sizeof(buf), &actual), ZX_OK);
+  ASSERT_NE(device_get_metadata_size(nullptr, 42, &size), ZX_OK);
+
+  const char kSource[] = "test";
+  bind.SetMetadata(42, kSource, sizeof(kSource));
+
+  // Can get metadata with correct type after setting.
+  ASSERT_OK(device_get_metadata(nullptr, 42, buf, sizeof(buf), &actual));
+  ASSERT_EQ(actual, sizeof(kSource));
+  ASSERT_BYTES_EQ(buf, kSource, sizeof(kSource));
+  ASSERT_OK(device_get_metadata_size(nullptr, 42, &size));
+  ASSERT_EQ(size, sizeof(kSource));
+
+  // Can't get metadata with incorrect type after setting.
+  ASSERT_NE(device_get_metadata(nullptr, 1, buf, sizeof(buf), &actual), ZX_OK);
+  ASSERT_NE(device_get_metadata_size(nullptr, 1, &size), ZX_OK);
+
+  const char kSource2[] = "other";
+  bind.SetMetadata(1, kSource2, sizeof(kSource2));
+
+  // We can get it after setting it though
+  ASSERT_OK(device_get_metadata(nullptr, 1, buf, sizeof(buf), &actual));
+  ASSERT_EQ(actual, sizeof(kSource2));
+  ASSERT_BYTES_EQ(buf, kSource2, sizeof(kSource2));
+  ASSERT_OK(device_get_metadata_size(nullptr, 1, &size));
+  ASSERT_EQ(size, sizeof(kSource2));
+
+  // Original metadata still works too
+  ASSERT_OK(device_get_metadata(nullptr, 42, buf, sizeof(buf), &actual));
+  ASSERT_EQ(actual, sizeof(kSource));
+  ASSERT_BYTES_EQ(buf, kSource, sizeof(kSource));
+  ASSERT_OK(device_get_metadata_size(nullptr, 42, &size));
+  ASSERT_EQ(size, sizeof(kSource));
+}
+
 class CompositeTest : public zxtest::Test {
  public:
   ~CompositeTest() override = default;
