@@ -51,6 +51,7 @@ pub fn make_body_with_hash(
     category: Option<&str>,
     action: Option<&str>,
     labels: Option<&str>,
+    custom_dimensions: BTreeMap<&str, String>,
     uuid_builder: &UuidBuilder,
 ) -> String {
     let uuid_pre = &(uuid_builder)();
@@ -79,6 +80,9 @@ pub fn make_body_with_hash(
     insert_if_present(GA_EVENT_ACTION_KEY, &mut params, action);
     insert_if_present(GA_EVENT_LABELS_KEY, &mut params, labels);
 
+    for (&key, value) in custom_dimensions.iter() {
+        params.insert(key, value);
+    }
     params.insert(GA_CUSTOM_DIMENSION_1_KEY, &uname);
 
     let body = to_kv_post_body(&params);
@@ -135,6 +139,7 @@ mod test {
                 None,
                 Some(args),
                 Some(args),
+                BTreeMap::new(),
                 &(test_uuid as UuidBuilder)
             )
         );
@@ -161,6 +166,37 @@ mod test {
                 None,
                 Some(args),
                 Some(labels),
+                BTreeMap::new(),
+                &(test_uuid as UuidBuilder)
+            )
+        );
+    }
+
+    #[test]
+    fn make_post_body_with_custom_dimensions() {
+        let args = "config analytics enable";
+        let args_encoded = "config+analytics+enable";
+        let labels = "labels";
+        let app_name = "ffx";
+        let app_version = "1";
+        let uname = os_and_release_desc().replace(" ", "+");
+        let cd3_val = "foo".to_string();
+        let cid = test_uuid();
+        let expected = format!(
+            "an={}&av={}&cd1={}&cd3={}&cid={}&ea={}&ec=general&el={}&t=event&tid=UA-175659118-1&v=1",
+            &app_name, &app_version, &uname, &cd3_val, &cid, &args_encoded, &labels
+        );
+        let mut custom_dimensions = BTreeMap::new();
+        custom_dimensions.insert("cd3", cd3_val);
+        assert_eq!(
+            expected,
+            make_body_with_hash(
+                app_name,
+                Some(app_version),
+                None,
+                Some(args),
+                Some(labels),
+                custom_dimensions,
                 &(test_uuid as UuidBuilder)
             )
         );

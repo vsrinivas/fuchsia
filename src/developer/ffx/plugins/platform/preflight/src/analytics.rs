@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {analytics::add_custom_event, ffx_core::build_info};
+use {
+    super::command_runner::SYSTEM_COMMAND_RUNNER, analytics::add_custom_event, anyhow::Result,
+    ffx_core::build_info, std::collections::BTreeMap,
+};
+
+#[allow(unused_imports)]
+use super::check::femu_graphics::{linux_find_graphics_cards, macos_find_graphics_cards};
 
 // String constants for report_preflight_analytics().
 pub static ANALYTICS_ACTION_SUCCESS: &str = "completed_success";
@@ -12,8 +18,24 @@ pub static ANALYTICS_ACTION_FAILURE: &str = "completed_failure";
 
 static ANALYTICS_APP_NAME: &str = "ffx";
 static ANALYTICS_CATEGORY: &str = "preflight";
+static ANALYTICS_CUSTOM_DIMENSION_2_KEY: &str = "cd3";
+
+#[cfg(target_os = "linux")]
+fn get_graphics_cards() -> Result<Vec<String>> {
+    linux_find_graphics_cards(&SYSTEM_COMMAND_RUNNER)
+}
+
+#[cfg(target_os = "macos")]
+fn get_graphics_cards() -> Result<Vec<String>> {
+    macos_find_graphics_cards(&SYSTEM_COMMAND_RUNNER)
+}
 
 pub async fn report_preflight_analytics(action: &str) {
+    let mut custom_dimensions = BTreeMap::new();
+    if let Ok(cards) = get_graphics_cards() {
+        custom_dimensions.insert(ANALYTICS_CUSTOM_DIMENSION_2_KEY, cards.join(","));
+    }
+
     let build_info = build_info();
     let build_version = build_info.build_version;
     if let Err(e) = add_custom_event(
@@ -22,6 +44,7 @@ pub async fn report_preflight_analytics(action: &str) {
         Some(ANALYTICS_CATEGORY),
         Some(action),
         None,
+        custom_dimensions,
     )
     .await
     {

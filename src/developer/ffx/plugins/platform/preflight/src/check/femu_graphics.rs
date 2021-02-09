@@ -48,31 +48,48 @@ pub struct FemuGraphics<'a> {
     command_runner: &'a CommandRunner,
 }
 
+pub fn linux_find_graphics_cards(command_runner: &CommandRunner) -> Result<Vec<String>> {
+    let (status, stdout, stderr) = (command_runner)(&vec!["lspci"])?;
+    if !status.success() {
+        return Err(anyhow!(
+            "Could not exec `lspci`: exited with code {}, stdout: {}, stderr: {}",
+            status.code(),
+            stdout,
+            stderr
+        ));
+    }
+
+    Ok(LINUX_GRAPHICS_CARDS_RE
+        .captures_iter(stdout.as_str())
+        .map(|c| c[1].to_string())
+        .collect::<Vec<_>>())
+}
+
+pub fn macos_find_graphics_cards(command_runner: &CommandRunner) -> Result<Vec<String>> {
+    let (status, stdout, stderr) =
+        (command_runner)(&vec!["system_profiler", "SPDisplaysDataType"])?;
+    if !status.success() {
+        return Err(anyhow!(
+                "Could not exec `system_profiler SPDisplaysDataType`: exited with code {}, stdout: {}, stderr: {}",
+                status.code(),
+                stdout,
+                stderr
+            ));
+    }
+
+    Ok(MACOS_GRAPHICS_CARDS_RE
+        .captures_iter(stdout.as_str())
+        .map(|c| c[1].to_string())
+        .collect::<Vec<_>>())
+}
+
 impl<'a> FemuGraphics<'a> {
     pub fn new(command_runner: &'a CommandRunner) -> Self {
         FemuGraphics { command_runner }
     }
 
-    fn linux_find_graphics_cards(&self) -> Result<Vec<String>> {
-        let (status, stdout, stderr) = (self.command_runner)(&vec!["lspci"])?;
-        if !status.success() {
-            return Err(anyhow!(
-                "Could not exec `lspci`: exited with code {}, stdout: {}, stderr: {}",
-                status.code(),
-                stdout,
-                stderr
-            ));
-        }
-
-        Ok(LINUX_GRAPHICS_CARDS_RE
-            .captures_iter(stdout.as_str())
-            .map(|c| c[1].to_string())
-            .collect::<Vec<_>>())
-    }
-
     fn linux_find_supported_graphics_cards(&self) -> Result<Vec<String>> {
-        Ok(self
-            .linux_find_graphics_cards()?
+        Ok(linux_find_graphics_cards(self.command_runner)?
             .into_iter()
             .filter(|e| LINUX_SUPPORTED_CARDS_RE.is_match(&e))
             .collect::<Vec<_>>())
@@ -119,27 +136,8 @@ impl<'a> FemuGraphics<'a> {
         })
     }
 
-    fn macos_find_graphics_cards(&self) -> Result<Vec<String>> {
-        let (status, stdout, stderr) =
-            (self.command_runner)(&vec!["system_profiler", "SPDisplaysDataType"])?;
-        if !status.success() {
-            return Err(anyhow!(
-                "Could not exec `system_profiler SPDisplaysDataType`: exited with code {}, stdout: {}, stderr: {}",
-                status.code(),
-                stdout,
-                stderr
-            ));
-        }
-
-        Ok(MACOS_GRAPHICS_CARDS_RE
-            .captures_iter(stdout.as_str())
-            .map(|c| c[1].to_string())
-            .collect::<Vec<_>>())
-    }
-
     fn macos_find_supported_graphics_cards(&self) -> Result<Vec<String>> {
-        Ok(self
-            .macos_find_graphics_cards()?
+        Ok(macos_find_graphics_cards(self.command_runner)?
             .into_iter()
             .filter(|e| MACOS_SUPPORTED_CARDS_RE.is_match(&e))
             .collect::<Vec<_>>())

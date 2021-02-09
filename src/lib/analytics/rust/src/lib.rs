@@ -8,6 +8,7 @@ pub use env_info::is_analytics_disabled_by_env;
 pub use ga_event::*;
 pub use notice::*;
 use std::any::Any;
+use std::collections::BTreeMap;
 pub use user_status::*;
 use {
     anyhow::Error,
@@ -35,7 +36,7 @@ pub async fn add_launch_event(
     app_version: Option<&str>,
     args: Option<&str>,
 ) -> anyhow::Result<()> {
-    add_custom_event(app_name, app_version, None, args, args).await
+    add_custom_event(app_name, app_version, None, args, args, BTreeMap::new()).await
 }
 
 pub async fn add_custom_event(
@@ -44,6 +45,7 @@ pub async fn add_custom_event(
     category: Option<&str>,
     action: Option<&str>,
     label: Option<&str>,
+    custom_dimensions: BTreeMap<&str, String>,
 ) -> anyhow::Result<()> {
     if is_analytics_disabled_by_env() || !is_opted_in() {
         return Ok(());
@@ -55,6 +57,7 @@ pub async fn add_custom_event(
         category,
         action,
         label,
+        custom_dimensions,
         &(uuid as UuidBuilder),
     );
     let client = new_https_client();
