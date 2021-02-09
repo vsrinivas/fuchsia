@@ -115,14 +115,14 @@ AVB algorithm type.Supported options:
 From //build/images/vbmeta.gni:33
 
 ### avb_atx_metadata
-AVB metadata that will be used to validate public key
+AVB metadata which will be used to validate public key
 
 **Current value (from the default):** `""`
 
 From //build/images/vbmeta.gni:24
 
 ### avb_key
-a key that will be used to sign VBMETA and images for AVB
+a key which will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
@@ -400,7 +400,7 @@ From //build/board.gni:28
 List of paths to board-specific tools to include in the build output.
 
 Most development tools can just be used in-tree and do not need to be
-included here. This arg is only meant for tools that may need to be
+included here. This arg is only meant for tools which may need to be
 distributed along with the build files, for example tools for flashing
 from SoC recovery mode.
 
@@ -588,7 +588,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:44
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -596,7 +596,7 @@ From //BUILD.gn:34
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:44
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -706,7 +706,7 @@ From //build/images/args.gni:97
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
 
-Dart analyzer uses a lot of memory, which may cause issues when building
+Dart analyzer uses a lot of memory which may cause issues when building
 with many parallel jobs e.g. when using goma. To avoid out-of-memory
 errors we explicitly reduce the number of jobs.
 
@@ -800,7 +800,7 @@ Non-product JIT
 From //build/dart/config.gni:18
 
 ### dart_force_product
-Forces all Dart apps to build in product mode, which is a
+Forces all Dart apps to build in product mode which is a
 stripped down version of the VM running in AOT mode.
 
 **Current value (from the default):** `false`
@@ -1155,7 +1155,7 @@ From //build/testing/flutter_driver.gni:9
 
 ### flutter_force_product
 If set to true, will force the runenrs to be built in
-product mode, which means they will not have an exposed vm service
+product mode which means they will not have an exposed vm service
 
 **Current value (from the default):** `false`
 
@@ -1192,7 +1192,7 @@ From //src/fonts/build/font_args.gni:12
 
 ### format_minfs_on_corruption
 If format_minfs_on_corruption is true (the default), fshost formats minfs partition on finding
-it corrupted.  Set to false to keep the devices in a corrupted state, which might be of help to
+it corrupted.  Set to false to keep the devices in a corrupted state which might be of help to
 debug issues.
 
 **Current value (from the default):** `true`
@@ -1401,7 +1401,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //products/bringup.gni:48
+From //products/bringup.gni:52
 
 **Overridden from the default:** `[]`
 
@@ -1409,7 +1409,7 @@ From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //products/bringup.gni:48
+From //products/bringup.gni:52
 
 **Overridden from the default:** `[]`
 
@@ -2014,7 +2014,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:40
+From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
@@ -2022,7 +2022,7 @@ From //build/images/args.gni:58
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:40
+From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
@@ -2678,17 +2678,17 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:37
+From //products/bringup.gni:41
 
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:37
+From //products/bringup.gni:41
 
 **Overridden from the default:** `[]`
 
@@ -3331,7 +3331,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host"]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:50
 
 **Overridden from the default:** `[]`
 
@@ -3339,7 +3339,7 @@ From //BUILD.gn:48
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:50
 
 **Overridden from the default:** `[]`
 
@@ -3654,7 +3654,7 @@ List of arguments to populate /boot/config/devmgr in the Zedboot image.
 From //build/images/zedboot/zedboot_args.gni:7
 
 ### zircon_a_partition
-Arguments to `fx flash` script (along with any `firmware_prebuilts` that
+Arguments to `fx flash` script (along with any `firmware_prebuilts` which
 specify a partition).
 
 If `fvm_partition` is provided, the flash script will flash the full OS,
