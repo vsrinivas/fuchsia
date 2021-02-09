@@ -3188,6 +3188,16 @@ custom kernel for development purposes.
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:12
 
+### termina_tools
+The termina tools disk image.
+
+Defaults to the disk image from CIPD, but can be overridden to use a
+custom disk for development purposes.
+
+**Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/images/arm64/vm_tools.img"`
+
+From //src/virtualization/packages/termina_guest/BUILD.gn:24
+
 ### test_durations_file
 A file in containing historical test duration data for this build
 configuration, used used by testsharder to evenly split tests across
