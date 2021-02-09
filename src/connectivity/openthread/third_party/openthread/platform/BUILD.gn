@@ -22,7 +22,6 @@ source_set("platform") {
     "spinel_fidl_interface.h",
     "system.cc",
     "thread_config_manager.cc",
-    "time.cc",
   ]
 
   public_deps = [

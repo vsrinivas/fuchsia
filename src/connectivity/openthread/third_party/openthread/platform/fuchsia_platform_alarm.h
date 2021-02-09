@@ -28,13 +28,12 @@ class FuchsiaPlatformAlarm {
   void ClearMicroSecAlarm();
   void SetOtStackCallBackPtr(OtStackCallBack *callback_ptr);
   OtStackCallBack *GetOtStackCallBackPtr();
-
- private:
   // Gets the current time in usec
   // Note - in posix world this is redefined in sim.
   // See if we need to do something similar
   static uint64_t GetTimeMicroSec(void);
 
+ private:
   static constexpr uint64_t kNanoSecondsPerMicroSecond = 1000;
   static constexpr uint64_t kMicroSecondsPerMilliSecond = 1000;
 

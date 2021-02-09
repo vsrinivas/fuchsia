@@ -7,6 +7,7 @@
 #include <openthread/platform/alarm-micro.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/diag.h>
+#include <openthread/platform/time.h>
 
 #include "fuchsia_platform_alarm.h"
 
@@ -34,6 +35,8 @@ extern "C" void otPlatAlarmMilliStop(otInstance *instance) {
   OT_UNUSED_VARIABLE(instance);
   alarm.ClearMilliSecAlarm();
 }
+
+extern "C" uint64_t otPlatTimeGet(void) { return alarm.GetTimeMicroSec(); }
 
 #if OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
 extern "C" uint32_t otPlatAlarmMicroGetNow(void) { return alarm.GetNowMicroSec(); }

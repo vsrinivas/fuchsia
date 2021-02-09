@@ -12,5 +12,6 @@ void platformAlarmInit(uint32_t speed_up_factor);
 void platformAlarmSetCallbackPtr(OtStackCallBack *callback_ptr);
 void platformAlarmProcess(otInstance *instance);
 void platformAlarmUpdateTimeout(zx_time_t *timeout);
+uint64_t otPlatTimeGet();
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_ALARM_H_
