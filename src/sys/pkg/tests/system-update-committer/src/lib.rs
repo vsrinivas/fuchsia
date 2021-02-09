@@ -20,7 +20,9 @@ use {
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     parking_lot::Mutex,
-    std::{sync::Arc, time::Duration},
+    serde_json::json,
+    std::{fs::File, path::PathBuf, sync::Arc, time::Duration},
+    tempfile::TempDir,
 };
 
 const SYSTEM_UPDATE_COMMITTER_CMX: &str =
@@ -28,10 +30,15 @@ const SYSTEM_UPDATE_COMMITTER_CMX: &str =
 const HANG_DURATION: Duration = Duration::from_millis(500);
 
 struct TestEnvBuilder {
+    config_data: Option<(PathBuf, String)>,
     paver_service_builder: Option<MockPaverServiceBuilder>,
     reboot_service: Option<MockRebootService>,
 }
 impl TestEnvBuilder {
+    fn config_data(self, path: impl Into<PathBuf>, data: impl Into<String>) -> Self {
+        Self { config_data: Some((path.into(), data.into())), ..self }
+    }
+
     fn paver_service_builder(self, paver_service_builder: MockPaverServiceBuilder) -> Self {
         Self { paver_service_builder: Some(paver_service_builder), ..self }
     }
@@ -41,6 +48,15 @@ impl TestEnvBuilder {
     }
 
     fn build(self) -> TestEnv {
+        // Optionally write config data.
+        let config_data = tempfile::tempdir().expect("/tmp to exist");
+        if let Some((path, data)) = self.config_data {
+            let path = config_data.path().join(path);
+            assert!(!path.exists());
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, &data).unwrap();
+        }
+
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
 
@@ -81,10 +97,16 @@ impl TestEnvBuilder {
         fasync::Task::spawn(fs.collect()).detach();
 
         let system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned())
+            .add_dir_to_namespace(
+                "/config/data".to_owned(),
+                File::open(config_data.path()).unwrap(),
+            )
+            .expect("config-data to mount")
             .spawn(env.launcher())
             .expect("system-update-committer to launch");
 
         TestEnv {
+            _config_data: config_data,
             _env: env,
             system_update_committer,
             _paver_service: paver_service,
@@ -94,6 +116,7 @@ impl TestEnvBuilder {
     }
 }
 struct TestEnv {
+    _config_data: TempDir,
     _env: NestedEnvironment,
     system_update_committer: App,
     _paver_service: Arc<MockPaverService>,
@@ -103,7 +126,7 @@ struct TestEnv {
 
 impl TestEnv {
     fn builder() -> TestEnvBuilder {
-        TestEnvBuilder { paver_service_builder: None, reboot_service: None }
+        TestEnvBuilder { config_data: None, paver_service_builder: None, reboot_service: None }
     }
 
     /// Opens a connection to the fuchsia.update/CommitStatusProvider FIDL service.
@@ -261,21 +284,17 @@ async fn multiple_commit_status_provider_requests() {
     );
 }
 
-/// When the paver fails, we expect the system-update-committer to trigger a reboot. Additionally,
-/// the inspect state should reflect the system being unhealthy. We could split this up into several
-/// tests, but instead we combine them to reduce redundant lines of code. We could do helper fns,
-/// but we decided not to given guidance in
+/// When the paver fails, the system-update-committer should trigger a reboot regardless of the
+/// config. Additionally, the inspect state should reflect the system being unhealthy. We could
+/// split this up into several tests, but instead we combine them to reduce redundant lines of code.
+/// We could do helper fns, but we decided not to given guidance in
 /// https://testing.googleblog.com/2019/12/testing-on-toilet-tests-too-dry-make.html.
 #[fasync::run_singlethreaded(test)]
-async fn paver_failure_causes_reboot_and_inspect_health_status_unhealthy() {
-    let (sender, recv) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(sender)));
-    let reboot_service = MockRebootService::new(Box::new(move |reason: RebootReason| {
-        sender.lock().take().unwrap().send(reason).unwrap();
-        Ok(())
-    }));
-
+async fn paver_failure_causes_reboot() {
+    let (reboot_sender, reboot_recv) = oneshot::channel();
+    let reboot_sender = Arc::new(Mutex::new(Some(reboot_sender)));
     let env = TestEnv::builder()
+        // Make sure the paver fails.
         .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(mphooks::return_error(
             |e: &PaverEvent| {
                 if e == &PaverEvent::QueryCurrentConfiguration {
@@ -285,10 +304,17 @@ async fn paver_failure_causes_reboot_and_inspect_health_status_unhealthy() {
                 }
             },
         )))
-        .reboot_service(reboot_service)
+        // Make the config say that verification errors should be ignored. This shouldn't have any
+        // effect on whether the paver failures cause a reboot.
+        .config_data("config.json", json!({"blobfs": "ignore"}).to_string())
+        // Handle the reboot requests.
+        .reboot_service(MockRebootService::new(Box::new(move |reason: RebootReason| {
+            reboot_sender.lock().take().unwrap().send(reason).unwrap();
+            Ok(())
+        })))
         .build();
 
-    assert_eq!(recv.await, Ok(RebootReason::RetrySystemUpdate));
+    assert_eq!(reboot_recv.await, Ok(RebootReason::RetrySystemUpdate));
 
     let hierarchy = env.system_update_committer_inspect_hierarchy().await;
     assert_inspect_tree!(

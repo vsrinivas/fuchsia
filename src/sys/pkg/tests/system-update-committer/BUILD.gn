@@ -28,6 +28,8 @@ rustc_test("test_driver") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
   ]
 
   sources = [ "src/lib.rs" ]
