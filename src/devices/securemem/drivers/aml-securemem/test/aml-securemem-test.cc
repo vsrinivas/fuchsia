@@ -7,10 +7,8 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/default.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/result.h>
-#include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/resource.h>
 #include <zircon/limits.h>
@@ -19,6 +17,7 @@
 #include <zxtest/zxtest.h>
 
 #include "device.h"
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
 struct Context {
   std::shared_ptr<amlogic_secure_mem::AmlogicSecureMemDevice> dev;
@@ -50,41 +49,6 @@ class Binder : public fake_ddk::Bind {
     }
     return ZX_OK;
   }
-};
-
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
- public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
-
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
-    zx_handle_t fake_bti;
-    zx_status_t status = fake_bti_create(&fake_bti);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    *out_bti = zx::bti(fake_bti);
-    return status;
-  }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
- private:
-  pdev_protocol_t proto_;
 };
 
 class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
@@ -144,13 +108,13 @@ class FakeTee : public ddk::TeeProtocol<FakeTee> {
 class AmlogicSecureMemTest : public zxtest::Test {
  protected:
   AmlogicSecureMemTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
+    pdev_.UseFakeBti();
+
     static constexpr size_t kNumBindFragments = 3;
 
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
                                                   kNumBindFragments);
-    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[0] = pdev_.fragment();
     fragments[1].name = "sysmem";
     fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
         ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())});
@@ -181,7 +145,7 @@ class AmlogicSecureMemTest : public zxtest::Test {
   // Default dispatcher for the test thread.  Not used to actually dispatch in these tests so far.
   async::Loop loop_;
   Binder ddk_;
-  FakePDev pdev_;
+  fake_pdev::FakePDev pdev_;
   FakeSysmem sysmem_;
   FakeTee tee_;
   Context ctx_ = {};

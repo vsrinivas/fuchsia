@@ -83,7 +83,7 @@ test("aml-securemem-test-bin") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.tee",
     "//src/devices/bus/lib/device-protocol-platform-device",
-    "//src/devices/testing/fake-bti",
+    "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake_ddk",
     "//src/security/tee/tee-client-api:tee-client-api-static",
     "//zircon/public/lib/async-cpp",
