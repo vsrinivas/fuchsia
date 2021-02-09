@@ -74,6 +74,9 @@ class Control : public ControlType,
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) override;
 
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) override;
+
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
@@ -145,8 +148,12 @@ class Control : public ControlType,
 
   // TODO(fxbug.dev/3213): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);
-  std::map<uint32_t, llcpp::fuchsia::hardware::goldfish::BufferHandleType> buffer_handle_types_
-      TA_GUARDED(lock_);
+
+  struct BufferHandleInfo {
+    llcpp::fuchsia::hardware::goldfish::BufferHandleType type;
+    uint32_t memory_property;
+  };
+  std::map<uint32_t, BufferHandleInfo> buffer_handle_info_ TA_GUARDED(lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Control);
 };

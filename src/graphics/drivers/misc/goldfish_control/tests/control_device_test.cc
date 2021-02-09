@@ -953,13 +953,14 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
 
 // Test |fuchsia.hardware.goldfish.Control.GetBufferHandle| method.
 TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
-  zx::vmo buffer_vmo;
-  zx::vmo color_buffer_vmo;
+  zx::vmo buffer_vmo, buffer_vmo_dup;
+  zx::vmo color_buffer_vmo, color_buffer_vmo_dup;
 
   // Create data buffer.
   {
     constexpr size_t kSize = 65536u;
     ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
+    ASSERT_OK(buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &buffer_vmo_dup));
 
     zx::vmo copy_vmo;
     ASSERT_OK(buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &copy_vmo));
@@ -989,6 +990,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
         llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL;
 
     ASSERT_OK(zx::vmo::create(kSize, 0u, &color_buffer_vmo));
+    ASSERT_OK(color_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &color_buffer_vmo_dup));
 
     zx::vmo copy_vmo;
     ASSERT_OK(color_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &copy_vmo));
@@ -1010,6 +1012,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
     EXPECT_OK(create_color_buffer_result.value().res);
   }
 
+  // Test GetBufferHandle() method.
   auto get_buffer_handle_result = fidl_client_.GetBufferHandle(std::move(buffer_vmo));
   ASSERT_TRUE(get_buffer_handle_result.ok());
   EXPECT_OK(get_buffer_handle_result.value().res);
@@ -1024,6 +1027,31 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
   EXPECT_NE(get_color_buffer_handle_result.value().id, get_buffer_handle_result.value().id);
   EXPECT_EQ(get_color_buffer_handle_result.value().type,
             llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER);
+
+  // Test GetBufferHandleInfo() method.
+  auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(std::move(buffer_vmo_dup));
+  ASSERT_TRUE(get_buffer_handle_info_result.ok());
+  ASSERT_TRUE(get_buffer_handle_info_result.value().result.is_response());
+
+  const auto& buffer_handle_info = get_buffer_handle_info_result.value().result.response().info;
+  EXPECT_NE(buffer_handle_info.id(), 0u);
+  EXPECT_EQ(buffer_handle_info.type(),
+            llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER);
+  EXPECT_EQ(buffer_handle_info.memory_property(),
+            llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL);
+
+  auto get_color_buffer_handle_info_result =
+      fidl_client_.GetBufferHandleInfo(std::move(color_buffer_vmo_dup));
+  ASSERT_TRUE(get_color_buffer_handle_info_result.ok());
+  ASSERT_TRUE(get_color_buffer_handle_info_result.value().result.is_response());
+
+  const auto& color_buffer_handle_info =
+      get_color_buffer_handle_info_result.value().result.response().info;
+  EXPECT_NE(color_buffer_handle_info.id(), 0u);
+  EXPECT_EQ(color_buffer_handle_info.type(),
+            llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER);
+  EXPECT_EQ(color_buffer_handle_info.memory_property(),
+            llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL);
 }
 
 TEST_F(ControlDeviceTest, GetBufferHandle_Invalid) {
@@ -1060,6 +1088,45 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Invalid) {
   {
     auto get_buffer_handle_result = fidl_client_.GetBufferHandle(zx::vmo());
     ASSERT_EQ(get_buffer_handle_result.status(), ZX_ERR_INVALID_ARGS);
+  }
+}
+
+TEST_F(ControlDeviceTest, GetBufferHandleInfo_Invalid) {
+  // Register data buffer, but don't create it.
+  {
+    constexpr size_t kSize = 65536u;
+    zx::vmo buffer_vmo;
+    ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
+
+    zx_info_handle_basic_t info;
+    ASSERT_OK(buffer_vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+
+    dut_->RegisterBufferHandle(buffer_vmo);
+
+    auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(std::move(buffer_vmo));
+    ASSERT_TRUE(get_buffer_handle_info_result.ok());
+    EXPECT_TRUE(get_buffer_handle_info_result.value().result.is_err());
+    EXPECT_EQ(get_buffer_handle_info_result.value().result.err(), ZX_ERR_NOT_FOUND);
+
+    dut_->FreeBufferHandle(info.koid);
+  }
+
+  // Check non-registered buffer VMO.
+  {
+    constexpr size_t kSize = 65536u;
+    zx::vmo buffer_vmo;
+    ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
+
+    auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(std::move(buffer_vmo));
+    ASSERT_TRUE(get_buffer_handle_info_result.ok());
+    EXPECT_TRUE(get_buffer_handle_info_result.value().result.is_err());
+    EXPECT_EQ(get_buffer_handle_info_result.value().result.err(), ZX_ERR_INVALID_ARGS);
+  }
+
+  // Check invalid buffer VMO.
+  {
+    auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(zx::vmo());
+    ASSERT_EQ(get_buffer_handle_info_result.status(), ZX_ERR_INVALID_ARGS);
   }
 }
 

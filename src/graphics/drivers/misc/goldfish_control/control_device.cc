@@ -324,7 +324,7 @@ void Control::FreeBufferHandle(uint64_t id) {
   if (it->second) {
     CloseBufferOrColorBufferLocked(it->second);
   }
-  buffer_handle_types_.erase(it->second);
+  buffer_handle_info_.erase(it->second);
   buffer_handles_.erase(it);
 }
 
@@ -410,7 +410,9 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
 
   close_color_buffer.cancel();
   it->second = id;
-  buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER;
+  buffer_handle_info_[id] = {
+      .type = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER,
+      .memory_property = create_params.memory_property()};
 
   return fit::ok(ControlDevice::CreateColorBuffer2Response(ZX_OK, hw_address_page_offset));
 }
@@ -503,7 +505,8 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
   close_buffer.cancel();
   it->second = id;
-  buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER;
+  buffer_handle_info_[id] = {.type = llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER,
+                             .memory_property = create_params.memory_property()};
 
   return fit::ok(ControlDevice_CreateBuffer2_Result::WithResponse(
       std::make_unique<ControlDevice_CreateBuffer2_Response>(
@@ -557,15 +560,66 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
     return;
   }
 
-  auto it_types = buffer_handle_types_.find(handle);
-  if (it_types == buffer_handle_types_.end()) {
+  auto it_types = buffer_handle_info_.find(handle);
+  if (it_types == buffer_handle_info_.end()) {
     // Color buffer type not registered yet.
     completer.Reply(ZX_ERR_NOT_FOUND, handle, handle_type);
     return;
   }
 
-  handle_type = it_types->second;
+  handle_type = it_types->second.type;
   completer.Reply(ZX_OK, handle, handle_type);
+}
+
+void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) {
+  using llcpp::fuchsia::hardware::goldfish::BufferHandleType;
+  using llcpp::fuchsia::hardware::goldfish::ControlDevice_GetBufferHandleInfo_Response;
+  using llcpp::fuchsia::hardware::goldfish::ControlDevice_GetBufferHandleInfo_Result;
+
+  TRACE_DURATION("gfx", "Control::FidlGetBufferHandleInfo");
+
+  zx_koid_t koid = GetKoidForVmo(vmo);
+  if (koid == ZX_KOID_INVALID) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  uint32_t handle = kInvalidBufferHandle;
+  fbl::AutoLock lock(&lock_);
+
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  handle = it->second;
+  if (handle == kInvalidBufferHandle) {
+    // Color buffer not created yet.
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  auto it_types = buffer_handle_info_.find(handle);
+  if (it_types == buffer_handle_info_.end()) {
+    // Color buffer type not registered yet.
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  ControlDevice_GetBufferHandleInfo_Response response;
+  auto builder =
+      llcpp::fuchsia::hardware::goldfish::BufferHandleInfo::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::goldfish::BufferHandleInfo::Frame>())
+          .set_id(std::make_unique<uint32_t>(handle))
+          .set_memory_property(std::make_unique<uint32_t>(it_types->second.memory_property))
+          .set_type(std::make_unique<BufferHandleType>(it_types->second.type));
+
+  completer.Reply(ControlDevice_GetBufferHandleInfo_Result::WithResponse(
+      std::make_unique<ControlDevice_GetBufferHandleInfo_Response>(
+          ControlDevice_GetBufferHandleInfo_Response{
+              .info = builder.build(),
+          })));
 }
 
 void Control::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -734,8 +788,8 @@ zx_status_t Control::CreateColorBufferLocked(uint32_t width, uint32_t height, ui
 }
 
 void Control::CloseBufferOrColorBufferLocked(uint32_t id) {
-  ZX_DEBUG_ASSERT(buffer_handle_types_.find(id) != buffer_handle_types_.end());
-  auto buffer_type = buffer_handle_types_.at(id);
+  ZX_DEBUG_ASSERT(buffer_handle_info_.find(id) != buffer_handle_info_.end());
+  auto buffer_type = buffer_handle_info_.at(id).type;
   switch (buffer_type) {
     case llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER:
       CloseBufferLocked(id);

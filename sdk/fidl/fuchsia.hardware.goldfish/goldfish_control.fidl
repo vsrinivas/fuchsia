@@ -118,6 +118,19 @@ table CreateBuffer2Params {
     3: uint64 physical_address;
 };
 
+/// Basic info of a control device buffer handle.
+table BufferHandleInfo {
+    // The ColorBuffer/Buffer ID.
+    1: uint32 id;
+
+    // Type of the buffer handle.
+    2: BufferHandleType type;
+
+    // Memory property flags the buffer should support. Only bits
+    // from `fuchsia.hardware.goldfish.MEMORY_PROPERTY_*` are allowed.
+    3: uint32 memory_property;
+};
+
 /// Interface for the Goldfish control driver providing color buffers and
 /// data buffers.
 protocol ControlDevice {
@@ -167,8 +180,23 @@ protocol ControlDevice {
 
     /// Get a buffer handle for VMO and the type of the handle.
     /// Fails if VMO is not associated with neither a color buffer nor a buffer.
+    ///
+    /// Deprecated. Use `GetBufferHandleInfo()` instead.
+    [Deprecated]
     GetBufferHandle(zx.handle:VMO vmo)
         -> (zx.status res, uint32 id, BufferHandleType type);
+
+    /// Get the info of buffer handle from a given VMO.
+    ///
+    /// Return value
+    ///     Error:
+    ///       - `ZX_ERR_INVALID_ARGS` if given `vmo` is invalid.
+    ///       - `ZX_ERR_NOT_FOUND` if `vmo` is not associated with any created
+    ///         goldfish Buffer or ColorBuffer.
+    ///
+    ///     `info`: a BufferHandleInfo object containing the buffer id, type
+    ///             and memory information.
+    GetBufferHandleInfo(zx.handle:VMO vmo) -> (BufferHandleInfo info) error zx.status;
 
     /// Create a sync fence on goldfish control device. Client pass half of an
     /// eventpair to this method, and `event` will signal its peer when all the
