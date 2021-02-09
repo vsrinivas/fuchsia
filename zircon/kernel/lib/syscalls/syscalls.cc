@@ -109,7 +109,7 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc, bool (*valid
 }
 
 // Called when an out of bounds syscall number is passed from user space
-syscall_result unknown_syscall(uint64_t syscall_num, uint64_t pc) {
+syscall_result unknown_syscall(uint64_t pc, uint64_t syscall_num) {
   return do_syscall(
       syscall_num, pc, [](uintptr_t) { return false; },
       [&](ProcessDispatcher*) {
