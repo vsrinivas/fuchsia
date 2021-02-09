@@ -146,8 +146,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/diagnostics/control:controller-rustc",
     "//src/diagnostics/lib/selectors",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -197,6 +197,16 @@ component_manifest_resources("root-manifest") {
 resource("root-config") {
   sources = [ "configs/root-config.json" ]
   outputs = "config/archivist/archivist_config.json"
+}
+
+resource("default-service-config") {
+  sources = [ "configs/default-service-config.json" ]
+  outputs = "config/archivist/archivist_service_config.json"
+}
+
+resource("no-detect-service-config") {
+  sources = [ "configs/no-detect-service-config.json" ]
+  outputs = "config/archivist/archivist_service_config.json"
 }
 
 group("bootfs") {

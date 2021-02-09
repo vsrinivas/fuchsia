@@ -42,6 +42,14 @@ pub struct LogsConfig {
     pub max_cached_original_bytes: usize,
 }
 
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+pub struct ServiceConfig {
+    /// The list of services to connect to at startup.
+    ///
+    /// Archivist is responsible for starting up diagnostics processing components listed here.
+    pub service_list: Vec<String>,
+}
+
 /// Configuration for pipeline selection.
 pub struct PipelineConfig {
     /// Map of file paths for inspect pipeline configurations to the number of selectors they
@@ -164,6 +172,15 @@ pub fn parse_config(path: impl AsRef<Path>) -> Result<Config, Error> {
     Ok(config)
 }
 
+pub fn parse_service_config(path: impl AsRef<Path>) -> Result<ServiceConfig, Error> {
+    let path = path.as_ref();
+    let json_string: String = fs::read_to_string(path)
+        .with_context(|| format!("parsing service config: {}", path.display()))?;
+    let config: ServiceConfig =
+        serde_json::from_str(&json_string).context("parsing json service config")?;
+    Ok(config)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,6 +260,43 @@ mod tests {
         write_test_config_to_file(&test_config_file_name, test_config);
         let parsed_config_result = parse_config(&test_config_file_name);
         assert!(parsed_config_result.is_err(), "Config had a missing field, and invalid field.");
+    }
+
+    #[test]
+    fn parse_valid_services_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "service_list": ["a", "b", "c"]
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        let parsed_config_result =
+            parse_service_config(&test_config_file_name).expect("failed to parse config");
+        assert_eq!(
+            parsed_config_result.service_list,
+            vec!["a", "b", "c"].into_iter().map(|s| s.to_string()).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn parse_invalid_services_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  "service_list": [1]
+                }"#;
+
+        write_test_config_to_file(&test_config_file_name, test_config);
+        assert!(parse_service_config(&test_config_file_name).is_err());
     }
 
     #[test]

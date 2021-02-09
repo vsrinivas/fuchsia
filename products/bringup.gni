@@ -17,6 +17,10 @@ product_bootfs_labels = [
   "//bundles/drivers:utils",
 ]
 
+# Enable diagnostics services.
+product_bootfs_labels +=
+    [ "//src/diagnostics/archivist:default-service-config" ]
+
 # Add kernel command line arguments.
 product_bootfs_labels += [
   "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT",

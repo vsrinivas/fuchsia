@@ -12,9 +12,7 @@ use {
         archivist, configs, diagnostics, events::sources::LogConnectorEventSource, logs,
     },
     argh::FromArgs,
-    fidl_fuchsia_diagnostics_internal::{
-        DetectControllerMarker, LogStatsControllerMarker, SamplerControllerMarker,
-    },
+    fdio::service_connect,
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
@@ -60,21 +58,13 @@ pub struct Args {
     #[argh(switch)]
     listen_to_lifecycle: bool,
 
-    /// connect to fuchsia.diagnostics.internal.DetectController
-    #[argh(switch)]
-    connect_to_detect: bool,
-
-    /// connect to fuchsia.diagnostics.internal.LogStatsController
-    #[argh(switch)]
-    connect_to_log_stats: bool,
-
-    /// connect to fuchsia.diagnostics.internal.SamplerController
-    #[argh(switch)]
-    connect_to_sampler: bool,
-
     /// path to a JSON configuration file
     #[argh(option)]
     config_path: PathBuf,
+
+    /// path to additional configuration for services to connect to
+    #[argh(option)]
+    service_config_path: Option<PathBuf>,
 }
 
 fn main() -> Result<(), Error> {
@@ -162,31 +152,27 @@ fn main() -> Result<(), Error> {
         fasync::Task::spawn(archivist.data_repo().clone().drain_debuglog(debuglog)).detach();
     }
 
-    let _detect;
-    if opt.connect_to_detect {
-        info!("Starting detect service.");
-        _detect = connect_to_service::<DetectControllerMarker>();
-        if let Err(e) = &_detect {
-            error!("Couldn't connect to detect: {}", e);
-        }
-    }
+    let mut services = vec![];
 
-    let _stats;
-    if opt.connect_to_log_stats {
-        info!("Starting log stats service.");
-        _stats = connect_to_service::<LogStatsControllerMarker>();
-        if let Err(e) = &_stats {
-            error!("Couldn't connect to log stats: {}", e);
-        }
-    }
-
-    let _sampler;
-    if opt.connect_to_sampler {
-        info!("Starting sampler service.");
-        _sampler = connect_to_service::<SamplerControllerMarker>();
-
-        if let Err(e) = &_sampler {
-            error!("Couldn't connect to sampler: {}", e);
+    if let Some(service_config_path) = &opt.service_config_path {
+        match configs::parse_service_config(service_config_path) {
+            Err(e) => {
+                error!("Couldn't parse service config: {}", e);
+            }
+            Ok(config) => {
+                for name in config.service_list.iter() {
+                    info!("Connecting to service {}", name);
+                    let (local, remote) = zx::Channel::create().expect("cannot create channels");
+                    match service_connect(&format!("/svc/{}", name), remote) {
+                        Ok(_) => {
+                            services.push(local);
+                        }
+                        Err(e) => {
+                            error!("Couldn't connect to service {}: {:?}", name, e);
+                        }
+                    }
+                }
+            }
         }
     }
 
