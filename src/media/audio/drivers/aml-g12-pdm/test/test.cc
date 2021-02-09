@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
@@ -13,37 +12,20 @@
 #include <zxtest/zxtest.h>
 
 #include "../audio-stream-in.h"
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
 namespace audio::aml_g12 {
 
 namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+class FakeMmio {
  public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {
+  FakeMmio() {
     regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegCount);
     mmio_ = std::make_unique<ddk_fake::FakeMmioRegRegion>(regs_.get(), sizeof(uint32_t), kRegCount);
   }
 
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
-    EXPECT_LE(index, 1);
-    out_mmio->offset = reinterpret_cast<size_t>(this);
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
-    return fake_bti_create(out_bti->reset_and_get_address());
-  }
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
   ddk::MmioBuffer mmio() { return ddk::MmioBuffer(mmio_->GetMmioBuffer()); }
   ddk_fake::FakeMmioReg& reg(size_t ix) {
@@ -53,7 +35,6 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
  private:
   static constexpr size_t kRegCount =
       S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
-  pdev_protocol_t proto_;
   std::unique_ptr<ddk_fake::FakeMmioReg[]> regs_;
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
 };
@@ -88,6 +69,10 @@ audio_fidl::PcmFormat GetDefaultPcmFormat() {
 
 struct AudioStreamInTest : public zxtest::Test {
   void SetUp() override {
+    pdev_.set_mmio(0, mmio_.mmio_info());
+    pdev_.set_mmio(1, mmio_.mmio_info());
+    pdev_.UseFakeBti();
+
     static constexpr size_t kNumBindProtocols = 1;
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
                                                   kNumBindProtocols);
@@ -101,8 +86,8 @@ struct AudioStreamInTest : public zxtest::Test {
     tester_.SetMetadata(&metadata, sizeof(metadata));
 
     int step = 0;  // Track of the expected sequence of reads and writes.
-    pdev_.reg(0x000).SetReadCallback([]() -> uint32_t { return 0; });
-    pdev_.reg(0x000).SetWriteCallback([&step, &mute_mask](size_t value) {
+    mmio_.reg(0x000).SetReadCallback([]() -> uint32_t { return 0; });
+    mmio_.reg(0x000).SetWriteCallback([&step, &mute_mask](size_t value) {
       if (step == 8) {
         EXPECT_EQ(mute_mask << 20, value);
       }
@@ -165,7 +150,8 @@ struct AudioStreamInTest : public zxtest::Test {
     EXPECT_TRUE(tester_.Ok());
     stream->DdkRelease();
   }
-  FakePDev pdev_;
+  fake_pdev::FakePDev pdev_;
+  FakeMmio mmio_;
   fake_ddk::Bind tester_;
 };
 
@@ -203,7 +189,7 @@ TEST_F(AudioStreamInTest, RingBufferSize6) {
 // Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.
 zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
                                         std::optional<MmioBuffer>* mmio, uint32_t cache_policy) {
-  auto* test_harness = reinterpret_cast<audio::aml_g12::FakePDev*>(pdev_mmio.offset);
+  auto* test_harness = reinterpret_cast<audio::aml_g12::FakeMmio*>(pdev_mmio.offset);
   mmio->emplace(test_harness->mmio());
   return ZX_OK;
 }
