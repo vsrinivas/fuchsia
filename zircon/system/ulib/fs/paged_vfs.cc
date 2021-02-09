@@ -8,7 +8,9 @@
 
 namespace fs {
 
-PagedVfs::PagedVfs(int num_pager_threads) : pager_pool_(*this, num_pager_threads) {}
+PagedVfs::PagedVfs(int num_pager_threads) {
+  pager_pool_ = std::make_unique<PagerThreadPool>(*this, num_pager_threads);
+}
 
 PagedVfs::~PagedVfs() {
   // TODO(fxbug.dev/51111) need to detach from PagedVnodes that have back-references to this class.
@@ -19,7 +21,7 @@ zx::status<> PagedVfs::Init() {
   if (zx_status_t status = zx::pager::create(0, &pager_); status != ZX_OK)
     return zx::error(status);
 
-  return pager_pool_.Init();
+  return pager_pool_->Init();
 }
 
 zx::status<> PagedVfs::SupplyPages(PagedVnode& node, uint64_t offset, uint64_t length,
@@ -32,28 +34,28 @@ zx::status<> PagedVfs::ReportPagerError(PagedVnode& node, uint32_t op, uint64_t 
   return zx::make_status(pager_.op_range(op, node.vmo(), offset, length, data));
 }
 
-uint64_t PagedVfs::RegisterNode(PagedVnode* node) {
-  fbl::AutoLock lock(&vfs_lock_);
+zx::status<zx::vmo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, uint64_t size) {
+  // Register this node with a unique ID to associated it with pager requests.
+  uint64_t id;
+  {
+    fbl::AutoLock lock(&vfs_lock_);
 
-  uint64_t id = next_node_id_;
-  ++next_node_id_;
+    id = next_node_id_;
+    ++next_node_id_;
 
-  paged_nodes_[id] = node;
-  return id;
-}
+    paged_nodes_[id] = std::move(node);
+  }
 
-void PagedVfs::UnregisterNode(uint64_t id) {
-  fbl::AutoLock lock(&vfs_lock_);
-
-  auto found = paged_nodes_.find(id);
-  ZX_ASSERT(found != paged_nodes_.end());
-  paged_nodes_.erase(found);
-}
-
-zx::status<zx::vmo> PagedVfs::CreatePagedVmo(uint64_t node_id, uint64_t size) {
   zx::vmo vmo;
-  if (auto status = pager_.create_vmo(0, pager_pool_.port(), node_id, size, &vmo); status != ZX_OK)
+  if (auto status = pager_.create_vmo(0, pager_pool_->port(), id, size, &vmo); status != ZX_OK) {
+    // On error we need to undo the owning reference from above. This would be simpler if we only
+    // store the reference once the VMO was created, but that would require two separate lock
+    // steps.
+    fbl::AutoLock lock(&vfs_lock_);
+    paged_nodes_.erase(id);
     return zx::error(status);
+  }
+
   return zx::ok(std::move(vmo));
 }
 
@@ -73,34 +75,6 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
 
   // Handle the request outside the lock while holding a reference to the node.
   node->VmoRead(offset, length);
-}
-
-void PagedVfs::PagerVmoComplete(uint64_t node_id) {
-  // Hold a reference to the object to ensure it doesn't go out of scope during processing.
-  fbl::RefPtr<PagedVnode> node;
-
-  {
-    fbl::AutoLock lock(&vfs_lock_);
-
-    auto found = paged_nodes_.find(node_id);
-    if (found == paged_nodes_.end()) {
-      ZX_DEBUG_ASSERT(false);  // Should only get one complete message.
-      return;
-    }
-
-    node = fbl::RefPtr<PagedVnode>(found->second);
-  }
-
-  // TODO(fxbug.dev/51111) notify the node (outside of the lock to prevent reentrant locking) that it's
-  // complete so it can remove itself.
-
-#ifndef NDEBUG
-  // The node should always have removed itself.
-  {
-    fbl::AutoLock lock(&vfs_lock_);
-    ZX_DEBUG_ASSERT(paged_nodes_.find(node_id) == paged_nodes_.end());
-  }
-#endif
 }
 
 }  // namespace fs

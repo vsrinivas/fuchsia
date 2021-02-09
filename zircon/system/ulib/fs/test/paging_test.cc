@@ -9,7 +9,10 @@
 #include <lib/zx/vmar.h>
 
 #include <iostream>
+#include <optional>
 
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
 #include <fbl/unique_fd.h>
 #include <fs/internal/connection.h>
 #include <fs/paged_vfs.h>
@@ -21,9 +24,53 @@ namespace fs {
 
 namespace {
 
+// This structure tracks the mapped state of the paging test file across the test thread and the
+// paging thread.
+class SharedFileState {
+ public:
+  // Called by the PagedVnode when the VMO is mapped or unmapped.
+  void SignalVmoPresenceChanged(bool present) {
+    {
+      fbl::AutoLock lock(&mutex_);
+
+      vmo_present_changed_ = true;
+      vmo_present_ = present;
+    }
+
+    cond_var_.Signal();
+  }
+
+  // Returns the current state of the mapped flag.
+  bool GetVmoPresent() {
+    fbl::AutoLock lock(&mutex_);
+    return vmo_present_;
+  }
+
+  // Waits for the vmo presence to be marked changed and returns the presence flag.
+  //
+  // Called by the test to get the [un]mapped event.
+  bool WaitForChangedVmoPresence() {
+    fbl::AutoLock lock(&mutex_);
+
+    while (!vmo_present_changed_)
+      cond_var_.Wait(&mutex_);
+
+    vmo_present_changed_ = false;
+    return vmo_present_;
+  }
+
+ private:
+  fbl::Mutex mutex_;
+  fbl::ConditionVariable cond_var_;
+
+  bool vmo_present_changed_ = false;
+  bool vmo_present_ = false;
+};
+
 class PagingTestFile : public PagedVnode {
  public:
-  PagingTestFile(PagedVfs* vfs, std::vector<uint8_t> data) : PagedVnode(vfs), data_(data) {}
+  PagingTestFile(PagedVfs* vfs, std::shared_ptr<SharedFileState> shared, std::vector<uint8_t> data)
+      : PagedVnode(vfs), shared_(std::move(shared)), data_(data) {}
 
   ~PagingTestFile() override {}
 
@@ -50,13 +97,27 @@ class PagingTestFile : public PagedVnode {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
-    if (auto result = EnsureCreateVmo(data_.size()); result.is_error()) {
+    // We need to signal after the VMO was mapped that it changed.
+    bool becoming_mapped = !vmo();
+
+    if (auto result = EnsureCreateVmo(data_.size()); result.is_error())
       return result.error_value();
-    }
-    return vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, data_.size(), out_vmo);
+
+    if (zx_status_t status =
+            vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, data_.size(), out_vmo);
+        status != ZX_OK)
+      return status;
+
+    if (becoming_mapped)
+      shared_->SignalVmoPresenceChanged(true);
+    return ZX_OK;
   }
 
+ protected:
+  void OnNoClones() override { shared_->SignalVmoPresenceChanged(false); }
+
  private:
+  std::shared_ptr<SharedFileState> shared_;
   std::vector<uint8_t> data_;
 };
 
@@ -126,7 +187,9 @@ class PagingTest : public zxtest::Test {
 
     // Set up the directory hierarchy.
     root_ = fbl::MakeRefCounted<PseudoDir>();
-    file1_ = fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file1_contents_);
+
+    file1_shared_ = std::make_shared<SharedFileState>();
+    file1_ = fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file1_shared_, file1_contents_);
     root_->AddEntry(kFile1Name, file1_);
 
     // Connect to the root.
@@ -142,6 +205,7 @@ class PagingTest : public zxtest::Test {
   }
 
  protected:
+  std::shared_ptr<SharedFileState> file1_shared_;
   std::vector<uint8_t> file1_contents_;
 
  private:
@@ -158,6 +222,7 @@ class PagingTest : public zxtest::Test {
   std::unique_ptr<PagingTestVfs> vfs_;
 
   fbl::RefPtr<PseudoDir> root_;
+
   fbl::RefPtr<PagingTestFile> file1_;
 };
 
@@ -168,28 +233,43 @@ T RoundUp(T value, T multiple) {
 
 }  // namespace
 
-// TODO(fxbug.dev/68038) re-enable when not flaky.
-TEST_F(PagingTest, DISABLED_Read) {
+TEST_F(PagingTest, Read) {
   fbl::unique_fd root_dir_fd(CreateVfs(1));
   ASSERT_TRUE(root_dir_fd);
 
   fbl::unique_fd file1_fd(openat(root_dir_fd.get(), kFile1Name, 0, S_IRWXU));
   ASSERT_TRUE(file1_fd);
 
+  // With no VMO requests, there should be no mappings of the VMO in the file.
+  ASSERT_FALSE(file1_shared_->GetVmoPresent());
+
+  // Gets the VMO for file1, it should now have a VMO.
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(file1_fd.get(), vmo.reset_and_get_address()));
+  ASSERT_TRUE(file1_shared_->WaitForChangedVmoPresence());
 
   // Map the data and validate the result can be read.
   zx_vaddr_t mapped_addr = 0;
+  size_t mapped_len = RoundUp<uint64_t>(kFile1Size, PAGE_SIZE);
   ASSERT_EQ(ZX_OK,
-            zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, vmo, 0,
-                                       RoundUp<uint64_t>(kFile1Size, PAGE_SIZE), &mapped_addr));
+            zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, vmo, 0, mapped_len, &mapped_addr));
   ASSERT_TRUE(mapped_addr);
+
+  // Clear the VMO so the code below also validates that the mapped memory works even when the
+  // VMO is freed. The mapping stores an implicit reference to the vmo.
+  vmo.reset();
 
   const uint8_t* mapped = reinterpret_cast<const uint8_t*>(mapped_addr);
   for (size_t i = 0; i < kFile1Size; i++) {
     ASSERT_EQ(mapped[i], file1_contents_[i]);
   }
+
+  // The vmo should still be valid.
+  ASSERT_TRUE(file1_shared_->GetVmoPresent());
+
+  // Unmap the memory. This should notify the vnode which should free its vmo_ reference.
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->unmap(mapped_addr, mapped_len));
+  ASSERT_FALSE(file1_shared_->WaitForChangedVmoPresence());
 }
 
 // TODO(bug 51111):

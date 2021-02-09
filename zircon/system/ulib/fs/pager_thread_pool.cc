@@ -64,7 +64,20 @@ void PagerThreadPool::ThreadProc() {
         vfs_.PagerVmoRead(packet.key, packet.page_request.offset, packet.page_request.length);
         break;
       case ZX_PAGER_VMO_COMPLETE:
-        vfs_.PagerVmoComplete(packet.key);
+        // We don't currently do anything on "complete" requests. There are two ways that a paged
+        // VMO can be torn down:
+        //
+        //  - The "natural" way when there are no more references to it. The PagedVnode watches for
+        //    the "zero children" notification to detect this condition and clean up. In this
+        //    case there is no "complete" notification from the kernel.
+        //
+        //  - Some code could decide to stop paging when there are still references to the VMO.
+        //    In this case it will call zx_pager_detach_vmo() and the kernel will call us back with
+        //    ZX_PAGER_VMO_COMPLETE to tell us that it's processed that request and will not send
+        //    any more pager requests for that VMO (even if there are still references to it). We
+        //    currently don't have any need for this case. And since we'll automatically fail
+        //    requests for VMOs we're no longer paging, it's not clear we'll ever need to
+        //    synchronize with the kernel in this manner.
         break;
       default:
         // Unexpected request.

@@ -32,6 +32,8 @@ class PagerThreadPool {
   // The VFS must outlive this class (in practice it owns us). Init() must be called and must
   // succeed before using this class.
   PagerThreadPool(PagedVfs& vfs, int num_threads);
+
+  // This object must be destroyed before the associated PagedVfs.
   ~PagerThreadPool();
 
   const zx::port& port() const { return port_; }

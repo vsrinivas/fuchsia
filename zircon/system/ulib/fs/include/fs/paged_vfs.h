@@ -42,31 +42,30 @@ class PagedVfs : public Vfs {
   zx::status<> ReportPagerError(PagedVnode& node, uint32_t op, uint64_t offset, uint64_t length,
                                 uint64_t data);
 
-  // Tracks all PagedVnodes. Each Vnode is assigned a unique ID and tracked in a map in this class
-  // for associating page requests from the kernel to nodes. PagedNodes should register on
-  // construction and unregister on destruction.
-  uint64_t RegisterNode(PagedVnode* node);
-  void UnregisterNode(uint64_t id);
-
-  // Allocates a VMO of the given size, associated with the given PagedVnode ID. VMOs for use with
+  // Allocates a VMO of the given size associated with the given PagedVnode. VMOs for use with
   // the pager must be allocated by this method so the page requests are routed to the correct
   // PagedVnode.
   //
-  // This function is for itnernal use by PagedVnode. Most callers should use
+  // This function takes a reference to the vnode on behalf of the kernel paging system. This
+  // reference will be released when the PagedNode notices there are no references to the VMO.
+  //
+  // This function is for internal use by PagedVnode. Most callers should use
   // PagedVnode::EnsureCreateVmo().
-  zx::status<zx::vmo> CreatePagedVmo(uint64_t node_id, uint64_t size);
+  zx::status<zx::vmo> CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, uint64_t size);
 
-  // Callbacks that the PagerThreadPool uses to notify us of pager events. These calls will get
+  // Callback that the PagerThreadPool uses to notify us of pager events. These calls will get
   // issued on arbitrary threads.
   void PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length);
-  void PagerVmoComplete(uint64_t node_id);
 
  private:
-  PagerThreadPool pager_pool_;  // Threadsafe, does not need locking.
+  std::unique_ptr<PagerThreadPool> pager_pool_;  // Threadsafe, does not need locking.
   zx::pager pager_;
 
+  // Vnodes with active references from the kernel paging system. The owning reference here
+  // represents the reference from the kernel to this paged VMO and should only be dropped when
+  // the kernel is no longer paging this node.
   uint64_t next_node_id_ = 1;
-  std::map<uint64_t, PagedVnode*> paged_nodes_ FS_TA_GUARDED(vfs_lock_);
+  std::map<uint64_t, fbl::RefPtr<PagedVnode>> paged_nodes_ FS_TA_GUARDED(vfs_lock_);
 };
 
 }  // namespace fs
