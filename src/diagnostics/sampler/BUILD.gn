@@ -81,6 +81,7 @@ lapis_configuration("production_lapis") {
     "config/archivist.json",
     "config/ftl.json",
     "config/fvm.json",
+    "config/system-update-committer.json",
   ]
 }
 
