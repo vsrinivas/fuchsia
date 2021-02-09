@@ -7,10 +7,10 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
-	"go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
 )
 
 func TestEnableDebuggingSyscalls(t *testing.T) {
@@ -33,24 +33,24 @@ func TestEnableDebuggingSyscalls(t *testing.T) {
 
 	stdout, stderr, err := distro.RunNonInteractive(
 		"/boot/bin/syscall-check",
-		support.ToolPath(t, "minfs"),
-		support.ToolPath(t, "zbi"),
+		filepath.Join(exDir, "test_data", "tools", "minfs"),
+		filepath.Join(exDir, "test_data", "tools", "zbi"),
 		device,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	support.EnsureContains(t, stdout, "zx_debug_read: enabled")
-	support.EnsureContains(t, stdout, "zx_debug_send_command: enabled")
-	support.EnsureContains(t, stdout, "zx_debug_write: enabled")
-	support.EnsureContains(t, stdout, "zx_ktrace_control: enabled")
-	support.EnsureContains(t, stdout, "zx_ktrace_read: enabled")
-	support.EnsureContains(t, stdout, "zx_ktrace_write: enabled")
-	support.EnsureContains(t, stdout, "zx_mtrace_control: enabled")
-	support.EnsureContains(t, stdout, "zx_process_write_memory: enabled")
-	support.EnsureContains(t, stdout, "zx_system_mexec: enabled")
-	support.EnsureContains(t, stdout, "zx_system_mexec_payload_get: enabled")
+	ensureContains(t, stdout, "zx_debug_read: enabled")
+	ensureContains(t, stdout, "zx_debug_send_command: enabled")
+	ensureContains(t, stdout, "zx_debug_write: enabled")
+	ensureContains(t, stdout, "zx_ktrace_control: enabled")
+	ensureContains(t, stdout, "zx_ktrace_read: enabled")
+	ensureContains(t, stdout, "zx_ktrace_write: enabled")
+	ensureContains(t, stdout, "zx_mtrace_control: enabled")
+	ensureContains(t, stdout, "zx_process_write_memory: enabled")
+	ensureContains(t, stdout, "zx_system_mexec: enabled")
+	ensureContains(t, stdout, "zx_system_mexec_payload_get: enabled")
 	if stderr != "" {
 		t.Fatal(stderr)
 	}
@@ -63,4 +63,10 @@ func execDir(t *testing.T) string {
 		return ""
 	}
 	return filepath.Dir(ex)
+}
+
+func ensureContains(t *testing.T, output string, lookFor string) {
+	if !strings.Contains(output, lookFor) {
+		t.Fatalf("output did not contain '%s'", lookFor)
+	}
 }

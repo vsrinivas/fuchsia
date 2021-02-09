@@ -26,13 +26,7 @@ import (
 const defaultNodename = "swarm-donut-petri-acre"
 
 func toolPath(t *testing.T, name string) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "test_data", "limited_netsvc", name)
+	return filepath.Join(execDir(t), "test_data", "limited_netsvc", name)
 }
 
 func cmdWithTimeout(t *testing.T, shouldWork bool, name string, arg ...string) {

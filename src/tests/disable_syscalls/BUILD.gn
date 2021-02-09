@@ -25,16 +25,6 @@ group("tests") {
 }
 
 if (is_linux) {
-  go_library("disable_syscalls_support_lib") {
-    testonly = true
-
-    source_dir = "//src/tests/disable_syscalls/support"
-
-    deps = [ "//src/testing/emulator" ]
-
-    sources = [ "support.go" ]
-  }
-
   host_test_data("syscall_zbi") {
     sources = [ "$root_build_dir/zedboot.zbi" ]
   }
@@ -62,10 +52,7 @@ if (is_linux) {
     go_library(target_name) {
       testonly = true
       source_dir = "//src/tests/disable_syscalls/$split_name"
-      deps = [
-        ":disable_syscalls_support_lib",
-        "//src/testing/emulator",
-      ]
+      deps = [ "//src/testing/emulator" ]
       forward_variables_from(invoker, [ "sources" ])
     }
 

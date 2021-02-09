@@ -7,10 +7,10 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
-	"go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
 )
 
 func TestDisabledMakesKtraceFail(t *testing.T) {
@@ -32,8 +32,8 @@ func TestDisabledMakesKtraceFail(t *testing.T) {
 	device.KernelArgs = append(device.KernelArgs, "kernel.enable-debugging-syscalls=false")
 	stdout, stderr, err := distro.RunNonInteractive(
 		"/boot/bin/ktrace start 0xff",
-		support.ToolPath(t, "minfs"),
-		support.ToolPath(t, "zbi"),
+		filepath.Join(exDir, "test_data", "tools", "minfs"),
+		filepath.Join(exDir, "test_data", "tools", "zbi"),
 		device)
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestDisabledMakesKtraceFail(t *testing.T) {
 	if stdout != "" {
 		t.Fatal(stdout)
 	}
-	support.EnsureContains(t, stderr, "ZX_ERR_NOT_SUPPORTED")
+	ensureContains(t, stderr, "ZX_ERR_NOT_SUPPORTED")
 }
 
 func execDir(t *testing.T) string {
@@ -52,4 +52,10 @@ func execDir(t *testing.T) string {
 		return ""
 	}
 	return filepath.Dir(ex)
+}
+
+func ensureContains(t *testing.T, output string, lookFor string) {
+	if !strings.Contains(output, lookFor) {
+		t.Fatalf("output did not contain '%s'", lookFor)
+	}
 }

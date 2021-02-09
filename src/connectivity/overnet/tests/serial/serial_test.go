@@ -24,21 +24,11 @@ func execDir(t *testing.T) string {
 	return filepath.Dir(ex)
 }
 
-func ascenddPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "ascendd")
-}
-
-func startAscendd(t *testing.T) *exec.Cmd {
+func startAscendd(t *testing.T, exDir string) *exec.Cmd {
 	n := rand.Uint64()
 	path := fmt.Sprintf("/tmp/ascendd-for-serial-test.%v.sock", n)
 	os.Setenv("ASCENDD", path)
-	return exec.Command(ascenddPath(t), "--serial", "-", "--sockpath", path)
+	return exec.Command(filepath.Join(exDir, "ascendd"), "--serial", "-", "--sockpath", path)
 }
 
 // Test that ascendd can connect to overnetstack via serial.
@@ -64,8 +54,7 @@ func TestOvernetSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ascendd := startAscendd(t)
-	if err = i.StartPiped(ascendd); err != nil {
+	if err = i.StartPiped(startAscendd(t, exDir)); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
@@ -102,8 +91,7 @@ func TestNoSpinningIfNoSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ascendd := startAscendd(t)
-	if err = i.StartPiped(ascendd); err != nil {
+	if err = i.StartPiped(startAscendd(t, exDir)); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {

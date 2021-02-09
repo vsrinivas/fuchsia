@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
-	"go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
 )
 
 func TestKtraceWorksWhenEnabled(t *testing.T) {
@@ -38,8 +37,8 @@ func TestKtraceWorksWhenEnabled(t *testing.T) {
 
 	stdout, stderr, err := distro.RunNonInteractive(
 		"/boot/bin/ktrace start 0xff",
-		support.ToolPath(t, "minfs"),
-		support.ToolPath(t, "zbi"),
+		filepath.Join(exDir, "test_data", "tools", "minfs"),
+		filepath.Join(exDir, "test_data", "tools", "zbi"),
 		device,
 	)
 	if err != nil {
