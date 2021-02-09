@@ -4,21 +4,13 @@
 
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_component("bt-host-unittests") {
-  manifest = "meta/bt-host-unittests.cmx"
-  deps = [ "//src/connectivity/bluetooth/core/bt-host:tests" ]
-}
-
 fuchsia_unittest_component("bt-lib-fidl-unittests") {
   manifest = "meta/bt-lib-fidl-unittests.cmx"
   deps = [ "//src/connectivity/bluetooth/lib/fidl:tests" ]
 }
 
 fuchsia_test_package("bluetooth-tests") {
-  test_components = [
-    ":bt-host-unittests",
-    ":bt-lib-fidl-unittests",
-  ]
+  test_components = [ ":bt-lib-fidl-unittests" ]
 }
 
 # Define a name provider, which is required for BT-GAP

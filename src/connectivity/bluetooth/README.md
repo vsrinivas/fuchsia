@@ -81,52 +81,22 @@ production binary or library to find its associated unit tests.
 Each test binary is a [component](/docs/glossary.md#component)
 whose runtime environment is defined by its [`.cmx` component manifest](/docs/the-book/package_metadata.md#Component-Manifest)
 
-For example, `bt-host-unittests` is a [Google Test](https://github.com/google/googletest)
-binary that contains all the C++ bt-host subsystem unit tests and is a part of
-the [`bluetooth-tests`](tests/BUILD.gn) package.
+For example, `bt-host-l2cap-tests` is a [Google Test](https://github.com/google/googletest)
+binary that contains all the C++ L2CAP subsystem unit tests and is a standalone test package.
 
 ##### Running on a Fuchsia device
 
 * Run all the bt-host unit tests:
 
   ```
-  $ fx test bt-host-unittests
+  $ fx test //src/connectivity/bluetooth/core/bt-host
   ```
 
-* Or use the `--gtest_filter`
-[flag](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#running-a-subset-of-the-tests) to run a subset of the tests:
-
-  ```
-  # This only runs the L2CAP unit tests.
-  $ fx test bt-host-unittests -- --gtest_filter="L2CAP_*"
-  ```
-
-* And use the `--severity=<TRACE|DEBUG|INFO|WARNING|ERROR>` flag to set the minimum log severity to print:
-
-  ```
-  $ fx test bt-host-unittests -- --severity=TRACE
-  ```
-
-* After making library or test changes, you can push the test package and run it from your development shell:
-
-  ```
-  $ fx test bt-host-unittests -- --gtest_filter="L2CAP_*"
-  ```
-
-Note the extra `--` used to separate arguments passed to the test binary.
+To see all options for running these tests, run `fx test --help`.
 
 ##### Running on QEMU
 
-If you don't have physical hardware available, you can run the tests in QEMU using the same commands as above. A couple of tips will help run the tests a little more quickly.
-
-* Run the VM with hardware virtualization support: `fx emu`
-* Disable unnecessary logging for the tests:
-
-  ```
-  $ fx test bt-host-unittests -- --severity=ERROR
-  ```
-
-With these two tips, the full bt-host-unittests suite runs in ~2 seconds.
+If you don't have physical hardware available, you can run the tests in FEMU using the same commands as above. See [FEMU set up instructions](https://fuchsia.dev/fuchsia-src/get-started/set_up_femu).
 
 #### Integration Tests
 
