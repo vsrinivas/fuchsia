@@ -10,6 +10,9 @@ alias PolicyId = uint32;
 
 /// Provides access to enumerating and modifying policies for the
 /// fuchsia.settings.Audio API.
+///
+/// Policies are automatically persisted across reboots and take effect again on
+/// boot.
 [Discoverable]
 protocol VolumePolicyController {
     /// Gets a list of volume policy properties, including possible transforms
@@ -18,8 +21,8 @@ protocol VolumePolicyController {
 
     /// Adds a policy for the given target.
     ///
-    /// Returns a policy_id for the added policy, which can be used to remove the
-    /// policy with RemovePolicy.
+    /// Returns a policy_id for the added policy, which can be used to remove
+    /// the policy with RemovePolicy.
     ///
     /// If the policy being added contradicts an existing policy, the add
     /// call will return an error. An example would be specifying a max volume
@@ -35,6 +38,8 @@ protocol VolumePolicyController {
     AddPolicy(Target target, PolicyParameters parameters) -> (PolicyId policy_id) error Error;
 
     /// Removes a policy with the given policy id.
+    ///
+    /// Any client of this API can remove policies set by any other client.
     RemovePolicy(PolicyId policy_id) -> () error Error;
 };
 
@@ -66,9 +71,37 @@ union Target {
 /// be active for a single property.
 enum Transform : uint8 {
     /// Limits the maximum value of an audio stream to a certain level.
+    ///
+    /// Max volume limits are transparent to clients of fuchsia.settings.Audio.
+    /// Clients will always be able to set the volume to 1.0 (max) to prevent
+    /// user confusion about not being able to set the volume to max. The
+    /// internal volume, which is communicated to AudioCore to set the true
+    /// volume level, will always be clamped to the specified maximum.
+    ///
+    /// Externally, the volume percentage will always be a percentage of the max
+    /// allowed by policy. For example, if the max limit is set to 0.8, a client
+    /// setting the volume to 1.0 translates to 0.8 internally. An external
+    /// volume of 0.5 would be scaled to 0.4 internally.
+    ///
+    /// If a min volume limit is present, the minimum external volume will be
+    /// the min volume limit divided by the max volume limit. For example, if
+    /// the max volume limit is 0.8 and the min volume limit is 0.2, the lowest
+    /// possible external volume is 0.25, since 0.2 is 25% of 0.8. The min range
+    /// is not transparent to clients to prevent the confusion of volume being
+    /// at 0% but still being able to hear audio.
     MAX = 1;
 
     /// Limits the minimum value of an audio stream to a certain level.
+    ///
+    /// If the volume is below the specified minimum level when the policy is
+    /// added, it will automatically be raised to the specified minimum. Calls
+    /// to set the volume below the minimum level will not fail, but the actual
+    /// volume will stay above the specified minimum level.
+    ///
+    /// Note that the minimum volume limit is a limit on the internal "true"
+    /// volume level. If a maximum volume policy is set, the minimum that
+    /// clients of fuchsia.settings.Audio will see is higher. See the
+    /// documentation of the MAX volume transform for more information.
     MIN = 2;
 };
 
