@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("gpio_bind") {
+  rules = "gpio.bind"
+  output = "gpio_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.gpio" ]
+}
 
 driver_module("gpio") {
   configs += [
@@ -14,14 +22,12 @@ driver_module("gpio") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpio.cc" ]
   deps = [
+    ":gpio_bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpioimpl",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -37,6 +43,7 @@ test("gpio-test-bin") {
     "gpio.cc",
   ]
   deps = [
+    ":gpio_bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpioimpl",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_mock",
@@ -44,9 +51,6 @@ test("gpio-test-bin") {
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -67,5 +71,8 @@ fuchsia_unittest_package("gpio-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":gpio-test" ]
+  deps = [
+    ":gpio-test",
+    ":gpio_bind_test",
+  ]
 }

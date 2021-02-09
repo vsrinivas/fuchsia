@@ -8,7 +8,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -16,6 +15,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/gpio/drivers/gpio/gpio_bind.h"
 
 namespace gpio {
 
@@ -133,5 +134,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gpio
 
-ZIRCON_DRIVER_BEGIN(gpio, gpio::driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GPIO_IMPL), ZIRCON_DRIVER_END(gpio)
+ZIRCON_DRIVER(gpio, gpio::driver_ops, "zircon", "0.1");
