@@ -77,10 +77,7 @@ pub fn network_config_vec_to_persistent_data(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::{super::network_config::PerformanceStats, *},
-        wlan_stash::policy as pstash,
-    };
+    use {super::super::*, wlan_stash::policy as pstash};
 
     #[test]
     fn network_identifier_to_stash_from_policy() {
@@ -153,32 +150,27 @@ mod tests {
 
     #[test]
     fn persistent_data_from_network_config() {
-        // has_ever_connected: false
+        // Check that from() works when has_ever_connected is true and false.
+        let has_ever_connected = false;
+        let id = NetworkIdentifier::new(b"ssid".to_vec(), SecurityType::Wpa3);
+        let credential = Credential::Password(b"foo_pass".to_vec());
+        let network_config = NetworkConfig::new(id, credential, has_ever_connected)
+            .expect("failed to create network config");
         assert_eq!(
-            pstash::PersistentData::from(NetworkConfig {
-                ssid: b"ssid".to_vec(),
-                security_type: SecurityType::Wpa3,
-                credential: Credential::Password(b"foo_pass".to_vec()),
-                has_ever_connected: false,
-                hidden_probability: 0.0,
-                perf_stats: PerformanceStats::new(),
-            }),
+            pstash::PersistentData::from(network_config),
             pstash::PersistentData {
                 credential: pstash::Credential::Password(b"foo_pass".to_vec()),
                 has_ever_connected: false
             }
         );
 
-        // has_ever_connected: true
+        let has_ever_connected = true;
+        let id = NetworkIdentifier::new(b"ssid".to_vec(), SecurityType::None);
+        let credential = Credential::None;
+        let network_config = NetworkConfig::new(id, credential, has_ever_connected)
+            .expect("failed to create network config");
         assert_eq!(
-            pstash::PersistentData::from(NetworkConfig {
-                ssid: b"ssid".to_vec(),
-                security_type: SecurityType::None,
-                credential: Credential::None,
-                has_ever_connected: true,
-                hidden_probability: 0.0,
-                perf_stats: PerformanceStats::new(),
-            }),
+            pstash::PersistentData::from(network_config),
             pstash::PersistentData {
                 credential: pstash::Credential::None,
                 has_ever_connected: true
