@@ -510,6 +510,7 @@ impl PackageDataCollector {
                 url: pkg.url.clone(),
                 merkle: pkg.merkle.clone(),
                 contents: pkg.contents.clone(),
+                meta: pkg.meta.clone(),
             };
             packages.push(package);
 

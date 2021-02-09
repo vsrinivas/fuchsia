@@ -106,6 +106,7 @@ mod tests {
                 url: "test_url".to_string(),
                 merkle: "test_merkle".to_string(),
                 contents,
+                meta: HashMap::new(),
             }]))
             .unwrap();
         let request_one = PackageSearchRequest { files: "foo".to_string() };

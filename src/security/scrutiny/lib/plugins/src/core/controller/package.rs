@@ -54,6 +54,7 @@ mod tests {
             url: "foo".to_string(),
             merkle: "bar".to_string(),
             contents: HashMap::new(),
+            meta: HashMap::new(),
         });
         model.set(packages).unwrap();
         let value = packages_controller.query(model, json!("")).unwrap();

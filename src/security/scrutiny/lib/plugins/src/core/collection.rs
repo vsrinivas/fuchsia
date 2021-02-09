@@ -61,6 +61,7 @@ pub struct Package {
     pub url: String,
     pub merkle: String,
     pub contents: HashMap<String, String>,
+    pub meta: HashMap<String, String>,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
