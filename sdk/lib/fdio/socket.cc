@@ -513,47 +513,6 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
   }
 }
 
-enum class IO {
-  SEND,
-  RECV,
-};
-
-// Read the current ioflag state and try to infer the return zx_status.
-// Returns the appropriate ZX_ERR status if possible, else returns ZX_OK.
-zx_status_t zxsio_flag_status(fdio_t* io, IO op) {
-  uint32_t* ioflag = fdio_get_ioflag(io);
-  const int flags = *ioflag;
-
-  if (flags & IOFLAG_SOCKET_HAS_ERROR) {
-    // Reset the socket connected or connecting flags, so that the subsequent calls do not return
-    // the same error. Test: src/connectivity/network/tests/bsdsocket_test.cc:TestListenWhileConnect
-    if (flags & IOFLAG_SOCKET_CONNECTED) {
-      *ioflag ^= IOFLAG_SOCKET_CONNECTED;
-      return ZX_ERR_CONNECTION_RESET;
-    }
-    if (flags & IOFLAG_SOCKET_CONNECTING) {
-      *ioflag ^= IOFLAG_SOCKET_CONNECTING;
-      return ZX_ERR_CONNECTION_REFUSED;
-    }
-    return ZX_OK;
-  }
-
-  if (flags & IOFLAG_SOCKET_CONNECTED) {
-    return ZX_OK;
-  }
-
-  if (flags & IOFLAG_SOCKET_CONNECTING) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-
-  switch (op) {
-    case IO::SEND:
-      return ZX_ERR_BAD_STATE;
-    case IO::RECV:
-      return ZX_ERR_NOT_CONNECTED;
-  }
-}
-
 }  // namespace
 
 static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_t* ioflag,
@@ -567,7 +526,7 @@ static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_
         socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
     if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
       if (observed & ZXSIO_SIGNAL_CONNECTED) {
-        *ioflag ^= IOFLAG_SOCKET_CONNECTING;
+        *ioflag &= ~IOFLAG_SOCKET_CONNECTING;
         *ioflag |= IOFLAG_SOCKET_CONNECTED;
       }
     }
@@ -612,7 +571,7 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
   // check the connection state
   if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
     if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
-      *ioflag ^= IOFLAG_SOCKET_CONNECTING;
+      *ioflag &= ~IOFLAG_SOCKET_CONNECTING;
       *ioflag |= IOFLAG_SOCKET_CONNECTED;
     }
     zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
@@ -633,21 +592,6 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
   }
 
   if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
-    // Update flags to hold an error state which can be harvested by read/write calls.
-    // For Linux parity reasons, do this only for non-blocking sockets.
-    // Test: src/connectivity/network/tests/bsdsocket_test.cc:TestListenWhileConnect
-    // For other errors like connection timeouts, no error is reported to the
-    // subsequent read/write calls, hence we do not update the ioflag state for those.
-    //
-    // On a related note, blocking socket behavior is one of the two below:
-    // (1) If the peer resets the connection while the socket is blocked, return error.
-    //     The caller of this routine can interpret POLLHUP to return appropriate error.
-    // (2) If the read/write is called post connection reset, that is treated as I/O
-    //     on a peer-closed socket handle.
-    if (*ioflag & IOFLAG_NONBLOCK &&
-        (zx_signals & (ZXSIO_SIGNAL_CONNECTION_REFUSED | ZXSIO_SIGNAL_CONNECTION_RESET))) {
-      *ioflag |= IOFLAG_SOCKET_HAS_ERROR;
-    }
     events |= POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP;
   }
   if (signals & ZXIO_SIGNAL_WRITE_DISABLED) {
@@ -1104,12 +1048,15 @@ static fdio_ops_t fdio_stream_socket_ops = {
         [](fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
           *out_code = 0;
 
-          auto status = zxsio_flag_status(io, IO::RECV);
-          if (status != ZX_OK) {
-            return status;
+          switch (*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
+            case 0:
+              return ZX_ERR_NOT_CONNECTED;
+            case IOFLAG_SOCKET_CONNECTING:
+              // Enable the caller to wait for the connection completion and retry.
+              return ZX_ERR_SHOULD_WAIT;
           }
 
-          status = fdio_zxio_recvmsg(io, msg, flags, out_actual);
+          auto status = fdio_zxio_recvmsg(io, msg, flags, out_actual);
           if (status == ZX_ERR_INVALID_ARGS) {
             status = ZX_OK;
             *out_code = EFAULT;
@@ -1120,13 +1067,16 @@ static fdio_ops_t fdio_stream_socket_ops = {
         [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
           *out_code = 0;
 
-          auto status = zxsio_flag_status(io, IO::SEND);
-          if (status != ZX_OK) {
-            return status;
+          // TODO(https://fxbug.dev/21106): support flags and control messages
+          switch (*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
+            case 0:
+              return ZX_ERR_BAD_STATE;
+            case IOFLAG_SOCKET_CONNECTING:
+              // Enable the caller to wait for the connection completion and retry.
+              return ZX_ERR_SHOULD_WAIT;
           }
 
-          // TODO(https://fxbug.dev/21106): support flags and control messages
-          status = fdio_zxio_sendmsg(io, msg, flags, out_actual);
+          auto status = fdio_zxio_sendmsg(io, msg, flags, out_actual);
           if (status == ZX_ERR_INVALID_ARGS) {
             status = ZX_OK;
             *out_code = EFAULT;
@@ -1136,6 +1086,9 @@ static fdio_ops_t fdio_stream_socket_ops = {
 
     .shutdown =
         [](fdio_t* io, int how, int16_t* out_code) {
+          if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
+            return ZX_ERR_BAD_STATE;
+          }
           *out_code = 0;
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
           zx_signals_t observed;
