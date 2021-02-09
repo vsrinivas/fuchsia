@@ -234,6 +234,44 @@ zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memor
   return ZX_OK;
 }
 
+zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
+                                                 bool* internal_guard_pages_out,
+                                                 bool* crash_on_fail_out) {
+  constexpr uint64_t kDefaultGuardBytes = ZX_PAGE_SIZE;
+  *guard_bytes_out = kDefaultGuardBytes;
+  *internal_guard_pages_out = false;
+  *crash_on_fail_out = false;
+
+  // If true, sysmem crashes on a guard page violation.
+  if (getenv("driver.sysmem.contiguous_guard_pages_fatal")) {
+    DRIVER_INFO("Setting contiguous_guard_pages_fatal");
+    *crash_on_fail_out = true;
+  }
+
+  // If true, sysmem will create guard regions around every allocation.
+  if (getenv("driver.sysmem.contiguous_guard_pages_internal")) {
+    DRIVER_INFO("Setting contiguous_guard_pages_internal");
+    *internal_guard_pages_out = true;
+  }
+
+  const char* kName = "driver.sysmem.contiguous_guard_page_count";
+  const char* guard_count = getenv(kName);
+  if (!guard_count || strlen(guard_count) == 0) {
+    return ZX_OK;
+  }
+  char* end = nullptr;
+  int64_t page_count = strtoll(guard_count, &end, 10);
+  // Check that entire string was used and there isn't garbage at the end.
+  if (*end != '\0') {
+    DRIVER_ERROR("Ignoring flag %s with invalid value \"%s\"", kName, guard_count);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  DRIVER_INFO("Flag %s setting guard page count to %ld", kName, page_count);
+  *guard_bytes_out = ZX_PAGE_SIZE * page_count;
+
+  return ZX_OK;
+}
+
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
   // Try to ensure there are no outstanding VMOS before shutting down the loop.
   async::PostTask(loop_.dispatcher(), [this]() mutable {
@@ -359,6 +397,14 @@ zx_status_t Device::Bind() {
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
+    }
+    uint64_t guard_region_size;
+    bool internal_guard_regions;
+    bool crash_on_guard;
+    if (GetContiguousGuardParameters(&guard_region_size, &internal_guard_regions,
+                                     &crash_on_guard) == ZX_OK) {
+      pooled_allocator->InitGuardRegion(guard_region_size, internal_guard_regions, crash_on_guard,
+                                        loop_.dispatcher());
     }
     contiguous_system_ram_allocator_ = std::move(pooled_allocator);
   } else {

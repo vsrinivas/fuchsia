@@ -30,6 +30,12 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // Default to page alignment.
   zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
 
+  // Initializes the guard regions. Must be called after Init. If
+  // internal_guard_regions is not set, there will be only guard regions at the
+  // begin and end of the buffer.
+  void InitGuardRegion(size_t guard_region_size, bool internal_guard_regions,
+                       bool crash_on_guard_failure, async_dispatcher_t* dispatcher);
+
   // TODO(fxbug.dev/13609): Use this for VDEC.
   //
   // This uses a physical VMO as the parent VMO.
@@ -56,6 +62,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   bool is_ready() override;
 
   const zx::vmo& GetPoolVmoForTest() { return contiguous_vmo_; }
+  // Gets the offset of a VMO from the beginning of a pool.
+  uint64_t GetVmoRegionOffsetForTest(const zx::vmo& vmo);
+
+  uint32_t failed_guard_region_checks() const { return failed_guard_region_checks_; }
 
  private:
   struct RegionData {
@@ -70,6 +80,13 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   zx_status_t InitCommon(zx::vmo local_contiguous_vmo);
   void TraceObserverCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal);
+
+  void CheckGuardPageCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                              zx_status_t status);
+  void CheckGuardRegion(const char* region_name, size_t region_size, bool pre,
+                        uint64_t start_offset);
+  void CheckGuardRegionData(const RegionData& region);
+  void CheckExternalGuardRegions();
   void DumpPoolStats();
   void DumpPoolHighWaterMark();
   void TracePoolSize(bool initial_trace);
@@ -77,6 +94,17 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   const char* const allocation_name_{};
   const uint64_t pool_id_{};
   char child_name_[ZX_MAX_NAME_LEN] = {};
+
+  // Holds the default data to be placed into the guard region.
+  std::vector<uint8_t> guard_region_data_;
+  // Holds a copy of the guard region data that's compared with the real value.
+  std::vector<uint8_t> guard_region_copy_;
+
+  bool crash_on_guard_failure_ = false;
+  // Internal guard regions are around every allocation, and not just the beginning and end of the
+  // contiguous VMO.
+  bool has_internal_guard_regions_ = false;
+
   zx::vmo contiguous_vmo_;
   zx::pmt pool_pmt_;
   RegionAllocator region_allocator_;
@@ -88,6 +116,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   bool is_ready_{};
   // True if the allocator can be deleted after it's marked ready.
   bool can_be_torn_down_{};
+
+  uint32_t failed_guard_region_checks_{};
 
   uint64_t high_water_mark_used_size_{};
   uint64_t max_free_size_at_high_water_mark_{};
@@ -107,11 +137,17 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // size - high_water_mark. This is used for cobalt reporting.
   inspect::UintProperty free_at_high_water_mark_property_;
   inspect::BoolProperty is_ready_property_;
+  inspect::UintProperty failed_guard_region_checks_property_;
+  inspect::UintProperty last_failed_guard_region_check_timestamp_ns_property_;
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,
                     &ContiguousPooledMemoryAllocator::TraceObserverCallback>
       wait_{this};
+
+  async::TaskMethod<ContiguousPooledMemoryAllocator,
+                    &ContiguousPooledMemoryAllocator::CheckGuardPageCallback>
+      guard_checker_{this};
 };
 
 }  // namespace sysmem_driver

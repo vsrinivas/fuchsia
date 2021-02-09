@@ -56,6 +56,9 @@ class Device final : public DdkDeviceType,
 
   [[nodiscard]] static zx_status_t OverrideSizeFromCommandLine(const char* name,
                                                                int64_t* memory_size);
+  [[nodiscard]] static zx_status_t GetContiguousGuardParameters(uint64_t* guard_bytes_out,
+                                                                bool* internal_guard_pages_out,
+                                                                bool* crash_on_fail_out);
 
   [[nodiscard]] zx_status_t Bind();
 

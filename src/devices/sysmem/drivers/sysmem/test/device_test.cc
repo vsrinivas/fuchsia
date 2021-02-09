@@ -107,6 +107,56 @@ TEST(Device, OverrideCommandLine) {
   EXPECT_EQ(-99, value);
 }
 
+TEST(Device, GuardPageCommandLine) {
+  uint64_t guard_bytes = 1;
+  bool internal_guard_pages = true;
+  bool crash_on_fail = true;
+  const char* kName = "driver.sysmem.contiguous_guard_page_count";
+  const char* kInternalName = "driver.sysmem.contiguous_guard_pages_internal";
+
+  setenv(kInternalName, "", true);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+                                                        &crash_on_fail));
+  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_TRUE(internal_guard_pages);
+  EXPECT_FALSE(crash_on_fail);
+  unsetenv(kInternalName);
+
+  setenv(kName, "fasfas", true);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, Device::GetContiguousGuardParameters(
+                                     &guard_bytes, &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_FALSE(internal_guard_pages);
+  EXPECT_FALSE(crash_on_fail);
+
+  setenv(kName, "", true);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+                                                        &crash_on_fail));
+  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_FALSE(internal_guard_pages);
+  EXPECT_FALSE(crash_on_fail);
+
+  setenv(kName, "2", true);
+  setenv(kInternalName, "", true);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+                                                        &crash_on_fail));
+  EXPECT_EQ(ZX_PAGE_SIZE * 2, guard_bytes);
+  EXPECT_TRUE(internal_guard_pages);
+  EXPECT_FALSE(crash_on_fail);
+
+  const char* kFatalName = "driver.sysmem.contiguous_guard_pages_fatal";
+  setenv(kFatalName, "", true);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+                                                        &crash_on_fail));
+  EXPECT_EQ(ZX_PAGE_SIZE * 2, guard_bytes);
+  EXPECT_TRUE(internal_guard_pages);
+  EXPECT_TRUE(crash_on_fail);
+
+  unsetenv(kName);
+  unsetenv(kFatalName);
+  unsetenv(kInternalName);
+}
+
 class FakeDdkSysmem : public zxtest::Test {
  public:
   void SetUp() override {

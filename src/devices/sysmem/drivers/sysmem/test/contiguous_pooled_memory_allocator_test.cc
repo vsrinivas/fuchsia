@@ -4,6 +4,7 @@
 
 #include "contiguous_pooled_memory_allocator.h"
 
+#include <lib/async-testing/test_loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/zx/clock.h>
@@ -13,6 +14,8 @@
 
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
+
+#include "lib/async-loop/loop.h"
 
 namespace sysmem_driver {
 namespace {
@@ -190,6 +193,85 @@ TEST_F(ContiguousPooledSystem, SetReady) {
   EXPECT_TRUE(allocator_.is_ready());
   EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
   allocator_.Delete(std::move(vmo));
+}
+
+TEST_F(ContiguousPooledSystem, GuardPages) {
+  async::TestLoop loop;
+  constexpr uint32_t kGuardRegionSize = ZX_PAGE_SIZE;
+  EXPECT_OK(allocator_.Init());
+  allocator_.InitGuardRegion(kGuardRegionSize, true, false, loop.dispatcher());
+  allocator_.set_ready();
+
+  zx::vmo vmo;
+  EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
+  EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+
+  // The guard check happens every 5 seconds, so run for 6 seconds to ensure one
+  // happens. We're using a test loop, so it's guaranteed that it runs exactly this length of time.
+  constexpr uint32_t kLoopTimeSeconds = 6;
+  loop.RunFor(zx::sec(kLoopTimeSeconds));
+
+  EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+
+  uint8_t data_to_write = 1;
+  uint64_t guard_offset = allocator_.GetVmoRegionOffsetForTest(vmo) - 1;
+  allocator_.GetPoolVmoForTest().write(&data_to_write, guard_offset, sizeof(data_to_write));
+
+  guard_offset = allocator_.GetVmoRegionOffsetForTest(vmo) + kVmoSize + kGuardRegionSize - 1;
+  allocator_.GetPoolVmoForTest().write(&data_to_write, guard_offset, sizeof(data_to_write));
+
+  loop.RunFor(zx::sec(kLoopTimeSeconds));
+
+  // One each for beginning and end.
+  EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
+  allocator_.Delete(std::move(vmo));
+  // Two more.
+  EXPECT_EQ(4u, allocator_.failed_guard_region_checks());
+}
+
+TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
+  async::TestLoop loop;
+  constexpr uint32_t kGuardRegionSize = ZX_PAGE_SIZE;
+  EXPECT_OK(allocator_.Init());
+  allocator_.InitGuardRegion(kGuardRegionSize, false, false, loop.dispatcher());
+  allocator_.set_ready();
+
+  zx::vmo vmo;
+  EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
+  EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+  // The guard check happens every 5 seconds, so run for 6 seconds to ensure one
+  // happens. We're using a test loop, so it's guaranteed that it runs exactly this length of time.
+  constexpr uint32_t kLoopTimeSeconds = 6;
+
+  loop.RunFor(zx::sec(kLoopTimeSeconds));
+
+  EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+
+  uint8_t data_to_write = 1;
+  uint64_t guard_offset = 1;
+  allocator_.GetPoolVmoForTest().write(&data_to_write, guard_offset, sizeof(data_to_write));
+
+  guard_offset = kVmoSize * kVmoCount - 1;
+  allocator_.GetPoolVmoForTest().write(&data_to_write, guard_offset, sizeof(data_to_write));
+
+  {
+    // Write into what would be the internal guard region, to check that it isn't caught.
+    uint8_t data_to_write = 1;
+    uint64_t guard_offset = allocator_.GetVmoRegionOffsetForTest(vmo) - 1;
+    allocator_.GetPoolVmoForTest().write(&data_to_write, guard_offset, sizeof(data_to_write));
+
+    guard_offset = allocator_.GetVmoRegionOffsetForTest(vmo) + kVmoSize + kGuardRegionSize - 1;
+    allocator_.GetPoolVmoForTest().write(&data_to_write, guard_offset, sizeof(data_to_write));
+  }
+
+  loop.RunFor(zx::sec(kLoopTimeSeconds));
+
+  // One each for beginning and end.
+  EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
+  allocator_.Delete(std::move(vmo));
+  // Deleting the allocator won't cause an external guard region check, so the count should be the
+  // same.
+  EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
 }
 
 }  // namespace
