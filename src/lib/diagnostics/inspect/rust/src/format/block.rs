@@ -428,6 +428,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         self.check_type(BlockType::Header)?;
         self.check_locked(false)?;
         self.increment_generation_count();
+        fence(Ordering::Acquire);
         Ok(())
     }
 
@@ -435,6 +436,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     pub fn unlock_header(&self) -> Result<(), Error> {
         self.check_type(BlockType::Header)?;
         self.check_locked(true)?;
+        fence(Ordering::Release);
         self.increment_generation_count();
         Ok(())
     }
@@ -797,7 +799,6 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         let new_value = if value == u64::max_value() { 0 } else { value + 1 };
         payload.set_header_generation_count(new_value);
         self.write_payload(payload);
-        fence(Ordering::Release);
     }
 }
 
