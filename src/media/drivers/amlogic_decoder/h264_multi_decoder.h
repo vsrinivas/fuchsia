@@ -78,7 +78,6 @@ class H264MultiDecoder : public VideoDecoder {
     virtual bool HasMoreInputData() = 0;
     virtual void AsyncPumpDecoder() = 0;
     virtual void AsyncResetStreamAfterCurrentFrame() = 0;
-    virtual uint32_t InputBufferSize() { return 0; }
   };
 
   H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider,
@@ -372,6 +371,10 @@ class H264MultiDecoder : public VideoDecoder {
   uint32_t next_max_reference_size_ = 0u;
   bool waiting_for_surfaces_ = false;
   bool waiting_for_input_ = false;
+
+  // We sometimes need to hold on to current_data_input_ from one PumpDecoder() to the next if
+  // current_data_input_ doesn't fit in the stream buffer immediately.
+  std::optional<DataInput> current_data_input_;
 
   // This becomes true on StartDecoding(), and becomes false on StopDecoding().
   //
