@@ -511,7 +511,8 @@ TEST_F(DeviceTest, GetConfigurationDescriptor) {
   auto usb = get_usb_protocol();
   usb_configuration_descriptor_t descriptor;
   size_t actual;
-  ASSERT_OK(usb.GetConfigurationDescriptor(1, &descriptor, sizeof(descriptor), &actual));
+  ASSERT_OK(usb.GetConfigurationDescriptor(1, reinterpret_cast<uint8_t*>(&descriptor),
+                                           sizeof(descriptor), &actual));
   ASSERT_EQ(actual, sizeof(descriptor));
   ASSERT_EQ(descriptor.bConfigurationValue, 1);
   ASSERT_EQ(descriptor.wTotalLength, sizeof(descriptor));
@@ -526,7 +527,7 @@ TEST_F(DeviceTest, GetDescriptors) {
   auto usb = get_usb_protocol();
   usb_configuration_descriptor_t descriptor;
   size_t actual;
-  usb.GetDescriptors(&descriptor, sizeof(descriptor), &actual);
+  usb.GetDescriptors(reinterpret_cast<uint8_t*>(&descriptor), sizeof(descriptor), &actual);
   ASSERT_EQ(actual, sizeof(descriptor));
   ASSERT_EQ(descriptor.bConfigurationValue, 1);
   ASSERT_EQ(descriptor.wTotalLength, sizeof(descriptor));
@@ -659,7 +660,7 @@ TEST_F(DeviceTest, UsbGetStringDescriptor_BufferTooSmall) {
   size_t small = 3;
 
   zx_status_t status = device.UsbGetStringDescriptor(
-    1, 1, lang_id, &desc, small, &actual);
+      1, 1, lang_id, reinterpret_cast<uint8_t*>(&desc), small, &actual);
 
   EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
   EXPECT_GT(actual, small);

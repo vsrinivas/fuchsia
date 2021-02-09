@@ -230,7 +230,8 @@ zx_status_t UsbBus::ControlReadRegister(uint16_t offset, char* value, size_t siz
   constexpr uint8_t kIndex = 0x0;
 
   return usb_control_in(&usb_protocol_, kRequestType, kRequest, offset, kIndex,
-                        zx::deadline_after(kRegisterIoDeadline).get(), value, size, nullptr);
+                        zx::deadline_after(kRegisterIoDeadline).get(),
+                        reinterpret_cast<uint8_t*>(value), size, nullptr);
 }
 
 zx_status_t UsbBus::ControlWriteRegister(uint16_t offset, char* value, size_t size) {
@@ -239,7 +240,8 @@ zx_status_t UsbBus::ControlWriteRegister(uint16_t offset, char* value, size_t si
   constexpr uint8_t kIndex = 0x0;
 
   return usb_control_out(&usb_protocol_, kRequestType, kRequest, offset, kIndex,
-                         zx::deadline_after(kRegisterIoDeadline).get(), value, size);
+                         zx::deadline_after(kRegisterIoDeadline).get(),
+                         reinterpret_cast<uint8_t*>(value), size);
 }
 
 }  // namespace

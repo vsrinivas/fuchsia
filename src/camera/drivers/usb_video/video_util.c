@@ -32,7 +32,7 @@ zx_status_t usb_video_negotiate_probe(usb_protocol_t* usb, uint8_t vs_interface_
   // See UVC 1.5 Spec. 4.2.1 Interface Control Requests.
   status = usb_control_out(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                            USB_VIDEO_SET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8, vs_interface_num,
-                           ZX_TIME_INFINITE, proposal, sizeof(*proposal));
+                           ZX_TIME_INFINITE, (uint8_t*)proposal, sizeof(*proposal));
   if (status != ZX_OK)
     goto out;
 
@@ -42,7 +42,7 @@ zx_status_t usb_video_negotiate_probe(usb_protocol_t* usb, uint8_t vs_interface_
   zxlogf(DEBUG, "usb_video_negotiate_probe: PROBE_CONTROL GET_CUR");
   status = usb_control_in(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_VIDEO_GET_CUR,
                           USB_VIDEO_VS_PROBE_CONTROL << 8, vs_interface_num, ZX_TIME_INFINITE,
-                          out_result, sizeof(*out_result), &out_length);
+                          (uint8_t*)out_result, sizeof(*out_result), &out_length);
   if (status != ZX_OK) {
     goto out;
   }
@@ -65,9 +65,10 @@ out:
 zx_status_t usb_video_negotiate_commit(usb_protocol_t* usb, uint8_t vs_interface_num,
                                        usb_video_vc_probe_and_commit_controls* ctrls) {
   zxlogf(DEBUG, "usb_video_negotiate_commit: COMMIT_CONTROL SET_CUR");
-  zx_status_t status = usb_control_out(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                       USB_VIDEO_SET_CUR, USB_VIDEO_VS_COMMIT_CONTROL << 8,
-                                       vs_interface_num, ZX_TIME_INFINITE, ctrls, sizeof(*ctrls));
+  zx_status_t status =
+      usb_control_out(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_VIDEO_SET_CUR,
+                      USB_VIDEO_VS_COMMIT_CONTROL << 8, vs_interface_num, ZX_TIME_INFINITE,
+                      (uint8_t*)ctrls, sizeof(*ctrls));
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     // clear the stall/error
     usb_reset_endpoint(usb, 0);

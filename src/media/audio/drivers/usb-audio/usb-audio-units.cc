@@ -108,12 +108,14 @@ zx_status_t AudioUnit::CtrlReq(const usb_protocol_t& proto, uint8_t code, uint16
   size_t done = 0;
   zx_status_t status;
   if ((req_type & USB_DIR_MASK) == USB_DIR_OUT) {
-    status = usb_control_out(proto_ptr, req_type, code, val, index(),
-                             zx_deadline_after(kRelativeTimeout), data, len);
+    status =
+        usb_control_out(proto_ptr, req_type, code, val, index(),
+                        zx_deadline_after(kRelativeTimeout), reinterpret_cast<uint8_t*>(data), len);
     done = len;
   } else {
-    status = usb_control_in(proto_ptr, req_type, code, val, index(),
-                            zx_deadline_after(kRelativeTimeout), data, len, &done);
+    status =
+        usb_control_in(proto_ptr, req_type, code, val, index(), zx_deadline_after(kRelativeTimeout),
+                       reinterpret_cast<uint8_t*>(data), len, &done);
   }
   if ((status == ZX_OK) && (done != len)) {
     status = ZX_ERR_BUFFER_TOO_SMALL;

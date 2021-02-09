@@ -362,7 +362,7 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
 }
 
 zx_status_t UsbDevice::UsbControlOut(uint8_t request_type, uint8_t request, uint16_t value,
-                                     uint16_t index, int64_t timeout, const void* write_buffer,
+                                     uint16_t index, int64_t timeout, const uint8_t* write_buffer,
                                      size_t write_size) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_OUT) {
     return ZX_ERR_INVALID_ARGS;
@@ -372,7 +372,7 @@ zx_status_t UsbDevice::UsbControlOut(uint8_t request_type, uint8_t request, uint
 }
 
 zx_status_t UsbDevice::UsbControlIn(uint8_t request_type, uint8_t request, uint16_t value,
-                                    uint16_t index, int64_t timeout, void* out_read_buffer,
+                                    uint16_t index, int64_t timeout, uint8_t* out_read_buffer,
                                     size_t read_size, size_t* out_read_actual) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {
     return ZX_ERR_INVALID_ARGS;
@@ -508,8 +508,9 @@ zx_status_t UsbDevice::UsbGetConfigurationDescriptorLength(uint8_t configuration
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t UsbDevice::UsbGetConfigurationDescriptor(uint8_t configuration, void* out_desc_buffer,
-                                                     size_t desc_size, size_t* out_desc_actual) {
+zx_status_t UsbDevice::UsbGetConfigurationDescriptor(uint8_t configuration,
+                                                     uint8_t* out_desc_buffer, size_t desc_size,
+                                                     size_t* out_desc_actual) {
   for (auto& desc_array : config_descs_) {
     auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(desc_array.data());
     if (config_desc->bConfigurationValue == configuration) {
@@ -532,7 +533,7 @@ size_t UsbDevice::UsbGetDescriptorsLength() {
   return le16toh(config_desc->wTotalLength);
 }
 
-void UsbDevice::UsbGetDescriptors(void* out_descs_buffer, size_t descs_size,
+void UsbDevice::UsbGetDescriptors(uint8_t* out_descs_buffer, size_t descs_size,
                                   size_t* out_descs_actual) {
   fbl::AutoLock lock(&state_lock_);
   auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(
@@ -547,7 +548,7 @@ void UsbDevice::UsbGetDescriptors(void* out_descs_buffer, size_t descs_size,
 }
 
 zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
-                                              uint16_t* out_actual_lang_id, void* buf,
+                                              uint16_t* out_actual_lang_id, uint8_t* buf,
                                               size_t buflen, size_t* out_actual) {
   fbl::AutoLock lock(&state_lock_);
   //  If we have never attempted to load our language ID table, do so now.
@@ -751,7 +752,8 @@ void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
                                     GetStringDescriptorCompleter::Sync& completer) {
   char buffer[llcpp::fuchsia::hardware::usb::device::MAX_STRING_DESC_SIZE];
   size_t actual = 0;
-  auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id, buffer, sizeof(buffer), &actual);
+  auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id,
+                                       reinterpret_cast<uint8_t*>(buffer), sizeof(buffer), &actual);
   completer.Reply(status, fidl::StringView(buffer, actual), lang_id);
 }
 
@@ -982,8 +984,8 @@ zx_status_t UsbDevice::Reinitialize() {
 zx_status_t UsbDevice::GetDescriptor(uint16_t type, uint16_t index, uint16_t language, void* data,
                                      size_t length, size_t* out_actual) {
   return UsbControlIn(USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_GET_DESCRIPTOR,
-                      static_cast<uint16_t>(type << 8 | index), language, ZX_TIME_INFINITE, data,
-                      length, out_actual);
+                      static_cast<uint16_t>(type << 8 | index), language, ZX_TIME_INFINITE,
+                      reinterpret_cast<uint8_t*>(data), length, out_actual);
 }
 
 }  // namespace usb_bus

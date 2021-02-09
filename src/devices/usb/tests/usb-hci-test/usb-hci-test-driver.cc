@@ -154,7 +154,8 @@ void HciTest::TestThread(RunCompleter::Async completer) {
       }
     }
     status = usb_.ControlIn(USB_TYPE_VENDOR | USB_DIR_IN | USB_RECIP_DEVICE, StopTransfers, 0, 0,
-                            ZX_TIME_INFINITE, &results, sizeof(results), &actual);
+                            ZX_TIME_INFINITE, reinterpret_cast<uint8_t*>(&results), sizeof(results),
+                            &actual);
   } else {
     usb_.ResetEndpoint(0);
   }
@@ -183,7 +184,8 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   // Test the case where we haven't queued any data
   usb_.CancelAll(bulk_out_.bEndpointAddress);
   status = usb_.ControlIn(USB_TYPE_VENDOR | USB_DIR_IN | USB_RECIP_DEVICE, StopTransfers, 0, 0,
-                          ZX_TIME_INFINITE, &results, sizeof(results), &actual);
+                          ZX_TIME_INFINITE, reinterpret_cast<uint8_t*>(&results), sizeof(results),
+                          &actual);
   if (status != ZX_OK) {
     completer.ReplyError(status);
     return;

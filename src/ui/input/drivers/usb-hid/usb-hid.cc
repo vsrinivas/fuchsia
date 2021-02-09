@@ -123,8 +123,8 @@ zx_status_t UsbHidbus::UsbHidControlIn(uint8_t req_type, uint8_t request, uint16
                                        uint16_t index, void* data, size_t length,
                                        size_t* out_length) {
   zx_status_t status;
-  status =
-      usb_.ControlIn(req_type, request, value, index, ZX_TIME_INFINITE, data, length, out_length);
+  status = usb_.ControlIn(req_type, request, value, index, ZX_TIME_INFINITE,
+                          reinterpret_cast<uint8_t*>(data), length, out_length);
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     status = usb_.ResetEndpoint(0);
   }
@@ -135,7 +135,8 @@ zx_status_t UsbHidbus::UsbHidControlOut(uint8_t req_type, uint8_t request, uint1
                                         uint16_t index, const void* data, size_t length,
                                         size_t* out_length) {
   zx_status_t status;
-  status = usb_.ControlOut(req_type, request, value, index, ZX_TIME_INFINITE, data, length);
+  status = usb_.ControlOut(req_type, request, value, index, ZX_TIME_INFINITE,
+                           reinterpret_cast<const uint8_t*>(data), length);
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     status = usb_.ResetEndpoint(0);
   }

@@ -106,9 +106,10 @@ zx_status_t Asix88179Ethernet::ReadMac(uint8_t register_address, T* data) {
   size_t out_length = 0;
   uint8_t register_length = sizeof(T);
 
-  zx_status_t status = usb_.ControlIn(USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                      AX88179_REQ_MAC, register_address, register_length,
-                                      ZX_TIME_INFINITE, data, register_length, &out_length);
+  zx_status_t status =
+      usb_.ControlIn(USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_MAC,
+                     register_address, register_length, ZX_TIME_INFINITE,
+                     reinterpret_cast<uint8_t*>(data), register_length, &out_length);
 
   return status;
 }
@@ -118,15 +119,16 @@ zx_status_t Asix88179Ethernet::WriteMac(uint8_t register_address, const T& data)
   uint8_t register_length = sizeof(T);
 
   return usb_.ControlOut(USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_MAC,
-                         register_address, register_length, ZX_TIME_INFINITE, &data,
-                         register_length);
+                         register_address, register_length, ZX_TIME_INFINITE,
+                         reinterpret_cast<const uint8_t*>(&data), register_length);
 }
 
 zx_status_t Asix88179Ethernet::ReadPhy(uint8_t register_address, uint16_t* data) {
   size_t out_length;
-  zx_status_t status = usb_.ControlIn(USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                      AX88179_REQ_PHY, AX88179_PHY_ID, register_address,
-                                      ZX_TIME_INFINITE, data, sizeof(*data), &out_length);
+  zx_status_t status =
+      usb_.ControlIn(USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
+                     AX88179_PHY_ID, register_address, ZX_TIME_INFINITE,
+                     reinterpret_cast<uint8_t*>(data), sizeof(*data), &out_length);
   if (out_length == sizeof(*data)) {
     zxlogf(TRACE, "ax88179: read phy %#x: %#x", register_address, *data);
   }
@@ -136,7 +138,8 @@ zx_status_t Asix88179Ethernet::ReadPhy(uint8_t register_address, uint16_t* data)
 zx_status_t Asix88179Ethernet::WritePhy(uint8_t register_address, uint16_t data) {
   zxlogf(TRACE, "ax88179: write phy %#x: %#x", register_address, data);
   return usb_.ControlOut(USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
-                         AX88179_PHY_ID, register_address, ZX_TIME_INFINITE, &data, sizeof(data));
+                         AX88179_PHY_ID, register_address, ZX_TIME_INFINITE,
+                         reinterpret_cast<uint8_t*>(&data), sizeof(data));
 }
 
 zx_status_t Asix88179Ethernet::ConfigureBulkIn(uint8_t plsr) {

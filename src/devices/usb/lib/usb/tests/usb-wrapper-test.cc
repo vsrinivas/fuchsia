@@ -207,7 +207,7 @@ class HighSpeedWrapperTest : public zxtest::Test {
     usb_ = ddk::UsbProtocolClient(&proto);
   }
 
-  static void UsbGetDescriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
+  static void UsbGetDescriptors(void* ctx, uint8_t* out_descs_buffer, size_t descs_size,
                                 size_t* out_descs_actual) {
     memcpy(out_descs_buffer, &kTestHSInterface, descs_size);
     *out_descs_actual = descs_size;
@@ -464,7 +464,7 @@ class SuperSpeedWrapperTest : public zxtest::Test {
     usb_ = ddk::UsbProtocolClient(&proto);
   }
 
-  static void UsbGetDescriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
+  static void UsbGetDescriptors(void* ctx, uint8_t* out_descs_buffer, size_t descs_size,
                                 size_t* out_descs_actual) {
     memcpy(out_descs_buffer, &kTestSSInterface, descs_size);
     *out_descs_actual = descs_size;
@@ -553,7 +553,7 @@ class BinaryHidDescriptorTest : public zxtest::Test {
     usb_ = ddk::UsbProtocolClient(&proto);
   }
 
-  static void UsbGetDescriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
+  static void UsbGetDescriptors(void* ctx, uint8_t* out_descs_buffer, size_t descs_size,
                                 size_t* out_descs_actual) {
     memcpy(out_descs_buffer, &descriptor_binary_array, descs_size);
     *out_descs_actual = descs_size;

@@ -241,9 +241,9 @@ zx_status_t UsbCdcAcmDevice::ConfigureDevice(uint32_t baud_rate, uint32_t flags)
   const bool baud_rate_only = flags & SERIAL_SET_BAUD_RATE_ONLY;
   if (baud_rate_only) {
     size_t coding_length;
-    status = usb_client_.ControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                   kUsbCdcAcmGetLineCoding, 0, 0, ZX_TIME_INFINITE, &coding,
-                                   sizeof(coding), &coding_length);
+    status = usb_client_.ControlIn(
+        USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, kUsbCdcAcmGetLineCoding, 0, 0,
+        ZX_TIME_INFINITE, reinterpret_cast<uint8_t*>(&coding), sizeof(coding), &coding_length);
     if (coding_length != sizeof(coding)) {
       zxlogf(TRACE, "usb-cdc-acm: failed to fetch line coding");
     }
@@ -295,8 +295,8 @@ zx_status_t UsbCdcAcmDevice::ConfigureDevice(uint32_t baud_rate, uint32_t flags)
   coding.dwDTERate = baud_rate;
 
   status = usb_client_.ControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                  kUsbCdcAcmSetLineCoding, 0, 0, ZX_TIME_INFINITE, &coding,
-                                  sizeof(coding));
+                                  kUsbCdcAcmSetLineCoding, 0, 0, ZX_TIME_INFINITE,
+                                  reinterpret_cast<uint8_t*>(&coding), sizeof(coding));
 
   if (status == ZX_OK) {
     baud_rate_ = baud_rate;

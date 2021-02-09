@@ -12,11 +12,11 @@ using zx;
 protocol Usb {
     // Initiates a control transfer with the device in the OUT direction.
     ControlOut(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout,
-               vector<voidptr> write) -> (zx.status status);
+               [Buffer] vector<uint8> write) -> (zx.status status);
 
     // Initiates a control transfer with the device in the IN direction.
     ControlIn(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout)
-              -> (zx.status status, vector<voidptr> read);
+              -> (zx.status status, [Buffer] vector<uint8> read);
 
     /// Queues a USB request.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
@@ -64,13 +64,13 @@ protocol Usb {
     GetConfigurationDescriptorLength(uint8 configuration) -> (zx.status s, uint64 length);
 
     /// Returns the configuration descriptor for the specified configuration.
-    GetConfigurationDescriptor(uint8 configuration) -> (zx.status s, vector<voidptr> desc);
+    GetConfigurationDescriptor(uint8 configuration) -> (zx.status s, [Buffer] vector<uint8> desc);
 
     /// Returns the length of the USB descriptors for the USB device or interface.
     GetDescriptorsLength() -> (uint64 length);
 
     /// returns the USB descriptors for the USB device or interface.
-    GetDescriptors() -> (vector<voidptr> descs);
+    GetDescriptors() -> ([Buffer] vector<uint8> descs);
 
     /// Fetch the descriptor using the provided descriptor ID and language ID.  If
     /// the language ID requested is not available, the first entry of the language
@@ -84,7 +84,7 @@ protocol Usb {
     /// in the string, and the result may not be null terminated if the string
     /// occupies the entire provided buffer.
     GetStringDescriptor(uint8 desc_id, uint16 lang_id) -> (zx.status s, uint16 lang_id,
-                                                           vector<voidptr> string);
+                                                           [Buffer] vector<uint8> string);
     /// Cancels all transactions currently queued on the specified endpoint.
     CancelAll(uint8 ep_address) -> (zx.status s);
 

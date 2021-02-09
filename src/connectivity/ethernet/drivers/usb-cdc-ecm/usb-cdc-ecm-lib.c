@@ -24,7 +24,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
   // Read string descriptor for MAC address (string index is in iMACAddress field)
   size_t out_length;
   zx_status_t result =
-      usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress, str_desc_buf,
+      usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress, (uint8_t*)str_desc_buf,
                          sizeof(str_desc_buf), ZX_TIME_INFINITE, &out_length);
   if (result < 0) {
     zxlogf(ERROR, "%s: error reading MAC address", module_name);

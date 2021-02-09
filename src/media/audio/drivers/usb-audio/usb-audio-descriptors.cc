@@ -38,7 +38,7 @@ fbl::RefPtr<DescriptorListMemory> DescriptorListMemory::Create(usb_protocol_t* p
   if (!ret->data_) {
     return nullptr;
   }
-  usb_get_descriptors(proto, ret->data_, desc_length, &ret->size_);
+  usb_get_descriptors(proto, reinterpret_cast<uint8_t*>(ret->data_), desc_length, &ret->size_);
 
   if (zxlog_level_enabled(TRACE)) {
     GLOBAL_LOG(TRACE, "Descriptor List is %zu bytes long\n", ret->size_);

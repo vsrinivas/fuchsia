@@ -28,7 +28,7 @@ class UsbCdcEcmTest : public zxtest::Test {
   }
 
  protected:
-  static void UsbGetDescriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
+  static void UsbGetDescriptors(void* ctx, uint8_t* out_descs_buffer, size_t descs_size,
                                 size_t* out_descs_actual) {
     auto test = reinterpret_cast<UsbCdcEcmTest*>(ctx);
     size_t descriptors_length = test->GetDescriptorLength();
@@ -45,7 +45,7 @@ class UsbCdcEcmTest : public zxtest::Test {
   }
 
   static zx_status_t UsbControlIn(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
-                                  uint16_t index, int64_t timeout, void* out_read_buffer,
+                                  uint16_t index, int64_t timeout, uint8_t* out_read_buffer,
                                   size_t read_size, size_t* out_read_actual) {
     if (!(request_type & USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR)) {
       return ZX_ERR_INTERNAL;

@@ -156,14 +156,14 @@ static size_t GetDescriptorLength(void* ctx) {
   return context->desc_length;
 }
 
-static void GetDescriptors(void* ctx, void* buffer, size_t size, size_t* outsize) {
+static void GetDescriptors(void* ctx, uint8_t* buffer, size_t size, size_t* outsize) {
   Context* context = reinterpret_cast<Context*>(ctx);
   *outsize = context->desc_length > size ? size : context->desc_length;
   memcpy(buffer, context->descs, *outsize);
 }
 
 static zx_status_t ControlIn(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
-                             uint16_t index, int64_t timeout, void* out_read_buffer,
+                             uint16_t index, int64_t timeout, uint8_t* out_read_buffer,
                              size_t read_size, size_t* out_read_actual) {
   switch (request) {
     case USB_REQ_GET_MAX_LUN: {

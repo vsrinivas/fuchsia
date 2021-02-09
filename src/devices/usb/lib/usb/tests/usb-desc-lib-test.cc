@@ -53,7 +53,7 @@ class UsbLibTest : public zxtest::Test {
   }
 
  protected:
-  static void UsbGetDescriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
+  static void UsbGetDescriptors(void* ctx, uint8_t* out_descs_buffer, size_t descs_size,
                                 size_t* out_descs_actual) {
     auto test = reinterpret_cast<UsbLibTest*>(ctx);
     size_t descriptors_length = test->GetDescriptorLength();

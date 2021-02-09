@@ -228,13 +228,13 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
 }
 
 zx_status_t UsbInterface::UsbControlOut(uint8_t request_type, uint8_t request, uint16_t value,
-                                        uint16_t index, zx_time_t timeout, const void* write_buffer,
-                                        size_t write_size) {
+                                        uint16_t index, zx_time_t timeout,
+                                        const uint8_t* write_buffer, size_t write_size) {
   return usb_.ControlOut(request_type, request, value, index, timeout, write_buffer, write_size);
 }
 
 zx_status_t UsbInterface::UsbControlIn(uint8_t request_type, uint8_t request, uint16_t value,
-                                       uint16_t index, zx_time_t timeout, void* out_read_buffer,
+                                       uint16_t index, zx_time_t timeout, uint8_t* out_read_buffer,
                                        size_t read_size, size_t* out_read_actual) {
   return usb_.ControlIn(request_type, request, value, index, timeout, out_read_buffer, read_size,
                         out_read_actual);
@@ -285,7 +285,7 @@ zx_status_t UsbInterface::UsbGetConfigurationDescriptorLength(uint8_t configurat
 }
 
 zx_status_t UsbInterface::UsbGetConfigurationDescriptor(uint8_t configuration,
-                                                        void* out_desc_buffer, size_t desc_size,
+                                                        uint8_t* out_desc_buffer, size_t desc_size,
                                                         size_t* out_desc_actual) {
   return usb_.GetConfigurationDescriptor(configuration, out_desc_buffer, desc_size,
                                          out_desc_actual);
@@ -293,7 +293,7 @@ zx_status_t UsbInterface::UsbGetConfigurationDescriptor(uint8_t configuration,
 
 size_t UsbInterface::UsbGetDescriptorsLength() { return descriptors_.size(); }
 
-void UsbInterface::UsbGetDescriptors(void* out_descs_buffer, size_t descs_size,
+void UsbInterface::UsbGetDescriptors(uint8_t* out_descs_buffer, size_t descs_size,
                                      size_t* out_descs_actual) {
   size_t length = descriptors_.size();
   if (length > descs_size) {
@@ -336,7 +336,7 @@ zx_status_t UsbInterface::UsbCompositeGetAdditionalDescriptorList(uint8_t* out_d
 }
 
 zx_status_t UsbInterface::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
-                                                 uint16_t* out_lang_id, void* out_string_buffer,
+                                                 uint16_t* out_lang_id, uint8_t* out_string_buffer,
                                                  size_t string_size, size_t* out_string_actual) {
   return usb_.GetStringDescriptor(desc_id, lang_id, out_lang_id, out_string_buffer, string_size,
                                   out_string_actual);

@@ -93,7 +93,7 @@ static zx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t
 
 static zx_status_t ax88772b_get_value(ax88772b_t* eth, uint8_t request, uint16_t* value_addr) {
   return usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, request, 0, 0,
-                        ZX_TIME_INFINITE, value_addr, sizeof(uint16_t), NULL);
+                        ZX_TIME_INFINITE, (uint8_t*)value_addr, sizeof(uint16_t), NULL);
 }
 
 static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
@@ -104,7 +104,7 @@ static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
   }
   status =
       usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, ASIX_REQ_PHY_READ,
-                     eth->phy_id, offset, ZX_TIME_INFINITE, value, sizeof(*value), NULL);
+                     eth->phy_id, offset, ZX_TIME_INFINITE, (uint8_t*)value, sizeof(*value), NULL);
   if (status < 0) {
     zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_READ failed: %d", status);
     return status;
@@ -518,7 +518,7 @@ static int ax88772b_start_thread(void* arg) {
   uint8_t phy_addr[2];
   status =
       usb_control_in(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, ASIX_REQ_PHY_ADDR,
-                     0, 0, ZX_TIME_INFINITE, &phy_addr, sizeof(phy_addr), NULL);
+                     0, 0, ZX_TIME_INFINITE, (uint8_t*)&phy_addr, sizeof(phy_addr), NULL);
   if (status < 0) {
     zxlogf(ERROR, "ax88772b: ASIX_REQ_READ_PHY_ADDR failed: %d", status);
     goto fail;

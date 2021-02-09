@@ -55,13 +55,15 @@ zx_status_t Dfu::ControlReq(uint8_t dir, uint8_t request, uint16_t value, void* 
   zx_status_t status;
   if (dir == USB_DIR_OUT) {
     status = usb_control_out(&usb_, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, request,
-                             value, intf_num_, ZX_SEC(kReqTimeoutSecs), data, length);
+                             value, intf_num_, ZX_SEC(kReqTimeoutSecs),
+                             reinterpret_cast<uint8_t*>(data), length);
     if (status == ZX_OK && out_length) {
       *out_length = length;
     }
   } else {
     status = usb_control_in(&usb_, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, request,
-                            value, intf_num_, ZX_SEC(kReqTimeoutSecs), data, length, out_length);
+                            value, intf_num_, ZX_SEC(kReqTimeoutSecs),
+                            reinterpret_cast<uint8_t*>(data), length, out_length);
   }
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     usb_reset_endpoint(&usb_, 0);

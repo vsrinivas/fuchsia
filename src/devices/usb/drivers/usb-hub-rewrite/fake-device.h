@@ -437,13 +437,13 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
 
   // USB protocol implementation
   zx_status_t UsbControlIn(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
-                           int64_t timeout, void* out_read_buffer, size_t read_size,
+                           int64_t timeout, uint8_t* out_read_buffer, size_t read_size,
                            size_t* out_read_actual) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t UsbControlOut(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
-                            int64_t timeout, const void* write_buffer, size_t write_size) {
+                            int64_t timeout, const uint8_t* write_buffer, size_t write_size) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -683,19 +683,19 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     return 0;
   }
 
-  zx_status_t UsbGetConfigurationDescriptor(uint8_t configuration, void* out_desc_buffer,
+  zx_status_t UsbGetConfigurationDescriptor(uint8_t configuration, uint8_t* out_desc_buffer,
                                             size_t desc_size, size_t* out_desc_actual) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   size_t UsbGetDescriptorsLength() { return emulation_.descriptor.size(); }
 
-  void UsbGetDescriptors(void* out_descs_buffer, size_t descs_size, size_t* out_descs_actual) {
+  void UsbGetDescriptors(uint8_t* out_descs_buffer, size_t descs_size, size_t* out_descs_actual) {
     memcpy(out_descs_buffer, emulation_.descriptor.data(), emulation_.descriptor.size());
     *out_descs_actual = emulation_.descriptor.size();
   }
 
   zx_status_t UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id, uint16_t* out_lang_id,
-                                     void* out_string_buffer, size_t string_size,
+                                     uint8_t* out_string_buffer, size_t string_size,
                                      size_t* out_string_actual) {
     return ZX_ERR_NOT_SUPPORTED;
   }
