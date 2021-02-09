@@ -139,13 +139,17 @@ pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error>
     Ok(true)
 }
 
-fn integer_constant_to_c_str(ty: &IntegerType, constant: &Constant) -> Result<String, Error> {
-    constant_to_c_str(&Type::Primitive { subtype: integer_type_to_primitive(ty) }, constant)
+fn integer_constant_to_c_str(
+    ty: &IntegerType,
+    constant: &Constant,
+    ir: &FidlIr,
+) -> Result<String, Error> {
+    constant_to_c_str(&Type::Primitive { subtype: integer_type_to_primitive(ty) }, constant, ir)
 }
 
-fn constant_to_c_str(ty: &Type, constant: &Constant) -> Result<String, Error> {
+fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<String, Error> {
     let value = match constant {
-        Constant::Identifier { expression, .. } => expression,
+        Constant::Identifier { value, .. } => value,
         Constant::Literal { expression, .. } => expression,
         Constant::BinaryOperator { expression, .. } => expression,
     };
@@ -161,6 +165,17 @@ fn constant_to_c_str(ty: &Type, constant: &Constant) -> Result<String, Error> {
             PrimitiveSubtype::Uint32 => Ok(String::from(format!("UINT32_C({})", value))),
             PrimitiveSubtype::Uint64 => Ok(String::from(format!("UINT64_C({})", value))),
             t => Err(anyhow!("Can't handle this primitive type: {:?}", t)),
+        },
+        Type::Identifier { identifier, .. } => match ir
+            .get_declaration(identifier)
+            .expect(&format!("Can't identify: {:?}", identifier))
+        {
+            Declaration::Enum => {
+                let decl =
+                    ir.get_enum(identifier).expect(&format!("Can't find enum: {:?}", identifier));
+                return integer_constant_to_c_str(&decl._type, constant, ir);
+            }
+            t => Err(anyhow!("Can't handle this constant identifier: {:?}", t)),
         },
         t => Err(anyhow!("Can't handle this constant type: {:?}", t)),
     }
@@ -222,12 +237,20 @@ fn field_to_c_str(
     ident: &Identifier,
     indent: &str,
     preserve_names: bool,
+    alias: &Option<FieldTypeConstructor>,
     ir: &FidlIr,
 ) -> Result<String, Error> {
     let mut accum = String::new();
     accum.push_str(get_doc_comment(maybe_attributes, 1).as_str());
-    let prefix = if has_attribute(maybe_attributes, "Mutable") { "" } else { "const " };
     let c_name = if preserve_names { String::from(&ident.0) } else { to_c_name(&ident.0) };
+    if let Some(arg_type) = get_base_type_from_alias(&alias.as_ref().map(|t| &t.name)) {
+        accum.push_str(
+            format!("{indent}{ty} {c_name};", indent = indent, ty = arg_type, c_name = c_name)
+                .as_str(),
+        );
+        return Ok(accum);
+    }
+    let prefix = if has_attribute(maybe_attributes, "Mutable") { "" } else { "const " };
     let ty_name = type_to_c_str(&ty, ir)?;
     match ty {
         Type::Str { maybe_element_count, .. } => {
@@ -294,10 +317,10 @@ fn field_to_c_str(
     Ok(accum)
 }
 
-fn get_base_arg_type(param: &MethodParameter) -> Option<String> {
-    if let Some(from_type_alias) = &param.experimental_maybe_from_type_alias {
-        if from_type_alias.name.starts_with("zx/") {
-            return Some(format!("zx_{}_t", &from_type_alias.name[3..]));
+fn get_base_type_from_alias(alias: &Option<&String>) -> Option<String> {
+    if let Some(name) = alias {
+        if name.starts_with("zx/") {
+            return Some(format!("zx_{}_t", &name[3..]));
         }
     }
     None
@@ -306,7 +329,9 @@ fn get_base_arg_type(param: &MethodParameter) -> Option<String> {
 fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error> {
     if let Some(response) = &method.maybe_response {
         if let Some(param) = response.get(0) {
-            if let Some(arg_type) = get_base_arg_type(param) {
+            if let Some(arg_type) = get_base_type_from_alias(
+                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+            ) {
                 return Ok((true, arg_type));
             }
             if param._type.is_primitive(ir)? {
@@ -327,7 +352,9 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
         .iter()
         .map(|param| {
             let c_name = to_c_name(&param.name.0);
-            if let Some(arg_type) = get_base_arg_type(param) {
+            if let Some(arg_type) = get_base_type_from_alias(
+                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+            ) {
                 return Ok(format!("{} {}", arg_type, c_name));
             }
             let ty_name = type_to_c_str(&param._type, ir)?;
@@ -561,7 +588,7 @@ impl From<&Option<Vec<Attribute>>> for ProtocolType {
 }
 
 impl<'a, W: io::Write> CBackend<'a, W> {
-    fn codegen_enum_decl(&self, data: &Enum) -> Result<String, Error> {
+    fn codegen_enum_decl(&self, data: &Enum, ir: &FidlIr) -> Result<String, Error> {
         let name = &data.name.get_name();
         let enum_defines = data
             .members
@@ -571,7 +598,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     "#define {c_name}_{v_name} {c_size}",
                     c_name = to_c_name(&name).to_uppercase(),
                     v_name = v.name.0.to_uppercase().trim(),
-                    c_size = integer_constant_to_c_str(&data._type, &v.value)?
+                    c_size = integer_constant_to_c_str(&data._type, &v.value, ir)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()?
@@ -584,14 +611,14 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         ))
     }
 
-    fn codegen_constant_decl(&self, data: &Const) -> Result<String, Error> {
+    fn codegen_constant_decl(&self, data: &Const, ir: &FidlIr) -> Result<String, Error> {
         let mut accum = String::new();
         accum.push_str(get_doc_comment(&data.maybe_attributes, 0).as_str());
         accum.push_str(
             format!(
                 "#define {name} {value}",
                 name = &data.name.get_name(),
-                value = constant_to_c_str(&data._type, &data.value)?
+                value = constant_to_c_str(&data._type, &data.value, ir)?
             )
             .as_str(),
         );
@@ -619,6 +646,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                             &f.name.as_ref().unwrap(),
                             "    ",
                             false,
+                            &f.experimental_maybe_from_type_alias,
                             ir,
                         )),
                     }
@@ -657,7 +685,15 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .members
             .iter()
             .map(|f| {
-                field_to_c_str(&f.maybe_attributes, &f._type, &f.name, "    ", preserve_names, ir)
+                field_to_c_str(
+                    &f.maybe_attributes,
+                    &f._type,
+                    &f.name,
+                    "    ",
+                    preserve_names,
+                    &f.experimental_maybe_from_type_alias,
+                    ir,
+                )
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
@@ -934,8 +970,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
         let declarations = decl_order
             .iter()
             .filter_map(|decl| match decl {
-                Decl::Const { data } => Some(self.codegen_constant_decl(data)),
-                Decl::Enum { data } => Some(self.codegen_enum_decl(data)),
+                Decl::Const { data } => Some(self.codegen_constant_decl(data, &ir)),
+                Decl::Enum { data } => Some(self.codegen_enum_decl(data, &ir)),
                 Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
                 Decl::TypeAlias { data } => Some(self.codegen_alias_decl(data, &ir)),

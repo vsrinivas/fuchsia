@@ -10,7 +10,7 @@
 use fuchsia_zircon as zircon;
 
 
-pub const FAVORITE_ECHO: EchoMe = zero;
+pub const FAVORITE_ECHO: EchoMe = EchoMe.zero;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EchoMore {

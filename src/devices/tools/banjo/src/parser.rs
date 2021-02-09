@@ -35,7 +35,7 @@ attributes = !{ (doc_comment_block)? ~ (attribute_list)? }
 struct_declaration = { attributes ~ "resource"? ~ "struct" ~ ident ~ "{" ~ (struct_field ~ ";")* ~ "}" }
 struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~ constant)? }
 
-union_declaration = { attributes ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
+union_declaration = { attributes ~ "resource"? ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
 union_ordinal = _{ ('0'..'9')+ ~ ":" }
 union_field  = { attributes? ~ union_ordinal ~ type_ ~ ident }
 

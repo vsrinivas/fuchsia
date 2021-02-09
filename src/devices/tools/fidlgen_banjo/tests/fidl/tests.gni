@@ -41,7 +41,7 @@ _simple_libraries = [
   {
     name = "callback"
     backends = [ "c" ]
-    disabled = true  # contains handle<foo>
+    deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "constants"
@@ -90,7 +90,8 @@ _simple_libraries = [
   {
     name = "example9"
     backends = [ "c" ]
-    disabled = true  # contains handle<foo>
+    deps = [ "//zircon/vdso/zx" ]
+    disabled = true  # declaration ordering issues
   },
   {
     name = "fidlhandle"
@@ -139,7 +140,7 @@ _simple_libraries = [
   {
     name = "protocolhandle"
     backends = [ "c" ]
-    disabled = true  # contains handle<foo>
+    deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "protocolothertypes"
@@ -167,7 +168,6 @@ _simple_libraries = [
     name = "simple"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # contains handle<foo>
   },
   {
     name = "tables"
@@ -177,7 +177,8 @@ _simple_libraries = [
   {
     name = "types"
     backends = [ "c" ]
-    disabled = true  # contains handle<foo>
+    deps = [ "//zircon/vdso/zx" ]
+    disabled = true  # declaration ordering issues
   },
   {
     name = "union"

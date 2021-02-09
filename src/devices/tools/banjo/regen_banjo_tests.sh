@@ -16,7 +16,7 @@ C_FILES="$BANJO_DIR/test/c"
 CPP_FILES="$BANJO_DIR/test/cpp"
 RUST_FILES="$BANJO_DIR/test/rust"
 AST_FILES="$BANJO_DIR/test/ast"
-BANJO_BIN="$FUCHSIA_BUILD_DIR/host_x64/banjo_bin"
+BANJO_BIN="$FUCHSIA_BUILD_DIR/host_x64/exe.unstripped/banjo_bin"
 
 for f in $BANJO_FILES/*
 do
@@ -46,7 +46,9 @@ do
     || [ "$filename" = "protocol-base" ] || [ "$filename" = "api" ] \
     || [ "$filename" = "pass-callback" ] || [ "$filename" = "fidl_handle" ] \
     || [ "$filename" = "handles" ] || [ "$filename" = "protocol-array" ] \
-    || [ "$filename" = "protocol-vector" ] || [ "$filename" = "tables" ]; then
+    || [ "$filename" = "protocol-vector" ] || [ "$filename" = "tables" ] \
+    || [ "$filename" = "example-9" ] || [ "$filename" = "protocol-handle" ] \
+    || [ "$filename" = "types" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 

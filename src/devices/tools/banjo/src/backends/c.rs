@@ -139,14 +139,15 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
         ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
         ast::Ty::Identifier { id, reference: _ } => {
             let decl = ast.id_to_decl(id).expect(format!("id: {:?}", id).as_str());
+            let variant_id = Ident::new_raw(size);
             if let Decl::Enum { ty: enum_ty, variants, .. } = decl {
                 for variant in variants {
-                    if variant.name == *size {
+                    if variant.name == variant_id.name() {
                         return size_to_c_str(enum_ty, &variant.value, ast);
                     }
                 }
             }
-            panic!("don't handle this kind of identifier: {:?}", id);
+            panic!("don't handle this kind of identifier: {:?} {:?}", id, size);
         }
         s => panic!("don't handles this sized const: {}", s),
     }

@@ -25,7 +25,7 @@ mod c {
     codegen_test!(example_6, CBackend, ["banjo/example-6.test.banjo"], "c/example-6.h");
     codegen_test!(example_7, CBackend, ["banjo/example-7.test.banjo"], "c/example-7.h");
     codegen_test!(example_8, CBackend, ["banjo/example-8.test.banjo"], "c/example-8.h");
-    codegen_test!(example_9, CBackend, ["banjo/example-9.test.banjo"], "c/example-9.h");
+    codegen_test!(example_9, CBackend, [zx!(), "banjo/example-9.test.banjo"], "c/example-9.h");
     codegen_test!(handles, CBackend, [zx!(), "banjo/handles.test.banjo"], "c/handles.h");
     codegen_test!(order, CBackend, ["banjo/order.test.banjo"], "c/order.h");
     codegen_test!(point, CBackend, ["banjo/point.test.banjo"], "c/point.h");
@@ -40,7 +40,7 @@ mod c {
     codegen_test!(simple, CBackend, [zx!(), "banjo/simple.test.banjo"], "c/simple.h");
     codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");
     codegen_test!(union, CBackend, ["banjo/union.test.banjo"], "c/union.h");
-    codegen_test!(types, CBackend, ["banjo/types.test.banjo"], "c/types.h");
+    codegen_test!(types, CBackend, [zx!(), "banjo/types.test.banjo"], "c/types.h");
     codegen_test!(
         protocol_primitive,
         CBackend,
@@ -97,7 +97,12 @@ mod rust {
     codegen_test!(example_6, RustBackend, ["banjo/example-6.test.banjo"], "rust/example-6.rs");
     codegen_test!(example_7, RustBackend, ["banjo/example-7.test.banjo"], "rust/example-7.rs");
     codegen_test!(example_8, RustBackend, ["banjo/example-8.test.banjo"], "rust/example-8.rs");
-    codegen_test!(example_9, RustBackend, ["banjo/example-9.test.banjo"], "rust/example-9.rs");
+    codegen_test!(
+        example_9,
+        RustBackend,
+        [zx!(), "banjo/example-9.test.banjo"],
+        "rust/example-9.rs"
+    );
     codegen_test!(point, RustBackend, ["banjo/point.test.banjo"], "rust/point.rs");
     codegen_test!(table, RustBackend, [zx!(), "banjo/tables.test.banjo"], "rust/tables.rs");
     codegen_test!(simple, RustBackend, [zx!(), "banjo/simple.test.banjo"], "rust/simple.rs");
@@ -107,7 +112,7 @@ mod rust {
         ["banjo/point.test.banjo", "banjo/view.test.banjo"],
         "rust/view.rs"
     );
-    codegen_test!(types, RustBackend, ["banjo/types.test.banjo"], "rust/types.rs");
+    codegen_test!(types, RustBackend, [zx!(), "banjo/types.test.banjo"], "rust/types.rs");
     codegen_test!(
         rust_derive,
         RustBackend,
@@ -160,7 +165,7 @@ mod cpp {
     codegen_test!(
         example_9,
         CppBackend,
-        ["banjo/example-9.test.banjo"],
+        [zx!(), "banjo/example-9.test.banjo"],
         "cpp/example-9.h",
         CppSubtype::Base
     );
@@ -273,7 +278,7 @@ mod cpp {
     codegen_test!(
         internal_example_9,
         CppBackend,
-        ["banjo/example-9.test.banjo"],
+        [zx!(), "banjo/example-9.test.banjo"],
         "cpp/example-9-internal.h",
         CppSubtype::Internal
     );

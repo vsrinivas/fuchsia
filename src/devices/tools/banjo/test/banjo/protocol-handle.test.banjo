@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.protocol.handle;
+library banjo.examples.protocolhandle;
 
 // TODO(surajmalhotra): Reference for handles.
+
+using zx;
 
 [BanjoLayout = "ddk-protocol"]
 protocol SynchronousHandle {
@@ -29,7 +31,7 @@ protocol SynchronousHandle {
 
 [BanjoLayout = "ddk-protocol"]
 protocol AnotherSynchronousHandle {
-    Handle(zx.handle h) -> (zx.handle @h, zx.handle @h2);
+    Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
 };
 
 [BanjoLayout = "ddk-protocol"]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.handle banjo file
+// Generated from the banjo.examples.protocolhandle banjo file
 
 #pragma once
 

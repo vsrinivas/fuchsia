@@ -299,13 +299,6 @@ pub struct unions {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct interfaces {
-    pub i: this_is_an_interface,
-    pub nullable_i: this_is_an_interface,
-}
-
-#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct default_enum(pub u32);
 

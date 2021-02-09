@@ -1265,11 +1265,19 @@ impl BanjoAst {
                         return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
                     }
                 }
-                _ => {
-                    let ident_ty = self.id_to_type(&Ident::new_raw(string));
-                    if *ty != ident_ty {
-                        return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
+                Ty::Identifier { id, .. } => {
+                    let ident = Ident::new_raw(string);
+                    // Special case: enum references "Enum.foo".
+                    if let Some(ns) = &ident.namespace {
+                        if ns == &id.name {
+                            // The constant is a reference to an enum variant.
+                            continue;
+                        }
                     }
+                    return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
+                }
+                _ => {
+                    return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
                 }
             };
         }

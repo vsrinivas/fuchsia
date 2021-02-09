@@ -435,6 +435,7 @@ pub struct StructMember {
     pub field_shape_v1: FieldShape,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub maybe_default_value: Option<Constant>,
+    pub experimental_maybe_from_type_alias: Option<FieldTypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -487,6 +488,7 @@ pub struct UnionMember {
     pub max_out_of_line: Option<Count>,
     pub offset: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
+    pub experimental_maybe_from_type_alias: Option<FieldTypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -507,6 +509,17 @@ pub struct TypeConstructor {
     pub args: Vec<TypeConstructor>,
     pub nullable: bool,
     pub maybe_size: Option<Constant>,
+    pub maybe_handle_subtype: Option<HandleSubtype>,
+}
+
+// This looks like it should be TypeConstructor, but fidlc does not generate the same data for
+// alias information in struct/union's vs. top-level aliases.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FieldTypeConstructor {
+    pub name: String,
+    pub args: Vec<TypeConstructor>,
+    pub nullable: bool,
+    pub maybe_size: Option<String>, // This is the difference with TypeConstructor.
     pub maybe_handle_subtype: Option<HandleSubtype>,
 }
 
@@ -550,6 +563,16 @@ impl CompoundIdentifier {
     }
 }
 
+macro_rules! fetch_declaration {
+    ( $ir: ident, $field: ident, $identifier: ident) => {
+        $ir.$field
+            .iter()
+            .filter(|e| e.name == *$identifier)
+            .next()
+            .expect(&format!("Could not find declaration: {:?}", $identifier))
+    };
+}
+
 impl FidlIr {
     pub fn get_declaration(&self, identifier: &CompoundIdentifier) -> Option<&Declaration> {
         self.declarations.0.get(identifier).or_else(|| {
@@ -572,6 +595,10 @@ impl FidlIr {
         })
     }
 
+    pub fn get_enum(&self, identifier: &CompoundIdentifier) -> Option<&Enum> {
+        Some(fetch_declaration!(self, enum_declarations, identifier))
+    }
+
     pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {
         self.declarations.0.get(identifier) == Some(&Declaration::Interface)
     }
@@ -591,16 +618,6 @@ impl FidlIr {
         }
         Err(anyhow!("Identifier does not represent a protocol: {:?}", identifier))
     }
-}
-
-macro_rules! fetch_declaration {
-    ( $ir: ident, $field: ident, $identifier: ident) => {
-        $ir.$field
-            .iter()
-            .filter(|e| e.name == *$identifier)
-            .next()
-            .expect(&format!("Could not find declaration: {:?}", $identifier))
-    };
 }
 
 impl Type {

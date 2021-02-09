@@ -4,6 +4,8 @@
 
 library banjo.examples.types;
 
+using zx;
+
 struct this_is_a_struct {
     string s;
 };
@@ -17,7 +19,7 @@ protocol this_is_an_interface {
     Copy(string s, uint32 count) -> (string s);
 };
 
-struct interfaces {
+resource struct interfaces {
     this_is_an_interface nonnullable_interface;
     this_is_an_interface? nullable_interface;
 };
@@ -52,7 +54,7 @@ struct default_values {
 
 const uint32 arrays_size = 32;
 
-struct arrays {
+resource struct arrays {
     array<bool>:1 b_0;
     array<int8>:1 i8_0;
     array<int16>:1 i16_0;
@@ -95,7 +97,7 @@ struct arrays {
 
 const uint32 vectors_size = 32;
 
-struct vectors {
+resource struct vectors {
     vector<bool> b_0;
     vector<int8> i8_0;
     vector<int16> i16_0;
@@ -228,7 +230,7 @@ struct vectors {
 };
 
 [Awesome]
-struct handles {
+resource struct handles {
     zx.handle handle_handle;
     zx.handle:PROCESS process_handle;
     zx.handle:THREAD thread_handle;
@@ -333,12 +335,7 @@ struct unions {
     this_is_a_union? nullable_u;
 };
 
-struct interfaces {
-    this_is_an_interface i;
-    this_is_an_interface? nullable_i;
-};
-
-union union_types {
+resource union union_types {
     1: bool b;
     2: int8 i8;
     3: int16 i16;

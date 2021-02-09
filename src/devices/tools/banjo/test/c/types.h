@@ -479,8 +479,8 @@ static inline void this_is_an_interface_copy(const this_is_an_interface_protocol
 
 
 struct interfaces {
-    this_is_an_interface_protocol_t i;
-    this_is_an_interface_protocol_t nullable_i;
+    this_is_an_interface_protocol_t nonnullable_interface;
+    this_is_an_interface_protocol_t nullable_interface;
 };
 
 

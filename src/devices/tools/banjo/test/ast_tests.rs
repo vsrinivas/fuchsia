@@ -20,7 +20,12 @@ codegen_test!(example_4, AstBackend, ["banjo/example-4.test.banjo"], "ast/exampl
 codegen_test!(example_6, AstBackend, ["banjo/example-6.test.banjo"], "ast/example-6.test.ast");
 codegen_test!(example_7, AstBackend, ["banjo/example-7.test.banjo"], "ast/example-7.test.ast");
 codegen_test!(example_8, AstBackend, ["banjo/example-8.test.banjo"], "ast/example-8.test.ast");
-codegen_test!(example_9, AstBackend, ["banjo/example-9.test.banjo"], "ast/example-9.test.ast");
+codegen_test!(
+    example_9,
+    AstBackend,
+    [zx!(), "banjo/example-9.test.banjo"],
+    "ast/example-9.test.ast"
+);
 codegen_test!(
     fidl_handle,
     AstBackend,
@@ -33,7 +38,7 @@ codegen_test!(
     ["banjo/library_part_one.test.banjo", "banjo/library_part_two.test.banjo"],
     "ast/library_parts.test.ast"
 );
-codegen_test!(types, AstBackend, ["banjo/types.test.banjo"], "ast/types.test.ast");
+codegen_test!(types, AstBackend, [zx!(), "banjo/types.test.banjo"], "ast/types.test.ast");
 codegen_test!(
     parameter_attributes,
     AstBackend,
@@ -64,7 +69,7 @@ codegen_test!(
 codegen_test!(
     protocol_handle,
     AstBackend,
-    ["banjo/protocol-handle.test.banjo"],
+    [zx!(), "banjo/protocol-handle.test.banjo"],
     "ast/protocol-handle.test.ast"
 );
 codegen_test!(
