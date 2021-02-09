@@ -1,4 +1,6 @@
-per-file bindc=alexlegg@google.com
+per-file bindc = file: /src/devices/OWNERS
+# per-file-COMPONENT bindc = Zircon>FDF
+
 per-file blobstats=raggi@google.com
 per-file bt-snoop-from-snapshot=belgum@google.com
 per-file check-licenses.fx=seancuff@google.com,omerlevran@google.com,jcecil@google.com,gridman@google.com
