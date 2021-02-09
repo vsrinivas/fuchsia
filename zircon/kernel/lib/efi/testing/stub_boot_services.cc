@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "stub_boot_services.h"
-
+#include <lib/efi/testing/stub_boot_services.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+namespace efi {
 
 namespace {
 
@@ -55,3 +56,5 @@ efi_status StubBootServices::FreePool(void* buf) {
   free(buf);
   return EFI_SUCCESS;
 }
+
+}  // namespace efi

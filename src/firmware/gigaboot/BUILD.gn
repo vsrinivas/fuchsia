@@ -97,9 +97,6 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
   # instead, stubbing out the necessary functions.
   group("tests") {
     testonly = true
-    deps = [
-      "src:gigaboot_test($host_toolchain)",
-      "test:gigaboot_utils_test($host_toolchain)",
-    ]
+    deps = [ "src:gigaboot_test($host_toolchain)" ]
   }
 }

@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "stub_boot_services.h"
-
+#include <lib/efi/testing/stub_boot_services.h>
 #include <stdio.h>
 
 #include <efi/protocol/block-io.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "test_helpers.h"
+namespace efi {
 
 namespace {
 
@@ -33,10 +32,10 @@ TEST(StubBootServices, AllocateAndFreePool) {
   StubBootServices stub;
 
   void* memory = nullptr;
-  ASSERT_EQ(kEfiSuccess, stub.services()->AllocatePool(EfiConventionalMemory, 16, &memory));
+  ASSERT_EQ(EFI_SUCCESS, stub.services()->AllocatePool(EfiConventionalMemory, 16, &memory));
   ASSERT_NE(nullptr, memory);
 
-  ASSERT_EQ(kEfiSuccess, stub.services()->FreePool(memory));
+  ASSERT_EQ(EFI_SUCCESS, stub.services()->FreePool(memory));
 }
 
 // Make sure mocking out the class works as expected. This ensures our code to
@@ -83,3 +82,5 @@ TEST(StubBootServices, CloseProtocol) {
 }
 
 }  // namespace
+
+}  // namespace efi

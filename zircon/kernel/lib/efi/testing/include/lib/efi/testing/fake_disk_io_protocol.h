@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_FIRMWARE_GIGABOOT_TEST_FAKE_DISK_IO_PROTOCOL_H_
-#define SRC_FIRMWARE_GIGABOOT_TEST_FAKE_DISK_IO_PROTOCOL_H_
+#ifndef ZIRCON_KERNEL_LIB_EFI_TESTING_INCLUDE_LIB_EFI_TESTING_FAKE_DISK_IO_PROTOCOL_H_
+#define ZIRCON_KERNEL_LIB_EFI_TESTING_INCLUDE_LIB_EFI_TESTING_FAKE_DISK_IO_PROTOCOL_H_
 
 #include <map>
 #include <type_traits>
 #include <vector>
 
 #include <efi/protocol/disk-io.h>
+
+namespace efi {
 
 // Wraps efi_disk_io_protocol to support reading/writing a fake disk.
 //
@@ -75,4 +77,6 @@ class FakeDiskIoProtocol {
 static_assert(std::is_standard_layout_v<FakeDiskIoProtocol>,
               "FakeDiskIoProtocol is not standard layout");
 
-#endif  // SRC_FIRMWARE_GIGABOOT_TEST_FAKE_DISK_IO_PROTOCOL_H_
+}  // namespace efi
+
+#endif  // ZIRCON_KERNEL_LIB_EFI_TESTING_INCLUDE_LIB_EFI_TESTING_FAKE_DISK_IO_PROTOCOL_H_

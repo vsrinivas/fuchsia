@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_FIRMWARE_GIGABOOT_TEST_STUB_BOOT_SERVICES_H_
-#define SRC_FIRMWARE_GIGABOOT_TEST_STUB_BOOT_SERVICES_H_
+#ifndef ZIRCON_KERNEL_LIB_EFI_TESTING_INCLUDE_LIB_EFI_TESTING_STUB_BOOT_SERVICES_H_
+#define ZIRCON_KERNEL_LIB_EFI_TESTING_INCLUDE_LIB_EFI_TESTING_STUB_BOOT_SERVICES_H_
 
 #include <memory>
 
 #include <efi/boot-services.h>
+
+namespace efi {
 
 // Boot services EFI stubs.
 //
@@ -33,7 +35,7 @@ class StubBootServices {
   StubBootServices& operator=(const StubBootServices&) = delete;
 
   // Returns the underlying efi_boot_services struct.
-  const efi_boot_services* services() const { return &services_; }
+  efi_boot_services* services() { return &services_; }
 
   // EFI function implementations.
   // There are a lot of functions here, don't bother adding them until we need them.
@@ -121,4 +123,6 @@ class StubBootServices {
   efi_boot_services services_;
 };
 
-#endif  // SRC_FIRMWARE_GIGABOOT_TEST_STUB_BOOT_SERVICES_H_
+}  // namespace efi
+
+#endif  // ZIRCON_KERNEL_LIB_EFI_TESTING_INCLUDE_LIB_EFI_TESTING_STUB_BOOT_SERVICES_H_

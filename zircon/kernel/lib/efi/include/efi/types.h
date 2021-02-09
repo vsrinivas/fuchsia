@@ -14,7 +14,7 @@
 #define EFI_ERR(x) (EFI_ERROR_MASK | x)
 #define EFI_ERROR(x) (((int64_t)x) < 0)
 
-#define EFI_SUCCESS 0
+#define EFI_SUCCESS 0u
 #define EFI_LOAD_ERROR EFI_ERR(1)
 #define EFI_INVALID_PARAMETER EFI_ERR(2)
 #define EFI_UNSUPPORTED EFI_ERR(3)

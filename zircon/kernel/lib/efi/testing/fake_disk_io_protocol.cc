@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake_disk_io_protocol.h"
+#include <lib/efi/testing/fake_disk_io_protocol.h>
+
+namespace efi {
 
 FakeDiskIoProtocol::FakeDiskIoProtocol()
     : protocol_{
@@ -55,3 +57,5 @@ efi_status FakeDiskIoProtocol::ValidateParams(uint32_t MediaId, uint64_t Offset,
 
   return EFI_SUCCESS;
 }
+
+}  // namespace efi

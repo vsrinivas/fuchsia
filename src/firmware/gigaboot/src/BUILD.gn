@@ -49,8 +49,8 @@ test("gigaboot_test") {
   include_dirs = [ "." ]
   deps = [
     "../host",
-    "../test",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/kernel/lib/efi",
+    "//zircon/kernel/lib/efi/testing",
   ]
 }
