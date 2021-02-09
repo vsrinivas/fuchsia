@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -22,16 +22,9 @@ test("fidl-struct-test") {
   ]
 }
 
-unittest_package("fidl-struct-test-package") {
+fuchsia_unittest_package("fidl-struct-test-package") {
   package_name = "fidl-struct-test"
   deps = [ ":fidl-struct-test" ]
-
-  tests = [
-    {
-      name = "fidl-struct-test"
-      dest = "fidl-struct-test"
-    },
-  ]
 }
 
 fidl("fidl.types.test") {
