@@ -6,9 +6,14 @@
 #include <lib/modular/testing/cpp/fake_component.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <memory>
+
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
-class FakeComponentTest : public modular_testing::TestHarnessFixture {};
+class FakeComponentTest : public modular_testing::TestHarnessFixture {
+ protected:
+  std::unique_ptr<modular_testing::FakeComponent> fake_component_;
+};
 
 class TestComponent : public modular_testing::FakeComponent {
  public:
@@ -32,17 +37,18 @@ class TestComponent : public modular_testing::FakeComponent {
 // Test that the options returned from FakeComponent::BuildInterceptOptions() intercepts and handles
 // the component launch.
 TEST_F(FakeComponentTest, BuildInterceptOptions) {
-  modular_testing::FakeComponent fake_agent(
-      {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
+  fake_component_ =
+      std::make_unique<modular_testing::FakeComponent>(modular_testing::FakeComponent::Args{
+          .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(fake_agent.url());
+  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(fake_component_->url());
 
   modular_testing::TestHarnessBuilder builder(std::move(spec));
-  builder.InterceptComponent(fake_agent.BuildInterceptOptions());
+  builder.InterceptComponent(fake_component_->BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return fake_agent.is_running(); });
+  RunLoopUntil([&] { return fake_component_->is_running(); });
 }
 
 // Tests overriding OnCreate/OnDestroy(), and the state change  is_running().
@@ -50,52 +56,55 @@ TEST_F(FakeComponentTest, OnCreateOnDestroy) {
   modular_testing::TestHarnessBuilder builder;
 
   bool running = false;
-  TestComponent session_shell([&] { running = true; }, [&] { running = false; });
-  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
+  fake_component_ =
+      std::make_unique<TestComponent>([&] { running = true; }, [&] { running = false; });
+  builder.InterceptSessionShell(fake_component_->BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  EXPECT_FALSE(session_shell.is_running());
-  RunLoopUntil([&] { return session_shell.is_running(); });
+  EXPECT_FALSE(fake_component_->is_running());
+  RunLoopUntil([&] { return fake_component_->is_running(); });
   EXPECT_TRUE(running);
 
   fuchsia::modular::SessionShellContextPtr session_shell_context;
-  session_shell.component_context()->svc()->Connect(session_shell_context.NewRequest());
+  fake_component_->component_context()->svc()->Connect(session_shell_context.NewRequest());
   session_shell_context->Logout();
 
-  RunLoopUntil([&] { return !session_shell.is_running(); });
+  RunLoopUntil([&] { return !fake_component_->is_running(); });
   EXPECT_FALSE(running);
 }
 
 TEST_F(FakeComponentTest, Exit) {
   modular_testing::TestHarnessBuilder builder;
-  modular_testing::FakeComponent session_shell(
-      {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
-  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
+  fake_component_ =
+      std::make_unique<modular_testing::FakeComponent>(modular_testing::FakeComponent::Args{
+          .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
+  builder.InterceptSessionShell(fake_component_->BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return session_shell.is_running(); });
-  session_shell.Exit(0);
-  RunLoopUntil([&] { return !session_shell.is_running(); });
+  RunLoopUntil([&] { return fake_component_->is_running(); });
+  fake_component_->Exit(0);
+  RunLoopUntil([&] { return !fake_component_->is_running(); });
 }
 
 // Tests that FakeComponent publishes & implements fuchsia.modular.Lifecycle.
 TEST_F(FakeComponentTest, Lifecyle) {
   modular_testing::TestHarnessBuilder builder;
-  modular_testing::FakeComponent session_shell(
-      {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
-  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
+  fake_component_ =
+      std::make_unique<modular_testing::FakeComponent>(modular_testing::FakeComponent::Args{
+          .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
+  builder.InterceptSessionShell(fake_component_->BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return session_shell.is_running(); });
+  RunLoopUntil([&] { return fake_component_->is_running(); });
 
   // Serve the outgoing() directory from FakeComponent.
   zx::channel svc_request, svc_dir;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_request, &svc_dir));
-  session_shell.component_context()->outgoing()->Serve(std::move(svc_request));
+  fake_component_->component_context()->outgoing()->Serve(std::move(svc_request));
   sys::ServiceDirectory svc(std::move(svc_dir));
 
   fuchsia::modular::LifecyclePtr lifecycle;
   ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(), "svc/fuchsia.modular.Lifecycle"));
   lifecycle->Terminate();
-  RunLoopUntil([&] { return !session_shell.is_running(); });
+  RunLoopUntil([&] { return !fake_component_->is_running(); });
 }
