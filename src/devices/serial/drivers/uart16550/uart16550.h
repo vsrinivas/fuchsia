@@ -99,9 +99,10 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
 #if UART16550_TESTING
   // This should never be used before Init, but must be default-constructible.
   // The Mock is the default (first) variant so it's default-constructible.
-  std::variant<hwreg::Mock::RegisterIo, hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_);
+  std::variant<hwreg::Mock::RegisterIo, hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_){
+      std::in_place_index<0>};
 #else
-  std::variant<hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_);
+  std::variant<hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_){nullptr};
 #endif
 
   size_t uart_fifo_len_ = 1;
