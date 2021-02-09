@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/interface_ptr.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 // The sysmem-test in zircon covers more functionality of sysmem itself.  This
 // test is only meant to verify that sysmem_connector establishes a connection
@@ -28,6 +29,7 @@ TEST(SysmemConnectorTest, Connect) {
   fuchsia::sysmem::AllocatorPtr allocator;
   allocator.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
   component_context->svc()->Connect(allocator.NewRequest(main_loop.dispatcher()));
+  allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   token.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });

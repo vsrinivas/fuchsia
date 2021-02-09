@@ -50,6 +50,7 @@ executable("sysmem_connector_test_executable") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
