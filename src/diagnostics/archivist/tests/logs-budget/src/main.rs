@@ -7,7 +7,7 @@ use archivist_lib::{
     logs::message::{fx_log_packet_t, METADATA_SIZE},
 };
 use diagnostics_data::{Data, LogError, Logs, Severity};
-use diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy};
+use diagnostics_hierarchy::trie::TrieIterableNode;
 use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
@@ -16,7 +16,7 @@ use fidl_fuchsia_sys::{ComponentControllerEvent::OnTerminated, LauncherProxy};
 use fidl_test_logs_budget::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
 };
-use fuchsia_async::Task;
+use fuchsia_async::{Task, Timer};
 use fuchsia_component::{
     client::{launch, launch_with_options, App, LaunchOptions},
     server::ServiceFs,
@@ -27,7 +27,7 @@ use futures::{
     StreamExt,
 };
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
-use std::{collections::BTreeMap, ops::Deref};
+use std::{collections::BTreeMap, ops::Deref, time::Duration};
 use tracing::{debug, info};
 
 const ARCHIVIST_URL: &str =
@@ -183,6 +183,11 @@ impl PuppetEnv {
         info!("observe the puppet appears in archivist's inspect output");
         self.launched_monikers.push(puppet.moniker.clone());
         self.running_puppets.push(puppet);
+
+        // wait for archivist to catch up with what we launched
+        while self.current_expected_sources() != self.current_observed_sources().await {
+            Timer::new(Duration::from_millis(100)).await;
+        }
     }
 
     fn current_expected_sources(&self) -> BTreeMap<String, Count> {
@@ -204,13 +209,29 @@ impl PuppetEnv {
         expected_sources
     }
 
-    async fn assert_archivist_state_matches_expected(&self) {
+    async fn current_observed_sources(&self) -> BTreeMap<String, Count> {
         // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
         let results =
             self.inspect_reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
-        let payload = results.payload.as_ref().unwrap();
+        let root = results.payload.as_ref().unwrap();
+
+        let mut counts = BTreeMap::new();
+        let sources = root.get_child("sources").unwrap();
+
+        for (moniker, source) in sources.get_children() {
+            if let Some(logs) = source.get_child("logs") {
+                let total = *logs.get_property("total").unwrap().uint().unwrap() as usize;
+                let dropped = *logs.get_property("dropped").unwrap().uint().unwrap() as usize;
+                counts.insert(moniker.clone(), Count { total, dropped });
+            }
+        }
+
+        counts
+    }
+
+    async fn assert_archivist_state_matches_expected(&self) {
         let expected_sources = self.current_expected_sources();
-        let observed_sources = get_log_counts_by_moniker(&payload);
+        let observed_sources = self.current_observed_sources().await;
         assert_eq!(observed_sources, expected_sources);
 
         let expected_logs = self
@@ -286,21 +307,6 @@ impl Deref for Puppet {
 struct Count {
     total: usize,
     dropped: usize,
-}
-
-fn get_log_counts_by_moniker(root: &DiagnosticsHierarchy) -> BTreeMap<String, Count> {
-    let mut counts = BTreeMap::new();
-    let sources = root.get_child("sources").unwrap();
-
-    for (moniker, source) in sources.get_children() {
-        if let Some(logs) = source.get_child("logs") {
-            let total = *logs.get_property("total").unwrap().uint().unwrap() as usize;
-            let dropped = *logs.get_property("dropped").unwrap().uint().unwrap() as usize;
-            counts.insert(moniker.clone(), Count { total, dropped });
-        }
-    }
-
-    counts
 }
 
 /// A value indicating a message was sent by a particular puppet.
