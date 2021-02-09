@@ -108,10 +108,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // Other methods.
 
-  // Identifies if we can safely remove all on-disk and in-memory storage used
-  // by this blob.
+  // Identifies if we can safely remove all on-disk and in-memory storage used by this blob.
+  // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
+  // the blob could change after (or during) the call, and the blob might not really be purgeable.
   bool Purgeable() const {
-    return fd_count_ == 0 && (DeletionQueued() || state() != BlobState::kReadable);
+    return fd_count_ == 0 && !clone_ref_ && (DeletionQueued() || state() != BlobState::kReadable);
   }
 
   bool DeletionQueued() const { return deletable_; }

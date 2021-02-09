@@ -921,6 +921,11 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
   }
   clone_watcher_.set_object(ZX_HANDLE_INVALID);
   clone_ref_ = nullptr;
+  // This might have been the last reference to a deleted blob, so try purging it.
+  if (zx_status_t status = TryPurge(); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Purging blob " << MerkleRoot()
+                     << " failed: " << zx_status_get_string(status);
+  }
 }
 
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
@@ -1217,7 +1222,7 @@ zx_status_t Blob::Open([[maybe_unused]] ValidatedOptions options,
 
 zx_status_t Blob::Close() {
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
-  ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
+  ZX_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
   fd_count_--;
   // Attempt purge in case blob was unlinked prior to close
   return TryPurge();
@@ -1231,7 +1236,6 @@ zx_status_t Blob::TryPurge() {
 }
 
 zx_status_t Blob::Purge() {
-  ZX_DEBUG_ASSERT(fd_count_ == 0);
   ZX_DEBUG_ASSERT(Purgeable());
 
   if (state() == BlobState::kReadable) {

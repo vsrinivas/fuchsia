@@ -452,15 +452,15 @@ zx_status_t Blobfs::FreeInode(uint32_t node_index, BlobTransaction& transaction)
   }
 
   if (mapped_inode->header.IsAllocated()) {
-    // Always write back the first node.
-    if (zx_status_t status = FreeNode(node_index, transaction); status != ZX_OK) {
-      return status;
-    }
-
     auto extent_iter = AllocatedExtentIterator::Create(allocator_.get(), node_index);
     if (extent_iter.is_error()) {
       return extent_iter.status_value();
     }
+
+    if (zx_status_t status = FreeNode(node_index, transaction); status != ZX_OK) {
+      return status;
+    }
+
     while (!extent_iter->Done()) {
       // If we're observing a new node, free it.
       if (extent_iter->NodeIndex() != node_index) {
