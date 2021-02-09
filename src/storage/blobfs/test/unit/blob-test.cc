@@ -5,7 +5,9 @@
 #include "src/storage/blobfs/blob.h"
 
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
+#include <chrono>
 #include <condition_variable>
 #include <memory>
 
@@ -300,6 +302,92 @@ TEST_P(BlobTest, WriteErrorsAreFused) {
   EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_ERR_NO_SPACE);
   // Writing just 1 byte now should see the same error returned.
   EXPECT_EQ(file->Write(info->data.get(), 1, 0, &out_actual), ZX_ERR_NO_SPACE);
+}
+
+TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
+  auto root = OpenRoot();
+
+  // Write the blob
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    size_t out_actual = 0;
+    ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+    ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+    ASSERT_EQ(file->Close(), ZX_OK);
+    ASSERT_EQ(out_actual, info->size_data);
+  }
+
+  // Get a copy of the VMO, but discard the vnode reference.
+  zx::vmo vmo = [&]() {
+    fbl::RefPtr<fs::Vnode> file;
+    // Lookup doesn't call Open, so no need to Close later.
+    EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    zx::vmo vmo = {};
+    size_t data_size;
+    EXPECT_EQ(file->GetVmo(fio::VMO_FLAG_READ, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(data_size, info->size_data);
+    return vmo;
+  }();
+
+  ASSERT_EQ(root->Unlink(info->path + 1, /* must_be_dir=*/false), ZX_OK);
+  uint8_t buf[8192];
+  for (size_t off = 0; off < 1 << 16; off += kBlobfsBlockSize) {
+    EXPECT_EQ(vmo.read(buf, off, kBlobfsBlockSize), ZX_OK);
+  }
+}
+
+TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
+  auto root = OpenRoot();
+
+  // Write the blob
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    size_t out_actual = 0;
+    ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+    ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+    ASSERT_EQ(file->Close(), ZX_OK);
+    ASSERT_EQ(out_actual, info->size_data);
+  }
+
+  // Get a copy of the VMO, but discard the vnode reference.
+  zx::vmo vmo = [&]() {
+    fbl::RefPtr<fs::Vnode> file;
+    // Lookup doesn't call Open, so no need to Close later.
+    EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    zx::vmo vmo = {};
+    size_t data_size;
+    EXPECT_EQ(file->GetVmo(fio::VMO_FLAG_READ, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(data_size, info->size_data);
+    return vmo;
+  }();
+
+  ASSERT_EQ(root->Unlink(info->path + 1, /* must_be_dir=*/false), ZX_OK);
+
+  // Delete the VMO. This should eventually trigger deletion of the blob.
+  vmo.reset();
+
+  // Unfortunately, polling the filesystem is the best option for checking the file as deleted.
+  bool deleted = false;
+  const auto start = std::chrono::steady_clock::now();
+  constexpr auto kMaxWait = std::chrono::seconds(60);
+  while (std::chrono::steady_clock::now() <= start + kMaxWait) {
+    loop_.RunUntilIdle();
+
+    fbl::RefPtr<fs::Vnode> file;
+    zx_status_t status = root->Lookup(info->path + 1, &file);
+    if (status == ZX_ERR_NOT_FOUND) {
+      deleted = true;
+      break;
+    }
+    ASSERT_EQ(status, ZX_OK);
+
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+  }
+  EXPECT_TRUE(deleted);
 }
 
 using BlobMigrationTest = BlobTestWithOldRevision;

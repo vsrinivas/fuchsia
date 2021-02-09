@@ -25,6 +25,10 @@ zx::status<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* 
   if (inode.is_error()) {
     return inode.take_error();
   }
+  if (!inode->header.IsAllocated() || !inode->header.IsInode()) {
+    FX_LOGS(ERROR) << "node_index " << node_index << " isn't a valid inode: " << *(inode.value());
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
   return zx::ok(AllocatedExtentIterator(finder, std::move(inode.value()), node_index));
 }
 
