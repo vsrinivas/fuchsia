@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
-#include <lib/fit/variant.h>
+#include <lib/stdcompat/variant.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -288,16 +288,16 @@ class OutgoingMessageAdaptorFromC {
   fidl::OutgoingMessage& GetOutgoingMessage() {
     switch (msg_.index()) {
       case 1:
-        return fit::get<fidl::OutgoingByteMessage>(msg_);
+        return cpp17::get<fidl::OutgoingByteMessage>(msg_);
       case 2:
-        return fit::get<fidl::OutgoingIovecMessage>(msg_);
+        return cpp17::get<fidl::OutgoingIovecMessage>(msg_);
       default:
         ZX_PANIC("unhandled index");
     }
   }
 
  private:
-  fit::variant<fit::monostate, fidl::OutgoingByteMessage, fidl::OutgoingIovecMessage> msg_;
+  cpp17::variant<cpp17::monostate, fidl::OutgoingByteMessage, fidl::OutgoingIovecMessage> msg_;
 };
 
 namespace internal {

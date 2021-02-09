@@ -29,7 +29,6 @@ test("fit-unittest") {
   sources = [
     "string_view_test.cc",
     "thread_checker_tests.cc",
-    "variant_tests.cc",
   ]
   deps = [
     "//zircon/public/lib/fit",

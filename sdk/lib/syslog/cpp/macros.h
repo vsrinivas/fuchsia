@@ -9,7 +9,6 @@
 #include <zircon/types.h>
 #endif
 
-#include <lib/fit/variant.h>
 #include <lib/syslog/cpp/log_level.h>
 
 #include <atomic>

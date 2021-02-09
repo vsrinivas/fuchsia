@@ -10,9 +10,9 @@
   "pkg/fit/include/lib/fit/in_place_internal.h": "11243cfb0e030d736c305c8ec7f9f824",
   "pkg/fit/include/lib/fit/nullable.h": "5b5b14272a7d75c8fa3fb00c3fd528bb",
   "pkg/fit/include/lib/fit/optional.h": "7b39d627a28c81bf40804186539406c8",
-  "pkg/fit/include/lib/fit/promise.h": "a18a8207d8340cdd0346192b94253d2b",
+  "pkg/fit/include/lib/fit/promise.h": "7f15edf7e14643fd77ab270611395592",
   "pkg/fit/include/lib/fit/promise_internal.h": "7179102deb96c00a658f3fc4d8e89452",
-  "pkg/fit/include/lib/fit/result.h": "a173d13373456250346b14703a8e84a3",
+  "pkg/fit/include/lib/fit/result.h": "5f272517a91076ca5edfdcbf7de6f992",
   "pkg/fit/include/lib/fit/scheduler.h": "cdcb86c6ca01162d73e027665881c856",
   "pkg/fit/include/lib/fit/scope.h": "f3032bf629c590061044e0575bc22565",
   "pkg/fit/include/lib/fit/sequencer.h": "aa1a4a6420203c48109dfaeb3a00177f",
@@ -23,6 +23,5 @@
   "pkg/fit/include/lib/fit/thread_checker.h": "5123a700eef1045db46835ad821b73df",
   "pkg/fit/include/lib/fit/thread_safety.h": "0df6c9f73fc6b7e13c9cedd8cdcac250",
   "pkg/fit/include/lib/fit/traits.h": "e06740b5e5b49281344c6533d51b5def",
-  "pkg/fit/include/lib/fit/utility_internal.h": "52e9462519eb2542d472b7a773e2fb77",
-  "pkg/fit/include/lib/fit/variant.h": "15b4937b33a3173430b0fc3a0b8afa49"
+  "pkg/fit/include/lib/fit/utility_internal.h": "52e9462519eb2542d472b7a773e2fb77"
 }

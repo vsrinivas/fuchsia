@@ -6,6 +6,7 @@
 #define LIB_FIT_PROMISE_H_
 
 #include <assert.h>
+#include <lib/stdcompat/variant.h>
 
 #include <tuple>
 #include <type_traits>
@@ -14,7 +15,6 @@
 #include "function.h"
 #include "promise_internal.h"
 #include "result.h"
-#include "variant.h"
 
 namespace fit {
 
@@ -1099,7 +1099,7 @@ class future_impl final {
       case 1:
         return future_state::pending;
       case 2:
-        return state_.template get<2>().is_ok() ? future_state::ok : future_state::error;
+        return cpp17::get<2>(state_).is_ok() ? future_state::ok : future_state::error;
     }
     __builtin_unreachable();
   }
@@ -1143,7 +1143,7 @@ class future_impl final {
       case 0:
         return false;
       case 1: {
-        result_type result = state_.template get<1>()(context);
+        result_type result = cpp17::get<1>(state_)(context);
         if (!result)
           return false;
         state_.template emplace<2>(std::move(result));
@@ -1159,14 +1159,14 @@ class future_impl final {
   // Asserts that the future's state is |fit::future_state::pending|.
   const promise_type& promise() const {
     assert(is_pending());
-    return state_.template get<1>();
+    return cpp17::get<1>(state_);
   }
 
   // Takes the future's promise, leaving it in an empty state.
   // Asserts that the future's state is |fit::future_state::pending|.
   promise_type take_promise() {
     assert(is_pending());
-    auto promise = std::move(state_.template get<1>());
+    auto promise = std::move(cpp17::get<1>(state_));
     state_.template emplace<0>();
     return promise;
   }
@@ -1176,11 +1176,11 @@ class future_impl final {
   // |fit::future_state::error|.
   result_type& result() {
     assert(is_ready());
-    return state_.template get<2>();
+    return cpp17::get<2>(state_);
   }
   const result_type& result() const {
     assert(is_ready());
-    return state_.template get<2>();
+    return cpp17::get<2>(state_);
   }
 
   // Takes the future's result, leaving it in an empty state.
@@ -1188,7 +1188,7 @@ class future_impl final {
   // |fit::future_state::error|.
   result_type take_result() {
     assert(is_ready());
-    auto result = std::move(state_.template get<2>());
+    auto result = std::move(cpp17::get<2>(state_));
     state_.template emplace<0>();
     return result;
   }
@@ -1198,12 +1198,12 @@ class future_impl final {
   template <typename R = value_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R& value() {
     assert(is_ok());
-    return state_.template get<2>().value();
+    return cpp17::get<2>(state_).value();
   }
   template <typename R = value_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   const R& value() const {
     assert(is_ok());
-    return state_.template get<2>().value();
+    return cpp17::get<2>(state_).value();
   }
 
   // Takes the future's value, leaving it in an empty state.
@@ -1211,13 +1211,13 @@ class future_impl final {
   template <typename R = value_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_value() {
     assert(is_ok());
-    auto value = state_.template get<2>().take_value();
+    auto value = cpp17::get<2>(state_).take_value();
     state_.template emplace<0>();
     return value;
   }
   ok_result<value_type> take_ok_result() {
     assert(is_ok());
-    auto result = state_.template get<2>().take_ok_result();
+    auto result = cpp17::get<2>(state_).take_ok_result();
     state_.template emplace<0>();
     return result;
   }
@@ -1227,12 +1227,12 @@ class future_impl final {
   template <typename R = error_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R& error() {
     assert(is_error());
-    return state_.template get<2>().error();
+    return cpp17::get<2>(state_).error();
   }
   template <typename R = error_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   const R& error() const {
     assert(is_error());
-    return state_.template get<2>().error();
+    return cpp17::get<2>(state_).error();
   }
 
   // Takes the future's error, leaving it in an empty state.
@@ -1240,13 +1240,13 @@ class future_impl final {
   template <typename R = error_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_error() {
     assert(is_error());
-    auto error = state_.template get<2>().take_error();
+    auto error = cpp17::get<2>(state_).take_error();
     state_.template emplace<0>();
     return error;
   }
   error_result<error_type> take_error_result() {
     assert(is_error());
-    auto result = state_.template get<2>().take_error_result();
+    auto result = cpp17::get<2>(state_).take_error_result();
     state_.template emplace<0>();
     return result;
   }
@@ -1294,7 +1294,7 @@ class future_impl final {
   future_impl& operator=(const future_impl&) = delete;
 
  private:
-  variant<monostate, promise_type, result_type> state_;
+  cpp17::variant<cpp17::monostate, promise_type, result_type> state_;
 };
 
 template <typename Promise>

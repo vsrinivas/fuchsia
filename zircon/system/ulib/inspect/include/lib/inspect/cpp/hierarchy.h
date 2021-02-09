@@ -6,7 +6,7 @@
 #define LIB_INSPECT_CPP_HIERARCHY_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/variant.h>
+#include <lib/stdcompat/variant.h>
 
 #include <limits>
 #include <map>
@@ -190,7 +190,7 @@ class NamedValue final {
   // this method panics.
   template <typename T>
   const T& Get() const {
-    return value_.template get<T::format_index>();
+    return cpp17::get<T::format_index>(value_);
   }
 
   // Gets the value by type. If this NamedValue does not contain the given type, this method returns
@@ -270,9 +270,9 @@ using ByteVectorPropertyValue =
 
 // Property consists of a name and a value corresponding to one PropertyFormat.
 using PropertyValue = internal::NamedValue<
-    fit::internal::variant<fit::internal::monostate, IntPropertyValue, UintPropertyValue,
-                           DoublePropertyValue, IntArrayValue, UintArrayValue, DoubleArrayValue,
-                           StringPropertyValue, ByteVectorPropertyValue, BoolPropertyValue>,
+    cpp17::variant<cpp17::monostate, IntPropertyValue, UintPropertyValue, DoublePropertyValue,
+                   IntArrayValue, UintArrayValue, DoubleArrayValue, StringPropertyValue,
+                   ByteVectorPropertyValue, BoolPropertyValue>,
     PropertyFormat>;
 
 // A Node parsed from a Hierarchy.

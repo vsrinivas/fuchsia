@@ -21,9 +21,9 @@
 #include "lib/vfs/cpp/pseudo_dir.h"
 #include "lib/vfs/cpp/service.h"
 
-using fit::holds_alternative;
+using cpp17::get;
+using cpp17::holds_alternative;
 using inspect::LazyNode;
-using std::get;
 using test::inspect::validate::Action;
 using test::inspect::validate::InitializationParams;
 using test::inspect::validate::LazyAction;
@@ -33,7 +33,7 @@ using test::inspect::validate::ROOT_ID;
 using test::inspect::validate::TestResult;
 
 using Value =
-    cpp17::variant<fit::monostate, inspect::Node, inspect::IntProperty, inspect::UintProperty,
+    cpp17::variant<cpp17::monostate, inspect::Node, inspect::IntProperty, inspect::UintProperty,
                    inspect::DoubleProperty, inspect::StringProperty, inspect::ByteVectorProperty,
                    inspect::BoolProperty, inspect::IntArray, inspect::UintArray,
                    inspect::DoubleArray, inspect::LinearIntHistogram, inspect::LinearUintHistogram,

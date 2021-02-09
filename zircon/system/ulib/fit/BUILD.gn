@@ -33,7 +33,6 @@ zx_library("fit") {
     "lib/fit/thread_safety.h",
     "lib/fit/traits.h",
     "lib/fit/utility_internal.h",
-    "lib/fit/variant.h",
   ]
   sdk_migrated = true
   host = true
@@ -47,6 +46,8 @@ zx_library("fit") {
     "sequencer.cc",
     "single_threaded_executor.cc",
   ]
+
+  public_deps = [ "//sdk/lib/stdcompat" ]
 }
 
 group("tests") {

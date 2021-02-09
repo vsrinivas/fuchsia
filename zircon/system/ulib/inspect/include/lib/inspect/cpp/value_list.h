@@ -5,7 +5,6 @@
 #ifndef LIB_INSPECT_CPP_VALUE_LIST_H_
 #define LIB_INSPECT_CPP_VALUE_LIST_H_
 
-#include <lib/fit/variant.h>
 #include <lib/inspect/cpp/vmo/types.h>
 
 namespace inspect {

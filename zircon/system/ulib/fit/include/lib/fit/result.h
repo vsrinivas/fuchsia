@@ -6,6 +6,7 @@
 #define LIB_FIT_RESULT_H_
 
 #include <assert.h>
+#include <lib/stdcompat/variant.h>
 
 #include <new>
 #include <type_traits>
@@ -13,7 +14,6 @@
 
 #include "in_place_internal.h"
 #include "traits.h"
-#include "variant.h"
 
 namespace fit {
 
@@ -131,16 +131,16 @@ class result final {
   constexpr result(pending_result) {}
 
   // Creates an ok result.
-  constexpr result(ok_result<V> result) : state_(in_place_index<1>, std::move(result)) {}
+  constexpr result(ok_result<V> result) : state_(cpp17::in_place_index<1>, std::move(result)) {}
   template <typename OtherV, typename = std::enable_if_t<std::is_constructible<V, OtherV>::value>>
   constexpr result(ok_result<OtherV> other)
-      : state_(in_place_index<1>, fit::ok<V>(std::move(other.value))) {}
+      : state_(cpp17::in_place_index<1>, fit::ok<V>(std::move(other.value))) {}
 
   // Creates an error result.
-  constexpr result(error_result<E> result) : state_(in_place_index<2>, std::move(result)) {}
+  constexpr result(error_result<E> result) : state_(cpp17::in_place_index<2>, std::move(result)) {}
   template <typename OtherE, typename = std::enable_if_t<std::is_constructible<E, OtherE>::value>>
   constexpr result(error_result<OtherE> other)
-      : state_(in_place_index<2>, fit::error<E>(std::move(other.error))) {}
+      : state_(cpp17::in_place_index<2>, fit::error<E>(std::move(other.error))) {}
 
   // Copies another result (if copyable).
   result(const result& other) = default;
@@ -169,23 +169,23 @@ class result final {
   // Asserts that the result's state is |fit::result_state::ok|.
   template <typename R = V, typename = std::enable_if_t<!std::is_void<R>::value>>
   constexpr R& value() {
-    return state_.template get<1>().value;
+    return cpp17::get<1>(state_).value;
   }
   template <typename R = V, typename = std::enable_if_t<!std::is_void<R>::value>>
   constexpr const R& value() const {
-    return state_.template get<1>().value;
+    return cpp17::get<1>(state_).value;
   }
 
   // Takes the result's value, leaving it in a pending state.
   // Asserts that the result's state is |fit::result_state::ok|.
   template <typename R = V, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_value() {
-    auto value = std::move(state_.template get<1>().value);
+    auto value = std::move(cpp17::get<1>(state_).value);
     reset();
     return value;
   }
   ok_result<V> take_ok_result() {
-    auto result = std::move(state_.template get<1>());
+    auto result = std::move(cpp17::get<1>(state_));
     reset();
     return result;
   }
@@ -194,23 +194,23 @@ class result final {
   // Asserts that the result's state is |fit::result_state::error|.
   template <typename R = E, typename = std::enable_if_t<!std::is_void<R>::value>>
   constexpr R& error() {
-    return state_.template get<2>().error;
+    return cpp17::get<2>(state_).error;
   }
   template <typename R = E, typename = std::enable_if_t<!std::is_void<R>::value>>
   constexpr const R& error() const {
-    return state_.template get<2>().error;
+    return cpp17::get<2>(state_).error;
   }
 
   // Takes the result's error, leaving it in a pending state.
   // Asserts that the result's state is |fit::result_state::error|.
   template <typename R = E, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_error() {
-    auto error = std::move(state_.template get<2>().error);
+    auto error = std::move(cpp17::get<2>(state_).error);
     reset();
     return error;
   }
   error_result<E> take_error_result() {
-    auto result = std::move(state_.template get<2>());
+    auto result = std::move(cpp17::get<2>(state_));
     reset();
     return result;
   }
@@ -231,7 +231,7 @@ class result final {
  private:
   void reset() { state_.template emplace<0>(); }
 
-  variant<monostate, ok_result<V>, error_result<E>> state_;
+  cpp17::variant<cpp17::monostate, ok_result<V>, error_result<E>> state_;
 };
 
 template <typename V, typename E>
