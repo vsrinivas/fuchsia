@@ -23,6 +23,163 @@ _METRICS_GA_PROPERTY_ID="UA-127897021-6"
 _METRICS_TRACK_ALL_ARGS=( "emu" "set" "fidlcat" "run-test" "run-test-component" "run-host-tests" )
 _METRICS_TRACK_RESULTS=( "set" "build" )
 _METRICS_ALLOWS_CUSTOM_REPORTING=( "test" )
+# We collect metrics when these operations happen without capturing all of
+# their args.
+_METRICS_TRACK_COMMAND_OPS=(
+    "shell activity"
+    "shell amber_ctl"
+    "shell amberctl"
+    "shell basemgr_launcher"
+    "shell basename"
+    "shell bssl"
+    "shell bt-avdtp-tool"
+    "shell bt-avrcp-controller"
+    "shell bt-cli"
+    "shell bt-hci-emulator"
+    "shell bt-hci-tool"
+    "shell bt-intel-tool"
+    "shell bt-le-central"
+    "shell bt-le-peripheral"
+    "shell bt-pairing-tool"
+    "shell bt-snoop-cli"
+    "shell bugreport"
+    "shell cal"
+    "shell cat"
+    "shell catapult_converter"
+    "shell cksum"
+    "shell cmp"
+    "shell cols"
+    "shell comm"
+    "shell cowsay"
+    "shell cp"
+    "shell crashpad_database_util"
+    "shell cs"
+    "shell curl"
+    "shell cut"
+    "shell date"
+    "shell dhcpd-cli"
+    "shell dirname"
+    "shell du"
+    "shell echo"
+    "shell ed"
+    "shell env"
+    "shell expand"
+    "shell expr"
+    "shell false"
+    "shell far"
+    "shell fdio_spawn_helper"
+    "shell fdr"
+    "shell find"
+    "shell fold"
+    "shell fuchsia_benchmarks"
+    "shell gltf_export"
+    "shell grep"
+    "shell head"
+    "shell hostname"
+    "shell ifconfig"
+    "shell input"
+    "shell iperf3"
+    "shell iquery"
+    "shell join"
+    "shell josh"
+    "shell kcounter_inspect"
+    "shell limbo_client"
+    "shell link"
+    "shell locate"
+    "shell log_listener"
+    "shell ls"
+    "shell md5sum"
+    "shell mediasession_cli_tool"
+    "shell mem"
+    "shell mkdir"
+    "shell mktemp"
+    "shell mv"
+    "shell net"
+    "shell netdump"
+    "shell nl"
+    "shell od"
+    "shell onet"
+    "shell paste"
+    "shell pathchk"
+    "shell pkgctl"
+    "shell pm"
+    "shell present_view"
+    "shell print_input"
+    "shell printenv"
+    "shell printf"
+    "shell process_input_latency_trace"
+    "shell pwd"
+    "shell readlink"
+    "shell rev"
+    "shell rm"
+    "shell rmdir"
+    "shell run"
+    "shell run_simplest_app_benchmark.sh"
+    "shell run_test_component"
+    "shell run_yuv_to_image_pipe_benchmark.sh"
+    "shell run-test-component"
+    "shell run-test-suite"
+    "shell runmany"
+    "shell scp"
+    "shell screencap"
+    "shell sed"
+    "shell seq"
+    "shell sessionctl"
+    "shell set_renderer_params"
+    "shell sh"
+    "shell sha1sum"
+    "shell sha224sum"
+    "shell sha256sum"
+    "shell sha384sum"
+    "shell sha512-224sum"
+    "shell sha512-256sum"
+    "shell sha512sum"
+    "shell signal_generator"
+    "shell sleep"
+    "shell snapshot"
+    "shell sort"
+    "shell split"
+    "shell sponge"
+    "shell ssh"
+    "shell ssh-keygen"
+    "shell stash_ctl"
+    "shell strings"
+    "shell sync"
+    "shell system-update-checker"
+    "shell tail"
+    "shell tar"
+    "shell tee"
+    "shell test"
+    "shell tftp"
+    "shell tiles_ctl"
+    "shell time"
+    "shell touch"
+    "shell tr"
+    "shell trace"
+    "shell true"
+    "shell tsort"
+    "shell tty"
+    "shell uname"
+    "shell unexpand"
+    "shell uniq"
+    "shell unlink"
+    "shell update"
+    "shell uudecode"
+    "shell uuencode"
+    "shell vim"
+    "shell virtual_audio"
+    "shell vol"
+    "shell wav_recorder"
+    "shell wc"
+    "shell which"
+    "shell whoami"
+    "shell wlan"
+    "shell xargs"
+    "shell xinstall"
+    "shell yes"
+)
+
+_METRICS_TRACK_UNKNOWN_OPS=( "shell" )
 
 # These variables need to be global, but readonly (or declare -r) declares new
 # variables as local when they are source'd inside a function.
@@ -30,7 +187,7 @@ _METRICS_ALLOWS_CUSTOM_REPORTING=( "test" )
 # old versions of Bash, particularly in the one in MacOS. The alternative is to
 # make them global first via the assignments above and marking they readonly
 # later.
-readonly _METRICS_GA_PROPERTY_ID _METRICS_TRACK_ALL_ARGS _METRICS_TRACK_RESULTS _METRICS_ALLOWS_CUSTOM_REPORTING
+readonly _METRICS_GA_PROPERTY_ID _METRICS_TRACK_ALL_ARGS _METRICS_TRACK_RESULTS _METRICS_ALLOWS_CUSTOM_REPORTING _METRICS_TRACK_COMMAND_OPS _METRICS_TRACK_UNKNOWN_OPS
 
 # To properly enable unit testing, METRICS_CONFIG is not read-only
 METRICS_CONFIG="${FUCHSIA_DIR}/.fx-metrics-config"
@@ -196,6 +353,11 @@ function track-command-execution {
   local subcommand="$1"
   shift
   local args="$*"
+  local subcommand_op;
+  if [[ $# -gt 0 ]]; then
+    local subcommand_arr=( $args )
+    subcommand_op=${subcommand_arr[0]}
+  fi
 
   local hide_init_warning=0
   if [[ "$subcommand" == "metrics" ]]; then
@@ -211,15 +373,29 @@ function track-command-execution {
     _process-fx-set-command "$@"
   fi
 
-  # Only track arguments to the subcommands in $_METRICS_TRACK_ALL_ARGS
-  if ! __is_in "$subcommand" "${_METRICS_TRACK_ALL_ARGS[@]}"; then
-    args=""
-  else
+  # Track arguments to the subcommands in $_METRICS_TRACK_ALL_ARGS
+  if __is_in "$subcommand" "${_METRICS_TRACK_ALL_ARGS[@]}"; then
+    # Track all arguments.
     # Limit to the first 100 characters of arguments.
     # The Analytics API supports up to 500 bytes, but it is likely that
     # anything larger than 100 characters is an invalid execution and/or not
     # what we want to track.
     args=${args:0:100}
+  elif [ -n "${subcommand_op}" ]; then
+    if __is_in "${subcommand} ${subcommand_op}" \
+        "${_METRICS_TRACK_COMMAND_OPS[@]}"; then
+      # Track specific subcommand arguments (instead of all of them)
+      args="${subcommand_op}"
+    elif __is_in "${subcommand}" "${_METRICS_TRACK_UNKNOWN_OPS[@]}"; then
+      # We care about the fact there was a subcommand_op, but we haven't
+      # explicitly opted it into metrics collection.
+      args="\$unknown_subcommand"
+    else
+      args=""
+    fi
+  else
+    # Track no arguments
+    args=""
   fi
 
   analytics_args=(
