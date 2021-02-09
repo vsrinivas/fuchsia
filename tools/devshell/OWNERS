@@ -11,4 +11,7 @@ per-file report-bug=gboone@google.com
 per-file cmc.fx = file: /tools/cmc/OWNERS
 per-file create.fx = file: /tools/create/OWNERS
 
+per-file vdl=dannyrosen@google.com,yuanzhi@google.com
+# per-file-COMPONENT vdl=Emulators>FEMU
+
 # COMPONENT: Tools>fx
