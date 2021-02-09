@@ -62,56 +62,67 @@ import("//tools/cmc/build/cmc.gni")
 #   testonly
 #   visibility
 template("fuchsia_package") {
-  package_name = target_name
-  if (defined(invoker.package_name)) {
-    package_name = invoker.package_name
-  }
-
-  # Generate the "meta/package" file
-  meta_package_target = "${target_name}_meta_package"
-  generate_meta_package(meta_package_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    package_name = package_name
-  }
-
-  # Generate package manifest
-  package_manifest_target = "${target_name}_manifest"
-  package_manifest_file = "$target_out_dir/${target_name}_manifest"
-  fini_manifest(package_manifest_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    if (!defined(deps)) {
-      deps = []
+  if (current_toolchain == target_toolchain) {
+    package_name = target_name
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
     }
-    deps += [ ":$meta_package_target" ]
-    visibility = [ ":*" ]
-    outputs = [ package_manifest_file ]
-  }
 
-  # Build package
-  pm_build(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "all_outputs_fresh",
-                             "deps",
-                             "testonly",
-                             "visibility",
-                           ])
-    manifest = ":$package_manifest_target"
-    metadata = {
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
+    # Generate the "meta/package" file
+    meta_package_target = "${target_name}_meta_package"
+    generate_meta_package(meta_package_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      visibility = [ ":*" ]
+      package_name = package_name
+    }
+
+    # Generate package manifest
+    package_manifest_target = "${target_name}_manifest"
+    package_manifest_file = "$target_out_dir/${target_name}_manifest"
+    fini_manifest(package_manifest_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      if (!defined(deps)) {
+        deps = []
       }
-      if (!bootfs_only) {
-        # If the bringup configuration is being built, the contents need to be
-        # exposed to other containers.
-        # See fxbug.dev/45680 for more information.
-        distribution_entries_barrier = []
+      deps += [ ":$meta_package_target" ]
+      visibility = [ ":*" ]
+      outputs = [ package_manifest_file ]
+    }
+
+    # Build package
+    pm_build(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "all_outputs_fresh",
+                               "deps",
+                               "testonly",
+                               "visibility",
+                             ])
+      manifest = ":$package_manifest_target"
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+        if (!bootfs_only) {
+          # If the bringup configuration is being built, the contents need to be
+          # exposed to other containers.
+          # See fxbug.dev/45680 for more information.
+          distribution_entries_barrier = []
+        }
       }
     }
+  } else {
+    # Fuchsia packages should only be built with target_toolchain. However, it
+    # is possible for package targets to be expanded in other toolchains (host,
+    # variant, etc.). In these cases, make fuchsia_package expand to nothing.
+    group(target_name) {
+    }
+
+    # Suppress unused variable warnings.
+    not_needed(invoker, "*")
   }
 }
