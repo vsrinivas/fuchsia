@@ -40,6 +40,7 @@ if (is_host) {
       "src/prelude.rs",
       "src/store/embedded.rs",
       "src/store/error.rs",
+      "src/store/memory.rs",
       "src/store/mod.rs",
       "src/store/store.rs",
     ]

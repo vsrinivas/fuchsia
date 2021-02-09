@@ -5,7 +5,7 @@ use {
     super::error::ModelError,
     crate::{
         model::collection::DataCollection,
-        store::{embedded::EmbeddedStore, store::Store},
+        store::{embedded::EmbeddedStore, memory::MemoryStore, store::Store},
     },
     anyhow::{Error, Result},
     serde::{Deserialize, Serialize},
@@ -50,9 +50,18 @@ impl DataModel {
     /// Connects to the internal data store and setups everything.
     pub fn connect(environment: ModelEnvironment) -> Result<Self> {
         let store: Mutex<Box<dyn Store>> =
-            DataModel::setup_schema(Box::new(EmbeddedStore::connect(environment.uri.clone())?))?;
+            DataModel::setup_schema(Self::store_factory(&environment)?)?;
 
         Ok(Self { collections: Mutex::new(HashMap::new()), environment, store })
+    }
+
+    /// Selects the internal store based on the URI set.
+    fn store_factory(environment: &ModelEnvironment) -> Result<Box<dyn Store>> {
+        if environment.uri == "{memory}" {
+            Ok(Box::new(MemoryStore::connect(environment.uri.clone())?))
+        } else {
+            Ok(Box::new(EmbeddedStore::connect(environment.uri.clone())?))
+        }
     }
 
     /// Verifies the underlying data model is running the correct current

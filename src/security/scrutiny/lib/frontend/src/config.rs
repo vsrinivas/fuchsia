@@ -159,9 +159,8 @@ impl ModelConfig {
     /// to an empty environment.
     pub fn default() -> ModelConfig {
         ModelConfig {
-            path: "/tmp/scrutiny/".to_string(),
-            build_path: fuchsia_build_dir()
-                .unwrap_or_else(|_| Path::new("").to_path_buf()),
+            path: "{memory}".to_string(),
+            build_path: fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf()),
         }
     }
     pub fn minimal() -> ModelConfig {

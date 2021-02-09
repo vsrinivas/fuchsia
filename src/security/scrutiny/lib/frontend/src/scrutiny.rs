@@ -111,7 +111,7 @@ impl Scrutiny {
                 Arg::with_name("model")
                     .short("m")
                     .help("The uri of the data model.")
-                    .default_value("/tmp/scrutiny/"),
+                    .default_value("{memory}"),
             )
             .arg(
                 Arg::with_name("log")
