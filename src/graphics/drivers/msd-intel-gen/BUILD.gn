@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
@@ -29,11 +30,19 @@ driver_module("msd_intel_test") {
   ]
 }
 
+bind_rules("msd_intel_bind") {
+  rules = "msd_intel.bind"
+  output = "msd_intel_bind.h"
+  tests = "tests/bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.intel.gpucore" ]
+}
+
 source_set("msd_intel_entry") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
   sources = [ "src/driver_entry.cc" ]
 
   deps = [
+    ":msd_intel_bind",
     "src",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//src/devices/lib/driver",
@@ -57,6 +66,7 @@ source_set("msd_intel_test_entry") {
   defines = [ "MAGMA_TEST_DRIVER=1" ]
 
   deps = [
+    ":msd_intel_bind",
     "src",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//src/devices/lib/driver",
@@ -80,7 +90,10 @@ source_set("msd_intel_test_entry") {
 
 group("tests") {
   testonly = true
-  public_deps = [ "tests/unit_tests:msd_intel_gen_nonhardware_tests" ]
+  public_deps = [
+    ":msd_intel_bind_test",
+    "tests/unit_tests:msd_intel_gen_nonhardware_tests",
+  ]
 }
 
 # This config allows inclusion of headers via relative paths

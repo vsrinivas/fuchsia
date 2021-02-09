@@ -16,7 +16,6 @@
 #include <set>
 #include <thread>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/fidl.h>
@@ -26,6 +25,7 @@
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
+#include "src/graphics/drivers/msd-intel-gen/msd_intel_bind.h"
 #include "src/graphics/lib/magma/src/magma_util/platform/zircon/magma_performance_counter_device.h"
 #include "sys_driver/magma_driver.h"
 
@@ -266,7 +266,4 @@ static int magma_stop(sysdrv_device_t* device) {
 }
 #endif
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(gpu, msd_driver_ops, "magma", "0.1", 5)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_INTEL_GPU_CORE),
-ZIRCON_DRIVER_END(gpu)
+ZIRCON_DRIVER(gpu, msd_driver_ops, "magma", "0.1");
