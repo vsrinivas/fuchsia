@@ -4,8 +4,8 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -35,15 +35,9 @@ test("hid-parser") {
   ]
 }
 
-unittest_package("hid-parser-package") {
+fuchsia_unittest_package("hid-parser-package") {
   package_name = "hid-parser-test"
   deps = [ ":hid-parser" ]
-  tests = [
-    {
-      name = "hid-parser-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 fuzzer("hid-parser-fuzzer") {
