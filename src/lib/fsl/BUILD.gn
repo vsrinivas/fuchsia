@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 static_library("fsl") {
   output_name = "fsl"
@@ -43,12 +43,7 @@ executable("fsl_unittests") {
   ]
 }
 
-test_package("fsl_tests") {
+fuchsia_unittest_package("fsl_tests") {
+  manifest = "meta/fsl_unittests.cmx"
   deps = [ ":fsl_unittests" ]
-
-  tests = [
-    {
-      name = "fsl_unittests"
-    },
-  ]
 }

@@ -5,9 +5,8 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 go_library("fake_clock") {
   testonly = true
@@ -28,15 +27,12 @@ go_test("fake_clock_test") {
   non_go_deps = [ "//src/lib/fake-clock/lib" ]
 }
 
-test_package("fake_clock_gotests") {
+fuchsia_unittest_package("fake_clock_gotests") {
+  manifest = "meta/fake_clock_test.cmx"
   deps = [ ":fake_clock_test" ]
-
-  tests = [
-    {
-      name = "fake_clock_test"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 group("examples") {

@@ -2,28 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-unittest_package("fidl_c_tests") {
-  deps = [
-    "coding_tables_tests:bin",
-    "llcpp_interop_tests:bin",
-    "simple_tests:bin",
-  ]
+fuchsia_unittest_component("coding_tables_tests") {
+  deps = [ "coding_tables_tests:bin" ]
+}
 
-  tests = [
-    {
-      name = "llcpp_interop_tests"
-      environments = basic_envs
-    },
-    {
-      name = "coding_tables_tests"
-      environments = basic_envs
-    },
-    {
-      name = "simple_tests"
-      environments = basic_envs
-    },
+fuchsia_unittest_component("llcpp_interop_tests") {
+  deps = [ "llcpp_interop_tests:bin" ]
+}
+
+fuchsia_unittest_component("simple_tests") {
+  deps = [ "simple_tests:bin" ]
+}
+
+fuchsia_test_package("fidl_c_tests") {
+  test_components = [
+    ":coding_tables_tests",
+    ":llcpp_interop_tests",
+    ":simple_tests",
   ]
 }
 

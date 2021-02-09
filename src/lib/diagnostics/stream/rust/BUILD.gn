@@ -4,10 +4,9 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -40,14 +39,8 @@ rustc_library("rust") {
   ]
 }
 
-unittest_package("diagnostics-stream-tests") {
+fuchsia_unittest_package("diagnostics-stream-tests") {
   deps = [ ":rust_test" ]
-
-  tests = [
-    {
-      name = "diagnostics_stream_lib_test"
-    },
-  ]
 }
 
 rustc_fuzzer("parse_record_fuzzer") {

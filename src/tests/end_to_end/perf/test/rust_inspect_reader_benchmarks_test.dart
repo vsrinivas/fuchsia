@@ -11,7 +11,7 @@ import 'helpers.dart';
 
 const _testName = 'fuchsia.rust_inspect.reader_benchmarks';
 const _appPath =
-    'fuchsia-pkg://fuchsia.com/rust-inspect-benchmarks#meta/rust_inspect_benchmarks.cmx';
+    'fuchsia-pkg://fuchsia.com/rust-inspect-benchmarks#meta/rust-inspect-benchmarks.cmx';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 

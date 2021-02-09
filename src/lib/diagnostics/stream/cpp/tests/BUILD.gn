@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 test("stream_cpp_unittests") {
   sources = [ "log_message_unittest.cc" ]
@@ -19,17 +19,13 @@ test("stream_cpp_unittests") {
   ]
 }
 
-test_package("stream-cpp-tests") {
+fuchsia_unittest_package("stream-cpp-tests") {
   deps = [ ":stream_cpp_unittests" ]
-
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "stream_cpp_unittests"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

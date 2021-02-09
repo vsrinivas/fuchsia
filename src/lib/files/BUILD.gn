@@ -61,16 +61,11 @@ executable("files_unittests") {
 }
 
 if (is_fuchsia) {
-  import("//build/test/test_package.gni")
+  import("//src/sys/build/components.gni")
 
-  test_package("files-tests") {
+  fuchsia_unittest_package("files-tests") {
+    manifest = "meta/files_unittests.cmx"
     deps = [ ":files_unittests" ]
-
-    tests = [
-      {
-        name = "files_unittests"
-      },
-    ]
   }
 
   group("tests") {

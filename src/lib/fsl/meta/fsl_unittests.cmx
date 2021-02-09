@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fsl_unittests"
+        "binary": "bin/fsl_unittests"
     },
     "sandbox": {
         "features": [

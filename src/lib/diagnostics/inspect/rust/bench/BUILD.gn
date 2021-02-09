@@ -3,25 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-package("rust-inspect-benchmarks") {
+fuchsia_package_with_single_component("rust-inspect-benchmarks") {
+  manifest = "meta/rust_inspect_benchmarks.cmx"
+  deps = [ ":bin" ]
   testonly = true
-
-  binaries = [
-    {
-      name = "rust_inspect_benchmarks"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/rust_inspect_benchmarks.cmx")
-      dest = "rust_inspect_benchmarks.cmx"
-    },
-  ]
-
-  public_deps = [ ":bin" ]
 }
 
 rustc_binary("bin") {

@@ -4,7 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # A collection of utilities useful to debuggers and similar programs.
 
@@ -47,41 +47,23 @@ test("elflib_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("elflib_tests") {
-  deps = [ ":elflib_unittest" ]
-
-  tests = [
-    {
-      name = "elflib_unittest"
-      environments = basic_envs
-    },
+resource("test_data") {
+  testonly = true
+  sources = [
+    "test_data/6d4d8ac190ecc7.debug",
+    "test_data/stripped_example.elf",
+    "test_data/unstripped_example.arm64.elf",
+    "test_data/unstripped_example.elf",
+    "test_data/unstripped_example_stripped.arm64.elf",
+    "test_data/unstripped_example_stripped.elf",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  resources = [
-    {
-      path = "test_data/6d4d8ac190ecc7.debug"
-      dest = "6d4d8ac190ecc7.debug"
-    },
-    {
-      path = "test_data/stripped_example.elf"
-      dest = "stripped_example.elf"
-    },
-    {
-      path = "test_data/unstripped_example.arm64.elf"
-      dest = "unstripped_example.arm64.elf"
-    },
-    {
-      path = "test_data/unstripped_example.elf"
-      dest = "unstripped_example.elf"
-    },
-    {
-      path = "test_data/unstripped_example_stripped.arm64.elf"
-      dest = "unstripped_example_stripped.arm64.elf"
-    },
-    {
-      path = "test_data/unstripped_example_stripped.elf"
-      dest = "unstripped_example_stripped.elf"
-    },
+fuchsia_unittest_package("elflib_tests") {
+  deps = [
+    ":elflib_unittest",
+    ":test_data",
   ]
 }
 

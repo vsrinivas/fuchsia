@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -29,13 +29,7 @@ test("ddktl-test") {
   ]
 }
 
-unittest_package("ddktl-unittest-package") {
+fuchsia_unittest_package("ddktl-unittest-package") {
   package_name = "ddktl"
   deps = [ ":ddktl-test" ]
-
-  tests = [
-    {
-      name = "ddktl-test"
-    },
-  ]
 }

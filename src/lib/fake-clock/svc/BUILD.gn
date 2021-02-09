@@ -4,8 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("fake_clock_svc") {
   edition = "2018"
@@ -46,13 +46,10 @@ package("svc") {
   ]
 }
 
-unittest_package("tests") {
+fuchsia_unittest_package("tests") {
   package_name = "fake_clock_test"
   deps = [ ":fake_clock_svc_test" ]
-  tests = [
-    {
-      name = "fake_clock_svc_bin_test"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }

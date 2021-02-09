@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("clonable_error") {
   with_unit_tests = true
@@ -29,15 +29,8 @@ rustc_library("clonable_error") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("clonable_error_tests") {
+fuchsia_unittest_package("clonable_error_tests") {
   deps = [ ":clonable_error_test" ]
-
-  tests = [
-    {
-      name = "clonable_error_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
