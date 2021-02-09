@@ -62,8 +62,7 @@ class FactoryResetManager : public fuchsia::recovery::policy::Device {
   FactoryResetManager(sys::ComponentContext& component_context,
                       std::shared_ptr<MediaRetriever> media_retriever);
 
-  // Returns true if the event is handled.
-  bool OnMediaButtonReport(const fuchsia::ui::input::MediaButtonsReport& report);
+  void OnMediaButtonReport(const fuchsia::ui::input::MediaButtonsReport& report);
 
   FactoryResetState factory_reset_state() const { return factory_reset_state_; }
 
