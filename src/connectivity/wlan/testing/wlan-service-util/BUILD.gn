@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("wlan-service-util") {
   with_unit_tests = true
@@ -35,14 +34,11 @@ rustc_library("wlan-service-util") {
   ]
 }
 
-unittest_package("wlan-service-util-tests") {
+fuchsia_unittest_package("wlan-service-util-tests") {
   deps = [ ":wlan-service-util_test" ]
-  tests = [
-    {
-      name = "wlan_service_util_lib_test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

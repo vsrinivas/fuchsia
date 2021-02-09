@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "wlan_smoke_test"
@@ -44,29 +43,11 @@ rustc_binary("bin") {
   ]
 }
 
-package("wlan-smoke-test") {
-  meta = [
-    {
-      path = rebase_path("meta/wlan-smoke-test.cmx")
-      dest = "wlan-smoke-test.cmx"
-    },
-  ]
-
+fuchsia_package_with_single_component("wlan-smoke-test") {
+  manifest = "meta/wlan-smoke-test.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "wlan_smoke_test"
-    },
-  ]
 }
 
-test_package("wlan-smoke-test-tests") {
+fuchsia_unittest_package("wlan-smoke-test-tests") {
   deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "wlan_smoke_test_bin_test"
-      dest = "wlan-smoke-test-bin-test"
-    },
-  ]
 }
