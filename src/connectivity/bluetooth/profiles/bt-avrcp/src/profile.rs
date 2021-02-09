@@ -147,10 +147,16 @@ fn make_target_service_definition() -> ServiceDefinition {
     service
 }
 
-#[derive(Debug, PartialEq, Hash, Clone, Copy)]
+#[derive(PartialEq, Hash, Clone, Copy)]
 pub struct AvrcpProtocolVersion(pub u8, pub u8);
 
-#[derive(Debug, PartialEq, Clone)]
+impl std::fmt::Debug for AvrcpProtocolVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.0, self.1)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AvrcpService {
     Target {
         features: AvcrpTargetFeatures,

@@ -4,9 +4,10 @@
 
 use {
     bt_avctp::{AvcCommandResponse, AvcCommandType, AvcPeer, AvcResponseType, AvctpPeer},
+    derivative::Derivative,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect::Property,
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, Future},
@@ -24,6 +25,7 @@ use {
 
 mod controller;
 mod handlers;
+mod inspect;
 mod tasks;
 
 use crate::{
@@ -36,6 +38,7 @@ use crate::{
 
 pub use controller::{Controller, ControllerEvent, ControllerEventStream};
 use handlers::{browse_channel::BrowseChannelHandler, ControlChannelHandler};
+use inspect::RemotePeerInspect;
 
 /// The minimum amount of time to wait before establishing an AVCTP connection.
 /// This is used during connection establishment when both devices attempt to establish
@@ -66,7 +69,7 @@ pub enum PeerChannelState<T> {
 pub struct PeerChannel<T> {
     /// The state of this channel.
     state: PeerChannelState<T>,
-    inspect: inspect::StringProperty,
+    inspect: fuchsia_inspect::StringProperty,
 }
 
 impl<T> PeerChannel<T> {
@@ -103,19 +106,27 @@ impl<T> PeerChannel<T> {
 
 impl<T> Default for PeerChannel<T> {
     fn default() -> Self {
-        Self { state: PeerChannelState::Disconnected, inspect: inspect::StringProperty::default() }
+        Self {
+            state: PeerChannelState::Disconnected,
+            inspect: fuchsia_inspect::StringProperty::default(),
+        }
     }
 }
 
 impl<T> Inspect for &mut PeerChannel<T> {
-    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> Result<(), AttachError> {
         self.inspect = parent.create_string(name, "Disconnected");
         Ok(())
     }
 }
 
 /// Internal object to manage a remote peer
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 struct RemotePeer {
     peer_id: PeerId,
 
@@ -168,15 +179,20 @@ struct RemotePeer {
     notification_cache: HashMap<Discriminant<ControllerEvent>, ControllerEvent>,
 
     /// The inspect node for this peer.
-    inspect: inspect::Node,
+    #[derivative(Debug = "ignore")]
+    inspect: RemotePeerInspect,
 }
 
 impl Inspect for &mut RemotePeer {
-    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
-        self.inspect.record_string("peer_id", format!("{}", self.peer_id));
-        self.control_channel.iattach(&self.inspect, "control")?;
-        self.browse_channel.iattach(&self.inspect, "browse")?;
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> Result<(), AttachError> {
+        self.inspect.iattach(parent, name)?;
+        self.inspect.node().record_string("peer_id", self.peer_id.to_string());
+        self.control_channel.iattach(&self.inspect.node(), "control")?;
+        self.browse_channel.iattach(&self.inspect.node(), "browse")?;
         Ok(())
     }
 }
@@ -202,7 +218,7 @@ impl RemotePeer {
             cancel_tasks: false,
             last_connected_time: None,
             notification_cache: HashMap::new(),
-            inspect: inspect::Node::default(),
+            inspect: RemotePeerInspect::default(),
         }
     }
 
@@ -303,6 +319,8 @@ impl RemotePeer {
         trace!("set_target_descriptor {:?}", self.peer_id);
         self.target_descriptor = Some(service);
         self.attempt_connection = true;
+        // Record inspect target features.
+        self.inspect.record_target_features(service);
         self.wake_state_watcher();
     }
 
@@ -310,6 +328,8 @@ impl RemotePeer {
         trace!("set_controller_descriptor {:?}", self.peer_id);
         self.controller_descriptor = Some(service);
         self.attempt_connection = true;
+        // Record inspect controller features.
+        self.inspect.record_controller_features(service);
         self.wake_state_watcher();
     }
 
@@ -399,7 +419,11 @@ pub struct RemotePeerHandle {
 }
 
 impl Inspect for &mut RemotePeerHandle {
-    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> Result<(), AttachError> {
         self.peer.write().iattach(parent, name)
     }
 }
