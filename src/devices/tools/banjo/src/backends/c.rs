@@ -84,18 +84,22 @@ fn ident_to_c_str(ast: &ast::BanjoAst, ident: &Ident) -> Result<String, Error> {
     ty_to_c_str(ast, &ast::Ty::Identifier { id: ident.clone(), reference: false })
 }
 
+fn get_size_spec<'b>(ast: &'b ast::BanjoAst, size: &'b str) -> &'b str {
+    // Check if the size specification is a constant and replace the constant name by its value
+    // if that's the case.
+    // This matches FIDL's behavior of inlining constant values in array sizes.
+    let size_ident = Ident::new_raw(size);
+    if let Some(size_decl) = ast.maybe_id_to_decl(&size_ident) {
+        if let Decl::Constant { value, .. } = size_decl {
+            return &value.0;
+        }
+    }
+    size
+}
+
 pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
     if let ast::Ty::Array { ref ty, size, .. } = ty {
-        let mut size_str = &size.0;
-        // Check if the size specification is a constant and replace the constant name by its value
-        // if that's the case.
-        // This matches FIDL's behavior of inlining constant values in array sizes.
-        let size_ident = Ident::new_raw(&size.0);
-        if let Some(size_decl) = ast.maybe_id_to_decl(&size_ident) {
-            if let Decl::Constant { value, .. } = size_decl {
-                size_str = &value.0;
-            }
-        }
+        let size_str = get_size_spec(ast, &size.0);
         return if let Some(bounds) = array_bounds(ast, ty) {
             Some(format!("[{}]{}", size_str, bounds))
         } else {
@@ -228,12 +232,13 @@ fn field_to_c_str(
         }
         ast::Ty::Str { ref size, .. } => {
             if let Some(size) = size {
+                let size_str = get_size_spec(ast, &size.0);
                 accum.push_str(
                     format!(
                         "{indent}char {c_name}[{size}];",
                         indent = indent,
                         c_name = c_name,
-                        size = size,
+                        size = size_str,
                     )
                     .as_str(),
                 );

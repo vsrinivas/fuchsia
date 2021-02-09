@@ -1,0 +1,62 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.order1",
+    namespaces: {
+        "banjo.examples.order1": [
+            Enum {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order1",
+                    ),
+                    name: "EchoMe",
+                },
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "zero",
+                        value: Constant(
+                            "0",
+                        ),
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "one",
+                        value: Constant(
+                            "1",
+                        ),
+                    },
+                ],
+            },
+            Constant {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order1",
+                    ),
+                    name: "favorite_echo",
+                },
+                ty: Identifier {
+                    id: Ident {
+                        namespace: Some(
+                            "banjo.examples.order1",
+                        ),
+                        name: "EchoMe",
+                    },
+                    reference: false,
+                },
+                value: Constant(
+                    "EchoMe.zero",
+                ),
+            },
+        ],
+    },
+}

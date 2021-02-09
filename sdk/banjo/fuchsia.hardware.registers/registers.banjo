@@ -4,6 +4,8 @@
 
 library fuchsia.hardware.registers;
 
+using zx;
+
 [BanjoLayout = "ddk-protocol"]
 protocol Registers {
     /// Gets a channel for FIDL protocol.

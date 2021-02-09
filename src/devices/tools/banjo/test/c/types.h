@@ -14,8 +14,10 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-#define vectors_size UINT32_C(32)
 typedef struct vectors vectors_t;
+typedef struct handles handles_t;
+typedef struct arrays arrays_t;
+#define vectors_size UINT32_C(32)
 typedef uint8_t u8_enum_t;
 #define U8_ENUM_X UINT8_C(23)
 typedef uint64_t u64_enum_t;
@@ -32,6 +34,7 @@ typedef struct structs structs_t;
 #define strings_size UINT32_C(32)
 typedef struct strings strings_t;
 typedef struct primitive_types primitive_types_t;
+typedef struct interfaces interfaces_t;
 typedef int8_t i8_enum_t;
 #define I8_ENUM_X INT8_C(23)
 typedef int64_t i64_enum_t;
@@ -40,15 +43,12 @@ typedef int32_t i32_enum_t;
 #define I32_ENUM_X INT32_C(23)
 typedef int16_t i16_enum_t;
 #define I16_ENUM_X INT16_C(23)
-typedef struct handles handles_t;
 typedef struct default_values default_values_t;
 typedef uint32_t default_enum_t;
 #define DEFAULT_ENUM_X UINT32_C(23)
 #define arrays_size UINT32_C(32)
-typedef struct arrays arrays_t;
 typedef struct this_is_an_interface_protocol this_is_an_interface_protocol_t;
 typedef struct this_is_an_interface_protocol_ops this_is_an_interface_protocol_ops_t;
-typedef struct interfaces interfaces_t;
 
 // Declarations
 struct vectors {
@@ -294,6 +294,92 @@ struct vectors {
     size_t handle_nullable_sized_2_count;
 };
 
+struct handles {
+    zx_handle_t handle_handle;
+    zx_handle_t process_handle;
+    zx_handle_t thread_handle;
+    zx_handle_t vmo_handle;
+    zx_handle_t channel_handle;
+    zx_handle_t event_handle;
+    zx_handle_t port_handle;
+    zx_handle_t interrupt_handle;
+    zx_handle_t socket_handle;
+    zx_handle_t resource_handle;
+    zx_handle_t eventpair_handle;
+    zx_handle_t job_handle;
+    zx_handle_t vmar_handle;
+    zx_handle_t fifo_handle;
+    zx_handle_t guest_handle;
+    zx_handle_t timer_handle;
+    zx_handle_t profile_handle;
+    zx_handle_t vcpu_handle;
+    zx_handle_t iommu_handle;
+    zx_handle_t pager_handle;
+    zx_handle_t pmt_handle;
+    zx_handle_t clock_handle;
+    zx_handle_t nullable_handle_handle;
+    zx_handle_t nullable_process_handle;
+    zx_handle_t nullable_thread_handle;
+    zx_handle_t nullable_vmo_handle;
+    zx_handle_t nullable_channel_handle;
+    zx_handle_t nullable_event_handle;
+    zx_handle_t nullable_port_handle;
+    zx_handle_t nullable_interrupt_handle;
+    zx_handle_t nullable_socket_handle;
+    zx_handle_t nullable_resource_handle;
+    zx_handle_t nullable_eventpair_handle;
+    zx_handle_t nullable_job_handle;
+    zx_handle_t nullable_vmar_handle;
+    zx_handle_t nullable_fifo_handle;
+    zx_handle_t nullable_guest_handle;
+    zx_handle_t nullable_timer_handle;
+    zx_handle_t nullable_profile_handle;
+    zx_handle_t nullable_vcpu_handle;
+    zx_handle_t nullable_iommu_handle;
+    zx_handle_t nullable_pager_handle;
+    zx_handle_t nullable_pmt_handle;
+    zx_handle_t nullable_clock_handle;
+};
+
+struct arrays {
+    bool b_0[1];
+    int8_t i8_0[1];
+    int16_t i16_0[1];
+    int32_t i32_0[1];
+    int64_t i64_0[1];
+    uint8_t u8_0[1];
+    uint16_t u16_0[1];
+    uint32_t u32_0[1];
+    uint64_t u64_0[1];
+    float f32_0[1];
+    double f64_0[1];
+    zx_handle_t handle_0[1];
+    bool b_1[32];
+    int8_t i8_1[32];
+    int16_t i16_1[32];
+    int32_t i32_1[32];
+    int64_t i64_1[32];
+    uint8_t u8_1[32];
+    uint16_t u16_1[32];
+    uint32_t u32_1[32];
+    uint64_t u64_1[32];
+    float f32_1[32];
+    double f64_1[32];
+    zx_handle_t handle_1[32];
+    bool b_2[32][4];
+    int8_t i8_2[32][4];
+    int16_t i16_2[32][4];
+    int32_t i32_2[32][4];
+    int64_t i64_2[32][4];
+    uint8_t u8_2[32][4];
+    uint16_t u16_2[32][4];
+    uint32_t u32_2[32][4];
+    uint64_t u64_2[32][4];
+    float f32_2[32][4];
+    double f64_2[32][4];
+    zx_handle_t handle_2[32][4];
+};
+
 union this_is_a_union {
     const char* s;
 };
@@ -345,9 +431,9 @@ struct strings {
     const char* s;
     const char* nullable_s;
     char size_0_s[4];
-    char size_1_s[strings_size];
+    char size_1_s[32];
     char nullable_size_0_s[4];
-    char nullable_size_1_s[strings_size];
+    char nullable_size_1_s[32];
 };
 
 struct primitive_types {
@@ -364,51 +450,9 @@ struct primitive_types {
     double f64;
 };
 
-struct handles {
-    zx_handle_t handle_handle;
-    zx_handle_t process_handle;
-    zx_handle_t thread_handle;
-    zx_handle_t vmo_handle;
-    zx_handle_t channel_handle;
-    zx_handle_t event_handle;
-    zx_handle_t port_handle;
-    zx_handle_t interrupt_handle;
-    zx_handle_t socket_handle;
-    zx_handle_t resource_handle;
-    zx_handle_t eventpair_handle;
-    zx_handle_t job_handle;
-    zx_handle_t vmar_handle;
-    zx_handle_t fifo_handle;
-    zx_handle_t guest_handle;
-    zx_handle_t timer_handle;
-    zx_handle_t profile_handle;
-    zx_handle_t vcpu_handle;
-    zx_handle_t iommu_handle;
-    zx_handle_t pager_handle;
-    zx_handle_t pmt_handle;
-    zx_handle_t clock_handle;
-    zx_handle_t nullable_handle_handle;
-    zx_handle_t nullable_process_handle;
-    zx_handle_t nullable_thread_handle;
-    zx_handle_t nullable_vmo_handle;
-    zx_handle_t nullable_channel_handle;
-    zx_handle_t nullable_event_handle;
-    zx_handle_t nullable_port_handle;
-    zx_handle_t nullable_interrupt_handle;
-    zx_handle_t nullable_socket_handle;
-    zx_handle_t nullable_resource_handle;
-    zx_handle_t nullable_eventpair_handle;
-    zx_handle_t nullable_job_handle;
-    zx_handle_t nullable_vmar_handle;
-    zx_handle_t nullable_fifo_handle;
-    zx_handle_t nullable_guest_handle;
-    zx_handle_t nullable_timer_handle;
-    zx_handle_t nullable_profile_handle;
-    zx_handle_t nullable_vcpu_handle;
-    zx_handle_t nullable_iommu_handle;
-    zx_handle_t nullable_pager_handle;
-    zx_handle_t nullable_pmt_handle;
-    zx_handle_t nullable_clock_handle;
+struct interfaces {
+    this_is_an_interface_protocol_t nonnullable_interface;
+    this_is_an_interface_protocol_t nullable_interface;
 };
 
 struct default_values {
@@ -425,45 +469,6 @@ struct default_values {
     const char* s;
 };
 
-struct arrays {
-    bool b_0[1];
-    int8_t i8_0[1];
-    int16_t i16_0[1];
-    int32_t i32_0[1];
-    int64_t i64_0[1];
-    uint8_t u8_0[1];
-    uint16_t u16_0[1];
-    uint32_t u32_0[1];
-    uint64_t u64_0[1];
-    float f32_0[1];
-    double f64_0[1];
-    zx_handle_t handle_0[1];
-    bool b_1[32];
-    int8_t i8_1[32];
-    int16_t i16_1[32];
-    int32_t i32_1[32];
-    int64_t i64_1[32];
-    uint8_t u8_1[32];
-    uint16_t u16_1[32];
-    uint32_t u32_1[32];
-    uint64_t u64_1[32];
-    float f32_1[32];
-    double f64_1[32];
-    zx_handle_t handle_1[32];
-    bool b_2[32][4];
-    int8_t i8_2[32][4];
-    int16_t i16_2[32][4];
-    int32_t i32_2[32][4];
-    int64_t i64_2[32][4];
-    uint8_t u8_2[32][4];
-    uint16_t u16_2[32][4];
-    uint32_t u32_2[32][4];
-    uint64_t u64_2[32][4];
-    float f32_2[32][4];
-    double f64_2[32][4];
-    zx_handle_t handle_2[32][4];
-};
-
 struct this_is_an_interface_protocol_ops {
     void (*copy)(void* ctx, const char* s, uint32_t count, char* out_s, size_t s_capacity);
 };
@@ -472,11 +477,6 @@ struct this_is_an_interface_protocol_ops {
 struct this_is_an_interface_protocol {
     this_is_an_interface_protocol_ops_t* ops;
     void* ctx;
-};
-
-struct interfaces {
-    this_is_an_interface_protocol_t nonnullable_interface;
-    this_is_an_interface_protocol_t nullable_interface;
 };
 
 

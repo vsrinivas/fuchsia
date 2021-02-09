@@ -8,11 +8,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix0",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -20,11 +39,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix1",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -32,11 +70,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix2",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -44,11 +101,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix3",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -56,11 +132,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix4",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -68,11 +163,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix5",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -80,11 +194,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix6",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -92,11 +225,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix7",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -104,11 +256,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix8",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -116,11 +287,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix9",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -128,11 +318,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix10",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -140,11 +349,408 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
                     name: "SomeLongAnonymousPrefix11",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix12",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix13",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix14",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix15",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix16",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix17",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix18",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix19",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix20",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix21",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix22",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix23",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -583,7 +1189,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix0",
                         },
@@ -592,7 +1198,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix1",
                         },
@@ -601,7 +1207,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix2",
                         },
@@ -610,7 +1216,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix3",
                         },
@@ -619,7 +1225,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix4",
                         },
@@ -628,7 +1234,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix5",
                         },
@@ -637,7 +1243,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix6",
                         },
@@ -646,7 +1252,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix7",
                         },
@@ -655,7 +1261,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix8",
                         },
@@ -664,7 +1270,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix9",
                         },
@@ -673,7 +1279,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix10",
                         },
@@ -682,9 +1288,117 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
                             name: "SomeLongAnonymousPrefix11",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix12",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix13",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix14",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix15",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix16",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix17",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix18",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix19",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix20",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix21",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix22",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix23",
                         },
                         reference: false,
                     },
@@ -711,11 +1425,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix12",
+                    name: "SomeLongAnonymousPrefix24",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -723,11 +1456,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix13",
+                    name: "SomeLongAnonymousPrefix25",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -735,11 +1487,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix14",
+                    name: "SomeLongAnonymousPrefix26",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -747,11 +1518,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix15",
+                    name: "SomeLongAnonymousPrefix27",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -759,11 +1549,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix16",
+                    name: "SomeLongAnonymousPrefix28",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -771,11 +1580,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix17",
+                    name: "SomeLongAnonymousPrefix29",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -783,11 +1611,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix18",
+                    name: "SomeLongAnonymousPrefix30",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -795,11 +1642,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix19",
+                    name: "SomeLongAnonymousPrefix31",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -807,11 +1673,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix20",
+                    name: "SomeLongAnonymousPrefix32",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -819,11 +1704,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix21",
+                    name: "SomeLongAnonymousPrefix33",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -831,11 +1735,30 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix22",
+                    name: "SomeLongAnonymousPrefix34",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -843,11 +1766,408 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix23",
+                    name: "SomeLongAnonymousPrefix35",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix36",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix37",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix38",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix39",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix40",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix41",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix42",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix43",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix44",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix45",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix46",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix47",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -1286,108 +2606,216 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix12",
+                            name: "SomeLongAnonymousPrefix24",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix13",
+                            name: "SomeLongAnonymousPrefix25",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix14",
+                            name: "SomeLongAnonymousPrefix26",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix15",
+                            name: "SomeLongAnonymousPrefix27",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix16",
+                            name: "SomeLongAnonymousPrefix28",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix17",
+                            name: "SomeLongAnonymousPrefix29",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix18",
+                            name: "SomeLongAnonymousPrefix30",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix19",
+                            name: "SomeLongAnonymousPrefix31",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix20",
+                            name: "SomeLongAnonymousPrefix32",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix21",
+                            name: "SomeLongAnonymousPrefix33",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix22",
+                            name: "SomeLongAnonymousPrefix34",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix23",
+                            name: "SomeLongAnonymousPrefix35",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix36",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix37",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix38",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix39",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix40",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix41",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix42",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix43",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix44",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix45",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix46",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix47",
                         },
                         reference: false,
                     },
@@ -1399,11 +2827,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix24",
+                    name: "SomeLongAnonymousPrefix48",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Bool,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1411,11 +2863,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix25",
+                    name: "SomeLongAnonymousPrefix49",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Bool,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1423,11 +2899,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix26",
+                    name: "SomeLongAnonymousPrefix50",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int8,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1435,11 +2935,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix27",
+                    name: "SomeLongAnonymousPrefix51",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int8,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1447,11 +2971,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix28",
+                    name: "SomeLongAnonymousPrefix52",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int16,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1459,11 +3007,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix29",
+                    name: "SomeLongAnonymousPrefix53",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int16,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1471,11 +3043,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix30",
+                    name: "SomeLongAnonymousPrefix54",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int32,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1483,11 +3079,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix31",
+                    name: "SomeLongAnonymousPrefix55",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int32,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1495,11 +3115,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix32",
+                    name: "SomeLongAnonymousPrefix56",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int64,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1507,11 +3151,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix33",
+                    name: "SomeLongAnonymousPrefix57",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int64,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1519,11 +3187,35 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix34",
+                    name: "SomeLongAnonymousPrefix58",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt8,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1531,11 +3223,473 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolarray",
                     ),
-                    name: "SomeLongAnonymousPrefix35",
+                    name: "SomeLongAnonymousPrefix59",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt8,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix60",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt16,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix61",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt16,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix62",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt32,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix63",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt32,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix64",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt64,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix65",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt64,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix66",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Float32,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix67",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Float32,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix68",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Float64,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix69",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Float64,
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix70",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Handle {
+                                    ty: None,
+                                    reference: false,
+                                },
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolarray",
+                    ),
+                    name: "SomeLongAnonymousPrefix71",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Handle {
+                                    ty: None,
+                                    reference: false,
+                                },
+                                size: Constant(
+                                    "4",
+                                ),
+                            },
+                            size: Constant(
+                                "array_size",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -2094,108 +4248,216 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix24",
+                            name: "SomeLongAnonymousPrefix48",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix25",
+                            name: "SomeLongAnonymousPrefix49",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix26",
+                            name: "SomeLongAnonymousPrefix50",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix27",
+                            name: "SomeLongAnonymousPrefix51",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix28",
+                            name: "SomeLongAnonymousPrefix52",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix29",
+                            name: "SomeLongAnonymousPrefix53",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix30",
+                            name: "SomeLongAnonymousPrefix54",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix31",
+                            name: "SomeLongAnonymousPrefix55",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix32",
+                            name: "SomeLongAnonymousPrefix56",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix33",
+                            name: "SomeLongAnonymousPrefix57",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix34",
+                            name: "SomeLongAnonymousPrefix58",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolarray",
                             ),
-                            name: "SomeLongAnonymousPrefix35",
+                            name: "SomeLongAnonymousPrefix59",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix60",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix61",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix62",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix63",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix64",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix65",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix66",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix67",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix68",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix69",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix70",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolarray",
+                            ),
+                            name: "SomeLongAnonymousPrefix71",
                         },
                         reference: false,
                     },
@@ -2363,6 +4625,20 @@ BanjoAst {
                         "zx",
                     ),
                     name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "handle",
                 },
                 Ident {
                     namespace: Some(

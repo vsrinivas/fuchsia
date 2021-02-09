@@ -8,9 +8,48 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.paramattr",
                     ),
                     name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt16,
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.paramattr",
+                            ),
+                            name: "param_one",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Bool,
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.paramattr",
+                            ),
+                            name: "param_two",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.paramattr",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
                 },
                 fields: [],
             },
@@ -20,11 +59,53 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.paramattr",
                     ),
-                    name: "SomeLongAnonymousPrefix1",
+                    name: "SomeLongAnonymousPrefix2",
                 },
                 fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.paramattr",
+                    ),
+                    name: "SomeLongAnonymousPrefix3",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int64,
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.paramattr",
+                            ),
+                            name: "out_one",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.paramattr",
+                            ),
+                            name: "out_two",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -103,7 +184,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.paramattr",
                             ),
                             name: "SomeLongAnonymousPrefix0",
                         },
@@ -112,9 +193,27 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.paramattr",
                             ),
                             name: "SomeLongAnonymousPrefix1",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.paramattr",
+                            ),
+                            name: "SomeLongAnonymousPrefix2",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.paramattr",
+                            ),
+                            name: "SomeLongAnonymousPrefix3",
                         },
                         reference: false,
                     },

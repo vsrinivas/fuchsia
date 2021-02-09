@@ -1,53 +1,81 @@
 BanjoAst {
-    primary_namespace: "banjo.examples.view",
+    primary_namespace: "banjo.examples.order2",
     namespaces: {
-        "banjo.examples.point": [
+        "banjo.examples.order2": [
             Struct {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.point",
+                        "banjo.examples.order2",
                     ),
-                    name: "Point",
+                    name: "SomeLongAnonymousPrefix0",
                 },
-                fields: [
-                    StructField {
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order2",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
+                },
+                fields: [],
+            },
+            Protocol {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order2",
+                    ),
+                    name: "Foo",
+                },
+                methods: [
+                    Method {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Float32,
-                        ident: Ident {
-                            namespace: None,
-                            name: "x",
-                        },
-                        val: None,
+                        name: "Hello",
+                        in_params: [],
+                        out_params: [],
                     },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Float32,
-                        ident: Ident {
-                            namespace: None,
-                            name: "y",
+                ],
+                placeholders: [
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.order2",
+                            ),
+                            name: "SomeLongAnonymousPrefix0",
                         },
-                        val: None,
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.order2",
+                            ),
+                            name: "SomeLongAnonymousPrefix1",
+                        },
+                        reference: false,
                     },
                 ],
             },
-        ],
-        "banjo.examples.view": [
             Struct {
                 attributes: Attrs(
                     [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.view",
+                        "banjo.examples.order2",
                     ),
-                    name: "SomeLongAnonymousPrefix0",
+                    name: "SomeLongAnonymousPrefix2",
                 },
                 fields: [
                     StructField {
@@ -57,17 +85,17 @@ BanjoAst {
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.point",
+                                    "banjo.examples.order2",
                                 ),
-                                name: "Point",
+                                name: "Foo",
                             },
                             reference: false,
                         },
                         ident: Ident {
                             namespace: Some(
-                                "banjo.examples.view",
+                                "banjo.examples.order2",
                             ),
-                            name: "p",
+                            name: "foo",
                         },
                         val: None,
                     },
@@ -79,44 +107,37 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.view",
+                        "banjo.examples.order2",
                     ),
-                    name: "SomeLongAnonymousPrefix1",
+                    name: "SomeLongAnonymousPrefix3",
                 },
                 fields: [],
             },
             Protocol {
                 attributes: Attrs(
-                    [
-                        Attr {
-                            key: "BanjoLayout",
-                            val: Some(
-                                "ddk-protocol",
-                            ),
-                        },
-                    ],
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.view",
+                        "banjo.examples.order2",
                     ),
-                    name: "View",
+                    name: "Bar",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "MoveTo",
+                        name: "World",
                         in_params: [
                             (
-                                "p",
+                                "foo",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.point",
+                                            "banjo.examples.order2",
                                         ),
-                                        name: "Point",
+                                        name: "Foo",
                                     },
                                     reference: false,
                                 },
@@ -132,18 +153,18 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "banjo.examples.view",
+                                "banjo.examples.order2",
                             ),
-                            name: "SomeLongAnonymousPrefix0",
+                            name: "SomeLongAnonymousPrefix2",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "banjo.examples.view",
+                                "banjo.examples.order2",
                             ),
-                            name: "SomeLongAnonymousPrefix1",
+                            name: "SomeLongAnonymousPrefix3",
                         },
                         reference: false,
                     },

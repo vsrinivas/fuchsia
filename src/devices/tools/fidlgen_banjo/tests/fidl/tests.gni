@@ -91,7 +91,6 @@ _simple_libraries = [
     name = "example9"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # declaration ordering issues
   },
   {
     name = "fidlhandle"
@@ -99,10 +98,14 @@ _simple_libraries = [
     deps = [ "//zircon/vdso/zx" ]
   },
   {
+    name = "handles"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+  },
+  {
     name = "interface"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # declaration ordering issues
   },
 
   # Note: libraryparts is omitted as FIDL supports libraries across multiple files.
@@ -110,13 +113,29 @@ _simple_libraries = [
     name = "order"
     backends = [ "c" ]
   },
+  {
+    name = "order1"
+    backends = [ "c" ]
+  },
+  {
+    name = "order2"
+    backends = [ "c" ]
+  },
+  {
+    name = "order3"
+    backends = [ "c" ]
+  },
+  {
+    name = "order4"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+  },
 
   # Note: parameterattributes is an AST-only test, the tested feature is supported by FIDL.
   {
     name = "passcallback"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # declaration ordering issues
   },
   {
     name = "point"
@@ -135,7 +154,6 @@ _simple_libraries = [
     name = "protocolbase"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # declaration ordering issues
   },
   {
     name = "protocolhandle"
@@ -145,7 +163,6 @@ _simple_libraries = [
   {
     name = "protocolothertypes"
     backends = [ "c" ]
-    disabled = true  # declaration ordering issues
   },
   {
     name = "protocolprimitive"
@@ -178,7 +195,6 @@ _simple_libraries = [
     name = "types"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # declaration ordering issues
   },
   {
     name = "union"

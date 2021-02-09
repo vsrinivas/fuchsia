@@ -23,11 +23,57 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.example6",
                     ),
                     name: "SomeLongAnonymousPrefix0",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.example6",
+                            ),
+                            name: "req",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example6",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.example6",
+                            ),
+                            name: "response",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -82,9 +128,18 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.example6",
                             ),
                             name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.example6",
+                            ),
+                            name: "SomeLongAnonymousPrefix1",
                         },
                         reference: false,
                     },

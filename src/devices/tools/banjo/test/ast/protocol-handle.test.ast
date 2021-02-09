@@ -8,11 +8,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix0",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -20,11 +37,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix1",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -32,11 +82,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix2",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -44,11 +111,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix3",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -56,11 +156,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix4",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -68,11 +185,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix5",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -80,11 +230,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix6",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -92,11 +259,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix7",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -104,11 +304,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix8",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -116,11 +333,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix9",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -128,11 +378,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix10",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -140,11 +407,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix11",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -152,11 +452,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix12",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -164,11 +481,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix13",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -176,11 +526,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix14",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -188,11 +555,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix15",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -200,11 +600,665 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
                     name: "SomeLongAnonymousPrefix16",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix17",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix18",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix19",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix20",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix21",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix22",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix23",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix24",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix25",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix26",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix27",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix28",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix29",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix30",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix31",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix32",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix33",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -909,7 +1963,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix0",
                         },
@@ -918,7 +1972,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix1",
                         },
@@ -927,7 +1981,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix2",
                         },
@@ -936,7 +1990,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix3",
                         },
@@ -945,7 +1999,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix4",
                         },
@@ -954,7 +2008,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix5",
                         },
@@ -963,7 +2017,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix6",
                         },
@@ -972,7 +2026,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix7",
                         },
@@ -981,7 +2035,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix8",
                         },
@@ -990,7 +2044,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix9",
                         },
@@ -999,7 +2053,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix10",
                         },
@@ -1008,7 +2062,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix11",
                         },
@@ -1017,7 +2071,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix12",
                         },
@@ -1026,7 +2080,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix13",
                         },
@@ -1035,7 +2089,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix14",
                         },
@@ -1044,7 +2098,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix15",
                         },
@@ -1053,9 +2107,162 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
                             name: "SomeLongAnonymousPrefix16",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix17",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix18",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix19",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix20",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix21",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix22",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix23",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix24",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix25",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix26",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix27",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix28",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix29",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix30",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix31",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix32",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix33",
                         },
                         reference: false,
                     },
@@ -1067,11 +2274,73 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix17",
+                    name: "SomeLongAnonymousPrefix34",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix35",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -1136,9 +2405,18 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix17",
+                            name: "SomeLongAnonymousPrefix34",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix35",
                         },
                         reference: false,
                     },
@@ -1150,11 +2428,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix18",
+                    name: "SomeLongAnonymousPrefix36",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1162,11 +2457,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix19",
+                    name: "SomeLongAnonymousPrefix37",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: None,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1174,11 +2502,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix20",
+                    name: "SomeLongAnonymousPrefix38",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1186,11 +2531,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix21",
+                    name: "SomeLongAnonymousPrefix39",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1198,11 +2576,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix22",
+                    name: "SomeLongAnonymousPrefix40",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1210,11 +2605,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix23",
+                    name: "SomeLongAnonymousPrefix41",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1222,11 +2650,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix24",
+                    name: "SomeLongAnonymousPrefix42",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1234,11 +2679,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix25",
+                    name: "SomeLongAnonymousPrefix43",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1246,11 +2724,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix26",
+                    name: "SomeLongAnonymousPrefix44",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1258,11 +2753,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix27",
+                    name: "SomeLongAnonymousPrefix45",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1270,11 +2798,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix28",
+                    name: "SomeLongAnonymousPrefix46",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1282,11 +2827,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix29",
+                    name: "SomeLongAnonymousPrefix47",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1294,11 +2872,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix30",
+                    name: "SomeLongAnonymousPrefix48",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1306,11 +2901,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix31",
+                    name: "SomeLongAnonymousPrefix49",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1318,11 +2946,28 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix32",
+                    name: "SomeLongAnonymousPrefix50",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1330,11 +2975,44 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix33",
+                    name: "SomeLongAnonymousPrefix51",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1342,11 +3020,665 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolhandle",
                     ),
-                    name: "SomeLongAnonymousPrefix34",
+                    name: "SomeLongAnonymousPrefix52",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix53",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix54",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix55",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix56",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix57",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix58",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix59",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix60",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix61",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix62",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix63",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix64",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix65",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix66",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix67",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix68",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolhandle",
+                    ),
+                    name: "SomeLongAnonymousPrefix69",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "h2",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -2136,153 +4468,306 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix18",
+                            name: "SomeLongAnonymousPrefix36",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix19",
+                            name: "SomeLongAnonymousPrefix37",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix20",
+                            name: "SomeLongAnonymousPrefix38",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix21",
+                            name: "SomeLongAnonymousPrefix39",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix22",
+                            name: "SomeLongAnonymousPrefix40",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix23",
+                            name: "SomeLongAnonymousPrefix41",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix24",
+                            name: "SomeLongAnonymousPrefix42",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix25",
+                            name: "SomeLongAnonymousPrefix43",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix26",
+                            name: "SomeLongAnonymousPrefix44",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix27",
+                            name: "SomeLongAnonymousPrefix45",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix28",
+                            name: "SomeLongAnonymousPrefix46",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix29",
+                            name: "SomeLongAnonymousPrefix47",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix30",
+                            name: "SomeLongAnonymousPrefix48",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix31",
+                            name: "SomeLongAnonymousPrefix49",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix32",
+                            name: "SomeLongAnonymousPrefix50",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix33",
+                            name: "SomeLongAnonymousPrefix51",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolhandle",
                             ),
-                            name: "SomeLongAnonymousPrefix34",
+                            name: "SomeLongAnonymousPrefix52",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix53",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix54",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix55",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix56",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix57",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix58",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix59",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix60",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix61",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix62",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix63",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix64",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix65",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix66",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix67",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix68",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolhandle",
+                            ),
+                            name: "SomeLongAnonymousPrefix69",
                         },
                         reference: false,
                     },
@@ -2450,6 +4935,20 @@ BanjoAst {
                         "zx",
                     ),
                     name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "handle",
                 },
                 Ident {
                     namespace: Some(

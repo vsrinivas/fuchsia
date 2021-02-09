@@ -49,9 +49,38 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.handles",
                     ),
                     name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.handles",
+                            ),
+                            name: "the_handle",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.handles",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
                 },
                 fields: [],
             },
@@ -61,9 +90,38 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.handles",
                     ),
-                    name: "SomeLongAnonymousPrefix1",
+                    name: "SomeLongAnonymousPrefix2",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.handles",
+                            ),
+                            name: "the_handle_too",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.handles",
+                    ),
+                    name: "SomeLongAnonymousPrefix3",
                 },
                 fields: [],
             },
@@ -121,7 +179,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.handles",
                             ),
                             name: "SomeLongAnonymousPrefix0",
                         },
@@ -130,9 +188,27 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.handles",
                             ),
                             name: "SomeLongAnonymousPrefix1",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.handles",
+                            ),
+                            name: "SomeLongAnonymousPrefix2",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.handles",
+                            ),
+                            name: "SomeLongAnonymousPrefix3",
                         },
                         reference: false,
                     },
@@ -300,6 +376,20 @@ BanjoAst {
                         "zx",
                     ),
                     name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "handle",
                 },
                 Ident {
                     namespace: Some(

@@ -154,9 +154,21 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.order",
                     ),
                     name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
                 },
                 fields: [],
             },
@@ -184,9 +196,18 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.order",
                             ),
                             name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.order",
+                            ),
+                            name: "SomeLongAnonymousPrefix1",
                         },
                         reference: false,
                     },

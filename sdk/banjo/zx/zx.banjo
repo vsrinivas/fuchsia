@@ -19,3 +19,7 @@ alias gpaddr = uint64;
 alias off = uint64;
 alias procarg = uint32;
 alias signals = uint32;
+
+// This type mimcs a type defined in the FIDL version of the FIDL library.
+// It is never used directly but plays a pivotal role in ordering type declarations.
+alias handle = uint32;

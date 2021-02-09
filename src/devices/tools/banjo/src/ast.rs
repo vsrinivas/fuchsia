@@ -575,17 +575,20 @@ pub enum Decl {
 }
 
 impl Decl {
-    fn get_order(&self) -> Option<&str> {
+    // Returns an object used to order declaration instances.
+    //
+    // Currently a tuple of optional namespace + required name.
+    fn get_order(&self) -> Option<(Option<String>, String)> {
         // Declarations are alphabetically ordered here. Note however that the list of 0-dependency
         // declarations is processed from the back in `validate_declaration_deps`, resulting in
         // descending alhpabetical order.
         match self {
-            Decl::Protocol { name, .. } => Some(&name.name),
-            Decl::Struct { name, .. } => Some(&name.name),
-            Decl::Union { name, .. } => Some(&name.name),
-            Decl::Enum { name, .. } => Some(&name.name),
-            Decl::Alias(to, _from) => Some(&to.name),
-            Decl::Constant { name, .. } => Some(&name.name),
+            Decl::Protocol { name, .. } => Some(name.fq()),
+            Decl::Struct { name, .. } => Some(name.fq()),
+            Decl::Union { name, .. } => Some(name.fq()),
+            Decl::Enum { name, .. } => Some(name.fq()),
+            Decl::Alias(to, _from) => Some(to.fq()),
+            Decl::Constant { name, .. } => Some(name.fq()),
             Decl::Resource { .. } => None,
         }
     }
@@ -624,11 +627,22 @@ impl PlaceholderGenerator {
         Self { counter: 0 }
     }
 
-    fn get(&mut self) -> (Decl, Ty) {
-        let ident =
-            Ident::new("placeholder", format!("{}{}", ANONYMOUS_PREFIX, self.counter).as_str());
+    fn get(&mut self, ns: &str, params: &Vec<(String, Ty, Attrs)>) -> (Decl, Ty) {
+        let ident = Ident::new(ns, format!("{}{}", ANONYMOUS_PREFIX, self.counter).as_str());
+        let fields: Vec<StructField> = params
+            .iter()
+            .map(|t| {
+                let (name, ty, _) = t;
+                return StructField {
+                    attributes: Attrs(Vec::new()),
+                    ty: ty.clone(),
+                    ident: Ident::new(ns, name),
+                    val: None,
+                };
+            })
+            .collect();
         let result =
-            Decl::Struct { attributes: Attrs(Vec::new()), name: ident.clone(), fields: Vec::new() };
+            Decl::Struct { attributes: Attrs(Vec::new()), name: ident.clone(), fields: fields };
         self.counter += 1;
         (result, Ty::Identifier { id: ident, reference: false })
     }
@@ -901,10 +915,13 @@ impl BanjoAst {
                 let mut placeholders: Vec<Ty> = Vec::new();
                 // Generate an anonymous type for each method.
                 // This ensures the protocol is properly ordered in the list of declarations.
-                for _ in &methods {
-                    let (decl, ty) = placeholder_generator.get();
-                    placeholders.push(ty);
-                    decls.push(decl);
+                for method in &methods {
+                    let (in_decl, in_ty) = placeholder_generator.get(ns, &method.in_params);
+                    placeholders.push(in_ty);
+                    decls.push(in_decl);
+                    let (out_decl, out_ty) = placeholder_generator.get(ns, &method.out_params);
+                    placeholders.push(out_ty);
+                    decls.push(out_decl);
                 }
                 decls.push(Decl::Protocol {
                     attributes,
@@ -1022,8 +1039,25 @@ impl BanjoAst {
                         Decl::Resource { .. } => {}
                     }
                 }
+
+                if id.is_base_type() {
+                    for decl in self.namespaces["zx"].iter() {
+                        match decl {
+                            Decl::Alias(to, _) => {
+                                if to == id {
+                                    return Some(decl);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
                 None
             }
+            Ty::Handle { .. } => Some(
+                self.id_to_decl(&Ident::new("zx", "handle")).expect("Could not find zx.handle"),
+            ),
             _ => None,
         }
     }
@@ -1080,20 +1114,18 @@ impl BanjoAst {
 
         let mut maybe_add_decl = |ty, ignore_ref| {
             if let Some(type_decl) = self.type_to_decl(ty, ignore_ref) {
-                edges.insert(type_decl);
+                match type_decl {
+                    // FIDL omits dependencies on protocols.
+                    Decl::Protocol { .. } => (),
+                    _ => {
+                        edges.insert(type_decl);
+                    }
+                }
             }
         };
 
         match decl {
-            Decl::Protocol { methods, placeholders, .. } => {
-                for method in methods {
-                    for (_, ty, _) in method.in_params.iter() {
-                        maybe_add_decl(&ty, false);
-                    }
-                    for (_, ty, _) in method.out_params.iter() {
-                        maybe_add_decl(&ty, false);
-                    }
-                }
+            Decl::Protocol { placeholders, .. } => {
                 for placeholder in placeholders {
                     maybe_add_decl(&placeholder, false);
                 }
@@ -1111,8 +1143,9 @@ impl BanjoAst {
             Decl::Alias(_to, from) => {
                 maybe_add_decl(&self.id_to_type(from), false);
             }
-            // TODO(surajmalhtora): Implement constant.
-            Decl::Constant { .. } => (),
+            Decl::Constant { ty, .. } => {
+                maybe_add_decl(&ty, false);
+            }
             // Enum cannot have dependencies.
             Decl::Enum { .. } => (),
             Decl::Resource { .. } => (),
@@ -1163,7 +1196,7 @@ impl BanjoAst {
 
             // Decrement the incoming degree of all other decls it points to.
             if let Some(inverse_deps) = inverse_dependencies.get(decl) {
-                for inverse_dep in inverse_deps {
+                for inverse_dep in inverse_deps.iter().sorted() {
                     let degree = degrees.get_mut(inverse_dep).unwrap();
                     assert_ne!(*degree, 0);
                     *degree -= 1;

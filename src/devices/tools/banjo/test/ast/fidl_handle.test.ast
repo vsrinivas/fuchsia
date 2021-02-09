@@ -199,6 +199,20 @@ BanjoAst {
                     name: "uint32",
                 },
             ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "handle",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
         ],
     },
 }

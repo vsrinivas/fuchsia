@@ -19,6 +19,10 @@ typedef uint32_t this_is_an_enum_t;
 #define THIS_IS_AN_ENUM_X UINT32_C(23)
 typedef union this_is_aunion this_is_aunion_t;
 typedef struct this_is_astruct this_is_astruct_t;
+typedef void (*interface_async_callback)(void* ctx, void* intf_ctx, other_types_protocol_ops_t* intf_ops);
+typedef void (*interface_async_refernce_callback)(void* ctx, void* intf_ctx, other_types_protocol_ops_t* intf_ops);
+typedef struct interface_protocol interface_protocol_t;
+typedef struct interface_protocol_ops interface_protocol_ops_t;
 typedef void (*other_types_async_reference_struct_callback)(void* ctx, const this_is_astruct_t* s);
 typedef void (*other_types_async_reference_union_callback)(void* ctx, const this_is_aunion_t* u);
 typedef void (*other_types_async_reference_string_callback)(void* ctx, const char* s);
@@ -38,10 +42,6 @@ typedef struct other_types_async_protocol other_types_async_protocol_t;
 typedef struct other_types_async_protocol_ops other_types_async_protocol_ops_t;
 typedef struct other_types_protocol other_types_protocol_t;
 typedef struct other_types_protocol_ops other_types_protocol_ops_t;
-typedef void (*interface_async_callback)(void* ctx, void* intf_ctx, other_types_protocol_ops_t* intf_ops);
-typedef void (*interface_async_refernce_callback)(void* ctx, void* intf_ctx, other_types_protocol_ops_t* intf_ops);
-typedef struct interface_protocol interface_protocol_t;
-typedef struct interface_protocol_ops interface_protocol_ops_t;
 
 // Declarations
 union this_is_aunion {
@@ -50,6 +50,19 @@ union this_is_aunion {
 
 struct this_is_astruct {
     const char* s;
+};
+
+struct interface_protocol_ops {
+    void (*value)(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t* out_intf);
+    void (*reference)(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t** out_intf);
+    void (*async)(void* ctx, const other_types_protocol_t* intf, interface_async_callback callback, void* cookie);
+    void (*async_refernce)(void* ctx, const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie);
+};
+
+
+struct interface_protocol {
+    interface_protocol_ops_t* ops;
+    void* ctx;
 };
 
 struct other_types_async_reference_protocol_ops {
@@ -110,21 +123,44 @@ struct other_types_protocol {
     void* ctx;
 };
 
-struct interface_protocol_ops {
-    void (*value)(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t* out_intf);
-    void (*reference)(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t** out_intf);
-    void (*async)(void* ctx, const other_types_protocol_t* intf, interface_async_callback callback, void* cookie);
-    void (*async_refernce)(void* ctx, const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie);
-};
-
-
-struct interface_protocol {
-    interface_protocol_ops_t* ops;
-    void* ctx;
-};
-
 
 // Helpers
+static inline void interface_value(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) {
+    const other_types_protocol_t intf2 = {
+        .ops = intf_ops,
+        .ctx = intf_ctx,
+    };
+    const other_types_protocol_t* intf = &intf2;
+    proto->ops->value(proto->ctx, intf, out_intf);
+}
+
+static inline void interface_reference(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) {
+    const other_types_protocol_t intf2 = {
+        .ops = intf_ops,
+        .ctx = intf_ctx,
+    };
+    const other_types_protocol_t* intf = &intf2;
+    proto->ops->reference(proto->ctx, intf, out_intf);
+}
+
+static inline void interface_async(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) {
+    const other_types_protocol_t intf2 = {
+        .ops = intf_ops,
+        .ctx = intf_ctx,
+    };
+    const other_types_protocol_t* intf = &intf2;
+    proto->ops->async(proto->ctx, intf, callback, cookie);
+}
+
+static inline void interface_async_refernce(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) {
+    const other_types_protocol_t intf2 = {
+        .ops = intf_ops,
+        .ctx = intf_ctx,
+    };
+    const other_types_protocol_t* intf = &intf2;
+    proto->ops->async_refernce(proto->ctx, intf, callback, cookie);
+}
+
 static inline void other_types_async_reference_struct(const other_types_async_reference_protocol_t* proto, const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
     proto->ops->struct(proto->ctx, s, callback, cookie);
 }
@@ -211,42 +247,6 @@ static inline void other_types_string_sized(const other_types_protocol_t* proto,
 
 static inline void other_types_string_sized2(const other_types_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
     proto->ops->string_sized2(proto->ctx, s, out_s, s_capacity);
-}
-
-static inline void interface_value(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) {
-    const other_types_protocol_t intf2 = {
-        .ops = intf_ops,
-        .ctx = intf_ctx,
-    };
-    const other_types_protocol_t* intf = &intf2;
-    proto->ops->value(proto->ctx, intf, out_intf);
-}
-
-static inline void interface_reference(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) {
-    const other_types_protocol_t intf2 = {
-        .ops = intf_ops,
-        .ctx = intf_ctx,
-    };
-    const other_types_protocol_t* intf = &intf2;
-    proto->ops->reference(proto->ctx, intf, out_intf);
-}
-
-static inline void interface_async(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) {
-    const other_types_protocol_t intf2 = {
-        .ops = intf_ops,
-        .ctx = intf_ctx,
-    };
-    const other_types_protocol_t* intf = &intf2;
-    proto->ops->async(proto->ctx, intf, callback, cookie);
-}
-
-static inline void interface_async_refernce(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) {
-    const other_types_protocol_t intf2 = {
-        .ops = intf_ops,
-        .ctx = intf_ctx,
-    };
-    const other_types_protocol_t* intf = &intf2;
-    proto->ops->async_refernce(proto->ctx, intf, callback, cookie);
 }
 
 

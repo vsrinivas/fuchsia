@@ -48,7 +48,7 @@ do
     || [ "$filename" = "handles" ] || [ "$filename" = "protocol-array" ] \
     || [ "$filename" = "protocol-vector" ] || [ "$filename" = "tables" ] \
     || [ "$filename" = "example-9" ] || [ "$filename" = "protocol-handle" ] \
-    || [ "$filename" = "types" ]; then
+    || [ "$filename" = "types" ] || [ "$filename" = "order4" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 
@@ -86,7 +86,9 @@ do
     with_rust=false
   fi
 
-  if [ "$filename" = "constants" ] || [ "$filename" = "order" ] || [ "$filename" = "union" ]; then
+  if [ "$filename" = "constants" ] || [ "$filename" = "order" ] || [ "$filename" = "union" ] \
+    || [ "$filename" = "order1" ] || [ "$filename" = "order2" ] || [ "$filename" = "order3" ] \
+    || [ "$filename" = "order4" ]; then
     with_cpp=false
     with_rust=false
   fi

@@ -14,11 +14,16 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct container container_t;
 typedef struct doer_protocol doer_protocol_t;
 typedef struct doer_protocol_ops doer_protocol_ops_t;
-typedef struct container container_t;
 
 // Declarations
+struct container {
+    zx_handle_t a_handle;
+    zx_handle_t another_handle;
+};
+
 struct doer_protocol_ops {
     void (*do_something)(void* ctx, zx_handle_t the_handle);
     void (*do_something_else)(void* ctx, zx_handle_t the_handle_too);
@@ -28,11 +33,6 @@ struct doer_protocol_ops {
 struct doer_protocol {
     doer_protocol_ops_t* ops;
     void* ctx;
-};
-
-struct container {
-    zx_handle_t a_handle;
-    zx_handle_t another_handle;
 };
 
 

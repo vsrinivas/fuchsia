@@ -93,9 +93,64 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.callback",
                     ),
                     name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.callback",
+                                ),
+                                name: "Point",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "p",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.callback",
+                                ),
+                                name: "Direction",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "d",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
                 },
                 fields: [],
             },
@@ -161,9 +216,18 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.callback",
                             ),
                             name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix1",
                         },
                         reference: false,
                     },
@@ -175,19 +239,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
-                    ),
-                    name: "SomeLongAnonymousPrefix1",
-                },
-                fields: [],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "placeholder",
+                        "banjo.examples.callback",
                     ),
                     name: "SomeLongAnonymousPrefix2",
                 },
@@ -199,7 +251,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.callback",
                     ),
                     name: "SomeLongAnonymousPrefix3",
                 },
@@ -211,7 +263,7 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.callback",
                     ),
                     name: "SomeLongAnonymousPrefix4",
                 },
@@ -223,11 +275,226 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.callback",
                     ),
                     name: "SomeLongAnonymousPrefix5",
                 },
                 fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix6",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "commands",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix7",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "result",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.callback",
+                                ),
+                                name: "Point",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "p",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix8",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Identifier {
+                                id: Ident {
+                                    namespace: Some(
+                                        "banjo.examples.callback",
+                                    ),
+                                    name: "Point",
+                                },
+                                reference: false,
+                            },
+                            size: Constant(
+                                "4",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "points",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix9",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "zx",
+                                ),
+                                name: "status",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "rv",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix10",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: Some(
+                                Constant(
+                                    "64",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "one",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.callback",
+                    ),
+                    name: "SomeLongAnonymousPrefix11",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: Some(
+                                Constant(
+                                    "128",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "two",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -393,16 +660,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
-                            ),
-                            name: "SomeLongAnonymousPrefix1",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "placeholder",
+                                "banjo.examples.callback",
                             ),
                             name: "SomeLongAnonymousPrefix2",
                         },
@@ -411,7 +669,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.callback",
                             ),
                             name: "SomeLongAnonymousPrefix3",
                         },
@@ -420,7 +678,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.callback",
                             ),
                             name: "SomeLongAnonymousPrefix4",
                         },
@@ -429,9 +687,63 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.callback",
                             ),
                             name: "SomeLongAnonymousPrefix5",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix6",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix7",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix8",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix9",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix10",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.callback",
+                            ),
+                            name: "SomeLongAnonymousPrefix11",
                         },
                         reference: false,
                     },
@@ -599,6 +911,20 @@ BanjoAst {
                         "zx",
                     ),
                     name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "handle",
                 },
                 Ident {
                     namespace: Some(

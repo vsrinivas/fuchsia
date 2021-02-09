@@ -8,11 +8,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix0",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -20,11 +42,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix1",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -32,11 +76,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix2",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -44,11 +110,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix3",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -56,11 +144,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix4",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -68,11 +178,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix5",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -80,11 +212,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix6",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -92,11 +246,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix7",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -104,11 +280,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix8",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -116,11 +314,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix9",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -128,11 +348,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix10",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -140,11 +382,447 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
                     name: "SomeLongAnonymousPrefix11",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix12",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix13",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix14",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix15",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix16",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix17",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix18",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix19",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix20",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix21",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix22",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix23",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "1",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -655,7 +1333,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix0",
                         },
@@ -664,7 +1342,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix1",
                         },
@@ -673,7 +1351,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix2",
                         },
@@ -682,7 +1360,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix3",
                         },
@@ -691,7 +1369,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix4",
                         },
@@ -700,7 +1378,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix5",
                         },
@@ -709,7 +1387,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix6",
                         },
@@ -718,7 +1396,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix7",
                         },
@@ -727,7 +1405,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix8",
                         },
@@ -736,7 +1414,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix9",
                         },
@@ -745,7 +1423,7 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix10",
                         },
@@ -754,9 +1432,117 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
                             name: "SomeLongAnonymousPrefix11",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix12",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix13",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix14",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix15",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix16",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix17",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix18",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix19",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix20",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix21",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix22",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix23",
                         },
                         reference: false,
                     },
@@ -783,11 +1569,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix12",
+                    name: "SomeLongAnonymousPrefix24",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -795,11 +1603,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix13",
+                    name: "SomeLongAnonymousPrefix25",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -807,11 +1637,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix14",
+                    name: "SomeLongAnonymousPrefix26",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -819,11 +1671,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix15",
+                    name: "SomeLongAnonymousPrefix27",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -831,11 +1705,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix16",
+                    name: "SomeLongAnonymousPrefix28",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -843,11 +1739,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix17",
+                    name: "SomeLongAnonymousPrefix29",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -855,11 +1773,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix18",
+                    name: "SomeLongAnonymousPrefix30",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -867,11 +1807,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix19",
+                    name: "SomeLongAnonymousPrefix31",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -879,11 +1841,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix20",
+                    name: "SomeLongAnonymousPrefix32",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -891,11 +1875,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix21",
+                    name: "SomeLongAnonymousPrefix33",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -903,11 +1909,33 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix22",
+                    name: "SomeLongAnonymousPrefix34",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -915,11 +1943,447 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix23",
+                    name: "SomeLongAnonymousPrefix35",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix36",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix37",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix38",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix39",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix40",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix41",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix42",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix43",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix44",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix45",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix46",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix47",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: None,
+                                reference: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -1430,108 +2894,216 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix12",
+                            name: "SomeLongAnonymousPrefix24",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix13",
+                            name: "SomeLongAnonymousPrefix25",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix14",
+                            name: "SomeLongAnonymousPrefix26",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix15",
+                            name: "SomeLongAnonymousPrefix27",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix16",
+                            name: "SomeLongAnonymousPrefix28",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix17",
+                            name: "SomeLongAnonymousPrefix29",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix18",
+                            name: "SomeLongAnonymousPrefix30",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix19",
+                            name: "SomeLongAnonymousPrefix31",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix20",
+                            name: "SomeLongAnonymousPrefix32",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix21",
+                            name: "SomeLongAnonymousPrefix33",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix22",
+                            name: "SomeLongAnonymousPrefix34",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix23",
+                            name: "SomeLongAnonymousPrefix35",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix36",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix37",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix38",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix39",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix40",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix41",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix42",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix43",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix44",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix45",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix46",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix47",
                         },
                         reference: false,
                     },
@@ -1543,11 +3115,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix24",
+                    name: "SomeLongAnonymousPrefix48",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Bool,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1555,11 +3157,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix25",
+                    name: "SomeLongAnonymousPrefix49",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Bool,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "b",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1567,11 +3199,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix26",
+                    name: "SomeLongAnonymousPrefix50",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int8,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1579,11 +3241,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix27",
+                    name: "SomeLongAnonymousPrefix51",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int8,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1591,11 +3283,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix28",
+                    name: "SomeLongAnonymousPrefix52",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int16,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1603,11 +3325,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix29",
+                    name: "SomeLongAnonymousPrefix53",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int16,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i16",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1615,11 +3367,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix30",
+                    name: "SomeLongAnonymousPrefix54",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int32,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1627,11 +3409,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix31",
+                    name: "SomeLongAnonymousPrefix55",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int32,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i32",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1639,11 +3451,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix32",
+                    name: "SomeLongAnonymousPrefix56",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int64,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1651,11 +3493,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix33",
+                    name: "SomeLongAnonymousPrefix57",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int64,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "i64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1663,11 +3535,41 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix34",
+                    name: "SomeLongAnonymousPrefix58",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt8,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -1675,11 +3577,551 @@ BanjoAst {
                 ),
                 name: Ident {
                     namespace: Some(
-                        "placeholder",
+                        "banjo.examples.protocolvector",
                     ),
-                    name: "SomeLongAnonymousPrefix35",
+                    name: "SomeLongAnonymousPrefix59",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt8,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u8",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix60",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt16,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix61",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt16,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u16",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix62",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt32,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix63",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt32,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix64",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt64,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix65",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt64,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix66",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float32,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix67",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float32,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f32",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix68",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float64,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix69",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float64,
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix70",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Handle {
+                                    ty: None,
+                                    reference: false,
+                                },
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "u64",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocolvector",
+                    ),
+                    name: "SomeLongAnonymousPrefix71",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Handle {
+                                    ty: None,
+                                    reference: false,
+                                },
+                                size: Some(
+                                    Constant(
+                                        "4",
+                                    ),
+                                ),
+                                nullable: false,
+                            },
+                            size: Some(
+                                Constant(
+                                    "vector_size",
+                                ),
+                            ),
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "f64",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -2382,108 +4824,216 @@ BanjoAst {
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix24",
+                            name: "SomeLongAnonymousPrefix48",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix25",
+                            name: "SomeLongAnonymousPrefix49",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix26",
+                            name: "SomeLongAnonymousPrefix50",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix27",
+                            name: "SomeLongAnonymousPrefix51",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix28",
+                            name: "SomeLongAnonymousPrefix52",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix29",
+                            name: "SomeLongAnonymousPrefix53",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix30",
+                            name: "SomeLongAnonymousPrefix54",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix31",
+                            name: "SomeLongAnonymousPrefix55",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix32",
+                            name: "SomeLongAnonymousPrefix56",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix33",
+                            name: "SomeLongAnonymousPrefix57",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix34",
+                            name: "SomeLongAnonymousPrefix58",
                         },
                         reference: false,
                     },
                     Identifier {
                         id: Ident {
                             namespace: Some(
-                                "placeholder",
+                                "banjo.examples.protocolvector",
                             ),
-                            name: "SomeLongAnonymousPrefix35",
+                            name: "SomeLongAnonymousPrefix59",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix60",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix61",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix62",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix63",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix64",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix65",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix66",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix67",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix68",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix69",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix70",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "banjo.examples.protocolvector",
+                            ),
+                            name: "SomeLongAnonymousPrefix71",
                         },
                         reference: false,
                     },
@@ -2651,6 +5201,20 @@ BanjoAst {
                         "zx",
                     ),
                     name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "handle",
                 },
                 Ident {
                     namespace: Some(

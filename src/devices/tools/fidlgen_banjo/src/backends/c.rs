@@ -447,14 +447,17 @@ fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, S
             .map_or(Vec::new(), |response| {
                 response.iter().skip(skip_amt)
                 .map(|param| {
-                    let ty_name = type_to_c_str(&param._type, ir).unwrap();
                     let c_name = to_c_name(&param.name.0);
+                    if let Some(arg_type) = get_base_type_from_alias(
+                        &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                    ) {
+                        return format!("{}* out_{}", arg_type, c_name);
+                    }
+                    let ty_name = type_to_c_str(&param._type, ir).unwrap();
                     match &param._type {
-                        Type::Identifier { identifier, nullable } => {
-                            match ir.get_declaration(identifier).unwrap() {
-                                Declaration::Interface => format!("const {}* {}", ty_name, c_name),
-                                _ => format!("{}{}* out_{}", ty_name, if *nullable { "*" } else { "" }, c_name),
-                            }
+                        Type::Identifier { nullable, .. } => {
+                            let nullable_str = if *nullable { "*" } else { "" };
+                            format!("{}{}* out_{}", ty_name, nullable_str, c_name)
                         }
                         Type::Array { .. } => {
                             let bounds = array_bounds(&param._type).unwrap();
@@ -526,12 +529,6 @@ fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
                 .map(|param| {
                     let c_name = to_c_name(&param.name.0);
                     match &param._type {
-                        Type::Identifier { identifier, .. } => {
-                            match ir.get_declaration(identifier).unwrap() {
-                                Declaration::Interface => format!("{}", c_name),
-                                _ => format!("out_{}", c_name),
-                            }
-                        }
                         Type::Vector { .. } => {
                             let buffer_name = name_buffer(&param.maybe_attributes);
                             let size_name = name_size(&param.maybe_attributes);
