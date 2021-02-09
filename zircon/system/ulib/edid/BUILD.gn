@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/unification/zx_library.gni")
+import("//src/sys/build/components.gni")
 
 zx_library("edid") {
   sdk = "source"
@@ -34,15 +34,9 @@ test("edid-test") {
   ]
 }
 
-unittest_package("edid-test-package") {
+fuchsia_unittest_package("edid-test-package") {
   package_name = "edid-test"
   deps = [ ":edid-test" ]
-  tests = [
-    {
-      name = "edid-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
