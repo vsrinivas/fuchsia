@@ -5,8 +5,8 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/zircon/migrated_targets.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 zx_library("memalloc") {
   sdk = "source"
@@ -50,15 +50,9 @@ test("memalloc-test") {
   ]
 }
 
-test_package("memalloc-test-package") {
+fuchsia_unittest_package("memalloc-test-package") {
   package_name = "memalloc-tests"
   deps = [ ":memalloc-test" ]
-
-  tests = [
-    {
-      name = "memalloc-test"
-    },
-  ]
 }
 
 group("tests") {
