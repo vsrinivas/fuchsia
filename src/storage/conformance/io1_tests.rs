@@ -574,12 +574,11 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
     let contents = "abcdef".as_bytes();
 
     for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
-        let root = root_directory(all_rights, vec![vmo_file("filename.txt", file_flags, contents)]);
+        let root = root_directory(all_rights, vec![vmo_file(TEST_FILE, file_flags, contents)]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
-                .await;
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, buffer) = file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
         assert_eq!(Status::from_raw(status), Status::OK);
 
@@ -604,15 +603,12 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
     let non_readable_flags = all_rights & !io::OPEN_RIGHT_READABLE;
 
     for file_flags in build_flag_combinations(0, non_readable_flags) {
-        let root = root_directory(
-            all_rights,
-            vec![vmo_file("filename.txt", file_flags, "abcdef".as_bytes())],
-        );
+        let root =
+            root_directory(all_rights, vec![vmo_file(TEST_FILE, file_flags, "abcdef".as_bytes())]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
-                .await;
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _buffer) =
             file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
         assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
@@ -631,15 +627,12 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
     let all_rights = all_rights_for_harness(&harness).await;
 
     for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
-        let root = root_directory(
-            all_rights,
-            vec![vmo_file("filename.txt", file_flags, "aaaaa".as_bytes())],
-        );
+        let root =
+            root_directory(all_rights, vec![vmo_file(TEST_FILE, file_flags, "aaaaa".as_bytes())]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
-                .await;
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         // Get writable buffer.
         let (status, buffer) =
             file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
@@ -664,15 +657,12 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
     let non_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
 
     for file_flags in build_flag_combinations(0, non_writable_flags) {
-        let root = root_directory(
-            all_rights,
-            vec![vmo_file("filename.txt", file_flags, "abcdef".as_bytes())],
-        );
+        let root =
+            root_directory(all_rights, vec![vmo_file(TEST_FILE, file_flags, "abcdef".as_bytes())]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
-                .await;
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _buffer) =
             file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
         assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
@@ -708,8 +698,31 @@ async fn file_describe() {
     assert!(matches!(node_info, io::NodeInfo::File { .. }));
 }
 
-// TODO(fxbug.dev/33880): Write vmofile_describe test. It currently returns File instead of Vmofile
-// on rustvfs.
+#[fasync::run_singlethreaded(test)]
+async fn vmo_file_describe() {
+    let harness = connect_to_harness().await;
+    let config = harness.get_config().await.expect("Could not get config from harness");
+    if config.no_vmofile.unwrap_or_default() {
+        return;
+    }
+    let root = root_directory(io::OPEN_RIGHT_READABLE, vec![vmo_file(TEST_FILE, 0, &[])]);
+    let test_dir = get_directory_from_harness(&harness, root);
+    let file = open_node::<io::FileMarker>(
+        &test_dir,
+        io::OPEN_RIGHT_READABLE,
+        io::MODE_TYPE_FILE,
+        TEST_FILE,
+    )
+    .await;
+
+    let node_info = file.describe().await.expect("describe failed");
+
+    assert!(
+        matches!(node_info, io::NodeInfo::Vmofile { .. }),
+        "Expected Vmofile, instead got {:?}",
+        node_info
+    );
+}
 
 #[cfg(test)]
 mod tests {

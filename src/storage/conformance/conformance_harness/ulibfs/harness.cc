@@ -29,39 +29,6 @@ zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
 zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
 
-void AddEntry(const fuchsia::io::test::DirectoryEntry& entry, fs::PseudoDir& dest) {
-  switch (entry.Which()) {
-    case fuchsia::io::test::DirectoryEntry::Tag::kDirectory: {
-      // TODO(fxbug.dev/33880): Set the correct flags on this directory.
-      fbl::RefPtr<fs::PseudoDir> child{fbl::MakeRefCounted<fs::PseudoDir>()};
-      if (entry.directory().has_entries()) {
-        for (const auto& grandchild : entry.directory().entries()) {
-          AddEntry(*grandchild, *child);
-        }
-      }
-      dest.AddEntry(entry.directory().name(), child);
-      break;
-    }
-    case fuchsia::io::test::DirectoryEntry::Tag::kFile: {
-      std::vector<uint8_t> contents = entry.file().contents();
-      auto reader = [contents](fbl::String* output) {
-        *output = fbl::String(reinterpret_cast<const char*>(contents.data()), contents.size());
-        return ZX_OK;
-      };
-      dest.AddEntry(entry.file().name(),
-                    fbl::MakeRefCounted<fs::BufferedPseudoFile>(reader, &DummyWriter));
-      break;
-    }
-    case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile:
-      // TODO(fxbug.dev/33880): Support VMO files.
-      FX_LOGS(ERROR) << "VMO files are not supported";
-      break;
-    case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
-      FX_LOGS(ERROR) << "Unknown DirectoryEntry type";
-      break;
-  }
-}
-
 class UlibfsHarness : public fuchsia::io::test::Io1Harness {
  public:
   explicit UlibfsHarness() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -144,6 +111,47 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Serving directory failed: " << zx_status_get_string(status);
       return;
+    }
+  }
+
+  void AddEntry(const fuchsia::io::test::DirectoryEntry& entry, fs::PseudoDir& dest) {
+    switch (entry.Which()) {
+      case fuchsia::io::test::DirectoryEntry::Tag::kDirectory: {
+        // TODO(fxbug.dev/33880): Set the correct flags on this directory.
+        fbl::RefPtr<fs::PseudoDir> child{fbl::MakeRefCounted<fs::PseudoDir>()};
+        if (entry.directory().has_entries()) {
+          for (const auto& grandchild : entry.directory().entries()) {
+            AddEntry(*grandchild, *child);
+          }
+        }
+        dest.AddEntry(entry.directory().name(), child);
+        break;
+      }
+      case fuchsia::io::test::DirectoryEntry::Tag::kFile: {
+        std::vector<uint8_t> contents = entry.file().contents();
+        auto reader = [contents](fbl::String* output) {
+          *output = fbl::String(reinterpret_cast<const char*>(contents.data()), contents.size());
+          return ZX_OK;
+        };
+        dest.AddEntry(entry.file().name(),
+                      fbl::MakeRefCounted<fs::BufferedPseudoFile>(reader, &DummyWriter));
+        break;
+      }
+      case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile: {
+        // Copy the buffer. We only have a reference, and we need to make sure it lives long enough.
+        fuchsia::mem::Range buffer;
+        entry.vmo_file().buffer().Clone(&buffer);
+
+        dest.AddEntry(entry.vmo_file().name(),
+                      fbl::MakeRefCounted<fs::VmoFile>(buffer.vmo, buffer.offset, buffer.size));
+
+        // Stash the vmo here, because |fs::VmoFile| only borrows a reference to it.
+        test_vmos_.emplace_back(std::move(buffer.vmo));
+        break;
+      }
+      case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
+        FX_LOGS(ERROR) << "Unknown DirectoryEntry type";
+        break;
     }
   }
 
