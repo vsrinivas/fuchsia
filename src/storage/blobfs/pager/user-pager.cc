@@ -212,7 +212,7 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
   size_t end;
   if (add_overflow(offset, length, &end)) {
     FX_LOGS(ERROR) << "pager transfer range would overflow (off=" << offset << ", len=" << length
-                   << ")";
+                   << ") for blob " << info.verifier->digest();
     return PagerErrorStatus::kErrBadState;
   }
 
@@ -267,8 +267,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     // Read from storage into the transfer buffer.
     auto populate_status = uncompressed_transfer_buffer_->Populate(offset, length, info);
     if (!populate_status.is_ok()) {
-      FX_LOGS(ERROR) << "TransferUncompressed: Failed to populate transfer vmo: "
-                     << populate_status.status_string();
+      FX_LOGS(ERROR) << "TransferUncompressed: Failed to populate transfer vmo for blob "
+                     << info.verifier->digest() << ": " << populate_status.status_string();
       return ToPagerErrorStatus(populate_status.status_value());
     }
 
@@ -309,8 +309,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
 
       status = info.verifier->VerifyPartial(mapping.start(), length, offset, rounded_length);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "TransferUncompressed: Failed to verify data: "
-                       << zx_status_get_string(status);
+        FX_LOGS(ERROR) << "TransferUncompressed: Failed to verify data for blob "
+                       << info.verifier->digest() << ": " << zx_status_get_string(status);
         return ToPagerErrorStatus(status);
       }
     }
@@ -320,8 +320,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     zx_status_t status =
         pager_.supply_pages(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferUncompressed: Failed to supply pages to paged VMO: "
-                     << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "TransferUncompressed: Failed to supply pages to paged VMO for blob "
+                     << info.verifier->digest() << ": " << zx_status_get_string(status);
       return ToPagerErrorStatus(status);
     }
 
@@ -376,8 +376,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
 
     if (!mapping_status.is_ok()) {
       FX_LOGS(ERROR) << "TransferChunked: Failed to find range for [" << offset << ", "
-                     << current_decompressed_offset + current_decompressed_length
-                     << "): " << mapping_status.status_string();
+                     << current_decompressed_offset + current_decompressed_length << ") for blob "
+                     << info.verifier->digest() << ": " << mapping_status.status_string();
       return ToPagerErrorStatus(mapping_status.status_value());
     }
     CompressionMapping mapping = mapping_status.value();
@@ -400,8 +400,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
 
     auto populate_status = compressed_transfer_buffer_->Populate(read_offset, read_len, info);
     if (!populate_status.is_ok()) {
-      FX_LOGS(ERROR) << "TransferChunked: Failed to populate transfer vmo: "
-                     << populate_status.status_string();
+      FX_LOGS(ERROR) << "TransferChunked: Failed to populate transfer vmo for blob "
+                     << info.verifier->digest() << ": " << populate_status.status_string();
       return ToPagerErrorStatus(populate_status.status_value());
     }
 
@@ -455,8 +455,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
           mapping.decompressed_offset);
     }
     if (decompress_status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferChunked: Failed to decompress: "
-                     << zx_status_get_string(decompress_status);
+      FX_LOGS(ERROR) << "TransferChunked: Failed to decompress for blob " << info.verifier->digest()
+                     << ": " << zx_status_get_string(decompress_status);
       return ToPagerErrorStatus(decompress_status);
     }
     metrics_->paged_read_metrics().IncrementDecompression(CompressionAlgorithm::CHUNKED,
@@ -470,7 +470,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
         info.verifier->VerifyPartial(decompressed_mapper.start(), mapping.decompressed_length,
                                      mapping.decompressed_offset, rounded_length);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferChunked: Failed to verify data: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "TransferChunked: Failed to verify data for blob "
+                     << info.verifier->digest() << ": " << zx_status_get_string(status);
       return ToPagerErrorStatus(status);
     }
 
@@ -480,8 +481,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
     status = pager_.supply_pages(vmo, mapping.decompressed_offset, rounded_length,
                                  decompression_buffer_, 0);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferChunked: Failed to supply pages to paged VMO: "
-                     << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "TransferChunked: Failed to supply pages to paged VMO for blob "
+                     << info.verifier->digest() << ": " << zx_status_get_string(status);
       return ToPagerErrorStatus(status);
     }
     metrics_->IncrementPageIn(merkle_root_hash, read_offset, read_len);

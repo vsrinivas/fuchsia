@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <ostream>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -280,6 +281,25 @@ class Extent {
   uint64_t data_ = 0;
 };
 
+// This is inlined because format.cc only compiles on Fuchsia builds (not host).
+inline std::ostream& operator<<(std::ostream& stream, const Extent& extent) {
+  stream << "{start:" << extent.Start() << ", len:" << extent.Length() << "}";
+  return stream;
+}
+
+template <size_t N>
+inline std::ostream& operator<<(std::ostream& stream, const Extent (&extents)[N]) {
+  stream << "[";
+  for (size_t i = 0; i < N; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    stream << extents[i];
+  }
+  stream << "]";
+  return stream;
+}
+
 static_assert(sizeof(Extent) == sizeof(uint64_t), "Extent class should only contain data");
 
 // The number of extents within a single blob.
@@ -336,6 +356,13 @@ struct __PACKED NodePrelude {
   bool IsInode() const { return !IsExtentContainer(); }
 };
 
+// This is inlined because format.cc only compiles on Fuchsia builds (not host).
+inline std::ostream& operator<<(std::ostream& stream, const NodePrelude& prelude) {
+  stream << "Node {allocated:" << prelude.IsAllocated() << " is_inode:" << prelude.IsInode()
+         << " version:" << prelude.version << " next_node:" << prelude.next_node << "}";
+  return stream;
+}
+
 struct ExtentContainer;
 
 struct __PACKED alignas(8) Inode {
@@ -356,6 +383,15 @@ struct __PACKED alignas(8) Inode {
   bool IsCompressed() const { return header.flags & kBlobFlagMaskAnyCompression; }
 };
 
+// This is inlined because format.cc only compiles on Fuchsia builds (not host).
+inline std::ostream& operator<<(std::ostream& stream, const Inode& inode) {
+  digest::Digest d(inode.merkle_root_hash);
+  stream << "Inode {header:" << inode.header << " merkle:" << d.ToString()
+         << " blob_size:" << inode.blob_size << " block_count:" << inode.block_count
+         << " extent_count:" << inode.extent_count << " extents:" << inode.extents << "}";
+  return stream;
+}
+
 struct __PACKED alignas(8) ExtentContainer {
   NodePrelude header;
   // The map index of the previous node.
@@ -365,6 +401,14 @@ struct __PACKED alignas(8) ExtentContainer {
   uint16_t reserved;
   Extent extents[kContainerMaxExtents];
 };
+
+// This is inlined because format.cc only compiles on Fuchsia builds (not host).
+inline std::ostream& operator<<(std::ostream& stream, const ExtentContainer& container) {
+  stream << "ExtentContainer {header:" << container.header
+         << " prev_node:" << container.previous_node << " extent_count:" << container.extent_count
+         << " extents:" << container.extents << "}";
+  return stream;
+}
 
 static_assert(sizeof(Inode) == sizeof(ExtentContainer), "Extent nodes must be as large as inodes");
 static_assert(sizeof(Inode) == kBlobfsInodeSize, "Blobfs Inode size is wrong");

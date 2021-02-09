@@ -66,13 +66,13 @@ void BlobfsChecker::TraverseInodeBitmap() {
         zx_status_t status = extents->Next(&extent);
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "check: Failed to acquire extent " << extents->ExtentIndex()
-                         << " within inode " << n;
+                         << " within inode " << n << ": " << *inode.value();
           valid = false;
           break;
         }
         if (extent->Length() == 0) {
           FX_LOGS(ERROR) << "check: Found zero-length extent at idx " << extents->ExtentIndex()
-                         << " within inode " << n;
+                         << " within inode " << n << ": " << *inode.value();
           valid = false;
           break;
         }
@@ -91,7 +91,7 @@ void BlobfsChecker::TraverseInodeBitmap() {
         inode_blocks_ += extent->Length();
       }
 
-      if (blobfs_->LoadAndVerifyBlob(n) != ZX_OK) {
+      if (valid && blobfs_->LoadAndVerifyBlob(n) != ZX_OK) {
         FX_LOGS(ERROR) << "check: detected inode " << n << " with bad state";
         valid = false;
       }
