@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
 
@@ -18,45 +17,21 @@
 #include <ddktl/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
+
 namespace amlogic_ram {
 
 constexpr size_t kRegSize = 0x01000 / sizeof(uint32_t);
 
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+class FakeMmio {
  public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {
+  FakeMmio() {
     regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegSize);
     mmio_ = std::make_unique<ddk_fake::FakeMmioRegRegion>(regs_.get(), sizeof(uint32_t), kRegSize);
-    zx::interrupt::create(zx::resource(ZX_HANDLE_INVALID), 0, ZX_INTERRUPT_VIRTUAL, &irq_);
   }
 
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
-    EXPECT_EQ(index, 0);
-    out_mmio->offset = reinterpret_cast<size_t>(this);
-    return ZX_OK;
-  }
+  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    EXPECT_EQ(index, 0);
-    irq_signaller_ = zx::unowned_interrupt(irq_);
-    *out_irq = std::move(irq_);
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) {
-    out_info->pid = PDEV_PID_AMLOGIC_T931;
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  const pdev_protocol_t* proto() const { return &proto_; }
   ddk::MmioBuffer mmio() { return ddk::MmioBuffer(mmio_->GetMmioBuffer()); }
 
   ddk_fake::FakeMmioReg& reg(size_t ix) {
@@ -64,14 +39,9 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
     return regs_[ix >> 2];
   }
 
-  void InjectInterrupt() { irq_signaller_->trigger(0, zx::time()); }
-
  private:
-  pdev_protocol_t proto_;
   std::unique_ptr<ddk_fake::FakeMmioReg[]> regs_;
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
-  zx::interrupt irq_;
-  zx::unowned_interrupt irq_signaller_;
 };
 
 class Ddk : public fake_ddk::Bind {
@@ -96,6 +66,14 @@ class Ddk : public fake_ddk::Bind {
 class AmlRamDeviceTest : public zxtest::Test {
  public:
   void SetUp() override {
+    irq_signaller_ = pdev_.CreateVirtualInterrupt(0);
+
+    pdev_.set_device_info(pdev_device_info_t{
+        .pid = PDEV_PID_AMLOGIC_T931,
+    });
+
+    pdev_.set_mmio(0, mmio_.mmio_info());
+
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
     protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
     ddk_.SetProtocols(std::move(protocols));
@@ -111,8 +89,12 @@ class AmlRamDeviceTest : public zxtest::Test {
     device->DdkRelease();
   }
 
+  void InjectInterrupt() { irq_signaller_->trigger(0, zx::time()); }
+
  protected:
-  FakePDev pdev_;
+  FakeMmio mmio_;
+  fake_pdev::FakePDev pdev_;
+  zx::unowned_interrupt irq_signaller_;
   Ddk ddk_;
 };
 
@@ -121,14 +103,14 @@ void WriteDisallowed(uint64_t value) { EXPECT_TRUE(false, "got register write of
 TEST_F(AmlRamDeviceTest, InitDoesNothing) {
   // By itself the driver does not write to registers.
   // The fixture's TearDown() test also the lifecycle bits.
-  pdev_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
-  pdev_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
 }
 
 TEST_F(AmlRamDeviceTest, MalformedRequests) {
   // An invalid request does not write to registers.
-  pdev_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
-  pdev_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
 
   ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
 
@@ -177,58 +159,57 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   // |step| helps track of the expected sequence of reads and writes.
   std::atomic<int> step = 0;
 
-  pdev_.reg(MEMBW_TIMER).SetWriteCallback([expect = kCyclesToMeasure, &step](size_t value) {
+  mmio_.reg(MEMBW_TIMER).SetWriteCallback([expect = kCyclesToMeasure, &step](size_t value) {
     EXPECT_EQ(step, 0, "unexpected: 0x%lx", value);
     EXPECT_EQ(value, expect, "0: got write of 0x%lx", value);
     ++step;
   });
 
-  pdev_.reg(MEMBW_PORTS_CTRL)
-      .SetWriteCallback(
-          [start = kControlStart, stop = kControlStop, &step, pdev = &pdev_](size_t value) {
-            if (step == 1) {
-              EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
-              pdev->InjectInterrupt();
-              ++step;
-            } else if (step == 4) {
-              EXPECT_EQ(value, stop, "4: got write of 0x%lx", value);
-              ++step;
-            } else {
-              EXPECT_TRUE(false, "unexpected: 0x%lx", value);
-            }
-          });
+  mmio_.reg(MEMBW_PORTS_CTRL)
+      .SetWriteCallback([this, start = kControlStart, stop = kControlStop, &step](size_t value) {
+        if (step == 1) {
+          EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
+          InjectInterrupt();
+          ++step;
+        } else if (step == 4) {
+          EXPECT_EQ(value, stop, "4: got write of 0x%lx", value);
+          ++step;
+        } else {
+          EXPECT_TRUE(false, "unexpected: 0x%lx", value);
+        }
+      });
 
-  pdev_.reg(MEMBW_PLL_CNTL).SetReadCallback([value = kFreq]() { return value; });
+  mmio_.reg(MEMBW_PLL_CNTL).SetReadCallback([value = kFreq]() { return value; });
 
   // Note that reading from MEMBW_PORTS_CTRL by default returns 0
   // and that makes the operation succeed.
 
-  pdev_.reg(MEMBW_C0_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[0]]() {
+  mmio_.reg(MEMBW_C0_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[0]]() {
     EXPECT_EQ(step, 2);
     // Value of channel 0 cycles granted.
     return value;
   });
 
-  pdev_.reg(MEMBW_C1_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[1]]() {
+  mmio_.reg(MEMBW_C1_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[1]]() {
     EXPECT_EQ(step, 2);
     // Value of channel 1 cycles granted.
     return value;
   });
 
-  pdev_.reg(MEMBW_C2_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[2]]() {
+  mmio_.reg(MEMBW_C2_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[2]]() {
     EXPECT_EQ(step, 2);
     // Value of channel 2 cycles granted.
     return value;
   });
 
-  pdev_.reg(MEMBW_C3_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[3]]() {
+  mmio_.reg(MEMBW_C3_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[3]]() {
     EXPECT_EQ(step, 2);
     ++step;
     // Value of channel 3 cycles granted.
     return value;
   });
 
-  pdev_.reg(MEMBW_ALL_GRANT_CNT)
+  mmio_.reg(MEMBW_ALL_GRANT_CNT)
       .SetReadCallback(
           [&step, value = kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]]() {
             EXPECT_EQ(step, 3);
@@ -272,7 +253,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
 // we can't properly fake at the moment.
 zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
                                         std::optional<MmioBuffer>* mmio, uint32_t cache_policy) {
-  auto* src = reinterpret_cast<amlogic_ram::FakePDev*>(pdev_mmio.offset);
+  auto* src = reinterpret_cast<amlogic_ram::FakeMmio*>(pdev_mmio.offset);
   mmio->emplace(src->mmio());
   return ZX_OK;
 }

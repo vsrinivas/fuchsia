@@ -45,7 +45,7 @@ test("aml-ram-test-bin") {
     ":aml_ram_bind",
     ":common",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
-    "//src/devices/testing/fake-bti",
+    "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",
