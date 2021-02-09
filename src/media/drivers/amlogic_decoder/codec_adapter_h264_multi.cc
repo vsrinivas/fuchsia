@@ -67,8 +67,13 @@ constexpr uint32_t kReadNotEqualWriteAdjustment = 1;
 // The ZX_PAGE_SIZE alignment is just because we won't really allocate a partial page via sysmem
 // anyway, so we may as well use the rest of the last needed page even if kStreamBufferReadAlignment
 // might technically work.
+//
+// The first kPaddingSize is to be able to flush through a first frame.  The second kPaddingSize is
+// because the first kPaddingSize is still in the stream buffer at the time we're decoding the
+// second frame, because the first frame ended just after the first frame's payload data as far as
+// the HW is concerned (despite the need for padding to cause the first frame to complete).
 constexpr uint32_t kStreamBufferSize =
-    AlignUpConstexpr(kMaxCompressedFrameSizeIncludingHeaders + kPaddingSize +
+    AlignUpConstexpr(kMaxCompressedFrameSizeIncludingHeaders + 2 * kPaddingSize +
                          kStreamBufferReadAlignment + kReadNotEqualWriteAdjustment,
                      static_cast<uint32_t>(ZX_PAGE_SIZE));
 static_assert(kStreamBufferSize % ZX_PAGE_SIZE == 0);
@@ -1305,11 +1310,6 @@ void CodecAdapterH264Multi::AsyncResetStreamAfterCurrentFrame() {
     is_stream_failed_ = true;
   }  // ~lock
   events_->onCoreCodecResetStreamAfterCurrentFrame();
-}
-
-uint32_t CodecAdapterH264Multi::InputBufferSize() {
-  ZX_DEBUG_ASSERT(buffer_settings_[kInputPort]);
-  return buffer_settings_[kInputPort]->buffer_settings.size_bytes;
 }
 
 void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
