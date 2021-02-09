@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 
+#include <cstdint>
 #include <thread>
 
 #include "src/lib/fsl/handles/object_info.h"
@@ -77,7 +78,13 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_TRUE(result);
 
   // Set the client constraints.
-  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(client_token));
+  std::vector<uint64_t> additional_format_modifiers;
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+    additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  }
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(client_token),
+                                          /* image_count */ 1, /* width */ 64, /* height */ 32,
+                                          kNoneUsage, additional_format_modifiers);
 
   // Now check that both server ids are allocated.
   bool res_1 =
@@ -124,7 +131,13 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
   EXPECT_FALSE(
       renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1}));
 
-  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token));
+  std::vector<uint64_t> additional_format_modifiers;
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+    additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  }
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
+                                          /* image_count */ 1, /* width */ 64, /* height */ 32,
+                                          kNoneUsage, additional_format_modifiers);
 
   // The buffer collection *should* be valid here.
   auto res = renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
@@ -146,7 +159,13 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_FALSE(
       renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1}));
 
-  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token));
+  std::vector<uint64_t> additional_format_modifiers;
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+    additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  }
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
+                                          /* image_count */ 1, /* width */ 64, /* height */ 32,
+                                          kNoneUsage, additional_format_modifiers);
 
   // The buffer collection *should* be valid here.
   auto import_result =
@@ -189,7 +208,14 @@ void MultithreadingTest(Renderer* renderer) {
 
     EXPECT_TRUE(result);
 
-    SetClientConstraintsAndWaitForAllocated(sysmem_allocator.get(), std::move(tokens.dup_token));
+    std::vector<uint64_t> additional_format_modifiers;
+    if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+      additional_format_modifiers.push_back(
+          fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+    }
+    SetClientConstraintsAndWaitForAllocated(sysmem_allocator.get(), std::move(tokens.local_token),
+                                            /* image_count */ 1, /* width */ 64, /* height */ 32,
+                                            kNoneUsage, additional_format_modifiers);
 
     // Add the bcid to the global vector in a thread-safe manner.
     {

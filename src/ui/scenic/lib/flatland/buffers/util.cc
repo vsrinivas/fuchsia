@@ -22,6 +22,7 @@ void SetClientConstraintsAndWaitForAllocated(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count, uint32_t width,
     uint32_t height, fuchsia::sysmem::BufferUsage usage,
+    const std::vector<uint64_t>& additional_format_modifiers,
     std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints) {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   zx_status_t status =
@@ -39,22 +40,25 @@ void SetClientConstraintsAndWaitForAllocated(
   constraints.usage = usage;
   constraints.min_buffer_count = image_count;
 
-  constraints.image_format_constraints_count = 1;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0] =
-      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
-  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
-  image_constraints.pixel_format.has_format_modifier = true;
-  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  constraints.image_format_constraints_count = 1 + additional_format_modifiers.size();
+  for (size_t i = 0; i < constraints.image_format_constraints_count; i++) {
+    auto& image_constraints = constraints.image_format_constraints[i];
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0] =
+        fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value =
+        i == 0 ? fuchsia::sysmem::FORMAT_MODIFIER_LINEAR : additional_format_modifiers[i - 1];
 
-  image_constraints.required_min_coded_width = width;
-  image_constraints.required_min_coded_height = height;
-  image_constraints.required_max_coded_width = width;
-  image_constraints.required_max_coded_height = height;
-  image_constraints.max_coded_width = width * 4 /*num channels*/;
-  image_constraints.max_coded_height = height;
-  image_constraints.max_bytes_per_row = 0xffffffff;
+    image_constraints.required_min_coded_width = width;
+    image_constraints.required_min_coded_height = height;
+    image_constraints.required_max_coded_width = width;
+    image_constraints.required_max_coded_height = height;
+    image_constraints.max_coded_width = width * 4 /*num channels*/;
+    image_constraints.max_coded_height = height;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+  }
 
   status = buffer_collection->SetConstraints(true, constraints);
   FX_DCHECK(status == ZX_OK);

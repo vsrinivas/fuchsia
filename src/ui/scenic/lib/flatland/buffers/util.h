@@ -46,6 +46,7 @@ void SetClientConstraintsAndWaitForAllocated(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
     uint32_t width = 64, uint32_t height = 32, fuchsia::sysmem::BufferUsage usage = kNoneUsage,
+    const std::vector<uint64_t>& additional_format_modifiers = {},
     std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints = std::nullopt);
 
 // Sets the constraints on a client buffer collection pointer and returns that pointer back to
