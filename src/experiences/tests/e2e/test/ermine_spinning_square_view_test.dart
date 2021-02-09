@@ -67,7 +67,8 @@ void main() {
     // spinning_square_view displays a red square on purple background.
     const purple = 0xffb73a67; //  (0xAABBGGRR)
     const red = 0xff5700f5; //  (0xAABBGGRR)
-    expect(histogram.keys.length, 2);
+    // We should find atleast 2 colors (the visible cursor adds its own color).
+    expect(histogram.keys.length >= 2, isTrue);
     expect(histogram[purple], isNotNull);
     expect(histogram[red], isNotNull);
     expect(histogram[purple] > histogram[red], isTrue);
@@ -76,5 +77,7 @@ void main() {
     await ermine.driver.requestData('close');
     // Verify the view is closed.
     await ermine.driver.waitForAbsent(find.text('spinning_square_view'));
+    // Ensure the component has stopped running.
+    await ermine.isStopped(componentUrl);
   });
 }

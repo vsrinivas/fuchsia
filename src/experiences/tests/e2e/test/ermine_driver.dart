@@ -12,6 +12,7 @@ import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart' show WebDriver;
 
 const _chromeDriverPath = 'runtime_deps/chromedriver';
+const ermineUrl = 'fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx';
 const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 
@@ -47,13 +48,14 @@ class ErmineDriver {
   /// of Ermine using FlutterDriver.
   Future<void> setUp() async {
     // Restart the workstation session.
-    final result = await sl4f.ssh.run('session_control restart');
-    if (result.exitCode != 0) {
-      fail('failed to restart workstation session.');
-    }
+    // TODO(http://fxbug.dev/60644): Uncomment once fixed.
+    // final result = await sl4f.ssh.run('session_control restart');
+    // if (result.exitCode != 0) {
+    //   fail('failed to restart workstation session.');
+    // }
 
     // Wait for Ermine to start.
-    expect(await component.search('ermine.cmx'), isTrue);
+    await isRunning(ermineUrl);
 
     // Initialize Ermine's flutter driver and web driver connectors.
     await _connector.initialize();
@@ -64,6 +66,9 @@ class ErmineDriver {
     if (_driver == null) {
       fail('unable to connect to ermine.');
     }
+
+    // Close any pre-existing views.
+    await _driver.requestData('closeAll');
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
@@ -83,11 +88,41 @@ class ErmineDriver {
   }
 
   /// Launch a component given its [componentUrl].
-  Future<void> launch(String componentUrl) async {
+  Future<void> launch(String componentUrl,
+      {Duration timeout = const Duration(seconds: 30)}) async {
     final result = await sl4f.ssh.run('session_control add $componentUrl');
     if (result.exitCode != 0) {
       fail('failed to launch component: $componentUrl.');
     }
+    if (!await isRunning(componentUrl, timeout: timeout)) {
+      fail('Timed out waiting to launch $componentUrl');
+    }
+  }
+
+  /// Returns true if a component is running.
+  Future<bool> isRunning(String componentUrl,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    final end = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(end)) {
+      var components = await component.list();
+      if (components.where((e) => e.contains(componentUrl)).isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Returns true if a component is stopped.
+  Future<bool> isStopped(String componentUrl,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    final end = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(end)) {
+      var components = await component.list();
+      if (components.where((e) => e.contains(componentUrl)).isEmpty) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Got to the Overview screen.

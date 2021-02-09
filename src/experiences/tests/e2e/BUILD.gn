@@ -5,6 +5,15 @@
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
+# E2E product test runtime dependencies specific to end to end product tests for
+# products in src/experiences.
+#
+# This is pulled from workstation.gni.
+group("end_to_end_deps") {
+  testonly = true
+  public_deps = [ "//src/experiences/bin/ermine_testserver" ]
+}
+
 dart_test("experiences_ermine_session_shell_e2e_test") {
   sources = [
     "ermine_driver.dart",

@@ -40,6 +40,11 @@ void main() {
   test('verify can change timezone setting in quicksettings', () async {
     await ermine.gotoOverview();
 
+    // Change the system timezone using setui_client.
+    await ermine.component.launch(
+        'fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx',
+        ['intl', '--time_zone', 'UTC']);
+
     // tap default timezone (UTC) to launch timezone list
     final defaultTimezone = find.text('UTC');
     await ermine.driver.waitFor(find.text('UTC'));
