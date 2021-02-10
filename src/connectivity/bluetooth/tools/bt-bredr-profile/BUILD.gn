@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_bredr_profile"
+  output_name = "bt-bredr-profile"
   edition = "2018"
   with_unit_tests = true
 
@@ -36,18 +35,8 @@ rustc_binary("bin") {
   ]
 }
 
-package("bt-bredr-profile") {
-  name = "bt_bredr_profile"
-
+fuchsia_shell_package("bt-bredr-profile") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bt_bredr_profile"
-      dest = "bt-bredr-profile"
-      shell = true
-    },
-  ]
 }
 
 fuchsia_unittest_package("bt-bredr-profile-unittests") {
