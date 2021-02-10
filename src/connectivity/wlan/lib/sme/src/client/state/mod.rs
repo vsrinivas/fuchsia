@@ -549,6 +549,14 @@ impl Associated {
             };
             context.info.report_disconnect(disconnect_info);
         }
+        let msg = format!(
+            "received DisassociateInd msg; reason code {:?}",
+            disconnect_source.reason_code()
+        );
+        state_change_ctx.replace(match connected_duration {
+            Some(_) => StateChangeContext::Disconnect { msg, disconnect_source },
+            None => StateChangeContext::Msg(msg),
+        });
 
         // Client is disassociating. The ESS-SA must be kept alive but reset.
         if let Protection::Rsna(rsna) = &mut protection {
@@ -569,13 +577,6 @@ impl Associated {
             &self.protection_ie,
             &context.mlme_sink,
         );
-        state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!(
-                "received DisassociateInd msg; reason code {:?}",
-                disconnect_source.reason_code()
-            ),
-            disconnect_source,
-        });
         Associating {
             cfg: self.cfg,
             cmd,
@@ -1311,7 +1312,7 @@ mod tests {
     use super::*;
     use anyhow::format_err;
     use fidl_fuchsia_wlan_common as fidl_common;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
     use futures::channel::{mpsc, oneshot};
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
@@ -2059,7 +2060,7 @@ mod tests {
     }
 
     #[test]
-    fn log_disconnect_ctx_on_disassoc_from_associated() {
+    fn log_disconnect_ctx_on_disassoc_from_link_up() {
         let mut h = TestHelper::new();
         let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
         assert_eq!(h.context.att_id, 0);
@@ -2081,6 +2082,36 @@ mod tests {
                         reason_code: 10u64,
                         locally_initiated: true,
                     }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn do_not_log_disconnect_ctx_on_disassoc_from_non_link_up() {
+        let mut h = TestHelper::new();
+        let (supplicant, _suppl_mock) = mock_psk_supplicant();
+        let (command, _receiver) = connect_command_wpa2(supplicant);
+        let state = establishing_rsna_state(command);
+
+        let disassociate_ind = MlmeEvent::DisassociateInd {
+            ind: fidl_mlme::DisassociateIndication {
+                peer_sta_address: [0, 0, 0, 0, 0, 0],
+                reason_code: 10,
+                locally_initiated: true,
+            },
+        };
+        let state = state.on_mlme_event(disassociate_ind, &mut h.context);
+        assert_associating(state, &fake_bss!(Wpa2, ssid: b"wpa2".to_vec()));
+
+        assert_inspect_tree!(h._inspector, root: contains {
+            state_events: {
+                // There's no disconnect_ctx node
+                "0": {
+                    "@time": AnyProperty,
+                    ctx: AnyProperty,
+                    from: AnyProperty,
+                    to: AnyProperty,
                 }
             }
         });
