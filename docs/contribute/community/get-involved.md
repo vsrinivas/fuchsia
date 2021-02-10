@@ -114,6 +114,15 @@ Fuchsia:
    </td>
   </tr>
   <tr>
+   <td><a href="https://groups.google.com/a/fuchsia.dev/g/diagnostics-dev">diagnostics-dev</a>
+   </td>
+   <td>
+    Discussions about the development of diagnostics features and services, such as
+    <a href="/docs/development/diagnostics/inspect/README.md">Inspect</a>,
+    <a href="/docs/concepts/diagnostics/logs/README.md">Logs</a>, and the Archivist.
+   </td>
+  </tr>
+  <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/drivers-dev">drivers-dev</a>
    </td>
    <td>For conversation about <a href="/docs/glossary.md#driver">Drivers</a>.
