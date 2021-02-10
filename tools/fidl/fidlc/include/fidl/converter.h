@@ -10,6 +10,7 @@
 #include <stack>
 
 #include "conversion.h"
+#include "flat_ast.h"
 #include "tree_visitor.h"
 
 namespace fidl::conv {
@@ -20,9 +21,11 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   friend Converting;
 
  public:
-  explicit ConvertingTreeVisitor(Conversion::Syntax syntax)
+  explicit ConvertingTreeVisitor(Conversion::Syntax syntax, const flat::Library* library)
       : to_syntax_(syntax),
-        last_conversion_end_(nullptr) {}
+        last_conversion_end_(nullptr),
+        library_(library) {
+  }
 
   // The following block of visitors are purposeful noops. Their nodes are
   // guaranteed to be identical in both the old and new syntax, so its best to
@@ -99,6 +102,11 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // times when doing nested conversions, and to ensure that the remaining text
   // after the final conversion gets copied.
   const char* last_conversion_end_;
+
+  // A pointer to the flat::Library representation of the file being visited.
+  // This will be used when resolving and converting type definitions that
+  // are behind aliases, defined in the imported libraries, and so forth.
+  [[maybe_unused]] const flat::Library* library_;
 };
 
 class Converting {

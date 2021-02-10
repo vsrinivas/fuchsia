@@ -11,31 +11,46 @@
 
 namespace {
 
-std::string Convert(const std::string& in, fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
-  TestLibrary library(in, flags);
+std::string Convert(const std::string& in, std::vector<std::string>& deps, fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
+  // Convert the test file, along with its deps, into a flat AST.
+  TestLibrary flat_lib(in, flags);
+  for (size_t i = 0; i < deps.size(); i++) {
+    const std::string& dep = deps[i];
+    flat_lib.AddSource("dep_lib_" + std::to_string(i) + ".file", dep);
+  }
+  flat_lib.Compile();
+
+  // Read the file again, and convert it into a raw AST.
+  TestLibrary raw_lib(in, flags);
   std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
-  fidl::conv::ConvertingTreeVisitor visitor = fidl::conv::ConvertingTreeVisitor(syntax);
+  raw_lib.Parse(&ast);
+
+  // Run the ConvertingTreeVisitor using the two previously generated ASTs.
+  fidl::conv::ConvertingTreeVisitor visitor = fidl::conv::ConvertingTreeVisitor(syntax, flat_lib.library());
   visitor.OnFile(ast);
   return *visitor.converted_output();
 }
 
 std::string ToOldSyntax(const std::string& in) {
   fidl::ExperimentalFlags flags;
-  return Convert(in, flags, fidl::conv::Conversion::Syntax::kOld);
+  std::vector<std::string> deps;
+  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
 }
 
 std::string ToOldSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
-  return Convert(in, flags, fidl::conv::Conversion::Syntax::kOld);
+  std::vector<std::string> deps;
+  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
 }
 
 std::string ToNewSyntax(const std::string& in) {
   fidl::ExperimentalFlags flags;
-  return Convert(in, flags, fidl::conv::Conversion::Syntax::kNew);
+  std::vector<std::string> deps;
+  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 
 std::string ToNewSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
-  return Convert(in, flags, fidl::conv::Conversion::Syntax::kNew);
+  std::vector<std::string> deps;
+  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 
 TEST(ConverterTests, AliasOfArray) {

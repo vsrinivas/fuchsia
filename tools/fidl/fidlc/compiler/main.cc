@@ -19,6 +19,8 @@
 #include <vector>
 
 #include <fidl/c_generator.h>
+#include <fidl/converter.h>
+#include <fidl/conversion.h>
 #include <fidl/experimental_flags.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
@@ -39,6 +41,7 @@ void Usage() {
          "             [--c-server SERVER_PATH]\n"
          "             [--tables TABLES_PATH]\n"
          "             [--json JSON_PATH]\n"
+         "             [--convert-syntax CONVERTED_SYNTAX_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
          "             [--experimental FLAG_NAME]\n"
          "             [--werror]\n"
@@ -64,6 +67,10 @@ void Usage() {
          "   library's intermediate representation at the given path. The intermediate\n"
          "   representation is JSON that conforms to the schema available via --json-schema.\n"
          "   The intermediate representation is used as input to the various backends.\n"
+         "\n"
+         " * `--convert-syntax CONVERTED_SYNTAX_PATH`. If present, this flag instructs `fidlc`\n"
+         "   to output the last file listed with updated syntax at the given path. The input\n"
+         "   file must be written in the old syntax for this to succeed.\n"
          "\n"
          " * `--name LIBRARY_NAME`. If present, this flag instructs `fidlc` to validate\n"
          "   that the library being compiled has the given name. This flag is useful to\n"
@@ -251,6 +258,7 @@ enum struct Behavior {
   kCServer,
   kTables,
   kJSON,
+  kConvSyntax,
 };
 
 bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
@@ -265,6 +273,15 @@ bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
     return false;
   }
   return true;
+}
+
+std::unique_ptr<fidl::raw::File> ParseIntoRaw(
+    const fidl::SourceFile& source_file,
+    fidl::Reporter* reporter,
+    const fidl::ExperimentalFlags& experimental_flags) {
+  fidl::Lexer lexer(source_file, reporter);
+  fidl::Parser parser(&lexer, reporter, experimental_flags);
+  return parser.Parse();
 }
 
 void Write(std::ostringstream output_stream, const std::string file_path) {
@@ -337,6 +354,9 @@ int main(int argc, char* argv[]) {
     } else if (behavior_argument == "--json") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
+    } else if (behavior_argument == "--convert-syntax") {
+      std::string path = args->Claim();
+      outputs.emplace_back(std::make_pair(Behavior::kConvSyntax, path));
     } else if (behavior_argument == "--name") {
       library_name = args->Claim();
     } else if (behavior_argument == "--experimental") {
@@ -467,6 +487,25 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
       case Behavior::kJSON: {
         fidl::JSONGenerator generator(final_library);
         Write(generator.Produce(), file_path);
+        break;
+      }
+      case Behavior::kConvSyntax: {
+        // The last file in the list of source files is the one actually being
+        // converted - all others were supplied merely to resolve library
+        // dependencies.
+        const auto& sf = source_managers.back().sources()[0];
+
+        // The target file will have to be re-parsed into a raw AST, since the
+        // previous raw AST of that file was consumed to convert it into the
+        // final_library.  The new raw AST, along with the final_library of the
+        // same file, can then be used to create the visitor that performs the
+        // syntax conversion.
+        auto ast = ParseIntoRaw(*sf, reporter, experimental_flags);
+        fidl::conv::ConvertingTreeVisitor visitor = fidl::conv::ConvertingTreeVisitor(fidl::conv::Conversion::Syntax::kNew, final_library);
+        visitor.OnFile(ast);
+        std::ostringstream o;
+        o << *visitor.converted_output();
+        Write(std::move(o), file_path);
         break;
       }
     }
