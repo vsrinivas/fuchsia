@@ -255,27 +255,83 @@ class Action(object):
             required_writes=_abspaths(required_writes))
 
 
-def check_access_permissions(
-        accesses: Iterable[FSAccess],
-        allowed_reads: FrozenSet[str] = {},
-        allowed_writes: FrozenSet[str] = {}) -> Sequence[FSAccess]:
-    """Checks a sequence of accesses against permission constraints.
+def _sorted_join(elements: Iterable[str], joiner: str):
+    return joiner.join(sorted(elements))
+
+
+@dataclasses.dataclass
+class FSAccessSet(object):
+    reads: FrozenSet[str] = dataclasses.field(default_factory=set)
+    writes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    # Deletes are not checked yet.
+
+    @property
+    def all_accesses(self):
+        return self.reads | self.writes
+
+    def __str__(self):
+        if not self.all_accesses:
+            return "[empty accesses]"
+        text = ""
+        if self.reads:
+            text += "\nReads:\n  " + _sorted_join(self.reads, "\n  ")
+        if self.writes:
+            text += "\nWrites:\n  " + _sorted_join(self.reads, "\n  ")
+        # trim first newline if there is one
+        return text.lstrip("\n")
+
+
+def finalize_filesystem_accesses(accesses: Iterable[FSAccess]) -> FSAccessSet:
+    """Converts a sequence of filesystem accesses into sets of accesses.
+
+    This tracks deleted files, assuming that a file that is written and
+    then deleted is only a temporary, and is not counted as a final write.
+    Converting from a stream to set(s) loses access sequence information.
 
     Args:
       accesses: stream of file-system accesses.
-      allowed_reads: set of files that are allowed to be read.
-      allowed_writes: set of files that are allowed to be written.
 
     Returns:
-      access violations (in the order they were encountered)
+      Sets of read and (finally) written files.
     """
-    unexpected_accesses = [
-        access for access in accesses
-        if not access.allowed(allowed_reads, allowed_writes)
-    ]
+    reads = set()
+    writes = set()
+    # TODO(fangism): track and record deletes, infer temporary files,
+    # and treat accesses to temporary files differently.
+    for access in accesses:
+        if access.op == FileAccessType.READ:
+            reads.add(access.path)
+        elif access.op == FileAccessType.WRITE:
+            writes.add(access.path)
+        elif access.op == FileAccessType.DELETE:
+            # This assumes that all deletes are ok.
+            # TODO(fangism): only allow certain patterns for names of
+            # temporary/deleted files.
+            writes.discard(access.path)
 
-    # TODO(fangism): track state of files across moves
-    return unexpected_accesses
+    # TODO(fangism): reading from temporary files should be allowed,
+    # and not count towards the overall set of read files.
+
+    # writes contains the set of files that were not deleted
+    return FSAccessSet(reads=reads, writes=writes)
+
+
+def check_access_permissions(
+        accesses: FSAccessSet, constraints: AccessConstraints) -> FSAccessSet:
+    """Checks a sequence of accesses against permission constraints.
+
+    Args:
+      accesses: sets of file-system read/write accesses.
+      constraints: permitted accesses.
+        .allowed_reads: set of files that are allowed to be read.
+        .allowed_writes: set of files that are allowed to be written.
+
+    Returns:
+      Subset of not-permitted file accesses.
+    """
+    unexpected_reads = accesses.reads - constraints.allowed_reads
+    unexpected_writes = accesses.writes - constraints.allowed_writes
+    return FSAccessSet(reads=unexpected_reads, writes=unexpected_writes)
 
 
 def check_missing_writes(
@@ -680,23 +736,22 @@ def main():
         )
     ]
 
+    file_access_sets = finalize_filesystem_accesses(filtered_accesses)
+
     # Check for overall correctness, print diagnostics,
     # and exit with the right code.
     exit_code = 0
     if args.check_access_permissions:
         # Verify the filesystem access trace.
         unexpected_accesses = check_access_permissions(
-            filtered_accesses,
-            allowed_reads=access_constraints.allowed_reads,
-            allowed_writes=access_constraints.allowed_writes)
+            accesses=file_access_sets, constraints=access_constraints)
 
-        if unexpected_accesses:
-            accesses_formatted = "\n".join(
-                f"{access}" for access in unexpected_accesses)
+        if unexpected_accesses.all_accesses:
+            unexpected_accesses_formatted = str(unexpected_accesses)
             print(
                 f"""
-Unexpected file accesses building {args.label}, following the order they are accessed:
-{accesses_formatted}
+Unexpected file accesses building {args.label}:
+{unexpected_accesses_formatted}
 
 Full access trace:
 {raw_trace}

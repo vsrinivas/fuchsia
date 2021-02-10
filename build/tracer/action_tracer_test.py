@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import textwrap
 import unittest
 from unittest import mock
 
@@ -261,46 +262,144 @@ class CheckAccessAllowedTests(unittest.TestCase):
                 allowed_reads={}, allowed_writes={}))
 
 
+class FormatAccessSetTest(unittest.TestCase):
+
+    def test_empty(self):
+        self.assertEqual(str(action_tracer.FSAccessSet()), "[empty accesses]")
+
+    def test_reads(self):
+        self.assertEqual(
+            str(action_tracer.FSAccessSet(reads={"c", "a", "b"})),
+            textwrap.dedent(
+                """\
+                 Reads:
+                   a
+                   b
+                   c"""))
+
+    def test_reads_writes(self):
+        files = {"c", "a", "b"}
+        self.assertEqual(
+            str(action_tracer.FSAccessSet(reads=files, writes=files)),
+            textwrap.dedent(
+                """\
+                 Reads:
+                   a
+                   b
+                   c
+                 Writes:
+                   a
+                   b
+                   c"""))
+
+
+class FinalizeFileSystemAccessesTest(unittest.TestCase):
+
+    def test_no_accesses(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses([]),
+            action_tracer.FSAccessSet())
+
+    def test_reads(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Read("r1.txt"),
+                    action_tracer.Read("r2.txt"),
+                ]), action_tracer.FSAccessSet(reads={"r1.txt", "r2.txt"}))
+
+    def test_writes(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Write("wb.txt"),
+                    action_tracer.Write("wa.txt"),
+                ]), action_tracer.FSAccessSet(writes={"wa.txt", "wb.txt"}))
+
+    def test_reads_writes_no_deletes(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Read("r2.txt"),
+                    action_tracer.Write("wb.txt"),
+                    action_tracer.Write("wa.txt"),
+                    action_tracer.Read("r1.txt"),
+                ]),
+            action_tracer.FSAccessSet(
+                reads={"r1.txt", "r2.txt"}, writes={"wa.txt", "wb.txt"}))
+
+    def test_delete(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Delete("d1.txt"),
+                    action_tracer.Delete("d2.txt"),
+                ]), action_tracer.FSAccessSet())
+
+    def test_delete_after_write(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Write("temp.txt"),
+                    action_tracer.Delete("temp.txt"),
+                ]), action_tracer.FSAccessSet())
+
+    def test_write_after_delete(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Delete("temp.txt"),
+                    action_tracer.Write("temp.txt"),
+                ]), action_tracer.FSAccessSet(writes={"temp.txt"}))
+
+
 class CheckAccessPermissionsTests(unittest.TestCase):
 
     def test_no_accesses(self):
         self.assertEqual(
-            action_tracer.check_access_permissions([]),
-            [],
+            action_tracer.check_access_permissions(
+                action_tracer.FSAccessSet(), action_tracer.AccessConstraints()),
+            action_tracer.FSAccessSet(),
         )
 
     def test_ok_read(self):
         self.assertEqual(
             action_tracer.check_access_permissions(
-                [action_tracer.Read("readable.txt")],
-                allowed_reads={"readable.txt"}),
-            [],
+                action_tracer.FSAccessSet(reads={"readable.txt"}),
+                action_tracer.AccessConstraints(
+                    allowed_reads={"readable.txt"})),
+            action_tracer.FSAccessSet(),
         )
 
     def test_forbidden_read(self):
-        read = action_tracer.Read("unreadable.txt")
+        read = "unreadable.txt"
         self.assertEqual(
-            action_tracer.check_access_permissions([read]),
-            [read],
+            action_tracer.check_access_permissions(
+                action_tracer.FSAccessSet(reads={read}),
+                action_tracer.AccessConstraints()),
+            action_tracer.FSAccessSet(reads={read}),
         )
 
     def test_ok_write(self):
         self.assertEqual(
             action_tracer.check_access_permissions(
-                [action_tracer.Write("writeable.txt")],
-                allowed_writes={"writeable.txt"}),
-            [],
+                action_tracer.FSAccessSet(writes={"writeable.txt"}),
+                action_tracer.AccessConstraints(
+                    allowed_writes={"writeable.txt"})),
+            action_tracer.FSAccessSet(),
         )
 
     def test_forbidden_writes(self):
         # make sure multiple violations accumulate
-        bad_writes = [
-            action_tracer.Write("unwriteable.txt"),
-            action_tracer.Write("you-shall-not-pass.txt"),
-        ]
+        bad_writes = {
+            "unwriteable.txt",
+            "you-shall-not-pass.txt",
+        }
         self.assertEqual(
-            action_tracer.check_access_permissions(bad_writes),
-            bad_writes,
+            action_tracer.check_access_permissions(
+                action_tracer.FSAccessSet(writes=bad_writes),
+                action_tracer.AccessConstraints()),
+            action_tracer.FSAccessSet(writes=bad_writes),
         )
 
 
