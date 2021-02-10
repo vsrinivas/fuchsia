@@ -25,6 +25,8 @@ pub(crate) const SSH_PRIV: &str = "ssh.priv";
 pub(crate) const SSH_PORT: &str = "ssh.port";
 pub(crate) const OVERNET_MAX_RETRY_COUNT: &str = "overnet.max_retry_count";
 
+pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
+
 #[cfg(not(test))]
 pub async fn get_socket() -> String {
     const OVERNET_SOCKET: &str = "overnet.socket";

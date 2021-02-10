@@ -11,6 +11,7 @@ use {
 
 const LOG_DIR: &str = "log.dir";
 const LOG_ENABLED: &str = "log.enabled";
+pub const LOG_PREFIX: &str = "ffx";
 
 fn config() -> Config {
     // Sets the target level to "Error" so that all logs show their module
@@ -42,7 +43,7 @@ pub async fn init(stdio: bool) -> Result<()> {
     // and enable a "--verbose" flag to the frontend that both logs to stdio and to file.
     // Currently that is avoided here because stdio implies "don't log to this file".
     if is_enabled().await && !stdio {
-        file = Some(log_file("ffx").await?);
+        file = Some(log_file(LOG_PREFIX).await?);
     }
 
     CombinedLogger::init(get_loggers(stdio, file)).context("initializing logger")

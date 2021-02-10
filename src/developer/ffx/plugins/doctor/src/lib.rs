@@ -5,22 +5,33 @@
 use {
     crate::constants::*,
     crate::daemon_manager::{DaemonManager, DefaultDaemonManager},
+    crate::recorder::{DoctorRecorder, Recorder},
     anyhow::{Error, Result},
-    async_std::future::timeout,
+    async_std::{
+        future::timeout,
+        sync::{Arc, Mutex},
+        task::sleep,
+    },
     async_trait::async_trait,
-    ffx_core::{build_info, ffx_plugin},
+    ffx_config::get,
+    ffx_core::{build_info, ffx_bail, ffx_plugin},
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     itertools::{Either, Itertools},
-    std::collections::HashSet,
-    std::time::Duration,
+    std::{
+        collections::HashSet,
+        io::{stdout, Write},
+        path::PathBuf,
+        time::Duration,
+    },
     termion::{color, style},
 };
 
 mod constants;
 mod daemon_manager;
+mod recorder;
 
 macro_rules! success_or_continue {
     ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
@@ -64,6 +75,7 @@ enum StepType {
     CommunicatingWithRcs,
     TargetSummary(Vec<String>, Vec<String>),
     RcsTerminalFailure,
+    RecordGenerated(PathBuf),
 }
 
 #[derive(Debug)]
@@ -165,6 +177,9 @@ impl std::fmt::Display for StepType {
                 "{}\n{}",
                 RCS_TERMINAL_FAILURE, RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS
             )),
+            StepType::RecordGenerated(path) => {
+                format!("Record generated at: {}", path.to_string_lossy().into_owned())
+            }
         };
 
         write!(f, "{}", s)
@@ -178,7 +193,9 @@ trait DoctorStepHandler {
     async fn result(&self, result: StepResult) -> Result<()>;
 }
 
-struct DefaultDoctorStepHandler {}
+struct DefaultDoctorStepHandler {
+    recorder: Arc<Mutex<dyn Recorder + Send>>,
+}
 
 #[async_trait]
 // The StepHandler interface exists to provide a clean separation between the
@@ -189,6 +206,9 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
     // between it and an output_step is the addition of a newline after the step content.
     async fn step(&self, step: StepType) -> Result<()> {
         print!("{}", step);
+        stdout().flush()?;
+        let mut r = self.recorder.lock().await;
+        r.add_output(format!("{}", step));
         Ok(())
     }
 
@@ -196,24 +216,35 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
     // result summary).
     async fn output_step(&self, step: StepType) -> Result<()> {
         println!("{}", step);
+        let mut r = self.recorder.lock().await;
+        r.add_output(format!("{}\n", step));
         Ok(())
     }
 
     // This represents the result of a `step`.
     async fn result(&self, result: StepResult) -> Result<()> {
         println!("{}", result);
+        let mut r = self.recorder.lock().await;
+        r.add_output(format!("{}\n", result));
         Ok(())
     }
 }
 
 impl DefaultDoctorStepHandler {
-    fn new() -> Self {
-        Self {}
+    fn new(recorder: Arc<Mutex<dyn Recorder + Send>>) -> Self {
+        Self { recorder }
     }
 }
 
 fn format_err(e: &Error) -> String {
     format!("{}\n\t{:?}", FAILED_WITH_ERROR, e)
+}
+
+struct DoctorRecorderParameters {
+    record: bool,
+    log_root: PathBuf,
+    output_dir: PathBuf,
+    recorder: Arc<Mutex<dyn Recorder>>,
 }
 
 #[ffx_plugin()]
@@ -223,7 +254,35 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
 
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let target_str = ffx.target.unwrap_or(String::default());
-    let mut handler = DefaultDoctorStepHandler::new();
+
+    let logs_enabled: bool = get("log.enabled").await?;
+    if !logs_enabled && cmd.record {
+        println!(
+            "{}WARNING:{} --record was provided but ffx logs are not enabled. This means your record will only include doctor output.",
+            color::Fg(color::Red), style::Reset
+        );
+        println!(
+            "ffx doctor will proceed, but if you want to enable logs, you can do so by running:"
+        );
+        println!("  ffx config set log.enabled true");
+        println!("You will then need to restart the ffx daemon:");
+        println!("  ffx doctor --force-daemon-restart\n\n");
+        sleep(Duration::from_millis(10000)).await;
+    }
+
+    let log_root: PathBuf = get("log.dir").await?;
+    let output_dir =
+        cmd.record_output.map(|s| PathBuf::from(s)).unwrap_or(std::env::current_dir()?);
+
+    if !output_dir.is_dir() {
+        ffx_bail!(
+            "cannot record: output directory does not exist or is unreadable: {:?}",
+            output_dir
+        );
+    }
+
+    let recorder = Arc::new(Mutex::new(DoctorRecorder::new()));
+    let mut handler = DefaultDoctorStepHandler::new(recorder.clone());
 
     doctor(
         &mut handler,
@@ -233,11 +292,55 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         delay,
         cmd.force_daemon_restart,
         build_info().build_version,
+        DoctorRecorderParameters {
+            record: cmd.record,
+            log_root,
+            output_dir,
+            recorder: recorder.clone(),
+        },
     )
-    .await
+    .await?;
+
+    Ok(())
 }
 
 async fn doctor(
+    step_handler: &mut impl DoctorStepHandler,
+    daemon_manager: &impl DaemonManager,
+    target_str: &str,
+    retry_count: usize,
+    retry_delay: Duration,
+    force_daemon_restart: bool,
+    build_version_string: Option<String>,
+    record_params: DoctorRecorderParameters,
+) -> Result<()> {
+    execute_steps(
+        step_handler,
+        daemon_manager,
+        target_str,
+        retry_count,
+        retry_delay,
+        force_daemon_restart,
+        build_version_string,
+    )
+    .await?;
+
+    if record_params.record {
+        let mut daemon_log = record_params.log_root.clone();
+        daemon_log.push("ffx.daemon.log");
+        let mut fe_log = record_params.log_root.clone();
+        fe_log.push("ffx.log");
+        let mut r = record_params.recorder.lock().await;
+
+        r.add_sources(vec![daemon_log, fe_log]);
+        step_handler
+            .output_step(StepType::RecordGenerated(r.generate(record_params.output_dir)?))
+            .await?;
+    }
+    Ok(())
+}
+
+async fn execute_steps(
     step_handler: &mut impl DoctorStepHandler,
     daemon_manager: &impl DaemonManager,
     target_str: &str,
@@ -399,6 +502,7 @@ async fn doctor(
 mod test {
     use {
         super::*,
+        crate::recorder::Recorder,
         anyhow::anyhow,
         async_std::sync::{Arc, Mutex},
         async_trait::async_trait,
@@ -413,6 +517,8 @@ mod test {
         futures::channel::oneshot::{self, Receiver},
         futures::future::Shared,
         futures::{Future, FutureExt, TryFutureExt, TryStreamExt},
+        std::cell::Cell,
+        tempfile::tempdir,
     };
 
     const NODENAME: &str = "fake-nodename";
@@ -527,6 +633,69 @@ mod test {
             let mut v = self.steps.lock().await;
             v.push(TestStepEntry::result(result));
             Ok(())
+        }
+    }
+
+    struct FakeRecorder {
+        expected_sources: Vec<PathBuf>,
+        expected_output_dir: PathBuf,
+        generate_called: Cell<bool>,
+    }
+
+    impl FakeRecorder {
+        fn new(expected_sources: Vec<PathBuf>, expected_output_dir: PathBuf) -> Self {
+            return Self {
+                expected_sources,
+                expected_output_dir,
+                generate_called: Cell::new(false),
+            };
+        }
+
+        fn assert_generate_called(&self) {
+            assert!(self.generate_called.get())
+        }
+
+        fn result_path() -> PathBuf {
+            PathBuf::from("/tmp")
+        }
+    }
+
+    impl Recorder for FakeRecorder {
+        fn add_sources(&mut self, sources: Vec<PathBuf>) {
+            let source_set: HashSet<_> = sources.iter().collect();
+            let expected_set: HashSet<_> = self.expected_sources.iter().collect();
+            assert_eq!(source_set, expected_set);
+        }
+
+        fn add_output(&mut self, _s: String) {
+            // Do nothing, we don't verify output in tests.
+        }
+
+        fn generate(&self, output_dir: PathBuf) -> Result<PathBuf> {
+            assert_eq!(output_dir, self.expected_output_dir);
+            self.generate_called.set(true);
+            Ok(Self::result_path())
+        }
+    }
+    struct DisabledRecorder {}
+
+    impl DisabledRecorder {
+        fn new() -> Self {
+            return Self {};
+        }
+    }
+
+    impl Recorder for DisabledRecorder {
+        fn add_sources(&mut self, _sources: Vec<PathBuf>) {
+            panic!("add_sources should not be called.")
+        }
+
+        fn add_output(&mut self, _s: String) {
+            // Do nothing, we don't verify output in tests.
+        }
+
+        fn generate(&self, _output_dir: PathBuf) -> Result<PathBuf> {
+            panic!("generate should not be called.")
         }
     }
 
@@ -818,6 +987,35 @@ mod test {
         }
     }
 
+    fn record_params_no_record() -> DoctorRecorderParameters {
+        DoctorRecorderParameters {
+            record: false,
+            log_root: PathBuf::from("/tmp"),
+            output_dir: PathBuf::from("/tmp"),
+            recorder: Arc::new(Mutex::new(DisabledRecorder::new())),
+        }
+    }
+
+    fn record_params_with_temp(
+        root: PathBuf,
+    ) -> (Arc<Mutex<FakeRecorder>>, DoctorRecorderParameters) {
+        let mut fe_log = root.clone();
+        fe_log.push("ffx.log");
+        let mut daemon_log = root.clone();
+        daemon_log.push("ffx.daemon.log");
+        let recorder =
+            Arc::new(Mutex::new(FakeRecorder::new(vec![fe_log, daemon_log], root.clone())));
+        (
+            recorder.clone(),
+            DoctorRecorderParameters {
+                record: true,
+                log_root: root.clone(),
+                output_dir: root.clone(),
+                recorder: recorder.clone(),
+            },
+        )
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_no_daemon_running_no_targets() {
         let fake = FakeDaemonManager::new(
@@ -828,9 +1026,18 @@ mod test {
         );
 
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str())
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
 
         handler
             .assert_matches_steps(vec![
@@ -866,9 +1073,18 @@ mod test {
         );
         let mut handler = FakeStepHandler::new();
 
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str())
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
 
         handler
             .assert_matches_steps(vec![
@@ -899,9 +1115,18 @@ mod test {
         );
         let mut handler = FakeStepHandler::new();
 
-        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false, version_str())
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            2,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
 
         handler
             .assert_matches_steps(vec![
@@ -950,9 +1175,18 @@ mod test {
             ],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false, version_str())
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            2,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
         tx.send(()).unwrap();
         handler
             .assert_matches_steps(vec![
@@ -996,9 +1230,18 @@ mod test {
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str())
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
         tx.send(()).unwrap();
 
         handler
@@ -1047,9 +1290,18 @@ mod test {
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY, false, version_str())
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            &NODENAME,
+            2,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
         tx.send(()).unwrap();
 
         handler
@@ -1099,6 +1351,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            record_params_no_record(),
         )
         .await
         .unwrap();
@@ -1133,7 +1386,18 @@ mod test {
             vec![Ok(setup_responsive_daemon_server())],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, true, version_str()).await.unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            true,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
 
         handler
             .assert_matches_steps(vec![
@@ -1157,5 +1421,44 @@ mod test {
             ])
             .await;
         fake.assert_no_leftover_calls().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_single_try_daemon_running_no_targets_record_enabled() {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server())],
+        );
+        let mut handler = FakeStepHandler::new();
+        let temp = tempdir().unwrap();
+        let root = temp.path().to_path_buf();
+        let (fake_recorder, params) = record_params_with_temp(root);
+
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str(), params)
+            .await
+            .unwrap();
+
+        let r = fake_recorder.lock().await;
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+                TestStepEntry::output_step(StepType::RecordGenerated(FakeRecorder::result_path())),
+            ])
+            .await;
+        fake.assert_no_leftover_calls().await;
+        r.assert_generate_called();
     }
 }

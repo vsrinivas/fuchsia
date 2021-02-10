@@ -31,4 +31,16 @@ pub struct DoctorCommand {
         description = "if true, forces a daemon restart, even if the connection appears to be working"
     )]
     pub force_daemon_restart: bool,
+
+    #[argh(
+        switch,
+        description = "if true, generates an output zip file that can be attached to a monorail issue"
+    )]
+    pub record: bool,
+
+    #[argh(
+        option,
+        description = "sets the output directory for doctor records. Only valid when --record is provided. Defaults to the current directory"
+    )]
+    pub record_output: Option<String>,
 }

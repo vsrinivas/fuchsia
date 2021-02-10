@@ -34,7 +34,7 @@ mod target_task;
 mod util;
 
 pub mod target;
-pub use constants::get_socket;
+pub use constants::{get_socket, LOG_FILE_PREFIX};
 
 async fn create_daemon_proxy(
     overnet_instance: &dyn OvernetInstance,
@@ -93,8 +93,8 @@ pub async fn spawn_daemon() -> Result<()> {
     } else {
         if ffx_config::logging::is_enabled().await {
             // TODO(raggi): maybe dup instead.
-            stdout = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
-            stderr = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
+            stdout = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX).await?);
+            stderr = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX).await?);
         }
     }
 
