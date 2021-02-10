@@ -27,7 +27,7 @@ pub struct ImeServiceState {
     /// `TextInputContext` is a service provided to input methods that want to edit text. Whenever
     /// a new text field is focused, we provide a TextField interface to any connected `TextInputContext`s,
     /// which are listed here.
-    pub text_input_context_clients: Vec<txt::TextInputContextControlHandle>,
+    pub text_input_context_clients: Vec<txt::TextInputContextLegacyControlHandle>,
 }
 
 /// The internal state of the IMEService, usually held behind an Arc<Mutex>
@@ -105,7 +105,7 @@ impl ImeService {
             }
         };
         let (txt_proxy, txt_request_stream) =
-            match fidl::endpoints::create_proxy_and_stream::<txt::TextFieldMarker>() {
+            match fidl::endpoints::create_proxy_and_stream::<txt::TextFieldLegacyMarker>() {
                 Ok(v) => v,
                 Err(e) => {
                     fx_log_err!("Failed to create TextField proxy and stream: {}", e);
@@ -226,7 +226,7 @@ impl ImeService {
         .detach();
     }
 
-    pub fn bind_text_input_context(&self, mut stream: txt::TextInputContextRequestStream) {
+    pub fn bind_text_input_context(&self, mut stream: txt::TextInputContextLegacyRequestStream) {
         let self_clone = self.clone();
         fuchsia_async::Task::spawn(
             async move {
@@ -245,7 +245,7 @@ impl ImeService {
                     .context("error reading value from text input context request stream")?
                 {
                     match msg {
-                        txt::TextInputContextRequest::HideKeyboard { .. } => {
+                        txt::TextInputContextLegacyRequest::HideKeyboard { .. } => {
                             self_clone.hide_keyboard().await;
                         }
                     }
@@ -259,10 +259,10 @@ impl ImeService {
 
 pub fn bind_new_text_field(
     multiplexer: &TextFieldMultiplexer,
-    control_handle: &txt::TextInputContextControlHandle,
+    control_handle: &txt::TextInputContextLegacyControlHandle,
 ) -> Result<(), fidl::Error> {
     let (client_end, request_stream) =
-        fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
+        fidl::endpoints::create_request_stream::<txt::TextFieldLegacyMarker>()
             .expect("Failed to create text field request stream");
     multiplexer.add_request_stream(request_stream);
     control_handle.send_on_focus(client_end)

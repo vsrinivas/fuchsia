@@ -12,8 +12,8 @@ fidl("fuchsia.ui.text") {
 
   sources = [
     "primitives.fidl",
-    "text_field.fidl",
-    "text_manager.fidl",
+    "text_field_legacy.fidl",
+    "text_manager_legacy.fidl",
   ]
 
   public_deps = [

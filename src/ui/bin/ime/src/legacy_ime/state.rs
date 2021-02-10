@@ -14,7 +14,7 @@ use {
         collections::{HashMap, HashSet},
         ops::Range,
     },
-    text::text_field_state::TextFieldState,
+    text::text_field_state::TextFieldStateLegacy,
 };
 
 use super::position;
@@ -44,7 +44,7 @@ pub struct ImeState {
     /// inject_input method. ImeState can only handle talking to one input_method
     /// at a time; it's the responsibility of some other code (likely inside
     /// ImeService) to multiplex multiple TextField interfaces into this one.
-    pub input_method: Option<txt::TextFieldControlHandle>,
+    pub input_method: Option<txt::TextFieldLegacyControlHandle>,
 
     /// A number used to serve the TextField interface. It increments any time any
     /// party makes a change to the state.
@@ -65,7 +65,7 @@ pub struct ImeState {
 
     /// We don't actually apply any edits in a transaction until CommitEdit() is called.
     /// This is a queue of edit requests that will get applied on commit.
-    pub transaction_changes: Vec<txt::TextFieldRequest>,
+    pub transaction_changes: Vec<txt::TextFieldLegacyRequest>,
 
     /// If there is an inflight transaction started with `TextField.BeginEdit()`, this
     /// contains the revision number specified in the `BeginEdit` call. If there is no
@@ -134,8 +134,8 @@ impl ImeState {
     }
 
     /// Converts the current self.text_state (the IME API v1 representation of the text field's state)
-    /// into the v2 representation TextFieldState.
-    pub fn as_text_field_state(&mut self) -> TextFieldState {
+    /// into the v2 representation TextFieldStateLegacy.
+    pub fn as_text_field_state(&mut self) -> TextFieldStateLegacy {
         let anchor_first = self.text_state.selection.base < self.text_state.selection.extent;
         let composition = if self.text_state.composing.start < 0
             || self.text_state.composing.end < 0
@@ -171,7 +171,7 @@ impl ImeState {
             },
             affinity: txt::Affinity::Upstream,
         };
-        TextFieldState {
+        TextFieldStateLegacy {
             document: txt::Range {
                 start: self.new_point(0),
                 end: self.new_point(self.text_state.text.len()),
@@ -209,7 +209,7 @@ impl ImeState {
         let mut new_state = self.text_state.clone();
         for edit in &self.transaction_changes {
             match edit {
-                txt::TextFieldRequest::Replace { range, new_text, .. } => {
+                txt::TextFieldLegacyRequest::Replace { range, new_text, .. } => {
                     let (start, end) = match get_range(&moved_points, &range, true) {
                         Some(v) => v,
                         None => return false,
@@ -266,7 +266,7 @@ impl ImeState {
                         );
                     }
                 }
-                txt::TextFieldRequest::SetSelection { selection, .. } => {
+                txt::TextFieldLegacyRequest::SetSelection { selection, .. } => {
                     let (start, end) = match get_range(&moved_points, &selection.range, false) {
                         Some(v) => v,
                         None => return false,
@@ -280,7 +280,7 @@ impl ImeState {
                         new_state.selection.base = end as i64;
                     }
                 }
-                txt::TextFieldRequest::SetComposition { composition_range, .. } => {
+                txt::TextFieldLegacyRequest::SetComposition { composition_range, .. } => {
                     let (start, end) = match get_range(&moved_points, &composition_range, true) {
                         Some(v) => v,
                         None => return false,
@@ -288,7 +288,7 @@ impl ImeState {
                     new_state.composing.start = start as i64;
                     new_state.composing.end = end as i64;
                 }
-                txt::TextFieldRequest::ClearComposition { .. } => {
+                txt::TextFieldLegacyRequest::ClearComposition { .. } => {
                     new_state.composing.start = -1;
                     new_state.composing.end = -1;
                 }

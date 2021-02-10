@@ -6,8 +6,9 @@ library fuchsia.ui.text;
 
 /// Lists the Positions for selection and other related ranges, at a particular
 /// revision number. Any time the revision number is incremented, all these Positions
-/// become invalid, and a new TextFieldState is sent through OnUpdate.
-table TextFieldState {
+/// become invalid, and a new TextFieldStateLegacy is sent through OnUpdate.
+[Deprecated]
+table TextFieldStateLegacy {
     /// (required) The start and end of the entire text field.
     1: Range document;
 
@@ -21,7 +22,7 @@ table TextFieldState {
 
     /// Some keyboards, notably Japanese, give the user buttons to highlight just a
     /// subset of the composition string for suggestions. It must be equal to or a subset
-    /// of the composition range. If the composition range changes, the TextField may
+    /// of the composition range. If the composition range changes, the TextFieldLegacy may
     /// discard this and require the keyboard to create a new one.
     4: Range composition_highlight;
 
@@ -29,7 +30,7 @@ table TextFieldState {
     /// marks, accents, or other changes to the second key. After the first key, a
     /// highlighted character indicates that the next character will be different. This
     /// range is that highlighted character. If the selection moves away from this
-    /// highlight range, or if the contents of the highlight range change, the TextField
+    /// highlight range, or if the contents of the highlight range change, the TextFieldLegacy
     /// may discard this and require the keyboard to create a new one.
     5: Range dead_key_highlight;
 
@@ -38,10 +39,11 @@ table TextFieldState {
     6: uint64 revision;
 };
 
-/// Indicates errors that can occur with various TextField methods. Until FIDL supports
+/// Indicates errors that can occur with various TextFieldLegacy methods. Until FIDL supports
 /// result return types, if Error has any value except OK, the client must ignore
 /// all other return data from that method.
-enum Error {
+[Deprecated]
+enum ErrorLegacy {
     // Once FIDL supports Result return types, this option can be removed.
     OK = 0;
 
@@ -68,30 +70,31 @@ enum Error {
 /// to read state and make changes to text fields.
 ///
 /// All editing methods must happen within an edit transaction. The edits aren't
-/// applied until CommitEdit is called. **This isn't a lock!** The TextField
+/// applied until CommitEdit is called. **This isn't a lock!** The TextFieldLegacy
 /// can still apply edits on its side, which would increase the current revision
 /// number. When CommitEdit is called, the edits are only run if the revision
-/// number passed to BeginEdit is still valid. TextField implementations can
+/// number passed to BeginEdit is still valid. TextFieldLegacy implementations can
 /// assume that there will only be one client at a time; they don't need to
 /// keep track of a separate transaction list for each client.
-protocol TextField {
+[Deprecated]
+protocol TextFieldLegacy {
     /// Any time the revision number increments, this event fires, with the latest version of
     /// the state. It also fires when a new client connects to the service, so it can get an
     /// initial state without waiting for an edit.
-    -> OnUpdate(TextFieldState state);
+    -> OnUpdate(TextFieldStateLegacy state);
 
     // READ METHODS
 
     /// Returns a new position that is `offset` unicode code points away from `old_position`
-    PositionOffset(Position old_position, int64 offset, uint64 revision) -> (Position new_position, Error error);
+    PositionOffset(Position old_position, int64 offset, uint64 revision) -> (Position new_position, ErrorLegacy error);
 
     /// Returns number of unicode code points between two positions. If the position range.start is after
     /// range.end, then the range is considered `inverted` and distance will be negative.
     /// For all positions A and B, PositionOffset(A, Distance(A, B)) == B
-    Distance(Range range, uint64 revision) -> (int64 distance, Error error);
+    Distance(Range range, uint64 revision) -> (int64 distance, ErrorLegacy error);
 
     /// Returns string of unicode code points between two positions
-    Contents(Range range, uint64 revision) -> (string contents, Position start, Error error);
+    Contents(Range range, uint64 revision) -> (string:MAX contents, Position start, ErrorLegacy error);
 
     // TRANSACTION METHODS
 
@@ -103,7 +106,7 @@ protocol TextField {
     /// If the transaction's revision number (from BeginEdit) is still current,
     /// runs all edit commands queued in this transaction. If not, returns
     /// `BAD_REVISION`.
-    CommitEdit() -> (Error error);
+    CommitEdit() -> (ErrorLegacy error);
 
     /// Discards the current transaction.
     AbortEdit();

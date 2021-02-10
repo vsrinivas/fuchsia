@@ -8,7 +8,7 @@
     "sandbox": {
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.ui.text.TextInputContext"
+            "fuchsia.ui.text.TextInputContextLegacy"
         ]
     }
 }

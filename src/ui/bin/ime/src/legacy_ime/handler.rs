@@ -74,7 +74,7 @@ impl LegacyIme {
     /// Binds a `TextField` to this `LegacyIme`, replacing and unbinding any previous `TextField`.
     /// All requests from the request stream will be translated into requests for
     /// `InputMethodEditorClient`, and for events, vice-versa.
-    pub fn bind_text_field(&self, mut stream: txt::TextFieldRequestStream) {
+    pub fn bind_text_field(&self, mut stream: txt::TextFieldLegacyRequestStream) {
         let mut self_clone = self.clone();
         fuchsia_async::Task::spawn(
             async move {
@@ -138,13 +138,19 @@ impl LegacyIme {
     /// Handles a TextFieldRequest, returning a FIDL error if one occurred when sending a reply.
     async fn handle_text_field_msg(
         &mut self,
-        msg: txt::TextFieldRequest,
+        msg: txt::TextFieldLegacyRequest,
     ) -> Result<(), fidl::Error> {
         let mut ime_state = self.0.lock().await;
         match msg {
-            txt::TextFieldRequest::PositionOffset { old_position, offset, revision, responder } => {
+            txt::TextFieldLegacyRequest::PositionOffset {
+                old_position,
+                offset,
+                revision,
+                responder,
+            } => {
                 if revision != ime_state.revision {
-                    return responder.send(&mut txt::Position { id: 0 }, txt::Error::BadRevision);
+                    return responder
+                        .send(&mut txt::Position { id: 0 }, txt::ErrorLegacy::BadRevision);
                 }
                 let old_char_index = if let Some(v) =
                     get_point(&ime_state.text_points, &old_position).and_then(|old_byte_index| {
@@ -152,7 +158,8 @@ impl LegacyIme {
                     }) {
                     v
                 } else {
-                    return responder.send(&mut txt::Position { id: 0 }, txt::Error::BadRequest);
+                    return responder
+                        .send(&mut txt::Position { id: 0 }, txt::ErrorLegacy::BadRequest);
                 };
                 let new_char_index = (old_char_index as i64 + offset)
                     .max(0)
@@ -161,17 +168,17 @@ impl LegacyIme {
                 let new_byte_index = idx::char_to_byte(&ime_state.text_state.text, new_char_index)
                     .expect("did not expect character to fail");
                 let mut new_point = ime_state.new_point(new_byte_index);
-                return responder.send(&mut new_point, txt::Error::Ok);
+                return responder.send(&mut new_point, txt::ErrorLegacy::Ok);
             }
-            txt::TextFieldRequest::Distance { range, revision, responder } => {
+            txt::TextFieldLegacyRequest::Distance { range, revision, responder } => {
                 if revision != ime_state.revision {
-                    return responder.send(0, txt::Error::BadRevision);
+                    return responder.send(0, txt::ErrorLegacy::BadRevision);
                 }
                 let (byte_start, byte_end) = match get_range(&ime_state.text_points, &range, false)
                 {
                     Some(v) => v,
                     None => {
-                        return responder.send(0, txt::Error::BadRequest);
+                        return responder.send(0, txt::ErrorLegacy::BadRequest);
                     }
                 };
                 let (char_start, char_end) = match (
@@ -180,17 +187,17 @@ impl LegacyIme {
                 ) {
                     (Some(a), Some(b)) => (a, b),
                     _ => {
-                        return responder.send(0, txt::Error::BadRequest);
+                        return responder.send(0, txt::ErrorLegacy::BadRequest);
                     }
                 };
-                return responder.send(char_end as i64 - char_start as i64, txt::Error::Ok);
+                return responder.send(char_end as i64 - char_start as i64, txt::ErrorLegacy::Ok);
             }
-            txt::TextFieldRequest::Contents { range, revision, responder } => {
+            txt::TextFieldLegacyRequest::Contents { range, revision, responder } => {
                 if revision != ime_state.revision {
                     return responder.send(
                         "",
                         &mut txt::Position { id: 0 },
-                        txt::Error::BadRevision,
+                        txt::ErrorLegacy::BadRevision,
                     );
                 }
                 match get_range(&ime_state.text_points, &range, true) {
@@ -198,13 +205,17 @@ impl LegacyIme {
                         let mut start_point = ime_state.new_point(start);
                         match ime_state.text_state.text.get(start..end) {
                             Some(contents) => {
-                                return responder.send(contents, &mut start_point, txt::Error::Ok);
+                                return responder.send(
+                                    contents,
+                                    &mut start_point,
+                                    txt::ErrorLegacy::Ok,
+                                );
                             }
                             None => {
                                 return responder.send(
                                     "",
                                     &mut txt::Position { id: 0 },
-                                    txt::Error::BadRequest,
+                                    txt::ErrorLegacy::BadRequest,
                                 );
                             }
                         }
@@ -213,42 +224,42 @@ impl LegacyIme {
                         return responder.send(
                             "",
                             &mut txt::Position { id: 0 },
-                            txt::Error::BadRequest,
+                            txt::ErrorLegacy::BadRequest,
                         );
                     }
                 }
             }
-            txt::TextFieldRequest::BeginEdit { revision, .. } => {
+            txt::TextFieldLegacyRequest::BeginEdit { revision, .. } => {
                 ime_state.transaction_changes = Vec::new();
                 ime_state.transaction_revision = Some(revision);
                 return Ok(());
             }
-            txt::TextFieldRequest::CommitEdit { responder, .. } => {
+            txt::TextFieldLegacyRequest::CommitEdit { responder, .. } => {
                 if ime_state.transaction_revision != Some(ime_state.revision) {
-                    return responder.send(txt::Error::BadRevision);
+                    return responder.send(txt::ErrorLegacy::BadRevision);
                 }
                 let res = if ime_state.apply_transaction() {
-                    let res = responder.send(txt::Error::Ok);
+                    let res = responder.send(txt::ErrorLegacy::Ok);
                     ime_state.increment_revision(true);
                     res
                 } else {
-                    responder.send(txt::Error::BadRequest)
+                    responder.send(txt::ErrorLegacy::BadRequest)
                 };
                 ime_state.transaction_changes = Vec::new();
                 ime_state.transaction_revision = None;
                 return res;
             }
-            txt::TextFieldRequest::AbortEdit { .. } => {
+            txt::TextFieldLegacyRequest::AbortEdit { .. } => {
                 ime_state.transaction_changes = Vec::new();
                 ime_state.transaction_revision = None;
                 return Ok(());
             }
-            req @ txt::TextFieldRequest::Replace { .. }
-            | req @ txt::TextFieldRequest::SetSelection { .. }
-            | req @ txt::TextFieldRequest::SetComposition { .. }
-            | req @ txt::TextFieldRequest::ClearComposition { .. }
-            | req @ txt::TextFieldRequest::SetDeadKeyHighlight { .. }
-            | req @ txt::TextFieldRequest::ClearDeadKeyHighlight { .. } => {
+            req @ txt::TextFieldLegacyRequest::Replace { .. }
+            | req @ txt::TextFieldLegacyRequest::SetSelection { .. }
+            | req @ txt::TextFieldLegacyRequest::SetComposition { .. }
+            | req @ txt::TextFieldLegacyRequest::ClearComposition { .. }
+            | req @ txt::TextFieldLegacyRequest::SetDeadKeyHighlight { .. }
+            | req @ txt::TextFieldLegacyRequest::ClearDeadKeyHighlight { .. } => {
                 if ime_state.transaction_revision.is_some() {
                     ime_state.transaction_changes.push(req)
                 }

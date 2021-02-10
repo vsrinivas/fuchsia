@@ -6,9 +6,9 @@ use anyhow::{format_err, Error};
 use core::convert::TryFrom;
 use fidl_fuchsia_ui_text as txt;
 
-/// A version of txt::TextFieldState that does not have mandatory fields wrapped in Options.
+/// A version of txt::TextFieldStateLegacy that does not have mandatory fields wrapped in Options.
 /// It also implements Clone.
-pub struct TextFieldState {
+pub struct TextFieldStateLegacy {
     pub document: txt::Range,
     pub selection: txt::Selection,
     pub revision: u64,
@@ -17,9 +17,9 @@ pub struct TextFieldState {
     pub dead_key_highlight: Option<txt::Range>,
 }
 
-impl Clone for TextFieldState {
+impl Clone for TextFieldStateLegacy {
     fn clone(&self) -> Self {
-        TextFieldState {
+        TextFieldStateLegacy {
             document: clone_range(&self.document),
             selection: txt::Selection {
                 range: clone_range(&self.selection.range),
@@ -34,10 +34,10 @@ impl Clone for TextFieldState {
     }
 }
 
-impl TryFrom<txt::TextFieldState> for TextFieldState {
+impl TryFrom<txt::TextFieldStateLegacy> for TextFieldStateLegacy {
     type Error = Error;
-    fn try_from(state: txt::TextFieldState) -> Result<Self, Self::Error> {
-        let txt::TextFieldState {
+    fn try_from(state: txt::TextFieldStateLegacy) -> Result<Self, Self::Error> {
+        let txt::TextFieldStateLegacy {
             revision,
             selection,
             document,
@@ -50,7 +50,7 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
             Some(v) => v,
             None => {
                 return Err(format_err!(format!(
-                    "Expected document field to be set on TextFieldState"
+                    "Expected document field to be set on TextFieldStateLegacy"
                 )))
             }
         };
@@ -58,7 +58,7 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
             Some(v) => v,
             None => {
                 return Err(format_err!(format!(
-                    "Expected selection field to be set on TextFieldState"
+                    "Expected selection field to be set on TextFieldStateLegacy"
                 )))
             }
         };
@@ -66,11 +66,11 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
             Some(v) => v,
             None => {
                 return Err(format_err!(format!(
-                    "Expected revision field to be set on TextFieldState"
+                    "Expected revision field to be set on TextFieldStateLegacy"
                 )))
             }
         };
-        Ok(TextFieldState {
+        Ok(TextFieldStateLegacy {
             document,
             selection,
             revision,
@@ -81,9 +81,9 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
     }
 }
 
-impl Into<txt::TextFieldState> for TextFieldState {
-    fn into(self) -> txt::TextFieldState {
-        let TextFieldState {
+impl Into<txt::TextFieldStateLegacy> for TextFieldStateLegacy {
+    fn into(self) -> txt::TextFieldStateLegacy {
+        let TextFieldStateLegacy {
             revision,
             selection,
             document,
@@ -91,14 +91,14 @@ impl Into<txt::TextFieldState> for TextFieldState {
             composition_highlight,
             dead_key_highlight,
         } = self;
-        txt::TextFieldState {
+        txt::TextFieldStateLegacy {
             document: Some(document),
             selection: Some(selection),
             revision: Some(revision),
             composition,
             composition_highlight,
             dead_key_highlight,
-            ..txt::TextFieldState::EMPTY
+            ..txt::TextFieldStateLegacy::EMPTY
         }
     }
 }

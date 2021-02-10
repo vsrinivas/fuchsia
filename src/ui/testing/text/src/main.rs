@@ -79,7 +79,7 @@ fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
     .detach();
 }
 
-async fn run_test(text_field: txt::TextFieldProxy, test_id: u64) -> Result<(), String> {
+async fn run_test(text_field: txt::TextFieldLegacyProxy, test_id: u64) -> Result<(), String> {
     let mut wrapper = TextFieldWrapper::new(text_field).await.map_err(|e| format!("{}", e))?;
     let res = match TEST_FNS.get(test_id as usize) {
         Some((_test_name, test_fn)) => test_fn(&mut wrapper).await,

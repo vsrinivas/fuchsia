@@ -18,7 +18,7 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::fs;
 use std::sync::Arc;
-use text::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldStateLegacy;
 
 mod keymap;
 
@@ -44,7 +44,7 @@ struct DefaultHardwareImeState {
 }
 
 struct CurrentField {
-    proxy: txt::TextFieldProxy,
+    proxy: txt::TextFieldLegacyProxy,
     last_revision: u64,
     last_selection: txt::Selection,
 }
@@ -68,17 +68,17 @@ impl DefaultHardwareIme {
         Ok(DefaultHardwareIme(Arc::new(Mutex::new(state))))
     }
 
-    fn on_focus(&self, text_field: txt::TextFieldProxy) {
+    fn on_focus(&self, text_field: txt::TextFieldLegacyProxy) {
         let this = self.clone();
         fasync::Task::spawn(async move {
             let mut evt_stream = text_field.take_event_stream();
             // wait for first onupdate to populate self.current_field
             let res = evt_stream.next().await;
-            if let Some(Ok(txt::TextFieldEvent::OnUpdate { state })) = res {
+            if let Some(Ok(txt::TextFieldLegacyEvent::OnUpdate { state })) = res {
                 let internal_state = match state.try_into() {
                     Ok(v) => v,
                     Err(e) => {
-                        fx_log_err!("got invalid TextFieldState: {}", e);
+                        fx_log_err!("got invalid TextFieldStateLegacy: {}", e);
                         return;
                     }
                 };
@@ -95,18 +95,18 @@ impl DefaultHardwareIme {
 
     async fn process_text_field_events(
         &self,
-        mut evt_stream: txt::TextFieldEventStream,
+        mut evt_stream: txt::TextFieldLegacyEventStream,
     ) -> Result<(), Error> {
         while let Some(msg) = evt_stream.next().await {
             match msg {
-                Ok(txt::TextFieldEvent::OnUpdate { state }) => {
+                Ok(txt::TextFieldLegacyEvent::OnUpdate { state }) => {
                     let mut lock = self.0.lock().await;
                     lock.on_update(state.try_into()?);
                     lock.process_input_queue().await;
                 }
                 Err(e) => {
                     return Err(format_err!(
-                        "error when receiving message from TextFieldEventStream: {}",
+                        "error when receiving message from TextFieldLegacyEventStream: {}",
                         e
                     ));
                 }
@@ -128,7 +128,11 @@ impl<E: Into<Error>> From<E> for OnInputError {
 }
 
 impl DefaultHardwareImeState {
-    fn on_first_update(&mut self, text_field: txt::TextFieldProxy, state: TextFieldState) {
+    fn on_first_update(
+        &mut self,
+        text_field: txt::TextFieldLegacyProxy,
+        state: TextFieldStateLegacy,
+    ) {
         self.current_field = Some(CurrentField {
             proxy: text_field,
             last_revision: state.revision,
@@ -136,7 +140,7 @@ impl DefaultHardwareImeState {
         });
     }
 
-    fn on_update(&mut self, state: TextFieldState) {
+    fn on_update(&mut self, state: TextFieldStateLegacy) {
         if let Some(s) = &mut self.current_field {
             s.last_selection = state.selection;
             s.last_revision = state.revision;
@@ -252,11 +256,13 @@ impl DefaultHardwareImeState {
     }
 }
 
-fn convert_commit_result(fidl_result: Result<txt::Error, fidl::Error>) -> Result<(), OnInputError> {
+fn convert_commit_result(
+    fidl_result: Result<txt::ErrorLegacy, fidl::Error>,
+) -> Result<(), OnInputError> {
     match fidl_result {
         Ok(e) => match e {
-            txt::Error::Ok => Ok(()),
-            txt::Error::BadRevision => Err(OnInputError::Retry),
+            txt::ErrorLegacy::Ok => Ok(()),
+            txt::ErrorLegacy::BadRevision => Err(OnInputError::Retry),
             e => Err(format_err!("DefaultHardwareIme received a Error: {:#?}", e).into()),
         },
         Err(e) => Err(format_err!("DefaultHardwareIme received a fidl::Error: {:#?}", e).into()),
@@ -333,14 +339,14 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
-    let text_service = connect_to_service::<txt::TextInputContextMarker>()?;
+    let text_service = connect_to_service::<txt::TextInputContextLegacyMarker>()?;
     let mut evt_stream = text_service.take_event_stream();
     while let Some(evt) = evt_stream.next().await {
         match evt {
-            Ok(txt::TextInputContextEvent::OnFocus { text_field }) => {
+            Ok(txt::TextInputContextLegacyEvent::OnFocus { text_field }) => {
                 ime.on_focus(text_field.into_proxy()?);
             }
-            Ok(txt::TextInputContextEvent::OnInputEvent { event }) => match event {
+            Ok(txt::TextInputContextLegacyEvent::OnInputEvent { event }) => match event {
                 uii::InputEvent::Keyboard(ke) => {
                     let mut lock = ime.0.lock().await;
                     // drop inputs if the queue is really long
@@ -353,7 +359,7 @@ async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
                     fx_log_err!("DefaultHardwareIme received a non-keyboard event");
                 }
             },
-            Ok(txt::TextInputContextEvent::OnKey3Event { .. }) => {
+            Ok(txt::TextInputContextLegacyEvent::OnKey3Event { .. }) => {
                 unimplemented!();
             }
             Err(e) => {
@@ -425,8 +431,8 @@ mod tests {
     use super::*;
     use futures::future::join;
 
-    fn default_state() -> TextFieldState {
-        TextFieldState {
+    fn default_state() -> TextFieldStateLegacy {
+        TextFieldStateLegacy {
             document: txt::Range { start: txt::Position { id: 0 }, end: txt::Position { id: 0 } },
             selection: txt::Selection {
                 range: txt::Range { start: txt::Position { id: 0 }, end: txt::Position { id: 0 } },
@@ -443,7 +449,8 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn state_sends_edits_on_input_and_retries() {
         let ime = DefaultHardwareIme::new().unwrap();
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldMarker>().unwrap();
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<txt::TextFieldLegacyMarker>().unwrap();
         let mut request_stream = server_end.into_stream().unwrap();
 
         let client = async move {
@@ -471,20 +478,20 @@ mod tests {
             // first set of edits, reply with BadRevision
             let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
-                txt::TextFieldRequest::BeginEdit { .. } => {}
+                txt::TextFieldLegacyRequest::BeginEdit { .. } => {}
                 _ => panic!("expected first BeginEdit request"),
             }
             let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
-                txt::TextFieldRequest::Replace { new_text, .. } => {
+                txt::TextFieldLegacyRequest::Replace { new_text, .. } => {
                     assert_eq!("a", new_text);
                 }
                 _ => panic!("expected first Replace request"),
             }
             let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
-                txt::TextFieldRequest::CommitEdit { responder, .. } => {
-                    responder.send(txt::Error::BadRevision).unwrap();
+                txt::TextFieldLegacyRequest::CommitEdit { responder, .. } => {
+                    responder.send(txt::ErrorLegacy::BadRevision).unwrap();
                 }
                 _ => panic!("expected first CommitEdit request"),
             }
@@ -492,20 +499,20 @@ mod tests {
             // second round of updates
             let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
-                txt::TextFieldRequest::BeginEdit { .. } => {}
+                txt::TextFieldLegacyRequest::BeginEdit { .. } => {}
                 _ => panic!("expected second BeginEdit request"),
             }
             let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
-                txt::TextFieldRequest::Replace { new_text, .. } => {
+                txt::TextFieldLegacyRequest::Replace { new_text, .. } => {
                     assert_eq!("a", new_text);
                 }
                 _ => panic!("expected second Replace request"),
             }
             let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
-                txt::TextFieldRequest::CommitEdit { responder, .. } => {
-                    responder.send(txt::Error::Ok).unwrap();
+                txt::TextFieldLegacyRequest::CommitEdit { responder, .. } => {
+                    responder.send(txt::ErrorLegacy::Ok).unwrap();
                 }
                 _ => panic!("expected second CommitEdit request"),
             }

@@ -43,7 +43,7 @@ async fn run_test(
 ) -> Result<(), String> {
     let mut ime_service = crate::ime_service::ImeService::new();
     let (text_proxy, text_stream) =
-        fidl::endpoints::create_proxy_and_stream::<txt::TextInputContextMarker>()
+        fidl::endpoints::create_proxy_and_stream::<txt::TextInputContextLegacyMarker>()
             .expect("Failed to create proxy");
     let (imec_client, _imec_server) =
         fidl::endpoints::create_endpoints::<uii::InputMethodEditorClientMarker>()
@@ -68,7 +68,7 @@ async fn run_test(
         .expect("Failed to get event.")
         .expect("TextInputContext event stream unexpectedly closed.");
     let text_field = match msg {
-        txt::TextInputContextEvent::OnFocus { text_field, .. } => text_field,
+        txt::TextInputContextLegacyEvent::OnFocus { text_field, .. } => text_field,
         _ => panic!("Expected text_field to pass OnFocus event type"),
     };
     let (passed, msg) =

@@ -11,7 +11,7 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 use std::convert::TryInto;
 use std::sync::Arc;
-use text::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldStateLegacy;
 
 /// Multiplexes multiple TextFieldRequestStreams into a single TextFieldProxy. This is not quite as
 /// easy as just forwarding each request — we need to broadcast events from the Proxy to every
@@ -23,15 +23,15 @@ pub struct TextFieldMultiplexer {
     inner: Arc<Mutex<TextFieldMultiplexerState>>,
 }
 struct TextFieldMultiplexerState {
-    proxy: txt::TextFieldProxy,
-    control_handles: Vec<txt::TextFieldControlHandle>,
-    last_state: Option<TextFieldState>,
+    proxy: txt::TextFieldLegacyProxy,
+    control_handles: Vec<txt::TextFieldLegacyControlHandle>,
+    last_state: Option<TextFieldStateLegacy>,
 }
 
 impl TextFieldMultiplexer {
     // TODO(fxbug.dev/26771): need way to close out a multiplexer's connections, right now Arc<Mutex<>> will
     // cause it to persist even if a new text field is focused.
-    pub fn new(proxy: txt::TextFieldProxy) -> TextFieldMultiplexer {
+    pub fn new(proxy: txt::TextFieldLegacyProxy) -> TextFieldMultiplexer {
         let mut event_stream = proxy.take_event_stream();
         let state =
             TextFieldMultiplexerState { proxy, control_handles: Vec::new(), last_state: None };
@@ -44,10 +44,10 @@ impl TextFieldMultiplexer {
                     .await
                     .context("error reading value from text field event stream")?
                 {
-                    let txt::TextFieldEvent::OnUpdate { state: textfield_state } = msg;
+                    let txt::TextFieldLegacyEvent::OnUpdate { state: textfield_state } = msg;
                     match textfield_state.try_into() {
                         Ok(textfield_state) => {
-                            let textfield_state: TextFieldState = textfield_state;
+                            let textfield_state: TextFieldStateLegacy = textfield_state;
                             let mut multiplex_state = multiplexer2.inner.lock().await;
                             multiplex_state.control_handles.retain(|handle| {
                                 handle.send_on_update(textfield_state.clone().into()).is_ok()
@@ -68,7 +68,7 @@ impl TextFieldMultiplexer {
         multiplexer
     }
 
-    pub fn add_request_stream(&self, mut stream: txt::TextFieldRequestStream) {
+    pub fn add_request_stream(&self, mut stream: txt::TextFieldLegacyRequestStream) {
         let this = self.clone();
         fasync::Task::spawn(
             async move {
@@ -105,23 +105,23 @@ impl TextFieldMultiplexer {
 
     async fn handle_request<'a>(
         &'a self,
-        req: txt::TextFieldRequest,
-        edit_queue: &'a mut Vec<txt::TextFieldRequest>,
+        req: txt::TextFieldLegacyRequest,
+        edit_queue: &'a mut Vec<txt::TextFieldLegacyRequest>,
         transaction_revision: &'a mut Option<u64>,
     ) -> Result<(), Error> {
         let state = self.inner.lock().await;
         match req {
-            req @ txt::TextFieldRequest::Replace { .. }
-            | req @ txt::TextFieldRequest::SetSelection { .. }
-            | req @ txt::TextFieldRequest::SetComposition { .. }
-            | req @ txt::TextFieldRequest::ClearComposition { .. }
-            | req @ txt::TextFieldRequest::SetDeadKeyHighlight { .. }
-            | req @ txt::TextFieldRequest::ClearDeadKeyHighlight { .. } => {
+            req @ txt::TextFieldLegacyRequest::Replace { .. }
+            | req @ txt::TextFieldLegacyRequest::SetSelection { .. }
+            | req @ txt::TextFieldLegacyRequest::SetComposition { .. }
+            | req @ txt::TextFieldLegacyRequest::ClearComposition { .. }
+            | req @ txt::TextFieldLegacyRequest::SetDeadKeyHighlight { .. }
+            | req @ txt::TextFieldLegacyRequest::ClearDeadKeyHighlight { .. } => {
                 if transaction_revision.is_some() {
                     edit_queue.push(req);
                 }
             }
-            txt::TextFieldRequest::PositionOffset {
+            txt::TextFieldLegacyRequest::PositionOffset {
                 mut old_position,
                 offset,
                 revision,
@@ -131,20 +131,20 @@ impl TextFieldMultiplexer {
                     state.proxy.position_offset(&mut old_position, offset, revision).await?;
                 responder.send(&mut position, error)?;
             }
-            txt::TextFieldRequest::Distance { mut range, revision, responder } => {
+            txt::TextFieldLegacyRequest::Distance { mut range, revision, responder } => {
                 let (distance, error) = state.proxy.distance(&mut range, revision).await?;
                 responder.send(distance, error)?;
             }
-            txt::TextFieldRequest::Contents { mut range, revision, responder } => {
+            txt::TextFieldLegacyRequest::Contents { mut range, revision, responder } => {
                 let (mut contents, mut point, error) =
                     state.proxy.contents(&mut range, revision).await?;
                 responder.send(&mut contents, &mut point, error)?;
             }
-            txt::TextFieldRequest::BeginEdit { revision, .. } => {
+            txt::TextFieldLegacyRequest::BeginEdit { revision, .. } => {
                 *transaction_revision = Some(revision);
                 edit_queue.clear();
             }
-            txt::TextFieldRequest::CommitEdit { responder } => {
+            txt::TextFieldLegacyRequest::CommitEdit { responder } => {
                 if let Some(revision) = *transaction_revision {
                     state.proxy.begin_edit(revision)?;
                     for edit in edit_queue.iter_mut() {
@@ -154,11 +154,11 @@ impl TextFieldMultiplexer {
                     let error = state.proxy.commit_edit().await?;
                     responder.send(error)?;
                 } else {
-                    responder.send(txt::Error::BadRequest)?;
+                    responder.send(txt::ErrorLegacy::BadRequest)?;
                 }
                 *transaction_revision = None;
             }
-            txt::TextFieldRequest::AbortEdit { .. } => {
+            txt::TextFieldLegacyRequest::AbortEdit { .. } => {
                 *transaction_revision = None;
                 edit_queue.clear();
             }
@@ -167,28 +167,31 @@ impl TextFieldMultiplexer {
     }
 }
 
-fn forward_edit(msg: &mut txt::TextFieldRequest, proxy: &txt::TextFieldProxy) -> Result<(), Error> {
+fn forward_edit(
+    msg: &mut txt::TextFieldLegacyRequest,
+    proxy: &txt::TextFieldLegacyProxy,
+) -> Result<(), Error> {
     match msg {
-        txt::TextFieldRequest::Replace { ref mut range, ref mut new_text, .. } => {
+        txt::TextFieldLegacyRequest::Replace { ref mut range, ref mut new_text, .. } => {
             proxy.replace(range, new_text)?;
         }
-        txt::TextFieldRequest::SetSelection { ref mut selection, .. } => {
+        txt::TextFieldLegacyRequest::SetSelection { ref mut selection, .. } => {
             proxy.set_selection(selection)?;
         }
-        txt::TextFieldRequest::SetComposition {
+        txt::TextFieldLegacyRequest::SetComposition {
             ref mut composition_range,
             ref mut highlight_range,
             ..
         } => {
             proxy.set_composition(composition_range, highlight_range.as_deref_mut())?;
         }
-        txt::TextFieldRequest::ClearComposition { .. } => {
+        txt::TextFieldLegacyRequest::ClearComposition { .. } => {
             proxy.clear_composition()?;
         }
-        txt::TextFieldRequest::SetDeadKeyHighlight { ref mut range, .. } => {
+        txt::TextFieldLegacyRequest::SetDeadKeyHighlight { ref mut range, .. } => {
             proxy.set_dead_key_highlight(range)?;
         }
-        txt::TextFieldRequest::ClearDeadKeyHighlight { .. } => {
+        txt::TextFieldLegacyRequest::ClearDeadKeyHighlight { .. } => {
             proxy.clear_dead_key_highlight()?;
         }
         _ => panic!("attempted to forward non-edit TextFieldRequest"),
@@ -201,8 +204,10 @@ mod tests {
     use super::*;
     use futures::future::join;
 
-    async fn setup() -> (txt::TextFieldRequestStream, txt::TextFieldProxy, txt::TextFieldProxy) {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldMarker>()
+    async fn setup(
+    ) -> (txt::TextFieldLegacyRequestStream, txt::TextFieldLegacyProxy, txt::TextFieldLegacyProxy)
+    {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldLegacyMarker>()
             .expect("failed to create TextFieldProxy");
         let multiplex = TextFieldMultiplexer::new(proxy);
         let final_request_stream =
@@ -210,7 +215,7 @@ mod tests {
 
         let proxy1 = {
             let (client_end, request_stream) =
-                fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
+                fidl::endpoints::create_request_stream::<txt::TextFieldLegacyMarker>()
                     .expect("failed to create TextFieldRequestStream");
             multiplex.add_request_stream(request_stream);
             client_end.into_proxy().expect("failed to create TextFieldProxy")
@@ -218,7 +223,7 @@ mod tests {
 
         let proxy2 = {
             let (client_end, request_stream) =
-                fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
+                fidl::endpoints::create_request_stream::<txt::TextFieldLegacyMarker>()
                     .expect("failed to create TextFieldRequestStream");
             multiplex.add_request_stream(request_stream);
             client_end.into_proxy().expect("failed to create TextFieldProxy")
@@ -227,7 +232,9 @@ mod tests {
         (final_request_stream, proxy1, proxy2)
     }
 
-    async fn get_stream_msg(stream: &mut txt::TextFieldRequestStream) -> txt::TextFieldRequest {
+    async fn get_stream_msg(
+        stream: &mut txt::TextFieldLegacyRequestStream,
+    ) -> txt::TextFieldLegacyRequest {
         stream
             .try_next()
             .await
@@ -236,40 +243,40 @@ mod tests {
     }
 
     async fn expect_begin_edit(
-        mut stream: &mut txt::TextFieldRequestStream,
+        mut stream: &mut txt::TextFieldLegacyRequestStream,
         expected_revision: u64,
     ) {
         match get_stream_msg(&mut stream).await {
-            txt::TextFieldRequest::BeginEdit { revision, .. } => {
+            txt::TextFieldLegacyRequest::BeginEdit { revision, .. } => {
                 assert_eq!(revision, expected_revision);
             }
             _ => panic!("server got unexpected request!"),
         }
     }
 
-    async fn expect_replace(mut stream: &mut txt::TextFieldRequestStream, expected_id: u64) {
+    async fn expect_replace(mut stream: &mut txt::TextFieldLegacyRequestStream, expected_id: u64) {
         match get_stream_msg(&mut stream).await {
-            txt::TextFieldRequest::Replace { range, .. } => {
+            txt::TextFieldLegacyRequest::Replace { range, .. } => {
                 assert_eq!(range.start.id, expected_id);
             }
             _ => panic!("server got unexpected request!"),
         }
     }
 
-    async fn expect_commit_edit(mut stream: &mut txt::TextFieldRequestStream) {
+    async fn expect_commit_edit(mut stream: &mut txt::TextFieldLegacyRequestStream) {
         match get_stream_msg(&mut stream).await {
-            txt::TextFieldRequest::CommitEdit { responder, .. } => {
-                responder.send(txt::Error::Ok).expect("failed to send CommitEdit reply");
+            txt::TextFieldLegacyRequest::CommitEdit { responder, .. } => {
+                responder.send(txt::ErrorLegacy::Ok).expect("failed to send CommitEdit reply");
             }
             _ => panic!("server got unexpected request!"),
         }
     }
 
-    async fn expect_position_offset(mut stream: &mut txt::TextFieldRequestStream) {
+    async fn expect_position_offset(mut stream: &mut txt::TextFieldLegacyRequestStream) {
         match get_stream_msg(&mut stream).await {
-            txt::TextFieldRequest::PositionOffset { mut old_position, responder, .. } => {
+            txt::TextFieldLegacyRequest::PositionOffset { mut old_position, responder, .. } => {
                 responder
-                    .send(&mut old_position, txt::Error::Ok)
+                    .send(&mut old_position, txt::ErrorLegacy::Ok)
                     .expect("failed to send PositionOffset reply");
             }
             _ => panic!("server got unexpected request!"),
@@ -339,14 +346,20 @@ mod tests {
             .await
             .expect("failed to call PositionOffset");
         // commit should succeed
-        assert_eq!(proxy_a.commit_edit().await.expect("failed to send CommitEdit"), txt::Error::Ok);
+        assert_eq!(
+            proxy_a.commit_edit().await.expect("failed to send CommitEdit"),
+            txt::ErrorLegacy::Ok
+        );
         // but a second commit with no request should fail, and not even send something to the
         // TextField server
         assert_eq!(
             proxy_a.commit_edit().await.expect("failed to send CommitEdit"),
-            txt::Error::BadRequest
+            txt::ErrorLegacy::BadRequest
         );
         // and a third commit, this time on the other proxy, should succeed
-        assert_eq!(proxy_b.commit_edit().await.expect("failed to send CommitEdit"), txt::Error::Ok);
+        assert_eq!(
+            proxy_b.commit_edit().await.expect("failed to send CommitEdit"),
+            txt::ErrorLegacy::Ok
+        );
     }
 }

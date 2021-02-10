@@ -14,7 +14,7 @@ pub async fn test_noop_causes_state_update(text_field: &mut TextFieldWrapper) ->
     let rev = text_field.state().revision;
 
     text_field.proxy().begin_edit(rev)?;
-    if text_field.proxy().commit_edit().await? != txt::Error::Ok {
+    if text_field.proxy().commit_edit().await? != txt::ErrorLegacy::Ok {
         return Err(format_err!("Expected commit_edit to succeed"));
     }
     text_field.wait_for_update().await?;

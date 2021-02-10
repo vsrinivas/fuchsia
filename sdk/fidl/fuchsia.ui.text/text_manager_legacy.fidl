@@ -11,8 +11,8 @@ using fuchsia.ui.input3;
 /// interface for the currently focused text field. Requests to this TextField
 /// interface are proxied through the TextManager to batch edits together,
 /// and to ensure requests aren't sent to unfocused TextFields.
-[Discoverable]
-protocol TextInputContext {
+[Discoverable, Deprecated]
+protocol TextInputContextLegacy {
     /// Tells anyone listening to ImeVisibilityService (usually a shell) to hide
     /// the onscreen keyboard.
     HideKeyboard();
@@ -20,7 +20,7 @@ protocol TextInputContext {
     /// This event fires any time a new text field is focused. It also is sent to
     /// newly connected keyboards when they connect, if there is a focused text
     /// field. If focus is lost, the TextField handle will be closed.
-    -> OnFocus(TextField text_field);
+    -> OnFocus(TextFieldLegacy text_field);
 
     /// This event fires any time a physical keyboard event is sent to the
     /// TextManager. The keyboard may translate it into an edit on the focused

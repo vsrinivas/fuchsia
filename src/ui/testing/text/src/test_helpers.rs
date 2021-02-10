@@ -8,11 +8,11 @@ use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use std::collections::HashSet;
 use std::convert::TryInto;
-use text::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldStateLegacy;
 
 pub struct TextFieldWrapper {
-    proxy: txt::TextFieldProxy,
-    last_state: TextFieldState,
+    proxy: txt::TextFieldLegacyProxy,
+    last_state: TextFieldStateLegacy,
     defunct_point_ids: HashSet<u64>,
     current_point_ids: HashSet<u64>,
 }
@@ -25,7 +25,7 @@ pub struct TextFieldWrapper {
 impl TextFieldWrapper {
     /// Creates a new TextFieldWrapper from a proxy. This is a async function and can fail, since it
     /// waits for the initial state update to come from the TextField.
-    pub async fn new(proxy: txt::TextFieldProxy) -> Result<TextFieldWrapper, Error> {
+    pub async fn new(proxy: txt::TextFieldLegacyProxy) -> Result<TextFieldWrapper, Error> {
         let state = get_update(&proxy).await.context("Receiving initial state.")?;
         Ok(TextFieldWrapper {
             proxy,
@@ -39,7 +39,7 @@ impl TextFieldWrapper {
     /// of the editing methods on the TextFieldWrapper, or if making calls on the proxy directly,
     /// call `text_field_wrapper.wait_for_update().await` after you expect a new state update from
     /// the TextField.
-    pub fn state(&self) -> TextFieldState {
+    pub fn state(&self) -> TextFieldStateLegacy {
         self.last_state.clone()
     }
 
@@ -77,7 +77,7 @@ impl TextFieldWrapper {
 
     /// Returns a handle to the raw TextFieldProxy, useful for sending it weird unexpected
     /// input and making sure it responds correctly.
-    pub fn proxy(&self) -> &txt::TextFieldProxy {
+    pub fn proxy(&self) -> &txt::TextFieldLegacyProxy {
         &self.proxy
     }
 
@@ -87,7 +87,7 @@ impl TextFieldWrapper {
         let rev = self.last_state.revision;
         self.proxy.begin_edit(rev)?;
         self.proxy.replace(&mut self.last_state.selection.range, contents)?;
-        if self.proxy.commit_edit().await? != txt::Error::Ok {
+        if self.proxy.commit_edit().await? != txt::ErrorLegacy::Ok {
             return Err(format_err!("Expected commit_edit to succeed"));
         }
         self.wait_for_update().await?;
@@ -106,7 +106,7 @@ impl TextFieldWrapper {
     ) -> Result<txt::Position, Error> {
         let (new_point, err) =
             self.proxy.position_offset(&mut point, offset, self.last_state.revision).await?;
-        if err != txt::Error::Ok {
+        if err != txt::ErrorLegacy::Ok {
             return Err(format_err!(format!(
                 "Expected point_offset request to succeed, returned {:?} instead",
                 err
@@ -126,7 +126,7 @@ impl TextFieldWrapper {
     ) -> Result<(String, txt::Position), Error> {
         let (contents, actual_start, err) =
             self.proxy.contents(range, self.last_state.revision).await?;
-        if err != txt::Error::Ok {
+        if err != txt::ErrorLegacy::Ok {
             return Err(format_err!(format!(
                 "Expected contents request to succeed, returned {:?} instead",
                 err
@@ -138,7 +138,7 @@ impl TextFieldWrapper {
     /// A convenience function that returns the distance of a range.
     pub async fn distance<'a>(&'a mut self, range: &'a mut txt::Range) -> Result<i64, Error> {
         let (length, err) = self.proxy.distance(range, self.last_state.revision).await?;
-        if err != txt::Error::Ok {
+        if err != txt::ErrorLegacy::Ok {
             return Err(format_err!(format!(
                 "Expected length request to succeed, returned {:?} instead",
                 err
@@ -217,7 +217,7 @@ impl TextFieldWrapper {
     }
 }
 
-async fn get_update(text_field: &txt::TextFieldProxy) -> Result<TextFieldState, Error> {
+async fn get_update(text_field: &txt::TextFieldLegacyProxy) -> Result<TextFieldStateLegacy, Error> {
     let mut stream = text_field.take_event_stream();
     let msg_future = stream
         .try_next()
@@ -227,11 +227,11 @@ async fn get_update(text_field: &txt::TextFieldProxy) -> Result<TextFieldState, 
         });
     let msg = msg_future.await?.ok_or(format_err!("TextMgr event stream unexpectedly closed"))?;
     match msg {
-        txt::TextFieldEvent::OnUpdate { state, .. } => Ok(state.try_into()?),
+        txt::TextFieldLegacyEvent::OnUpdate { state, .. } => Ok(state.try_into()?),
     }
 }
 
-fn all_point_ids_for_state(state: &TextFieldState) -> HashSet<u64> {
+fn all_point_ids_for_state(state: &TextFieldStateLegacy) -> HashSet<u64> {
     let mut point_ids = HashSet::new();
     let mut point_ids_for_range = |range: &txt::Range| {
         point_ids.insert(range.start.id);
@@ -251,8 +251,8 @@ mod test {
     fn default_range(n: u64) -> txt::Range {
         txt::Range { start: txt::Position { id: n }, end: txt::Position { id: n + 1 } }
     }
-    fn default_state(n: u64) -> TextFieldState {
-        TextFieldState {
+    fn default_state(n: u64) -> TextFieldStateLegacy {
+        TextFieldStateLegacy {
             document: default_range(n),
             selection: txt::Selection {
                 range: default_range(n + 2),
@@ -269,7 +269,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded]
     #[test]
     async fn test_wrapper_insert() {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldMarker>()
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldLegacyMarker>()
             .expect("Should have created proxy");
         let (mut stream, control_handle) = server_end
             .into_stream_and_control_handle()
@@ -311,7 +311,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded]
     #[test]
     async fn test_duplicate_points_cause_error() {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldMarker>()
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldLegacyMarker>()
             .expect("Should have created proxy");
         let (_stream, control_handle) = server_end
             .into_stream_and_control_handle()
