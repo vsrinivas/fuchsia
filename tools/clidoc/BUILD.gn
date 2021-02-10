@@ -15,12 +15,25 @@ if (is_host) {
     name = "clidoc"
     edition = "2020"
     sources = common_sources
+    deps = [ ":rust_crates" ]
   }
 
   rustc_test("clidoc_bin_test") {
     source_root = "src/main.rs"
-    deps = [ ":clidoc_bin" ]
+    deps = [
+      ":clidoc_bin",
+      ":rust_crates",
+    ]
     sources = common_sources
+  }
+
+  group("rust_crates") {
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tempfile",
+    ]
   }
 }
 
