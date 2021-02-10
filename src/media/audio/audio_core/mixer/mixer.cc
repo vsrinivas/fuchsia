@@ -29,16 +29,16 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 // specified, or if Resampler::Default, the existing selection algorithm is
 // used. Note that requiring a specific resampler may cause Mixer::Select() to
 // fail (i.e. return nullptr), even in cases where 'Default' would succeed.
-std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
+std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& source_format,
                                      const fuchsia::media::AudioStreamType& dest_format,
                                      Resampler resampler) {
   TRACE_DURATION("audio", "Mixer::Select");
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:
-      return mixer::PointSampler::Select(src_format, dest_format);
+      return mixer::PointSampler::Select(source_format, dest_format);
     case Resampler::WindowedSinc:
-      return mixer::SincSampler::Select(src_format, dest_format);
+      return mixer::SincSampler::Select(source_format, dest_format);
 
       // Otherwise (if Default), continue onward.
     case Resampler::Default:
@@ -47,11 +47,11 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& src_
 
   // Use SampleAndHold if no rate conversion (unity 1:1). Otherwise, use WindowedSinc (with
   // integrated low-pass filter).
-  TimelineRate src_to_dest(dest_format.frames_per_second, src_format.frames_per_second);
-  if (src_to_dest.subject_delta() == 1 && src_to_dest.reference_delta() == 1) {
-    return mixer::PointSampler::Select(src_format, dest_format);
+  TimelineRate source_to_dest(dest_format.frames_per_second, source_format.frames_per_second);
+  if (source_to_dest.subject_delta() == 1 && source_to_dest.reference_delta() == 1) {
+    return mixer::PointSampler::Select(source_format, dest_format);
   } else {
-    return mixer::SincSampler::Select(src_format, dest_format);
+    return mixer::SincSampler::Select(source_format, dest_format);
   }
 }
 

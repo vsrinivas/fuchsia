@@ -42,11 +42,11 @@ class AudioClockTest : public testing::Test {
     source_clock.ResetRateAdjustment(now - zx::msec(10));
     dest_clock.ResetRateAdjustment(now - zx::msec(10));
 
-    auto microsrc_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, now, zx::usec(10));
+    auto micro_src_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, now, zx::usec(10));
     if (expect_zero) {
-      EXPECT_EQ(0, microsrc_ppm);
+      EXPECT_EQ(0, micro_src_ppm);
     } else {
-      EXPECT_GT(0, microsrc_ppm);
+      EXPECT_GT(0, micro_src_ppm);
     }
   }
 

@@ -26,7 +26,7 @@ namespace media::audio::mixer {
 // even with 192kHz input hardware, we can produce 8kHz streams to capturers.
 static constexpr size_t kDataCacheLength = 680;
 
-template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
+template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 class SincSamplerImpl : public SincSampler {
  public:
   SincSamplerImpl(uint32_t source_frame_rate, uint32_t dest_frame_rate)
@@ -34,7 +34,7 @@ class SincSamplerImpl : public SincSampler {
                     SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)),
         source_rate_(source_frame_rate),
         dest_rate_(dest_frame_rate),
-        position_(SrcChanCount, DestChanCount,
+        position_(SourceChanCount, DestChanCount,
                   SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate),
                   SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)),
         working_data_(DestChanCount, kDataCacheLength),
@@ -48,8 +48,9 @@ class SincSamplerImpl : public SincSampler {
         << " to support SRC ratio " << source_frame_rate << "/" << dest_frame_rate;
   }
 
-  bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
+  bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset,
+           const void* source_void_ptr, uint32_t frac_source_frames, int32_t* frac_source_offset,
+           bool accumulate) override;
 
   void Reset() override {
     SincSampler::Reset();
@@ -60,20 +61,21 @@ class SincSamplerImpl : public SincSampler {
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate>
-  inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-                  uint32_t frac_src_frames, int32_t* frac_src_offset);
+  inline bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset,
+                  const void* source_void_ptr, uint32_t frac_source_frames,
+                  int32_t* frac_source_offset);
 
-  static inline void PopulateFramesToChannelStrip(const void* src_void,
-                                                  int32_t next_src_idx_to_copy,
+  static inline void PopulateFramesToChannelStrip(const void* source_void_ptr,
+                                                  int32_t next_source_idx_to_copy,
                                                   const uint32_t frames_needed,
                                                   ChannelStrip* channel_strip,
                                                   uint32_t next_cache_idx_to_fill);
 
-  static inline int32_t LeftIdx(int32_t frac_src_offset) {
-    return frac_src_offset >> kPtsFractionalBits;
+  static inline int32_t LeftIdx(int32_t frac_source_offset) {
+    return frac_source_offset >> kPtsFractionalBits;
   }
-  static inline int32_t RightIdx(int32_t frac_src_offset) {
-    return ((frac_src_offset - 1) >> kPtsFractionalBits) + 1;
+  static inline int32_t RightIdx(int32_t frac_source_offset) {
+    return ((frac_source_offset - 1) >> kPtsFractionalBits) + 1;
   }
 
   uint32_t source_rate_;
@@ -89,35 +91,36 @@ class SincSamplerImpl : public SincSampler {
 // Implementation
 //
 // static
-template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
+template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 inline void
-SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::PopulateFramesToChannelStrip(
-    const void* src_void, int32_t next_src_idx_to_copy, const uint32_t frames_needed,
+SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFramesToChannelStrip(
+    const void* source_void_ptr, int32_t next_source_idx_to_copy, const uint32_t frames_needed,
     ChannelStrip* channel_strip, uint32_t next_cache_idx_to_fill) {
-  using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
+  using SR = SourceReader<SourceSampleType, SourceChanCount, DestChanCount>;
 
-  const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+  const SourceSampleType* source_ptr = static_cast<const SourceSampleType*>(source_void_ptr);
 
-  for (uint32_t src_idx = next_src_idx_to_copy; src_idx < next_src_idx_to_copy + frames_needed;
-       ++src_idx, ++next_cache_idx_to_fill) {
-    auto src_frame = src + (src_idx * SrcChanCount);
+  for (uint32_t source_idx = next_source_idx_to_copy;
+       source_idx < next_source_idx_to_copy + frames_needed;
+       ++source_idx, ++next_cache_idx_to_fill) {
+    auto current_source_ptr = source_ptr + (source_idx * SourceChanCount);
 
     // Do this one dest_chan at a time
     for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
-      (*channel_strip)[dest_chan][next_cache_idx_to_fill] = SR::Read(src_frame, dest_chan);
+      (*channel_strip)[dest_chan][next_cache_idx_to_fill] = SR::Read(current_source_ptr, dest_chan);
     }
   }
 }
 
 // If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
-template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
+template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
-inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
-    float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src_void,
-    uint32_t frac_src_frames, int32_t* frac_src_offset) {
+inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
+    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset, const void* source_void_ptr,
+    uint32_t frac_source_frames, int32_t* frac_source_offset) {
   TRACE_DURATION("audio", "SincSamplerImpl::MixInternal", "source_rate", source_rate_, "dest_rate",
-                 dest_rate_, "source_chans", SrcChanCount, "dest_chans", DestChanCount);
+                 dest_rate_, "source_chans", SourceChanCount, "dest_chans", DestChanCount);
 
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
@@ -125,35 +128,35 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   using DM = DestMixer<ScaleType, DoAccumulate>;
 
   auto info = &bookkeeping();
-  int32_t frac_src_off = *frac_src_offset;
-  position_.SetSourceValues(src_void, frac_src_frames, frac_src_offset);
-  position_.SetDestValues(dest, dest_frames, dest_offset);
+  int32_t frac_source_off = *frac_source_offset;
+  position_.SetSourceValues(source_void_ptr, frac_source_frames, frac_source_offset);
+  position_.SetDestValues(dest_ptr, dest_frames, dest_offset);
   position_.SetRateValues(info->step_size, info->rate_modulo(), info->denominator(),
-                          &info->src_pos_modulo);
+                          &info->source_pos_modulo);
 
-  const uint32_t src_frames = frac_src_frames >> kPtsFractionalBits;
+  const uint32_t source_frames = frac_source_frames >> kPtsFractionalBits;
   uint32_t next_cache_idx_to_fill = 0;
-  int32_t next_src_idx_to_copy =
-      RightIdx(frac_src_off - static_cast<int32_t>(neg_filter_width().raw_value()));
+  int32_t next_source_idx_to_copy =
+      RightIdx(frac_source_off - static_cast<int32_t>(neg_filter_width().raw_value()));
 
   // Do we need previously-cached values?
-  if (next_src_idx_to_copy < 0) {
-    next_cache_idx_to_fill = 0 - next_src_idx_to_copy;
-    next_src_idx_to_copy = 0;
+  if (next_source_idx_to_copy < 0) {
+    next_cache_idx_to_fill = 0 - next_source_idx_to_copy;
+    next_source_idx_to_copy = 0;
   }
 
   // If we don't have enough source or dest to mix even one frame, get out. Before leaving, if we've
   // reached the end of the source buffer, then cache the last few source frames for the next mix.
   if (!position_.FrameCanBeMixed()) {
     if (position_.SourceIsConsumed()) {
-      const auto frames_needed = src_frames - next_src_idx_to_copy;
-      if (frac_src_off > 0) {
-        working_data_.ShiftBy(RightIdx(frac_src_off));
+      const auto frames_needed = source_frames - next_source_idx_to_copy;
+      if (frac_source_off > 0) {
+        working_data_.ShiftBy(RightIdx(frac_source_off));
       }
 
       // Calculate/store the last few source frames to the start of the channel_strip for next time
-      PopulateFramesToChannelStrip(src_void, next_src_idx_to_copy, frames_needed, &working_data_,
-                                   next_cache_idx_to_fill);
+      PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
+                                   &working_data_, next_cache_idx_to_fill);
       return true;
     }
     return false;
@@ -169,17 +172,17 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
 
     while (position_.FrameCanBeMixed()) {
-      auto src_offset_to_cache =
-          RightIdx(frac_src_off - neg_filter_width().raw_value()) * Mixer::FRAC_ONE;
-      const auto frames_needed = std::min<uint32_t>(src_frames - next_src_idx_to_copy,
+      auto source_offset_to_cache =
+          RightIdx(frac_source_off - neg_filter_width().raw_value()) * Mixer::FRAC_ONE;
+      const auto frames_needed = std::min<uint32_t>(source_frames - next_source_idx_to_copy,
                                                     kDataCacheLength - next_cache_idx_to_fill);
 
       // Bring in as much as a channel strip of source data (while channel/format-converting).
-      PopulateFramesToChannelStrip(src_void, next_src_idx_to_copy, frames_needed, &working_data_,
-                                   next_cache_idx_to_fill);
-      next_src_idx_to_copy += frames_needed;
+      PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
+                                   &working_data_, next_cache_idx_to_fill);
+      next_source_idx_to_copy += frames_needed;
 
-      uint32_t frac_cache_offset = frac_src_off - src_offset_to_cache;
+      uint32_t frac_cache_offset = frac_source_off - source_offset_to_cache;
       uint32_t interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
       uint32_t cache_center_idx = LeftIdx(frac_cache_offset);
       FX_CHECK(RightIdx(frac_cache_offset - neg_filter_width().raw_value()) >= 0)
@@ -200,9 +203,9 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
           dest_frame[dest_chan] = DM::Mix(dest_frame[dest_chan], sample, amplitude_scale);
         }
 
-        frac_src_off = position_.AdvanceFrame();
+        frac_source_off = position_.AdvanceFrame();
 
-        frac_cache_offset = frac_src_off - src_offset_to_cache;
+        frac_cache_offset = frac_source_off - source_offset_to_cache;
         interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
         cache_center_idx = LeftIdx(frac_cache_offset);
       }
@@ -215,20 +218,20 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       next_cache_idx_to_fill = kDataCacheLength - num_frames_to_shift;
     }
   } else {
-    auto num_src_frames_skipped = position_.AdvanceToEnd();
-    working_data_.ShiftBy(num_src_frames_skipped);
+    auto num_source_frames_skipped = position_.AdvanceToEnd();
+    working_data_.ShiftBy(num_source_frames_skipped);
   }
 
   position_.UpdateOffsets();
   return position_.SourceIsConsumed();
 }
 
-template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
-bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
-    float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) {
+template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
+    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset, const void* source_void_ptr,
+    uint32_t frac_source_frames, int32_t* frac_source_offset, bool accumulate) {
   TRACE_DURATION("audio", "SincSamplerImpl::Mix", "source_rate", source_rate_, "dest_rate",
-                 dest_rate_, "source_chans", SrcChanCount, "dest_chans", DestChanCount);
+                 dest_rate_, "source_chans", SourceChanCount, "dest_chans", DestChanCount);
 
   auto info = &bookkeeping();
 
@@ -237,15 +240,17 @@ bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // of these specializations from Point, we regained only about 75K of blob space, while
   // mixer microbenchmarks running times ballooned to ~3x of their previous durations.
   if (info->gain.IsUnity()) {
-    return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest, dest_frames, dest_offset, src,
-                                                        frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::EQ_UNITY, false>(dest, dest_frames, dest_offset, src,
-                                                         frac_src_frames, frac_src_offset);
+    return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset,
+                                                        source_void_ptr, frac_source_frames,
+                                                        frac_source_offset)
+                      : Mix<ScalerType::EQ_UNITY, false>(dest_ptr, dest_frames, dest_offset,
+                                                         source_void_ptr, frac_source_frames,
+                                                         frac_source_offset);
   }
 
   if (info->gain.IsSilent()) {
-    return Mix<ScalerType::MUTED, true>(dest, dest_frames, dest_offset, src, frac_src_frames,
-                                        frac_src_offset);
+    return Mix<ScalerType::MUTED, true>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
+                                        frac_source_frames, frac_source_offset);
   }
 
   if (info->gain.IsRamping()) {
@@ -254,52 +259,55 @@ bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       dest_frames = max_frames;
     }
 
-    return accumulate ? Mix<ScalerType::RAMPING, true>(dest, dest_frames, dest_offset, src,
-                                                       frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::RAMPING, false>(dest, dest_frames, dest_offset, src,
-                                                        frac_src_frames, frac_src_offset);
+    return accumulate
+               ? Mix<ScalerType::RAMPING, true>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
+                                                frac_source_frames, frac_source_offset)
+               : Mix<ScalerType::RAMPING, false>(dest_ptr, dest_frames, dest_offset,
+                                                 source_void_ptr, frac_source_frames,
+                                                 frac_source_offset);
   }
 
-  return accumulate ? Mix<ScalerType::NE_UNITY, true>(dest, dest_frames, dest_offset, src,
-                                                      frac_src_frames, frac_src_offset)
-                    : Mix<ScalerType::NE_UNITY, false>(dest, dest_frames, dest_offset, src,
-                                                       frac_src_frames, frac_src_offset);
+  return accumulate
+             ? Mix<ScalerType::NE_UNITY, true>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
+                                               frac_source_frames, frac_source_offset)
+             : Mix<ScalerType::NE_UNITY, false>(dest_ptr, dest_frames, dest_offset, source_void_ptr,
+                                                frac_source_frames, frac_source_offset);
 }
 
 // Templates used to expand  the different combinations of possible SincSampler configurations.
-template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
-static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& src_format,
+template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
-  return std::make_unique<SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>>(
-      src_format.frames_per_second, dest_format.frames_per_second);
+  return std::make_unique<SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>(
+      source_format.frames_per_second, dest_format.frames_per_second);
 }
 
-template <size_t DestChanCount, typename SrcSampleType>
-static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& src_format,
+template <size_t DestChanCount, typename SourceSampleType>
+static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectSSM(dChan,sType)");
 
-  switch (src_format.channels) {
+  switch (source_format.channels) {
     case 1:
       if constexpr (DestChanCount <= 4) {
-        return SelectSSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 1>(source_format, dest_format);
       }
       break;
     case 2:
       if constexpr (DestChanCount <= 4) {
-        return SelectSSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 2>(source_format, dest_format);
       }
       break;
     case 3:
       // Unlike other samplers, we handle 3:3 here since there is no NxN sinc sampler variant.
       if constexpr (DestChanCount <= 3) {
-        return SelectSSM<DestChanCount, SrcSampleType, 3>(src_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 3>(source_format, dest_format);
       }
       break;
     case 4:
       // Unlike other samplers, we handle 4:4 here since there is no NxN sinc sampler variant.
       if constexpr (DestChanCount <= 2 || DestChanCount == 4) {
-        return SelectSSM<DestChanCount, SrcSampleType, 4>(src_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format);
       }
       break;
     default:
@@ -309,40 +317,41 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
 }
 
 template <size_t DestChanCount>
-static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& src_format,
+static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectSSM(dChan)");
 
-  switch (src_format.sample_format) {
+  switch (source_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return SelectSSM<DestChanCount, uint8_t>(src_format, dest_format);
+      return SelectSSM<DestChanCount, uint8_t>(source_format, dest_format);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return SelectSSM<DestChanCount, int16_t>(src_format, dest_format);
+      return SelectSSM<DestChanCount, int16_t>(source_format, dest_format);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return SelectSSM<DestChanCount, int32_t>(src_format, dest_format);
+      return SelectSSM<DestChanCount, int32_t>(source_format, dest_format);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return SelectSSM<DestChanCount, float>(src_format, dest_format);
+      return SelectSSM<DestChanCount, float>(source_format, dest_format);
     default:
       return nullptr;
   }
 }
 
-std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType& src_format,
+std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType& source_format,
                                            const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SincSampler::Select");
 
-  if ((src_format.channels < 1 || dest_format.channels < 1) ||
-      (src_format.channels > 4 || dest_format.channels > 4)) {
+  if (source_format.channels < 1 || source_format.channels > 4) {
+    FX_LOGS(WARNING) << "SincSampler does not support this channelization: "
+                     << source_format.channels << " -> " << dest_format.channels;
     return nullptr;
   }
 
   switch (dest_format.channels) {
     case 1:
-      return SelectSSM<1>(src_format, dest_format);
+      return SelectSSM<1>(source_format, dest_format);
     case 2:
-      return SelectSSM<2>(src_format, dest_format);
+      return SelectSSM<2>(source_format, dest_format);
     case 3:
-      return SelectSSM<3>(src_format, dest_format);
+      return SelectSSM<3>(source_format, dest_format);
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
@@ -351,7 +360,7 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
       // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo
       // woofer+tweeter).
-      return SelectSSM<4>(src_format, dest_format);
+      return SelectSSM<4>(source_format, dest_format);
     default:
       return nullptr;
   }

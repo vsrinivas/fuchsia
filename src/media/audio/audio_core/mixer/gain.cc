@@ -21,16 +21,16 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
     return;
   }
 
-  if (source_gain_db != target_src_gain_db_) {
+  if (source_gain_db != target_source_gain_db_) {
     // Start ramping.
     source_ramp_duration_ = duration;
     frames_ramped_ = 0;
 
-    start_src_gain_db_ = target_src_gain_db_;
-    start_src_scale_ = DbToScale(target_src_gain_db_);
+    start_source_gain_db_ = target_source_gain_db_;
+    start_source_scale_ = DbToScale(target_source_gain_db_);
 
-    end_src_gain_db_ = source_gain_db;
-    end_src_scale_ = DbToScale(source_gain_db);
+    end_source_gain_db_ = source_gain_db;
+    end_source_scale_ = DbToScale(source_gain_db);
   } else {
     // Already at the ramp destination: we are done.
     source_ramp_duration_ = zx::nsec(0);
@@ -55,27 +55,28 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& destination_frames_p
   frames_ramped_ += num_frames;
   zx::duration advance_duration =
       zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(frames_ramped_));
-  float src_gain_db;
+  float source_gain_db;
 
   if (source_ramp_duration_ > advance_duration) {
-    AScale src_scale = start_src_scale_ + (static_cast<double>(end_src_scale_ - start_src_scale_) *
-                                           advance_duration.to_nsecs()) /
-                                              source_ramp_duration_.to_nsecs();
-    src_gain_db = ScaleToDb(src_scale);
+    AScale source_scale =
+        start_source_scale_ + (static_cast<double>(end_source_scale_ - start_source_scale_) *
+                               advance_duration.to_nsecs()) /
+                                  source_ramp_duration_.to_nsecs();
+    source_gain_db = ScaleToDb(source_scale);
 
   } else {
     source_ramp_duration_ = zx::nsec(0);
     frames_ramped_ = 0;
-    src_gain_db = end_src_gain_db_;
+    source_gain_db = end_source_gain_db_;
   }
 
-  target_src_gain_db_ = src_gain_db;
+  target_source_gain_db_ = source_gain_db;
 
   if constexpr (kVerboseRampDebug) {
     FX_LOGS(INFO) << "Advanced " << advance_duration.to_nsecs() << " nsec for " << num_frames
                   << " frames. Total frames ramped: " << frames_ramped_ << ".";
-    FX_LOGS(INFO) << "Src_gain is now " << src_gain_db << " dB for this "
-                  << source_ramp_duration_.to_nsecs() << "-nsec ramp to " << end_src_gain_db_
+    FX_LOGS(INFO) << "source_gain_db is now " << source_gain_db << " for this "
+                  << source_ramp_duration_.to_nsecs() << "-nsec ramp to " << end_source_gain_db_
                   << " dB.";
   }
 }
@@ -105,8 +106,8 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
     // Compose the ramp, in pieces
     TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
     AScale dest_scale = DbToScale(target_dest_gain_db_);
-    AScale start_scale = start_src_scale_ * dest_scale;
-    AScale end_scale = end_src_scale_ * dest_scale;
+    AScale start_scale = start_source_scale_ * dest_scale;
+    AScale end_scale = end_source_scale_ * dest_scale;
 
     for (uint32_t idx = 0; idx < num_frames; ++idx) {
       zx::duration frame_time = zx::nsec(output_to_local.Scale(frames_ramped_ + idx));
@@ -123,25 +124,25 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in
 // dB. Optimize to avoid doing the full calculation unless we must.
-Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
+Gain::AScale Gain::GetGainScale(float source_gain_db, float dest_gain_db) {
   TRACE_DURATION("audio", "Gain::GetGainScale");
 
   // If nothing changed, return the previously-computed amplitude scale value.
-  if ((current_src_gain_db_ == src_gain_db) && (current_dest_gain_db_ == dest_gain_db)) {
+  if ((current_source_gain_db_ == source_gain_db) && (current_dest_gain_db_ == dest_gain_db)) {
     return combined_gain_scale_;
   }
 
-  current_src_gain_db_ = src_gain_db;
+  current_source_gain_db_ = source_gain_db;
   current_dest_gain_db_ = dest_gain_db;
 
-  // If sum of the src and dest cancel each other, the combined is kUnityScale.
-  if ((current_dest_gain_db_ + current_src_gain_db_) == kUnityGainDb) {
+  // If sum of the source and dest cancel each other, the combined is kUnityScale.
+  if ((current_dest_gain_db_ + current_source_gain_db_) == kUnityGainDb) {
     combined_gain_scale_ = kUnityScale;
-  } else if ((current_src_gain_db_ <= kMinGainDb) || (current_dest_gain_db_ <= kMinGainDb)) {
+  } else if ((current_source_gain_db_ <= kMinGainDb) || (current_dest_gain_db_ <= kMinGainDb)) {
     // If source or dest are at the mute point, then silence the stream.
     combined_gain_scale_ = kMuteScale;
   } else {
-    float effective_gain_db = current_src_gain_db_ + current_dest_gain_db_;
+    float effective_gain_db = current_source_gain_db_ + current_dest_gain_db_;
     // Likewise, silence the stream if the combined gain is at the mute point.
     if (effective_gain_db <= kMinGainDb) {
       combined_gain_scale_ = kMuteScale;

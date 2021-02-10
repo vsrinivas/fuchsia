@@ -26,15 +26,15 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
   AudioBuffer accum(format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
-  int32_t frac_src_offset = 0;
+  int32_t frac_source_offset = 0;
 
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(gain_db);
 
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_source_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
+  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
@@ -129,12 +129,12 @@ TEST(DynamicRange, MonoToStereo) {
   AudioBuffer left(mono_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
-  int32_t frac_src_offset = 0;
+  int32_t frac_source_offset = 0;
 
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_source_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
+  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
@@ -182,12 +182,12 @@ TEST(DynamicRange, StereoToMono) {
   }
 
   uint32_t dest_offset = 0;
-  int32_t frac_src_offset = 0;
+  int32_t frac_source_offset = 0;
 
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_source_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
+  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
@@ -240,23 +240,23 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   AudioBuffer accum(float_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
-  int32_t frac_src_offset = 0;
+  int32_t frac_source_offset = 0;
 
   // -6.0206 dB leads to 0.500 scale (exactly 50%), to be mixed with itself
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(-6.0205999f);
 
   EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-                         kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false));
+                         kFreqTestBufSize << kPtsFractionalBits, &frac_source_offset, false));
 
   // Accumulate the same (reference-frequency) wave.
   dest_offset = 0;
-  frac_src_offset = 0;
+  frac_source_offset = 0;
 
   EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-                         kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, true));
+                         kFreqTestBufSize << kPtsFractionalBits, &frac_source_offset, true));
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
+  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);

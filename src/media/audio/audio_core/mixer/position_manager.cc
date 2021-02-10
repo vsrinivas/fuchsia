@@ -7,27 +7,27 @@
 
 namespace media::audio::mixer {
 
-PositionManager::PositionManager(uint32_t num_src_chans, uint32_t num_dest_chans,
+PositionManager::PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans,
                                  uint32_t positive_width, uint32_t negative_width,
                                  uint32_t frac_bits)
-    : num_src_chans_(num_src_chans),
+    : num_source_chans_(num_source_chans),
       num_dest_chans_(num_dest_chans),
       positive_width_(positive_width),
       negative_width_(negative_width),
       frac_bits_(frac_bits),
       frac_size_(1u << frac_bits_),
-      min_frac_src_frames_(positive_width_ + negative_width_ - (frac_size_ - 1)) {}
+      min_frac_source_frames_(positive_width_ + negative_width_ - (frac_size_ - 1)) {}
 
 void PositionManager::Display(const PositionManager& pos_mgr, uint32_t frac_bits) {
-  FX_LOGS(INFO) << "Channels: src " << pos_mgr.num_src_chans_ << ", dest "
+  FX_LOGS(INFO) << "Channels: source " << pos_mgr.num_source_chans_ << ", dest "
                 << pos_mgr.num_dest_chans_ << ".          Width: pos 0x" << std::hex
                 << pos_mgr.positive_width_ << ", neg 0x" << pos_mgr.negative_width_;
 
-  FX_LOGS(INFO) << "Source:   len 0x" << std::hex << pos_mgr.frac_src_frames_ << " (" << std::dec
-                << (pos_mgr.frac_src_frames_ >> frac_bits) << "), end 0x" << std::hex
-                << pos_mgr.frac_src_end_ << " (" << std::dec << (pos_mgr.frac_src_end_ >> frac_bits)
-                << "), min_frames 0x" << std::hex << pos_mgr.min_frac_src_frames_
-                << ". Dest: len 0x" << pos_mgr.dest_frames_;
+  FX_LOGS(INFO) << "Source:   len 0x" << std::hex << pos_mgr.frac_source_frames_ << " (" << std::dec
+                << (pos_mgr.frac_source_frames_ >> frac_bits) << "), end 0x" << std::hex
+                << pos_mgr.frac_source_end_ << " (" << std::dec
+                << (pos_mgr.frac_source_end_ >> frac_bits) << "), min_frames 0x" << std::hex
+                << pos_mgr.min_frac_source_frames_ << ". Dest: len 0x" << pos_mgr.dest_frames_;
 
   FX_LOGS(INFO) << "Rate:     step_size 0x" << std::hex << pos_mgr.step_size_ << ", rate_mod "
                 << std::dec << pos_mgr.rate_modulo_ << ", denom " << pos_mgr.denominator_
@@ -38,44 +38,46 @@ void PositionManager::Display(const PositionManager& pos_mgr, uint32_t frac_bits
 
 void PositionManager::DisplayUpdate(const PositionManager& pos_mgr, uint32_t frac_bits) {
   const auto frac_mask = (1u << frac_bits) - 1u;
-  FX_LOGS(INFO) << "Position: frac_src_offset " << std::hex
-                << (pos_mgr.frac_src_offset_ < 0 ? "-" : " ") << "0x"
-                << std::abs(pos_mgr.frac_src_offset_ >> frac_bits) << ":"
-                << (pos_mgr.frac_src_offset_ & frac_mask) << ", dest_offset 0x"
-                << pos_mgr.dest_offset_ << ", src_pos_mod 0x" << pos_mgr.src_pos_modulo_;
+  FX_LOGS(INFO) << "Position: frac_source_offset " << std::hex
+                << (pos_mgr.frac_source_offset_ < 0 ? "-" : " ") << "0x"
+                << std::abs(pos_mgr.frac_source_offset_ >> frac_bits) << ":"
+                << (pos_mgr.frac_source_offset_ & frac_mask) << ", dest_offset 0x"
+                << pos_mgr.dest_offset_ << ", source_pos_mod 0x" << pos_mgr.source_pos_modulo_;
 }
 
 // static
-void PositionManager::CheckPositions(uint32_t dest_frames, uint32_t* dest_offset,
+void PositionManager::CheckPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr,
                                      uint32_t frac_source_frames, int32_t* frac_source_offset_ptr,
                                      Fixed pos_filter_width, Mixer::Bookkeeping* info) {
-  CheckDestPositions(dest_frames, dest_offset);
+  CheckDestPositions(dest_frames, dest_offset_ptr);
 
   CheckSourcePositions(frac_source_frames, frac_source_offset_ptr, pos_filter_width);
 
-  CheckRateValues(info->step_size, info->rate_modulo(), info->denominator(), &info->src_pos_modulo);
+  CheckRateValues(info->step_size, info->rate_modulo(), info->denominator(),
+                  &info->source_pos_modulo);
 }
 
-void PositionManager::SetSourceValues(const void* src_void, uint32_t frac_src_frames,
-                                      int32_t* frac_src_offset) {
-  CheckSourcePositions(frac_src_frames, frac_src_offset, Fixed::FromRaw(positive_width_));
+void PositionManager::SetSourceValues(const void* source_void_ptr, uint32_t frac_source_frames,
+                                      int32_t* frac_source_offset_ptr) {
+  CheckSourcePositions(frac_source_frames, frac_source_offset_ptr, Fixed::FromRaw(positive_width_));
 
-  src_void_ = const_cast<void*>(src_void);
+  source_void_ptr_ = const_cast<void*>(source_void_ptr);
 
-  frac_src_frames_ = frac_src_frames;
-  frac_src_offset_ptr_ = frac_src_offset;
-  frac_src_offset_ = *frac_src_offset_ptr_;
+  frac_source_frames_ = frac_source_frames;
+  frac_source_offset_ptr_ = frac_source_offset_ptr;
+  frac_source_offset_ = *frac_source_offset_ptr_;
 
   // The last subframe for which this Mix call can produce output. Because of filter width, output
   // for the subsequent position requires source frames that we have not yet received.
-  frac_src_end_ = static_cast<int32_t>(frac_src_frames_ - positive_width_) - 1;
+  frac_source_end_ = static_cast<int32_t>(frac_source_frames_ - positive_width_) - 1;
 }
 
 // static
 void PositionManager::CheckSourcePositions(uint32_t frac_source_frames,
                                            int32_t* frac_source_offset_ptr,
                                            Fixed pos_filter_width) {
-  // Interp offset is an int32. frac_src_frames is uint32, but callers cannot exceed int32_t::max()
+  // Interp offset is an int32. frac_source_frames is uint32, but callers cannot exceed
+  // int32_t::max()
   FX_CHECK(frac_source_frames <= std::numeric_limits<int32_t>::max())
       << "frac_source_frames (0x" << std::hex << frac_source_frames << ") too large, must be "
       << std::numeric_limits<int32_t>::max() << " or less.";
@@ -106,25 +108,27 @@ void PositionManager::CheckSourcePositions(uint32_t frac_source_frames,
   // full cache.
 }
 
-void PositionManager::SetDestValues(float* dest, uint32_t dest_frames, uint32_t* dest_offset) {
-  CheckDestPositions(dest_frames, dest_offset);
+void PositionManager::SetDestValues(float* dest_ptr, uint32_t dest_frames,
+                                    uint32_t* dest_offset_ptr) {
+  CheckDestPositions(dest_frames, dest_offset_ptr);
 
-  dest_ = dest;
+  dest_ptr_ = dest_ptr;
   dest_frames_ = dest_frames;
-  dest_offset_ptr_ = dest_offset;
+  dest_offset_ptr_ = dest_offset_ptr;
   dest_offset_ = *dest_offset_ptr_;
 }
 
 // static
-void PositionManager::CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset) {
+void PositionManager::CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr) {
   // Location of first dest frame to produce must be within the provided buffer.
-  FX_CHECK(*dest_offset < dest_frames) << "dest_offset (" << *dest_offset
-                                       << ") must be less than dest_frames (" << dest_frames << ")";
+  FX_CHECK(*dest_offset_ptr < dest_frames)
+      << "dest_offset (" << *dest_offset_ptr << ") must be less than dest_frames (" << dest_frames
+      << ")";
 }
 
 void PositionManager::SetRateValues(uint32_t step_size, uint64_t rate_modulo, uint64_t denominator,
-                                    uint64_t* src_pos_mod) {
-  CheckRateValues(step_size, rate_modulo, denominator, src_pos_mod);
+                                    uint64_t* source_pos_mod) {
+  CheckRateValues(step_size, rate_modulo, denominator, source_pos_mod);
 
   step_size_ = step_size;
   using_modulo_ = (rate_modulo > 0 && denominator > 0);
@@ -132,8 +136,8 @@ void PositionManager::SetRateValues(uint32_t step_size, uint64_t rate_modulo, ui
   if (using_modulo_) {
     denominator_ = denominator;
     rate_modulo_ = rate_modulo;
-    src_pos_modulo_ptr_ = src_pos_mod;
-    src_pos_modulo_ = *src_pos_modulo_ptr_;
+    source_pos_modulo_ptr_ = source_pos_mod;
+    source_pos_modulo_ = *source_pos_modulo_ptr_;
   }
 }
 
@@ -160,40 +164,43 @@ uint32_t PositionManager::AdvanceToEnd() {
   }
 
   // Number of source steps available, if no rate_modulo effect.
-  const uint32_t src_rough_steps_avail = (frac_src_end_ - frac_src_offset_) / step_size_ + 1;
+  const uint32_t source_rough_steps_avail =
+      (frac_source_end_ - frac_source_offset_) / step_size_ + 1;
   const auto dest_frames_avail = dest_frames_ - dest_offset_;
-  const auto avail = std::min(dest_frames_avail, src_rough_steps_avail);
+  const auto avail = std::min(dest_frames_avail, source_rough_steps_avail);
 
-  const auto prev_src_frame_consumed =
-      (frac_src_offset_ + static_cast<int32_t>(positive_width_)) >> frac_bits_;
+  const auto prev_source_frame_consumed =
+      (frac_source_offset_ + static_cast<int32_t>(positive_width_)) >> frac_bits_;
 
-  frac_src_offset_ += (avail * step_size_);
+  frac_source_offset_ += (avail * step_size_);
   dest_offset_ += avail;
 
   if (UseModulo && using_modulo_) {
-    const uint64_t total_mod = src_pos_modulo_ + (avail * rate_modulo_);
-    frac_src_offset_ += (total_mod / denominator_);
-    src_pos_modulo_ = total_mod % denominator_;
+    const uint64_t total_mod = source_pos_modulo_ + (avail * rate_modulo_);
+    frac_source_offset_ += (total_mod / denominator_);
+    source_pos_modulo_ = total_mod % denominator_;
 
-    int32_t prev_src_offset = (src_pos_modulo_ < rate_modulo_) ? (frac_src_offset_ - step_size_ - 1)
-                                                               : (frac_src_offset_ - step_size_);
-    while (prev_src_offset > frac_src_end_) {
-      if (src_pos_modulo_ < rate_modulo_) {
-        src_pos_modulo_ += denominator_;
+    int32_t prev_source_offset = (source_pos_modulo_ < rate_modulo_)
+                                     ? (frac_source_offset_ - step_size_ - 1)
+                                     : (frac_source_offset_ - step_size_);
+    while (prev_source_offset > frac_source_end_) {
+      if (source_pos_modulo_ < rate_modulo_) {
+        source_pos_modulo_ += denominator_;
       }
-      src_pos_modulo_ -= rate_modulo_;
+      source_pos_modulo_ -= rate_modulo_;
 
       --dest_offset_;
-      frac_src_offset_ = prev_src_offset;
+      frac_source_offset_ = prev_source_offset;
 
-      prev_src_offset = (src_pos_modulo_ < rate_modulo_) ? (frac_src_offset_ - step_size_ - 1)
-                                                         : (frac_src_offset_ - step_size_);
+      prev_source_offset = (source_pos_modulo_ < rate_modulo_)
+                               ? (frac_source_offset_ - step_size_ - 1)
+                               : (frac_source_offset_ - step_size_);
     }
   }
 
-  const auto new_src_frame_consumed =
-      (frac_src_offset_ + static_cast<int32_t>(positive_width_)) >> frac_bits_;
-  return new_src_frame_consumed - prev_src_frame_consumed;
+  const auto new_source_frame_consumed =
+      (frac_source_offset_ + static_cast<int32_t>(positive_width_)) >> frac_bits_;
+  return new_source_frame_consumed - prev_source_frame_consumed;
 }
 
 template uint32_t PositionManager::AdvanceToEnd<true>();

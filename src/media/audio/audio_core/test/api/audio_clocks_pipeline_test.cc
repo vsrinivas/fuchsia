@@ -534,7 +534,7 @@ class AdjustableClockPipelineTest : public ClockSyncPipelineTest {
   }
 };
 
-// Use these to debug the tests in the absence of rate-adjustment
+// Use these when debugging, to eliminate rate-adjustment. They aren't worth running otherwise.
 //
 // TEST_F(MicroSrcPipelineTest, ImpulseBaseline) { RunImpulseTest(0, kFrameRate); }
 // TEST_F(MicroSrcPipelineTest, StepBaseline) { RunStepTest(0, kFrameRate); }

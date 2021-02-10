@@ -27,7 +27,7 @@ TEST(BookkeepingTest, Defaults) {
   EXPECT_EQ(bookkeeping.step_size, Mixer::FRAC_ONE);
   EXPECT_EQ(bookkeeping.rate_modulo(), 0ull);
   EXPECT_EQ(bookkeeping.denominator(), 1ull);
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 0ull);
+  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
 
   EXPECT_TRUE(bookkeeping.gain.IsUnity());
   EXPECT_FALSE(bookkeeping.gain.IsSilent());
@@ -40,7 +40,7 @@ TEST(BookkeepingTest, Reset) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
   bookkeeping.SetRateModuloAndDenominator(5, 7);
-  bookkeeping.src_pos_modulo = 3;
+  bookkeeping.source_pos_modulo = 3;
   bookkeeping.gain.SetSourceGainWithRamp(-42.0f, zx::sec(1),
                                          fuchsia::media::audio::RampType::SCALE_LINEAR);
   EXPECT_TRUE(bookkeeping.gain.IsRamping());
@@ -49,7 +49,7 @@ TEST(BookkeepingTest, Reset) {
 
   EXPECT_EQ(bookkeeping.rate_modulo(), 5ull);
   EXPECT_EQ(bookkeeping.denominator(), 7ull);
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 0ull);
+  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
 
   EXPECT_FALSE(bookkeeping.gain.IsRamping());
 }

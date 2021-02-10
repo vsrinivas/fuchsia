@@ -123,77 +123,77 @@ TEST(SampleScalerTest, Unity) {
 }
 
 //
-// SrcReader tests all use float, as type conversion is handled by SamplerNormalizer
+// SourceReader tests all use float, as type conversion is handled by SamplerNormalizer
 //
 // Validate N->N channel mapping, including higher channel counts.
 // Expectation: each source channel maps identically to that destination channel.
-TEST(SrcReaderTest, Map_N_N) {
+TEST(SourceReaderTest, Map_N_N) {
   const float data[] = {-1.0, 1.0, 0.0, 0.5};
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 1>::Read(data, 0)), data[0]);
-  EXPECT_EQ((mixer::SrcReader<float, 1, 1>::Read(data + 3, 0)), data[3]);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 1>::Read(data, 0)), data[0]);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 1>::Read(data + 3, 0)), data[3]);
 
-  EXPECT_EQ((mixer::SrcReader<float, 2, 2>::Read(data, 0)), data[0]);
-  EXPECT_EQ((mixer::SrcReader<float, 2, 2>::Read(data, 1)), data[1]);
-  EXPECT_EQ((mixer::SrcReader<float, 2, 2>::Read(data + 2, 0)), data[2]);
-  EXPECT_EQ((mixer::SrcReader<float, 2, 2>::Read(data + 2, 1)), data[3]);
+  EXPECT_EQ((mixer::SourceReader<float, 2, 2>::Read(data, 0)), data[0]);
+  EXPECT_EQ((mixer::SourceReader<float, 2, 2>::Read(data, 1)), data[1]);
+  EXPECT_EQ((mixer::SourceReader<float, 2, 2>::Read(data + 2, 0)), data[2]);
+  EXPECT_EQ((mixer::SourceReader<float, 2, 2>::Read(data + 2, 1)), data[3]);
 
-  EXPECT_EQ((mixer::SrcReader<float, 3, 3>::Read(data, 0)), data[0]);
-  EXPECT_EQ((mixer::SrcReader<float, 3, 3>::Read(data, 1)), data[1]);
-  EXPECT_EQ((mixer::SrcReader<float, 3, 3>::Read(data + 2, 0)), data[2]);
-  EXPECT_EQ((mixer::SrcReader<float, 3, 3>::Read(data + 1, 2)), data[3]);
+  EXPECT_EQ((mixer::SourceReader<float, 3, 3>::Read(data, 0)), data[0]);
+  EXPECT_EQ((mixer::SourceReader<float, 3, 3>::Read(data, 1)), data[1]);
+  EXPECT_EQ((mixer::SourceReader<float, 3, 3>::Read(data + 2, 0)), data[2]);
+  EXPECT_EQ((mixer::SourceReader<float, 3, 3>::Read(data + 1, 2)), data[3]);
 
-  EXPECT_EQ((mixer::SrcReader<float, 4, 4>::Read(data, 0)), data[0]);
-  EXPECT_EQ((mixer::SrcReader<float, 4, 4>::Read(data, 1)), data[1]);
-  EXPECT_EQ((mixer::SrcReader<float, 4, 4>::Read(data, 2)), data[2]);
-  EXPECT_EQ((mixer::SrcReader<float, 4, 4>::Read(data, 3)), data[3]);
+  EXPECT_EQ((mixer::SourceReader<float, 4, 4>::Read(data, 0)), data[0]);
+  EXPECT_EQ((mixer::SourceReader<float, 4, 4>::Read(data, 1)), data[1]);
+  EXPECT_EQ((mixer::SourceReader<float, 4, 4>::Read(data, 2)), data[2]);
+  EXPECT_EQ((mixer::SourceReader<float, 4, 4>::Read(data, 3)), data[3]);
 
-  EXPECT_EQ((mixer::SrcReader<float, 6, 6>::Read(data, 1)), data[1]);
-  EXPECT_EQ((mixer::SrcReader<float, 6, 6>::Read(data, 2)), data[2]);
+  EXPECT_EQ((mixer::SourceReader<float, 6, 6>::Read(data, 1)), data[1]);
+  EXPECT_EQ((mixer::SourceReader<float, 6, 6>::Read(data, 2)), data[2]);
 
-  EXPECT_EQ((mixer::SrcReader<float, 8, 8>::Read(data, 0)), data[0]);
-  EXPECT_EQ((mixer::SrcReader<float, 8, 8>::Read(data, 3)), data[3]);
+  EXPECT_EQ((mixer::SourceReader<float, 8, 8>::Read(data, 0)), data[0]);
+  EXPECT_EQ((mixer::SourceReader<float, 8, 8>::Read(data, 3)), data[3]);
 }
 
 // Validate 1->N channel mapping, including higher destination channel counts.
 // Expectation: the one source channel maps to every destination channel without attenuation.
-TEST(SrcReaderTest, Map_1_N) {
+TEST(SourceReaderTest, Map_1_N) {
   const float data[] = {0.76543f, 0.0};
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 1>::Read(data, 0)), *data);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 1>::Read(data, 0)), *data);
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 2>::Read(data, 0)), *data);
-  EXPECT_EQ((mixer::SrcReader<float, 1, 2>::Read(data, 1)),
-            (mixer::SrcReader<float, 1, 2>::Read(data, 0)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 2>::Read(data, 0)), *data);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 2>::Read(data, 1)),
+            (mixer::SourceReader<float, 1, 2>::Read(data, 0)));
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 3>::Read(data, 0)), *data);
-  EXPECT_EQ((mixer::SrcReader<float, 1, 3>::Read(data, 1)),
-            (mixer::SrcReader<float, 1, 3>::Read(data, 0)));
-  EXPECT_EQ((mixer::SrcReader<float, 1, 3>::Read(data, 2)),
-            (mixer::SrcReader<float, 1, 3>::Read(data, 0)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 3>::Read(data, 0)), *data);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 3>::Read(data, 1)),
+            (mixer::SourceReader<float, 1, 3>::Read(data, 0)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 3>::Read(data, 2)),
+            (mixer::SourceReader<float, 1, 3>::Read(data, 0)));
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 4>::Read(data, 0)), *data);
-  EXPECT_EQ((mixer::SrcReader<float, 1, 4>::Read(data, 1)),
-            (mixer::SrcReader<float, 1, 4>::Read(data, 0)));
-  EXPECT_EQ((mixer::SrcReader<float, 1, 4>::Read(data, 2)),
-            (mixer::SrcReader<float, 1, 4>::Read(data, 0)));
-  EXPECT_EQ((mixer::SrcReader<float, 1, 4>::Read(data, 3)),
-            (mixer::SrcReader<float, 1, 4>::Read(data, 0)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 4>::Read(data, 0)), *data);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 4>::Read(data, 1)),
+            (mixer::SourceReader<float, 1, 4>::Read(data, 0)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 4>::Read(data, 2)),
+            (mixer::SourceReader<float, 1, 4>::Read(data, 0)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 4>::Read(data, 3)),
+            (mixer::SourceReader<float, 1, 4>::Read(data, 0)));
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 5>::Read(data, 1)), *data);
-  EXPECT_EQ((mixer::SrcReader<float, 1, 5>::Read(data, 4)),
-            (mixer::SrcReader<float, 1, 5>::Read(data, 1)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 5>::Read(data, 1)), *data);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 5>::Read(data, 4)),
+            (mixer::SourceReader<float, 1, 5>::Read(data, 1)));
 
-  EXPECT_EQ((mixer::SrcReader<float, 1, 8>::Read(data, 2)), *data);
-  EXPECT_EQ((mixer::SrcReader<float, 1, 8>::Read(data, 7)),
-            (mixer::SrcReader<float, 1, 8>::Read(data, 2)));
+  EXPECT_EQ((mixer::SourceReader<float, 1, 8>::Read(data, 2)), *data);
+  EXPECT_EQ((mixer::SourceReader<float, 1, 8>::Read(data, 7)),
+            (mixer::SourceReader<float, 1, 8>::Read(data, 2)));
 }
 
 // Validate 2->1 channel mapping.
 // Expectation: each source channel should contribute equally to the one destination channel.
 // The one destination channel is average of all source channels.
-TEST(SrcReaderTest, Map_2_1) {
-  using SR = mixer::SrcReader<float, 2, 1>;
+TEST(SourceReaderTest, Map_2_1) {
+  using SR = mixer::SourceReader<float, 2, 1>;
   const float data[] = {-1.0, 1.0, 0.5};
   const float expect[] = {0, 0.75};
 
@@ -205,8 +205,8 @@ TEST(SrcReaderTest, Map_2_1) {
 // Expectation: 3-channel destination is L.R.C (or some other geometry where third destination
 // channel should contain an equal mix of the two source channels).
 // dest[0] is source[0]; dest[1] is source[1]; dest[2] is average of source[0] and source[1].
-TEST(SrcReaderTest, Map_2_3) {
-  using SR = mixer::SrcReader<float, 2, 3>;
+TEST(SourceReaderTest, Map_2_3) {
+  using SR = mixer::SourceReader<float, 2, 3>;
   const float data[] = {-1.0, 1.0, 0.5};
   const float expect_chan2[] = {0.0, 0.75};
 
@@ -222,8 +222,8 @@ TEST(SrcReaderTest, Map_2_3) {
 // Validate 2->4 channel mapping.
 // Expectation: 4-chan destination is "4 corners" FL.FR.BL.BR (or other L.R.L.R geometry).
 // We map each source channel equally to the two destination channels on each side.
-TEST(SrcReaderTest, Map_2_4) {
-  using SR = mixer::SrcReader<float, 2, 4>;
+TEST(SourceReaderTest, Map_2_4) {
+  using SR = mixer::SourceReader<float, 2, 4>;
   const float data[] = {-1.0, 1.0, 0.5};
 
   EXPECT_EQ(SR::Read(data, 0), data[0]);
@@ -240,8 +240,8 @@ TEST(SrcReaderTest, Map_2_4) {
 // Validate 3->1 channel mapping.
 // Expectation: each source channel should contribute equally to the one destination channel.
 // The one destination channel is average of all source channels.
-TEST(SrcReaderTest, Map_3_1) {
-  using SR = mixer::SrcReader<float, 3, 1>;
+TEST(SourceReaderTest, Map_3_1) {
+  using SR = mixer::SourceReader<float, 3, 1>;
   const float data[] = {-0.5, 1.0, 1.0, -0.8};
   const float expect[] = {0.5, 0.4};
 
@@ -265,8 +265,8 @@ TEST(SrcReaderTest, Map_3_1) {
 //
 //   dest[0] = (0.585786... * source[0]) + (0.414213... * source[2])
 //   dest[1] = (0.585786... * source[1]) + (0.414213... * source[2])
-TEST(SrcReaderTest, Map_3_2) {
-  using SR = mixer::SrcReader<float, 3, 2>;
+TEST(SourceReaderTest, Map_3_2) {
+  using SR = mixer::SourceReader<float, 3, 2>;
   const float data[] = {1, -0.5, -0.5, -1};
   const float expect[] = {0.378679656f, -0.5f, -0.70710678f};
 
@@ -282,8 +282,8 @@ TEST(SrcReaderTest, Map_3_2) {
 // Validate 4->1 channel mapping.
 // Expectation: each source channel should contribute equally to the one destination channel.
 // The one destination channel is average of all source channels.
-TEST(SrcReaderTest, Map_4_1) {
-  using SR = mixer::SrcReader<float, 4, 1>;
+TEST(SourceReaderTest, Map_4_1) {
+  using SR = mixer::SourceReader<float, 4, 1>;
   const float data[] = {-0.25, 0.75, 1.0, -0.5, -0.05};
   const float expect[] = {0.25, 0.3};
 
@@ -302,8 +302,8 @@ TEST(SrcReaderTest, Map_4_1) {
 // Expectation: 4-chan source is "4 corners" FL.FR.BL.BR (or other L.R.L.R geometry).
 // We assign equal weight to the source channels on each side.
 // dest[0] is average of source[0] and [2]; dest[1] is average of source[1] and [3].
-TEST(SrcReaderTest, Map_4_2) {
-  using SR = mixer::SrcReader<float, 4, 2>;
+TEST(SourceReaderTest, Map_4_2) {
+  using SR = mixer::SourceReader<float, 4, 2>;
   const float data[] = {-0.25, 0.75, 1.0, -0.5, 0.0};
   const float expect[] = {0.375, 0.125, 0.5};
 

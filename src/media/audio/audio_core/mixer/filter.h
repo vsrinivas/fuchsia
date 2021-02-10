@@ -86,7 +86,7 @@ class Filter {
 // -Fractional source pos 1.499 requires frames between 0.999 and 1.999, thus source frame 1
 // -Fractional source pos 1.500 requires frames between 1.000 and 2.000, thus source frames 1 and 2
 // -Fractional source pos 1.501 requires frames between 1.001 and 2.001, thus source frame 2
-// For frac src pos .5, we average the pre- and post- values so as to achieve zero phase delay
+// For frac source pos .5, we average the pre- and post- values so as to achieve zero phase delay
 //
 // TODO(fxbug.dev/37356): Make the fixed-point fractional scale typesafe.
 class PointFilter : public Filter {
@@ -136,7 +136,7 @@ class PointFilter : public Filter {
 // -Fractional source pos 1.999 requires frames between 1.000 and 2.998, thus source frames 1 and 2
 // -Fractional source pos 2.000 requires frames between 1.001 and 2.999, thus source frame 2 only
 // -Fractional source pos 2.001 requires frames between 1.002 and 3.000, thus source frames 2 and 3
-// For frac src pos .0, we use that value precisely; no need to interpolate with any neighbor
+// For frac source pos .0, we use that value precisely; no need to interpolate with any neighbor
 class LinearFilter : public Filter {
  public:
   LinearFilter(uint32_t source_rate, uint32_t dest_rate,

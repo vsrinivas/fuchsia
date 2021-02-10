@@ -34,25 +34,25 @@ class Mixer {
   struct SourceInfo {
     // This method resets the long-running and per-Mix position counters and is called upon a
     // destination discontinuity. If a next_dest_frame value is provided, set next_frac_source_frame
-    // based on the dest_frames_to_frac_source_frames transform. Pre-setting next_src_pos_modulo
-    // here would only be helpful for very high resolution scenarios.
+    // based on the dest_frames_to_frac_source_frames transform. Pre-setting next_source_pos_modulo
+    // here would only be helpful for very high resolution scenarios (where +/- 1 nsec matters!).
     void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
       bookkeeping.Reset();
 
       next_dest_frame = target_dest_frame;
       next_frac_source_frame =
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
-      next_src_pos_modulo = 0;
-      src_pos_error = zx::duration(0);
+      next_source_pos_modulo = 0;
+      source_pos_error = zx::duration(0);
       initial_position_is_set = true;
     }
 
     // Used by custom code when debugging.
     std::string PositionsToString(std::string tag = "") {
-      return tag + ": next_dst " + std::to_string(next_dest_frame) + ", next_frac_src " +
-             std::to_string(next_frac_source_frame.raw_value()) + ", next_src_pos_mod " +
-             std::to_string(next_src_pos_modulo) + ", src_pos_err " +
-             std::to_string(src_pos_error.get());
+      return tag + ": next_dest " + std::to_string(next_dest_frame) + ", next_frac_source " +
+             std::to_string(next_frac_source_frame.raw_value()) + ", next_source_pos_mod " +
+             std::to_string(next_source_pos_modulo) + ", source_pos_err " +
+             std::to_string(source_pos_error.get());
     }
 
     // From their current values, advance the long-running positions by a number of dest frames.
@@ -64,29 +64,31 @@ class Mixer {
       if (bookkeeping.denominator()) {
         // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
         __int128_t denominator_128 = bookkeeping.denominator();
-        __int128_t src_pos_modulo_delta =
+        __int128_t source_pos_modulo_delta =
             static_cast<__int128_t>(bookkeeping.rate_modulo()) * dest_frames;
-        __int128_t next_src_pos_modulo_128 = next_src_pos_modulo + src_pos_modulo_delta;
-        __int128_t src_pos_modulo_128 = bookkeeping.src_pos_modulo + src_pos_modulo_delta;
+        __int128_t next_source_pos_modulo_128 = next_source_pos_modulo + source_pos_modulo_delta;
+        __int128_t source_pos_modulo_128 = bookkeeping.source_pos_modulo + source_pos_modulo_delta;
 
         // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
         //
         // If advance was negative, mod the potentially-negative pos_modulo values up into range.
         // Negative modulo is error-prone and potentially-undefined-behavior; avoiding it is more
         // clear at little additional CPU cost (any negative position advance should be small).
-        while (next_src_pos_modulo_128 < 0) {
+        while (next_source_pos_modulo_128 < 0) {
           --source_frame_delta;
-          next_src_pos_modulo_128 += denominator_128;
+          next_source_pos_modulo_128 += denominator_128;
         }
-        while (src_pos_modulo_128 < 0) {
-          src_pos_modulo_128 += denominator_128;
+        while (source_pos_modulo_128 < 0) {
+          source_pos_modulo_128 += denominator_128;
         }
         // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
 
         // mod these back down into range.
-        source_frame_delta += static_cast<int64_t>(next_src_pos_modulo_128 / denominator_128);
-        next_src_pos_modulo = static_cast<uint64_t>(next_src_pos_modulo_128 % denominator_128);
-        bookkeeping.src_pos_modulo = static_cast<uint64_t>(src_pos_modulo_128 % denominator_128);
+        source_frame_delta += static_cast<int64_t>(next_source_pos_modulo_128 / denominator_128);
+        next_source_pos_modulo =
+            static_cast<uint64_t>(next_source_pos_modulo_128 % denominator_128);
+        bookkeeping.source_pos_modulo =
+            static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
       }
       next_frac_source_frame += Fixed::FromRaw(source_frame_delta);
     }
@@ -128,16 +130,17 @@ class Mixer {
     // from the dest_frames_to_frac_source_frames TimelineFunction.
     Fixed next_frac_source_frame{0};
 
-    // This field is similar to src_pos_modulo and relates to the same rate_modulo and denominator.
-    // It expresses the stream's long-running position modulo (whereas src_pos_modulo is per-Mix).
-    uint64_t next_src_pos_modulo = 0;
+    // This field is similar to source_pos_modulo and relates to the same rate_modulo and
+    // denominator. It expresses the stream's long-running position modulo (whereas
+    // source_pos_modulo is per-Mix).
+    uint64_t next_source_pos_modulo = 0;
 
     // This field represents the difference between next_frac_souce_frame (maintained on a relative
     // basis after each Mix() call), and the clock-derived absolute source position (calculated from
     // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
     // next_frac_source_frame is reset to that clock-derived value, and this field is set to zero.
     // This field sets the direction and magnitude of any steps taken for clock reconciliation.
-    zx::duration src_pos_error{0};
+    zx::duration source_pos_error{0};
 
     // This field is used to ensure that when a stream first starts, we establish the offset
     // between destination frame and source fractional frame using clock calculations. We want to
@@ -155,13 +158,13 @@ class Mixer {
   //
   // When calling Mix(), we communicate resampling details with three parameters found in the
   // Bookkeeping. To augment step_size, rate_modulo and denominator arguments capture any remaining
-  // aspects that are not expressed by the 19.13 fixed-point step_size. Because frac_src_offset and
-  // step_size both use the 19.13 format, they exhibit the same precision limitations. These rate
-  // and position limitations are reiterated upon the start of each mix job.
+  // aspects that are not expressed by the 19.13 fixed-point step_size. Because frac_source_offset
+  // and step_size both use the 19.13 format, they exhibit the same precision limitations. These
+  // rate and position limitations are reiterated upon the start of each mix job.
   //
   // Just as we address *rate* with rate_modulo and denominator, likewise for *position* Bookkeeping
-  // uses src_pos_modulo to track initial and ongoing modulo of src subframes. This work is only
-  // partially complete; the remaining work (e.g., setting src_pos_modulo's initial value to
+  // uses source_pos_modulo to track initial and ongoing modulo of source subframes. This work is
+  // only partially complete; the remaining work (e.g., setting source_pos_modulo's initial value to
   // anything other than 0) is tracked with fxbug.dev/13414.
   //
   // With *rate*, the effect of inaccuracy accumulates over time, causing measurable distortion that
@@ -186,30 +189,31 @@ class Mixer {
     // configuration to another is essentially an MxN gain table that can be applied during Mix().
 
     // This 19.13 fixed-point value represents how much to increment our sampling position in the
-    // source (src) stream, for each output (dest) frame produced.
+    // source stream, for each output (dest) frame produced.
     uint32_t step_size = Mixer::FRAC_ONE;
 
     // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
     // subsequent denominator) expresses leftover precision. When non-zero, rate_modulo and
-    // denominator express a fractional value of the step_size unit that src position should
+    // denominator express a fractional value of the step_size unit that source position should
     // advance, for each dest frame.
     uint64_t rate_modulo() const { return rate_modulo_; }
 
     // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
     // precedent rate_modulo) expresses leftover precision. When non-zero, rate_modulo and
-    // denominator express a fractional value of the step_size unit that src position should
+    // denominator express a fractional value of the step_size unit that source position should
     // advance, for each dest frame.
     uint64_t denominator() const { return denominator_; }
 
-    // If frac_src_offset cannot perfectly express the source's position, this parameter (along with
-    // denominator) expresses any leftover precision. When present, src_pos_modulo and denominator
-    // express a fractional value of the frac_src_offset unit to be used when src position advances.
-    uint64_t src_pos_modulo = 0;
+    // If frac_source_offset cannot perfectly express the source's position, this parameter (along
+    // with denominator) expresses any leftover precision. When present, source_pos_modulo and
+    // denominator express a fractional value of the frac_source_offset unit to be used when source
+    // position advances.
+    uint64_t source_pos_modulo = 0;
 
     // This method resets the local position accounting (including gain ramping), but not the
     // long-running positions. This is called upon a source discontinuity.
     void Reset() {
-      src_pos_modulo = 0;
+      source_pos_modulo = 0;
       gain.CompleteSourceRamp();
     }
 
@@ -218,9 +222,9 @@ class Mixer {
       FX_CHECK(denom > 0);
       FX_CHECK(rate_mod < denom);
       if (denom == 1) {
-        src_pos_modulo = 0;
+        source_pos_modulo = 0;
         if (info != nullptr) {
-          info->next_src_pos_modulo = 0;
+          info->next_source_pos_modulo = 0;
         }
         denominator_ = 1;
         rate_modulo_ = 0;
@@ -228,13 +232,13 @@ class Mixer {
       }
 
       if (denom != denominator_) {
-        __uint128_t temp = (static_cast<__uint128_t>(src_pos_modulo) * denom) / denominator_;
-        src_pos_modulo = static_cast<uint64_t>(temp);
+        __uint128_t temp = (static_cast<__uint128_t>(source_pos_modulo) * denom) / denominator_;
+        source_pos_modulo = static_cast<uint64_t>(temp);
 
         if (info != nullptr) {
           __uint128_t temp =
-              (static_cast<__uint128_t>(info->next_src_pos_modulo) * denom) / denominator_;
-          info->next_src_pos_modulo = static_cast<uint64_t>(temp);
+              (static_cast<__uint128_t>(info->next_source_pos_modulo) * denom) / denominator_;
+          info->next_source_pos_modulo = static_cast<uint64_t>(temp);
         }
 
         denominator_ = denom;
@@ -274,7 +278,7 @@ class Mixer {
   //
   // If resampler_type is absent or Default, this is determined by algorithm. For optimum system
   // performance across changing conditions, callers should use Default whenever possible.
-  static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& src_format,
+  static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& source_format,
                                        const fuchsia::media::AudioStreamType& dest_format,
                                        Resampler resampler_type = Resampler::Default);
 
@@ -296,16 +300,16 @@ class Mixer {
   // output frame. When Mix has finished, dest_offset is updated to indicate the
   // destination buffer offset of the next frame to be mixed.
   //
-  // @param src
+  // @param source
   // Pointer to source buffer, containing frames to be mixed to the dest buffer.
   //
-  // @param frac_src_frames
+  // @param frac_source_frames
   // Total number (in 19.13 fixed) of incoming subframes in the source buffer.
   //
-  // @param frac_src_offset
-  // A pointer to the offset (in fractional source frames) from start of src
+  // @param frac_source_offset
+  // A pointer to the offset (in fractional source frames) from start of source
   // buffer, at which the first source frame should be sampled. When Mix has
-  // finished, frac_src_offset will be updated to indicate the offset of the
+  // finished, frac_source_offset will be updated to indicate the offset of the
   // sampling position of the next frame to be sampled.
   //
   // @param accumulate
@@ -317,23 +321,26 @@ class Mixer {
   // need it in the future. False if the mixer has not consumed the entire
   // source buffer and will need more of it in the future.
   //
-  // TODO(mpuryear): Change parameter frac_src_frames to src_frames (change
+  // TODO(mpuryear): Change parameter frac_source_frames to source_frames (change
   // subframes to int frames), as this was never intended to be fractional.
   //
-  // TODO(fxbug.dev/37356): Make frac_src_frames and frac_src_offset typesafe
+  // TODO(fxbug.dev/37356): Make frac_source_frames and frac_source_offset typesafe
   //
-  // Within Mix(), the following dest/source/rate constraints are enforced:
-  //  * frac_src_frames cannot exceed INT32_MAX
-  //                    must be purely integral (no fractional value)
-  //                    must equal/exceed 1 frame
-  //  * frac_src_offset cannot exceed frac_src_frames
-  //                    cannot be less than -pos_filter_width
-  //  * dest_offset     cannot exceed dest_frames
-  //  * step_size       must exceed zero
-  //  * denominator     must exceed both rate_modulo and source_position_modulo,
-  //                    or must be zero
-  virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-                   uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) = 0;
+  // Within Mix(), the following source/dest/rate constraints are enforced:
+  //  * frac_source_frames     must be at least 1 frame
+  //                           must be integral (no fractional value)
+  //                           cannot exceed INT32_MAX
+  //  * frac_source_offset     must be at least -pos_filter_width
+  //                           cannot exceed frac_source_frames
+  //
+  //  * dest_offset            cannot exceed dest_frames
+  //
+  //  * step_size              must exceed zero
+  //  * rate_modulo            must be either zero or less than denominator
+  //  * source_position_modulo must be either zero or less than denominator
+  //
+  virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* source,
+                   uint32_t frac_source_frames, int32_t* frac_source_offset, bool accumulate) = 0;
   //
   // Reset
   //

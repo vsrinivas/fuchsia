@@ -137,8 +137,8 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
 
   float primary_err_ppm_multiplier_;
   float secondary_err_ppm_multiplier_;
-  zx::duration upper_limit_src_pos_err_;
-  zx::duration lower_limit_src_pos_err_;
+  zx::duration upper_limit_source_pos_err_;
+  zx::duration lower_limit_source_pos_err_;
 
   zx::duration one_usec_err_;       // The smaller of one microsec, and our settled err value.
   zx::duration one_percent_err_;    // 1% of the maximum allowed primary error
@@ -273,8 +273,8 @@ void MixStageClockTest::SetRateLimits(int32_t rate_adjust_ppm) {
   // very small rate_adjust_ppm, these values can be overshadowed by any steady-state "ripple" we
   // might have, so include that "ripple" value in our max/min and 1% errors.
   auto min_max = std::minmax(primary_err_limit, secondary_err_limit);
-  lower_limit_src_pos_err_ = min_max.first - limit_settled_err_;
-  upper_limit_src_pos_err_ = min_max.second + limit_settled_err_;
+  lower_limit_source_pos_err_ = min_max.first - limit_settled_err_;
+  upper_limit_source_pos_err_ = min_max.second + limit_settled_err_;
 
   one_usec_err_ = std::max(limit_settled_err_, zx::usec(1));
   auto primary_err_one_percent = zx::duration(std::abs(primary_err_limit.get()) / 100);
@@ -347,40 +347,40 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
     ASSERT_EQ(mix_info.next_dest_frame, kFramesToMix * (mix_count + 1));
 
     // Track the worst-case position errors (overall min/max, 1%, 1us, final-settled).
-    if (mix_info.src_pos_error > max_err) {
-      max_err = mix_info.src_pos_error;
+    if (mix_info.source_pos_error > max_err) {
+      max_err = mix_info.source_pos_error;
       mix_count_of_max_err = mix_count;
     }
-    if (mix_info.src_pos_error < min_err) {
-      min_err = mix_info.src_pos_error;
+    if (mix_info.source_pos_error < min_err) {
+      min_err = mix_info.source_pos_error;
       mix_count_of_min_err = mix_count;
     }
-    auto abs_src_pos_error = zx::duration(std::abs(mix_info.src_pos_error.get()));
-    if (abs_src_pos_error > one_percent_err_) {
+    auto abs_source_pos_error = zx::duration(std::abs(mix_info.source_pos_error.get()));
+    if (abs_source_pos_error > one_percent_err_) {
       actual_mix_count_one_percent_err = mix_count;
     }
-    if (abs_src_pos_error > one_usec_err_) {
+    if (abs_source_pos_error > one_usec_err_) {
       actual_mix_count_one_usec_err = mix_count;
     }
-    if (abs_src_pos_error > limit_settled_err_) {
+    if (abs_source_pos_error > limit_settled_err_) {
       actual_mix_count_settled = mix_count;
     }
 
     if (mix_count >= limit_mix_count_settled_) {
-      max_settled_err = std::max(mix_info.src_pos_error, max_settled_err);
-      min_settled_err = std::min(mix_info.src_pos_error, min_settled_err);
+      max_settled_err = std::max(mix_info.source_pos_error, max_settled_err);
+      min_settled_err = std::min(mix_info.source_pos_error, min_settled_err);
     }
 
     if constexpr (kTraceClockSyncConvergence) {
       FX_LOGS(INFO) << std::setw(5) << rate_adjust_ppm << ": [" << std::right << std::setw(3)
-                    << mix_count << "], error " << std::setw(5) << mix_info.src_pos_error.get();
+                    << mix_count << "], error " << std::setw(5) << mix_info.source_pos_error.get();
     }
   }
 
-  EXPECT_LE(max_err.get(), upper_limit_src_pos_err_.get())
+  EXPECT_LE(max_err.get(), upper_limit_source_pos_err_.get())
       << "rate ppm " << rate_adjust_ppm << " at mix_count[" << mix_count_of_max_err << "] "
       << mix_count_of_max_err * kClockSyncMixDuration.to_msecs() << "ms";
-  EXPECT_GE(min_err.get(), lower_limit_src_pos_err_.get())
+  EXPECT_GE(min_err.get(), lower_limit_source_pos_err_.get())
       << "rate ppm " << rate_adjust_ppm << " at mix_count[" << mix_count_of_min_err << "] "
       << mix_count_of_min_err * kClockSyncMixDuration.to_msecs() << "ms";
 
@@ -403,21 +403,21 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
     if (rate_adjust_ppm != 0) {
       FX_LOGS(INFO)
           << "****************************************************************************";
-      if (zx::duration(std::abs(lower_limit_src_pos_err_.get())) > upper_limit_src_pos_err_) {
+      if (zx::duration(std::abs(lower_limit_source_pos_err_.get())) > upper_limit_source_pos_err_) {
         FX_LOGS(INFO)
             << fbl::StringPrintf(
                    "Rate %5d: Primary [%2d] %5ld (%5ld limit); Secondary [%2d] %5ld (%5ld limit)",
                    rate_adjust_ppm, mix_count_of_min_err, min_err.get(),
-                   lower_limit_src_pos_err_.get(), mix_count_of_max_err, max_err.get(),
-                   upper_limit_src_pos_err_.get())
+                   lower_limit_source_pos_err_.get(), mix_count_of_max_err, max_err.get(),
+                   upper_limit_source_pos_err_.get())
                    .c_str();
       } else {
         FX_LOGS(INFO)
             << fbl::StringPrintf(
                    "Rate %5d: Primary [%2d] %5ld (%5ld limit); Secondary [%2d] %5ld (%5ld limit)",
                    rate_adjust_ppm, mix_count_of_max_err, max_err.get(),
-                   upper_limit_src_pos_err_.get(), mix_count_of_min_err, min_err.get(),
-                   lower_limit_src_pos_err_.get())
+                   upper_limit_source_pos_err_.get(), mix_count_of_min_err, min_err.get(),
+                   lower_limit_source_pos_err_.get())
                    .c_str();
       }
 

@@ -24,8 +24,8 @@ TEST(SourceInfoTest, Defaults) {
 
   EXPECT_EQ(info.next_dest_frame, 0);
   EXPECT_EQ(info.next_frac_source_frame, 0);
-  EXPECT_EQ(info.next_src_pos_modulo, 0ull);
-  EXPECT_EQ(info.src_pos_error, zx::duration(0));
+  EXPECT_EQ(info.next_source_pos_modulo, 0ull);
+  EXPECT_EQ(info.source_pos_error, zx::duration(0));
 
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_time(), 0);
@@ -38,8 +38,8 @@ TEST(SourceInfoTest, Defaults) {
   EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_delta(), 1u);
 }
 
-// Reset with dest_frame: sets the running dest and frac_src position counters appropriately.
-// next_frac_source_frame is set according to dest_to_frac_src transform, next_src_pos_modulo
+// Reset with dest_frame: sets the running dest and frac_source position counters appropriately.
+// next_frac_source_frame is set according to dest_to_frac_source transform, next_source_pos_modulo
 // according to rate_modulo and denominator.
 TEST(SourceInfoTest, ResetPositions) {
   StubMixer mixer;
@@ -51,8 +51,8 @@ TEST(SourceInfoTest, ResetPositions) {
   // All these values will be overwritten
   info.next_dest_frame = -97;
   info.next_frac_source_frame = Fixed(7);
-  info.next_src_pos_modulo = 1u;
-  info.src_pos_error = zx::duration(-777);
+  info.next_source_pos_modulo = 1u;
+  info.source_pos_error = zx::duration(-777);
 
   info.ResetPositions(100, bookkeeping);
 
@@ -60,8 +60,8 @@ TEST(SourceInfoTest, ResetPositions) {
   // Calculated directly from the TimelineFunction
   EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(1700));
   // Cleared by ResetPositions()
-  EXPECT_EQ(info.next_src_pos_modulo, 0ull);
-  EXPECT_EQ(info.src_pos_error, zx::duration(0));
+  EXPECT_EQ(info.next_source_pos_modulo, 0ull);
+  EXPECT_EQ(info.source_pos_error, zx::duration(0));
 }
 
 // Bookkeeping::Reset clears its own struct but should not affect SourceInfo.
@@ -69,20 +69,20 @@ TEST(SourceInfoTest, UnaffectedByBookkeepingReset) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
   bookkeeping.SetRateModuloAndDenominator(5, 7);
-  bookkeeping.src_pos_modulo = 3u;
+  bookkeeping.source_pos_modulo = 3u;
 
   auto& info = mixer.source_info();
   info.next_dest_frame = 13;
   info.next_frac_source_frame = Fixed(11);
-  info.next_src_pos_modulo = 2;
-  info.src_pos_error = zx::duration(-17);
+  info.next_source_pos_modulo = 2;
+  info.source_pos_error = zx::duration(-17);
 
   bookkeeping.Reset();
 
   EXPECT_EQ(info.next_dest_frame, 13);
   EXPECT_EQ(info.next_frac_source_frame, Fixed(11));
-  EXPECT_EQ(info.next_src_pos_modulo, 2ull);
-  EXPECT_EQ(info.src_pos_error, zx::duration(-17));
+  EXPECT_EQ(info.next_source_pos_modulo, 2ull);
+  EXPECT_EQ(info.source_pos_error, zx::duration(-17));
 }
 
 // From current values, AdvanceRunningPositions advances running positions for dest, frac_source and
@@ -92,32 +92,32 @@ TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
   auto& bookkeeping = mixer.bookkeeping();
   bookkeeping.step_size = Mixer::FRAC_ONE + 2;
   bookkeeping.SetRateModuloAndDenominator(2, 5);
-  bookkeeping.src_pos_modulo = 3;
+  bookkeeping.source_pos_modulo = 3;
 
   auto& info = mixer.source_info();
   info.next_dest_frame = 2;
   info.next_frac_source_frame = Fixed(3);
-  info.next_src_pos_modulo = 1;
-  info.src_pos_error = zx::duration(-17);
+  info.next_source_pos_modulo = 1;
+  info.source_pos_error = zx::duration(-17);
 
   info.AdvanceRunningPositionsTo(11, bookkeeping);
 
   // This should be unchanged
-  EXPECT_EQ(info.src_pos_error, zx::duration(-17));
+  EXPECT_EQ(info.source_pos_error, zx::duration(-17));
 
   // These should be updated
   //
   // Starts at 3 with position modulo 1 (out of 5).
   // Advanced by 9 dest frames at step_size "1.002" with rate_modulo 2.
   // Position mod: expect 1 + (9 * 2) = 19, %5 becomes 3 subframes and position modulo 4.
-  // frac_src: expect 3 + (9 * 1.002) frames (12 frames + 18 subframes), plus 3 subs from above.
-  // Thus expect new running src position: 12 frames, 21 subframes, position modulo 4.
+  // frac_source: expect 3 + (9 * 1.002) frames (12 frames + 18 subframes), plus 3 subs from above.
+  // Thus expect new running source position: 12 frames, 21 subframes, position modulo 4.
   EXPECT_EQ(info.next_dest_frame, 11u);
   EXPECT_EQ(info.next_frac_source_frame, Fixed(12) + Fixed::FromRaw(21));
-  EXPECT_EQ(info.next_src_pos_modulo, 4ull);
+  EXPECT_EQ(info.next_source_pos_modulo, 4ull);
   // Starts at position modulo 3 (out of 5). Advance by 9 with rate_modulo 2.
   // Position mod: expect 3 + (9 * 2) = 21, %5 becomes position modulo 1.
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 1u);
+  EXPECT_EQ(bookkeeping.source_pos_modulo, 1u);
 }
 
 // Also validate AdvanceRunningPositions for negative offsets.
@@ -130,20 +130,20 @@ TEST(SourceInfoTest, NegativeAdvanceRunningPositionBy) {
   auto& info = mixer.source_info();
   info.next_dest_frame = 12;
   info.next_frac_source_frame = Fixed(3);
-  info.next_src_pos_modulo = 0;
+  info.next_source_pos_modulo = 0;
 
   info.AdvanceRunningPositionsBy(-3, bookkeeping);
 
-  // frac_src_pos starts at 3 frames, 0 subframes, with position modulo 0 out of 5.
+  // frac_source_pos starts at 3 frames, 0 subframes, with position modulo 0 out of 5.
   // Advanced by -3 dest frames at a step_size of [1 frame + 2 subframes+ mod 2/5]
-  // For -3 dest frames, this is a src advance of -3 frames, -6 subframes, -6/5 mod.
-  // src_pos_mod was 0/5, plus -6/5, is now -6/5, but negative modulo must be reduced.
+  // For -3 dest frames, this is a source advance of -3 frames, -6 subframes, -6/5 mod.
+  // source_pos_mod was 0/5, plus -6/5, is now -6/5, but negative modulo must be reduced.
   // 0 subframes + mod -6/5 becomes -2 subframe + mod 4/5.
   //
-  // frac_src advances by -3f, -8 subframes (-6-2) to become 0 frames -8 subframes.
+  // frac_source advances by -3f, -8 subframes (-6-2) to become 0 frames -8 subframes.
   EXPECT_EQ(info.next_dest_frame, 9u);
   EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(-8));
-  EXPECT_EQ(info.next_src_pos_modulo, 4ul);
+  EXPECT_EQ(info.next_source_pos_modulo, 4ul);
 }
 
 }  // namespace

@@ -47,26 +47,26 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   AudioBuffer accum(accum_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
-  uint32_t frac_src_frames = kFreqTestBufSize << kPtsFractionalBits;
+  uint32_t frac_source_frames = kFreqTestBufSize << kPtsFractionalBits;
 
   // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
   // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
   // these frames are exactly what would have immediately preceded the first data in the buffer.
   // This enables resamplers with significant side width to perform as they would in steady-state.
-  int32_t frac_src_offset = frac_src_frames;
+  int32_t frac_source_offset = frac_source_frames;
   auto source_is_consumed =
       mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-                 frac_src_frames, &frac_src_offset, false);
+                 frac_source_frames, &frac_source_offset, false);
   FX_DCHECK(source_is_consumed);
   FX_DCHECK(dest_offset == 0u);
-  FX_DCHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+  FX_DCHECK(frac_source_offset == static_cast<int32_t>(frac_source_frames));
 
   // We now have a full cache of previous frames (for resamplers that require this), so do the mix.
-  frac_src_offset = 0;
+  frac_source_offset = 0;
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-             frac_src_frames, &frac_src_offset, false);
+             frac_source_frames, &frac_source_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(frac_src_frames));
+  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(frac_source_frames));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
@@ -217,7 +217,7 @@ TEST(NoiseFloor, Output_Float) {
 // to a value 2_PI less. Zero phase is ideal; constant phase is very good; linear is reasonable.
 //
 // If UseFullFrequencySet is false, we test at only three summary frequencies.
-void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* level_db,
+void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_source_frames, double* level_db,
                                double* sinad_db, double* phase_rad) {
   if (!std::isnan(level_db[0])) {
     // This run already has frequency response/SINAD/phase results for this sampler and resampling
@@ -235,14 +235,14 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
   // data can change depending on resampling ratio. However, all FFT inputs are considered periodic,
   // so to generate a periodic output from the resampler, we can provide extra source elements to
   // resamplers by simply wrapping around to source[0], etc.
-  AudioBuffer source(format, num_src_frames);
+  AudioBuffer source(format, num_source_frames);
   AudioBuffer accum(format, num_dest_frames);
 
-  // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
+  // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
   auto& info = mixer->bookkeeping();
-  info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
+  info.step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
   info.SetRateModuloAndDenominator(
-      (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames), num_dest_frames);
+      (Mixer::FRAC_ONE * num_source_frames) - (info.step_size * num_dest_frames), num_dest_frames);
 
   bool use_full_set = FrequencySet::UseFullFrequencySet;
   // kReferenceFreqs[] contains the full set of test frequencies (47). kSummaryIdxs is a subset of
@@ -264,7 +264,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
 
     // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist limit,
     // buffer length must be at least 2x the frequency we want to measure.
-    if (frequency_to_measure * 2 >= num_src_frames) {
+    if (frequency_to_measure * 2 >= num_source_frames) {
       if (freq_idx < FrequencySet::kFirstOutBandRefFreqIdx) {
         level_db[freq_idx] = -INFINITY;
         phase_rad[freq_idx] = -INFINITY;
@@ -274,55 +274,55 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     }
 
     // Populate the source buffer with a sinusoid at each reference frequency.
-    source = GenerateCosineAudio(format, num_src_frames, frequency_to_measure);
+    source = GenerateCosineAudio(format, num_source_frames, frequency_to_measure);
 
-    // Use this to keep ongoing src_pos_modulo across multiple Mix() calls, but then reset it each
-    // time we start testing a new input signal frequency.
-    info.src_pos_modulo = 0;
+    // Use this to keep ongoing source_pos_modulo across multiple Mix() calls, but then reset it
+    // each time we start testing a new input signal frequency.
+    info.source_pos_modulo = 0;
 
     uint32_t dest_frames, dest_offset = 0;
-    uint32_t frac_src_frames = source.NumFrames() * Mixer::FRAC_ONE;
+    uint32_t frac_source_frames = source.NumFrames() * Mixer::FRAC_ONE;
 
     // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
     // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
     // these frames are exactly what would have immediately preceded the first data in the buffer.
     // This enables resamplers with significant side width to perform as they would in steady-state.
-    int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
+    int32_t frac_source_offset = static_cast<int32_t>(frac_source_frames);
     auto source_is_consumed =
         mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
-                   frac_src_frames, &frac_src_offset, false);
+                   frac_source_frames, &frac_source_offset, false);
     FX_CHECK(source_is_consumed);
     FX_CHECK(dest_offset == 0u);
-    FX_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+    FX_CHECK(frac_source_offset == static_cast<int32_t>(frac_source_frames));
 
     // Now resample source to accum. (Why in pieces? See kResamplerTestNumPackets: frequency_set.h)
-    frac_src_offset = 0;
+    frac_source_offset = 0;
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
       mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
-                 frac_src_frames, &frac_src_offset, false);
+                 frac_source_frames, &frac_source_offset, false);
     }
 
-    int32_t expected_frac_src_offset = frac_src_frames;
+    int32_t expected_frac_source_offset = frac_source_frames;
     if (dest_offset < dest_frames) {
       AUDIO_LOG(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames
-                       << ", dest_offset " << dest_offset << ", frac_src_frames " << std::hex
-                       << frac_src_frames << ", frac_src_offset " << frac_src_offset;
-      ASSERT_GE(frac_src_offset, 0);
-      EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width().raw_value(),
-                frac_src_frames)
-          << "src_off " << std::hex << frac_src_offset << ", pos_width "
-          << mixer->pos_filter_width().raw_value() << ", src_frames " << frac_src_frames;
+                       << ", dest_offset " << dest_offset << ", frac_source_frames " << std::hex
+                       << frac_source_frames << ", frac_source_offset " << frac_source_offset;
+      ASSERT_GE(frac_source_offset, 0);
+      EXPECT_GE(static_cast<uint32_t>(frac_source_offset) + mixer->pos_filter_width().raw_value(),
+                frac_source_frames)
+          << "source_off " << std::hex << frac_source_offset << ", pos_width "
+          << mixer->pos_filter_width().raw_value() << ", source_frames " << frac_source_frames;
 
       // Wrap around in the source buffer -- making the offset slightly negative. We can do
       // this, within the positive filter width of this sampler.
-      frac_src_offset -= frac_src_frames;
+      frac_source_offset -= frac_source_frames;
       mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
-                 frac_src_frames, &frac_src_offset, false);
-      expected_frac_src_offset = 0;
+                 frac_source_frames, &frac_source_offset, false);
+      expected_frac_source_offset = 0;
     }
     EXPECT_EQ(dest_offset, dest_frames);
-    EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
+    EXPECT_EQ(frac_source_offset, expected_frac_source_offset);
 
     // After running each frequency, clear the cached filter state. This is not strictly necessary
     // today, since each frequency test starts precisely at buffer-start (thus for Point
@@ -531,8 +531,8 @@ void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results, doubl
 }
 
 // For this resampler, target the upsampling ratio "almost 1:4". EXACTLY 1:4 (combined with our
-// chosen buffer size, and the system definition of STEP_SIZE), would exceed MAX_INT for src_pos. We
-// specify a source buffer at _just_greater__than_ 1/4 the length of the destination buffer.
+// chosen buffer size, and the system definition of STEP_SIZE), would exceed MAX_INT for source_pos.
+// We specify a source buffer at _just_greater__than_ 1/4 the length of the destination buffer.
 void TestUpSampleRatio3(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                         double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 12001, 1, 48000, sampler_type);
@@ -858,7 +858,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   auto num_chans = FrequencySet::kNumSummaryIdxs;
   auto source_rate = 48001u;
   auto dest_rate = 48000u;
-  auto num_src_frames = kFreqTestBufSize + 1;
+  auto num_source_frames = kFreqTestBufSize + 1;
 
   // Mix the N-channel source[] into the N-channel accum[].
   auto mixer = SelectMixer(ASF::FLOAT, num_chans, source_rate, num_chans, dest_rate, sampler_type);
@@ -871,58 +871,58 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // data can change depending on resampling ratio. However, all FFT inputs are considered periodic,
   // so to generate a periodic output from the resampler, we can provide extra source elements to
   // resamplers by simply wrapping around to source[0], etc.
-  auto source = PopulateNxNSourceBuffer(num_src_frames, num_chans, source_rate);
+  auto source = PopulateNxNSourceBuffer(num_source_frames, num_chans, source_rate);
   auto accum = AudioBuffer(dest_format, num_dest_frames);
 
-  // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
+  // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
   auto& info = mixer->bookkeeping();
-  info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
+  info.step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
   info.SetRateModuloAndDenominator(
-      (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames), num_dest_frames);
-  info.src_pos_modulo = 0;
+      (Mixer::FRAC_ONE * num_source_frames) - (info.step_size * num_dest_frames), num_dest_frames);
+  info.source_pos_modulo = 0;
 
   uint32_t dest_frames, dest_offset = 0;
-  uint32_t frac_src_frames = num_src_frames * Mixer::FRAC_ONE;
+  uint32_t frac_source_frames = num_source_frames * Mixer::FRAC_ONE;
 
   // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
   // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
   // these frames are exactly what would have immediately preceded the first data in the buffer.
   // This enables resamplers with significant side width to perform as they would in steady-state.
-  int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
+  int32_t frac_source_offset = static_cast<int32_t>(frac_source_frames);
   auto source_is_consumed =
       mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
-                 frac_src_frames, &frac_src_offset, false);
+                 frac_source_frames, &frac_source_offset, false);
   FX_CHECK(source_is_consumed);
   FX_CHECK(dest_offset == 0u);
-  FX_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+  FX_CHECK(frac_source_offset == static_cast<int32_t>(frac_source_frames));
 
   // Resample source to accum. (Why in pieces? See kResamplerTestNumPackets in frequency_set.h)
-  frac_src_offset = 0;
+  frac_source_offset = 0;
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
     mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
-               frac_src_frames, &frac_src_offset, false);
+               frac_source_frames, &frac_source_offset, false);
   }
-  int32_t expected_frac_src_offset = frac_src_frames;
+  int32_t expected_frac_source_offset = frac_source_frames;
   if (dest_offset < dest_frames) {
     AUDIO_LOG(WARNING) << "Performing wraparound mix: dest_frames " << dest_frames
-                       << ", dest_offset " << dest_offset << ", frac_src_frames " << std::hex
-                       << frac_src_frames << ", frac_src_offset " << frac_src_offset;
-    ASSERT_GE(frac_src_offset, 0);
-    EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width().raw_value(),
-              frac_src_frames)
-        << "src_off " << std::hex << frac_src_offset << ", pos_width "
-        << mixer->pos_filter_width().raw_value() << ", src_frames " << frac_src_frames;
+                       << ", dest_offset " << dest_offset << ", frac_source_frames " << std::hex
+                       << frac_source_frames << ", frac_source_offset " << frac_source_offset;
+    ASSERT_GE(frac_source_offset, 0);
+    EXPECT_GE(static_cast<uint32_t>(frac_source_offset) + mixer->pos_filter_width().raw_value(),
+              frac_source_frames)
+        << "source_off " << std::hex << frac_source_offset << ", pos_width "
+        << mixer->pos_filter_width().raw_value() << ", source_frames " << frac_source_frames;
 
     // Wrap around in the source buffer -- making the offset slightly negative. We can do
     // this, within the positive filter width of this sampler.
-    frac_src_offset -= frac_src_frames;
+    frac_source_offset -= frac_source_frames;
     mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
-               frac_src_frames, &frac_src_offset, false);
-    expected_frac_src_offset = 0;
+               frac_source_frames, &frac_source_offset, false);
+    expected_frac_source_offset = 0;
   }
   EXPECT_EQ(dest_offset, dest_frames);
-  EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
+  EXPECT_EQ(frac_source_offset, expected_frac_source_offset);
 
   // After running each frequency, clear out any remained cached filter state.
   // Currently, this is not strictly necessary since for each frequency test,
@@ -941,7 +941,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
 
     auto frequency_to_measure = FrequencySet::kReferenceFreqs[freq_idx];
     // If frequency is too high to be characterized in this buffer length, skip it.
-    if (frequency_to_measure * 2 >= num_src_frames) {
+    if (frequency_to_measure * 2 >= num_source_frames) {
       if (freq_idx < FrequencySet::kFirstOutBandRefFreqIdx) {
         level_db[freq_idx] = -INFINITY;
         phase_rad[freq_idx] = -INFINITY;

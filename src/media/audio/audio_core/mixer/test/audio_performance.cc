@@ -330,8 +330,8 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
                           FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx], amplitude);
 
   auto accum = std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
-  uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
-  int32_t frac_src_offset;
+  uint32_t frac_source_frames = source_frames * Mixer::FRAC_ONE;
+  int32_t frac_source_offset;
   uint32_t dest_offset, previous_dest_offset;
 
   auto& info = mixer->bookkeeping();
@@ -384,18 +384,18 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
     auto start_time = zx::clock::get_monotonic();
 
     dest_offset = 0;
-    frac_src_offset = 0;
-    info.src_pos_modulo = 0;
+    frac_source_offset = 0;
+    info.source_pos_modulo = 0;
 
     while (dest_offset < kFreqTestBufSize) {
       previous_dest_offset = dest_offset;
-      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, &source.samples()[0], frac_src_frames,
-                 &frac_src_offset, accumulate);
+      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, &source.samples()[0],
+                 frac_source_frames, &frac_source_offset, accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
       info.gain.Advance(dest_offset - previous_dest_offset, TimelineRate(source_rate, ZX_SEC(1)));
-      if (frac_src_offset + width >= frac_src_frames) {
-        frac_src_offset -= frac_src_frames;
+      if (frac_source_offset + width >= frac_source_frames) {
+        frac_source_offset -= frac_source_frames;
       }
     }
 

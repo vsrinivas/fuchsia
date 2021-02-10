@@ -13,13 +13,13 @@ using Resampler = ::media::audio::Mixer::Resampler;
 // Subtest utility functions -- used by test functions; can ASSERT on their own.
 //
 // Find a suitable mixer for the provided format, channels and frame rates.
-// In testing, we choose ratio-of-frame-rates and src_channels carefully, to
+// In testing, we choose ratio-of-frame-rates and source_channels carefully, to
 // trigger the selection of a specific mixer. Note: Mixers convert audio into
 // our accumulation format (not the destination format), so we need not specify
 // a dest_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
-std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
-                                   uint32_t src_channels, uint32_t src_frame_rate,
+std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_format,
+                                   uint32_t source_channels, uint32_t source_frame_rate,
                                    uint32_t dest_channels, uint32_t dest_frame_rate,
                                    Resampler resampler) {
   if (resampler == Resampler::Default) {
@@ -28,17 +28,17 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
     return nullptr;
   }
 
-  fuchsia::media::AudioStreamType src_details;
-  src_details.sample_format = src_format;
-  src_details.channels = src_channels;
-  src_details.frames_per_second = src_frame_rate;
+  fuchsia::media::AudioStreamType source_details;
+  source_details.sample_format = source_format;
+  source_details.channels = source_channels;
+  source_details.frames_per_second = source_frame_rate;
 
   fuchsia::media::AudioStreamType dest_details;
   dest_details.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   dest_details.channels = dest_channels;
   dest_details.frames_per_second = dest_frame_rate;
 
-  return Mixer::Select(src_details, dest_details, resampler);
+  return Mixer::Select(source_details, dest_details, resampler);
 }
 
 // Just as Mixers convert audio into our accumulation format, OutputProducer
@@ -67,25 +67,25 @@ void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
   }
 }
 
-// Use the supplied mixer to scale from src into accum buffers.  Assumes a
+// Use the supplied mixer to scale from source into accum buffers.  Assumes a
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
-void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate, int32_t num_frames,
-           float gain_db) {
+void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
+           int32_t num_frames, float gain_db) {
   ASSERT_NE(mixer, nullptr);
 
   uint32_t dest_offset = 0;
-  int32_t frac_src_offset = 0;
+  int32_t frac_source_offset = 0;
 
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(gain_db);
 
-  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf,
-                               num_frames << kPtsFractionalBits, &frac_src_offset, accumulate);
+  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf,
+                               num_frames << kPtsFractionalBits, &frac_source_offset, accumulate);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, static_cast<uint32_t>(num_frames));
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
+  EXPECT_EQ(frac_source_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
 }
 
 std::pair<double, double> SampleFormatToAmplitudes(fuchsia::media::AudioSampleFormat f) {

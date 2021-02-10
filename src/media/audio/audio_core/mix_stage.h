@@ -69,7 +69,7 @@ class MixStage : public ReadableStream {
   void ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                      ReadableStream& stream);
   void SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                   TimelineRate& frac_src_frames_per_dest_frame);
+                   TimelineRate& frac_source_frames_per_dest_frame);
 
   void MixStream(Mixer& mixer, ReadableStream& stream);
   bool ProcessMix(Mixer& mixer, ReadableStream& stream, const ReadableStream::Buffer& buffer);

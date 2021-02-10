@@ -20,8 +20,8 @@ namespace media::audio::test {
 //
 
 // Find a suitable mixer for the provided format, channels and frame rates.
-std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
-                                   uint32_t src_channels, uint32_t src_frame_rate,
+std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_format,
+                                   uint32_t source_channels, uint32_t source_frame_rate,
                                    uint32_t dest_channels, uint32_t dest_frame_rate,
                                    Mixer::Resampler resampler);
 
@@ -74,8 +74,8 @@ constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
 
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
-void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate, int32_t num_frames,
-           float gain_db = 0.0f);
+void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
+           int32_t num_frames, float gain_db = 0.0f);
 
 // Returns a pair of (format_amplitude, double_amplitude) where
 // |format_amplitude| is the amplitude that should be applied in the given format |f|, and

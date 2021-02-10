@@ -38,7 +38,9 @@ class Gain {
 
   // constructor
   Gain()
-      : target_src_gain_db_(kUnityGainDb), target_dest_gain_db_(kUnityGainDb), frames_ramped_(0) {}
+      : target_source_gain_db_(kUnityGainDb),
+        target_dest_gain_db_(kUnityGainDb),
+        frames_ramped_(0) {}
 
   // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
   using AScale = float;
@@ -93,7 +95,7 @@ class Gain {
   // the range [-inf, 24.0]. Callers must guarantee single-threaded semantics
   // for each Gain instance.
   void SetSourceGain(float gain_db) {
-    target_src_gain_db_ = gain_db;
+    target_source_gain_db_ = gain_db;
     if constexpr (kVerboseGainDebug) {
       FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
     }
@@ -108,7 +110,7 @@ class Gain {
   void CompleteSourceRamp() {
     if (source_ramp_duration_ > zx::nsec(0)) {
       source_ramp_duration_ = zx::nsec(0);
-      SetSourceGain(end_src_gain_db_);
+      SetSourceGain(end_source_gain_db_);
     }
   }
 
@@ -131,7 +133,7 @@ class Gain {
   float GetGainDb() { return ScaleToDb(GetGainScale()); }
 
   // Calculate the stream's gain-scale, from cached source and dest values.
-  AScale GetGainScale() { return GetGainScale(target_src_gain_db_, target_dest_gain_db_); }
+  AScale GetGainScale() { return GetGainScale(target_source_gain_db_, target_dest_gain_db_); }
 
   void GetScaleArray(AScale* scale_arr, uint32_t num_frames, const TimelineRate& rate);
 
@@ -142,14 +144,14 @@ class Gain {
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
   bool IsUnity() {
-    float temp_db = target_src_gain_db_ + target_dest_gain_db_;
+    float temp_db = target_source_gain_db_ + target_dest_gain_db_;
 
     return (temp_db == 0) && !IsRamping();
   }
 
   bool IsSilent() {
-    return (IsSilentNow() && (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
-                              end_src_gain_db_ <= kMinGainDb));
+    return (IsSilentNow() && (!IsRamping() || start_source_gain_db_ >= end_source_gain_db_ ||
+                              end_source_gain_db_ <= kMinGainDb));
   }
 
   // TODO(perley/mpuryear): Handle usage ramping.
@@ -158,25 +160,25 @@ class Gain {
  private:
   // Called by the above GetGainScale variants. For performance reasons, this
   // implementation caches values and recomputes the result only as needed.
-  AScale GetGainScale(float src_gain_db, float dest_gain_db);
+  AScale GetGainScale(float source_gain_db, float dest_gain_db);
 
   // Used internally only -- the instananeous gain state
   bool IsSilentNow() {
-    return (target_src_gain_db_ <= kMinGainDb) || (target_dest_gain_db_ <= kMinGainDb) ||
-           (target_src_gain_db_ + target_dest_gain_db_ <= kMinGainDb);
+    return (target_source_gain_db_ <= kMinGainDb) || (target_dest_gain_db_ <= kMinGainDb) ||
+           (target_source_gain_db_ + target_dest_gain_db_ <= kMinGainDb);
   }
 
-  float target_src_gain_db_ = kUnityGainDb;
+  float target_source_gain_db_ = kUnityGainDb;
   float target_dest_gain_db_ = kUnityGainDb;
 
-  float current_src_gain_db_ = kUnityGainDb;
+  float current_source_gain_db_ = kUnityGainDb;
   float current_dest_gain_db_ = kUnityGainDb;
   AScale combined_gain_scale_ = kUnityScale;
 
-  float start_src_scale_ = kUnityScale;
-  float start_src_gain_db_ = kUnityGainDb;
-  float end_src_scale_ = kUnityScale;
-  float end_src_gain_db_ = kUnityGainDb;
+  float start_source_scale_ = kUnityScale;
+  float start_source_gain_db_ = kUnityGainDb;
+  float end_source_scale_ = kUnityScale;
+  float end_source_gain_db_ = kUnityGainDb;
   zx::duration source_ramp_duration_;
   uint32_t frames_ramped_;
 };

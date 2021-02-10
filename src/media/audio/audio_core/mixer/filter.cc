@@ -15,7 +15,7 @@ namespace media::audio::mixer {
 
 // Display the filter table values.
 void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
-  FX_LOGS(INFO) << "Filter: src rate " << source_rate_ << ", dest rate " << dest_rate_
+  FX_LOGS(INFO) << "Filter: source rate " << source_rate_ << ", dest rate " << dest_rate_
                 << ", width 0x" << std::hex << side_width_;
 
   FX_LOGS(INFO) << " **************************************************************";
@@ -71,8 +71,9 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = (*sample_ptr) * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
-      FX_LOGS(INFO) << "Adding src[" << -static_cast<ssize_t>(source_idx) << "] " << (*sample_ptr)
-                    << " x " << coefficient_ptr[source_idx] << " = " << contribution;
+      FX_LOGS(INFO) << "Adding source[" << -static_cast<ssize_t>(source_idx) << "] "
+                    << (*sample_ptr) << " x " << coefficient_ptr[source_idx] << " = "
+                    << contribution;
     }
     result += contribution;
     --sample_ptr;
@@ -88,7 +89,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = sample_ptr[source_idx] * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
-      FX_LOGS(INFO) << "Adding src[" << 1 + source_idx << "] " << sample_ptr[source_idx] << " x "
+      FX_LOGS(INFO) << "Adding source[" << 1 + source_idx << "] " << sample_ptr[source_idx] << " x "
                     << coefficient_ptr[source_idx] << " = " << contribution;
     }
     result += contribution;
@@ -175,7 +176,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   const auto width = inputs.side_width;
   const auto frac_one = 1u << inputs.num_frac_bits;
 
-  // By capping this at 1.0, we set our low-pass filter to the lower of [src_rate, dest_rate].
+  // By capping this at 1.0, we set our low-pass filter to the lower of [source_rate, dest_rate].
   const double conversion_rate = M_PI * fmin(inputs.rate_conversion_ratio, 1.0);
 
   // Construct a sinc-based LPF, from our rate-conversion ratio and filter width.
