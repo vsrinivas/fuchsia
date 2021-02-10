@@ -1478,9 +1478,15 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
   ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
 
   // Connect asynchronously and immediately hang up the listener.
-
-  ASSERT_EQ(connect(client.get(), addr, addr_len), -1);
-  ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+  int ret = connect(client.get(), addr, addr_len);
+#if !defined(__Fuchsia__)
+  // Linux connect may succeed if the handshake completes before the system call returns.
+  if (ret != 0)
+#endif
+  {
+    ASSERT_EQ(ret, -1);
+    ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+  }
 
   ASSERT_NO_FATAL_FAILURE(hangup(&listener));
 
@@ -1506,9 +1512,6 @@ TEST(NetStreamTest, CloseDuringConnect) {
 }
 
 TEST(NetStreamTest, ShutdownDuringConnect) {
-#if defined(__Fuchsia__)
-  GTEST_SKIP() << "TODO(fxbug.dev/35594): shutdown doesn't work on listeners";
-#endif
   TestHangupDuringConnect([](fbl::unique_fd* listener) {
     ASSERT_EQ(shutdown(listener->get(), SHUT_RD), 0) << strerror(errno);
   });
