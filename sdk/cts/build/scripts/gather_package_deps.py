@@ -87,7 +87,10 @@ class GatherPackageDeps:
 
     def archive_output(self):
         tar_path = os.path.join(self.output_dir, 'package.tar')
-        with tarfile.open(tar_path, 'w') as tar:
+        # Explicitly use the GNU_FORMAT because the current dart library
+        # (v.3.0.0) does not support parsing other tar formats that allow for
+        # filenames longer than 100 characters.
+        with tarfile.open(tar_path, 'w', format=tarfile.GNU_FORMAT) as tar:
             for root, _, files in os.walk(self.output_dir):
                 for name in files:
                     relative_dir = os.path.relpath(root, self.output_dir)
