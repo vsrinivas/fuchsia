@@ -35,17 +35,39 @@ namespace {
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kBlockCount = 1 << 20;
 
-std::unique_ptr<FsHostMetrics> MakeMetrics(cobalt_client::InMemoryLogger** logger) {
-  std::unique_ptr<cobalt_client::InMemoryLogger> logger_ptr =
-      std::make_unique<cobalt_client::InMemoryLogger>();
-  *logger = logger_ptr.get();
+// The class helps in keeping track of number of minfs corruptions seen.
+class CorruptionEventCounter : public cobalt_client::InMemoryLogger {
+ public:
+  explicit CorruptionEventCounter(std::atomic<uint32_t>* corruption_count)
+      : cobalt_client::InMemoryLogger(), corruption_count_(corruption_count) {}
+
+  bool Log(const cobalt_client::MetricOptions& metric_info, int64_t count) override {
+    auto ret = cobalt_client::InMemoryLogger::Log(metric_info, count);
+
+    // If this happens to be a minfs corruption event then track count.
+    if (metric_info.metric_id == static_cast<std::underlying_type<fs_metrics::Event>::type>(
+                                     fs_metrics::Event::kDataCorruption) &&
+        metric_info.event_codes[0] == static_cast<uint32_t>(fs_metrics::CorruptionSource::kMinfs)) {
+      ++(*corruption_count_);
+    }
+    return ret;
+  }
+
+ private:
+  std::atomic<uint32_t>* corruption_count_;
+};
+
+std::unique_ptr<FsHostMetrics> MakeMetrics(std::atomic<uint32_t>* corruption_count) {
+  std::unique_ptr<CorruptionEventCounter> logger_ptr =
+      std::make_unique<CorruptionEventCounter>(corruption_count);
   return std::make_unique<FsHostMetrics>(
       std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
 }
 
 class BlockDeviceTest : public testing::Test {
  public:
-  BlockDeviceTest() : manager_(nullptr, MakeMetrics(&logger_)), watcher_(manager_, &config_) {}
+  BlockDeviceTest()
+      : manager_(nullptr, MakeMetrics(&minfs_corruption_count_)), watcher_(manager_, &config_) {}
 
   void SetUp() override {
     // Initialize FilesystemMounter.
@@ -90,12 +112,15 @@ class BlockDeviceTest : public testing::Test {
 
   fbl::unique_fd devfs_root() { return fbl::unique_fd(open("/dev", O_RDWR)); }
 
+  uint32_t corruption_count() const { return minfs_corruption_count_.load(); }
+
  protected:
-  cobalt_client::InMemoryLogger* logger_ = nullptr;
   FsManager manager_;
   Config config_;
 
  private:
+  // This counts number of minfs corruptions events seen.
+  std::atomic<uint32_t> minfs_corruption_count_ = 0;
   std::optional<isolated_devmgr::RamDisk> ramdisk_;
   BlockWatcher watcher_;
 };
@@ -259,10 +284,9 @@ TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
   // Block till counters change. Timed sleep without while loop is not sufficient because
   // it make make test flake in virtual environment.
   // The test may timeout and fail if the counter is never seen.
-  while (logger_->counters().find(metric_options) == logger_->counters().end()) {
+  while (corruption_count() == 0) {
     sleep(1);
   }
-  ASSERT_EQ(logger_->counters().at(metric_options), 1ul);
 }
 
 std::unique_ptr<std::string> GetData(int fd) {
