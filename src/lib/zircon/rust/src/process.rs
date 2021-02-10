@@ -97,6 +97,44 @@ impl Process {
         unsafe { Ok(Thread::from(Handle::from_raw(thread_out))) }
     }
 
+    /// Write memory inside a process.
+    ///
+    /// Wraps the
+    /// [zx_process_write_memory](https://fuchsia.dev/fuchsia-src/reference/syscalls/process_write_memory.md)
+    /// syscall.
+    pub fn write_memory(&self, vaddr: sys::zx_vaddr_t, bytes: &[u8]) -> Result<usize, Status> {
+        let mut actual = 0;
+        let status = unsafe {
+            sys::zx_process_write_memory(
+                self.raw_handle(),
+                vaddr,
+                bytes.as_ptr(),
+                bytes.len(),
+                &mut actual,
+            )
+        };
+        ok(status).map(|()| actual)
+    }
+
+    /// Read memory from inside a process.
+    ///
+    /// Wraps the
+    /// [zx_process_read_memory](https://fuchsia.dev/fuchsia-src/reference/syscalls/process_read_memory.md)
+    /// syscall.
+    pub fn read_memory(&self, vaddr: sys::zx_vaddr_t, bytes: &mut [u8]) -> Result<usize, Status> {
+        let mut actual = 0;
+        let status = unsafe {
+            sys::zx_process_read_memory(
+                self.raw_handle(),
+                vaddr,
+                bytes.as_mut_ptr(),
+                bytes.len(),
+                &mut actual,
+            )
+        };
+        ok(status).map(|()| actual)
+    }
+
     /// Wraps the
     /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_PROCESS topic.
