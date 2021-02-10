@@ -194,10 +194,9 @@ If you specify `UINT32_MAX`, the device will reside in a new driver host.
 
 ## Using a composite device
 
-From a programming perspective, a composite device acts like an ordinary device
-that implements a `ZX_PROTOCOL_COMPOSITE` protocol.
-This allows you to access all of the individual fragments that make up the
-composite device.
+From a programming perspective, a composite device acts like an ordinary device,
+but it has no banjo protocol. This allows you to access all of the individual
+fragments that make up the composite device.
 
 The first thing to retrieve a device for each fragment.
 This is done with **device_get_fragment()**:

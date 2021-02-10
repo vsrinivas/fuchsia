@@ -172,7 +172,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
 
   auto dev =
       fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(), fbl::String(),
-                                  nullptr, ZX_PROTOCOL_COMPOSITE, zx::vmo(), zx::channel());
+                                  nullptr, 0, zx::vmo(), zx::channel());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -257,7 +257,7 @@ void Device::InitializeInspectValues() {
   std::string type("Device");
   if (flags & DEV_CTX_PROXY) {
     type = std::string("Proxy device");
-  } else if (protocol_id_ == ZX_PROTOCOL_COMPOSITE) {
+  } else if (is_composite()) {
     type = std::string("Composite device");
   }
   inspect().set_type(type);

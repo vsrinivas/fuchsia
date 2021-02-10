@@ -209,7 +209,7 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
 TEST_F(InspectDevfsTestCase, NoPubProtocolVisibleInClassDirectory) {
   size_t test_index;
   zx::vmo inspect_vmo, inspect_vmo_duplicate;
-  uint32_t test_device_protocol = ZX_PROTOCOL_COMPOSITE;  // This has PF_NOPUB set
+  uint32_t test_device_protocol = ZX_PROTOCOL_BUTTONS;  // This has PF_NOPUB set
   ASSERT_OK(zx::vmo::create(8 * 1024, 0, &inspect_vmo));
   ASSERT_OK(inspect_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
                                   &inspect_vmo_duplicate));

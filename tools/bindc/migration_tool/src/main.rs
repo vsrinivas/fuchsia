@@ -111,7 +111,6 @@ impl Library {
         match self {
             Library::Acpi => "fuchsia.acpi",
             Library::Bluetooth => "fuchsia.bluetooth",
-            Library::Composite => "fuchsia.composite",
             Library::Pci => "fuchsia.pci",
             Library::Platform => "fuchsia.platform",
             Library::Serial => "fuchsia.serial",
@@ -125,7 +124,6 @@ impl Library {
         match self {
             Library::Acpi => "//src/devices/bind/fuchsia.acpi",
             Library::Bluetooth => "//src/devices/bind/fuchsia.bluetooth",
-            Library::Composite => "//src/devices/bind/fuchsia.composite",
             Library::Pci => "//src/devices/bind/fuchsia.pci",
             Library::Platform => "//src/devices/bind/fuchsia.platform",
             Library::Serial => "//src/devices/bind/fuchsia.serial",
@@ -230,10 +228,6 @@ impl Migrator {
             "ZX_PROTOCOL_ACPI" => {
                 self.libraries.insert(Library::Acpi);
                 "fuchsia.acpi.BIND_PROTOCOL.DEVICE"
-            }
-            "ZX_PROTOCOL_COMPOSITE" => {
-                self.libraries.insert(Library::Composite);
-                "fuchsia.composite.BIND_PROTOCOL.DEVICE"
             }
             "ZX_PROTOCOL_PCI" => {
                 self.libraries.insert(Library::Pci);

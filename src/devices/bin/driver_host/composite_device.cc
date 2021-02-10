@@ -110,7 +110,6 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
   }
 
   dev->set_composite(composite, false);
-  dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);
   dev->set_ops(&composite_device_ops);
   dev->ctx = new_device.release();
   // Flag that when this is cleaned up, we should run its release hook.

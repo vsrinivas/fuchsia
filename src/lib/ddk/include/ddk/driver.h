@@ -322,8 +322,8 @@ typedef struct composite_device_desc {
 
 // Create a composite device with the properties |comp_desc|.
 // Once all of the fragment devices are found, the composite
-// device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the
-// given properties.  A driver may then bind to the created device, and
+// device will be published with device property fuchsia.BIND_COMPOSITE == 1 and
+// the given properties.  A driver may then bind to the created device, and
 // access its parents via device_get_fragment.
 //
 // |name| must be no longer than ZX_DEVICE_NAME_MAX, and is used primarily as a
