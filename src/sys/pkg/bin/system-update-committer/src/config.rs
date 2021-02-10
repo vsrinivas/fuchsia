@@ -10,18 +10,13 @@ use {
     thiserror::Error,
 };
 
-#[cfg(test)]
-use proptest_derive::Arbitrary;
-
 /// Static service configuration options.
 #[derive(Debug, Default, PartialEq, Eq)]
-#[cfg_attr(test, derive(Arbitrary))]
 pub struct Config {
     blobfs: Mode,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-#[cfg_attr(test, derive(Arbitrary))]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
     Ignore,

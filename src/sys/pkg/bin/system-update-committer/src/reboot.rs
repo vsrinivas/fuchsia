@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        config::{Config, Mode},
-        metadata::{MetadataError, VerifyError},
-    },
     anyhow::{anyhow, Context},
     fidl_fuchsia_hardware_power_statecontrol::{
         AdminProxy as PowerStateControlProxy, RebootReason,
@@ -15,14 +11,6 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
 };
-
-/// Determines if we should reboot.
-pub(super) fn should_reboot(error: &MetadataError, config: &Config) -> bool {
-    if let MetadataError::Verify(VerifyError::BlobFs(_)) = error {
-        return config.blobfs() == &Mode::RebootOnFailure;
-    }
-    return true;
-}
 
 /// Waits for the timer to complete and then reboots the system, logging errors instead of failing.
 pub(super) async fn wait_and_reboot(proxy: &PowerStateControlProxy, timer: fasync::Timer) {
@@ -45,11 +33,9 @@ pub(super) async fn wait_and_reboot(proxy: &PowerStateControlProxy, timer: fasyn
 mod tests {
     use {
         super::*,
-        crate::metadata::{BootManagerError, PolicyError, VerifyFailureReason},
         futures::{channel::oneshot, pin_mut, task::Poll},
         mock_reboot::MockRebootService,
         parking_lot::Mutex,
-        proptest::prelude::*,
         std::{sync::Arc, time::Duration},
     };
 
@@ -102,64 +88,5 @@ mod tests {
             Poll::Ready(res) => assert_eq!(res, Ok(RebootReason::RetrySystemUpdate)),
             Poll::Pending => panic!("future unexpectedly pending"),
         };
-    }
-
-    fn test_blobfs_verify_errors(config: Config, expect_reboot: bool) {
-        let timeout_err = MetadataError::Verify(VerifyError::BlobFs(VerifyFailureReason::Timeout));
-        let verify_err =
-            MetadataError::Verify(VerifyError::BlobFs(VerifyFailureReason::Verify(anyhow!("foo"))));
-        let fidl_err = MetadataError::Verify(VerifyError::BlobFs(VerifyFailureReason::Fidl(
-            fidl::Error::OutOfRange,
-        )));
-
-        assert_eq!(should_reboot(&timeout_err, &config), expect_reboot);
-        assert_eq!(should_reboot(&verify_err, &config), expect_reboot);
-        assert_eq!(should_reboot(&fidl_err, &config), expect_reboot);
-    }
-
-    /// Blobfs errors SHOULD NOT cause a reboot if they're ignored.
-    #[test]
-    fn test_blobfs_errors_should_not_reboot() {
-        test_blobfs_verify_errors(Config::builder().blobfs(Mode::Ignore).build(), false);
-    }
-
-    /// Blobfs errors SHOULD cause a reboot if they're NOT ignored.
-    #[test]
-    fn test_blobfs_errors_should_reboot() {
-        test_blobfs_verify_errors(Config::builder().blobfs(Mode::RebootOnFailure).build(), true);
-    }
-
-    // Test that all the non-blobfs metadata errors will always cause a reboot, regardless of the
-    // config. Ideally, we'd also generate arbitrary MetadataErrors, but that's not possible
-    // because there are !Clone descendants.
-    proptest! {
-        #[test]
-        fn test_should_reboot_commit_error(config: Config) {
-            let err = MetadataError::Commit(BootManagerError::Status {
-                method_name: "foo",
-                status: Status::UNAVAILABLE,
-            });
-            assert!(should_reboot(&err, &config));
-        }
-
-        #[test]
-        fn test_should_reboot_policy_error(config: Config) {
-            let err = MetadataError::Policy(PolicyError::Build(BootManagerError::Status {
-                method_name: "bar",
-                status: Status::ACCESS_DENIED,
-            }));
-            assert!(should_reboot(&err, &config));
-        }
-
-        #[test]
-        fn test_should_reboot_signal_error(config: Config) {
-            let err = MetadataError::SignalPeer(fuchsia_zircon::Status::NOT_FOUND);
-            assert!(should_reboot(&err, &config));
-        }
-
-        #[test]
-        fn test_should_reboot_unblock_error(config: Config) {
-            assert!(should_reboot(&MetadataError::Unblock, &config));
-        }
     }
 }

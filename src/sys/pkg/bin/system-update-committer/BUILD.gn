@@ -37,7 +37,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:proptest",
-    "//third_party/rust_crates:proptest-derive",
   ]
 
   source_root = "src/main.rs"

@@ -380,7 +380,10 @@ async fn paver_failure_causes_reboot() {
         root: {
             "verification": {},
             "fuchsia.inspect.Health": {
-                "message": "Failed to put metadata in happy state: Policy(Build(Status { method_name: \"query_current_configuration\", status: Status(NOT_FOUND) }))",
+                "message": "Failed to put metadata in happy state. Rebooting given error while \
+                    interfacing with policy: the policy engine failed to build: BootManager \
+                    returned non-ok status while calling query_current_configuration: NOT_FOUND \
+                    and config Config { blobfs: Ignore }",
                 "start_timestamp_nanos": AnyProperty,
                 "status": "UNHEALTHY"
             }
@@ -429,7 +432,9 @@ async fn verification_failure_causes_reboot() {
                 }
             },
             "fuchsia.inspect.Health": {
-                "message": "Failed to put metadata in happy state: Verify(BlobFs(Verify(Internal)))",
+                "message": "Failed to put metadata in happy state. Rebooting given error while \
+                    doing health verification: the blobfs verification failed: the verification \
+                    failed: Internal and config Config { blobfs: RebootOnFailure }",
                 "start_timestamp_nanos": AnyProperty,
                 "status": "UNHEALTHY"
             }
@@ -461,8 +466,7 @@ async fn verification_failure_does_not_cause_reboot() {
         })))
         .build();
 
-    // The CommitStatusProvider should report "Committed", even though the verification fails. As a
-    // reminder, this is only happening because the config said to ignore the failed verification.
+    // The commit should happen because the failure was ignored.
     let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
     assert_eq!(OnSignals::new(&p, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
 
@@ -483,9 +487,8 @@ async fn verification_failure_does_not_cause_reboot() {
                 }
             },
             "fuchsia.inspect.Health": {
-                "message": "Failed to put metadata in happy state: Verify(BlobFs(Verify(Internal)))",
                 "start_timestamp_nanos": AnyProperty,
-                "status": "UNHEALTHY"
+                "status": "OK"
             }
         }
     );

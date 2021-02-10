@@ -4,7 +4,8 @@
 
 use {
     super::configuration::Configuration,
-    super::errors::{BootManagerError, BootManagerResultExt, PolicyError},
+    super::errors::{BootManagerError, BootManagerResultExt, PolicyError, VerifyError},
+    crate::config::{Config as ComponentConfig, Mode},
     fidl_fuchsia_paver as paver,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::Status,
@@ -76,12 +77,27 @@ impl PolicyEngine {
             None | Some((_, paver::ConfigurationStatus::Healthy)) => Ok(None),
         }
     }
+
+    /// Filters out any failed verifications if the config says to ignore them.
+    pub fn apply_config(
+        res: Result<(), VerifyError>,
+        config: &ComponentConfig,
+    ) -> Result<(), VerifyError> {
+        if let Err(VerifyError::BlobFs(_)) = res {
+            if config.blobfs() == &Mode::Ignore {
+                return Ok(());
+            };
+        }
+        res
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::metadata::errors::VerifyFailureReason,
+        anyhow::anyhow,
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         matches::assert_matches,
@@ -237,5 +253,30 @@ mod tests {
         );
 
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
+    }
+
+    fn test_blobfs_verify_errors(config: ComponentConfig, expect_err: bool) {
+        let timeout_err = Err(VerifyError::BlobFs(VerifyFailureReason::Timeout));
+        let verify_err = Err(VerifyError::BlobFs(VerifyFailureReason::Verify(anyhow!("foo"))));
+        let fidl_err = Err(VerifyError::BlobFs(VerifyFailureReason::Fidl(fidl::Error::OutOfRange)));
+
+        assert_eq!(PolicyEngine::apply_config(timeout_err, &config).is_err(), expect_err);
+        assert_eq!(PolicyEngine::apply_config(verify_err, &config).is_err(), expect_err);
+        assert_eq!(PolicyEngine::apply_config(fidl_err, &config).is_err(), expect_err);
+    }
+
+    /// Blobfs errors should be ignored if the config says so.
+    #[test]
+    fn test_blobfs_errors_ignored() {
+        test_blobfs_verify_errors(ComponentConfig::builder().blobfs(Mode::Ignore).build(), false);
+    }
+
+    /// Blobfs errors should NOT be ignored if the config says to reboot on failure.
+    #[test]
+    fn test_blobfs_errors_reboot_on_failure() {
+        test_blobfs_verify_errors(
+            ComponentConfig::builder().blobfs(Mode::RebootOnFailure).build(),
+            true,
+        );
     }
 }

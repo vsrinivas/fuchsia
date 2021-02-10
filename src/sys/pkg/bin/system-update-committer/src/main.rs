@@ -3,11 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        fidl::FidlServer,
-        metadata::put_metadata_in_happy_state,
-        reboot::{should_reboot, wait_and_reboot},
-    },
+    crate::{fidl::FidlServer, metadata::put_metadata_in_happy_state, reboot::wait_and_reboot},
     anyhow::{anyhow, Context, Error},
     config::Config,
     fidl_fuchsia_hardware_power_statecontrol::AdminMarker as PowerStateControlMarker,
@@ -16,8 +12,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_inspect::{self as finspect, health::Reporter},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_zircon::{self as zx, HandleBased, Peered},
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::{channel::oneshot, prelude::*, stream::FuturesUnordered},
     std::{sync::Arc, time::Duration},
 };
@@ -88,34 +84,33 @@ async fn main_inner_async() -> Result<(), Error> {
 
     // Handle putting boot metadata in happy state, rebooting on failure (if necessary), and
     // reporting health to the inspect health node.
-    futures.push(async move {
-        if let Err(e) = put_metadata_in_happy_state(&boot_manager, &p_internal, unblocker, &blobfs_verifier, verification_node_ref).await {
-            health_node_ref.set_unhealthy(&format!("Failed to put metadata in happy state: {:?}", e));
-            if should_reboot(&e, &config) {
-                fx_log_warn!(
+    futures.push(
+        async move {
+            if let Err(e) = put_metadata_in_happy_state(
+                &boot_manager,
+                &p_internal,
+                unblocker,
+                &blobfs_verifier,
+                verification_node_ref,
+                &config,
+            )
+            .await
+            {
+                let msg = format!(
                     "Failed to put metadata in happy state. Rebooting given error {:#} and config {:?}",
                     anyhow!(e),
                     config
                 );
+                health_node_ref.set_unhealthy(&msg);
+                fx_log_warn!("{}", msg);
                 wait_and_reboot(&reboot_proxy, reboot_timer).await;
             } else {
-                fx_log_warn!(
-                    "Failed to put metadata in happy state. NOT rebooting given error {:#} and config {:?}",
-                    anyhow!(e),
-                    config
-                );
-                // Report to clients that we are committed, even though the metadata might not
-                // reflect that. This prevents the case where a health verification fails and the
-                // device is permanently barred from OTAing.
-                if let Err(e) = p_internal.signal_peer(zx::Signals::NONE, zx::Signals::USER_0) {
-                    fx_log_err!("Failed to force commit: {:#}", anyhow!(e));
-                }
+                fx_log_info!("metadata is in happy state!");
+                health_node_ref.set_ok();
             }
-        } else {
-            fx_log_info!("metadata is in happy state!");
-            health_node_ref.set_ok();
         }
-    }.boxed_local());
+        .boxed_local(),
+    );
 
     // Handle ServiceFs and inspect
     let mut fs = ServiceFs::new_local();

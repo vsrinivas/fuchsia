@@ -5,7 +5,9 @@
 //! Handles interfacing with the boot metadata (e.g. verifying a slot, committing a slot, etc).
 
 use {
+    crate::config::Config,
     commit::do_commit,
+    errors::MetadataError,
     fidl_fuchsia_paver as paver,
     fidl_fuchsia_update_verify::BlobfsVerifierProxy,
     fuchsia_inspect as finspect,
@@ -14,11 +16,6 @@ use {
     policy::PolicyEngine,
     verify::do_health_verification,
 };
-
-pub(super) use errors::{MetadataError, VerifyError};
-
-#[cfg(test)]
-pub(super) use errors::{BootManagerError, PolicyError, VerifyFailureReason};
 
 mod commit;
 mod configuration;
@@ -45,6 +42,7 @@ pub async fn put_metadata_in_happy_state(
     unblocker: oneshot::Sender<()>,
     blobfs_verifier: &BlobfsVerifierProxy,
     node: &finspect::Node,
+    config: &Config,
 ) -> Result<(), MetadataError> {
     let engine = PolicyEngine::build(boot_manager).await.map_err(MetadataError::Policy)?;
     let mut unblocker = Some(unblocker);
@@ -54,8 +52,8 @@ pub async fn put_metadata_in_happy_state(
         // At this point, the FIDL server should start responding to requests so that clients can
         // find out that the health verification is underway.
         unblocker = unblock_fidl_server(unblocker)?;
-        let () =
-            do_health_verification(blobfs_verifier, node).await.map_err(MetadataError::Verify)?;
+        let res = do_health_verification(blobfs_verifier, node).await;
+        let () = PolicyEngine::apply_config(res, config).map_err(MetadataError::Verify)?;
         let () = do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
     }
 
@@ -84,11 +82,14 @@ fn unblock_fidl_server(
 #[cfg(test)]
 mod tests {
     use {
+        super::errors::{VerifyError, VerifyFailureReason},
         super::*,
+        crate::config::Mode,
         configuration::Configuration,
         fasync::OnSignals,
-        fuchsia_async as fasync,
+        fidl_fuchsia_update_verify as fidl, fuchsia_async as fasync,
         fuchsia_zircon::{AsHandleRef, Status},
+        matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         mock_verifier::MockVerifierService,
         std::sync::{
@@ -97,18 +98,28 @@ mod tests {
         },
     };
 
-    fn blobfs_verifier_and_call_count() -> (BlobfsVerifierProxy, Arc<AtomicU32>) {
+    fn blobfs_verifier_and_call_count(
+        res: Result<(), fidl::VerifyError>,
+    ) -> (BlobfsVerifierProxy, Arc<AtomicU32>) {
         let call_count = Arc::new(AtomicU32::new(0));
         let call_count_clone = Arc::clone(&call_count);
         let verifier = Arc::new(MockVerifierService::new(move |_| {
             call_count_clone.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            res
         }));
 
         let (blobfs_verifier, server) = verifier.spawn_blobfs_verifier_service();
         let () = server.detach();
 
         (blobfs_verifier, call_count)
+    }
+
+    fn success_blobfs_verifier_and_call_count() -> (BlobfsVerifierProxy, Arc<AtomicU32>) {
+        blobfs_verifier_and_call_count(Ok(()))
+    }
+
+    fn failing_blobfs_verifier_and_call_count() -> (BlobfsVerifierProxy, Arc<AtomicU32>) {
+        blobfs_verifier_and_call_count(Err(fidl::VerifyError::Internal))
     }
 
     /// When we don't support ABR, we should not update metadata.
@@ -122,7 +133,8 @@ mod tests {
         );
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
-        let (blobfs_verifier, blobfs_verifier_call_count) = blobfs_verifier_and_call_count();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            success_blobfs_verifier_and_call_count();
 
         put_metadata_in_happy_state(
             &paver.spawn_boot_manager_service(),
@@ -130,6 +142,7 @@ mod tests {
             unblocker,
             &blobfs_verifier,
             &finspect::Node::default(),
+            &Config::default(),
         )
         .await
         .unwrap();
@@ -155,7 +168,8 @@ mod tests {
         );
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
-        let (blobfs_verifier, blobfs_verifier_call_count) = blobfs_verifier_and_call_count();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            success_blobfs_verifier_and_call_count();
 
         put_metadata_in_happy_state(
             &paver.spawn_boot_manager_service(),
@@ -163,6 +177,7 @@ mod tests {
             unblocker,
             &blobfs_verifier,
             &finspect::Node::default(),
+            &Config::default(),
         )
         .await
         .unwrap();
@@ -187,7 +202,8 @@ mod tests {
         );
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
-        let (blobfs_verifier, blobfs_verifier_call_count) = blobfs_verifier_and_call_count();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            success_blobfs_verifier_and_call_count();
 
         put_metadata_in_happy_state(
             &paver.spawn_boot_manager_service(),
@@ -195,6 +211,7 @@ mod tests {
             unblocker,
             &blobfs_verifier,
             &finspect::Node::default(),
+            &Config::default(),
         )
         .await
         .unwrap();
@@ -234,7 +251,8 @@ mod tests {
         );
         let (p_internal, p_external) = EventPair::create().unwrap();
         let (unblocker, unblocker_recv) = oneshot::channel();
-        let (blobfs_verifier, blobfs_verifier_call_count) = blobfs_verifier_and_call_count();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            success_blobfs_verifier_and_call_count();
 
         put_metadata_in_happy_state(
             &paver.spawn_boot_manager_service(),
@@ -242,6 +260,7 @@ mod tests {
             unblocker,
             &blobfs_verifier,
             &finspect::Node::default(),
+            &Config::default(),
         )
         .await
         .unwrap();
@@ -271,5 +290,108 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_verifies_and_commits_when_current_is_pending_b() {
         test_verifies_and_commits_when_current_is_pending(&Configuration::B).await
+    }
+
+    /// When we fail to verify and the config says to ignore, we should still do the commit.
+    async fn test_commits_when_failed_verification_ignored(current_config: &Configuration) {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(current_config.into())
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
+                .build(),
+        );
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            failing_blobfs_verifier_and_call_count();
+
+        put_metadata_in_happy_state(
+            &paver.spawn_boot_manager_service(),
+            &p_internal,
+            unblocker,
+            &blobfs_verifier,
+            &finspect::Node::default(),
+            &Config::builder().blobfs(Mode::Ignore).build(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::QueryCurrentConfiguration,
+                PaverEvent::QueryConfigurationStatus { configuration: current_config.into() },
+                PaverEvent::SetConfigurationHealthy { configuration: current_config.into() },
+                PaverEvent::SetConfigurationUnbootable {
+                    configuration: current_config.to_alternate().into()
+                },
+                PaverEvent::BootManagerFlush,
+            ]
+        );
+        assert_eq!(OnSignals::new(&p_external, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+        assert_eq!(unblocker_recv.await, Ok(()));
+        assert_eq!(blobfs_verifier_call_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_commits_when_failed_verification_ignored_a() {
+        test_commits_when_failed_verification_ignored(&Configuration::A).await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_commits_when_failed_verification_ignored_b() {
+        test_commits_when_failed_verification_ignored(&Configuration::B).await
+    }
+
+    /// When we fail to verify and the config says to not ignore, we should report an error.
+    async fn test_errors_when_failed_verification_not_ignored(current_config: &Configuration) {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(current_config.into())
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
+                .build(),
+        );
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
+        let (blobfs_verifier, blobfs_verifier_call_count) =
+            failing_blobfs_verifier_and_call_count();
+
+        let res = put_metadata_in_happy_state(
+            &paver.spawn_boot_manager_service(),
+            &p_internal,
+            unblocker,
+            &blobfs_verifier,
+            &finspect::Node::default(),
+            &Config::builder().blobfs(Mode::RebootOnFailure).build(),
+        )
+        .await;
+
+        assert_matches!(
+            res,
+            Err(MetadataError::Verify(VerifyError::BlobFs(VerifyFailureReason::Verify(_))))
+        );
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::QueryCurrentConfiguration,
+                PaverEvent::QueryConfigurationStatus { configuration: current_config.into() },
+            ]
+        );
+        assert_eq!(
+            p_external.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            Err(zx::Status::TIMED_OUT)
+        );
+        assert_eq!(unblocker_recv.await, Ok(()));
+        assert_eq!(blobfs_verifier_call_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_errors_when_failed_verification_not_ignored_a() {
+        test_errors_when_failed_verification_not_ignored(&Configuration::A).await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_errors_when_failed_verification_not_ignored_b() {
+        test_errors_when_failed_verification_not_ignored(&Configuration::B).await
     }
 }
