@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_shared_library.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 sdk_shared_library("svc") {
   category = "partner"
@@ -45,12 +45,7 @@ test("svc_unittests") {
   ]
 }
 
-test_package("svc_tests") {
+fuchsia_unittest_package("svc_tests") {
   deps = [ ":svc_unittests" ]
-
-  tests = [
-    {
-      name = "svc_unittests"
-    },
-  ]
+  manifest = "meta/svc_unittests.cmx"
 }
