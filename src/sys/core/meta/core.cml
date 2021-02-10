@@ -25,6 +25,10 @@
             url: "fuchsia-pkg://fuchsia.com/activity#meta/activity.cm",
         },
         {
+            name: "battery_manager",
+            url: "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cm",
+        },
+        {
             name: "detect",
             url: "fuchsia-pkg://fuchsia.com/triage-detect#meta/triage-detect.cm",
         },
@@ -116,6 +120,14 @@
                 "fuchsia.ui.activity.Tracker",
             ],
             from: "#activity",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.power.BatteryManager",
+                "fuchsia.power.test.BatterySimulator",
+            ],
+            from: "#battery_manager",
             to: [ "#appmgr" ],
         },
         {
@@ -257,6 +269,7 @@
             to: [
                 "#activity",
                 "#appmgr",
+                "#battery_manager",
                 "#debug_serial",
                 "#detect",
                 "#font_provider",
@@ -385,6 +398,13 @@
             from: "#appmgr",
             to: [ "#system-metrics-logger" ],
             dependency: "weak_for_migration",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-power",
+            to: [ "#battery_manager" ],
+            subdir: "class/power",
         },
         {
             directory: "dev",

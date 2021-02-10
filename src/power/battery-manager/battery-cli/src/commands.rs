@@ -91,7 +91,7 @@ gen_commands! {
         Reconnect = ("reconnect", [],
             "Connect the real battery and disconnect the simulator"),
         Disconnect = ("disconnect", [],
-            "Disconnect the real battery and connnect to the simulator"),
+            "Disconnect the real battery and connect to the simulator"),
         Help = ("help", [], "Help message"),
         Exit = ("exit", [], "Exit/Close REPL"),
         Quit = ("quit", [], "Quit/Close REPL"),

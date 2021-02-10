@@ -5,8 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 go_library("battery_manager_lib") {
   name = "battery_manager"
@@ -21,16 +20,24 @@ go_library("battery_manager_lib") {
   sources = [ "battery_manager_test.go" ]
 }
 
-go_test("battery_manager_test") {
+go_test("battery_manager_go_test") {
   gopackages = [ "battery_manager" ]
   deps = [ ":battery_manager_lib" ]
 }
 
-test_package("battery-manager-gotests") {
-  deps = [ ":battery_manager_test" ]
-  tests = [
-    {
-      name = "battery_manager_test"
-    },
-  ]
+fuchsia_component("battery_manager_test_driver") {
+  testonly = true
+  manifest = "meta/battery_manager_test_driver.cml"
+  deps = [ ":battery_manager_go_test" ]
+}
+
+fuchsia_component("battery_manager_test") {
+  testonly = true
+  component_name = "battery_manager_test"
+  manifest = "meta/battery_manager_test.cml"
+}
+
+fuchsia_test_package("battery-manager-gotests") {
+  test_components = [ ":battery_manager_test" ]
+  deps = [ ":battery_manager_test_driver" ]
 }

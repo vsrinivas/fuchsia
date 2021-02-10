@@ -25,7 +25,8 @@
                 "fuchsia.factory.WidevineFactoryStoreProvider": [
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/widevine.cmx",
                     "--config=/config/data/widevine_factory_store.config"
-                ]
+                ],
+                "fuchsia.power.test.BatterySimulator": "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cmx"
             }
         }
     },
