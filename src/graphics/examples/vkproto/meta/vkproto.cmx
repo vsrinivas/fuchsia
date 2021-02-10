@@ -7,7 +7,7 @@
         "args": [
             "-offscreen"
         ],
-        "binary": "test/vkproto"
+        "binary": "bin/vkproto"
     },
     "sandbox": {
         "dev": [

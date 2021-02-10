@@ -3,41 +3,35 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/build/config.gni")
 import("//src/lib/vulkan/build/vulkan_targets.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
 
-test_package("vkproto") {
-  tests = [
-    {
-      name = "vkproto"
-      environments = magma_hardware_envs
-    },
+fuchsia_component("vkproto_cmp") {
+  manifest = "meta/vkproto.cmx"
+
+  deps = [
+    ":bin",
+    ":shaders",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
   ]
-  deps = [ ":bin" ]
+}
 
-  resources = [
-    {
-      path = "common/shaders/vert.spv"
-      dest = "shaders/vert.spv"
-    },
-    {
-      path = "common/shaders/frag.spv"
-      dest = "shaders/frag.spv"
-    },
+resource("shaders") {
+  sources = [
+    "common/shaders/frag.spv",
+    "common/shaders/vert.spv",
   ]
+  outputs = [ "data/shaders/{{source_file_part}}" ]
+}
 
-  if (is_fuchsia) {
-    public_deps = vulkan_validation_layers.public_deps +
-                  image_pipe_swapchain_fb.public_deps
-    loadable_modules = vulkan_validation_layers.loadable_modules +
-                       image_pipe_swapchain_fb.loadable_modules
-    resources +=
-        vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+fuchsia_test_package("vkproto-pkg") {
+  test_components = [ ":vkproto_cmp" ]
+
+  test_specs = {
+    environments = magma_hardware_envs
   }
 }
 
@@ -112,4 +106,9 @@ group("vkproto_glfw") {
   if (is_linux) {
     deps += [ ":bin($host_toolchain)" ]
   }
+}
+
+group("vkproto") {
+  deps = [ ":vkproto-pkg" ]
+  testonly = true
 }
