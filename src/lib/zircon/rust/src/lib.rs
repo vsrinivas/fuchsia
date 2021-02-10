@@ -315,6 +315,15 @@ pub fn system_get_page_size() -> u32 {
     unsafe { sys::zx_system_get_page_size() }
 }
 
+/// Get the amount of physical memory on the system, in bytes.
+///
+/// Wraps the
+/// [zx_system_get_physmem](https://fuchsia.dev/fuchsia-src/reference/syscalls/system_get_physmem)
+/// syscall.
+pub fn system_get_physmem() -> u64 {
+    unsafe { sys::zx_system_get_physmem() }
+}
+
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
