@@ -15,7 +15,7 @@ const tmplDecoderEncoder = `
   }
 
   {{ .Decl.Wire }}* value = decoded.PrimaryObject();
-  {{ .Decl.Wire }}::OwnedEncodedMessage encoded(value);
+  {{ .Decl.Wire }}::OwnedByteEncodedMessage encoded(value);
 
   if (encoded.status() != ZX_OK) {
     return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());

@@ -102,7 +102,7 @@ class {{ .Name }}::WeakEventSender {
     {{- /* Managed */}}
 zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventManagedMethodSignature" . }} {
-  {{ .Name }}Response::OwnedEncodedMessage _response{
+  ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::OwnedByte _response{
       {{- template "PassthroughMessageParams" .Response -}}
   };
   _response.Write(server_end_);
@@ -113,7 +113,8 @@ zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{ "" }}
 zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
-  {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
+  ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::UnownedByte _response(
+      _buffer.data, _buffer.capacity
       {{- template "CommaPassthroughMessageParams" .Response -}}
   );
   _response.Write(server_end_);

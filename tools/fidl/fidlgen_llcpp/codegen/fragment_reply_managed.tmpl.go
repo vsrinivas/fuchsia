@@ -13,7 +13,7 @@ Reply({{ template "Params" .Response }})
 ::fidl::Result
 {{ .LLProps.ProtocolName.Name }}::TypedChannelInterface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedMethodSignature" . }} {
-  {{ .Name }}Response::OwnedEncodedMessage _response{
+  ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::OwnedByte _response{
       {{- template "PassthroughMessageParams" .Response -}}
   };
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

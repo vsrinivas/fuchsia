@@ -24,6 +24,12 @@ namespace fidl {
 
 namespace internal {
 
+// This is the size of the stack buffer to allocate for iovec messages.
+// Note: the kernel has a higher-performance mode for <= 16 iovecs.
+// (fxbug.dev/66977) Use a more sophisticated method to allocate iovecs
+// in generated code that covers all cases.
+constexpr uint32_t kIovecBufferSize = 64;
+
 #ifdef __Fuchsia__
 class ClientBase;
 class ResponseContext;
@@ -355,18 +361,30 @@ class IncomingMessage : public ::fidl::Result {
   fidl_incoming_msg_t message_;
 };
 
+// Helper to access private generated classes representing encoded messsages.
+// Generally OwnedEncodedMessage or UnownedEncodedMessage should be used instead.
+template <typename T>
+struct EncodedMessageTypes {
+ public:
+  using OwnedByte = typename T::OwnedEncodedByteMessage;
+  using OwnedIovec = typename T::OwnedEncodedIovecMessage;
+  using UnownedByte = typename T::UnownedEncodedByteMessage;
+  using UnownedIovec = typename T::UnownedEncodedIovecMessage;
+};
+
 }  // namespace internal
 
-// This class owns a message of |FidlType| and encodes the message automatically upon construction.
+// This class owns a message of |FidlType| and encodes the message automatically upon construction
+// into a byte buffer.
 template <typename FidlType>
-using OwnedEncodedMessage = typename FidlType::OwnedEncodedMessage;
+using OwnedEncodedMessage = typename internal::EncodedMessageTypes<FidlType>::OwnedByte;
 
 // This class manages the handles within |FidlType| and encodes the message automatically upon
-// construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
+// construction. Different from |OwnedEncodedByteMessage|, it takes in a caller-allocated buffer and
 // uses that as the backing storage for the message. The buffer must outlive instances of this
 // class.
 template <typename FidlType>
-using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
+using UnownedEncodedMessage = typename internal::EncodedMessageTypes<FidlType>::UnownedByte;
 
 // This class manages the handles within |FidlType| and decodes the message automatically upon
 // construction. It always borrows external buffers for the backing storage of the message.

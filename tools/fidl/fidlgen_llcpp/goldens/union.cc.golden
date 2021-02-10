@@ -152,7 +152,8 @@ extern "C" const fidl_type_t
         StrictXUnionHenceResponseMayBeStackAllocated(
             ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
                 _client) {
-  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
@@ -170,7 +171,8 @@ extern "C" const fidl_type_t
             ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
                 _client,
             zx_time_t _deadline) {
-  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
@@ -190,7 +192,8 @@ extern "C" const fidl_type_t
                 _client,
             uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
@@ -206,7 +209,8 @@ extern "C" const fidl_type_t
                 _client)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
@@ -223,7 +227,8 @@ extern "C" const fidl_type_t
             zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
@@ -239,7 +244,8 @@ extern "C" const fidl_type_t
                 _client,
             uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>::OwnedByte
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
@@ -508,7 +514,8 @@ namespace entries {
 ::fidl::Result TestProtocol::TypedChannelInterface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion xu) {
-  StrictXUnionHenceResponseMayBeStackAllocatedResponse::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse>::OwnedByte
       _response{xu};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -525,7 +532,8 @@ namespace entries {
 ::fidl::Result TestProtocol::TypedChannelInterface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::union_::wire::OlderSimpleUnion xu) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::OwnedEncodedMessage
+  ::fidl::internal::EncodedMessageTypes<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::OwnedByte
       _response{xu};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }

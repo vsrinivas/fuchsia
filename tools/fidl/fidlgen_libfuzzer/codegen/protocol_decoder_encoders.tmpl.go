@@ -17,7 +17,7 @@ const tmplProtocolDecoderEncoders = `
   {{ .RequestCodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
   if (decoded.status()) {
     {{ .RequestCodingTable.Wire }}* value = decoded.PrimaryObject();
-    {{ .RequestCodingTable.Wire }}::OwnedEncodedMessage encoded(value);
+    {{ .RequestCodingTable.Wire }}::OwnedByteEncodedMessage encoded(value);
     if (!encoded.status()) {
       return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());
     }
@@ -36,7 +36,7 @@ const tmplProtocolDecoderEncoders = `
   {{ .ResponseCodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
   if (decoded.status()) {
     {{ .ResponseCodingTable.Wire }}* value = decoded.PrimaryObject();
-    {{ .RequestCodingTable.Wire }}::{{ .Name }}::OwnedEncodedMessage encoded(value);
+    {{ .RequestCodingTable.Wire }}::{{ .Name }}::OwnedByteEncodedMessage encoded(value);
     if (!encoded.status()) {
       return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());
     }

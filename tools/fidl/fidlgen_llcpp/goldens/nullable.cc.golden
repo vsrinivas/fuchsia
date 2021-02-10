@@ -43,7 +43,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
         _client,
     int32_t a, int32_t b) {
-  AddRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
+  ::fidl::internal::EncodedMessageTypes<AddRequest>::OwnedByte _request(
+      zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(
       _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -54,7 +55,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::nullable::SimpleProtocol>
         _client,
     int32_t a, int32_t b, zx_time_t _deadline) {
-  AddRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
+  ::fidl::internal::EncodedMessageTypes<AddRequest>::OwnedByte _request(
+      zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(
       _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine,
       _deadline);
@@ -68,8 +70,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     uint8_t* _request_bytes, uint32_t _request_byte_capacity, int32_t a,
     int32_t b, uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  AddRequest::UnownedEncodedMessage _request(_request_bytes,
-                                             _request_byte_capacity, 0, a, b);
+  ::fidl::internal::EncodedMessageTypes<AddRequest>::UnownedByte _request(
+      _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(_client, _response_bytes,
                                                   _response_byte_capacity);
   status_ = _request.status();
@@ -209,7 +211,7 @@ namespace entries {
 
 ::fidl::Result SimpleProtocol::TypedChannelInterface::AddCompleterBase::Reply(
     int32_t sum) {
-  AddResponse::OwnedEncodedMessage _response{sum};
+  ::fidl::internal::EncodedMessageTypes<AddResponse>::OwnedByte _response{sum};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

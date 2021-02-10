@@ -47,7 +47,8 @@ extern "C" const fidl_type_t
 ::llcpp::fidl::test::protocolrequest::Parent::ResultOf::GetChild::GetChild(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
         _client) {
-  GetChildRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(
       _client, bytes_,
       GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine);
@@ -59,7 +60,8 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
         _client,
     zx_time_t _deadline) {
-  GetChildRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(
       _client, bytes_,
       GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine,
@@ -74,7 +76,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  GetChildRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(_client, _response_bytes,
                                                        _response_byte_capacity);
   status_ = _request.status();
@@ -85,7 +88,8 @@ extern "C" const fidl_type_t
     GetChildRequest(
         ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
             _client) {
-  GetChildRequestRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
       _client, bytes_,
       GetChildRequestResponse::PrimarySize +
@@ -99,7 +103,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
             _client,
         zx_time_t _deadline) {
-  GetChildRequestRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
       _client, bytes_,
       GetChildRequestResponse::PrimarySize +
@@ -115,7 +120,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  GetChildRequestRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -126,7 +132,8 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
         _client,
     ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c) {
-  TakeChildRequest::OwnedEncodedMessage _request(zx_txid_t(0), c);
+  ::fidl::internal::EncodedMessageTypes<TakeChildRequest>::OwnedByte _request(
+      zx_txid_t(0), c);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -138,7 +145,7 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c) {
-  TakeChildRequest::UnownedEncodedMessage _request(
+  ::fidl::internal::EncodedMessageTypes<TakeChildRequest>::UnownedByte _request(
       _request_bytes, _request_byte_capacity, 0, c);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -150,7 +157,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
             _client,
         ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r) {
-  TakeChildRequestRequest::OwnedEncodedMessage _request(zx_txid_t(0), r);
+  ::fidl::internal::EncodedMessageTypes<TakeChildRequestRequest>::OwnedByte
+      _request(zx_txid_t(0), r);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -162,8 +170,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r) {
-  TakeChildRequestRequest::UnownedEncodedMessage _request(
-      _request_bytes, _request_byte_capacity, 0, r);
+  ::fidl::internal::EncodedMessageTypes<TakeChildRequestRequest>::UnownedByte
+      _request(_request_bytes, _request_byte_capacity, 0, r);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -460,7 +468,8 @@ namespace entries {
 
 ::fidl::Result Parent::TypedChannelInterface::GetChildCompleterBase::Reply(
     ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
-  GetChildResponse::OwnedEncodedMessage _response{c};
+  ::fidl::internal::EncodedMessageTypes<GetChildResponse>::OwnedByte _response{
+      c};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -475,7 +484,8 @@ namespace entries {
 ::fidl::Result
 Parent::TypedChannelInterface::GetChildRequestCompleterBase::Reply(
     ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
-  GetChildRequestResponse::OwnedEncodedMessage _response{r};
+  ::fidl::internal::EncodedMessageTypes<GetChildRequestResponse>::OwnedByte
+      _response{r};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

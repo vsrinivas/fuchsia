@@ -20,7 +20,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 ::llcpp::fidl::test::inheritance::super::ResultOf::foo::foo(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super> _client,
     const ::fidl::StringView& s) {
-  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -30,7 +31,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 ::llcpp::fidl::test::inheritance::super::ResultOf::foo::foo(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super> _client,
     const ::fidl::StringView& s, zx_time_t _deadline) {
-  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);
@@ -44,8 +46,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
     const ::fidl::StringView& s, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  fooRequest::UnownedEncodedMessage _request(_request_bytes,
-                                             _request_byte_capacity, 0, s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::UnownedByte _request(
+      _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<fooResponse>(_client, _response_bytes,
                                                   _response_byte_capacity);
   status_ = _request.status();
@@ -185,7 +187,7 @@ namespace entries {
 
 ::fidl::Result super::TypedChannelInterface::fooCompleterBase::Reply(
     int64_t y) {
-  fooResponse::OwnedEncodedMessage _response{y};
+  ::fidl::internal::EncodedMessageTypes<fooResponse>::OwnedByte _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -217,7 +219,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 ::llcpp::fidl::test::inheritance::sub::ResultOf::foo::foo(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub> _client,
     const ::fidl::StringView& s) {
-  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -227,7 +230,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 ::llcpp::fidl::test::inheritance::sub::ResultOf::foo::foo(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub> _client,
     const ::fidl::StringView& s, zx_time_t _deadline) {
-  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);
@@ -241,8 +245,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
     const ::fidl::StringView& s, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  fooRequest::UnownedEncodedMessage _request(_request_bytes,
-                                             _request_byte_capacity, 0, s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::UnownedByte _request(
+      _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<fooResponse>(_client, _response_bytes,
                                                   _response_byte_capacity);
   status_ = _request.status();
@@ -377,7 +381,7 @@ namespace entries {
 }
 
 ::fidl::Result sub::TypedChannelInterface::fooCompleterBase::Reply(int64_t y) {
-  fooResponse::OwnedEncodedMessage _response{y};
+  ::fidl::internal::EncodedMessageTypes<fooResponse>::OwnedByte _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

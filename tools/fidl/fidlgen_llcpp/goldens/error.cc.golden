@@ -30,7 +30,8 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 ::llcpp::fidl::test::error::Example::ResultOf::foo::foo(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example> _client,
     const ::fidl::StringView& s) {
-  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -40,7 +41,8 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 ::llcpp::fidl::test::error::Example::ResultOf::foo::foo(
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::error::Example> _client,
     const ::fidl::StringView& s, zx_time_t _deadline) {
-  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::OwnedByte _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);
@@ -54,8 +56,8 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
     const ::fidl::StringView& s, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  fooRequest::UnownedEncodedMessage _request(_request_bytes,
-                                             _request_byte_capacity, 0, s);
+  ::fidl::internal::EncodedMessageTypes<fooRequest>::UnownedByte _request(
+      _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<fooResponse>(_client, _response_bytes,
                                                   _response_byte_capacity);
   status_ = _request.status();
@@ -193,7 +195,8 @@ namespace entries {
 
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::Reply(
     ::llcpp::fidl::test::error::wire::Example_foo_Result result) {
-  fooResponse::OwnedEncodedMessage _response{result};
+  ::fidl::internal::EncodedMessageTypes<fooResponse>::OwnedByte _response{
+      result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::ReplySuccess(

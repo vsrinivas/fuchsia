@@ -57,7 +57,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
     int64_t x) {
-  RequestRequest::OwnedEncodedMessage _request(zx_txid_t(0), x);
+  ::fidl::internal::EncodedMessageTypes<RequestRequest>::OwnedByte _request(
+      zx_txid_t(0), x);
   _request.GetOutgoingMessage().Call<RequestResponse>(
       _client, bytes_,
       RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine);
@@ -69,7 +70,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
     int64_t x, zx_time_t _deadline) {
-  RequestRequest::OwnedEncodedMessage _request(zx_txid_t(0), x);
+  ::fidl::internal::EncodedMessageTypes<RequestRequest>::OwnedByte _request(
+      zx_txid_t(0), x);
   _request.GetOutgoingMessage().Call<RequestResponse>(
       _client, bytes_,
       RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine, _deadline);
@@ -83,8 +85,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t x,
     uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  RequestRequest::UnownedEncodedMessage _request(_request_bytes,
-                                                 _request_byte_capacity, 0, x);
+  ::fidl::internal::EncodedMessageTypes<RequestRequest>::UnownedByte _request(
+      _request_bytes, _request_byte_capacity, 0, x);
   _request.GetOutgoingMessage().Call<RequestResponse>(_client, _response_bytes,
                                                       _response_byte_capacity);
   status_ = _request.status();
@@ -95,7 +97,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
     int64_t x) {
-  OneWayRequest::OwnedEncodedMessage _request(zx_txid_t(0), x);
+  ::fidl::internal::EncodedMessageTypes<OneWayRequest>::OwnedByte _request(
+      zx_txid_t(0), x);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -105,8 +108,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
         _client,
     uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t x) {
-  OneWayRequest::UnownedEncodedMessage _request(_request_bytes,
-                                                _request_byte_capacity, 0, x);
+  ::fidl::internal::EncodedMessageTypes<OneWayRequest>::UnownedByte _request(
+      _request_bytes, _request_byte_capacity, 0, x);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -379,7 +382,8 @@ namespace entries {
 
 ::fidl::Result Transitional::TypedChannelInterface::RequestCompleterBase::Reply(
     int64_t y) {
-  RequestResponse::OwnedEncodedMessage _response{y};
+  ::fidl::internal::EncodedMessageTypes<RequestResponse>::OwnedByte _response{
+      y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -411,15 +415,15 @@ void ::llcpp::fidl::test::protocols::Transitional::EventResponse::
 }
 
 zx_status_t Transitional::EventSender::Event(int64_t x) const {
-  EventResponse::OwnedEncodedMessage _response{x};
+  ::fidl::internal::EncodedMessageTypes<EventResponse>::OwnedByte _response{x};
   _response.Write(server_end_);
   return _response.status();
 }
 
 zx_status_t Transitional::EventSender::Event(::fidl::BufferSpan _buffer,
                                              int64_t x) const {
-  EventResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                                 x);
+  ::fidl::internal::EncodedMessageTypes<EventResponse>::UnownedByte _response(
+      _buffer.data, _buffer.capacity, x);
   _response.Write(server_end_);
   return _response.status();
 }
@@ -472,7 +476,8 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
         _client,
     int64_t a, int64_t b) {
-  MethodARequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
+  ::fidl::internal::EncodedMessageTypes<MethodARequest>::OwnedByte _request(
+      zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -484,7 +489,7 @@ extern "C" const fidl_type_t
                 _client,
             uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t a,
             int64_t b) {
-  MethodARequest::UnownedEncodedMessage _request(
+  ::fidl::internal::EncodedMessageTypes<MethodARequest>::UnownedByte _request(
       _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -495,7 +500,8 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
         _client,
     int64_t a, int64_t b) {
-  MethodBRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
+  ::fidl::internal::EncodedMessageTypes<MethodBRequest>::OwnedByte _request(
+      zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(
       _client, bytes_,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine);
@@ -507,7 +513,8 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::ChannelProtocol>
         _client,
     int64_t a, int64_t b, zx_time_t _deadline) {
-  MethodBRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
+  ::fidl::internal::EncodedMessageTypes<MethodBRequest>::OwnedByte _request(
+      zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(
       _client, bytes_,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine, _deadline);
@@ -523,7 +530,7 @@ extern "C" const fidl_type_t
             int64_t b, uint8_t* _response_bytes,
             uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  MethodBRequest::UnownedEncodedMessage _request(
+  ::fidl::internal::EncodedMessageTypes<MethodBRequest>::UnownedByte _request(
       _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(_client, _response_bytes,
                                                       _response_byte_capacity);
@@ -536,7 +543,8 @@ extern "C" const fidl_type_t
                    ::llcpp::fidl::test::protocols::ChannelProtocol>
                    _client,
                ::zx::handle& h) {
-  TakeHandleRequest::OwnedEncodedMessage _request(zx_txid_t(0), h);
+  ::fidl::internal::EncodedMessageTypes<TakeHandleRequest>::OwnedByte _request(
+      zx_txid_t(0), h);
   _request.GetOutgoingMessage().Call<TakeHandleResponse>(
       _client, bytes_,
       TakeHandleResponse::PrimarySize + TakeHandleResponse::MaxOutOfLine);
@@ -549,7 +557,8 @@ extern "C" const fidl_type_t
                    ::llcpp::fidl::test::protocols::ChannelProtocol>
                    _client,
                ::zx::handle& h, zx_time_t _deadline) {
-  TakeHandleRequest::OwnedEncodedMessage _request(zx_txid_t(0), h);
+  ::fidl::internal::EncodedMessageTypes<TakeHandleRequest>::OwnedByte _request(
+      zx_txid_t(0), h);
   _request.GetOutgoingMessage().Call<TakeHandleResponse>(
       _client, bytes_,
       TakeHandleResponse::PrimarySize + TakeHandleResponse::MaxOutOfLine,
@@ -566,8 +575,8 @@ extern "C" const fidl_type_t
                ::zx::handle& h, uint8_t* _response_bytes,
                uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  TakeHandleRequest::UnownedEncodedMessage _request(
-      _request_bytes, _request_byte_capacity, 0, h);
+  ::fidl::internal::EncodedMessageTypes<TakeHandleRequest>::UnownedByte
+      _request(_request_bytes, _request_byte_capacity, 0, h);
   _request.GetOutgoingMessage().Call<TakeHandleResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -579,7 +588,8 @@ extern "C" const fidl_type_t
                      ::llcpp::fidl::test::protocols::ChannelProtocol>
                      _client,
                  ::zx::socket& a) {
-  MutateSocketRequest::OwnedEncodedMessage _request(zx_txid_t(0), a);
+  ::fidl::internal::EncodedMessageTypes<MutateSocketRequest>::OwnedByte
+      _request(zx_txid_t(0), a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine);
@@ -592,7 +602,8 @@ extern "C" const fidl_type_t
                      ::llcpp::fidl::test::protocols::ChannelProtocol>
                      _client,
                  ::zx::socket& a, zx_time_t _deadline) {
-  MutateSocketRequest::OwnedEncodedMessage _request(zx_txid_t(0), a);
+  ::fidl::internal::EncodedMessageTypes<MutateSocketRequest>::OwnedByte
+      _request(zx_txid_t(0), a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine,
@@ -609,8 +620,8 @@ extern "C" const fidl_type_t
                  ::zx::socket& a, uint8_t* _response_bytes,
                  uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  MutateSocketRequest::UnownedEncodedMessage _request(
-      _request_bytes, _request_byte_capacity, 0, a);
+  ::fidl::internal::EncodedMessageTypes<MutateSocketRequest>::UnownedByte
+      _request(_request_bytes, _request_byte_capacity, 0, a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -1074,7 +1085,8 @@ namespace entries {
 ::fidl::Result
 ChannelProtocol::TypedChannelInterface::MethodBCompleterBase::Reply(
     int64_t result) {
-  MethodBResponse::OwnedEncodedMessage _response{result};
+  ::fidl::internal::EncodedMessageTypes<MethodBResponse>::OwnedByte _response{
+      result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -1088,14 +1100,16 @@ ChannelProtocol::TypedChannelInterface::MethodBCompleterBase::Reply(
 
 ::fidl::Result
 ChannelProtocol::TypedChannelInterface::TakeHandleCompleterBase::Reply() {
-  TakeHandleResponse::OwnedEncodedMessage _response{};
+  ::fidl::internal::EncodedMessageTypes<TakeHandleResponse>::OwnedByte
+      _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result
 ChannelProtocol::TypedChannelInterface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
-  MutateSocketResponse::OwnedEncodedMessage _response{b};
+  ::fidl::internal::EncodedMessageTypes<MutateSocketResponse>::OwnedByte
+      _response{b};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -1163,15 +1177,16 @@ void ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse::
 }
 
 zx_status_t ChannelProtocol::EventSender::EventA(int64_t a, int64_t b) const {
-  EventAResponse::OwnedEncodedMessage _response{a, b};
+  ::fidl::internal::EncodedMessageTypes<EventAResponse>::OwnedByte _response{a,
+                                                                             b};
   _response.Write(server_end_);
   return _response.status();
 }
 
 zx_status_t ChannelProtocol::EventSender::EventA(::fidl::BufferSpan _buffer,
                                                  int64_t a, int64_t b) const {
-  EventAResponse::UnownedEncodedMessage _response(_buffer.data,
-                                                  _buffer.capacity, a, b);
+  ::fidl::internal::EncodedMessageTypes<EventAResponse>::UnownedByte _response(
+      _buffer.data, _buffer.capacity, a, b);
   _response.Write(server_end_);
   return _response.status();
 }
@@ -1257,7 +1272,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<
             ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
             _client) {
-  NoRequestNoResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<NoRequestNoResponseRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -1268,7 +1284,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<
             ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
             _client) {
-  NoRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<
+      NoRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
       _client, bytes_,
       NoRequestEmptyResponseResponse::PrimarySize +
@@ -1283,7 +1300,8 @@ extern "C" const fidl_type_t
             ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
             _client,
         zx_time_t _deadline) {
-  NoRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<
+      NoRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
       _client, bytes_,
       NoRequestEmptyResponseResponse::PrimarySize +
@@ -1300,7 +1318,8 @@ extern "C" const fidl_type_t
             _client)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  NoRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<NoRequestWithResponseRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -1315,7 +1334,8 @@ extern "C" const fidl_type_t
         zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  NoRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<NoRequestWithResponseRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -1329,7 +1349,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  NoRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<NoRequestWithResponseRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -1342,7 +1363,8 @@ extern "C" const fidl_type_t
             ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
             _client,
         const ::fidl::StringView& arg) {
-  WithRequestNoResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0), arg);
+  ::fidl::internal::EncodedMessageTypes<WithRequestNoResponseRequest>::OwnedByte
+      _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -1355,8 +1377,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         const ::fidl::StringView& arg) {
-  WithRequestNoResponseRequest::UnownedEncodedMessage _request(
-      _request_bytes, _request_byte_capacity, 0, arg);
+  ::fidl::internal::EncodedMessageTypes<WithRequestNoResponseRequest>::
+      UnownedByte _request(_request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -1368,8 +1390,8 @@ extern "C" const fidl_type_t
             ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
             _client,
         const ::fidl::StringView& arg) {
-  WithRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0),
-                                                                arg);
+  ::fidl::internal::EncodedMessageTypes<
+      WithRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
       _client, bytes_,
       WithRequestEmptyResponseResponse::PrimarySize +
@@ -1384,8 +1406,8 @@ extern "C" const fidl_type_t
             ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
             _client,
         const ::fidl::StringView& arg, zx_time_t _deadline) {
-  WithRequestEmptyResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0),
-                                                                arg);
+  ::fidl::internal::EncodedMessageTypes<
+      WithRequestEmptyResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
       _client, bytes_,
       WithRequestEmptyResponseResponse::PrimarySize +
@@ -1404,8 +1426,8 @@ extern "C" const fidl_type_t
         const ::fidl::StringView& arg, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  WithRequestEmptyResponseRequest::UnownedEncodedMessage _request(
-      _request_bytes, _request_byte_capacity, 0, arg);
+  ::fidl::internal::EncodedMessageTypes<WithRequestEmptyResponseRequest>::
+      UnownedByte _request(_request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -1420,8 +1442,8 @@ extern "C" const fidl_type_t
         const ::fidl::StringView& arg)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  WithRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0),
-                                                               arg);
+  ::fidl::internal::EncodedMessageTypes<
+      WithRequestWithResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -1436,8 +1458,8 @@ extern "C" const fidl_type_t
         const ::fidl::StringView& arg, zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  WithRequestWithResponseRequest::OwnedEncodedMessage _request(zx_txid_t(0),
-                                                               arg);
+  ::fidl::internal::EncodedMessageTypes<
+      WithRequestWithResponseRequest>::OwnedByte _request(zx_txid_t(0), arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -1453,8 +1475,8 @@ extern "C" const fidl_type_t
         const ::fidl::StringView& arg, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  WithRequestWithResponseRequest::UnownedEncodedMessage _request(
-      _request_bytes, _request_byte_capacity, 0, arg);
+  ::fidl::internal::EncodedMessageTypes<WithRequestWithResponseRequest>::
+      UnownedByte _request(_request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -2086,13 +2108,15 @@ WithAndWithoutRequestResponse::TypedChannelInterface::dispatch_message(
 
 ::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     NoRequestEmptyResponseCompleterBase::Reply() {
-  NoRequestEmptyResponseResponse::OwnedEncodedMessage _response{};
+  ::fidl::internal::EncodedMessageTypes<
+      NoRequestEmptyResponseResponse>::OwnedByte _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  NoRequestWithResponseResponse::OwnedEncodedMessage _response{ret};
+  ::fidl::internal::EncodedMessageTypes<
+      NoRequestWithResponseResponse>::OwnedByte _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -2106,13 +2130,15 @@ WithAndWithoutRequestResponse::TypedChannelInterface::dispatch_message(
 
 ::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     WithRequestEmptyResponseCompleterBase::Reply() {
-  WithRequestEmptyResponseResponse::OwnedEncodedMessage _response{};
+  ::fidl::internal::EncodedMessageTypes<
+      WithRequestEmptyResponseResponse>::OwnedByte _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  WithRequestWithResponseResponse::OwnedEncodedMessage _response{ret};
+  ::fidl::internal::EncodedMessageTypes<
+      WithRequestWithResponseResponse>::OwnedByte _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -2204,22 +2230,24 @@ void ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
 
 zx_status_t WithAndWithoutRequestResponse::EventSender::OnEmptyResponse()
     const {
-  OnEmptyResponseResponse::OwnedEncodedMessage _response{};
+  ::fidl::internal::EncodedMessageTypes<OnEmptyResponseResponse>::OwnedByte
+      _response{};
   _response.Write(server_end_);
   return _response.status();
 }
 
 zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
     ::fidl::StringView ret) const {
-  OnWithResponseResponse::OwnedEncodedMessage _response{ret};
+  ::fidl::internal::EncodedMessageTypes<OnWithResponseResponse>::OwnedByte
+      _response{ret};
   _response.Write(server_end_);
   return _response.status();
 }
 
 zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
     ::fidl::BufferSpan _buffer, ::fidl::StringView ret) const {
-  OnWithResponseResponse::UnownedEncodedMessage _response(
-      _buffer.data, _buffer.capacity, ret);
+  ::fidl::internal::EncodedMessageTypes<OnWithResponseResponse>::UnownedByte
+      _response(_buffer.data, _buffer.capacity, ret);
   _response.Write(server_end_);
   return _response.status();
 }
@@ -2266,7 +2294,8 @@ extern "C" const fidl_type_t
     ResponseAsStruct(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::protocols::WithErrorSyntax>
                          _client) {
-  ResponseAsStructRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ResponseAsStructRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, bytes_,
       ResponseAsStructResponse::PrimarySize +
@@ -2280,7 +2309,8 @@ extern "C" const fidl_type_t
                          ::llcpp::fidl::test::protocols::WithErrorSyntax>
                          _client,
                      zx_time_t _deadline) {
-  ResponseAsStructRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ResponseAsStructRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, bytes_,
       ResponseAsStructResponse::PrimarySize +
@@ -2297,7 +2327,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ResponseAsStructRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ResponseAsStructRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -2308,7 +2339,8 @@ extern "C" const fidl_type_t
     ErrorAsPrimitive(::fidl::UnownedClientEnd<
                      ::llcpp::fidl::test::protocols::WithErrorSyntax>
                          _client) {
-  ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ErrorAsPrimitiveRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, bytes_,
       ErrorAsPrimitiveResponse::PrimarySize +
@@ -2322,7 +2354,8 @@ extern "C" const fidl_type_t
                          ::llcpp::fidl::test::protocols::WithErrorSyntax>
                          _client,
                      zx_time_t _deadline) {
-  ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ErrorAsPrimitiveRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, bytes_,
       ErrorAsPrimitiveResponse::PrimarySize +
@@ -2339,7 +2372,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ErrorAsPrimitiveRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ErrorAsPrimitiveRequest>::OwnedByte
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -2350,7 +2384,8 @@ extern "C" const fidl_type_t
     ErrorAsEnum(::fidl::UnownedClientEnd<
                 ::llcpp::fidl::test::protocols::WithErrorSyntax>
                     _client) {
-  ErrorAsEnumRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ErrorAsEnumRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine);
@@ -2363,7 +2398,8 @@ extern "C" const fidl_type_t
                     ::llcpp::fidl::test::protocols::WithErrorSyntax>
                     _client,
                 zx_time_t _deadline) {
-  ErrorAsEnumRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ErrorAsEnumRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine,
@@ -2378,7 +2414,8 @@ extern "C" const fidl_type_t
                     _client,
                 uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ErrorAsEnumRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<ErrorAsEnumRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -2692,7 +2729,8 @@ namespace entries {
 WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::wire::
         WithErrorSyntax_ResponseAsStruct_Result result) {
-  ResponseAsStructResponse::OwnedEncodedMessage _response{result};
+  ::fidl::internal::EncodedMessageTypes<ResponseAsStructResponse>::OwnedByte
+      _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
@@ -2746,7 +2784,8 @@ WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
 WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::wire::
         WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  ErrorAsPrimitiveResponse::OwnedEncodedMessage _response{result};
+  ::fidl::internal::EncodedMessageTypes<ErrorAsPrimitiveResponse>::OwnedByte
+      _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::
@@ -2791,7 +2830,8 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
 WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
         result) {
-  ErrorAsEnumResponse::OwnedEncodedMessage _response{result};
+  ::fidl::internal::EncodedMessageTypes<ErrorAsEnumResponse>::OwnedByte
+      _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result WithErrorSyntax::TypedChannelInterface::

@@ -24,7 +24,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<
             ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
             _client) {
-  GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
       GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine);
@@ -38,7 +39,8 @@ extern "C" const fidl_type_t
             ::llcpp::fidl::test::foreigntypeinresponseusedthroughcompose::Top>
             _client,
         zx_time_t _deadline) {
-  GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
       GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine, _deadline);
@@ -53,7 +55,8 @@ extern "C" const fidl_type_t
             _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
+  ::fidl::internal::EncodedMessageTypes<GetFooRequest>::OwnedByte _request(
+      zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(_client, _response_bytes,
                                                      _response_byte_capacity);
   status_ = _request.status();
@@ -190,7 +193,8 @@ namespace entries {
 
 ::fidl::Result Top::TypedChannelInterface::GetFooCompleterBase::Reply(
     ::llcpp::bottom::wire::Foo foo) {
-  GetFooResponse::OwnedEncodedMessage _response{foo};
+  ::fidl::internal::EncodedMessageTypes<GetFooResponse>::OwnedByte _response{
+      foo};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
