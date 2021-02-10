@@ -53,7 +53,14 @@ group("test_infra") {
   testonly = true
 
   # Tools that are only needed on the type of host that does the build.
-  public_deps = [ "//tools/integration/testsharder($host_toolchain)" ]
+  public_deps = [
+    "//tools/integration/testsharder($host_toolchain)",
+
+    # The symbolizer should only be needed on Linux x64, but cross-compilation
+    # doesn't work for this tool and the Mac builders don't use it, so just
+    # build it for the host toolchain.
+    "//tools/symbolizer($host_toolchain)",
+  ]
 
   # Tools that are only needed on Linux x64, regardless of the current host.
   linux_x64_only_tools = [
