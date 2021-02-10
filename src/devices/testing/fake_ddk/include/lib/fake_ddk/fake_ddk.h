@@ -101,6 +101,9 @@ class Bind {
   // parent device.
   void SetProtocols(fbl::Array<ProtocolEntry>&& protocols);
 
+  // Set a specific protocol. nullptr means the protocol should be removed.
+  void SetProtocol(uint32_t id, const void* proto);
+
   // Sets an optional list of fragments that the ddk should return for the
   // parent device. Each fragment may have one more protocols
   void SetFragments(fbl::Array<FragmentEntry>&& protocols);
@@ -223,7 +226,7 @@ class Bind {
 
   zx_off_t size_ = 0;
 
-  fbl::Array<ProtocolEntry> protocols_;
+  std::map<uint32_t, Protocol> protocols_;
   fbl::Array<FragmentEntry> fragments_;
   std::set<const FragmentEntry*> fragment_lookup_;
   FidlMessenger fidl_;

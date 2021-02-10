@@ -59,14 +59,12 @@ class Binder : public fake_ddk::Bind {
   zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                 void* protocol) override {
     auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-    for (const auto& proto : protocols_) {
-      if (proto_id == proto.id) {
-        out->ops = proto.proto.ops;
-        out->ctx = proto.proto.ctx;
-        return ZX_OK;
-      }
+    auto itr = protocols_.find(proto_id);
+    if (itr == protocols_.end()) {
+      return ZX_ERR_NOT_SUPPORTED;
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    *out = itr->second;
+    return ZX_OK;
   }
 };
 

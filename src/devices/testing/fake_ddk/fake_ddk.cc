@@ -91,7 +91,17 @@ void Bind::GetMetadataInfo(int* num_calls, size_t* length) {
 }
 
 void Bind::SetProtocols(fbl::Array<ProtocolEntry>&& protocols) {
-  protocols_ = std::move(protocols);
+  for (auto protocol : protocols) {
+    protocols_[protocol.id] = protocol.proto;
+  }
+}
+
+void Bind::SetProtocol(uint32_t id, const void* proto) {
+  if (proto) {
+    protocols_[id] = *static_cast<const Protocol*>(proto);
+  } else {
+    protocols_.erase(id);
+  }
 }
 
 void Bind::SetFragments(fbl::Array<FragmentEntry>&& fragments) {
@@ -303,14 +313,12 @@ void Bind::DeviceResumeComplete(zx_device_t* device, zx_status_t status, uint8_t
 zx_status_t Bind::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
   auto out = reinterpret_cast<Protocol*>(protocol);
   if (device == kFakeParent) {
-    for (const auto& proto : protocols_) {
-      if (proto_id == proto.id) {
-        out->ops = proto.proto.ops;
-        out->ctx = proto.proto.ctx;
-        return ZX_OK;
-      }
+    auto itr = protocols_.find(proto_id);
+    if (itr == protocols_.end()) {
+      return ZX_ERR_NOT_SUPPORTED;
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    *out = itr->second;
+    return ZX_OK;
   }
 
   const auto& fragment = fragment_lookup_.find(reinterpret_cast<const FragmentEntry*>(device));

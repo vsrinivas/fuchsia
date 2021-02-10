@@ -76,6 +76,29 @@ TEST(FakeDdk, SetMetadata) {
   ASSERT_EQ(size, sizeof(kSource));
 }
 
+TEST(FakeDdk, SetProtocol) {
+  fake_ddk::Bind bind;
+
+  fake_ddk::Protocol proto = {};
+  EXPECT_NE(device_get_protocol(fake_ddk::FakeParent(), 8, &proto), ZX_OK);
+
+  const fake_ddk::Protocol kTestProto = {
+      .ctx = reinterpret_cast<void*>(0x10),
+  };
+  bind.SetProtocol(8, &kTestProto);
+
+  // Protocol is available after being set.
+  EXPECT_OK(device_get_protocol(fake_ddk::FakeParent(), 8, &proto));
+  EXPECT_BYTES_EQ(&proto, &kTestProto, sizeof(proto));
+
+  // Incorrect proto ids still fail.
+  EXPECT_NE(device_get_protocol(fake_ddk::FakeParent(), 0, &proto), ZX_OK);
+
+  // nullptr removes it.
+  bind.SetProtocol(8, nullptr);
+  EXPECT_NE(device_get_protocol(fake_ddk::FakeParent(), 8, &proto), ZX_OK);
+}
+
 class CompositeTest : public zxtest::Test {
  public:
   ~CompositeTest() override = default;
