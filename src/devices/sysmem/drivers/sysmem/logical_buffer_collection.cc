@@ -55,100 +55,99 @@ bool IsNonZeroPowerOf2(T value) {
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
 // types.
-#define FIELD_DEFAULT_1(table_ptr_name, field_name)                                     \
-  do {                                                                                  \
-    auto table_ptr = (table_ptr_name);                                                  \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value);    \
-    using FieldType = std::remove_reference<decltype((table_ptr->field_name()))>::type; \
-    if (!table_ptr->has_##field_name()) {                                               \
-      table_ptr->set_##field_name(allocator_, static_cast<FieldType>(1));               \
-      ZX_DEBUG_ASSERT(table_ptr->field_name() == 1);                                    \
-    }                                                                                   \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                     \
+#define FIELD_DEFAULT_1(table_ref_name, field_name)                                    \
+  do {                                                                                 \
+    auto& table_ref = (table_ref_name);                                                \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value); \
+    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type; \
+    if (!table_ref.has_##field_name()) {                                               \
+      table_ref.set_##field_name(allocator_, static_cast<FieldType>(1));               \
+      ZX_DEBUG_ASSERT(table_ref.field_name() == 1);                                    \
+    }                                                                                  \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                     \
   } while (false)
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
 // types.
-#define FIELD_DEFAULT_MAX(table_ptr_name, field_name)                                    \
-  do {                                                                                   \
-    auto table_ptr = (table_ptr_name);                                                   \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value);     \
-    using FieldType = std::remove_reference<decltype((table_ptr->field_name()))>::type;  \
-    if (!table_ptr->has_##field_name()) {                                                \
-      table_ptr->set_##field_name(allocator_, std::numeric_limits<FieldType>::max());    \
-      ZX_DEBUG_ASSERT(table_ptr->field_name() == std::numeric_limits<FieldType>::max()); \
-    }                                                                                    \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                      \
+#define FIELD_DEFAULT_MAX(table_ref_name, field_name)                                   \
+  do {                                                                                  \
+    auto& table_ref = (table_ref_name);                                                 \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value);  \
+    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type;  \
+    if (!table_ref.has_##field_name()) {                                                \
+      table_ref.set_##field_name(allocator_, std::numeric_limits<FieldType>::max());    \
+      ZX_DEBUG_ASSERT(table_ref.field_name() == std::numeric_limits<FieldType>::max()); \
+    }                                                                                   \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                      \
   } while (false)
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
 // types.
-#define FIELD_DEFAULT_ZERO(table_ptr_name, field_name)                                  \
-  do {                                                                                  \
-    auto table_ptr = (table_ptr_name);                                                  \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value);    \
-    using FieldType = std::remove_reference<decltype((table_ptr->field_name()))>::type; \
-    if (!table_ptr->has_##field_name()) {                                               \
-      table_ptr->set_##field_name(allocator_, static_cast<FieldType>(0));               \
-      ZX_DEBUG_ASSERT(!static_cast<bool>(table_ptr->field_name()));                     \
-    }                                                                                   \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                     \
+#define FIELD_DEFAULT_ZERO(table_ref_name, field_name)                                 \
+  do {                                                                                 \
+    auto& table_ref = (table_ref_name);                                                \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value); \
+    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type; \
+    if (!table_ref.has_##field_name()) {                                               \
+      table_ref.set_##field_name(allocator_, static_cast<FieldType>(0));               \
+      ZX_DEBUG_ASSERT(!static_cast<bool>(table_ref.field_name()));                     \
+    }                                                                                  \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                     \
   } while (false)
 
-#define FIELD_DEFAULT_FALSE(table_ptr_name, field_name)                                 \
-  do {                                                                                  \
-    auto table_ptr = (table_ptr_name);                                                  \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value);    \
-    using FieldType = std::remove_reference<decltype((table_ptr->field_name()))>::type; \
-    static_assert(std::is_same<FieldType, bool>::value);                                \
-    if (!table_ptr->has_##field_name()) {                                               \
-      table_ptr->set_##field_name(allocator_, false);                                   \
-      ZX_DEBUG_ASSERT(!table_ptr->field_name());                                        \
-    }                                                                                   \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                     \
+#define FIELD_DEFAULT_FALSE(table_ref_name, field_name)                                \
+  do {                                                                                 \
+    auto& table_ref = (table_ref_name);                                                \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value); \
+    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type; \
+    static_assert(std::is_same<FieldType, bool>::value);                               \
+    if (!table_ref.has_##field_name()) {                                               \
+      table_ref.set_##field_name(allocator_, false);                                   \
+      ZX_DEBUG_ASSERT(!table_ref.field_name());                                        \
+    }                                                                                  \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                     \
   } while (false)
 
-#define FIELD_DEFAULT(table_ptr_name, field_name, value_name)                           \
-  do {                                                                                  \
-    auto table_ptr = (table_ptr_name);                                                  \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value);    \
-    using FieldType = std::remove_reference<decltype((table_ptr->field_name()))>::type; \
-    static_assert(!fidl::IsFidlObject<FieldType>::value);                               \
-    static_assert(!fidl::IsVectorView<FieldType>::value);                               \
-    static_assert(!fidl::IsStringView<FieldType>::value);                               \
-    if (!table_ptr->has_##field_name()) {                                               \
-      auto field_value = (value_name);                                                  \
-      table_ptr->set_##field_name(allocator_, field_value);                             \
-      ZX_DEBUG_ASSERT(table_ptr->field_name() == field_value);                          \
-    }                                                                                   \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                     \
+#define FIELD_DEFAULT(table_ref_name, field_name, value_name)                          \
+  do {                                                                                 \
+    auto& table_ref = (table_ref_name);                                                \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value); \
+    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type; \
+    static_assert(!fidl::IsFidlObject<FieldType>::value);                              \
+    static_assert(!fidl::IsVectorView<FieldType>::value);                              \
+    static_assert(!fidl::IsStringView<FieldType>::value);                              \
+    if (!table_ref.has_##field_name()) {                                               \
+      auto field_value = (value_name);                                                 \
+      table_ref.set_##field_name(allocator_, field_value);                             \
+      ZX_DEBUG_ASSERT(table_ref.field_name() == field_value);                          \
+    }                                                                                  \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                     \
   } while (false)
 
-#define FIELD_DEFAULT_SET(table_ptr_name, field_name)                                \
-  do {                                                                               \
-    auto table_ptr = (table_ptr_name);                                               \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value); \
-    using TableType = std::remove_reference_t<decltype((table_ptr->field_name()))>;  \
-    static_assert(fidl::IsTable<TableType>::value);                                  \
-    if (!table_ptr->has_##field_name()) {                                            \
-      table_ptr->set_##field_name(allocator_, allocator_.make_table<TableType>());   \
-    }                                                                                \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                  \
+#define FIELD_DEFAULT_SET(table_ref_name, field_name)                                  \
+  do {                                                                                 \
+    auto& table_ref = (table_ref_name);                                                \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value); \
+    using TableType = std::remove_reference_t<decltype((table_ref.field_name()))>;     \
+    static_assert(fidl::IsTable<TableType>::value);                                    \
+    if (!table_ref.has_##field_name()) {                                               \
+      table_ref.set_##field_name(allocator_, TableType(allocator_));                   \
+    }                                                                                  \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                     \
   } while (false)
 
 // regardless of capacity, initial count is always 0
-#define FIELD_DEFAULT_SET_VECTOR(table_ptr_name, field_name, capacity_param)              \
-  do {                                                                                    \
-    auto table_ptr = (table_ptr_name);                                                    \
-    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(table_ptr)>>::value);      \
-    using VectorFieldType = std::remove_reference_t<decltype((table_ptr->field_name()))>; \
-    static_assert(fidl::IsVectorView<VectorFieldType>::value);                            \
-    using ElementType = typename VectorFieldType::elem_type;                              \
-    if (!table_ptr->has_##field_name()) {                                                 \
-      size_t capacity = (capacity_param);                                                 \
-      table_ptr->set_##field_name(allocator_.make_vec_ptr<ElementType>(0, capacity));     \
-    }                                                                                     \
-    ZX_DEBUG_ASSERT(table_ptr->has_##field_name());                                       \
+#define FIELD_DEFAULT_SET_VECTOR(table_ref_name, field_name, capacity_param)             \
+  do {                                                                                   \
+    auto& table_ref = (table_ref_name);                                                  \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value);   \
+    using VectorFieldType = std::remove_reference_t<decltype((table_ref.field_name()))>; \
+    static_assert(fidl::IsVectorView<VectorFieldType>::value);                           \
+    if (!table_ref.has_##field_name()) {                                                 \
+      size_t capacity = (capacity_param);                                                \
+      table_ref.set_##field_name(allocator_, allocator_, 0, capacity);                   \
+    }                                                                                    \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                       \
   } while (false)
 
 template <typename T>
@@ -884,10 +883,10 @@ bool LogicalBufferCollection::CombineConstraints() {
   }
 
   // Start with empty constraints / unconstrained.
-  auto acc = allocator_.make_table<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+  llcpp::fuchsia::sysmem2::BufferCollectionConstraints acc(allocator_);
   // Sanitize initial accumulation target to keep accumulation simpler.  This is guaranteed to
   // succeed; the input is always the same.
-  bool result = CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kInitial, &acc);
+  bool result = CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kInitial, acc);
   ZX_DEBUG_ASSERT(result);
   // Accumulate each participant's constraints.
   while (!constraints_list_.empty()) {
@@ -896,7 +895,7 @@ bool LogicalBufferCollection::CombineConstraints() {
     current_client_info_ = &constraints_entry.client;
     auto defer_reset = fit::defer([this] { current_client_info_ = nullptr; });
     if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kNotAggregated,
-                                                  &constraints_entry.constraints)) {
+                                                  constraints_entry.constraints)) {
       return false;
     }
     if (!AccumulateConstraintBufferCollection(&acc, &constraints_entry.constraints)) {
@@ -906,7 +905,7 @@ bool LogicalBufferCollection::CombineConstraints() {
     }
   }
 
-  if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kAggregated, &acc)) {
+  if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kAggregated, acc)) {
     return false;
   }
 
@@ -947,7 +946,7 @@ static bool IsCpuAccessSupported(
 }
 
 bool LogicalBufferCollection::CheckSanitizeBufferUsage(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferUsage* buffer_usage) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage) {
   FIELD_DEFAULT_ZERO(buffer_usage, none);
   FIELD_DEFAULT_ZERO(buffer_usage, cpu);
   FIELD_DEFAULT_ZERO(buffer_usage, vulkan);
@@ -962,14 +961,14 @@ bool LogicalBufferCollection::CheckSanitizeBufferUsage(
       // specifies constraints.  The "none" usage bit can be set by a participant
       // that doesn't directly use the buffers, so we know that the participant
       // didn't forget to set usage.
-      if (buffer_usage->none() == 0 && buffer_usage->cpu() == 0 && buffer_usage->vulkan() == 0 &&
-          buffer_usage->display() == 0 && buffer_usage->video() == 0) {
+      if (buffer_usage.none() == 0 && buffer_usage.cpu() == 0 && buffer_usage.vulkan() == 0 &&
+          buffer_usage.display() == 0 && buffer_usage.video() == 0) {
         LogError(FROM_HERE, "At least one usage bit must be set by a participant.");
         return false;
       }
-      if (buffer_usage->none() != 0) {
-        if (buffer_usage->cpu() != 0 || buffer_usage->vulkan() != 0 ||
-            buffer_usage->display() != 0 || buffer_usage->video() != 0) {
+      if (buffer_usage.none() != 0) {
+        if (buffer_usage.cpu() != 0 || buffer_usage.vulkan() != 0 || buffer_usage.display() != 0 ||
+            buffer_usage.video() != 0) {
           LogError(FROM_HERE,
                    "A participant indicating 'none' usage can't specify any other usage.");
           return false;
@@ -977,8 +976,8 @@ bool LogicalBufferCollection::CheckSanitizeBufferUsage(
       }
       break;
     case CheckSanitizeStage::kAggregated:
-      if (buffer_usage->cpu() == 0 && buffer_usage->vulkan() == 0 && buffer_usage->display() == 0 &&
-          buffer_usage->video() == 0) {
+      if (buffer_usage.cpu() == 0 && buffer_usage.vulkan() == 0 && buffer_usage.display() == 0 &&
+          buffer_usage.video() == 0) {
         LogError(FROM_HERE,
                  "At least one non-'none' usage bit must be set across all participants.");
         return false;
@@ -999,53 +998,53 @@ size_t LogicalBufferCollection::InitialCapacityOrZero(CheckSanitizeStage stage,
 // constraint checks that are present under Accumulate* are commented explaining
 // why it's ok for them to be there.
 bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints* constraints) {
-  bool was_empty = constraints->IsEmpty();
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints) {
+  bool was_empty = constraints.IsEmpty();
   FIELD_DEFAULT_SET(constraints, usage);
   if (was_empty) {
     // Completely empty constraints are permitted, so convert to NONE_USAGE to avoid triggering the
     // check applied to non-empty constraints where at least one usage bit must be set (NONE_USAGE
     // counts for that check, and doesn't constrain anything).
-    FIELD_DEFAULT(&constraints->usage(), none, llcpp::fuchsia::sysmem2::NONE_USAGE);
+    FIELD_DEFAULT(constraints.usage(), none, llcpp::fuchsia::sysmem2::NONE_USAGE);
   }
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_camping);
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_dedicated_slack);
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_shared_slack);
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count);
   FIELD_DEFAULT_MAX(constraints, max_buffer_count);
-  ZX_DEBUG_ASSERT(constraints->has_buffer_memory_constraints() ||
+  ZX_DEBUG_ASSERT(constraints.has_buffer_memory_constraints() ||
                   stage != CheckSanitizeStage::kAggregated);
   FIELD_DEFAULT_SET(constraints, buffer_memory_constraints);
-  ZX_DEBUG_ASSERT(constraints->has_buffer_memory_constraints());
+  ZX_DEBUG_ASSERT(constraints.has_buffer_memory_constraints());
   FIELD_DEFAULT_SET_VECTOR(constraints, image_format_constraints, InitialCapacityOrZero(stage, 64));
   FIELD_DEFAULT_FALSE(constraints, need_clear_aux_buffers_for_secure);
   FIELD_DEFAULT(constraints, allow_clear_aux_buffers_for_secure,
-                !IsWriteUsage(constraints->usage()));
-  if (!CheckSanitizeBufferUsage(stage, &constraints->usage())) {
+                !IsWriteUsage(constraints.usage()));
+  if (!CheckSanitizeBufferUsage(stage, constraints.usage())) {
     LogError(FROM_HERE, "CheckSanitizeBufferUsage() failed");
     return false;
   }
-  if (constraints->max_buffer_count() == 0) {
+  if (constraints.max_buffer_count() == 0) {
     LogError(FROM_HERE, "max_buffer_count == 0");
     return false;
   }
-  if (constraints->min_buffer_count() > constraints->max_buffer_count()) {
+  if (constraints.min_buffer_count() > constraints.max_buffer_count()) {
     LogError(FROM_HERE, "min_buffer_count > max_buffer_count");
     return false;
   }
-  if (!CheckSanitizeBufferMemoryConstraints(stage, constraints->usage(),
-                                            &constraints->buffer_memory_constraints())) {
+  if (!CheckSanitizeBufferMemoryConstraints(stage, constraints.usage(),
+                                            constraints.buffer_memory_constraints())) {
     return false;
   }
   if (stage != CheckSanitizeStage::kAggregated) {
-    if (IsCpuUsage(constraints->usage())) {
-      if (!IsCpuAccessSupported(constraints->buffer_memory_constraints())) {
+    if (IsCpuUsage(constraints.usage())) {
+      if (!IsCpuAccessSupported(constraints.buffer_memory_constraints())) {
         LogError(FROM_HERE, "IsCpuUsage() && !IsCpuAccessSupported()");
         return false;
       }
       // From a single participant, reject secure_required in combination with CPU usage, since CPU
       // usage isn't possible given secure memory.
-      if (constraints->buffer_memory_constraints().secure_required()) {
+      if (constraints.buffer_memory_constraints().secure_required()) {
         LogError(FROM_HERE, "IsCpuUsage() && secure_required");
         return false;
       }
@@ -1054,26 +1053,26 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
       // coherency domain and is_secure and realize that it shouldn't attempt to read/write the
       // VMOs.
     }
-    if (constraints->buffer_memory_constraints().secure_required() &&
-        IsCpuAccessSupported(constraints->buffer_memory_constraints())) {
+    if (constraints.buffer_memory_constraints().secure_required() &&
+        IsCpuAccessSupported(constraints.buffer_memory_constraints())) {
       // This is a little picky, but easier to be less picky later than more picky later.
       LogError(FROM_HERE, "secure_required && IsCpuAccessSupported()");
       return false;
     }
   }
-  for (uint32_t i = 0; i < constraints->image_format_constraints().count(); ++i) {
-    if (!CheckSanitizeImageFormatConstraints(stage, &constraints->image_format_constraints()[i])) {
+  for (uint32_t i = 0; i < constraints.image_format_constraints().count(); ++i) {
+    if (!CheckSanitizeImageFormatConstraints(stage, constraints.image_format_constraints()[i])) {
       return false;
     }
   }
 
   if (stage == CheckSanitizeStage::kNotAggregated) {
     // As an optimization, only check the unaggregated inputs.
-    for (uint32_t i = 0; i < constraints->image_format_constraints().count(); ++i) {
-      for (uint32_t j = i + 1; j < constraints->image_format_constraints().count(); ++j) {
+    for (uint32_t i = 0; i < constraints.image_format_constraints().count(); ++i) {
+      for (uint32_t j = i + 1; j < constraints.image_format_constraints().count(); ++j) {
         if (ImageFormatIsPixelFormatEqual(
-                constraints->image_format_constraints()[i].pixel_format(),
-                constraints->image_format_constraints()[j].pixel_format())) {
+                constraints.image_format_constraints()[i].pixel_format(),
+                constraints.image_format_constraints()[j].pixel_format())) {
           LogError(FROM_HERE, "image format constraints %d and %d have identical formats", i, j);
           return false;
         }
@@ -1085,7 +1084,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
 
 bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
     CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage,
-    llcpp::fuchsia::sysmem2::BufferMemoryConstraints* constraints) {
+    llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints) {
   FIELD_DEFAULT_ZERO(constraints, min_size_bytes);
   FIELD_DEFAULT_MAX(constraints, max_size_bytes);
   FIELD_DEFAULT_FALSE(constraints, physically_contiguous_required);
@@ -1097,9 +1096,9 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
   FIELD_DEFAULT(constraints, ram_domain_supported, !buffer_usage.cpu());
   FIELD_DEFAULT(constraints, inaccessible_domain_supported, !buffer_usage.cpu());
   if (stage != CheckSanitizeStage::kAggregated) {
-    if (constraints->has_heap_permitted() && !constraints->heap_permitted().count()) {
+    if (constraints.has_heap_permitted() && !constraints.heap_permitted().count()) {
       LogError(FROM_HERE,
-               "constraints->has_heap_permitted() && !constraints->heap_permitted().count()");
+               "constraints.has_heap_permitted() && !constraints.heap_permitted().count()");
       return false;
     }
   }
@@ -1107,12 +1106,12 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
   // For now 0 heaps means any heap.
   FIELD_DEFAULT_SET_VECTOR(constraints, heap_permitted, 0);
   ZX_DEBUG_ASSERT(stage != CheckSanitizeStage::kInitial ||
-                  constraints->heap_permitted().count() == 0);
-  if (constraints->min_size_bytes() > constraints->max_size_bytes()) {
+                  constraints.heap_permitted().count() == 0);
+  if (constraints.min_size_bytes() > constraints.max_size_bytes()) {
     LogError(FROM_HERE, "min_size_bytes > max_size_bytes");
     return false;
   }
-  if (constraints->secure_required() && !IsSecurePermitted(*constraints)) {
+  if (constraints.secure_required() && !IsSecurePermitted(constraints)) {
     LogError(FROM_HERE, "secure memory required but not permitted");
     return false;
   }
@@ -1120,13 +1119,13 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
 }
 
 bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints* constraints) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints& constraints) {
   // We never CheckSanitizeImageFormatConstraints() on empty (aka initial) constraints.
   ZX_DEBUG_ASSERT(stage != CheckSanitizeStage::kInitial);
 
   FIELD_DEFAULT_SET(constraints, pixel_format);
-  FIELD_DEFAULT_ZERO(&constraints->pixel_format(), type);
-  FIELD_DEFAULT_ZERO(&constraints->pixel_format(), format_modifier_value);
+  FIELD_DEFAULT_ZERO(constraints.pixel_format(), type);
+  FIELD_DEFAULT_ZERO(constraints.pixel_format(), format_modifier_value);
 
   FIELD_DEFAULT_SET_VECTOR(constraints, color_spaces, 0);
 
@@ -1152,126 +1151,126 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
   FIELD_DEFAULT_MAX(constraints, required_min_bytes_per_row);
   FIELD_DEFAULT_ZERO(constraints, required_max_bytes_per_row);
 
-  if (constraints->pixel_format().type() == llcpp::fuchsia::sysmem2::PixelFormatType::INVALID) {
+  if (constraints.pixel_format().type() == llcpp::fuchsia::sysmem2::PixelFormatType::INVALID) {
     LogError(FROM_HERE, "PixelFormatType INVALID not allowed");
     return false;
   }
-  if (!ImageFormatIsSupported(constraints->pixel_format())) {
+  if (!ImageFormatIsSupported(constraints.pixel_format())) {
     LogError(FROM_HERE, "Unsupported pixel format");
     return false;
   }
 
   uint32_t min_bytes_per_row_given_min_width =
-      ImageFormatStrideBytesPerWidthPixel(constraints->pixel_format()) *
-      constraints->min_coded_width();
-  constraints->min_bytes_per_row() =
-      std::max(constraints->min_bytes_per_row(), min_bytes_per_row_given_min_width);
+      ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format()) *
+      constraints.min_coded_width();
+  constraints.min_bytes_per_row() =
+      std::max(constraints.min_bytes_per_row(), min_bytes_per_row_given_min_width);
 
-  if (!constraints->color_spaces().count()) {
+  if (!constraints.color_spaces().count()) {
     LogError(FROM_HERE, "color_spaces.count() == 0 not allowed");
     return false;
   }
 
-  if (constraints->min_coded_width() > constraints->max_coded_width()) {
+  if (constraints.min_coded_width() > constraints.max_coded_width()) {
     LogError(FROM_HERE, "min_coded_width > max_coded_width");
     return false;
   }
-  if (constraints->min_coded_height() > constraints->max_coded_height()) {
+  if (constraints.min_coded_height() > constraints.max_coded_height()) {
     LogError(FROM_HERE, "min_coded_height > max_coded_height");
     return false;
   }
-  if (constraints->min_bytes_per_row() > constraints->max_bytes_per_row()) {
+  if (constraints.min_bytes_per_row() > constraints.max_bytes_per_row()) {
     LogError(FROM_HERE, "min_bytes_per_row > max_bytes_per_row");
     return false;
   }
-  if (constraints->min_coded_width() * constraints->min_coded_height() >
-      constraints->max_coded_width_times_coded_height()) {
+  if (constraints.min_coded_width() * constraints.min_coded_height() >
+      constraints.max_coded_width_times_coded_height()) {
     LogError(FROM_HERE,
              "min_coded_width * min_coded_height > "
              "max_coded_width_times_coded_height");
     return false;
   }
 
-  if (!IsNonZeroPowerOf2(constraints->coded_width_divisor())) {
+  if (!IsNonZeroPowerOf2(constraints.coded_width_divisor())) {
     LogError(FROM_HERE, "non-power-of-2 coded_width_divisor not supported");
     return false;
   }
-  if (!IsNonZeroPowerOf2(constraints->coded_height_divisor())) {
+  if (!IsNonZeroPowerOf2(constraints.coded_height_divisor())) {
     LogError(FROM_HERE, "non-power-of-2 coded_width_divisor not supported");
     return false;
   }
-  if (!IsNonZeroPowerOf2(constraints->bytes_per_row_divisor())) {
+  if (!IsNonZeroPowerOf2(constraints.bytes_per_row_divisor())) {
     LogError(FROM_HERE, "non-power-of-2 bytes_per_row_divisor not supported");
     return false;
   }
-  if (!IsNonZeroPowerOf2(constraints->start_offset_divisor())) {
+  if (!IsNonZeroPowerOf2(constraints.start_offset_divisor())) {
     LogError(FROM_HERE, "non-power-of-2 start_offset_divisor not supported");
     return false;
   }
-  if (constraints->start_offset_divisor() > PAGE_SIZE) {
+  if (constraints.start_offset_divisor() > PAGE_SIZE) {
     LogError(FROM_HERE, "support for start_offset_divisor > PAGE_SIZE not yet implemented");
     return false;
   }
-  if (!IsNonZeroPowerOf2(constraints->display_width_divisor())) {
+  if (!IsNonZeroPowerOf2(constraints.display_width_divisor())) {
     LogError(FROM_HERE, "non-power-of-2 display_width_divisor not supported");
     return false;
   }
-  if (!IsNonZeroPowerOf2(constraints->display_height_divisor())) {
+  if (!IsNonZeroPowerOf2(constraints.display_height_divisor())) {
     LogError(FROM_HERE, "non-power-of-2 display_height_divisor not supported");
     return false;
   }
 
-  for (uint32_t i = 0; i < constraints->color_spaces().count(); ++i) {
-    if (!ImageFormatIsSupportedColorSpaceForPixelFormat(constraints->color_spaces()[i],
-                                                        constraints->pixel_format())) {
-      auto colorspace_type = constraints->color_spaces()[i].has_type()
-                                 ? constraints->color_spaces()[i].type()
+  for (uint32_t i = 0; i < constraints.color_spaces().count(); ++i) {
+    if (!ImageFormatIsSupportedColorSpaceForPixelFormat(constraints.color_spaces()[i],
+                                                        constraints.pixel_format())) {
+      auto colorspace_type = constraints.color_spaces()[i].has_type()
+                                 ? constraints.color_spaces()[i].type()
                                  : llcpp::fuchsia::sysmem2::ColorSpaceType::INVALID;
       LogError(FROM_HERE,
                "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
                "color_space.type: %u "
                "pixel_format.type: %u",
-               colorspace_type, constraints->pixel_format().type());
+               colorspace_type, constraints.pixel_format().type());
       return false;
     }
   }
 
-  if (constraints->required_min_coded_width() == 0) {
+  if (constraints.required_min_coded_width() == 0) {
     LogError(FROM_HERE, "required_min_coded_width == 0");
     return false;
   }
-  ZX_DEBUG_ASSERT(constraints->required_min_coded_width() != 0);
-  if (constraints->required_min_coded_width() < constraints->min_coded_width()) {
+  ZX_DEBUG_ASSERT(constraints.required_min_coded_width() != 0);
+  if (constraints.required_min_coded_width() < constraints.min_coded_width()) {
     LogError(FROM_HERE, "required_min_coded_width < min_coded_width");
     return false;
   }
-  if (constraints->required_max_coded_width() > constraints->max_coded_width()) {
+  if (constraints.required_max_coded_width() > constraints.max_coded_width()) {
     LogError(FROM_HERE, "required_max_coded_width > max_coded_width");
     return false;
   }
-  if (constraints->required_min_coded_height() == 0) {
+  if (constraints.required_min_coded_height() == 0) {
     LogError(FROM_HERE, "required_min_coded_height == 0");
     return false;
   }
-  ZX_DEBUG_ASSERT(constraints->required_min_coded_height() != 0);
-  if (constraints->required_min_coded_height() < constraints->min_coded_height()) {
+  ZX_DEBUG_ASSERT(constraints.required_min_coded_height() != 0);
+  if (constraints.required_min_coded_height() < constraints.min_coded_height()) {
     LogError(FROM_HERE, "required_min_coded_height < min_coded_height");
     return false;
   }
-  if (constraints->required_max_coded_height() > constraints->max_coded_height()) {
+  if (constraints.required_max_coded_height() > constraints.max_coded_height()) {
     LogError(FROM_HERE, "required_max_coded_height > max_coded_height");
     return false;
   }
-  if (constraints->required_min_bytes_per_row() == 0) {
+  if (constraints.required_min_bytes_per_row() == 0) {
     LogError(FROM_HERE, "required_min_bytes_per_row == 0");
     return false;
   }
-  ZX_DEBUG_ASSERT(constraints->required_min_bytes_per_row() != 0);
-  if (constraints->required_min_bytes_per_row() < constraints->min_bytes_per_row()) {
+  ZX_DEBUG_ASSERT(constraints.required_min_bytes_per_row() != 0);
+  if (constraints.required_min_bytes_per_row() < constraints.min_bytes_per_row()) {
     LogError(FROM_HERE, "required_min_bytes_per_row < min_bytes_per_row");
     return false;
   }
-  if (constraints->required_max_bytes_per_row() > constraints->max_bytes_per_row()) {
+  if (constraints.required_max_bytes_per_row() > constraints.max_bytes_per_row()) {
     LogError(FROM_HERE, "required_max_bytes_per_row > max_bytes_per_row");
     return false;
   }

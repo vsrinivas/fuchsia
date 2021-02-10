@@ -637,10 +637,10 @@ TEST(SysmemVersion, CoherencyDomainSupport) {
     random(&ram_supported);
     random(&inaccessible_supported);
 
-    v2::CoherencyDomainSupport v2_1 = allocator.make_table<v2::CoherencyDomainSupport>();
-    v2_1.set_cpu_supported(allocator.make<bool>(cpu_supported));
-    v2_1.set_ram_supported(allocator.make<bool>(ram_supported));
-    v2_1.set_inaccessible_supported(allocator.make<bool>(inaccessible_supported));
+    v2::CoherencyDomainSupport v2_1(allocator);
+    v2_1.set_cpu_supported(allocator, cpu_supported);
+    v2_1.set_ram_supported(allocator, ram_supported);
+    v2_1.set_inaccessible_supported(allocator, inaccessible_supported);
 
     v2::CoherencyDomainSupport v2_2 = sysmem::V2CloneCoherencyDomainSuppoort(allocator, v2_1);
     EXPECT_TRUE(v2_2.has_cpu_supported());
@@ -665,16 +665,14 @@ TEST(SysmemVersion, HeapProperties) {
     random(&inaccessible_supported);
     random(&need_clear);
 
-    v2::HeapProperties v2_1 = allocator.make_table<v2::HeapProperties>();
-    v2_1.set_need_clear(allocator.make<bool>(need_clear));
+    v2::HeapProperties v2_1(allocator);
+    v2_1.set_need_clear(allocator, need_clear);
     {
-      auto coherency_domain_support = allocator.make_table<v2::CoherencyDomainSupport>();
-      coherency_domain_support.set_cpu_supported(allocator.make<bool>(cpu_supported));
-      coherency_domain_support.set_ram_supported(allocator.make<bool>(ram_supported));
-      coherency_domain_support.set_inaccessible_supported(
-          allocator.make<bool>(inaccessible_supported));
-      v2_1.set_coherency_domain_support(
-          allocator.make<v2::CoherencyDomainSupport>(std::move(coherency_domain_support)));
+      v2::CoherencyDomainSupport coherency_domain_support(allocator);
+      coherency_domain_support.set_cpu_supported(allocator, cpu_supported);
+      coherency_domain_support.set_ram_supported(allocator, ram_supported);
+      coherency_domain_support.set_inaccessible_supported(allocator, inaccessible_supported);
+      v2_1.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
     }
 
     v2::HeapProperties v2_2 = sysmem::V2CloneHeapProperties(allocator, v2_1);

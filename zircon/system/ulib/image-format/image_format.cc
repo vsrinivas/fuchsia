@@ -1188,22 +1188,22 @@ fit::result<ImageFormat> ImageConstraintsToFormat(fidl::Allocator& allocator,
       (constraints.has_max_coded_width() && width > constraints.max_coded_width())) {
     return fit::error();
   }
-  ImageFormat result(allocator.make<ImageFormat::Frame>());
+  ImageFormat result(allocator);
   uint32_t minimum_row_bytes;
   if (ImageFormatMinimumRowBytes(constraints, width, &minimum_row_bytes)) {
-    result.set_bytes_per_row(allocator.make<uint32_t>(minimum_row_bytes));
+    result.set_bytes_per_row(allocator, minimum_row_bytes);
   } else {
-    result.set_bytes_per_row(allocator.make<uint32_t>(0));
+    result.set_bytes_per_row(allocator, 0);
   }
-  result.set_pixel_format(allocator.make<PixelFormat>(
-      sysmem::V2ClonePixelFormat(allocator, constraints.pixel_format())));
-  result.set_coded_width(allocator.make<uint32_t>(width));
-  result.set_coded_height(allocator.make<uint32_t>(height));
-  result.set_display_width(allocator.make<uint32_t>(width));
-  result.set_display_height(allocator.make<uint32_t>(height));
+  result.set_pixel_format(allocator,
+                          sysmem::V2ClonePixelFormat(allocator, constraints.pixel_format()));
+  result.set_coded_width(allocator, width);
+  result.set_coded_height(allocator, height);
+  result.set_display_width(allocator, width);
+  result.set_display_height(allocator, height);
   if (constraints.has_color_spaces() && constraints.color_spaces().count()) {
-    result.set_color_space(allocator.make<ColorSpace>(
-        sysmem::V2CloneColorSpace(allocator, constraints.color_spaces()[0])));
+    result.set_color_space(allocator,
+                           sysmem::V2CloneColorSpace(allocator, constraints.color_spaces()[0]));
   }
   // result's has_pixel_aspect_ratio field remains un-set which is equivalent to false
   return fit::ok(std::move(result));

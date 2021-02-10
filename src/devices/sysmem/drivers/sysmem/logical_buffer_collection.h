@@ -176,17 +176,17 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool CombineConstraints();
 
   bool CheckSanitizeBufferCollectionConstraints(
-      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints* constraints);
+      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints);
 
   bool CheckSanitizeBufferUsage(CheckSanitizeStage stage,
-                                llcpp::fuchsia::sysmem2::BufferUsage* buffer_usage);
+                                llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage);
 
   bool CheckSanitizeBufferMemoryConstraints(
       CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage,
-      llcpp::fuchsia::sysmem2::BufferMemoryConstraints* constraints);
+      llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints);
 
   bool CheckSanitizeImageFormatConstraints(
-      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints* constraints);
+      CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints& constraints);
 
   bool AccumulateConstraintBufferCollection(
       llcpp::fuchsia::sysmem2::BufferCollectionConstraints* acc,
