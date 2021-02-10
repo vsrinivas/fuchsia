@@ -83,25 +83,28 @@ async fn print_device_status(
         println!("\tstate: {:?}", x);
     }
 
+    let identity = device_extra.watch_identity().await?;
+
+    if let Some(x) = identity.raw_name {
+        match std::str::from_utf8(&x) {
+            Ok(x) => println!("\tnetwork_name: {:?}", x),
+            Err(e) => println!("\tnetwork_name: {} ({:?})", hex::encode(&x), e),
+        }
+    }
+
+    if let Some(x) = identity.xpanid {
+        println!("\txpanid: {}", hex::encode(x));
+    }
+
+    if let Some(x) = identity.panid {
+        println!("\tpanid: 0x{:04x}", x);
+    }
+
     match device_state.connectivity_state {
         Some(ConnectivityState::Ready)
         | Some(ConnectivityState::Attaching)
         | Some(ConnectivityState::Attached)
         | Some(ConnectivityState::Isolated) => {
-            let identity = device_extra.watch_identity().await?;
-            if let Some(x) = identity.raw_name {
-                match std::str::from_utf8(&x) {
-                    Ok(x) => println!("\tnetwork_name: {:?}", x),
-                    Err(e) => println!("\tnetwork_name: {} ({:?})", hex::encode(&x), e),
-                }
-            }
-            if let Some(x) = identity.xpanid {
-                println!("\txpanid: {}", hex::encode(x));
-            }
-            if let Some(x) = identity.panid {
-                println!("\tpanid: 0x{:04x}", x);
-            }
-
             if let Some(x) = device_state.role.as_ref() {
                 println!("\trole: {:?}", x);
             }

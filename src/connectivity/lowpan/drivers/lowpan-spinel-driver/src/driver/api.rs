@@ -1131,6 +1131,10 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
     fn identity_snapshot(&self) -> Identity {
         let driver_state = self.driver_state.lock();
-        driver_state.identity.clone()
+        if driver_state.is_ready() {
+            driver_state.identity.clone()
+        } else {
+            Identity::EMPTY
+        }
     }
 }
