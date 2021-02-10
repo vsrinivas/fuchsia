@@ -55,7 +55,7 @@ grained sequence of preferred locales to use.
 
 ## Future work
 
-See [Future work][future_work.md#locale_fallback] section for details on
+See [Future work](future_work.md#locale_fallback) section for details on
 planned but not yet implemented features related to fallback.
 
 <!-- xrefs -->
