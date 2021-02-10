@@ -416,12 +416,13 @@ template("assemble_system") {
     # TODO(fxbug.dev/69264): Remove this line and use testonly from invoker.
     testonly = true
     deps = [
-             ":${image_name}_cmdline",
-             ":${image_name}_devmgr_config",
-             ":${image_name}_system_image.manifest",
-             "//build/unification/zbi:kernel",
-             "//src/sys/base-resolver:bootfs",
-           ] + invoker.bootfs_labels
+      ":${image_name}_cmdline",
+      ":${image_name}_devmgr_config",
+      ":${image_name}_system_image.manifest",
+      "//src/sys/base-resolver:bootfs",
+      "//zircon/kernel",
+    ]
+    deps += invoker.bootfs_labels
 
     if (ramdisk_fvm_in_zbi) {
       deps += [

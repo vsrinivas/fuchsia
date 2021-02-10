@@ -545,7 +545,7 @@ zbi("fuchsia_unverified") {
 
   deps = [
     "//build/input:bootfs",
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
   ]
 
   if (!include_devmgr_config_in_vbmeta) {
@@ -702,7 +702,7 @@ zbi("fuchsia_prime") {
 
   deps = [
     "//build/input:bootfs",
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
   ]
 
   if (!include_devmgr_config_in_vbmeta) {

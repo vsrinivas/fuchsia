@@ -111,8 +111,8 @@ zbi("zbi") {
   deps = [
     ":cmdline",
     "//build/input:zedboot_bootfs",
-    "//build/unification/zbi:kernel",
     "//src/sys/installer:bin",
+    "//zircon/kernel",
   ]
   deps += zedboot_deps
 

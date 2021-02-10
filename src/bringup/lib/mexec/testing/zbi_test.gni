@@ -78,9 +78,9 @@ template("mexec_zbi_test") {
 
     deps += [
       ":$resource_target",
-      "//build/unification/zbi:kernel",
       "//src/bringup/bin/bootsvc",
       "//src/bringup/lib/mexec/testing:zbi-test-entry",
+      "//zircon/kernel",
     ]
   }
 }

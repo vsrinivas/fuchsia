@@ -192,7 +192,7 @@ zbi_test("bootsvc-integration-tests") {
   ]
   deps = [
     # We need a zircon kernel to get off the ground at all.
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
 
     # Include bootsvc itself, since that's what we're testing here.  Note
     # that this uses the package() target for bootsvc, which comes with its
@@ -220,7 +220,7 @@ zbi_test("bootsvc-root-job-test") {
   ]
   deps = [
     # We need a zircon kernel to get off the ground at all.
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
 
     # Include bootsvc itself, since that's what we're testing here.  Note
     # that this uses the package() target for bootsvc, which comes with its

@@ -21,7 +21,7 @@ zbi_test("smoke-zbi-test") {
   args = [ "userboot=bin/no-op-success" ]
   deps = [
     ":no-op-success",
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
   ]
 }
 

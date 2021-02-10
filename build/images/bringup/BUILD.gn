@@ -63,7 +63,7 @@ zbi("bringup") {
     ":devmgr_config",
     ":system_package.manifest_args",
     "//build/input:bootfs",
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
   ]
 
   metadata = {

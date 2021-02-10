@@ -132,7 +132,7 @@ zbi_test("core-tests") {
 
   deps = [
     ":standalone",
-    "//build/unification/zbi:kernel",
+    "//zircon/kernel",
   ]
   assert_no_deps = [
     "//zircon/system/core/*",
@@ -162,7 +162,7 @@ if (current_cpu == "x64") {
     ]
     deps = [
       ":standalone",
-      "//build/unification/zbi:kernel",
+      "//zircon/kernel",
     ]
     assert_no_deps = [
       "//zircon/system/core/*",

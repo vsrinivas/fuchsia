@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Used to include a kernel in zbi's.
-group("kernel") {
-  deps = [ "//zircon/kernel(//zircon/kernel:kernel_$target_cpu)" ]
-}
-
 # Targets in this group are added to the list of tests automatically run.
 group("tests") {
   testonly = true
