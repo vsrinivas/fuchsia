@@ -89,6 +89,10 @@ TEST_F(CountryCodeTest, SetCCode) {
   status = SetCountryCode(&invalid_country);
   ASSERT_NE(status, ZX_OK);
 
+  // Verify that it stays with the default
+  GetCountryCodeFromFirmware(&country_code);
+  code = memcmp(country_code.ccode, "WW", WLANPHY_ALPHA2_LEN);
+  ASSERT_EQ(code, 0);
   // Set a valid CC and verify it succeeds
   status = SetCountryCode(&valid_country);
   ASSERT_EQ(status, ZX_OK);
