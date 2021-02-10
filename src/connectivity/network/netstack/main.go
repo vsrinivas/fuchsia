@@ -232,9 +232,11 @@ func Main() {
 				},
 			}),
 			ipv6.NewProtocolWithOptions(ipv6.Options{
+				DADConfigs: tcpipstack.DADConfigurations{
+					DupAddrDetectTransmits: dadTransmits,
+					RetransmitTimer:        dadRetransmitTimer,
+				},
 				NDPConfigs: ipv6.NDPConfigurations{
-					DupAddrDetectTransmits:        dadTransmits,
-					RetransmitTimer:               dadRetransmitTimer,
 					MaxRtrSolicitations:           maxRtrSolicitations,
 					RtrSolicitationInterval:       rtrSolicitationInterval,
 					MaxRtrSolicitationDelay:       maxRtrSolicitationDelay,

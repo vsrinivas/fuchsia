@@ -540,12 +540,17 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			// Handle the event.
 			switch event := event.(type) {
 			case *ndpDuplicateAddressDetectionEvent:
-				if event.resolved {
-					_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
-				} else if err := event.err; err != nil {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, err)
-				} else {
-					_ = syslog.WarnTf(ndpSyslogTagName, "duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+				switch event.err.(type) {
+				case nil:
+					if event.resolved {
+						_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+					} else {
+						_ = syslog.WarnTf(ndpSyslogTagName, "duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+					}
+				case *tcpip.ErrAborted:
+					_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted (err=%s), sending interface changed event...", event.addr, event.nicID, event.err)
+				default:
+					_ = syslog.ErrorTf(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, event.err)
 				}
 
 				n.ns.onInterfacesChanged()

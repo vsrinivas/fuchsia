@@ -969,7 +969,7 @@ func (ns *Netstack) addLoopback() error {
 	nicid := ifs.nicid
 	ifs.mu.Unlock()
 
-	// Loopback interfaces do not need NDP.
+	// Loopback interfaces do not need NDP or DAD.
 	if err := func() tcpip.Error {
 		ep, err := ns.stack.GetNetworkEndpoint(nicid, ipv6.ProtocolNumber)
 		if err != nil {
@@ -977,8 +977,11 @@ func (ns *Netstack) addLoopback() error {
 		}
 
 		// Must never fail, but the compiler can't tell.
-		ipv6EP := ep.(ipv6.NDPEndpoint)
-		ipv6EP.SetNDPConfigurations(ipv6.NDPConfigurations{})
+		ndpEP := ep.(ipv6.NDPEndpoint)
+		ndpEP.SetNDPConfigurations(ipv6.NDPConfigurations{})
+
+		dadEP := ep.(stack.DuplicateAddressDetector)
+		dadEP.SetDADConfigurations(stack.DADConfigurations{})
 
 		return nil
 	}(); err != nil {
