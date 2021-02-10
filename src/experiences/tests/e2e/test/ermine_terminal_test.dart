@@ -47,14 +47,26 @@ void main() {
     await ermine.gotoOverview();
   });
 
+  Future<bool> _waitForInstances(String componentUrl, int instances,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    final end = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(end)) {
+      var components = await ermine.component.list();
+      if (components.where((e) => e.contains(componentUrl)).length ==
+          instances) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   test('Launch and close three terminal instances', () async {
     // Launch three instances of component.
     const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
     await ermine.launch(componentUrl);
     await ermine.launch(componentUrl);
     await ermine.launch(componentUrl);
-    var runningComponents = await ermine.component.list();
-    expect(runningComponents.where((e) => e.contains(componentUrl)).length, 3);
+    expect(await _waitForInstances(componentUrl, 3), isTrue);
 
     // Close first instance using keyboard shortcut.
     // TODO(http://fxb/66076): Replace action with shortcut when implemented.
@@ -63,8 +75,7 @@ void main() {
     var terminalViews = views.where((view) => view['url'] == componentUrl);
     expect(terminalViews.length, 2);
     expect(terminalViews.last['focused'], isTrue);
-    runningComponents = await ermine.component.list();
-    expect(runningComponents.where((e) => e.contains(componentUrl)).length, 2);
+    expect(await _waitForInstances(componentUrl, 2), isTrue);
 
     // Close second instance clicking the close button on view title bar.
     await ermine.driver.tap(find.byValueKey('close'));
@@ -72,8 +83,7 @@ void main() {
     terminalViews = views.where((view) => view['url'] == componentUrl);
     expect(terminalViews.length, 1);
     expect(terminalViews.last['focused'], isTrue);
-    runningComponents = await ermine.component.list();
-    expect(runningComponents.where((e) => e.contains(componentUrl)).length, 1);
+    expect(await _waitForInstances(componentUrl, 1), isTrue);
 
     // Close the third instance by injecting 'exit\n'.
     // TODO(http://fxbug.dev/69242): Uncomment once text injection is fixed.
@@ -85,7 +95,6 @@ void main() {
     // views = await ermine.launchedViews();
     // terminalViews = views.where((view) => view['url'] == componentUrl);
     // expect(terminalViews.length, 0);
-    // runningComponents = await ermine.component.list();
-    // expect(runningComponents.where((e) => e.contains(componentUrl)).length, 0);
+    // expect(await _waitForInstances(componentUrl, 0), isTrue);
   });
 }
