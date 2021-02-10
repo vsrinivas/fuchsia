@@ -449,11 +449,11 @@ impl ArchivistBuilder {
         let listen_receiver = self.listen_receiver;
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
-            info!("Log ingestion stopped.");
+            debug!("Log ingestion stopped.");
             data_repo.terminate_logs();
-            info!("Flushing to listeners.");
+            debug!("Flushing to listeners.");
             listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
-            info!("Log listeners and batch iterators stopped.");
+            debug!("Log listeners and batch iterators stopped.");
         };
 
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
