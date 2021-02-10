@@ -55,13 +55,6 @@ class Binder : public fake_ddk::Bind {
 
   bool Ok();
 
-  // |fake_ddk::Bind|
-  zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) override;
-
-  // |fake_ddk::Bind|
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                size_t* actual) override;
-
   zx::unowned_channel fidl_loop(const zx_device_t* dev) {
     auto iter = fidl_loops_.find(dev);
     if (iter == fidl_loops_.end()) {
@@ -78,12 +71,6 @@ class Binder : public fake_ddk::Bind {
   zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0xcccc);
   int total_children_ = 0;
   int children_ = 0;
-  const sysmem_metadata_t sysmem_metadata_ = {
-      .vid = PDEV_VID_QEMU,
-      .pid = PDEV_PID_QEMU,
-      .protected_memory_size = 0,
-      .contiguous_memory_size = 0,
-  };
 };
 
 // Helper class for internal use by FakeDisplayDeviceTree, below.
@@ -193,6 +180,13 @@ class FakeDisplayDeviceTree {
   Controller* controller_;
 
   bool shutdown_ = false;
+
+  const sysmem_metadata_t sysmem_metadata_ = {
+      .vid = PDEV_VID_QEMU,
+      .pid = PDEV_PID_QEMU,
+      .protected_memory_size = 0,
+      .contiguous_memory_size = 0,
+  };
 };
 
 }  // namespace display

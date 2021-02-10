@@ -70,31 +70,11 @@ bool Binder::Ok() {
   }
 }
 
-zx_status_t Binder::DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) {
-  if (type == SYSMEM_METADATA) {
-    *out_size = sizeof(sysmem_metadata_);
-    return ZX_OK;
-  }
-  return ZX_ERR_INVALID_ARGS;
-}
-
-zx_status_t Binder::DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                      size_t* actual) {
-  if (type == SYSMEM_METADATA) {
-    *actual = sizeof(sysmem_metadata_);
-    if (length < *actual) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    *static_cast<sysmem_metadata_t*>(data) = sysmem_metadata_;
-    return ZX_OK;
-  }
-  return ZX_ERR_INVALID_ARGS;
-}
-
 FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper> sysmem,
                                              bool start_vsync)
     : sysmem_(std::move(sysmem)) {
   pdev_.UseFakeBti();
+  ddk_.SetMetadata(SYSMEM_METADATA, &sysmem_metadata_, sizeof(sysmem_metadata_));
 
   // Protocols for sysmem
   fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
