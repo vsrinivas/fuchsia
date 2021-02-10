@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var testDataDir = flag.String("test_data_dir", "", "Path to test data; only used in GN build")
+var testDataDir = flag.String("test_data_dir", "testdata", "Path to test data; only used in GN build")
 
 func TestConfigNew(t *testing.T) {
 	folder := t.TempDir()
