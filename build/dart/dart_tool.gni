@@ -250,7 +250,6 @@ template("dart_tool") {
     }
 
     args = [
-      "--enable-experiment=non-nullable",
       "--no-sound-null-safety",
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",
