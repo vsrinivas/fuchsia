@@ -83,50 +83,10 @@ static void DestroyDevices(zx_device_t* node) {
   }
 }
 
-const char kSerialNumber[] = "Test serial number";
-
 class Ddk : public fake_ddk::Bind {
  public:
-  Ddk() {
-    UsbConfig config = {};
-    memcpy(config.serial, kSerialNumber, sizeof(kSerialNumber));
-    InsertMetadata(DEVICE_METADATA_USB_CONFIG, config);
-    InsertMetadata(DEVICE_METADATA_SERIAL_NUMBER, kSerialNumber);
-  }
-  template <typename T>
-  void InsertMetadata(uint32_t type, const T& value) {
-    std::vector<uint8_t> data;
-    data.resize(sizeof(T));
-    memcpy(data.data(), &value, data.size());
-    metadata_[type] = std::move(data);
-  }
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                size_t* actual) override {
-    if (metadata_.find(type) == metadata_.end()) {
-      return ZX_ERR_NOT_FOUND;
-    }
-    if (metadata_[type].size() != length) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-    memcpy(data, metadata_[type].data(), length);
-    *actual = length;
-    return ZX_OK;
-  }
-  zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) override {
-    if (metadata_.find(type) == metadata_.end()) {
-      return ZX_ERR_NOT_FOUND;
-    }
-    *out_size = metadata_[type].size();
-    return ZX_OK;
-  }
-  zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
-                                size_t length) override {
-    std::vector<uint8_t> meta;
-    meta.resize(length);
-    memcpy(meta.data(), data, length);
-    dev->metadata[type] = std::move(meta);
-    return ZX_OK;
-  }
+  Ddk() = default;
+
   zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                 void* protocol) override {
     if (device->proto_id != proto_id) {
@@ -156,14 +116,19 @@ class Ddk : public fake_ddk::Bind {
     DestroyDevices(device);
     return ZX_OK;
   }
-
- private:
-  std::map<uint32_t, std::vector<uint8_t>> metadata_;
 };
 
 class UsbPeripheralHarness : public zxtest::Test {
  public:
   void SetUp() override {
+    static const UsbConfig kConfig = []() {
+      UsbConfig config = {};
+      memcpy(config.serial, kSerialNumber, sizeof(kSerialNumber));
+      return config;
+    }();
+    ddk_.SetMetadata(DEVICE_METADATA_USB_CONFIG, &kConfig, sizeof(kConfig));
+    ddk_.SetMetadata(DEVICE_METADATA_SERIAL_NUMBER, &kSerialNumber, sizeof(kSerialNumber));
+
     dci_ = std::make_unique<FakeDevice>();
     root_device_ = std::make_shared<zx_device_t>();
     root_device_->proto_ops = dci_->proto();
@@ -183,6 +148,8 @@ class UsbPeripheralHarness : public zxtest::Test {
   std::shared_ptr<zx_device_t> root_device_;
   Ddk ddk_;
   ddk::UsbDciInterfaceProtocolClient client_;
+
+  static constexpr char kSerialNumber[] = "Test serial number";
 };
 
 TEST_F(UsbPeripheralHarness, AddsCorrectSerialNumberMetadata) {
