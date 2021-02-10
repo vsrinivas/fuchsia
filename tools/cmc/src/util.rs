@@ -95,6 +95,15 @@ pub fn read_cml(file: &Path) -> Result<cml::Document, Error> {
     })
 }
 
+pub fn ensure_directory_exists(output: &PathBuf) -> Result<(), Error> {
+    if let Some(parent) = output.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,5 +126,19 @@ mod tests {
             depfile_contents,
             format!("{tmp}/foo.cml: {tmp}/bar.cml {tmp}/qux.cml\n", tmp = tmp_path.display())
         );
+    }
+
+    #[test]
+    fn test_ensure_directory_exists() {
+        let tmp_dir = TempDir::new().unwrap();
+        let tmp_path = tmp_dir.path();
+        let nested_directory = tmp_path.join("foo/bar");
+        let nested_file = nested_directory.join("qux.cml");
+        assert!(!nested_directory.exists());
+        ensure_directory_exists(&nested_file).unwrap();
+        assert!(nested_directory.exists());
+        // Operation is idempotent
+        ensure_directory_exists(&nested_file).unwrap();
+        assert!(nested_directory.exists());
     }
 }

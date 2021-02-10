@@ -54,6 +54,7 @@ pub fn compile(
     validate::validate_cml(&document, &file)?;
 
     let mut out_data = compile_cml(&document)?;
+    util::ensure_directory_exists(&output)?;
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
     out_file.write(&encode_persistent(&mut out_data)?)?;

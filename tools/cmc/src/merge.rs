@@ -4,6 +4,7 @@
 
 use {
     crate::error::Error,
+    crate::util,
     crate::util::json_or_json5_from_file,
     serde_json::{json, Value},
     std::fs,
@@ -47,6 +48,7 @@ pub fn merge(
         })?;
     }
     if let Some(output_path) = output {
+        util::ensure_directory_exists(&output_path)?;
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)

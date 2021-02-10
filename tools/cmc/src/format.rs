@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::error::{Error, Location};
+use crate::util;
 use json5format;
 use json5format::{FormatOptions, PathOption};
 use maplit::hashmap;
@@ -43,6 +44,7 @@ pub fn format(
     };
 
     if let Some(output_path) = output {
+        util::ensure_directory_exists(&output_path)?;
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)

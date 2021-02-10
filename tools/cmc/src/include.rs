@@ -5,6 +5,7 @@
 use {
     crate::error::Error,
     crate::merge::merge_json,
+    crate::util,
     crate::util::{json_or_json5_from_file, write_depfile},
     serde_json::Value,
     std::{
@@ -44,6 +45,7 @@ pub fn merge_includes(
 
     // Write postprocessed JSON
     if let Some(output_path) = output.as_ref() {
+        util::ensure_directory_exists(&output_path)?;
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)

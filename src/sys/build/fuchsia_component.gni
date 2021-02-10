@@ -92,10 +92,11 @@ template("fuchsia_component") {
   }
 
   # Handle different manifest versions
-  if (get_path_info(invoker.manifest, "extension") == "cml") {
+  manifest_extension = get_path_info(invoker.manifest, "extension")
+  if (manifest_extension == "cml") {
     manifest_processor = "cm"
     manifest_name = "$component_name.cm"
-  } else if (get_path_info(invoker.manifest, "extension") == "cmx") {
+  } else if (manifest_extension == "cmx") {
     manifest_processor = "cmx"
     manifest_name = "$component_name.cmx"
   } else {
@@ -117,7 +118,7 @@ template("fuchsia_component") {
 
   # Process the manifest
   target(manifest_processor, target_name) {
-    output_name = manifest_name
+    output_name = "$manifest_extension/$target_name/$manifest_name"
     forward_variables_from(invoker,
                            [
                              "deps",
