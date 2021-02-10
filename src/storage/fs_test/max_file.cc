@@ -127,6 +127,44 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
   ASSERT_EQ(close(fd.release()), 0);
 }
 
+using MaxFileSizeTest = MaxFileTest;
+
+TEST_P(MaxFileSizeTest, WritingToMaxSupportedOffset) {
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(pwrite(fd.get(), "h", 1, fs().GetTraits().max_file_size - 1), 1);
+}
+
+TEST_P(MaxFileTest, WritingBeyondMaxSupportedOffset) {
+  // Fat does not support sparse files. Maybe test is not worth the time spent writing a huge file.
+  if (fs().GetTraits().is_fat) {
+    return;
+  }
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(pwrite(fd.get(), "h", 1, fs().GetTraits().max_file_size), -1);
+}
+
+TEST_P(MaxFileTest, TruncatingToMaxSupportedOffset) {
+  // Fat does not support sparse files. Maybe test is not worth the time spent writing a huge file.
+  if (fs().GetTraits().is_fat) {
+    return;
+  }
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(ftruncate(fd.get(), fs().GetTraits().max_file_size), 0);
+}
+
+TEST_P(MaxFileTest, TruncatingBeyondMaxSupportedOffset) {
+  // Fat does not support sparse files. Maybe test is not worth the time spent writing a huge file.
+  if (fs().GetTraits().is_fat) {
+    return;
+  }
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(ftruncate(fd.get(), fs().GetTraits().max_file_size + 1), -1);
+}
+
 // Test writing to two files, in alternation, until we run out of space. For trivial (sequential)
 // block allocation policies, this will create two large files with non-contiguous block
 // allocations.
@@ -256,7 +294,32 @@ std::vector<ParamType> GetTestCombinations() {
   return test_combinations;
 }
 
+std::vector<ParamType> GetCombinationWithSparseFileSupport() {
+  std::vector<ParamType> test_combinations;
+  for (TestFilesystemOptions options : AllTestFilesystems()) {
+    // For those filesystems that don't support sparse files,  it is not worth the time spent
+    // writing a huge file.
+    if (!options.filesystem->GetTraits().supports_sparse_files) {
+      continue;
+    }
+    // Use a larger ram-disk than the default so that the maximum transaction limit is exceeded
+    // for during delayed data allocation on non-FVM-backed Minfs partitions.
+    options.device_block_size = 512;
+    options.device_block_count = 1'048'576;
+    options.fvm_slice_size = 8'388'608;
+    test_combinations.emplace_back(options, false);
+    if (options.filesystem->GetTraits().can_unmount) {
+      test_combinations.emplace_back(options, true);
+    }
+  }
+  return test_combinations;
+}
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxFileTest, testing::ValuesIn(GetTestCombinations()),
+                         GetParamDescription);
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxFileSizeTest,
+                         testing::ValuesIn(GetCombinationWithSparseFileSupport()),
                          GetParamDescription);
 
 }  // namespace

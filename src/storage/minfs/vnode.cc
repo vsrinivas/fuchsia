@@ -464,6 +464,10 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
 // Internal write. Usable on directories.
 zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* data, size_t len,
                                       size_t off, size_t* actual) {
+  // We should be called after validating offset and length. Assert if they are invalid.
+  auto new_size_or = safemath::CheckAdd(len, off);
+  ZX_ASSERT(new_size_or.IsValid() && new_size_or.ValueOrDie() <= kMinfsMaxFileSize);
+
   if (len == 0) {
     *actual = 0;
     return ZX_OK;
@@ -484,7 +488,8 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
   uint32_t n = static_cast<uint32_t>(off / fs_->BlockSize());
   size_t adjust = off % fs_->BlockSize();
 
-  while ((len > 0) && (n < kMinfsMaxFileBlock)) {
+  while (len > 0) {
+    ZX_ASSERT(n < kMinfsMaxFileBlock);
     size_t xfer;
     if (len > (fs_->BlockSize() - adjust)) {
       xfer = fs_->BlockSize() - adjust;
@@ -733,6 +738,9 @@ void VnodeMinfs::GetMountState(GetMountStateCompleter::Sync& completer) {
 #endif
 
 zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
+  // We should be called after validating length. Assert if len is unexpected.
+  ZX_ASSERT(len <= kMinfsMaxFileSize);
+
   zx_status_t status = ZX_OK;
 #ifdef __Fuchsia__
   // TODO(smklein): We should only init up to 'len'; no need
