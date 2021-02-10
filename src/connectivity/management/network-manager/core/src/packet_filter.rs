@@ -84,7 +84,6 @@ fn to_filter_rule(
     netfilter::Rule {
         action,
         direction: _,
-        quick: _,
         proto,
         src_subnet,
         src_subnet_invert_match: _,
@@ -239,7 +238,6 @@ fn gen_netfilter_rule(
         dst_subnet_invert_match: false,
         keep_state: true,
         log: false,
-        quick: false,
         src_subnet,
         src_subnet_invert_match: false,
         src_port_range,
@@ -548,7 +546,7 @@ impl PacketFilter {
             }
         };
         match self.filter_svc.update_nat_rules(&mut nat_rules.iter_mut(), generation).await {
-            Ok(Status::Ok) => Ok(()),
+            Ok(Status::Ok) | Ok(Status::ErrNotSupported) => Ok(()),
             Ok(status) => {
                 warn!("Failed to set NAT state: {:?}", status);
                 Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed))
@@ -578,7 +576,7 @@ impl PacketFilter {
             }
         };
         match self.filter_svc.update_nat_rules(&mut empty_ruleset.iter_mut(), generation).await {
-            Ok(Status::Ok) => Ok(()),
+            Ok(Status::Ok) | Ok(Status::ErrNotSupported) => Ok(()),
             Ok(status) => {
                 warn!("failed to set NAT state: {:?}", status);
                 Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed))
@@ -675,7 +673,6 @@ mod tests {
         let test_netfilter_rule = netfilter::Rule {
             action: netfilter::Action::Pass,
             direction: netfilter::Direction::Incoming,
-            quick: false,
             src_subnet,
             src_subnet_invert_match: false,
             src_port_range: netfilter::PortRange { start: 1024, end: 1024 },
@@ -734,7 +731,6 @@ mod tests {
             // `FilterRule`. The conversion logic assumes that if a direction is not specified,
             // then we will default it to `Incoming`.
             direction: netfilter::Direction::Incoming,
-            quick: false,
             src_subnet,
             src_subnet_invert_match: false,
             src_port_range: netfilter::PortRange { start: 1024, end: 1024 },
@@ -954,7 +950,6 @@ mod tests {
             Ok(actual) => {
                 assert_eq!(actual.action, netfilter::Action::Drop);
                 assert_eq!(actual.direction, netfilter::Direction::Incoming);
-                assert_eq!(actual.quick, false);
                 assert_eq!(actual.proto, netfilter::SocketProtocol::Tcp);
                 assert_eq!(actual.src_subnet, None);
                 assert_eq!(actual.src_subnet_invert_match, false);

@@ -261,7 +261,7 @@ func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []s
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
 
-var _ nicRemovedHandler = (*availableDynamicIPv6AddressConfigObservation)(nil)
+var _ NICRemovedHandler = (*availableDynamicIPv6AddressConfigObservation)(nil)
 var _ cobaltEventProducer = (*availableDynamicIPv6AddressConfigObservation)(nil)
 
 // Using a var so that it can be overriden for tests.
@@ -321,7 +321,7 @@ func (o *availableDynamicIPv6AddressConfigObservation) init(hasEvents func()) {
 	})
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) removedNIC(nicID tcpip.NICID) {
+func (o *availableDynamicIPv6AddressConfigObservation) RemovedNIC(nicID tcpip.NICID) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	delete(o.mu.obs, nicID)

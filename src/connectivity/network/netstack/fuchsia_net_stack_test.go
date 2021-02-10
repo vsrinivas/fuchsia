@@ -276,12 +276,11 @@ func TestDnsServerWatcher(t *testing.T) {
 }
 
 func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {
-	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
-		return false, fmt.Errorf("NICInfo %d not found", id)
+	name := ni.ns.stack.FindNICNameFromID(tcpip.NICID(id))
+	if name == "" {
+		return false, fmt.Errorf("failed to find nic %d", id)
 	}
-	ifs := nicInfo.Context.(*ifState)
-	return ifs.filterEndpoint.IsEnabled(), nil
+	return !ni.ns.filter.IsInterfaceDisabled(name), nil
 }
 
 func (ni *stackImpl) isIpForwardingEnabled() bool {

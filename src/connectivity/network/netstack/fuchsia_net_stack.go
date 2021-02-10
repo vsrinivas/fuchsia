@@ -157,7 +157,6 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 		ep,
 		controller,
 		observer,
-		true, /* doFilter */
 		routes.Metric(config.GetMetricWithDefault(0)),
 	)
 	if err != nil {
@@ -450,44 +449,20 @@ func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, subnet net.Subnet) (stac
 	return ni.ns.delForwardingEntry(subnet), nil
 }
 
+// TODO(https://fxbug.dev/68274): Move this method to fuchsia.net.filter.
 func (ni *stackImpl) EnablePacketFilter(_ fidl.Context, id uint64) (stack.StackEnablePacketFilterResult, error) {
 	var result stack.StackEnablePacketFilterResult
 
-	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
-		result.SetErr(stack.ErrorNotFound)
-		return result, nil
-	}
-
-	filter := nicInfo.Context.(*ifState).filterEndpoint
-	if filter == nil {
-		result.SetErr(stack.ErrorNotSupported)
-		return result, nil
-	}
-
-	filter.Enable()
-
+	ni.ns.filter.EnableInterface(tcpip.NICID(id))
 	result.SetResponse(stack.StackEnablePacketFilterResponse{})
 	return result, nil
 }
 
+// TODO(https://fxbug.dev/68274): Move this method to fuchsia.net.filter.
 func (ni *stackImpl) DisablePacketFilter(_ fidl.Context, id uint64) (stack.StackDisablePacketFilterResult, error) {
 	var result stack.StackDisablePacketFilterResult
 
-	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
-		result.SetErr(stack.ErrorNotFound)
-		return result, nil
-	}
-
-	filter := nicInfo.Context.(*ifState).filterEndpoint
-	if filter == nil {
-		result.SetErr(stack.ErrorNotSupported)
-		return result, nil
-	}
-
-	filter.Disable()
-
+	ni.ns.filter.DisableInterface(tcpip.NICID(id))
 	result.SetResponse(stack.StackDisablePacketFilterResponse{})
 	return result, nil
 }

@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "dns_server_watcher:tests",
     "net_interfaces:tests",
+    "netfilter:tests",
   ]
 }

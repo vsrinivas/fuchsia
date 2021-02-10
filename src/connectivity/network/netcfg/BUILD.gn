@@ -13,7 +13,6 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/lib/rust/netfilter",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
@@ -30,6 +29,7 @@ rustc_binary("bin") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/management/network-manager/core/interface:lib",
     "//src/connectivity/network/lib/dns_server_watcher",
+    "//src/connectivity/network/lib/netfilter",
     "//src/lib/async-utils",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

@@ -185,7 +185,6 @@ group("deprecated_package") {
     "//garnet/lib/rust/escaped-cstring/*",
     "//garnet/lib/rust/files_async/*",
     "//garnet/lib/rust/io_util/*",
-    "//garnet/lib/rust/netfilter/*",
     "//garnet/lib/rust/sysconfig-client/*",
     "//garnet/lib/rust/webpki-roots-fuchsia/*",
     "//garnet/lib/trace_converters/*",

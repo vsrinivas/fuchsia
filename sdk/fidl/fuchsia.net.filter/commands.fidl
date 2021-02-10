@@ -10,6 +10,7 @@ enum Status {
     ERR_INTERNAL = 1;
     ERR_GENERATION_MISMATCH = 2;
     ERR_BAD_RULE = 3;
+    ERR_NOT_SUPPORTED = 4;
 };
 
 /// The maximum number of rules.

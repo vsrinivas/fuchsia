@@ -16,7 +16,7 @@
 
 ## Regular Rule Syntax
   ```
-  action direction ["quick"] ["proto" proto]
+  action direction ["proto" proto]
      ["from" [["!"]src_subnet] [src_port]]
      ["to" [["!"]dst_subnet] [dst_port]] [log] [state] ";"
   ```
@@ -28,11 +28,6 @@
   * direction
 
     "in" or "out".
-
-  * quick (optional)
-
-    The rule is selected immediately. Usually a rule is selected only
-    if that is the last matched rule in the set of rules.
 
   * proto (optional)
 
@@ -56,7 +51,7 @@
 
   * state (optional)
 
-    "keep state" (default) or "no state".
+    "keep state" or "no state" (default).
 
 ### Examples
 
@@ -67,7 +62,6 @@
         filter::Rule {
             action: filter::Action::Pass,
             direction: filter::Direction::Incoming,
-            quick: false,
             proto: net::SocketProtocol::Tcp,
             src_subnet: Some(Box::new(net::Subnet{
                 addr: net::IpAddress::Ipv6(net::Ipv6Address{
@@ -85,7 +79,7 @@
             dst_port: filter::Port { start: 1000, end: 1000 },
             nic: 0,
             log: false,
-            keep_state: true,
+            keep_state: false,
         },
     ]
     ```
@@ -97,7 +91,6 @@
         filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -107,7 +100,7 @@
                 dst_port: filter::Port { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
         }
     ]
     ```

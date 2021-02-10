@@ -36,8 +36,6 @@ struct PortRange {
 struct Rule {
     Action action;
     Direction direction;
-    /// If true, no more rules will be tested.
-    bool quick;
     SocketProtocol proto;
     fuchsia.net.Subnet? src_subnet;
     /// If true, matches any address that is NOT contained in the subnet.

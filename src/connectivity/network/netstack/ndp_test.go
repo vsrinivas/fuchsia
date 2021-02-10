@@ -1191,7 +1191,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.dynamicAddressSourceObs.removedNIC(nicID1)
+						ndpDisp.dynamicAddressSourceObs.RemovedNIC(nicID1)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
 					want: []cobalt.CobaltEvent{
@@ -1204,7 +1204,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.dynamicAddressSourceObs.removedNIC(nicID2)
+						ndpDisp.dynamicAddressSourceObs.RemovedNIC(nicID2)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
 					want: nil,

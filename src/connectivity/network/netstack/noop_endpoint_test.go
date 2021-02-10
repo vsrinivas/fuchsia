@@ -121,8 +121,7 @@ func addNoopEndpoint(ns *Netstack, name string) (*ifState, error) {
 		makeEndpointName("test", name),
 		&noopEndpoint{},
 		&noopController{},
-		nil,  /* observer */
-		true, /* doFilter */
-		0,    /* metric */
+		nil, /* observer */
+		0,   /* metric */
 	)
 }

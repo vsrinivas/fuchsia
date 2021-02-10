@@ -302,11 +302,13 @@ func Main() {
 	}
 	appCtx.ConnectToEnvService(req)
 
+	f := filter.New(stk)
+
 	ns := &Netstack{
-		dnsConfig:         dns.MakeServersConfig(stk.Clock()),
-		nameProvider:      np,
-		stack:             stk,
-		nicRemovedHandler: &ndpDisp.dynamicAddressSourceObs,
+		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
+		nameProvider:       np,
+		stack:              stk,
+		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceObs, f},
 	}
 
 	ns.netstackService.mu.proxies = make(map[*netstack.NetstackEventProxy]struct{})
@@ -323,6 +325,9 @@ func Main() {
 		cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
 	})
 	ndpDisp.start(ctx)
+
+	ns.filter = f
+	filter.AddOutgoingService(appCtx, f)
 
 	if err := ns.addLoopback(); err != nil {
 		syslog.Fatalf("loopback: %s", err)
@@ -592,9 +597,6 @@ func Main() {
 			_ = syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 		}
 	}()
-
-	ns.filter = filter.New(stk.PortManager)
-	filter.AddOutgoingService(appCtx, ns.filter)
 
 	appCtx.BindStartupHandle(context.Background())
 }

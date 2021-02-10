@@ -1,22 +1,33 @@
 {
-  "dns_config": {
-    "servers": [
-      "8.8.8.8",
-      "8.8.4.4",
-      "2001:4860:4860::8888",
-      "2001:4860:4860::8844"
-    ]
-  },
-  "rules": [
-    [ ["all", "all"], ["ip_address", "dhcp"] ]
-  ],
-  "filter_config": {
-    "rules": [
-      "drop in proto tcp to range 1:65535;",
-      "pass in proto tcp to range 1024:65535 no state;"
+    "dns_config": {
+        "servers": [
+            "8.8.8.8",
+            "8.8.4.4",
+            "2001:4860:4860::8888",
+            "2001:4860:4860::8844"
+        ]
+    },
+    "filter_config": {
+        "nat_rules": [],
+        "rdr_rules": [],
+        "rules": [
+            "pass in proto tcp to range 1024:65535;",
+            "drop in proto tcp to range 1:65535;"
+        ]
+    },
+    "filter_enabled_interface_types": [
+        "wlan"
     ],
-    "nat_rules": [],
-    "rdr_rules": []
-  },
-  "filter_enabled_interface_types": [ "wlan" ]
+    "rules": [
+        [
+            [
+                "all",
+                "all"
+            ],
+            [
+                "ip_address",
+                "dhcp"
+            ]
+        ]
+    ]
 }

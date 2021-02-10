@@ -166,13 +166,13 @@ func TestStackNICEnableDisable(t *testing.T) {
 	}
 }
 
-var _ nicRemovedHandler = (*testNicRemovedHandler)(nil)
+var _ NICRemovedHandler = (*testNicRemovedHandler)(nil)
 
 type testNicRemovedHandler struct {
 	removedNICID tcpip.NICID
 }
 
-func (h *testNicRemovedHandler) removedNIC(nicID tcpip.NICID) {
+func (h *testNicRemovedHandler) RemovedNIC(nicID tcpip.NICID) {
 	h.removedNICID = nicID
 }
 
@@ -188,8 +188,7 @@ func TestStackNICRemove(t *testing.T) {
 		&noopEndpoint{},
 		&noopController{},
 		&obs,
-		true, /* doFilter */
-		0,    /* metric */
+		0, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -204,6 +203,15 @@ func TestStackNICRemove(t *testing.T) {
 	}
 	if _, ok := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); !ok {
 		t.Errorf("GetMainNICAddress(%d, header.IPv6ProtocolNumber): (_, false)", ifs.nicid)
+	}
+
+	nicName := ns.stack.FindNICNameFromID(ifs.nicid)
+	if disabled := ns.filter.IsInterfaceDisabled(nicName); !disabled {
+		t.Errorf("got ns.filter.IsInterfaceDisabled(%s) = false, want = true", nicName)
+	}
+	ns.filter.EnableInterface(ifs.nicid)
+	if disabled := ns.filter.IsInterfaceDisabled(nicName); disabled {
+		t.Errorf("got ns.filter.IsInterfaceDisabled(%s) = true, want = false", nicName)
 	}
 
 	if t.Failed() {
@@ -224,6 +232,11 @@ func TestStackNICRemove(t *testing.T) {
 	}
 	if nicRemovedHandler.removedNICID != ifs.nicid {
 		t.Errorf("got nicRemovedHandler.removedNICID = %d, want = %d", nicRemovedHandler.removedNICID, ifs.nicid)
+	}
+
+	// Removing the NIC should disable the filter on its nicName.
+	if disabled := ns.filter.IsInterfaceDisabled(nicName); !disabled {
+		t.Errorf("got ns.filter.IsInterfaceDisabled(%s) = false, want = true", nicName)
 	}
 
 	// Wait for the controller to stop and free up its resources.
@@ -555,8 +568,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 		linkEP,
 		nil,
 		nil,
-		false, /* doFilter */
-		0,     /* metric */
+		0, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -776,9 +788,8 @@ func TestNotStartedByDefault(t *testing.T) {
 		func(tcpip.NICID) string { return t.Name() },
 		&noopEndpoint{},
 		&controller,
-		nil,  /* observer */
-		true, /* doFilter */
-		0,    /* metric */
+		nil, /* observer */
+		0,   /* metric */
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -879,9 +890,8 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 		func(tcpip.NICID) string { return t.Name() },
 		&ep,
 		&noopController{},
-		nil,  /* observer */
-		true, /* doFilter */
-		0,    /* metric */
+		nil, /* observer */
+		0,   /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -984,7 +994,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 
 func TestStaticIPConfiguration(t *testing.T) {
 	ns := newNetstack(t)
-	ns.filter = filter.New(ns.stack.PortManager)
+	ns.filter = filter.New(ns.stack)
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := fidlnet.Subnet{Addr: addr, PrefixLen: 32}
@@ -1070,18 +1080,18 @@ func TestStaticIPConfiguration(t *testing.T) {
 	}
 }
 
-var _ nicRemovedHandler = (*noopNicRemovedHandler)(nil)
+var _ NICRemovedHandler = (*noopNicRemovedHandler)(nil)
 
 type noopNicRemovedHandler struct{}
 
-func (*noopNicRemovedHandler) removedNIC(tcpip.NICID) {}
+func (*noopNicRemovedHandler) RemovedNIC(tcpip.NICID) {}
 
 func newNetstack(t *testing.T) *Netstack {
 	t.Helper()
 	return newNetstackWithNDPDispatcher(t, nil)
 }
 
-func newNetstackWithNicRemovedHandler(t *testing.T, h nicRemovedHandler) *Netstack {
+func newNetstackWithNicRemovedHandler(t *testing.T, h NICRemovedHandler) *Netstack {
 	t.Helper()
 	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, nil, h)
 }
@@ -1116,7 +1126,7 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp ipv6.NDPDispatcher)
 	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, ndpDisp, &noopNicRemovedHandler{})
 }
 
-func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp ipv6.NDPDispatcher, h nicRemovedHandler) *Netstack {
+func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp ipv6.NDPDispatcher, h NICRemovedHandler) *Netstack {
 	t.Helper()
 
 	// TODO(fxbug.dev/57075): Use a fake clock
@@ -1133,15 +1143,21 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 			udp.NewProtocol,
 		},
 	})
+	f := filter.New(stk)
 	ns := &Netstack{
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
 		// DNS configuration.
-		dnsConfig:         dns.MakeServersConfig(stk.Clock()),
-		nicRemovedHandler: h,
+		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
+		nicRemovedHandlers: []NICRemovedHandler{h, f},
 	}
 	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
+
+	// TODO(https://fxbug.dev/68274): Remove this after moving all
+	// filter methods to fuchsia.net.filter.
+	ns.filter = f
+
 	t.Cleanup(func() {
 		for _, nic := range ns.stack.NICInfo() {
 			ifs := nic.Context.(*ifState)
@@ -1236,9 +1252,8 @@ func TestListInterfaceAddresses(t *testing.T) {
 		func(tcpip.NICID) string { return t.Name() },
 		&ep,
 		&noopController{},
-		nil,  /* observer */
-		true, /* doFilter */
-		0,    /* metric */
+		nil, /* observer */
+		0,   /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)

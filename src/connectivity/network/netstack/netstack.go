@@ -315,11 +315,11 @@ func (m *endpointsMap) Range(f func(key uint64, value tcpip.Endpoint) bool) {
 	})
 }
 
-// nicRemovedHandler is an interface implemented by types that are interested
+// NICRemovedHandler is an interface implemented by types that are interested
 // in NICs that have been removed.
-type nicRemovedHandler interface {
-	// removedNIC informs the receiver that the specified NIC has been removed.
-	removedNIC(tcpip.NICID)
+type NICRemovedHandler interface {
+	// RemovedNIC informs the receiver that the specified NIC has been removed.
+	RemovedNIC(tcpip.NICID)
 }
 
 // A Netstack tracks all of the running state of the network stack.
@@ -347,11 +347,13 @@ type Netstack struct {
 
 	stats stats
 
+	// TODO(https://fxbug.dev/68274): Remove this after moving all
+	// filter methods to fuchsia.net.filter.
 	filter *filter.Filter
 
 	endpoints endpointsMap
 
-	nicRemovedHandler nicRemovedHandler
+	nicRemovedHandlers []NICRemovedHandler
 }
 
 // Each ifState tracks the state of a network interface.
@@ -394,8 +396,6 @@ type ifState struct {
 	endpoint stack.LinkEndpoint
 
 	bridgeable *bridge.BridgeableEndpoint
-
-	filterEndpoint *filter.Endpoint
 }
 
 func (ifs *ifState) LinkOnlineLocked() bool {
@@ -475,7 +475,7 @@ func (ns *Netstack) onInterfacesChanged() {
 
 // AddRoute adds a single route to the route table in a sorted fashion.
 func (ns *Netstack) AddRoute(r tcpip.Route, metric routes.Metric, dynamic bool) error {
-	syslog.Infof("adding route %s metric=%d dynamic=%t", r, metric, dynamic)
+	_ = syslog.Infof("adding route %s metric=%d dynamic=%t", r, metric, dynamic)
 	return ns.AddRoutes([]tcpip.Route{r}, metric, dynamic)
 }
 
@@ -528,7 +528,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 
 // DelRoute deletes a single route from the route table.
 func (ns *Netstack) DelRoute(r tcpip.Route) error {
-	syslog.Infof("deleting route %s", r)
+	_ = syslog.Infof("deleting route %s", r)
 	if err := ns.routeTable.DelRoute(r); err != nil {
 		return err
 	}
@@ -557,7 +557,7 @@ func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Act
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-	syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %s", addr.AddressWithPrefix, nic, route)
+	_ = syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %s", addr.AddressWithPrefix, nic, route)
 
 	nicInfo, ok := ns.stack.NICInfo()[nic]
 	if !ok {
@@ -591,7 +591,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 // tcpip.NICID was found or false and an error.
 func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-	syslog.Infof("adding static IP %s to NIC %d, creating subnet route %s with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
+	_ = syslog.Infof("adding static IP %s to NIC %d, creating subnet route %s with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
 
 	info, ok := ns.stack.NICInfo()[nic]
 	if !ok {
@@ -632,13 +632,13 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 	name := ifs.ns.name(ifs.nicid)
 
 	if oldAddr == newAddr {
-		syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, newAddr, config.LeaseLength)
+		_ = syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, newAddr, config.LeaseLength)
 	} else {
 		if oldAddr != (tcpip.AddressWithPrefix{}) {
 			if err := ifs.ns.stack.RemoveAddress(ifs.nicid, oldAddr.Address); err != nil {
-				syslog.Infof("NIC %s: failed to remove DHCP address %s: %s", name, oldAddr, err)
+				_ = syslog.Infof("NIC %s: failed to remove DHCP address %s: %s", name, oldAddr, err)
 			} else {
-				syslog.Infof("NIC %s: removed DHCP address %s", name, oldAddr)
+				_ = syslog.Infof("NIC %s: removed DHCP address %s", name, oldAddr)
 			}
 
 			// Remove the dynamic routes for this interface.
@@ -650,9 +650,9 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				Protocol:          ipv4.ProtocolNumber,
 				AddressWithPrefix: newAddr,
 			}, stack.FirstPrimaryEndpoint); err != nil {
-				syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
+				_ = syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
 			} else {
-				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
+				_ = syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
 
 				// Add a route for the local subnet.
 				rs := []tcpip.Route{
@@ -663,15 +663,15 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 					// Reject non-unicast addresses to avoid an explosion of traffic in
 					// case of misconfiguration.
 					if ip := net.IP(router); !ip.IsLinkLocalUnicast() && !ip.IsGlobalUnicast() {
-						syslog.Warnf("NIC %s: DHCP specified non-unicast router %s, skipping", name, ip)
+						_ = syslog.Warnf("NIC %s: DHCP specified non-unicast router %s, skipping", name, ip)
 						continue
 					}
 					rs = append(rs, defaultV4Route(ifs.nicid, router))
 				}
-				syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
+				_ = syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
 
 				if err := ifs.ns.AddRoutes(rs, metricNotSet, true /* dynamic */); err != nil {
-					syslog.Infof("error adding routes for DHCP: %s", err)
+					_ = syslog.Infof("error adding routes for DHCP: %s", err)
 				}
 			}
 		}
@@ -685,7 +685,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 	}
 
 	if updated := ifs.setDNSServers(config.DNS); updated {
-		syslog.Infof("NIC %s: setting DNS servers: %s", name, config.DNS)
+		_ = syslog.Infof("NIC %s: setting DNS servers: %s", name, config.DNS)
 	}
 }
 
@@ -774,20 +774,22 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 	}
 
 	if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
-		syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
+		_ = syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
 	}
 
 	if closed {
 		switch err := ifs.ns.stack.RemoveNIC(ifs.nicid); err.(type) {
 		case nil, *tcpip.ErrUnknownNICID:
 		default:
-			syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
+			_ = syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
 		}
 
-		ifs.ns.nicRemovedHandler.removedNIC(ifs.nicid)
+		for _, h := range ifs.ns.nicRemovedHandlers {
+			h.RemovedNIC(ifs.nicid)
+		}
 	} else {
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
-			syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
+			_ = syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
 		}
 	}
 }
@@ -799,7 +801,7 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 	if after != before {
 		if after {
 			if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
-				syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
+				_ = syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
 			}
 
 			// DHCPv4 sends packets to the IPv4 broadcast address so make sure there is
@@ -928,7 +930,7 @@ func (ns *Netstack) getDeviceName() string {
 	result, err := ns.nameProvider.GetDeviceName(context.Background())
 	if err != nil {
 		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
-			syslog.Warnf("getDeviceName: error accessing device name provider: %s", err)
+			_ = syslog.Warnf("getDeviceName: error accessing device name provider: %s", err)
 		}
 		return device.DefaultDeviceName
 	}
@@ -939,7 +941,7 @@ func (ns *Netstack) getDeviceName() string {
 		return result.Response.Name
 	case device.NameProviderGetDeviceNameResultErr:
 		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
-			syslog.Warnf("getDeviceName: nameProvider.GetdeviceName() = %s", zx.Status(result.Err))
+			_ = syslog.Warnf("getDeviceName: nameProvider.GetdeviceName() = %s", zx.Status(result.Err))
 		}
 		return device.DefaultDeviceName
 	default:
@@ -955,9 +957,8 @@ func (ns *Netstack) addLoopback() error {
 			return "lo"
 		},
 		loopback.New(),
-		nil,   /* controller */
-		nil,   /* observer */
-		false, /* doFilter */
+		nil, /* controller */
+		nil, /* observer */
 		defaultInterfaceMetric,
 	)
 	if err != nil {
@@ -1046,8 +1047,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		},
 		b,
 		b,
-		nil,   /* observer */
-		false, /* doFilter */
+		nil, /* observer */
 		defaultInterfaceMetric,
 	)
 }
@@ -1072,7 +1072,6 @@ func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, dev
 		ethernet.New(client),
 		client,
 		client,
-		true, /* doFilter */
 		routes.Metric(config.Metric),
 	)
 }
@@ -1083,7 +1082,6 @@ func (ns *Netstack) addEndpoint(
 	ep stack.LinkEndpoint,
 	controller link.Controller,
 	observer link.Observer,
-	doFilter bool,
 	metric routes.Metric,
 ) (*ifState, error) {
 	ifs := &ifState{
@@ -1112,10 +1110,6 @@ func (ns *Netstack) addEndpoint(
 	// one, and manifest itself to 3rd party netstack.
 	ep = sniffer.NewWithPrefix(ep, fmt.Sprintf("[%s(id=%d)] ", name, ifs.nicid))
 
-	if doFilter {
-		ifs.filterEndpoint = filter.NewEndpoint(ns.filter, ep)
-		ep = ifs.filterEndpoint
-	}
 	ifs.bridgeable = bridge.NewEndpoint(ep)
 	ep = ifs.bridgeable
 	ifs.endpoint = ep
@@ -1124,7 +1118,7 @@ func (ns *Netstack) addEndpoint(
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %w", name, WrapTcpIpError(err))
 	}
 
-	syslog.Infof("NIC %s added", name)
+	_ = syslog.Infof("NIC %s added", name)
 
 	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
 		dhcpClient := dhcp.NewClient(ns.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)

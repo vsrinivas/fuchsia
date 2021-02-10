@@ -16,7 +16,6 @@ rules = { SOI ~ (rule ~ ";")+ ~ EOI }
 rule = {
      action ~
      direction ~
-     quick ~
      proto ~
      src ~
      dst ~
@@ -52,8 +51,6 @@ action = { pass | drop | dropreset }
 direction = { incoming | outgoing }
   incoming = { "in" }
   outgoing = { "out" }
-
-quick = { ("quick")? }
 
 proto = { ("proto" ~ (tcp | udp | icmp))? }
   tcp = { "tcp" }
@@ -144,11 +141,6 @@ fn parse_direction(pair: Pair<'_, Rule>) -> filter::Direction {
         Rule::outgoing => filter::Direction::Outgoing,
         _ => unreachable!(),
     }
-}
-
-fn parse_quick(pair: Pair<'_, Rule>) -> bool {
-    assert_eq!(pair.as_rule(), Rule::quick);
-    pair.as_str() == "quick"
 }
 
 fn parse_proto(pair: Pair<'_, Rule>) -> filter::SocketProtocol {
@@ -282,7 +274,7 @@ fn parse_state(pair: Pair<'_, Rule>) -> bool {
                 _ => unreachable!(),
             }
         }
-        None => true, // keep state by default
+        None => false, // no state by default
     }
 }
 
@@ -292,7 +284,6 @@ fn parse_rule(pair: Pair<'_, Rule>) -> Result<filter::Rule, Error> {
 
     let action = parse_action(pairs.next().unwrap());
     let direction = parse_direction(pairs.next().unwrap());
-    let quick = parse_quick(pairs.next().unwrap());
     let proto = parse_proto(pairs.next().unwrap());
     let (src_subnet, src_subnet_invert_match, src_port_range) = parse_src(pairs.next().unwrap())?;
     let (dst_subnet, dst_subnet_invert_match, dst_port_range) = parse_dst(pairs.next().unwrap())?;
@@ -302,7 +293,6 @@ fn parse_rule(pair: Pair<'_, Rule>) -> Result<filter::Rule, Error> {
     Ok(filter::Rule {
         action: action,
         direction: direction,
-        quick: quick,
         proto: proto,
         src_subnet: src_subnet,
         src_subnet_invert_match: src_subnet_invert_match,
@@ -466,7 +456,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Any,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -476,7 +465,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -488,7 +477,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -498,7 +486,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -511,7 +499,6 @@ mod test {
                 filter::Rule {
                     action: filter::Action::Pass,
                     direction: filter::Direction::Incoming,
-                    quick: false,
                     proto: filter::SocketProtocol::Tcp,
                     src_subnet: None,
                     src_subnet_invert_match: false,
@@ -521,12 +508,11 @@ mod test {
                     dst_port_range: filter::PortRange { start: 0, end: 0 },
                     nic: 0,
                     log: false,
-                    keep_state: true,
+                    keep_state: false,
                 },
                 filter::Rule {
                     action: filter::Action::Drop,
                     direction: filter::Direction::Outgoing,
-                    quick: false,
                     proto: filter::SocketProtocol::Udp,
                     src_subnet: None,
                     src_subnet_invert_match: false,
@@ -536,7 +522,7 @@ mod test {
                     dst_port_range: filter::PortRange { start: 0, end: 0 },
                     nic: 0,
                     log: false,
-                    keep_state: true,
+                    keep_state: false,
                 },
             ])
         );
@@ -549,7 +535,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -562,7 +547,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -574,7 +559,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -584,7 +568,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -596,7 +580,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -606,7 +589,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -634,7 +617,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -647,7 +629,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -659,7 +641,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -672,7 +653,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -684,7 +665,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv6(net::Ipv6Address {
@@ -699,7 +679,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -711,7 +691,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -726,7 +705,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 10000, end: 10000 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -750,7 +729,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv6(net::Ipv6Address {
@@ -770,7 +748,7 @@ mod test {
                 dst_port_range: filter::PortRange { start: 1000, end: 1000 },
                 nic: 0,
                 log: false,
-                keep_state: true,
+                keep_state: false,
             }])
         );
     }
@@ -782,7 +760,6 @@ mod test {
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
@@ -800,11 +777,10 @@ mod test {
     #[test]
     fn test_rule_with_keep_state() {
         assert_eq!(
-            parse_str_to_rules("pass in quick proto tcp keep state;"),
+            parse_str_to_rules("pass in proto tcp keep state;"),
             Ok(vec![filter::Rule {
                 action: filter::Action::Pass,
                 direction: filter::Direction::Incoming,
-                quick: true,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,

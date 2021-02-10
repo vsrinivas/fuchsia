@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,536 +8,386 @@
 package filter
 
 import (
-	"sync/atomic"
+	"fmt"
+	"sync"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
+	"fidl/fuchsia/net/filter"
+
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/header/parse"
-	"gvisor.dev/gvisor/pkg/tcpip/ports"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-const chatty = false
-
-type Filter struct {
-	enabled     atomic.Value // bool
-	portManager *ports.PortManager
-	rulesetMain RulesetMain
-	rulesetNAT  RulesetNAT
-	rulesetRDR  RulesetRDR
-	states      *States
-}
-
 const tag = "filter"
 
-func New(pm *ports.PortManager) *Filter {
-	f := &Filter{
-		portManager: pm,
-		states:      NewStates(),
+type Filter struct {
+	stack          *stack.Stack
+	defaultV4Table stack.Table
+	defaultV6Table stack.Table
+
+	filterDisabledNICMatcher filterDisabledNICMatcher
+
+	mu struct {
+		sync.RWMutex
+
+		enabled bool
+
+		rules      []filter.Rule
+		v4Table    stack.Table
+		v6Table    stack.Table
+		generation uint32
 	}
-	f.states.enablePurge()
-	f.enabled.Store(true)
+}
+
+func New(s *stack.Stack) *Filter {
+	defaultTables := stack.DefaultTables()
+	defaultV4Table := defaultTables.GetTable(stack.FilterID, false /* ipv6 */)
+	defaultV6Table := defaultTables.GetTable(stack.FilterID, true /* ipv6 */)
+
+	f := &Filter{
+		stack:          s,
+		defaultV4Table: defaultV4Table,
+		defaultV6Table: defaultV6Table,
+	}
+	f.filterDisabledNICMatcher.init()
+	f.mu.Lock()
+	f.mu.enabled = true
+	f.mu.v4Table = defaultV4Table
+	f.mu.v6Table = defaultV6Table
+	f.mu.Unlock()
 	return f
 }
 
-// Enable enables or disables the packet filter.
-func (f *Filter) Enable(b bool) {
-	if b {
-		syslog.InfoTf(tag, "enabled")
-	} else {
-		syslog.InfoTf(tag, "disabled")
-	}
-	f.enabled.Store(b)
+func (f *Filter) enabled() bool {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.mu.enabled
 }
 
-// IsEnabled returns true if the packet filter is currently enabled.
-func (f *Filter) IsEnabled() bool {
-	return f.enabled.Load().(bool)
+func (f *Filter) setEnabled(v bool) filter.Status {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.mu.enabled == v {
+		return filter.StatusOk
+	}
+
+	iptables := f.stack.IPTables()
+
+	if v {
+		if err := iptables.ReplaceTable(stack.FilterID, f.mu.v4Table, false /* ipv6 */); err != nil {
+			_ = syslog.ErrorTf(tag, "error enabling iptables = %s", err)
+			return filter.StatusErrInternal
+		}
+		if err := iptables.ReplaceTable(stack.FilterID, f.mu.v6Table, true /* ipv6 */); err != nil {
+			_ = syslog.ErrorTf(tag, "error enabling ip6tables = %s", err)
+			return filter.StatusErrInternal
+		}
+
+		f.mu.enabled = true
+		return filter.StatusOk
+	}
+
+	if err := iptables.ReplaceTable(stack.FilterID, f.defaultV4Table, false /* ipv6 */); err != nil {
+		_ = syslog.ErrorTf(tag, "error disabling iptables = %s", err)
+		return filter.StatusErrInternal
+	}
+	if err := iptables.ReplaceTable(stack.FilterID, f.defaultV6Table, true /* ipv6 */); err != nil {
+		_ = syslog.ErrorTf(tag, "error disabling ip6tables = %s", err)
+		return filter.StatusErrInternal
+	}
+
+	f.mu.enabled = false
+	return filter.StatusOk
 }
 
-// Run is the entry point to the packet filter. It should be called from
-// two hook locations in the network stack: one for incoming packets, another
-// for outgoing packets.
-func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr buffer.View, payload buffer.VectorisedView) Action {
-	if f.enabled.Load().(bool) == false {
-		// The filter is disabled.
-		return Pass
+func (f *Filter) EnableInterface(id tcpip.NICID) {
+	name := f.stack.FindNICNameFromID(id)
+	if name == "" {
+		return
 	}
 
-	f.states.purgeExpiredEntries(f.portManager)
+	f.filterDisabledNICMatcher.mu.Lock()
+	defer f.filterDisabledNICMatcher.mu.Unlock()
+	f.filterDisabledNICMatcher.mu.nicNames[name] = id
+}
 
-	// Parse the network protocol header.
-	var transProto tcpip.TransportProtocolNumber
-	var srcAddr, dstAddr tcpip.Address
-	var payloadLength uint16
-	var transportHeader []byte
-	switch netProto {
-	case header.IPv4ProtocolNumber:
-		ipv4 := header.IPv4(hdr)
-		if !ipv4.IsValid(len(hdr) + payload.Size()) {
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "ipv4 packet is not valid")
-			return Drop
-		}
-		transProto = ipv4.TransportProtocol()
-		srcAddr = ipv4.SourceAddress()
-		dstAddr = ipv4.DestinationAddress()
-		payloadLength = ipv4.PayloadLength()
-		transportHeader = ipv4[ipv4.HeaderLength():]
-		if ipv4.FragmentOffset() != 0 {
-			return Pass
-		}
-	case header.IPv6ProtocolNumber:
-		pkt := stack.PacketBuffer{Data: hdr.ToVectorisedView()}
-		proto, _, _, _, ok := parse.IPv6(&pkt)
-		if !ok {
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "failed to parse IPv6 packet")
-			return Drop
-		}
-
-		ipv6 := header.IPv6(pkt.NetworkHeader().View())
-		if !ipv6.IsValid(pkt.Size() + payload.Size()) {
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "ipv6 packet is not valid")
-			return Drop
-		}
-		srcAddr = ipv6.SourceAddress()
-		dstAddr = ipv6.DestinationAddress()
-
-		transProto = proto
-		payloadLength = ipv6.PayloadLength() - uint16(len(ipv6))
-		transportHeader = pkt.Data.ToView()
-	case header.ARPProtocolNumber:
-		// TODO: Anything?
-		return Pass
-	default:
-		syslog.VLogTf(syslog.TraceVerbosity, tag, "drop unknown network protocol: %v (%v)", netProto, dir)
-		return Drop
+func (f *Filter) DisableInterface(id tcpip.NICID) {
+	name := f.stack.FindNICNameFromID(id)
+	if name == "" {
+		return
 	}
 
-	f.states.mut.Lock()
-	defer f.states.mut.Unlock()
+	f.filterDisabledNICMatcher.mu.Lock()
+	defer f.filterDisabledNICMatcher.mu.Unlock()
+	delete(f.filterDisabledNICMatcher.mu.nicNames, name)
+}
 
-	switch transProto {
-	case header.IGMPProtocolNumber:
-		return Pass
-	case header.ICMPv4ProtocolNumber:
-		return f.runForICMPv4(dir, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
-	case header.ICMPv6ProtocolNumber:
-		// Do nothing.
-		return Pass
-	case header.UDPProtocolNumber:
-		return f.runForUDP(dir, netProto, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
-	case header.TCPProtocolNumber:
-		return f.runForTCP(dir, netProto, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
-	default:
-		syslog.VLogTf(syslog.TraceVerbosity, tag, "drop unknown transport protocol: %v (%v)", transProto, dir)
-		return Drop
+func (f *Filter) RemovedNIC(id tcpip.NICID) {
+	f.filterDisabledNICMatcher.mu.Lock()
+	defer f.filterDisabledNICMatcher.mu.Unlock()
+	for k, v := range f.filterDisabledNICMatcher.mu.nicNames {
+		if v == id {
+			delete(f.filterDisabledNICMatcher.mu.nicNames, k)
+			break
+		}
 	}
 }
 
-func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.View, transportHeader []byte, payload buffer.VectorisedView) Action {
-	if s, err := f.states.findStateICMPv4(dir, header.IPv4ProtocolNumber, header.ICMPv4ProtocolNumber, srcAddr, dstAddr, payloadLength, transportHeader, payload); s != nil {
-		if chatty {
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "icmp state found: %v", s)
-		}
+func (f *Filter) IsInterfaceDisabled(name string) bool {
+	return f.filterDisabledNICMatcher.nicDisabled(name)
+}
 
-		// If NAT or RDR is in effect, rewrite address and port.
-		// Note that findStateICMPv4 may return a state for a different transport protocol.
-		switch s.transProto {
-		case header.ICMPv4ProtocolNumber:
-			if s.lanAddr != s.gwyAddr {
-				switch dir {
-				case Incoming:
-					rewritePacketICMPv4(s.lanAddr, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketICMPv4(s.gwyAddr, true, hdr, transportHeader)
-				}
+func (f *Filter) lastRules() ([]filter.Rule, uint32) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.mu.rules, f.mu.generation
+}
+
+func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.Status {
+	f.mu.RLock()
+	g := f.mu.generation
+	f.mu.RUnlock()
+
+	if generation != g {
+		return filter.StatusErrGenerationMismatch
+	}
+
+	err, v4Table, v6Table := f.parseRules(rules)
+	if err != filter.StatusOk {
+		return err
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.mu.generation != generation {
+		return filter.StatusErrGenerationMismatch
+	}
+
+	f.mu.rules = rules
+	f.mu.v4Table = v4Table
+	f.mu.v6Table = v6Table
+
+	iptables := f.stack.IPTables()
+	if err := iptables.ReplaceTable(stack.FilterID, v4Table, false /* ipv6 */); err != nil {
+		_ = syslog.ErrorTf(tag, "error replacing iptables = %s", err)
+		return filter.StatusErrInternal
+	}
+	if err := iptables.ReplaceTable(stack.FilterID, v6Table, true /* ipv6 */); err != nil {
+		_ = syslog.ErrorTf(tag, "error replacing ip6tables = %s", err)
+		return filter.StatusErrInternal
+	}
+	f.mu.generation++
+	return filter.StatusOk
+}
+
+func isPortRangeAny(p filter.PortRange) bool {
+	return p.Start == 0 && p.End == 0
+}
+
+func isPortRangeValid(p filter.PortRange) bool {
+	return isPortRangeAny(p) || (1 <= p.Start && p.Start <= p.End)
+}
+
+func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table stack.Table, v6Table stack.Table) {
+	type ipType int
+	const (
+		generic ipType = iota
+		ipv4Only
+		ipv6Only
+	)
+
+	if len(rules) == 0 {
+		return filter.StatusOk, f.defaultV4Table, f.defaultV6Table
+	}
+
+	allowPacketsForFilterDisbledNICs := stack.Rule{
+		Matchers: []stack.Matcher{&f.filterDisabledNICMatcher},
+		Target:   &stack.AcceptTarget{},
+	}
+	v4InputRules := []stack.Rule{allowPacketsForFilterDisbledNICs}
+	v4OutputRules := []stack.Rule{allowPacketsForFilterDisbledNICs}
+	v6InputRules := []stack.Rule{allowPacketsForFilterDisbledNICs}
+	v6OutputRules := []stack.Rule{allowPacketsForFilterDisbledNICs}
+
+	for _, r := range rules {
+		var ipTypeValue ipType
+		var ipHdrFilter stack.IPHeaderFilter
+
+		if src := r.SrcSubnet; src != nil {
+			ipHdrFilter.SrcInvert = r.SrcSubnetInvertMatch
+			subnet := fidlconv.ToTCPIPSubnet(*src)
+			ipHdrFilter.Src = subnet.ID()
+			ipHdrFilter.SrcMask = tcpip.Address(subnet.Mask())
+
+			switch l := len(ipHdrFilter.Src); l {
+			case header.IPv4AddressSize:
+				ipTypeValue = ipv4Only
+			case header.IPv6AddressSize:
+				ipTypeValue = ipv6Only
+			default:
+				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
 			}
-		case header.UDPProtocolNumber:
-			if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
-				switch dir {
-				case Incoming:
-					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
-				}
+		}
+
+		if dst := r.DstSubnet; dst != nil {
+			ipHdrFilter.DstInvert = r.DstSubnetInvertMatch
+			subnet := fidlconv.ToTCPIPSubnet(*dst)
+			ipHdrFilter.Dst = subnet.ID()
+			ipHdrFilter.DstMask = tcpip.Address(subnet.Mask())
+
+			var dstIpType ipType
+			switch l := len(ipHdrFilter.Dst); l {
+			case header.IPv4AddressSize:
+				dstIpType = ipv4Only
+			case header.IPv6AddressSize:
+				dstIpType = ipv6Only
+			default:
+				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
 			}
-		case header.TCPProtocolNumber:
-			if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
-				switch dir {
-				case Incoming:
-					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
+
+			if ipTypeValue == generic {
+				ipTypeValue = dstIpType
+			} else if ipTypeValue != dstIpType {
+				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			}
+		}
+
+		var matchers []stack.Matcher
+		switch r.Proto {
+		case filter.SocketProtocolAny:
+		case filter.SocketProtocolIcmp:
+			if ipTypeValue == ipv6Only {
+				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			}
+			ipTypeValue = ipv4Only
+
+			ipHdrFilter.CheckProtocol = true
+			ipHdrFilter.Protocol = header.ICMPv4ProtocolNumber
+		case filter.SocketProtocolTcp:
+			ipHdrFilter.CheckProtocol = true
+			ipHdrFilter.Protocol = header.TCPProtocolNumber
+
+			if !isPortRangeAny(r.SrcPortRange) {
+				if !isPortRangeValid(r.SrcPortRange) {
+					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
 				}
+				matchers = append(matchers, NewTCPSourcePortMatcher(r.SrcPortRange.Start, r.SrcPortRange.End))
+			}
+
+			if !isPortRangeAny(r.DstPortRange) {
+				if !isPortRangeValid(r.DstPortRange) {
+					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				}
+				matchers = append(matchers, NewTCPDestinationPortMatcher(r.DstPortRange.Start, r.DstPortRange.End))
+			}
+
+		case filter.SocketProtocolUdp:
+			ipHdrFilter.CheckProtocol = true
+			ipHdrFilter.Protocol = header.UDPProtocolNumber
+
+			if !isPortRangeAny(r.SrcPortRange) {
+				if !isPortRangeValid(r.SrcPortRange) {
+					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				}
+				matchers = append(matchers, NewUDPSourcePortMatcher(r.SrcPortRange.Start, r.SrcPortRange.End))
+			}
+
+			if !isPortRangeAny(r.DstPortRange) {
+				if !isPortRangeValid(r.DstPortRange) {
+					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				}
+				matchers = append(matchers, NewUDPDestinationPortMatcher(r.DstPortRange.Start, r.DstPortRange.End))
+			}
+		case filter.SocketProtocolIcmpv6:
+			if ipTypeValue == ipv4Only {
+				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			}
+			ipTypeValue = ipv6Only
+
+			ipHdrFilter.CheckProtocol = true
+			ipHdrFilter.Protocol = header.ICMPv6ProtocolNumber
+		default:
+			return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+		}
+
+		var target stack.Target
+		switch r.Action {
+		case filter.ActionPass:
+			target = &stack.AcceptTarget{}
+			if r.KeepState {
+				// TODO(https://fxbug.dev/68501): Support keep state.
+				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			}
+		case filter.ActionDrop:
+			target = &stack.DropTarget{}
+		default:
+			return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+		}
+
+		rule := stack.Rule{
+			Filter:   ipHdrFilter,
+			Matchers: matchers,
+			Target:   target,
+		}
+
+		switch r.Direction {
+		case filter.DirectionIncoming:
+			switch ipTypeValue {
+			case generic:
+				v4InputRules = append(v4InputRules, rule)
+				v6InputRules = append(v6InputRules, rule)
+			case ipv4Only:
+				v4InputRules = append(v4InputRules, rule)
+			case ipv6Only:
+				v6InputRules = append(v6InputRules, rule)
+			default:
+				panic(fmt.Sprintf("unrecognied ipTypeValue = %d", ipTypeValue))
+			}
+		case filter.DirectionOutgoing:
+			switch ipTypeValue {
+			case generic:
+				v4OutputRules = append(v4OutputRules, rule)
+				v6OutputRules = append(v6OutputRules, rule)
+			case ipv4Only:
+				v4OutputRules = append(v4OutputRules, rule)
+			case ipv6Only:
+				v6OutputRules = append(v6OutputRules, rule)
+			default:
+				panic(fmt.Sprintf("unrecognied ipTypeValue = %d", ipTypeValue))
 			}
 		default:
-			panic("Unsupported transport protocol")
-		}
-
-		return Pass
-	} else if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, tag, "%v", err)
-		return Drop
-	}
-
-	var nat *NAT
-	var origAddr tcpip.Address
-	var nicID tcpip.NICID
-
-	if dir == Outgoing {
-		if nat = f.matchNAT(header.ICMPv4ProtocolNumber, srcAddr); nat != nil {
-			// Rewrite srcAddr in the packet.
-			// The original values are saved in origAddr.
-			origAddr = srcAddr
-			srcAddr = nat.newSrcAddr
-			nicID = nat.nic
-			rewritePacketICMPv4(srcAddr, true, hdr, transportHeader)
+			return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
 		}
 	}
 
-	// TODO: Add interface parameter.
-	rm := f.matchMain(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0)
-	if rm != nil {
-		if rm.nic != 0 {
-			nicID = rm.nic
-		}
-		if rm.log {
-			syslog.InfoTf(tag, "%v %v %v %v %v", rm.action, dir, "icmp", srcAddr, dstAddr)
-		}
-		if rm.action == DropReset {
-			if nat != nil {
-				// Revert the packet modified for NAT.
-				rewritePacketICMPv4(origAddr, true, hdr, transportHeader)
-			}
-			// TODO: Send a Reset packet.
-			return Drop
-		} else if rm.action == Drop {
-			return Drop
-		}
+	v4InputRules = append(v4InputRules, stack.Rule{Target: &stack.AcceptTarget{}})
+	v4OutputRules = append(v4OutputRules, stack.Rule{Target: &stack.AcceptTarget{}})
+	v6InputRules = append(v6InputRules, stack.Rule{Target: &stack.AcceptTarget{}})
+	v6OutputRules = append(v6OutputRules, stack.Rule{Target: &stack.AcceptTarget{}})
+
+	v4Table = stack.Table{
+		Rules: append(append([]stack.Rule{{Target: &stack.AcceptTarget{}}}, v4InputRules...), v4OutputRules...),
+		BuiltinChains: [stack.NumHooks]int{
+			stack.Prerouting:  0,
+			stack.Input:       1,
+			stack.Forward:     0,
+			stack.Output:      1 + len(v4InputRules),
+			stack.Postrouting: 0,
+		},
 	}
-	if (rm != nil && rm.keepState) || nat != nil {
-		f.states.createState(dir, nicID, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0, origAddr, 0, "", 0, nat != nil, false, payloadLength, hdr, transportHeader, payload)
+	v6Table = stack.Table{
+		Rules: append(append([]stack.Rule{{Target: &stack.AcceptTarget{}}}, v6InputRules...), v6OutputRules...),
+		BuiltinChains: [stack.NumHooks]int{
+			stack.Prerouting:  0,
+			stack.Input:       1,
+			stack.Forward:     0,
+			stack.Output:      1 + len(v6InputRules),
+			stack.Postrouting: 0,
+		},
 	}
-
-	return Pass
-}
-
-func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.View, transportHeader []byte, payload buffer.VectorisedView) Action {
-	if len(transportHeader) < header.UDPMinimumSize {
-		syslog.VLogTf(syslog.DebugVerbosity, tag, "udp packet too short")
-		return Drop
-	}
-	udp := header.UDP(transportHeader)
-	srcPort := udp.SourcePort()
-	dstPort := udp.DestinationPort()
-
-	if s, err := f.states.findStateUDP(dir, netProto, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader); s != nil {
-		if chatty {
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "udp state found: %v", s)
-		}
-
-		// If NAT or RDR is in effect, rewrite address and port.
-		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				switch dir {
-				case Incoming:
-					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
-				}
-			case header.IPv6ProtocolNumber:
-				switch dir {
-				case Incoming:
-					rewritePacketUDPv6(s.lanAddr, s.lanPort, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketUDPv6(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
-				}
-			}
-		}
-
-		return Pass
-	} else if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, tag, "%v", err)
-		return Drop
-	}
-
-	var nat *NAT
-	var rdr *RDR
-	var origAddr tcpip.Address
-	var origPort uint16
-	var newAddr tcpip.Address
-	var newPort uint16
-	var nicID tcpip.NICID // TODO: nicID should be initialized rather than relying on a match.
-
-	switch dir {
-	case Incoming:
-		if rdr = f.matchRDR(header.UDPProtocolNumber, dstAddr, dstPort); rdr != nil {
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "RDR rule matched: proto: %d, dstAddr: %s, dstPortRange: %v, newDstAddr: %s, newDstPortRange: %v, nic: %d", rdr.transProto, rdr.dstAddr, rdr.dstPortRange, rdr.newDstAddr, rdr.newDstPortRange, rdr.nic)
-			// Rewrite dstAddr and dstPort in the packet.
-			// The original values are saved in origAddr and origPort.
-			origAddr = dstAddr
-			dstAddr = rdr.newDstAddr
-			origPort = dstPort
-			dstPort = rdr.newDstPort(dstPort)
-			nicID = rdr.nic
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "RDR: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, dstAddr, dstPort)
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				rewritePacketUDPv4(dstAddr, dstPort, false, hdr, transportHeader)
-			case header.IPv6ProtocolNumber:
-				rewritePacketUDPv6(dstAddr, dstPort, false, hdr, transportHeader)
-			}
-		}
-	case Outgoing:
-		if nat = f.matchNAT(header.UDPProtocolNumber, srcAddr); nat != nil {
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "NAT rule matched: proto: %d, srcNet: %s(%s), srcAddr: %s, nic: %d", nat.transProto, nat.srcSubnet.ID(), tcpip.Address(nat.srcSubnet.Mask()), nat.newSrcAddr, nat.nic)
-			newAddr = nat.newSrcAddr
-			// Reserve a new port.
-			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-			var e tcpip.Error
-			nicID = nat.nic
-			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, ports.Flags{}, nat.nic, tcpip.FullAddress{
-				Addr: dstAddr,
-				Port: dstPort,
-			}, nil)
-			if e != nil {
-				syslog.VLogTf(syslog.TraceVerbosity, tag, "ReservePort: %v", e)
-				return Drop
-			}
-			// Rewrite srcAddr and srcPort in the packet.
-			// The original values are saved in origAddr and origPort.
-			origAddr = srcAddr
-			srcAddr = newAddr
-			origPort = srcPort
-			srcPort = newPort
-			nicID = nat.nic
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "NAT: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, srcAddr, srcPort)
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				rewritePacketUDPv4(srcAddr, srcPort, true, hdr, transportHeader)
-			case header.IPv6ProtocolNumber:
-				rewritePacketUDPv6(srcAddr, srcPort, true, hdr, transportHeader)
-			}
-		}
-	}
-
-	// TODO: Add interface parameter.
-	rm := f.matchMain(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort)
-	if rm != nil {
-		if rm.nic != 0 {
-			nicID = rm.nic
-		}
-		if rm.log {
-			syslog.InfoTf(tag, "%v %v %v %v:%v %v:%v",
-				rm.action, dir, "udp", srcAddr, srcPort, dstAddr, dstPort)
-		}
-		if rm.action == DropReset {
-			if nat != nil {
-				// Revert the packet modified for NAT.
-				switch netProto {
-				case header.IPv4ProtocolNumber:
-					rewritePacketUDPv4(origAddr, origPort, true, hdr, transportHeader)
-				case header.IPv6ProtocolNumber:
-					rewritePacketUDPv6(origAddr, origPort, true, hdr, transportHeader)
-				}
-			}
-			if rdr != nil {
-				// Revert the packet modified for RDR.
-				switch netProto {
-				case header.IPv4ProtocolNumber:
-					rewritePacketUDPv4(origAddr, origPort, false, hdr, transportHeader)
-				case header.IPv6ProtocolNumber:
-					rewritePacketUDPv6(origAddr, origPort, false, hdr, transportHeader)
-				}
-			}
-			// TODO: Send a Reset packet.
-			return Drop
-		} else if rm.action == Drop {
-			return Drop
-		}
-	}
-	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
-		f.states.createState(dir, nicID, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
-	}
-
-	return Pass
-}
-
-func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.View, transportHeader []byte, payload buffer.VectorisedView) Action {
-	if len(transportHeader) < header.TCPMinimumSize {
-		syslog.VLogTf(syslog.DebugVerbosity, tag, "tcp packet too short")
-		return Drop
-	}
-	tcp := header.TCP(transportHeader)
-	srcPort := tcp.SourcePort()
-	dstPort := tcp.DestinationPort()
-
-	s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader)
-	if err != nil {
-		syslog.WarnTf(tag, "%s", err)
-		return Drop
-	}
-	if s != nil {
-		if chatty {
-			syslog.VLogTf(syslog.TraceVerbosity, tag, "tcp state found: %v", s)
-		}
-
-		// If NAT or RDR is in effect, rewrite address and port.
-		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				switch dir {
-				case Incoming:
-					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
-				}
-			case header.IPv6ProtocolNumber:
-				switch dir {
-				case Incoming:
-					rewritePacketTCPv6(s.lanAddr, s.lanPort, false, hdr, transportHeader)
-				case Outgoing:
-					rewritePacketTCPv6(s.gwyAddr, s.gwyPort, true, hdr, transportHeader)
-				}
-			}
-		}
-
-		return Pass
-	}
-
-	var nat *NAT
-	var rdr *RDR
-	var origAddr tcpip.Address
-	var origPort uint16
-	var newAddr tcpip.Address
-	var newPort uint16
-	var nicID tcpip.NICID // TODO: nicID should be initalized rather than relying on a match.
-
-	switch dir {
-	case Incoming:
-		if rdr = f.matchRDR(header.TCPProtocolNumber, dstAddr, dstPort); rdr != nil {
-			// Rewrite dstAddr and dstPort in the packet.
-			// The original values are saved in origAddr and origPort.
-			origAddr = dstAddr
-			dstAddr = rdr.newDstAddr
-			origPort = dstPort
-			dstPort = rdr.newDstPort(dstPort)
-			nicID = rdr.nic
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				rewritePacketTCPv4(dstAddr, dstPort, false, hdr, transportHeader)
-			case header.IPv6ProtocolNumber:
-				rewritePacketTCPv6(dstAddr, dstPort, false, hdr, transportHeader)
-			}
-		}
-	case Outgoing:
-		if nat = f.matchNAT(header.TCPProtocolNumber, srcAddr); nat != nil {
-			newAddr = nat.newSrcAddr
-			// Reserve a new port.
-			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-			var err tcpip.Error
-			newPort, err = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID, tcpip.FullAddress{
-				Addr: dstAddr,
-				Port: dstPort,
-			}, nil)
-			if err != nil {
-				syslog.WarnTf(tag, "ReservePort: %s", err)
-				return Drop
-			}
-			// Rewrite srcAddr and srcPort in the packet.
-			// The original values are saved in origAddr and origPort.
-			origAddr = srcAddr
-			srcAddr = newAddr
-			origPort = srcPort
-			srcPort = newPort
-			nicID = nat.nic
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				rewritePacketTCPv4(srcAddr, srcPort, true, hdr, transportHeader)
-			case header.IPv6ProtocolNumber:
-				rewritePacketTCPv6(srcAddr, srcPort, true, hdr, transportHeader)
-			}
-		}
-	}
-
-	// TODO: Add interface parameter.
-	rm := f.matchMain(dir, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort)
-	if rm != nil {
-		if rm.log {
-			syslog.InfoTf(tag, "%v %v %v %v:%v %v:%v",
-				rm.action, dir, "tcp", srcAddr, srcPort, dstAddr, dstPort)
-		}
-		if rm.action == DropReset {
-			if nat != nil {
-				switch netProto {
-				case header.IPv4ProtocolNumber:
-					rewritePacketTCPv4(origAddr, origPort, true, hdr, transportHeader)
-				case header.IPv6ProtocolNumber:
-					rewritePacketTCPv6(origAddr, origPort, true, hdr, transportHeader)
-				}
-			}
-			if rdr != nil {
-				// Revert the packet modified for RDR.
-				switch netProto {
-				case header.IPv4ProtocolNumber:
-					rewritePacketTCPv4(origAddr, origPort, false, hdr, transportHeader)
-				case header.IPv6ProtocolNumber:
-					rewritePacketTCPv6(origAddr, origPort, false, hdr, transportHeader)
-				}
-			}
-			// TODO: Send a Reset packet.
-			return Drop
-		} else if rm.action == Drop {
-			return Drop
-		}
-	}
-	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
-		f.states.createState(dir, nicID, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
-	}
-
-	return Pass
-}
-
-func (f *Filter) matchMain(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16) *Rule {
-	f.rulesetMain.RLock()
-	defer f.rulesetMain.RUnlock()
-	var rm *Rule
-	for i := range f.rulesetMain.v {
-		r := &f.rulesetMain.v[i]
-		if r.Match(dir, transProto, srcAddr, srcPort, dstAddr, dstPort) {
-			rm = r
-			if r.quick {
-				break
-			}
-		}
-	}
-	return rm
-}
-
-func (f *Filter) matchNAT(transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address) *NAT {
-	f.rulesetNAT.RLock()
-	defer f.rulesetNAT.RUnlock()
-	for i := range f.rulesetNAT.v {
-		r := &f.rulesetNAT.v[i]
-		if r.Match(transProto, srcAddr) {
-			return r
-		}
-	}
-	return nil
-}
-
-func (f *Filter) matchRDR(transProto tcpip.TransportProtocolNumber, dstAddr tcpip.Address, dstPort uint16) *RDR {
-	f.rulesetRDR.RLock()
-	defer f.rulesetRDR.RUnlock()
-	for i := range f.rulesetRDR.v {
-		r := &f.rulesetRDR.v[i]
-		if r.Match(transProto, dstAddr, dstPort) {
-			return r
-		}
-	}
-	return nil
+	return filter.StatusOk, v4Table, v6Table
 }
