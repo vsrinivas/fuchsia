@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
-#include <crypto/digest.h>
 #include <lib/zircon-internal/debug.h>
+#include <stddef.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
 #include <openssl/digest.h>
+
+#include "src/security/fcrypto/digest.h"
 
 #define ZXDEBUG 0
 

@@ -9,12 +9,12 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <crypto/aead.h>
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
-#include <crypto/digest.h>
-#include <crypto/hkdf.h>
-#include <crypto/hmac.h>
+#include "src/security/fcrypto/aead.h"
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/cipher.h"
+#include "src/security/fcrypto/digest.h"
+#include "src/security/fcrypto/hkdf.h"
+#include "src/security/fcrypto/hmac.h"
 
 namespace crypto {
 namespace testing {

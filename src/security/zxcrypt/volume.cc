@@ -16,12 +16,12 @@
 
 #include <algorithm>
 
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
-#include <crypto/hkdf.h>
-#include <crypto/secret.h>
 #include <fbl/algorithm.h>
 
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/cipher.h"
+#include "src/security/fcrypto/hkdf.h"
+#include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0

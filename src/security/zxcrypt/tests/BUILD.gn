@@ -19,6 +19,7 @@ test("zxcrypt") {
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+    "//src/security/fcrypto",
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/fvm",

@@ -17,12 +17,12 @@
 #include <iterator>
 #include <memory>
 
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 #include "src/storage/fvm/format.h"
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/cipher.h"
 #include "src/security/zxcrypt/volume.h"
 #include "src/security/zxcrypt/tests/test-device.h"
 

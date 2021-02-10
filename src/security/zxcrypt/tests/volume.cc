@@ -15,10 +15,10 @@
 #include <memory>
 #include <utility>
 
-#include <crypto/cipher.h>
-#include <crypto/secret.h>
 #include <zxtest/zxtest.h>
 
+#include "src/security/fcrypto/cipher.h"
+#include "src/security/fcrypto/secret.h"
 #include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/security/zxcrypt/volume.h"

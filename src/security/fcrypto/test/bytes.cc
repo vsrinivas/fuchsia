@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/security/fcrypto/bytes.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <crypto/bytes.h>
 #include <zxtest/zxtest.h>
 
-#include "utils.h"
+#include "src/security/fcrypto/test/utils.h"
 
 namespace crypto {
 namespace testing {
@@ -34,14 +35,6 @@ TEST(Bytes, Resize) {
   EXPECT_OK(bytes.Resize(kSize, 0xff));
   EXPECT_EQ(bytes.len(), kSize);
   EXPECT_NOT_NULL(bytes.get());
-
-#if !__has_feature(address_sanitizer)
-  // The ASan allocator reports errors for unreasonable allocation sizes.
-  EXPECT_STATUS(bytes.Resize(size_t(-1)), ZX_ERR_NO_MEMORY);
-  EXPECT_EQ(bytes.len(), kSize);
-  EXPECT_NOT_NULL(bytes.get());
-  EXPECT_TRUE(AllEqual(bytes, 0xff, 0, kSize));
-#endif
 
   EXPECT_OK(bytes.Resize(kSize));
   EXPECT_EQ(bytes.len(), kSize);

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_DIGEST_H_
-#define CRYPTO_DIGEST_H_
+#ifndef SRC_SECURITY_FCRYPTO_DIGEST_H_
+#define SRC_SECURITY_FCRYPTO_DIGEST_H_
 
 #include <stddef.h>
 #include <zircon/types.h>
@@ -28,4 +28,4 @@ zx_status_t GetDigestLen(Algorithm digest, size_t* out);
 }  // namespace digest
 }  // namespace crypto
 
-#endif  // CRYPTO_DIGEST_H_
+#endif  // SRC_SECURITY_FCRYPTO_DIGEST_H_

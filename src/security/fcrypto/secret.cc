@@ -12,7 +12,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <crypto/secret.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -21,6 +20,8 @@
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
 #include <openssl/mem.h>
+
+#include "src/security/fcrypto/secret.h"
 
 #define ZXDEBUG 0
 

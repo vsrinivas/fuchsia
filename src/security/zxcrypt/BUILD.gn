@@ -13,8 +13,8 @@ static_library("zxcrypt-dev") {
   ]
 
   public_deps = [
-    # volume.h has #include <crypto/aead.h> (among others).
-    "//zircon/system/ulib/zircon-crypto:zircon-crypto-static",
+    # volume.h references crypto/aead.h (among others).
+    "//src/security/fcrypto",
 
     # ddk-volume.h has #include <ddk/device.h>.
     "//src/lib/ddk",
@@ -50,8 +50,8 @@ shared_library("zxcrypt-fdio") {
     # fdio-volume.h has #include <lib/fdio/cpp/caller.h>
     "//zircon/system/ulib/fdio-caller",
 
-    # volume.h has #include <crypto/aead.h> (among others).
-    "//zircon/system/ulib/zircon-crypto",
+    # volume.h includes crypto/aead.h (among others).
+    "//src/security/fcrypto",
   ]
   configs += [ "//build/config/fuchsia:integer-paranoia" ]
   deps = [

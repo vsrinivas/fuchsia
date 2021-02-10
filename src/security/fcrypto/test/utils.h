@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_CRYPTO_TEST_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_CRYPTO_TEST_UTILS_H_
+#ifndef SRC_SECURITY_FCRYPTO_TEST_UTILS_H_
+#define SRC_SECURITY_FCRYPTO_TEST_UTILS_H_
 
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <crypto/aead.h>
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
-#include <crypto/hkdf.h>
-#include <crypto/secret.h>
+#include "src/security/fcrypto/aead.h"
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/cipher.h"
+#include "src/security/fcrypto/hkdf.h"
+#include "src/security/fcrypto/secret.h"
 
 namespace crypto {
 namespace testing {
@@ -35,4 +35,4 @@ bool AllEqual(const Bytes& buf, uint8_t val, zx_off_t off, size_t len);
 }  // namespace testing
 }  // namespace crypto
 
-#endif  // ZIRCON_SYSTEM_ULIB_CRYPTO_TEST_UTILS_H_
+#endif  // SRC_SECURITY_FCRYPTO_TEST_UTILS_H_

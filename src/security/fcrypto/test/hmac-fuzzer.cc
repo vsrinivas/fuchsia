@@ -4,10 +4,11 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <crypto/bytes.h>
-#include <crypto/digest.h>
-#include <crypto/hmac.h>
 #include <fuzzer/FuzzedDataProvider.h>
+
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/digest.h"
+#include "src/security/fcrypto/hmac.h"
 
 static const size_t kMaxKeyLen = 1024;
 

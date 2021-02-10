@@ -20,12 +20,12 @@
 #include <memory>
 
 #include <block-client/client.h>
-#include <crypto/secret.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/storage/fvm/format.h"
 

@@ -14,8 +14,6 @@
 
 #include <memory>
 
-#include <crypto/bytes.h>
-#include <crypto/secret.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -26,6 +24,9 @@
 #include <utility>
 
 #include <openssl/mem.h>
+
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/secret.h"
 
 #define ZXDEBUG 0
 

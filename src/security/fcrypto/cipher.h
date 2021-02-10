@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_CIPHER_H_
-#define CRYPTO_CIPHER_H_
+#ifndef SRC_SECURITY_FCRYPTO_CIPHER_H_
+#define SRC_SECURITY_FCRYPTO_CIPHER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,9 +11,10 @@
 
 #include <memory>
 
-#include <crypto/bytes.h>
-#include <crypto/secret.h>
 #include <fbl/macros.h>
+
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/secret.h"
 
 // |crypto::Cipher| is used to encrypt and decrypt data.  Ciphers differ from AEADs in that they
 // require block-aligned lengths and do not check data integrity.  This implementation can be used
@@ -131,4 +132,4 @@ class __EXPORT Cipher final {
 };
 }  // namespace crypto
 
-#endif  // CRYPTO_CIPHER_H_
+#endif  // SRC_SECURITY_FCRYPTO_CIPHER_H_

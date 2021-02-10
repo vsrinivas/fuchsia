@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/security/fcrypto/cipher.h"
+
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
 #include <zxtest/zxtest.h>
 
-#include "utils.h"
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/test/utils.h"
 
 namespace crypto {
 namespace testing {

@@ -9,8 +9,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <crypto/aead.h>
-#include <crypto/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -19,7 +17,9 @@
 #define BORINGSSL_NO_CXX
 #include <openssl/aead.h>
 
-#include "error.h"
+#include "src/security/fcrypto/aead.h"
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/error.h"
 
 #define ZXDEBUG 0
 

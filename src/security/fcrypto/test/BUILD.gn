@@ -9,16 +9,13 @@ import("//src/sys/build/fuchsia_unittest_package.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":zircon-crypto-fuzzers",
-    ":zircon-crypto-test-pkg",
+    ":fcrypto-fuzzers",
+    ":fcrypto-test-pkg",
   ]
 }
 
-test("zircon-crypto") {
-  output_name = "zircon-crypto-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
+test("fcrypto") {
+  output_name = "fcrypto-test"
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -36,25 +33,25 @@ test("zircon-crypto") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/security/fcrypto",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/zircon-crypto",
   ]
 }
 
 fuzzer("hmac-fuzzer") {
   sources = [ "hmac-fuzzer.cc" ]
   deps = [
+    "//src/security/fcrypto",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/zircon-crypto",
   ]
 }
 
-fuzzers_package("zircon-crypto-fuzzers") {
+fuzzers_package("fcrypto-fuzzers") {
   cpp_fuzzers = [ ":hmac-fuzzer" ]
 }
 
-fuchsia_unittest_package("zircon-crypto-test-pkg") {
-  package_name = "zircon-crypto-test"
-  deps = [ ":zircon-crypto" ]
+fuchsia_unittest_package("fcrypto-test-pkg") {
+  package_name = "fcrypto-test"
+  deps = [ ":fcrypto" ]
 }

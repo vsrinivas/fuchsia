@@ -10,11 +10,11 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <crypto/aead.h>
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
-#include <crypto/digest.h>
-#include <crypto/secret.h>
+#include "src/security/fcrypto/aead.h"
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/cipher.h"
+#include "src/security/fcrypto/digest.h"
+#include "src/security/fcrypto/secret.h"
 
 // |zxcrypt::Volume| manages the interactions of both driver and library code with the metadata
 // used to format and operate zxcrypt devices.  The superblock is saved multiple times on disk to

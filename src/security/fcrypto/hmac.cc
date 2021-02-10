@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zircon-internal/debug.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include <crypto/digest.h>
-#include <crypto/hmac.h>
-#include <explicit-memory/bytes.h>
-#include <fbl/alloc_checker.h>
-#include <lib/zircon-internal/debug.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <explicit-memory/bytes.h>
+#include <fbl/alloc_checker.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
 
-#include "error.h"
+#include "src/security/fcrypto/digest.h"
+#include "src/security/fcrypto/error.h"
+#include "src/security/fcrypto/hmac.h"
 
 #define ZXDEBUG 0
 

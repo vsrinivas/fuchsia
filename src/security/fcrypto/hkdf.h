@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_HKDF_H_
-#define CRYPTO_HKDF_H_
+#ifndef SRC_SECURITY_FCRYPTO_HKDF_H_
+#define SRC_SECURITY_FCRYPTO_HKDF_H_
 
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <crypto/bytes.h>
-#include <crypto/digest.h>
-#include <crypto/secret.h>
 #include <fbl/macros.h>
+
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/digest.h"
+#include "src/security/fcrypto/secret.h"
 
 // |crypto::HKDF| is a key derivation function.  It can turn variable-length and/or weak input key
 // material into cryptographically strong output key material.  However, this class does NOT do any
@@ -56,4 +57,4 @@ class __EXPORT HKDF final {
 
 }  // namespace crypto
 
-#endif  // CRYPTO_HKDF_H_
+#endif  // SRC_SECURITY_FCRYPTO_HKDF_H_

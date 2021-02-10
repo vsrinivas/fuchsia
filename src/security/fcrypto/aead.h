@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_AEAD_H_
-#define CRYPTO_AEAD_H_
+#ifndef SRC_SECURITY_FCRYPTO_AEAD_H_
+#define SRC_SECURITY_FCRYPTO_AEAD_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,10 +11,11 @@
 
 #include <memory>
 
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
-#include <crypto/secret.h>
 #include <fbl/macros.h>
+
+#include "src/security/fcrypto/bytes.h"
+#include "src/security/fcrypto/cipher.h"
+#include "src/security/fcrypto/secret.h"
 
 // |crypto::AEAD| is an authenticated encryption and decryption cipher.  It differs from |Cipher| in
 // that it incurs additional overhead to store its authentication tag, but can verify data integrity
@@ -111,4 +112,4 @@ class __EXPORT AEAD final {
 };
 }  // namespace crypto
 
-#endif  // CRYPTO_AEAD_H_
+#endif  // SRC_SECURITY_FCRYPTO_AEAD_H_

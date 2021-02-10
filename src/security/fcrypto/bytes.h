@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_BYTES_H_
-#define CRYPTO_BYTES_H_
+#ifndef SRC_SECURITY_FCRYPTO_BYTES_H_
+#define SRC_SECURITY_FCRYPTO_BYTES_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -64,4 +64,4 @@ class __EXPORT Bytes final {
 
 }  // namespace crypto
 
-#endif  // CRYPTO_BYTES_H_
+#endif  // SRC_SECURITY_FCRYPTO_BYTES_H_

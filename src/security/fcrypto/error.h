@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_SECURITY_FCRYPTO_ERROR_H_
+#define SRC_SECURITY_FCRYPTO_ERROR_H_
 
 #include <zircon/types.h>
 
@@ -12,3 +13,5 @@ namespace crypto {
 void xprintf_crypto_errors(zx_status_t* out);
 
 }  // namespace crypto
+
+#endif  // SRC_SECURITY_FCRYPTO_ERROR_H_

@@ -11,12 +11,12 @@
 
 #include <memory>
 
-#include <crypto/secret.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
+#include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
