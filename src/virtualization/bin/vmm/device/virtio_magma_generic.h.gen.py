@@ -149,6 +149,7 @@ def generate_handle_command(magma):
     for export in magma['exports'] + magma['virtmagma-internal']:
         name = get_name(export)
         ret += '      case VIRTIO_MAGMA_CMD_' + name.upper() + ': {\n'
+        ret += '        TRACE_DURATION("magma", "' + name + '");\n'
         ret += '        auto request = reinterpret_cast<const virtio_magma_' + name + '_ctrl_t*>(request_desc.addr);\n'
         ret += '        auto response = reinterpret_cast<virtio_magma_' + name + '_resp_t*>(response_desc.addr);\n'
         ret += '#ifdef VIRTMAGMA_DEBUG\n'
