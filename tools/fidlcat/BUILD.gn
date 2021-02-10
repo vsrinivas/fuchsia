@@ -44,6 +44,8 @@ if (is_host) {
       "//src/lib/fxl",
       "//zircon/system/ulib/cmdline",
     ]
+
+    public_deps = [ "//src/lib/analytics/cpp/core_dev_tools" ]
   }
 
   test("fidlcat_host_tests") {

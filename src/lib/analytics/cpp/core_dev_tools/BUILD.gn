@@ -10,6 +10,7 @@ static_library("core_dev_tools") {
   public = [
     "analytics.h",
     "analytics_executor.h",
+    "command_line_options.h",
     "general_parameters.h",
     "google_analytics_client.h",
     "system_info.h",
@@ -25,6 +26,8 @@ static_library("core_dev_tools") {
     "analytics_messages.cc",
     "analytics_messages.h",
     "analytics_status.h",
+    "command_line_options.cc",
+    "command_line_options.h",
     "environment_status.cc",
     "environment_status.h",
     "general_parameters.cc",
@@ -48,6 +51,8 @@ static_library("core_dev_tools") {
     "//src/lib/fxl",
     "//src/lib/uuid",
   ]
+
+  public_deps = [ "//zircon/system/ulib/cmdline" ]
 }
 
 test("unittests") {

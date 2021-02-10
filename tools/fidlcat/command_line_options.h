@@ -9,13 +9,17 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/analytics/cpp/core_dev_tools/command_line_options.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "tools/fidlcat/lib/decode_options.h"
 
 namespace fidlcat {
 
 struct CommandLineOptions {
-  enum class AnalyticsMode { kEnable, kDisable, kSubLaunchFirst, kSubLaunchNormal, kUnspecified };
+ private:
+  using AnalyticsOption = ::analytics::core_dev_tools::AnalyticsOption;
+
+ public:
   // debug agent options:
   std::optional<std::string> connect;
   std::vector<std::string> symbol_index_files;
@@ -62,7 +66,7 @@ struct CommandLineOptions {
   std::vector<std::string> remote_job_name;
 
   // Analytics options:
-  AnalyticsMode analytics = AnalyticsMode::kUnspecified;
+  AnalyticsOption analytics = AnalyticsOption::kUnspecified;
   bool analytics_show = false;
 
   // --version in command line

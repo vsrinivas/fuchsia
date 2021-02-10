@@ -258,15 +258,8 @@ const char* const kHelpHelp = R"(  --help
   -h
       Prints all command-line switches.)";
 
-const char* const kAnalyticsHelp = R"(  --analytics=enable|disable
-      Enable or disable collection of analytics:
-      --analytics=enable           Enable collection of analytics and save the
-                                   status in a configuration file.
-      --analytics=disable          Disable collection of analytics and save the
-                                   status in a configuration file.)";
-
-const char* const kAnalyticsShowHelp = R"(  --analytics-show
-      Show the opt-in/out status for collection of analytics and what we collect when opt-in.)";
+using ::analytics::core_dev_tools::kAnalyticsHelp;
+using ::analytics::core_dev_tools::kAnalyticsShowHelp;
 
 const char* const kVersionHelp = R"(  --version
       Prints the version.)";
@@ -323,6 +316,9 @@ cmdline::Status ProcessLogOptions(const CommandLineOptions* options) {
 std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                              DecodeOptions* decode_options, DisplayOptions* display_options,
                              std::vector<std::string>* params) {
+  using analytics::core_dev_tools::AnalyticsOption;
+  using analytics::core_dev_tools::ParseAnalyticsOption;
+
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   // Debug agent options:
@@ -376,31 +372,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   parser.AddSwitch("version", 0, kVersionHelp, &CommandLineOptions::requested_version);
 
-  // The analytics option can take two additional internal options, which can only be used when
-  // another core developer tool (such as ffx) is sub-launching fidlcat. The two internal options
-  // are
-  //      --analytics=sublaunch-first  Indicate that fidlcat is sub-launched by the
-  //                                   first run of the first tool. Collection of
-  //                                   analytics will be disabled in this run.
-  //      --analytics=sublaunch-normal Indicate that fidlcat is sub-launched by another
-  //                                   tool, but not by the first run of the first
-  //                                   tool. Collection of analytics will be enabled
-  //                                   or disabled according to the saved status.
-  CommandLineOptions::AnalyticsMode analytics = CommandLineOptions::AnalyticsMode::kUnspecified;
-  parser.AddGeneralSwitch("analytics", 0, kAnalyticsHelp, [&analytics](const std::string& value) {
-    if (value == "enable") {
-      analytics = CommandLineOptions::AnalyticsMode::kEnable;
-    } else if (value == "disable") {
-      analytics = CommandLineOptions::AnalyticsMode::kDisable;
-    } else if (value == "sublaunch-first") {
-      analytics = CommandLineOptions::AnalyticsMode::kSubLaunchFirst;
-    } else if (value == "sublaunch-normal") {
-      analytics = CommandLineOptions::AnalyticsMode::kSubLaunchNormal;
-    } else {
-      return cmdline::Status::Error("Unable to parse analytics setting \"" + value + "\"");
-    }
-    return cmdline::Status::Ok();
-  });
+  parser.AddSwitch("analytics", 0, kAnalyticsHelp, &CommandLineOptions::analytics);
   parser.AddSwitch("analytics-show", 0, kAnalyticsShowHelp, &CommandLineOptions::analytics_show);
 
   bool requested_help = false;
@@ -415,9 +387,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     return "";
   }
 
-  options->analytics = analytics;
-  if (options->analytics_show || options->analytics == CommandLineOptions::AnalyticsMode::kEnable ||
-      options->analytics == CommandLineOptions::AnalyticsMode::kDisable) {
+  if (options->analytics_show || options->analytics == AnalyticsOption::kEnable ||
+      options->analytics == AnalyticsOption::kDisable) {
     return "";
   }
 

@@ -58,12 +58,14 @@ if (is_host) {
       "//src/lib/fxl",
       "//third_party/protobuf:protobuf_full",
       "//third_party/rapidjson",
-      "//tools/fidlcat:lib",
       "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/fit",
     ]
 
-    public_deps = [ "//zircon/system/public" ]
+    public_deps = [
+      "//tools/fidlcat:lib",
+      "//zircon/system/public",
+    ]
   }
 
   source_set("host_tests") {

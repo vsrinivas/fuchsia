@@ -11,11 +11,15 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/analytics/cpp/core_dev_tools/command_line_options.h"
+
 namespace zxdb {
 
 struct CommandLineOptions {
-  enum class AnalyticsMode { kEnable, kDisable, kSubLaunchFirst, kSubLaunchNormal, kUnspecified };
+ private:
+  using AnalyticsOption = ::analytics::core_dev_tools::AnalyticsOption;
 
+ public:
   std::optional<std::string> connect;
   std::optional<std::string> unix_connect;
   bool debug_mode = false;
@@ -31,7 +35,7 @@ struct CommandLineOptions {
   std::vector<std::string> ids_txts;
   std::vector<std::string> symbol_servers;
   std::vector<std::string> build_dirs;
-  AnalyticsMode analytics = AnalyticsMode::kUnspecified;
+  AnalyticsOption analytics = AnalyticsOption::kUnspecified;
   bool analytics_show = false;
   bool requested_version = false;
   bool enable_debug_adapter = false;

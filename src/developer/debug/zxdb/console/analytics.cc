@@ -12,12 +12,12 @@
 namespace zxdb {
 
 using ::analytics::GetOsVersion;
+using ::analytics::core_dev_tools::AnalyticsOption;
 using ::analytics::core_dev_tools::GeneralParameters;
 using ::analytics::core_dev_tools::GoogleAnalyticsEvent;
-using ::analytics::core_dev_tools::SubLaunchStatus;
 
-void Analytics::Init(Session& session, SubLaunchStatus sub_launch_status) {
-  Init(sub_launch_status);
+void Analytics::Init(Session& session, AnalyticsOption analytics_option) {
+  Init(analytics_option);
   session.system().settings().SetBool(ClientSettings::System::kEnableAnalytics, enabled_runtime_);
 }
 

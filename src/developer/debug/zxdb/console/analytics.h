@@ -12,7 +12,7 @@ namespace zxdb {
 
 class Analytics : public analytics::core_dev_tools::Analytics<Analytics> {
  public:
-  static void Init(Session& session, analytics::core_dev_tools::SubLaunchStatus sub_launch_status);
+  static void Init(Session& session, analytics::core_dev_tools::AnalyticsOption analytics_option);
   static void IfEnabledSendInvokeEvent(Session* session);
 
  private:

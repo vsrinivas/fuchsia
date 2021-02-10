@@ -13,6 +13,7 @@
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_internal.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_messages.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_status.h"
+#include "src/lib/analytics/cpp/core_dev_tools/command_line_options.h"
 #include "src/lib/analytics/cpp/core_dev_tools/environment_status.h"
 #include "src/lib/analytics/cpp/core_dev_tools/general_parameters.h"
 #include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
@@ -22,15 +23,6 @@
 #include "src/lib/analytics/cpp/google_analytics/event.h"
 
 namespace analytics::core_dev_tools {
-
-enum class SubLaunchStatus {
-  // sub-launched by the first run of the first tool
-  kSubLaunchedFirst,
-  // sub-launched otherwise
-  kSubLaunchedNormal,
-
-  kDirectlyLaunched
-};
 
 // This class uses template following the pattern of CRTP
 // (See https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern).
@@ -78,13 +70,13 @@ template <class T>
 class Analytics {
  public:
   // Init analytics status, and show suitable welcome messages if on the first run.
-  static void Init(SubLaunchStatus sub_launch_status) {
+  static void Init(AnalyticsOption analytics_option) {
     internal::PersistentStatus persistent_status(T::kToolName);
     if (internal::PersistentStatus::IsFirstLaunchOfFirstTool()) {
       InitFirstRunOfFirstTool(persistent_status);
-    } else if (sub_launch_status == SubLaunchStatus::kSubLaunchedFirst) {
+    } else if (analytics_option == AnalyticsOption::kSubLaunchFirst) {
       InitSubLaunchedFirst();
-    } else if (sub_launch_status == SubLaunchStatus::kSubLaunchedNormal) {
+    } else if (analytics_option == AnalyticsOption::kSubLaunchNormal) {
       InitSubLaunchedNormal();
     } else if (persistent_status.IsFirstDirectLaunch()) {
       InitFirstRunOfOtherTool(persistent_status);
@@ -94,11 +86,11 @@ class Analytics {
   }
 
   // Same as Init() but will disable analytics when run by bot
-  static void InitBotAware(SubLaunchStatus sub_launch_status) {
+  static void InitBotAware(AnalyticsOption analytics_option) {
     if (IsRunByBot()) {
       T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled);
     } else {
-      Init(sub_launch_status);
+      Init(analytics_option);
     }
   }
 
