@@ -224,6 +224,10 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetThreadProvision(DeviceNetworkInfo
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
 
+  if (!IsThreadProvisioned()) {
+    return WEAVE_ERROR_INCORRECT_STATE;
+  }
+
   // Get the Device pointer.
   status = GetProtocols(std::move(Protocols().set_device_extra(device_extra.NewRequest())));
   if (status != ZX_OK) {

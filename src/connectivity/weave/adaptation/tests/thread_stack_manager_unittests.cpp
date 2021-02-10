@@ -337,6 +337,10 @@ TEST_F(ThreadStackManagerTest, GetProvisionNoCredential) {
   const std::string kFakeNetworkName = "fake-net-name";
   const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
   const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+  DeviceNetworkInfo net_info;
+
+  // Expect failure getting Thread provision.
+  EXPECT_NE(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_NO_ERROR);
 
   // Set up device info.
   fake_lookup_.device()
@@ -347,9 +351,9 @@ TEST_F(ThreadStackManagerTest, GetProvisionNoCredential) {
       .set_channel(kFakeChannel)
       .set_xpanid(kFakeExtendedId);
   fake_lookup_.device().credential().set_master_key(kFakeMasterKey);
+  fake_lookup_.device().set_connectivity_state(ConnectivityState::READY);
 
   // Get the provision.
-  DeviceNetworkInfo net_info;
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_NO_ERROR);
 
   EXPECT_EQ(net_info.NetworkType, kNetworkType_Thread);
@@ -375,6 +379,10 @@ TEST_F(ThreadStackManagerTest, GetProvisionWithCredential) {
   const std::string kFakeNetworkName = "fake-net-name";
   const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
   const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+  DeviceNetworkInfo net_info;
+
+  // Expect failure getting Thread provision.
+  EXPECT_NE(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_NO_ERROR);
 
   // Set up device info.
   fake_lookup_.device()
@@ -385,9 +393,9 @@ TEST_F(ThreadStackManagerTest, GetProvisionWithCredential) {
       .set_channel(kFakeChannel)
       .set_xpanid(kFakeExtendedId);
   fake_lookup_.device().credential().set_master_key(kFakeMasterKey);
+  fake_lookup_.device().set_connectivity_state(ConnectivityState::READY);
 
   // Get the provision.
-  DeviceNetworkInfo net_info;
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, true), WEAVE_NO_ERROR);
 
   EXPECT_EQ(net_info.NetworkType, kNetworkType_Thread);
