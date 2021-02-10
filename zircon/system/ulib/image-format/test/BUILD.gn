@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -23,12 +23,7 @@ test("image-format-test") {
   ]
 }
 
-unittest_package("image-format-test-package") {
+fuchsia_unittest_package("image-format-test-package") {
   package_name = "image-format-test"
   deps = [ ":image-format-test" ]
-  tests = [
-    {
-      name = "image-format-test"
-    },
-  ]
 }
