@@ -195,24 +195,24 @@ pub async fn multi_finger_swipe_command(
 /// of `synthesizer::InputDeviceRegistry`.
 ///
 /// # Returns
-/// * Ok(`modern_backend::InputDeviceRegistry`) if `fuchsia.input.injection.InputDeviceRegistry`
-///   is available (even if `fuchsia.ui.input.InputDeviceRegistry` is also available).
-/// * Ok(`legacy_backend::InputDeviceRegistry`) if only `fuchsia.ui.input.InputDeviceRegistry`
+/// * Ok(`legacy_backend::InputDeviceRegistry`) if `fuchsia.ui.input.InputDeviceRegistry`
+///   is available (even if `fuchsia.input.injection.InputDeviceRegistry` is also available).
+/// * Ok(`modern_backend::InputDeviceRegistry`) if only `fuchsia.input.injection.InputDeviceRegistry`
 ///   is available.
 /// * Err otherwise. E.g.,
 ///   * Neither protocol was available.
 ///   * Access to `/svc` was denied.
 async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
-    let modern_registry =
-        new_service_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
-    if modern_registry.exists().await? {
-        return Ok(Box::new(modern_backend::InputDeviceRegistry::new(modern_registry.connect()?)));
-    }
-
     let legacy_registry =
         new_service_connector::<fidl_fuchsia_ui_input::InputDeviceRegistryMarker>()?;
     if legacy_registry.exists().await? {
         return Ok(Box::new(legacy_backend::InputDeviceRegistry::new()));
+    }
+
+    let modern_registry =
+        new_service_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
+    if modern_registry.exists().await? {
+        return Ok(Box::new(modern_backend::InputDeviceRegistry::new(modern_registry.connect()?)));
     }
 
     Err(format_err!("no available InputDeviceRegistry"))

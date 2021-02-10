@@ -523,6 +523,12 @@
             from: "#appmgr",
             to: [ "#session-manager" ],
         },
+        {
+            protocol: "fuchsia.input.injection.InputDeviceRegistry",
+            from: "#session-manager",
+            to: [ "#appmgr" ],
+            dependency: "weak_for_migration",
+        },
     ],
     expose: [
         // Non-zircon services for svchost

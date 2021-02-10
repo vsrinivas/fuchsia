@@ -370,6 +370,12 @@
             path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
         },
 
+        // From session_manager
+        {
+            protocol: "fuchsia.input.injection.InputDeviceRegistry",
+            path: "/svc_for_sys/fuchsia.input.injection.InputDeviceRegistry",
+        },
+
         // These services are used by appmgr directly
         {
             protocol: [
