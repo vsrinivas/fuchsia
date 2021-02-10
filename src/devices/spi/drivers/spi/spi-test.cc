@@ -30,6 +30,8 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     ASSERT_TRUE(ac.check());
     protocols[0] = {ZX_PROTOCOL_SPI_IMPL, {&spi_impl_protocol_ops_, this}};
     SetProtocols(std::move(protocols));
+    SetMetadata(DEVICE_METADATA_SPI_CHANNELS, &kSpiChannels, sizeof(kSpiChannels));
+    SetMetadata(DEVICE_METADATA_PRIVATE, &kTestBusId, sizeof(kTestBusId));
   }
 
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
@@ -77,37 +79,6 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
       }
     }
     return ZX_ERR_BAD_STATE;
-  }
-
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
-                                size_t* actual) {
-    switch (type) {
-      case DEVICE_METADATA_SPI_CHANNELS:
-        memcpy(buf, &spi_channels_, sizeof spi_channels_);
-        *actual = sizeof spi_channels_;
-        break;
-      case DEVICE_METADATA_PRIVATE:
-        memcpy(buf, &kTestBusId, sizeof kTestBusId);
-        *actual = sizeof kTestBusId;
-        break;
-      default:
-        return ZX_ERR_INTERNAL;
-    }
-    return ZX_OK;
-  }
-
-  zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) {
-    switch (type) {
-      case DEVICE_METADATA_SPI_CHANNELS:
-        *out_size = sizeof spi_channels_;
-        break;
-      case DEVICE_METADATA_PRIVATE:
-        *out_size = sizeof kTestBusId;
-        break;
-      default:
-        return ZX_ERR_INTERNAL;
-    }
-    return ZX_OK;
   }
 
   uint32_t SpiImplGetChipSelectCount() { return 2; }
@@ -250,7 +221,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
   } test_mode_;
 
   static constexpr uint32_t kTestBusId = 0;
-  static constexpr spi_channel_t spi_channels_[] = {
+  static constexpr spi_channel_t kSpiChannels[] = {
       {.bus_id = 0, .cs = 0, .vid = 0, .pid = 0, .did = 0},
       {.bus_id = 0, .cs = 1, .vid = 0, .pid = 0, .did = 0}};
 
@@ -266,7 +237,7 @@ TEST(SpiDevice, SpiTest) {
 
   // make it
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
-  EXPECT_EQ(ddk.children_.size(), countof(ddk.spi_channels_), "");
+  EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
 
   // test it
   const uint8_t txbuf[] = {0, 1, 2, 3, 4, 5, 6};
@@ -307,7 +278,7 @@ TEST(SpiDevice, SpiFidlTest) {
   fidl::Client<::llcpp::fuchsia::hardware::spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
-  EXPECT_EQ(ddk.children_.size(), countof(ddk.spi_channels_));
+  EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
 
   {
     zx::channel client, server;
