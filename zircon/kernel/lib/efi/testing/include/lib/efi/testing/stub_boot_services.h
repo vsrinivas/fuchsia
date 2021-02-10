@@ -107,8 +107,12 @@ class StubBootServices {
   //                                         size_t* entry_count);
   //   efi_status (*ProtocolsPerHandle)(efi_handle handle, efi_guid*** protocol_buf,
   //                                    size_t* protocol_buf_count);
-  //   efi_status (*LocateHandleBuffer)(efi_locate_search_type search_type, efi_guid* protocol,
-  //                                    void* search_key, size_t* num_handles, efi_handle** buf);
+
+  virtual efi_status LocateHandleBuffer(efi_locate_search_type search_type, efi_guid* protocol,
+                                        void* search_key, size_t* num_handles, efi_handle** buf) {
+    return EFI_UNSUPPORTED;
+  }
+
   //   efi_status (*LocateProtocol)(efi_guid* protocol, void* registration, void** intf);
   //   efi_status (*InstallMultipleProtocolInterfaces)(efi_handle* handle, ...);
   //   efi_status (*UninstallMultipleProtocolInterfaces)(efi_handle handle, ...);

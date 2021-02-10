@@ -50,6 +50,10 @@ class MockBootServices : public StubBootServices {
               (efi_handle handle, efi_guid* protocol, efi_handle agent_handle,
                efi_handle controller_handle),
               (override));
+  MOCK_METHOD(efi_status, LocateHandleBuffer,
+              (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
+               size_t* num_handles, efi_handle** buf),
+              (override));
 };
 
 const efi_handle kTestHandle1 = reinterpret_cast<efi_handle>(0x1);
@@ -79,6 +83,17 @@ TEST(StubBootServices, CloseProtocol) {
 
   EXPECT_EQ(EFI_TIMEOUT, mock.services()->CloseProtocol(kTestHandle1, &protocol_guid, kTestHandle2,
                                                         kTestHandle3));
+}
+
+TEST(StubBootServices, LocateHandleBuffer) {
+  MockBootServices mock;
+  efi_guid protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+
+  EXPECT_CALL(mock, LocateHandleBuffer(ByProtocol, &protocol_guid, _, _, _))
+      .WillOnce(Return(EFI_TIMEOUT));
+
+  EXPECT_EQ(EFI_TIMEOUT, mock.services()->LocateHandleBuffer(ByProtocol, &protocol_guid, nullptr,
+                                                             nullptr, nullptr));
 }
 
 }  // namespace
