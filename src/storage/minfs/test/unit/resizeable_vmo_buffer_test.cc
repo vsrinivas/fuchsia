@@ -5,7 +5,7 @@
 #include "src/storage/minfs/resizeable_vmo_buffer.h"
 
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace minfs {
 namespace {
@@ -26,38 +26,38 @@ class Device : public storage::VmoidRegistry {
 
 TEST(ResizeableVmoBufferTest, Grow) {
   ResizeableVmoBuffer buffer(kBlockSize);
-  ASSERT_OK(buffer.Attach("test", &device));
-  auto detach = fbl::MakeAutoCall([&]() { EXPECT_OK(buffer.Detach(&device)); });
-  ASSERT_OK(buffer.Grow(2));
-  EXPECT_EQ(2, buffer.capacity());
+  ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
+  auto detach = fbl::MakeAutoCall([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
+  ASSERT_EQ(buffer.Grow(2), ZX_OK);
+  EXPECT_EQ(buffer.capacity(), 2ul);
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_OK(buffer.Grow(50));
+  ASSERT_EQ(buffer.Grow(50), ZX_OK);
   // Check that after growing, the data is still there.
-  EXPECT_BYTES_EQ(buf, buffer.Data(1), kBlockSize);
-  EXPECT_EQ(50, buffer.capacity());
+  EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
+  EXPECT_EQ(buffer.capacity(), 50ul);
 }
 
 TEST(ResizeableVmoBufferTest, Shrink) {
   ResizeableVmoBuffer buffer(kBlockSize);
-  ASSERT_OK(buffer.Attach("test", &device));
-  auto detach = fbl::MakeAutoCall([&]() { EXPECT_OK(buffer.Detach(&device)); });
-  ASSERT_OK(buffer.Grow(5));
+  ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
+  auto detach = fbl::MakeAutoCall([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
+  ASSERT_EQ(buffer.Grow(5), ZX_OK);
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_OK(buffer.Shrink(2));
-  EXPECT_BYTES_EQ(buf, buffer.Data(1), kBlockSize);
-  EXPECT_EQ(2, buffer.capacity());
+  ASSERT_EQ(buffer.Shrink(2), ZX_OK);
+  EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
+  EXPECT_EQ(buffer.capacity(), 2ul);
 }
 
 TEST(ResizeableVmoBufferTest, Zero) {
   constexpr int kBlocks = 10;
   ResizeableVmoBuffer buffer(kBlockSize);
-  ASSERT_OK(buffer.Attach("test", &device));
-  auto detach = fbl::MakeAutoCall([&]() { EXPECT_OK(buffer.Detach(&device)); });
-  ASSERT_OK(buffer.Grow(kBlocks));
+  ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
+  auto detach = fbl::MakeAutoCall([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
+  ASSERT_EQ(buffer.Grow(kBlocks), ZX_OK);
   static const uint8_t kFill = 0xaf;
   memset(buffer.Data(0), kFill, kBlocks * kBlockSize);
   constexpr int kStart = 5;

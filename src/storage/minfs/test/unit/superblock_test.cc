@@ -10,7 +10,8 @@
 #include <unistd.h>
 
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
@@ -19,7 +20,9 @@
 namespace minfs {
 namespace {
 
-using block_client::FakeBlockDevice;
+using ::block_client::FakeBlockDevice;
+using ::testing::_;
+
 constexpr size_t abm_block = 5;
 constexpr size_t ibm_block = 6;
 constexpr size_t data_block = 7;
@@ -47,9 +50,9 @@ class MockTransactionHandler : public fs::DeviceTransactionHandler {
 void CreateAndRegisterVmo(block_client::BlockDevice* device, size_t blocks, zx::vmo* vmo,
                           storage::OwnedVmoid* vmoid) {
   fuchsia_hardware_block_BlockInfo info = {};
-  ASSERT_OK(device->BlockGetInfo(&info));
-  ASSERT_OK(zx::vmo::create(blocks * info.block_size, 0, vmo));
-  ASSERT_OK(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)));
+  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(blocks * info.block_size, 0, vmo), ZX_OK);
+  ASSERT_EQ(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)), ZX_OK);
 }
 
 void FillSuperblockFields(Superblock* info) {
@@ -112,38 +115,38 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
   zx::vmo vmo;
   block_fifo_request_t request[2];
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
-  ASSERT_OK(vmo.write(block, 0, kMinfsBlockSize));
-  ASSERT_OK(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
+  ASSERT_EQ(vmo.write(block, 0, kMinfsBlockSize), ZX_OK);
+  ASSERT_EQ(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize), ZX_OK);
 
   // Write abm_block and ibm_block to disk.
   FillWriteRequest(transaction_handler.get(), abm_block, ibm_block, vmoid.get(), request);
 
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Reconstruct alloc_*_counts from respective bitmaps.
   zx_status_t status = ReconstructAllocCounts(transaction_handler.get(), &device, &info);
   ASSERT_EQ(status, ZX_OK);
 
   // Confirm that alloc_*_counts are updated correctly.
-  ASSERT_EQ(32, info.alloc_block_count);
-  ASSERT_EQ(32, info.alloc_inode_count);
+  ASSERT_EQ(info.alloc_block_count, 32u);
+  ASSERT_EQ(info.alloc_inode_count, 32u);
 
   // Write all bits unset for abm_block and ibm_block.
   memset(block, 0, sizeof(block));
 
   // Write the bitmaps to disk.
-  ASSERT_OK(vmo.write(block, 0, sizeof(block)));
-  ASSERT_OK(vmo.write(block, sizeof(block), sizeof(block)));
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(vmo.write(block, 0, sizeof(block)), ZX_OK);
+  ASSERT_EQ(vmo.write(block, sizeof(block), sizeof(block)), ZX_OK);
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Reconstruct alloc_*_counts from respective bitmaps.
   status = ReconstructAllocCounts(transaction_handler.get(), &device, &info);
   ASSERT_EQ(status, ZX_OK);
 
   // Confirm the alloc_*_counts are updated correctly.
-  ASSERT_EQ(0, info.alloc_block_count);
-  ASSERT_EQ(0, info.alloc_inode_count);
+  ASSERT_EQ(info.alloc_block_count, 0u);
+  ASSERT_EQ(info.alloc_inode_count, 0u);
 
   memset(block, 0, sizeof(block));
 
@@ -154,17 +157,17 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
   block[5000] = 0x2C;
 
   // Write the bitmaps on disk.
-  ASSERT_OK(vmo.write(block, 0, sizeof(block)));
-  ASSERT_OK(vmo.write(block, sizeof(block), sizeof(block)));
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(vmo.write(block, 0, sizeof(block)), ZX_OK);
+  ASSERT_EQ(vmo.write(block, sizeof(block), sizeof(block)), ZX_OK);
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Reconstruct alloc_*_counts from respective bitmaps.
   status = ReconstructAllocCounts(transaction_handler.get(), &device, &info);
   ASSERT_EQ(status, ZX_OK);
 
   // Confirm the alloc_*_counts are updated correctly.
-  ASSERT_EQ(11, info.alloc_block_count);
-  ASSERT_EQ(11, info.alloc_inode_count);
+  ASSERT_EQ(info.alloc_block_count, 11u);
+  ASSERT_EQ(info.alloc_inode_count, 11u);
 }
 
 // Tests corrupt superblock and corrupt backup superblock.
@@ -189,26 +192,26 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   block_fifo_request_t request[2];
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
-  ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
-  ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
+  ASSERT_EQ(vmo.write(&info, 0, kMinfsBlockSize), ZX_OK);
+  ASSERT_EQ(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize), ZX_OK);
 
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
                    vmoid.get(), request);
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Try to correct the corrupted superblock.
   zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
                                         info.dat_block + info.block_count, &info);
   ASSERT_NE(status, ZX_OK);
   // Read back the superblock and backup superblock.
-  ASSERT_OK(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info));
-  ASSERT_OK(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup));
+  ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
+  ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
 
   // Confirm that the superblock is not updated by backup.
-  ASSERT_BYTES_NE(&info, &backup, sizeof(backup));
+  ASSERT_NE(memcmp(&info, &backup, sizeof(backup)), 0);
   ASSERT_EQ(0xdeadbeef, info.format_version);
-  ASSERT_EQ(0x55, backup.format_version);
+  ASSERT_EQ(backup.format_version, 0x55u);
 }
 
 // Tests corrupt superblock and non-corrupt backup superblock.
@@ -230,23 +233,23 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   block_fifo_request_t request[2];
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
-  ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
-  ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
+  ASSERT_EQ(vmo.write(&info, 0, kMinfsBlockSize), ZX_OK);
+  ASSERT_EQ(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize), ZX_OK);
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
                    vmoid.get(), request);
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
   // Try to correct the corrupted superblock.
   zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
                                         info.dat_block + info.block_count, &info);
   ASSERT_EQ(status, ZX_OK);
 
   // Read back the superblock and backup superblock.
-  ASSERT_OK(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info));
-  ASSERT_OK(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup));
+  ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
+  ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
 
   // Confirm that the superblock is updated by backup.
-  ASSERT_BYTES_EQ(&info, &backup, sizeof(backup));
+  ASSERT_EQ(memcmp(&info, &backup, sizeof(backup)), 0);
 }
 
 // Tests if Repair of corrupted superblock reconstructs the bitmaps correctly.
@@ -266,12 +269,12 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   block_fifo_request_t request[2];
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
-  ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
-  ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
+  ASSERT_EQ(vmo.write(&info, 0, kMinfsBlockSize), ZX_OK);
+  ASSERT_EQ(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize), ZX_OK);
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
                    vmoid.get(), request);
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   uint8_t block[minfs::kMinfsBlockSize];
   memset(block, 0, sizeof(block));
@@ -283,10 +286,10 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   block[5000] = 0xFF;
 
   // Write abm_block and ibm_block to disk.
-  ASSERT_OK(vmo.write(block, 0, kMinfsBlockSize));
-  ASSERT_OK(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize));
+  ASSERT_EQ(vmo.write(block, 0, kMinfsBlockSize), ZX_OK);
+  ASSERT_EQ(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize), ZX_OK);
   FillWriteRequest(transaction_handler.get(), abm_block, ibm_block, vmoid.get(), request);
-  ASSERT_OK(device.FifoTransaction(request, 2));
+  ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Try to correct the corrupted superblock.
   zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
@@ -294,30 +297,30 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   ASSERT_EQ(status, ZX_OK);
 
   // Read back the superblock and backup superblock.
-  ASSERT_OK(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info));
-  ASSERT_OK(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup));
+  ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
+  ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
 
   // Confirm that alloc_*_counts are updated correctly in superblock and backup from bitmaps.
-  ASSERT_GT(info.alloc_block_count, 0);
-  ASSERT_GT(info.alloc_inode_count, 0);
-  ASSERT_GT(backup.alloc_block_count, 0);
-  ASSERT_GT(backup.alloc_inode_count, 0);
+  ASSERT_GT(info.alloc_block_count, 0u);
+  ASSERT_GT(info.alloc_inode_count, 0u);
+  ASSERT_GT(backup.alloc_block_count, 0u);
+  ASSERT_GT(backup.alloc_inode_count, 0u);
 }
 
 TEST(SuperblockTest, UnsupportedBlockSize) {
-  ASSERT_DEATH(([]() {
-    Superblock info = {};
-    info.block_size = kMinfsBlockSize - 1;
-    info.BlockSize();
-  }));
+  ASSERT_DEATH(
+      {
+        Superblock info = {};
+        info.block_size = kMinfsBlockSize - 1;
+        info.BlockSize();
+      },
+      _);
 }
 
 TEST(SuperblockTest, SupportedBlockSize) {
-  ASSERT_NO_DEATH(([]() {
-    Superblock info = {};
-    info.block_size = kMinfsBlockSize;
-    info.BlockSize();
-  }));
+  Superblock info = {};
+  info.block_size = kMinfsBlockSize;
+  info.BlockSize();
 }
 
 TEST(SuperblockTest, GetFvmFlag) {

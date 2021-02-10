@@ -9,13 +9,13 @@
 #include <memory>
 
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 
-class JournalIntegrationFixture : public zxtest::Test {
+class JournalIntegrationFixture : public testing::Test {
  public:
   static constexpr uint64_t kBlockCount = 1 << 15;
   static constexpr uint32_t kBlockSize = 512;

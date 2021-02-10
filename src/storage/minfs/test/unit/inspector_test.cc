@@ -12,7 +12,7 @@
 #include <disk_inspector/disk_inspector.h>
 #include <fbl/string_printf.h>
 #include <fs/journal/inspector_journal.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/inspector_inode.h"
 #include "src/storage/minfs/inspector_inode_table.h"
@@ -77,7 +77,7 @@ uint64_t GetUint64Value(const disk_inspector::DiskObject* object) {
   object->GetValue(&buffer, &size);
 
   if (size != sizeof(uint64_t)) {
-    ADD_FAILURE("Unexpected value size");
+    ADD_FAILURE() << "Unexpected value size";
     return 0;
   }
   return *reinterpret_cast<const uint64_t*>(buffer);
@@ -99,13 +99,13 @@ void RunSuperblockTest(SuperblockType version) {
   auto superblock = std::make_unique<SuperBlockObject>(sb, version);
   switch (version) {
     case SuperblockType::kPrimary:
-      ASSERT_STR_EQ(kSuperBlockName, superblock->GetName());
+      ASSERT_EQ(superblock->GetName(), std::string_view(kSuperBlockName));
       break;
     case SuperblockType::kBackup:
-      ASSERT_STR_EQ(kBackupSuperBlockName, superblock->GetName());
+      ASSERT_EQ(superblock->GetName(), std::string_view(kBackupSuperBlockName));
       break;
     default:
-      ADD_FATAL_FAILURE("Unexpected superblock type");
+      FAIL() << "Unexpected superblock type";
   }
   ASSERT_EQ(kSuperblockNumElements, superblock->GetNumElements());
 
@@ -138,21 +138,21 @@ TEST(InspectorTest, TestRoot) {
   auto fs = std::unique_ptr<MockMinfs>(new MockMinfs());
 
   std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
-  ASSERT_STR_EQ(kRootName, root_obj->GetName());
+  ASSERT_EQ(root_obj->GetName(), std::string_view(kRootName));
   ASSERT_EQ(kRootNumElements, root_obj->GetNumElements());
 
   // Superblock.
   std::unique_ptr<disk_inspector::DiskObject> obj0 = root_obj->GetElementAt(0);
-  ASSERT_STR_EQ(kSuperBlockName, obj0->GetName());
+  ASSERT_EQ(obj0->GetName(), std::string_view(kSuperBlockName));
   ASSERT_EQ(kSuperblockNumElements, obj0->GetNumElements());
 
   // Inode Table.
   std::unique_ptr<disk_inspector::DiskObject> obj1 = root_obj->GetElementAt(1);
-  ASSERT_STR_EQ(kInodeTableName, obj1->GetName());
+  ASSERT_EQ(obj1->GetName(), std::string_view(kInodeTableName));
 
   // Journal info.
   std::unique_ptr<disk_inspector::DiskObject> obj2 = root_obj->GetElementAt(2);
-  ASSERT_STR_EQ(fs::kJournalName, obj2->GetName());
+  ASSERT_EQ(obj2->GetName(), std::string_view(fs::kJournalName));
   ASSERT_EQ(fs::kJournalNumElements, obj2->GetNumElements());
 }
 
@@ -163,13 +163,13 @@ TEST(InspectorTest, TestInodeTable) {
   uint32_t inode_num = 3;
   std::unique_ptr<InodeTableObject> inode_mgr(
       new InodeTableObject(inode_table_obj.get(), allocated_num, inode_num));
-  ASSERT_STR_EQ(kInodeTableName, inode_mgr->GetName());
+  ASSERT_EQ(inode_mgr->GetName(), std::string_view(kInodeTableName));
   ASSERT_EQ(allocated_num, inode_mgr->GetNumElements());
 
   // The only allocated inode should be inode #1 as defined in |MockInodeManager::CheckAllocated|.
   std::unique_ptr<disk_inspector::DiskObject> obj0 = inode_mgr->GetElementAt(0);
   fbl::String name = fbl::StringPrintf("allocated #%d, inode #%d", 0, 1);
-  ASSERT_STR_EQ(name, obj0->GetName());
+  ASSERT_EQ(obj0->GetName(), name);
   ASSERT_EQ(kInodeNumElements, obj0->GetNumElements());
 }
 
@@ -186,7 +186,7 @@ TEST(InspectorTest, TestInode) {
   uint32_t inode_num = 4;
   std::unique_ptr<InodeObject> finodeObj(new InodeObject(allocated_num, inode_num, fileInode));
   fbl::String name = fbl::StringPrintf("allocated #%d, inode #%d", allocated_num, inode_num);
-  ASSERT_STR_EQ(name, finodeObj->GetName());
+  ASSERT_EQ(finodeObj->GetName(), name);
   ASSERT_EQ(kInodeNumElements, finodeObj->GetNumElements());
 
   size_t size;
@@ -198,15 +198,15 @@ TEST(InspectorTest, TestInode) {
 
   std::unique_ptr<disk_inspector::DiskObject> obj1 = finodeObj->GetElementAt(1);
   obj1->GetValue(&buffer, &size);
-  ASSERT_EQ(10, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(*(reinterpret_cast<const uint32_t*>(buffer)), 10u);
 
   std::unique_ptr<disk_inspector::DiskObject> obj2 = finodeObj->GetElementAt(2);
   obj2->GetValue(&buffer, &size);
-  ASSERT_EQ(2, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(*(reinterpret_cast<const uint32_t*>(buffer)), 2u);
 
   std::unique_ptr<disk_inspector::DiskObject> obj3 = finodeObj->GetElementAt(3);
   obj3->GetValue(&buffer, &size);
-  ASSERT_EQ(1, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(*(reinterpret_cast<const uint32_t*>(buffer)), 1u);
 }
 
 TEST(InspectorTest, CorrectJournalLocation) {
@@ -214,24 +214,24 @@ TEST(InspectorTest, CorrectJournalLocation) {
 
   // Format the device.
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
 
   std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_OK(minfs::Minfs::Create(std::move(bcache), options, &fs));
+  ASSERT_EQ(minfs::Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
 
   // Ensure the dirty bit is propagated to the device.
   sync_completion_t completion;
   fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+  ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   uint64_t journal_length = JournalBlocks(fs->Info());
   std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
 
   // Journal info.
   auto journalObj = root_obj->GetElementAt(2);
-  EXPECT_STR_EQ(fs::kJournalName, journalObj->GetName());
+  EXPECT_EQ(journalObj->GetName(), std::string_view(fs::kJournalName));
   ASSERT_EQ(fs::kJournalNumElements, journalObj->GetNumElements());
 
   // Check if journal magic is correct.
@@ -240,7 +240,7 @@ TEST(InspectorTest, CorrectJournalLocation) {
 
   // Access journal entries.
   auto entries = journalObj->GetElementAt(5);
-  EXPECT_STR_EQ(fs::kJournalEntriesName, entries->GetName());
+  EXPECT_EQ(entries->GetName(), std::string_view(fs::kJournalEntriesName));
   ASSERT_EQ(journal_length - fs::kJournalMetadataBlocks, entries->GetNumElements());
 
   // Parse the header block.
@@ -248,37 +248,37 @@ TEST(InspectorTest, CorrectJournalLocation) {
   // Warning: This has tight coupling with the dirty bit and backup superblock.
   // To ensure this exists on the journal, we invoked sync earlier in the test.
   auto block = entries->GetElementAt(0);
-  EXPECT_STR_EQ("Journal[0]: Header", block->GetName());
+  EXPECT_EQ(block->GetName(), std::string_view("Journal[0]: Header"));
   {
     auto entryMagic = block->GetElementAt(0);
-    EXPECT_STR_EQ("magic", entryMagic->GetName());
+    EXPECT_EQ(entryMagic->GetName(), std::string_view("magic"));
     ASSERT_EQ(fs::kJournalEntryMagic, GetUint64Value(entryMagic.get()));
 
     auto payload_blocks = block->GetElementAt(4);
-    EXPECT_STR_EQ("payload blocks", payload_blocks->GetName());
-    ASSERT_EQ(2, GetUint64Value(payload_blocks.get()));
+    EXPECT_EQ(payload_blocks->GetName(), std::string_view("payload blocks"));
+    ASSERT_EQ(GetUint64Value(payload_blocks.get()), 2ul);
 
     auto target_block = block->GetElementAt(5);
-    EXPECT_STR_EQ("target block", target_block->GetName());
+    EXPECT_EQ(target_block->GetName(), std::string_view("target block"));
     EXPECT_EQ(kSuperblockStart, GetUint64Value(target_block.get()));
 
     target_block = block->GetElementAt(6);
-    EXPECT_STR_EQ("target block", target_block->GetName());
+    EXPECT_EQ(target_block->GetName(), std::string_view("target block"));
     EXPECT_EQ(kNonFvmSuperblockBackup, GetUint64Value(target_block.get()));
 
-    EXPECT_NULL(block->GetElementAt(7));
+    EXPECT_EQ(block->GetElementAt(7), nullptr);
   }
 
   // Parse the journal entries.
   block = entries->GetElementAt(1);
-  EXPECT_STR_EQ("Journal[1]: Block", block->GetName());
+  EXPECT_EQ(block->GetName(), std::string_view("Journal[1]: Block"));
 
   block = entries->GetElementAt(2);
-  EXPECT_STR_EQ("Journal[2]: Block", block->GetName());
+  EXPECT_EQ(block->GetName(), std::string_view("Journal[2]: Block"));
 
   // Parse the commit block.
   block = entries->GetElementAt(3);
-  EXPECT_STR_EQ("Journal[3]: Commit", block->GetName());
+  EXPECT_EQ(block->GetName(), std::string_view("Journal[3]: Commit"));
 }
 
 // Currently, the only difference between this test and TestSuperblock is that

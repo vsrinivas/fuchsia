@@ -6,13 +6,16 @@
 
 #include <fs/journal/format.h>
 #include <fs/transaction/transaction_handler.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
-#include <zxtest/zxtest.h>
 
 #include "src/storage/minfs/format.h"
 
 namespace minfs {
 namespace {
+
+using ::testing::_;
 
 class MockTransactionHandler : public fs::TransactionHandler {
  public:
@@ -47,13 +50,13 @@ class MockTransactionHandler : public fs::TransactionHandler {
   }
 
   void ValidateOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) {
-    ASSERT_NOT_NULL(mock_device_);
-    ASSERT_GE(buffer->capacity(), operation.vmo_offset + operation.length,
-              "Operation goes past input buffer length\n");
-    ASSERT_GE(mock_device_->capacity(), operation.dev_offset + operation.length,
-              "Operation goes past device buffer length\n");
+    ASSERT_NE(mock_device_, nullptr);
+    ASSERT_GE(buffer->capacity(), operation.vmo_offset + operation.length)
+        << "Operation goes past input buffer length";
+    ASSERT_GE(mock_device_->capacity(), operation.dev_offset + operation.length)
+        << "Operation goes past device buffer length";
 
-    ASSERT_NE(operation.type, storage::OperationType::kTrim, "Trim operation is not supported\n");
+    ASSERT_NE(operation.type, storage::OperationType::kTrim) << "Trim operation is not supported";
   }
 
  private:
@@ -74,8 +77,8 @@ TEST(InspectorLoader, LoadSuperblock) {
   Loader loader(&handler);
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
-  ASSERT_OK(loader.LoadSuperblock(start_block, &client_buffer));
-  EXPECT_BYTES_EQ(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length);
+  ASSERT_EQ(loader.LoadSuperblock(start_block, &client_buffer), ZX_OK);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length), 0);
 }
 
 TEST(InspectorLoader, LoadInodeBitmap) {
@@ -92,8 +95,8 @@ TEST(InspectorLoader, LoadInodeBitmap) {
   Loader loader(&handler);
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
-  ASSERT_OK(loader.LoadInodeBitmap(superblock, &client_buffer));
-  EXPECT_BYTES_EQ(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length);
+  ASSERT_EQ(loader.LoadInodeBitmap(superblock, &client_buffer), ZX_OK);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length), 0);
 }
 
 TEST(InspectorLoader, LoadInodeTable) {
@@ -116,8 +119,8 @@ TEST(InspectorLoader, LoadInodeTable) {
   superblock.integrity_start_block = start_block + block_length;
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
-  ASSERT_OK(loader.LoadInodeTable(superblock, &client_buffer));
-  EXPECT_BYTES_EQ(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length);
+  ASSERT_EQ(loader.LoadInodeTable(superblock, &client_buffer), ZX_OK);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length), 0);
 }
 
 TEST(InspectorLoader, LoadJournal) {
@@ -139,9 +142,10 @@ TEST(InspectorLoader, LoadJournal) {
   superblock.dat_block = start_block + device_length;
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
-  ASSERT_OK(loader.LoadJournal(superblock, &client_buffer));
-  EXPECT_BYTES_EQ(client_buffer.Data(0), device.Data(kBackupSuperblockBlocks),
-                  kMinfsBlockSize * block_length);
+  ASSERT_EQ(loader.LoadJournal(superblock, &client_buffer), ZX_OK);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(kBackupSuperblockBlocks),
+                   kMinfsBlockSize * block_length),
+            0);
 }
 
 TEST(InspectorLoader, RunReadOperation) {
@@ -157,14 +161,14 @@ TEST(InspectorLoader, RunReadOperation) {
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
   memset(client_buffer.Data(0), 'd', client_buffer.capacity() * device.BlockSize());
-  ASSERT_OK(loader.RunReadOperation(&client_buffer, 0, 0, 1));
-  ASSERT_OK(loader.RunReadOperation(&client_buffer, 2, 2, 1));
+  ASSERT_EQ(loader.RunReadOperation(&client_buffer, 0, 0, 1), ZX_OK);
+  ASSERT_EQ(loader.RunReadOperation(&client_buffer, 2, 2, 1), ZX_OK);
 
   storage::ArrayBuffer expected(block_length, kMinfsBlockSize);
   memset(expected.Data(0), 'a', expected.BlockSize());
   memset(expected.Data(1), 'd', expected.BlockSize());
   memset(expected.Data(2), 'c', expected.BlockSize());
-  EXPECT_BYTES_EQ(client_buffer.Data(0), expected.Data(0), kMinfsBlockSize * block_length);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), expected.Data(0), kMinfsBlockSize * block_length), 0);
 }
 
 TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
@@ -176,11 +180,8 @@ TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
 
   storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
 
-  ASSERT_DEATH(([&] {
-                 // Buffer too small. Should assert crash here.
-                 loader.RunReadOperation(&client_buffer, 0, 0, block_length);
-               }),
-               "Failed to crash on buffer too small\n");
+  // Buffer too small. Should assert crash here.
+  ASSERT_DEATH(loader.RunReadOperation(&client_buffer, 0, 0, block_length), _);
 }
 
 TEST(InspectorLoader, RunWriteOperation) {
@@ -196,14 +197,14 @@ TEST(InspectorLoader, RunWriteOperation) {
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
   memset(client_buffer.Data(0), 'd', client_buffer.capacity() * device.BlockSize());
-  ASSERT_OK(loader.RunWriteOperation(&client_buffer, 0, 0, 1));
-  ASSERT_OK(loader.RunWriteOperation(&client_buffer, 2, 2, 1));
+  ASSERT_EQ(loader.RunWriteOperation(&client_buffer, 0, 0, 1), ZX_OK);
+  ASSERT_EQ(loader.RunWriteOperation(&client_buffer, 2, 2, 1), ZX_OK);
 
   storage::ArrayBuffer expected(block_length, kMinfsBlockSize);
   memset(expected.Data(0), 'd', expected.BlockSize());
   memset(expected.Data(1), 'b', expected.BlockSize());
   memset(expected.Data(2), 'd', expected.BlockSize());
-  EXPECT_BYTES_EQ(device.Data(0), expected.Data(0), kMinfsBlockSize * block_length);
+  EXPECT_EQ(memcmp(device.Data(0), expected.Data(0), kMinfsBlockSize * block_length), 0);
 }
 
 TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
@@ -215,11 +216,8 @@ TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
 
   storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
 
-  ASSERT_DEATH(([&] {
-                 // Buffer too small. Should assert crash here.
-                 loader.RunWriteOperation(&client_buffer, 0, 0, block_length);
-               }),
-               "Failed to crash on buffer too small\n");
+  // Buffer too small. Should assert crash here.
+  ASSERT_DEATH(loader.RunWriteOperation(&client_buffer, 0, 0, block_length), _);
 }
 
 }  // namespace

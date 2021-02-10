@@ -4,7 +4,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/file.h"
 #include "src/storage/minfs/format.h"
@@ -21,11 +21,11 @@ class JournalIntegrationTest : public JournalIntegrationFixture {
   // storage.
   void PerformOperation(Minfs* fs) override {
     fbl::RefPtr<VnodeMinfs> root;
-    ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+    ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
 
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_OK(root->Create("foo", 0, &child));
-    ASSERT_OK(child->Close());
+    ASSERT_EQ(root->Create("foo", 0, &child), ZX_OK);
+    ASSERT_EQ(child->Close(), ZX_OK);
   }
 };
 
@@ -39,16 +39,17 @@ constexpr uint64_t kCreateEntryCutoff = 4 * JournalIntegrationTest::kDiskBlocksP
 
 TEST_F(JournalIntegrationTest, FsckWithRepairDoesReplayJournal) {
   auto bcache = CutOffDevice(write_count() - kCreateEntryCutoff);
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 
   // We should be able to re-run fsck with the same results, with or without repairing.
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache), ZX_OK);
 }
 
 TEST_F(JournalIntegrationTest, FsckWithReadOnlyDoesNotReplayJournal) {
   auto bcache = CutOffDevice(write_count() - kCreateEntryCutoff);
-  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache));
+  EXPECT_NE(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache),
+            ZX_OK);
 }
 
 TEST_F(JournalIntegrationTest, CreateWithRepairDoesReplayJournal) {
@@ -56,9 +57,9 @@ TEST_F(JournalIntegrationTest, CreateWithRepairDoesReplayJournal) {
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  EXPECT_OK(Minfs::Create(std::move(bcache), options, &fs));
+  EXPECT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
   bcache = Minfs::Destroy(std::move(fs));
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions(), &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions(), &bcache), ZX_OK);
 }
 
 class JournalUnlinkTest : public JournalIntegrationFixture {
@@ -67,15 +68,15 @@ class JournalUnlinkTest : public JournalIntegrationFixture {
   // unlinked vnode remains alive.
   void PerformOperation(Minfs* fs) override {
     fbl::RefPtr<VnodeMinfs> root;
-    ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+    ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
 
     fbl::RefPtr<fs::Vnode> foo, bar, baz;
-    ASSERT_OK(root->Create("foo", 0, &foo));
-    ASSERT_OK(root->Create("bar", 0, &bar));
-    ASSERT_OK(root->Create("baz", 0, &baz));
-    ASSERT_OK(root->Unlink("foo", false));
-    ASSERT_OK(root->Unlink("bar", false));
-    ASSERT_OK(root->Unlink("baz", false));
+    ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
+    ASSERT_EQ(root->Create("bar", 0, &bar), ZX_OK);
+    ASSERT_EQ(root->Create("baz", 0, &baz), ZX_OK);
+    ASSERT_EQ(root->Unlink("foo", false), ZX_OK);
+    ASSERT_EQ(root->Unlink("bar", false), ZX_OK);
+    ASSERT_EQ(root->Unlink("baz", false), ZX_OK);
 
     RecordWriteCount(fs);
 
@@ -97,42 +98,43 @@ constexpr uint64_t kUnlinkCutoff = 3 * JournalUnlinkTest::kDiskBlocksPerFsBlock;
 
 TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
   auto bcache = CutOffDevice(write_count() - kUnlinkCutoff);
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 
   // We should be able to re-run fsck with the same results, with or without repairing.
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache), ZX_OK);
 }
 
 TEST_F(JournalUnlinkTest, ReadOnlyFsckDoesNotReplayJournal) {
   auto bcache = CutOffDevice(write_count() - kUnlinkCutoff);
-  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache));
+  EXPECT_NE(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache),
+            ZX_OK);
 }
 
 class JournalGrowFvmTest : public JournalIntegrationFixture {
  private:
   void PerformOperation(Minfs* fs) override {
     fbl::RefPtr<VnodeMinfs> root;
-    ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+    ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
     fbl::RefPtr<fs::Vnode> foo, bar, baz;
-    ASSERT_OK(root->Create("foo", 0, &foo));
+    ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
     // Write to a file until we cause an FVM extension.
     std::vector<uint8_t> buf(TransactionLimits::kMaxWriteBytes);
     size_t done = 0;
     uint32_t slices = fs->Info().dat_slices;
     while (fs->Info().dat_slices == slices) {
       size_t written;
-      ASSERT_OK(foo->Write(buf.data(), buf.size(), done, &written));
+      ASSERT_EQ(foo->Write(buf.data(), buf.size(), done, &written), ZX_OK);
       ASSERT_EQ(written, buf.size());
       done += written;
     }
-    ASSERT_OK(foo->Close());
+    ASSERT_EQ(foo->Close(), ZX_OK);
     // The infrastructure relies on the number of blocks written to block device
     // to function properly. Sync here ensures that what was written in this
     // function gets persisted to underlying block device.
     sync_completion_t completion;
     fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-    ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+    ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
   }
 };
 
@@ -141,19 +143,19 @@ constexpr uint64_t kGrowFvmCutoff = 32 * JournalGrowFvmTest::kDiskBlocksPerFsBlo
 
 TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
   auto bcache = CutOffDevice(write_count());
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
   std::unique_ptr<Minfs> fs;
-  ASSERT_OK(Minfs::Create(std::move(bcache), MountOptions(), &fs));
-  EXPECT_EQ(2, fs->Info().dat_slices);  // We expect the increased size.
+  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions(), &fs), ZX_OK);
+  EXPECT_EQ(fs->Info().dat_slices, 2u);  // We expect the increased size.
 }
 
 TEST_F(JournalGrowFvmTest, GrowingWithNoReplaySucceeds) {
   // In this test, 1 fewer block means the replay will fail.
   auto bcache = CutOffDevice(write_count() - kGrowFvmCutoff - kDiskBlocksPerFsBlock);
-  EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
   std::unique_ptr<Minfs> fs;
-  ASSERT_OK(Minfs::Create(std::move(bcache), MountOptions(), &fs));
-  EXPECT_EQ(1, fs->Info().dat_slices);  // We expect the old, smaller size.
+  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions(), &fs), ZX_OK);
+  EXPECT_EQ(fs->Info().dat_slices, 1u);  // We expect the old, smaller size.
 }
 
 // It is not safe for data writes to go to freed blocks until the metadata that frees them has been
@@ -165,39 +167,39 @@ TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, 512);
   block_client::FakeBlockDevice* device_ptr = device.get();
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_OK(Minfs::Create(std::move(bcache), options, &fs));
+  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
 
   // Create a file and make it allocate 1 block.
   fbl::RefPtr<VnodeMinfs> root;
-  ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+  ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
   fbl::RefPtr<fs::Vnode> foo;
-  ASSERT_OK(root->Create("foo", 0, &foo));
-  auto close = fbl::MakeAutoCall([foo]() { ASSERT_OK(foo->Close()); });
+  ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
+  auto close = fbl::MakeAutoCall([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
   std::vector<uint8_t> buf(10, 0xaf);
   size_t written;
-  ASSERT_OK(foo->Write(buf.data(), buf.size(), 0, &written));
+  ASSERT_EQ(foo->Write(buf.data(), buf.size(), 0, &written), ZX_OK);
   sync_completion_t completion;
   foo->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+  ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
   ASSERT_EQ(written, buf.size());
 
   // Make a note of which block was allocated.
   auto foo_file = fbl::RefPtr<File>::Downcast(foo);
   blk_t block = foo_file->GetInode()->dnum[0];
-  EXPECT_NE(0, block);
+  EXPECT_NE(block, 0u);
 
   // Pause writes now.
   device_ptr->Pause();
 
   // Truncate the file which should cause the block to be released.
-  ASSERT_OK(foo->Truncate(0));
+  ASSERT_EQ(foo->Truncate(0), ZX_OK);
 
   // Write to the file again and make sure it gets written to a different block.
-  ASSERT_OK(foo->Write(buf.data(), buf.size(), 0, &written));
+  ASSERT_EQ(foo->Write(buf.data(), buf.size(), 0, &written), ZX_OK);
   ASSERT_EQ(written, buf.size());
 
   // The block that was allocated should be different.

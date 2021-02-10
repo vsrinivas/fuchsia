@@ -39,13 +39,15 @@ test("minfs_unit") {
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
+    "//src/lib/fxl/test:gtest_main",
     "//src/storage/fvm",
     "//src/storage/minfs",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
@@ -54,7 +56,6 @@ test("minfs_unit") {
     "//zircon/system/ulib/fs-management",
     "//zircon/third_party/ulib/cksum",
   ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 test("minfs-integration") {
@@ -200,6 +201,7 @@ isolated_devmgr_unittest_v2_component("minfs-power-test") {
 
 fuchsia_unittest_component("minfs-unit-test") {
   deps = [ ":minfs_unit" ]
+  manifest = "meta/minfs_unit_test.cml"
 }
 
 isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {

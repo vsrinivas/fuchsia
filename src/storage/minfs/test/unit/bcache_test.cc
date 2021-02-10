@@ -5,8 +5,8 @@
 #include "src/storage/minfs/bcache.h"
 
 #include <block-client/cpp/fake-device.h>
+#include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
-#include <zxtest/zxtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs.h"
@@ -46,14 +46,14 @@ class MockBlockDevice : public FakeBlockDevice {
   bool called_ = false;
 };
 
-class BcacheTest : public zxtest::Test {
+class BcacheTestWithMockDevice : public testing::Test {
  public:
   void SetUp() final {
     auto device = std::make_unique<MockBlockDevice>();
     ASSERT_TRUE(device);
     device_ = device.get();
 
-    ASSERT_OK(Bcache::Create(std::move(device), kNumBlocks, &bcache_));
+    ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache_), ZX_OK);
   }
 
  protected:
@@ -61,15 +61,15 @@ class BcacheTest : public zxtest::Test {
   std::unique_ptr<Bcache> bcache_;
 };
 
-TEST_F(BcacheTest, GetDevice) { ASSERT_EQ(device_, bcache_->GetDevice()); }
+TEST_F(BcacheTestWithMockDevice, GetDevice) { ASSERT_EQ(device_, bcache_->GetDevice()); }
 
-TEST_F(BcacheTest, BlockNumberToDevice) {
+TEST_F(BcacheTestWithMockDevice, BlockNumberToDevice) {
   ASSERT_EQ(42 * kMinfsBlockSize / kBlockSize, bcache_->BlockNumberToDevice(42));
 }
 
-TEST_F(BcacheTest, RunOperation) {
+TEST_F(BcacheTestWithMockDevice, RunOperation) {
   storage::VmoBuffer buffer;
-  ASSERT_OK(buffer.Initialize(bcache_.get(), 1, kMinfsBlockSize, "source"));
+  ASSERT_EQ(buffer.Initialize(bcache_.get(), 1, kMinfsBlockSize, "source"), ZX_OK);
 
   const uint64_t kVmoOffset = 1234;
   const uint64_t kDeviceOffset = 42;
@@ -81,10 +81,10 @@ TEST_F(BcacheTest, RunOperation) {
   operation.dev_offset = kDeviceOffset;
   operation.length = kLength;
 
-  ASSERT_OK(bcache_->RunOperation(operation, &buffer));
+  ASSERT_EQ(bcache_->RunOperation(operation, &buffer), ZX_OK);
 
   block_fifo_request_t request = device_->request();
-  ASSERT_EQ(BLOCKIO_WRITE, request.opcode);
+  ASSERT_EQ(request.opcode, unsigned{BLOCKIO_WRITE});
   ASSERT_EQ(buffer.vmoid(), request.vmoid);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kVmoOffset), request.vmo_offset);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kDeviceOffset), request.dev_offset);
@@ -93,10 +93,10 @@ TEST_F(BcacheTest, RunOperation) {
   operation.type = storage::OperationType::kRead;
   device_->Reset();
 
-  ASSERT_OK(bcache_->RunOperation(operation, &buffer));
+  ASSERT_EQ(bcache_->RunOperation(operation, &buffer), ZX_OK);
 
   request = device_->request();
-  ASSERT_EQ(BLOCKIO_READ, request.opcode);
+  ASSERT_EQ(request.opcode, unsigned{BLOCKIO_READ});
   ASSERT_EQ(buffer.vmoid(), request.vmoid);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kVmoOffset), request.vmo_offset);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kDeviceOffset), request.dev_offset);
@@ -106,27 +106,27 @@ TEST_F(BcacheTest, RunOperation) {
 TEST(BcacheTest, WriteblkThenReadblk) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kNumBlocks, &bcache));
+  ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache), ZX_OK);
   std::unique_ptr<uint8_t[]> source_buffer(new uint8_t[kMinfsBlockSize]);
 
   // Write 'a' to block 1.
   memset(source_buffer.get(), 'a', kMinfsBlockSize);
-  ASSERT_OK(bcache->Writeblk(1, source_buffer.get()));
+  ASSERT_EQ(bcache->Writeblk(1, source_buffer.get()), ZX_OK);
 
   // Write 'b' to block 2.
   memset(source_buffer.get(), 'b', kMinfsBlockSize);
-  ASSERT_OK(bcache->Writeblk(2, source_buffer.get()));
+  ASSERT_EQ(bcache->Writeblk(2, source_buffer.get()), ZX_OK);
 
   std::unique_ptr<uint8_t[]> destination_buffer(new uint8_t[kMinfsBlockSize]);
   // Read 'a' from block 1.
   memset(source_buffer.get(), 'a', kMinfsBlockSize);
-  ASSERT_OK(bcache->Readblk(1, destination_buffer.get()));
-  EXPECT_BYTES_EQ(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize);
+  ASSERT_EQ(bcache->Readblk(1, destination_buffer.get()), ZX_OK);
+  EXPECT_EQ(memcmp(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize), 0);
 
   // Read 'b' from block 2.
   memset(source_buffer.get(), 'b', kMinfsBlockSize);
-  ASSERT_OK(bcache->Readblk(2, destination_buffer.get()));
-  EXPECT_BYTES_EQ(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize);
+  ASSERT_EQ(bcache->Readblk(2, destination_buffer.get()), ZX_OK);
+  EXPECT_EQ(memcmp(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize), 0);
 }
 
 }  // namespace

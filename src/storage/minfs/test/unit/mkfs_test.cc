@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
@@ -23,17 +23,18 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
 
   // Format the device.
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
 
   // Before re-formatting, fill the journal with sentinel pages.
   Superblock superblock = {};
-  ASSERT_OK(LoadSuperblock(bcache.get(), &superblock));
+  ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
   std::unique_ptr<uint8_t[]> sentinel(new uint8_t[kMinfsBlockSize]);
   memset(sentinel.get(), 'a', kMinfsBlockSize);
   storage::VmoBuffer buffer;
-  ASSERT_OK(buffer.Initialize(bcache.get(), JournalBlocks(superblock), kMinfsBlockSize,
-                              "journal-buffer"));
+  ASSERT_EQ(
+      buffer.Initialize(bcache.get(), JournalBlocks(superblock), kMinfsBlockSize, "journal-buffer"),
+      ZX_OK);
   for (size_t i = 0; i < JournalBlocks(superblock); i++) {
     memcpy(buffer.Data(i), sentinel.get(), kMinfsBlockSize);
   }
@@ -42,14 +43,14 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   operation.vmo_offset = 0;
   operation.dev_offset = JournalStartBlock(superblock);
   operation.length = JournalBlocks(superblock);
-  ASSERT_OK(bcache->RunOperation(operation, &buffer));
+  ASSERT_EQ(bcache->RunOperation(operation, &buffer), ZX_OK);
 
   // Format the device. We expect this to clear the sentinel pages.
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
 
   // Verify the superblock has the correct versions.
   Superblock new_superblock = {};
-  ASSERT_OK(LoadSuperblock(bcache.get(), &new_superblock));
+  ASSERT_EQ(LoadSuperblock(bcache.get(), &new_superblock), ZX_OK);
   EXPECT_EQ(kMinfsCurrentFormatVersion, new_superblock.format_version);
   EXPECT_EQ(kMinfsCurrentRevision, new_superblock.oldest_revision);
 
@@ -59,11 +60,11 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   operation.vmo_offset = 0;
   operation.dev_offset = JournalStartBlock(superblock);
   operation.length = JournalBlocks(superblock);
-  ASSERT_OK(bcache->RunOperation(operation, &buffer));
+  ASSERT_EQ(bcache->RunOperation(operation, &buffer), ZX_OK);
   std::unique_ptr<uint8_t[]> expected_buffer(new uint8_t[kMinfsBlockSize]);
   memset(expected_buffer.get(), 0, kMinfsBlockSize);
   for (size_t i = fs::kJournalMetadataBlocks; i < JournalBlocks(superblock); i++) {
-    EXPECT_BYTES_EQ(buffer.Data(i), expected_buffer.get(), kMinfsBlockSize);
+    EXPECT_EQ(memcmp(buffer.Data(i), expected_buffer.get(), kMinfsBlockSize), 0);
   }
 }
 

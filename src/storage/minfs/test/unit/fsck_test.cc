@@ -13,8 +13,8 @@
 #include <fbl/auto_call.h>
 #include <fs-management/mount.h>
 #include <fs/journal/format.h>
+#include <gtest/gtest.h>
 #include <safemath/checked_math.h>
-#include <zxtest/zxtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
@@ -27,7 +27,7 @@ using block_client::FakeBlockDevice;
 constexpr uint64_t kBlockCount = 1 << 20;
 constexpr uint32_t kBlockSize = 512;
 
-class ConsistencyCheckerFixture : public zxtest::Test {
+class ConsistencyCheckerFixture : public testing::Test {
  public:
   void SetUp() override { device_ = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize); }
 
@@ -42,43 +42,43 @@ using ConsistencyCheckerTest = ConsistencyCheckerFixture;
 TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemWithRepair) {
   auto device = take_device();
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
-  ASSERT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}), ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemWithoutRepair) {
   auto device = take_device();
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
-  ASSERT_OK(Fsck(std::move(bcache), FsckOptions()));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bcache), FsckOptions()), ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemCheckAfterMount) {
   auto device = take_device();
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_OK(Minfs::Create(std::move(bcache), options, &fs));
+  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
   bcache = Minfs::Destroy(std::move(fs));
-  ASSERT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}));
+  ASSERT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}), ZX_OK);
 }
 
-class ConsistencyCheckerFixtureVerbose : public zxtest::Test {
+class ConsistencyCheckerFixtureVerbose : public testing::Test {
  public:
   void SetUp() override {
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
     std::unique_ptr<Bcache> bcache;
-    EXPECT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
-    EXPECT_OK(Mkfs(bcache.get()));
+    EXPECT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+    EXPECT_EQ(Mkfs(bcache.get()), ZX_OK);
     MountOptions options = {};
 
-    EXPECT_OK(Minfs::Create(std::move(bcache), options, &fs_));
+    EXPECT_EQ(Minfs::Create(std::move(bcache), options, &fs_), ZX_OK);
   }
 
   Minfs* get_fs() const { return fs_.get(); }
@@ -86,33 +86,33 @@ class ConsistencyCheckerFixtureVerbose : public zxtest::Test {
   void destroy_fs(std::unique_ptr<Bcache>* bcache) {
     sync_completion_t completion;
     fs_->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-    EXPECT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+    EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
     *bcache = Minfs::Destroy(std::move(fs_));
   }
 
   fs::VnodeAttributes CreateAndWrite(const char* name, size_t truncate_size, size_t offset,
                                      size_t data_size) {
     fbl::RefPtr<VnodeMinfs> root;
-    EXPECT_OK(fs_->VnodeGet(&root, kMinfsRootIno));
+    EXPECT_EQ(fs_->VnodeGet(&root, kMinfsRootIno), ZX_OK);
     fbl::RefPtr<fs::Vnode> child;
-    EXPECT_OK(root->Create(name, 0, &child));
+    EXPECT_EQ(root->Create(name, 0, &child), ZX_OK);
     if (data_size != 0) {
       char data[data_size];
       memset(data, 0, data_size);
       size_t size_written;
-      EXPECT_OK(child->Write(data, data_size, offset, &size_written));
+      EXPECT_EQ(child->Write(data, data_size, offset, &size_written), ZX_OK);
       EXPECT_EQ(size_written, data_size);
     }
     if (truncate_size > 0) {
-      EXPECT_OK(child->Truncate(truncate_size));
+      EXPECT_EQ(child->Truncate(truncate_size), ZX_OK);
     }
     fs::VnodeAttributes stat;
-    EXPECT_OK(child->GetAttributes(&stat));
-    EXPECT_OK(child->Close());
+    EXPECT_EQ(child->GetAttributes(&stat), ZX_OK);
+    EXPECT_EQ(child->Close(), ZX_OK);
     return stat;
   }
 
-  void TearDown() override { EXPECT_NULL(fs_.get()); }
+  void TearDown() override { EXPECT_EQ(fs_.get(), nullptr); }
   Minfs& fs() { return *fs_; }
   std::unique_ptr<Minfs> TakeFs() { return std::move(fs_); }
 
@@ -144,28 +144,28 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoInodesPointToABlock) {
   destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
+  EXPECT_EQ(bcache->Readblk(0, &sb), ZX_OK);
 
   Inode inodes[kMinfsInodesPerBlock];
   blk_t inode_block =
       safemath::checked_cast<uint32_t>(sb.ino_block + (file1_stat.inode / kMinfsInodesPerBlock));
-  EXPECT_OK(bcache->Readblk(inode_block, &inodes));
+  EXPECT_EQ(bcache->Readblk(inode_block, &inodes), ZX_OK);
 
   size_t file1_ino = file1_stat.inode % kMinfsInodesPerBlock;
   size_t file2_ino = file2_stat.inode % kMinfsInodesPerBlock;
 
   // The test code has hard dependency on filesystem layout.
   // TODO(fxbug.dev/39741): Isolate this test from the on-disk format.
-  EXPECT_GT(inodes[file1_ino].dnum[0], 0);
-  EXPECT_EQ(inodes[file2_ino].dnum[0], 0);
+  EXPECT_GT(inodes[file1_ino].dnum[0], 0u);
+  EXPECT_EQ(inodes[file2_ino].dnum[0], 0u);
 
   // Make second file to point to the block owned by first file.
   inodes[file2_ino].dnum[0] = inodes[file1_ino].dnum[0];
   inodes[file2_ino].block_count = inodes[file1_ino].block_count;
   inodes[file2_ino].size = inodes[file1_ino].size;
-  EXPECT_OK(bcache->Writeblk(inode_block, inodes));
+  EXPECT_EQ(bcache->Writeblk(inode_block, inodes), ZX_OK);
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
@@ -176,23 +176,23 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
   destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
+  EXPECT_EQ(bcache->Readblk(0, &sb), ZX_OK);
 
   Inode inodes[kMinfsInodesPerBlock];
   blk_t inode_block =
       safemath::checked_cast<uint32_t>(sb.ino_block + (file_stat.inode / kMinfsInodesPerBlock));
-  EXPECT_OK(bcache->Readblk(inode_block, &inodes));
+  EXPECT_EQ(bcache->Readblk(inode_block, &inodes), ZX_OK);
 
   size_t file_ino = file_stat.inode % kMinfsInodesPerBlock;
 
-  EXPECT_GT(inodes[file_ino].dnum[0], 0);
-  EXPECT_EQ(inodes[file_ino].dnum[1], 0);
+  EXPECT_GT(inodes[file_ino].dnum[0], 0u);
+  EXPECT_EQ(inodes[file_ino].dnum[1], 0u);
 
   // Make second block offset point to the first block.
   inodes[file_ino].dnum[1] = inodes[file_ino].dnum[0];
-  EXPECT_OK(bcache->Writeblk(inode_block, inodes));
+  EXPECT_EQ(bcache->Writeblk(inode_block, inodes), ZX_OK);
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
@@ -205,27 +205,27 @@ TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
   destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
+  EXPECT_EQ(bcache->Readblk(0, &sb), ZX_OK);
 
   Inode inodes[kMinfsInodesPerBlock];
   blk_t inode_block =
       safemath::checked_cast<uint32_t>(sb.ino_block + (file_stat.inode / kMinfsInodesPerBlock));
-  EXPECT_OK(bcache->Readblk(inode_block, &inodes));
+  EXPECT_EQ(bcache->Readblk(inode_block, &inodes), ZX_OK);
 
   size_t file_ino = file_stat.inode % kMinfsInodesPerBlock;
 
-  EXPECT_GT(inodes[file_ino].dnum[0], 0);
-  EXPECT_EQ(inodes[file_ino].dnum[1], 0);
-  EXPECT_EQ(inodes[file_ino].inum[0], 0);
-  EXPECT_EQ(inodes[file_ino].dinum[0], 0);
+  EXPECT_GT(inodes[file_ino].dnum[0], 0u);
+  EXPECT_EQ(inodes[file_ino].dnum[1], 0u);
+  EXPECT_EQ(inodes[file_ino].inum[0], 0u);
+  EXPECT_EQ(inodes[file_ino].dinum[0], 0u);
 
   // Make various indirect blocks to point to the data block.
   inodes[file_ino].dnum[1] = inodes[file_ino].dnum[0];
   inodes[file_ino].inum[0] = inodes[file_ino].dnum[0];
   inodes[file_ino].dinum[0] = inodes[file_ino].dnum[0];
-  EXPECT_OK(bcache->Writeblk(inode_block, inodes));
+  EXPECT_EQ(bcache->Writeblk(inode_block, inodes), ZX_OK);
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 }
 
 void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(size_t offset,
@@ -233,7 +233,7 @@ void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(size_t offset,
   blk_t root_dir_block;
   {
     fbl::RefPtr<VnodeMinfs> root;
-    EXPECT_OK(fs_->VnodeGet(&root, kMinfsRootIno));
+    EXPECT_EQ(fs_->VnodeGet(&root, kMinfsRootIno), ZX_OK);
     root_dir_block = root->GetInode()->dnum[0] + fs().Info().dat_block;
   }
 
@@ -242,23 +242,23 @@ void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(size_t offset,
   // Need this buffer to be a full block.
   DirentBuffer<kMinfsBlockSize> dirent_buffer;
 
-  ASSERT_OK((*bcache)->Readblk(root_dir_block, dirent_buffer.raw));
+  ASSERT_EQ((*bcache)->Readblk(root_dir_block, dirent_buffer.raw), ZX_OK);
   dirent_buffer.dirent.ino = 0;
-  ASSERT_OK((*bcache)->Writeblk(root_dir_block, dirent_buffer.raw));
+  ASSERT_EQ((*bcache)->Writeblk(root_dir_block, dirent_buffer.raw), ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotEntry) {
   std::unique_ptr<Bcache> bcache;
   MarkDirectoryEntryMissing(0, &bcache);
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotDotEntry) {
   std::unique_ptr<Bcache> bcache;
   MarkDirectoryEntryMissing(DirentSize(1), &bcache);
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
 }
 
 void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
@@ -268,9 +268,9 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
 
   {
     fbl::RefPtr<VnodeMinfs> root;
-    ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+    ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
     fbl::RefPtr<fs::Vnode> child_;
-    ASSERT_OK(root->Create("foo", 0, &child_));
+    ASSERT_EQ(root->Create("foo", 0, &child_), ZX_OK);
     auto child = fbl::RefPtr<VnodeMinfs>::Downcast(std::move(child_));
     auto close_child = fbl::MakeAutoCall([child]() { child->Close(); });
     ino = child->GetIno();
@@ -287,14 +287,14 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
     dirent_buffer.dirent.name[0] = '.';
 
     size_t written;
-    ASSERT_OK(child->Write(data, dirent_buffer.dirent.reclen, 0, &written));
+    ASSERT_EQ(child->Write(data, dirent_buffer.dirent.reclen, 0, &written), ZX_OK);
     ASSERT_EQ(written, dirent_buffer.dirent.reclen);
 
-    ASSERT_OK(root->Unlink("foo", false));
+    ASSERT_EQ(root->Unlink("foo", false), ZX_OK);
 
     sync_completion_t completion;
     fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-    EXPECT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+    EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
     inode_block = fs->Info().ino_block;
 
@@ -307,19 +307,20 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
 
   // Now hack the inode so it looks like a directory with an invalid entry count.
   Inode inodes[kMinfsInodesPerBlock];
-  ASSERT_OK(bcache->Readblk(inode_block, &inodes));
+  ASSERT_EQ(bcache->Readblk(inode_block, &inodes), ZX_OK);
   Inode& inode = inodes[ino];
   inode.magic = kMinfsMagicDir;
   inode.dirent_count = 1;
-  ASSERT_OK(bcache->Writeblk(inode_block, &inodes));
+  ASSERT_EQ(bcache->Writeblk(inode_block, &inodes), ZX_OK);
 
   *bcache_out = std::move(bcache);
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, UnlinkedDirectoryHasBadEntryCount) {
   std::unique_ptr<Bcache> bcache;
-  ASSERT_NO_FATAL_FAILURES(CreateUnlinkedDirectoryWithEntry(TakeFs(), &bcache));
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache));
+  ASSERT_NO_FATAL_FAILURE(CreateUnlinkedDirectoryWithEntry(TakeFs(), &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache),
+            ZX_OK);
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {
@@ -327,7 +328,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {
   destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
+  EXPECT_EQ(bcache->Readblk(0, &sb), ZX_OK);
 
   // Check if superblock magic is valid
   EXPECT_EQ(sb.magic0, kMinfsMagic0);
@@ -335,9 +336,9 @@ TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {
 
   // Corrupt the superblock
   sb.checksum = 0;
-  EXPECT_OK(bcache->Writeblk(0, &sb));
+  EXPECT_EQ(bcache->Writeblk(0, &sb), ZX_OK);
 
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+  ASSERT_NE(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache), ZX_OK);
 }
 
 }  // namespace

@@ -4,10 +4,13 @@
 
 #include "src/storage/minfs/buffer_view.h"
 
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace minfs {
 namespace {
+
+using ::testing::_;
 
 constexpr int kArraySize = 100;
 constexpr uint8_t kFill = 0x56;
@@ -36,7 +39,7 @@ TEST(BufferViewTest, FlushOnCleanViewIssuesNoFlush) {
     return ZX_OK;
   });
 
-  EXPECT_OK(view.Flush());
+  EXPECT_EQ(view.Flush(), ZX_OK);
 
   EXPECT_FALSE(flushed);
 }
@@ -58,7 +61,7 @@ TEST(BufferViewTest, FlushOnDirtyViewIssuesFlush) {
   EXPECT_TRUE(view.dirty());
   EXPECT_EQ(kData, view[2]);
 
-  EXPECT_OK(view.Flush());
+  EXPECT_EQ(view.Flush(), ZX_OK);
 
   EXPECT_TRUE(flushed);
 }
@@ -74,7 +77,7 @@ TEST(BufferViewTest, FlushOnDirtyViewSetsStateToClean) {
   view.mut_ref(3) = 0x12345678;
 
   view.set_dirty(false);
-  EXPECT_OK(view.Flush());
+  EXPECT_EQ(view.Flush(), ZX_OK);
 
   EXPECT_FALSE(flushed);
 }
@@ -97,38 +100,42 @@ TEST(BufferViewTest, Move) {
 }
 
 TEST(BufferViewDeathTest, OutOfRangeReadAsserts) {
-  ASSERT_DEATH(([]() {
+  auto test = [] {
     std::array<uint8_t, kArraySize> array;
     BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3);
     view[7];
-  }));
+  };
+  ASSERT_DEATH(test(), _);
 }
 
 TEST(BufferViewDeathTest, OutOfRangeWriteAsserts) {
-  ASSERT_DEATH(([]() {
+  auto test = [] {
     std::array<uint8_t, kArraySize> array;
     BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3,
                               [&](BaseBufferView* view) { return ZX_OK; });
     view.mut_ref(7) = 1;
     view.set_dirty(false);
-  }));
+  };
+  ASSERT_DEATH(test(), _);
 }
 
 TEST(BufferViewDeathTest, DestructorAssertNonNullFlusher) {
-  ASSERT_DEATH(([]() {
+  auto test = [] {
     std::array<uint8_t, kArraySize> array;
     BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3);
     view.mut_ref(0) = 10;
-  }));
+  };
+  ASSERT_DEATH(test(), _);
 }
 
 TEST(BufferViewDeathTest, DestructorWithDirtyStateAssertsFlushed) {
-  ASSERT_DEATH(([]() {
+  auto test = [] {
     std::array<uint8_t, kArraySize> array;
     BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3,
                               [&](BaseBufferView* view) { return ZX_OK; });
     view.mut_ref() = 10;
-  }));
+  };
+  ASSERT_DEATH(test(), _);
 }
 
 }  // namespace

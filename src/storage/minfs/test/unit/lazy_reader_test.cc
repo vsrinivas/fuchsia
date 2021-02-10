@@ -8,7 +8,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/resizeable_vmo_buffer.h"
@@ -36,7 +36,7 @@ class Mapper : public MapperInterface {
     EXPECT_TRUE(*allocated == false);
     auto iter = mappings_.find(range.Start());
     if (iter == mappings_.end()) {
-      EXPECT_GE(10, range.Start());
+      EXPECT_LT(range.Start(), 10ul);
       // Reverses and spaces every logical block out by 2.
       DeviceBlockRange device_range = DeviceBlockRange(20 - range.Start() * 2, 1);
       mappings_[range.Start()] = device_range.block();
@@ -65,7 +65,7 @@ TEST(LazyReaderTest, ReadSucceeds) {
   static const int kBlockCount = 21;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
   // Write to logical block 1.
   char data[kMinfsBlockSize] = "hello";
   StubTransaction transaction;
@@ -77,25 +77,25 @@ TEST(LazyReaderTest, ReadSucceeds) {
 
   // Now read the data back using the lazy_reader.
   ResizeableVmoBuffer buffer(kMinfsBlockSize);
-  ASSERT_OK(buffer.Attach("LazyReaderTest", bcache.get()));
+  ASSERT_EQ(buffer.Attach("LazyReaderTest", bcache.get()), ZX_OK);
   auto detach = fbl::MakeAutoCall([&]() { buffer.Detach(bcache.get()); });
-  ASSERT_OK(buffer.Grow(kBlockCount));
+  ASSERT_EQ(buffer.Grow(kBlockCount), ZX_OK);
   MappedFileReader reader(bcache.get(), &mapper, &buffer);
   LazyReader lazy_reader;
-  ASSERT_OK(lazy_reader.Read(ByteRange(kMinfsBlockSize, kMinfsBlockSize + 6), &reader));
+  ASSERT_EQ(lazy_reader.Read(ByteRange(kMinfsBlockSize, kMinfsBlockSize + 6), &reader), ZX_OK);
 
   // We should see the same data read back.
-  EXPECT_BYTES_EQ(buffer.Data(1), "hello", 6);
+  EXPECT_EQ(memcmp(buffer.Data(1), "hello", 6), 0);
 }
 
 TEST(LazyReaderTest, UnmappedBlockIsZeroed) {
   static const int kBlockCount = 21;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
 
   ResizeableVmoBuffer buffer(kMinfsBlockSize);
-  ASSERT_OK(buffer.Attach("LazyReaderTest", bcache.get()));
+  ASSERT_EQ(buffer.Attach("LazyReaderTest", bcache.get()), ZX_OK);
   auto detach = fbl::MakeAutoCall([&]() { buffer.Detach(bcache.get()); });
   *static_cast<uint8_t*>(buffer.Data(0)) = 0xab;
   Mapper mapper;
@@ -103,12 +103,12 @@ TEST(LazyReaderTest, UnmappedBlockIsZeroed) {
   LazyReader lazy_reader;
 
   // There is no mapping for the first block so it should get zeroed.
-  EXPECT_OK(lazy_reader.Read(ByteRange(0, 1), &reader));
+  EXPECT_EQ(lazy_reader.Read(ByteRange(0, 1), &reader), ZX_OK);
   EXPECT_EQ(0, *static_cast<uint8_t*>(buffer.Data(0)));
 
   // Reading again should not zero it again.
   *static_cast<uint8_t*>(buffer.Data(0)) = 0xab;
-  EXPECT_OK(lazy_reader.Read(ByteRange(0, 1), &reader));
+  EXPECT_EQ(lazy_reader.Read(ByteRange(0, 1), &reader), ZX_OK);
   EXPECT_EQ(0xab, *static_cast<uint8_t*>(buffer.Data(0)));
 }
 
@@ -159,8 +159,8 @@ TEST(LazyReaderTest, ZeroLengthReadIsNotEnqeued) {
   LazyReader lazy_reader;
   MockReader reader;
 
-  ASSERT_OK(lazy_reader.Read(ByteRange(100, 100), &reader));
-  EXPECT_EQ(0, reader.enqueued().size());
+  ASSERT_EQ(lazy_reader.Read(ByteRange(100, 100), &reader), ZX_OK);
+  EXPECT_EQ(reader.enqueued().size(), 0ul);
 }
 
 TEST(LazyReaderTest, ReadForMutlipleBlocksAfterOneBlockReadEnqueuedCorrectly) {
@@ -168,39 +168,40 @@ TEST(LazyReaderTest, ReadForMutlipleBlocksAfterOneBlockReadEnqueuedCorrectly) {
   MockReader reader;
 
   // Read one block.
-  ASSERT_OK(lazy_reader.Read(ByteRange(530, 531), &reader));
-  ASSERT_EQ(1, reader.enqueued().size());
-  EXPECT_EQ(1, reader.enqueued()[0].Start());
-  EXPECT_EQ(2, reader.enqueued()[0].End());
+  ASSERT_EQ(lazy_reader.Read(ByteRange(530, 531), &reader), ZX_OK);
+  ASSERT_EQ(reader.enqueued().size(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].Start(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].End(), 2ul);
   EXPECT_TRUE(reader.run_requests_called());
   reader.Reset();
 
   // Now read through blocks 0 to 4.
-  ASSERT_OK(
-      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 4 * reader.BlockSize() + 1), &reader));
+  ASSERT_EQ(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 4 * reader.BlockSize() + 1), &reader),
+      ZX_OK);
 
   // We read one block earlier which shouldn't read again. This should result in Enqueue(0, 1),
   // Enqueue(2, 5).
-  ASSERT_EQ(2, reader.enqueued().size());
-  EXPECT_EQ(0, reader.enqueued()[0].Start());
-  EXPECT_EQ(1, reader.enqueued()[0].End());
-  EXPECT_EQ(2, reader.enqueued()[1].Start());
-  EXPECT_EQ(5, reader.enqueued()[1].End());
+  ASSERT_EQ(reader.enqueued().size(), 2ul);
+  EXPECT_EQ(reader.enqueued()[0].Start(), 0ul);
+  EXPECT_EQ(reader.enqueued()[0].End(), 1ul);
+  EXPECT_EQ(reader.enqueued()[1].Start(), 2ul);
+  EXPECT_EQ(reader.enqueued()[1].End(), 5ul);
 }
 
 TEST(LazyReaderTest, EnqueueError) {
   LazyReader lazy_reader;
   MockReader reader;
   reader.set_return_error_for_enqueue(true);
-  EXPECT_STATUS(lazy_reader.Read(ByteRange(530, 531), &reader), ZX_ERR_NO_MEMORY);
+  EXPECT_EQ(lazy_reader.Read(ByteRange(530, 531), &reader), ZX_ERR_NO_MEMORY);
   EXPECT_FALSE(reader.run_requests_called());
   reader.Reset();
 
   // If we try again with no error, it should proceed with the read.
-  ASSERT_OK(lazy_reader.Read(ByteRange(530, 531), &reader));
-  ASSERT_EQ(1, reader.enqueued().size());
-  EXPECT_EQ(1, reader.enqueued()[0].Start());
-  EXPECT_EQ(2, reader.enqueued()[0].End());
+  ASSERT_EQ(lazy_reader.Read(ByteRange(530, 531), &reader), ZX_OK);
+  ASSERT_EQ(reader.enqueued().size(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].Start(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].End(), 2ul);
   EXPECT_TRUE(reader.run_requests_called());
 }
 
@@ -208,15 +209,15 @@ TEST(LazyReaderTest, RunRequestsError) {
   LazyReader lazy_reader;
   MockReader reader;
   reader.set_return_error_for_run_requests(true);
-  EXPECT_STATUS(ZX_ERR_IO, lazy_reader.Read(ByteRange(530, 531), &reader));
+  EXPECT_EQ(lazy_reader.Read(ByteRange(530, 531), &reader), ZX_ERR_IO);
   EXPECT_FALSE(reader.run_requests_called());
   reader.Reset();
 
   // If we try again with no error, it should proceed with the read.
-  ASSERT_OK(lazy_reader.Read(ByteRange(530, 531), &reader));
-  ASSERT_EQ(1, reader.enqueued().size());
-  EXPECT_EQ(1, reader.enqueued()[0].Start());
-  EXPECT_EQ(2, reader.enqueued()[0].End());
+  ASSERT_EQ(lazy_reader.Read(ByteRange(530, 531), &reader), ZX_OK);
+  ASSERT_EQ(reader.enqueued().size(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].Start(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].End(), 2ul);
   EXPECT_TRUE(reader.run_requests_called());
 }
 
@@ -226,29 +227,32 @@ TEST(LazyReaderTest, SetLoadedMarksBlocksAsLoaded) {
   lazy_reader.SetLoaded(BlockRange(1, 2), true);
 
   MockReader reader;
-  ASSERT_OK(
-      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader));
-  ASSERT_EQ(2, reader.enqueued().size());
-  EXPECT_EQ(0, reader.enqueued()[0].Start());
-  EXPECT_EQ(1, reader.enqueued()[0].End());
-  EXPECT_EQ(2, reader.enqueued()[1].Start());
-  EXPECT_EQ(3, reader.enqueued()[1].End());
+  ASSERT_EQ(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader),
+      ZX_OK);
+  ASSERT_EQ(reader.enqueued().size(), 2ul);
+  EXPECT_EQ(reader.enqueued()[0].Start(), 0ul);
+  EXPECT_EQ(reader.enqueued()[0].End(), 1ul);
+  EXPECT_EQ(reader.enqueued()[1].Start(), 2ul);
+  EXPECT_EQ(reader.enqueued()[1].End(), 3ul);
 }
 
 TEST(LazyReaderTest, ClearLoadedMarksBlocksAsNotLoaded) {
   LazyReader lazy_reader;
   MockReader reader;
-  ASSERT_OK(
-      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader));
+  ASSERT_EQ(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader),
+      ZX_OK);
 
   lazy_reader.SetLoaded(BlockRange(1, 2), false);
 
   reader.Reset();
-  ASSERT_OK(
-      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader));
-  ASSERT_EQ(1, reader.enqueued().size());
-  EXPECT_EQ(1, reader.enqueued()[0].Start());
-  EXPECT_EQ(2, reader.enqueued()[0].End());
+  ASSERT_EQ(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader),
+      ZX_OK);
+  ASSERT_EQ(reader.enqueued().size(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].Start(), 1ul);
+  EXPECT_EQ(reader.enqueued()[0].End(), 2ul);
 }
 
 }  // namespace

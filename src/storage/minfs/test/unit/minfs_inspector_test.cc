@@ -12,7 +12,8 @@
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <fs/journal/format.h>
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
@@ -28,8 +29,9 @@ constexpr uint32_t kBlockSize = 512;
 void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
                           std::unique_ptr<MinfsInspector>* out) {
   std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
-  ASSERT_OK(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
-                                                                &inspector_handler));
+  ASSERT_EQ(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
+                                                                &inspector_handler),
+            ZX_OK);
   auto buffer_factory =
       std::make_unique<disk_inspector::VmoBufferFactory>(inspector_handler.get(), kMinfsBlockSize);
   auto result = MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
@@ -44,17 +46,17 @@ void SetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector) {
 
   // Format the device.
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(temp), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Bcache::Create(std::move(temp), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
 
   // Write journal info to the device by creating a minfs and waiting for it
   // to finish.
   std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_OK(minfs::Minfs::Create(std::move(bcache), options, &fs));
+  ASSERT_EQ(minfs::Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
   sync_completion_t completion;
   fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+  ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   // We only care about the disk format written into the fake block device,
   // so we destroy the minfs/bcache used to format it.
@@ -70,11 +72,11 @@ void BadSetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector, void* da
   auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   if (count > 0) {
     zx::vmo buffer;
-    ASSERT_OK(zx::vmo::create(count, 0, &buffer));
-    ASSERT_OK(buffer.write(data, 0, count));
+    ASSERT_EQ(zx::vmo::create(count, 0, &buffer), ZX_OK);
+    ASSERT_EQ(buffer.write(data, 0, count), ZX_OK);
 
     storage::OwnedVmoid vmoid;
-    ASSERT_OK(temp->BlockAttachVmo(buffer, &vmoid.GetReference(temp.get())));
+    ASSERT_EQ(temp->BlockAttachVmo(buffer, &vmoid.GetReference(temp.get())), ZX_OK);
 
     std::vector<block_fifo_request_t> reqs = {{
         .opcode = BLOCKIO_WRITE,
@@ -85,7 +87,7 @@ void BadSetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector, void* da
         .vmo_offset = 0,
         .dev_offset = 0,
     }};
-    ASSERT_OK(temp->FifoTransaction(reqs.data(), 1));
+    ASSERT_EQ(temp->FifoTransaction(reqs.data(), 1), ZX_OK);
   }
   CreateMinfsInspector(std::move(temp), inspector);
 }
@@ -96,12 +98,8 @@ TEST(MinfsInspector, CreateWithoutError) {
 }
 
 TEST(MinfsInspector, CreateWithoutErrorOnBadSuperblock) {
-  ASSERT_NO_DEATH(
-      []() {
-        std::unique_ptr<MinfsInspector> inspector;
-        BadSetupMinfsInspector(&inspector, nullptr, 0);
-      },
-      "Could not initialize minfs inspector with bad superblock.");
+  std::unique_ptr<MinfsInspector> inspector;
+  BadSetupMinfsInspector(&inspector, nullptr, 0);
 }
 
 TEST(MinfsInspector, InspectSuperblock) {
@@ -116,8 +114,8 @@ TEST(MinfsInspector, InspectSuperblock) {
   EXPECT_EQ(sb.flags, kMinfsFlagClean);
   EXPECT_EQ(sb.block_size, kMinfsBlockSize);
   EXPECT_EQ(sb.inode_size, kMinfsInodeSize);
-  EXPECT_EQ(sb.alloc_block_count, 2);
-  EXPECT_EQ(sb.alloc_block_count, 2);
+  EXPECT_EQ(sb.alloc_block_count, 2u);
+  EXPECT_EQ(sb.alloc_block_count, 2u);
 }
 
 TEST(MinfsInspector, GetInodeCount) {
@@ -135,7 +133,7 @@ TEST(MinfsInspector, InspectInode) {
   Superblock sb = inspector->InspectSuperblock();
   // The fresh minfs device should have 2 allocated inodes, empty inode 0 and
   // allocated inode 1.
-  ASSERT_EQ(sb.alloc_inode_count, 2);
+  ASSERT_EQ(sb.alloc_inode_count, 2u);
 
   auto result = inspector->InspectInodeRange(0, 3);
   ASSERT_TRUE(result.is_ok());
@@ -143,24 +141,24 @@ TEST(MinfsInspector, InspectInode) {
   // 0th inode is uninitialized.
 
   Inode inode = inodes[0];
-  EXPECT_EQ(inode.magic, 0);
-  EXPECT_EQ(inode.size, 0);
-  EXPECT_EQ(inode.block_count, 0);
-  EXPECT_EQ(inode.link_count, 0);
+  EXPECT_EQ(inode.magic, 0u);
+  EXPECT_EQ(inode.size, 0u);
+  EXPECT_EQ(inode.block_count, 0u);
+  EXPECT_EQ(inode.link_count, 0u);
 
   // 1st inode is initialized and is the root directory.
   inode = inodes[1];
   EXPECT_EQ(inode.magic, kMinfsMagicDir);
   EXPECT_EQ(inode.size, kMinfsBlockSize);
-  EXPECT_EQ(inode.block_count, 1);
-  EXPECT_EQ(inode.link_count, 2);
+  EXPECT_EQ(inode.block_count, 1u);
+  EXPECT_EQ(inode.link_count, 2u);
 
   // 2nd inode is uninitialized.
   inode = inodes[2];
-  EXPECT_EQ(inode.magic, 0);
-  EXPECT_EQ(inode.size, 0);
-  EXPECT_EQ(inode.block_count, 0);
-  EXPECT_EQ(inode.link_count, 0);
+  EXPECT_EQ(inode.magic, 0u);
+  EXPECT_EQ(inode.size, 0u);
+  EXPECT_EQ(inode.block_count, 0u);
+  EXPECT_EQ(inode.link_count, 0u);
 }
 
 TEST(MinfsInspector, CheckInodeAllocated) {
@@ -193,7 +191,7 @@ TEST(MinfsInspector, InspectJournalSuperblock) {
   fs::JournalInfo journal_info = result.take_value();
 
   EXPECT_EQ(journal_info.magic, fs::kJournalMagic);
-  EXPECT_EQ(journal_info.start_block, 8);
+  EXPECT_EQ(journal_info.start_block, 8ul);
 }
 
 TEST(MinfsInspector, GetJournalEntryCount) {
@@ -214,7 +212,7 @@ TEST(MinfsInspector, GetJournalEntryCountWithNoJournalBlocks) {
   superblock.integrity_start_block = 0;
   superblock.dat_block = superblock.integrity_start_block + kBackupSuperblockBlocks;
   BadSetupMinfsInspector(&inspector, &superblock, sizeof(superblock));
-  EXPECT_EQ(inspector->GetJournalEntryCount(), 0);
+  EXPECT_EQ(inspector->GetJournalEntryCount(), 0ul);
 }
 
 template <typename T>
@@ -232,9 +230,9 @@ TEST(MinfsInspector, InspectJournalEntryAs) {
   fs::JournalHeaderBlock header;
   LoadAndUnwrapJournalEntry<fs::JournalHeaderBlock>(inspector.get(), 0, &header);
   EXPECT_EQ(header.prefix.magic, fs::kJournalEntryMagic);
-  EXPECT_EQ(header.prefix.sequence_number, 0);
+  EXPECT_EQ(header.prefix.sequence_number, 0ul);
   EXPECT_EQ(header.prefix.flags, fs::kJournalPrefixFlagHeader);
-  EXPECT_EQ(header.payload_blocks, 2);
+  EXPECT_EQ(header.payload_blocks, 2ul);
 
   fs::JournalPrefix prefix;
   LoadAndUnwrapJournalEntry<fs::JournalPrefix>(inspector.get(), 1, &prefix);
@@ -246,7 +244,7 @@ TEST(MinfsInspector, InspectJournalEntryAs) {
   fs::JournalCommitBlock commit;
   LoadAndUnwrapJournalEntry<fs::JournalCommitBlock>(inspector.get(), 3, &commit);
   EXPECT_EQ(commit.prefix.magic, fs::kJournalEntryMagic);
-  EXPECT_EQ(commit.prefix.sequence_number, 0);
+  EXPECT_EQ(commit.prefix.sequence_number, 0ul);
   EXPECT_EQ(commit.prefix.flags, fs::kJournalPrefixFlagCommit);
 }
 
@@ -264,8 +262,8 @@ TEST(MinfsInspector, InspectBackupSuperblock) {
   EXPECT_EQ(sb.flags, kMinfsFlagClean);
   EXPECT_EQ(sb.block_size, kMinfsBlockSize);
   EXPECT_EQ(sb.inode_size, kMinfsInodeSize);
-  EXPECT_EQ(sb.alloc_block_count, 2);
-  EXPECT_EQ(sb.alloc_block_count, 2);
+  EXPECT_EQ(sb.alloc_block_count, 2u);
+  EXPECT_EQ(sb.alloc_block_count, 2u);
 }
 
 TEST(MinfsInspector, WriteSuperblock) {
@@ -285,16 +283,16 @@ TEST(MinfsInspector, WriteSuperblock) {
 
   // Test if superblock is saved in memory.
   Superblock edit_sb = inspector->InspectSuperblock();
-  EXPECT_EQ(edit_sb.magic0, 0);
+  EXPECT_EQ(edit_sb.magic0, 0u);
   EXPECT_EQ(edit_sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(edit_sb.format_version, 0);
+  EXPECT_EQ(edit_sb.format_version, 0u);
 
   // Test reloading from disk.
-  ASSERT_OK(inspector->ReloadSuperblock());
+  ASSERT_EQ(inspector->ReloadSuperblock(), ZX_OK);
   Superblock reload_sb = inspector->InspectSuperblock();
-  EXPECT_EQ(reload_sb.magic0, 0);
+  EXPECT_EQ(reload_sb.magic0, 0u);
   EXPECT_EQ(reload_sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(reload_sb.format_version, 0);
+  EXPECT_EQ(reload_sb.format_version, 0u);
 }
 
 // TODO(fxbug.dev/46821): Implement these tests once we have a fake block device

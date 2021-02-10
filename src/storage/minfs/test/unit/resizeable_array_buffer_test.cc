@@ -4,24 +4,27 @@
 
 #include "src/storage/minfs/resizeable_array_buffer.h"
 
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace minfs {
 namespace {
+
+using ::testing::_;
 
 const uint32_t kBlockSize = 8192;
 
 TEST(ResizeableArrayBufferTest, Grow) {
   ResizeableArrayBuffer buffer(kBlockSize);
-  ASSERT_OK(buffer.Grow(2));
-  EXPECT_EQ(2, buffer.capacity());
+  ASSERT_EQ(buffer.Grow(2), ZX_OK);
+  EXPECT_EQ(buffer.capacity(), 2ul);
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_OK(buffer.Grow(50));
+  ASSERT_EQ(buffer.Grow(50), ZX_OK);
   // Check that after growing, the data is still there.
-  EXPECT_BYTES_EQ(buf, buffer.Data(1), kBlockSize);
-  EXPECT_EQ(50, buffer.capacity());
+  EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
+  EXPECT_EQ(buffer.capacity(), 50ul);
 }
 
 TEST(ResizeableArrayBufferTest, Shrink) {
@@ -29,9 +32,9 @@ TEST(ResizeableArrayBufferTest, Shrink) {
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_OK(buffer.Shrink(2));
-  EXPECT_BYTES_EQ(buf, buffer.Data(1), kBlockSize);
-  EXPECT_EQ(2, buffer.capacity());
+  ASSERT_EQ(buffer.Shrink(2), ZX_OK);
+  EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
+  EXPECT_EQ(buffer.capacity(), 2ul);
 }
 
 TEST(ResizeableArrayBufferTest, Zero) {
@@ -51,17 +54,17 @@ TEST(ResizeableArrayBufferTest, Zero) {
 
 TEST(ResizeableArrayBufferDeathTest, BadGrow) {
   ResizeableArrayBuffer buffer(10, kBlockSize);
-  ASSERT_DEATH([&]() { [[maybe_unused]] zx_status_t status = buffer.Grow(4); });
+  ASSERT_DEATH({ [[maybe_unused]] zx_status_t status = buffer.Grow(4); }, _);
 }
 
 TEST(ResizeableArrayBufferDeathTest, BadShrink) {
   ResizeableArrayBuffer buffer(10, kBlockSize);
-  ASSERT_DEATH([&]() { [[maybe_unused]] zx_status_t status = buffer.Shrink(15); });
+  ASSERT_DEATH({ [[maybe_unused]] zx_status_t status = buffer.Shrink(15); }, _);
 }
 
 TEST(ResizeableArrayBufferDeathTest, BadShrink2) {
   ResizeableArrayBuffer buffer(10, kBlockSize);
-  ASSERT_DEATH([&]() { [[maybe_unused]] zx_status_t status = buffer.Shrink(0); });
+  ASSERT_DEATH({ [[maybe_unused]] zx_status_t status = buffer.Shrink(0); }, _);
 }
 
 }  // namespace

@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 
@@ -23,7 +23,7 @@ TEST(GetRequiredBlockCountTest, InvalidBlockSize) {
 }
 
 TEST(GetRequiredBlockCountTest, ZeroLength) {
-  ASSERT_EQ(GetRequiredBlockCount(0, 0, kMinfsBlockSize).value(), 0);
+  ASSERT_EQ(GetRequiredBlockCount(0, 0, kMinfsBlockSize).value(), 0u);
 }
 
 }  // namespace

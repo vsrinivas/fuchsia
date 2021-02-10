@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 
@@ -53,7 +53,7 @@ TEST(InspectorDiskStruct, GetSuperblockString) {
 	reserved: uint32_t[2018] = { ... }
 )""";
 
-  EXPECT_STR_EQ(disk_struct->ToString(&sb, options).c_str(), output.c_str());
+  EXPECT_EQ(disk_struct->ToString(&sb, options), output);
 }
 
 TEST(InspectorDiskStruct, GetInodeString) {
@@ -80,7 +80,7 @@ TEST(InspectorDiskStruct, GetInodeString) {
 	inum: uint32_t[31] = { ... }
 	dinum: uint32_t[1] = { ... }
 )""";
-  EXPECT_STR_EQ(disk_struct->ToString(&inode, options).c_str(), output.c_str());
+  EXPECT_EQ(disk_struct->ToString(&inode, options), output);
 }
 
 }  // namespace

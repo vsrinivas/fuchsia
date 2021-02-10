@@ -18,16 +18,16 @@ class TruncateTest : public JournalIntegrationFixture {
   // contents.
   void PerformOperation(Minfs* fs) {
     fbl::RefPtr<VnodeMinfs> root;
-    ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+    ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
     fbl::RefPtr<fs::Vnode> foo;
-    ASSERT_OK(root->Create("foo", 0, &foo));
-    auto close = fbl::MakeAutoCall([foo]() { ASSERT_OK(foo->Close()); });
+    ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
+    auto close = fbl::MakeAutoCall([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
     std::vector<uint8_t> buf(kMinfsBlockSize + 10, kFill);
     size_t written;
-    ASSERT_OK(foo->Write(buf.data(), buf.size(), 0, &written));
+    ASSERT_EQ(foo->Write(buf.data(), buf.size(), 0, &written), ZX_OK);
     ASSERT_EQ(written, buf.size());
 
-    ASSERT_OK(foo->Truncate(1));
+    ASSERT_EQ(foo->Truncate(1), ZX_OK);
   }
 };
 
@@ -37,22 +37,22 @@ TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
 
   // Since we cut off the transaction, we should see the old length with the old contents.
   std::unique_ptr<Minfs> fs;
-  ASSERT_OK(Minfs::Create(std::move(bcache), MountOptions{}, &fs));
+  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions{}, &fs), ZX_OK);
 
   // Open the 'foo' file.
   fbl::RefPtr<VnodeMinfs> root;
-  ASSERT_OK(fs->VnodeGet(&root, kMinfsRootIno));
+  ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
   fbl::RefPtr<fs::Vnode> foo;
-  ASSERT_OK(root->Lookup("foo", &foo));
+  ASSERT_EQ(root->Lookup("foo", &foo), ZX_OK);
   auto validated_options = foo->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
-  ASSERT_OK(foo->Open(validated_options.value(), &foo));
-  auto close = fbl::MakeAutoCall([foo]() { ASSERT_OK(foo->Close()); });
+  ASSERT_EQ(foo->Open(validated_options.value(), &foo), ZX_OK);
+  auto close = fbl::MakeAutoCall([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
 
   // Read the file.
   std::vector<uint8_t> buf(kMinfsBlockSize + 10);
   size_t read;
-  ASSERT_OK(foo->Read(buf.data(), buf.size(), 0, &read));
+  ASSERT_EQ(foo->Read(buf.data(), buf.size(), 0, &read), ZX_OK);
   ASSERT_EQ(buf.size(), read);
 
   // And now check the file.

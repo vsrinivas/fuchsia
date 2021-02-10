@@ -6,7 +6,7 @@
 
 #include "src/storage/minfs/format.h"
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace minfs {
 namespace {

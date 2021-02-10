@@ -7,7 +7,8 @@
 #include <memory>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
@@ -16,6 +17,8 @@
 
 namespace minfs {
 namespace {
+
+using ::testing::_;
 
 constexpr size_t kTotalElements = 32768;
 constexpr size_t kDefaultElements = kTotalElements / 64;
@@ -169,22 +172,22 @@ TEST(TransactionTest, CreateTransactionNoReservationsAlt) {
 TEST(TransactionTest, CreateTransactionNoReservations) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(0, 0, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(0, 0, &transaction), ZX_OK);
 }
 
 // Creates a Transaction with inode and block reservations.
 TEST(TransactionTest, CreateTransactionWithReservations) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction), ZX_OK);
 }
 
 // Creates a Transaction with inode and block reservations. Try to extend block reservation.
 TEST(TransactionTest, ExtendBlockReservation) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-  ASSERT_OK(transaction->ExtendBlockReservation(kTotalElements - kDefaultElements));
+  ASSERT_EQ(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction), ZX_OK);
+  ASSERT_EQ(transaction->ExtendBlockReservation(kTotalElements - kDefaultElements), ZX_OK);
 }
 
 // Creates a Transaction with inode and block reservations. Try to extend block reservation more
@@ -192,40 +195,42 @@ TEST(TransactionTest, ExtendBlockReservation) {
 TEST(TransactionTest, ExtendBlockReservationFails) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-  ASSERT_NOT_OK(transaction->ExtendBlockReservation(kTotalElements + 1 - kDefaultElements));
+  ASSERT_EQ(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction), ZX_OK);
+  ASSERT_NE(transaction->ExtendBlockReservation(kTotalElements + 1 - kDefaultElements), ZX_OK);
 }
 
 // Creates a Transaction with the maximum possible number of inodes and blocks reserved.
 TEST(TransactionTest, CreateTransactionWithMaxBlockReservations) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kTotalElements, kTotalElements, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(kTotalElements, kTotalElements, &transaction), ZX_OK);
 }
 
 TEST(TransactionTest, FromCachedBlockTransaction) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(0, kDefaultElements, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(0, kDefaultElements, &transaction), ZX_OK);
   auto cached_transaction = std::make_unique<CachedBlockTransaction>(
       Transaction::TakeBlockReservations(std::move(transaction)));
   transaction.reset(nullptr);
 
-  ASSERT_OK(minfs.ContinueTransaction(kTotalElements - kDefaultElements,
-                                      std::move(cached_transaction), &transaction));
+  ASSERT_EQ(minfs.ContinueTransaction(kTotalElements - kDefaultElements,
+                                      std::move(cached_transaction), &transaction),
+            ZX_OK);
   ASSERT_EQ(transaction->block_reservation().GetReserved(), kTotalElements);
 }
 
 TEST(TransactionTest, FromCachedBlockTransactionFailsToExtend) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(0, kDefaultElements, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(0, kDefaultElements, &transaction), ZX_OK);
   auto cached_transaction = std::make_unique<CachedBlockTransaction>(
       Transaction::TakeBlockReservations(std::move(transaction)));
   transaction.reset(nullptr);
 
-  ASSERT_NOT_OK(minfs.ContinueTransaction(kTotalElements + 1 - kDefaultElements,
-                                          std::move(cached_transaction), &transaction));
+  ASSERT_NE(minfs.ContinueTransaction(kTotalElements + 1 - kDefaultElements,
+                                      std::move(cached_transaction), &transaction),
+            ZX_OK);
   ASSERT_EQ(transaction->block_reservation().GetReserved(), kDefaultElements);
 }
 
@@ -246,45 +251,43 @@ TEST(TransactionTest, CreateTransactionTooManyBlocksFails) {
 // Attempts to reserve an blocks and inodes and then try to take only block reservation.
 TEST(TransactionDeathTest, TakeBlockReservationsWithInodeReservationDies) {
   FakeMinfs minfs;
-  std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-  // We lose ownership of the Transaction  in the ASSERT_DEATH, and it ends up leaking.
-  // So keep track of the raw pointer to be able to properly delete it afterwards.
-  Transaction* raw_transaction = transaction.get();
-  ASSERT_DEATH([&transaction]() {
-    [[maybe_unused]] auto result = Transaction::TakeBlockReservations(std::move(transaction));
-  });
-  delete raw_transaction;
+  ASSERT_DEATH(
+      {
+        std::unique_ptr<Transaction> transaction;
+        ASSERT_EQ(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction), ZX_OK);
+        [[maybe_unused]] auto result = Transaction::TakeBlockReservations(std::move(transaction));
+      },
+      _);
 }
 
 // Tests allocation of a single inode.
 TEST(TransactionTest, InodeAllocationSucceeds) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-  ASSERT_NO_DEATH([&transaction]() { transaction->AllocateInode(); });
+  ASSERT_EQ(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction), ZX_OK);
+  transaction->AllocateInode();
 }
 
 // Tests allocation of a single block.
 TEST(TransactionTest, BlockAllocationSucceeds) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
-  ASSERT_NO_DEATH([&transaction]() { transaction->AllocateBlock(); });
+  ASSERT_EQ(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction), ZX_OK);
+  transaction->AllocateBlock();
 }
 
 // Attempts to allocate an inode when the transaction was not initialized properly.
 TEST(TransactionDeathTest, AllocateInodeWithoutInitializationFails) {
   FakeMinfs minfs;
   Transaction transaction(&minfs);
-  ASSERT_DEATH([&transaction]() { transaction.AllocateInode(); });
+  ASSERT_DEATH(transaction.AllocateInode(), _);
 }
 
 // Attempts to allocate a block when the transaction was not initialized properly.
 TEST(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
   FakeMinfs minfs;
   Transaction transaction(&minfs);
-  ASSERT_DEATH([&transaction]() { transaction.AllocateBlock(); });
+  ASSERT_DEATH(transaction.AllocateBlock(), _);
 }
 
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
@@ -292,13 +295,13 @@ TEST(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
 TEST(TransactionDeathTest, AllocateTooManyInodesFails) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(1, 0, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(1, 0, &transaction), ZX_OK);
 
   // First allocation should succeed.
-  ASSERT_NO_DEATH([&transaction]() { transaction->AllocateInode(); });
+  transaction->AllocateInode();
 
   // Second allocation should fail.
-  ASSERT_DEATH([&transaction]() { transaction->AllocateInode(); });
+  ASSERT_DEATH(transaction->AllocateInode(), _);
 }
 #endif
 
@@ -307,13 +310,13 @@ TEST(TransactionDeathTest, AllocateTooManyInodesFails) {
 TEST(TransactionDeathTest, AllocateTooManyBlocksFails) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(0, 1, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(0, 1, &transaction), ZX_OK);
 
   // First allocation should succeed.
-  ASSERT_NO_DEATH([&transaction]() { transaction->AllocateBlock(); });
+  transaction->AllocateBlock();
 
   // Second allocation should fail.
-  ASSERT_DEATH([&transaction]() { transaction->AllocateBlock(); });
+  ASSERT_DEATH(transaction->AllocateBlock(), _);
 }
 #endif
 
@@ -348,11 +351,11 @@ TEST(TransactionTest, EnqueueAndVerifyMetadataWork) {
 
   std::vector<storage::UnbufferedOperation> meta_operations =
       transaction.RemoveMetadataOperations();
-  ASSERT_EQ(1, meta_operations.size());
+  ASSERT_EQ(meta_operations.size(), 1ul);
   ASSERT_EQ(1, meta_operations[0].vmo);
-  ASSERT_EQ(2, meta_operations[0].op.vmo_offset);
-  ASSERT_EQ(3, meta_operations[0].op.dev_offset);
-  ASSERT_EQ(4, meta_operations[0].op.length);
+  ASSERT_EQ(meta_operations[0].op.vmo_offset, 2ul);
+  ASSERT_EQ(meta_operations[0].op.dev_offset, 3ul);
+  ASSERT_EQ(meta_operations[0].op.length, 4ul);
   ASSERT_EQ(storage::OperationType::kWrite, meta_operations[0].op.type);
 }
 
@@ -371,11 +374,11 @@ TEST(TransactionTest, EnqueueAndVerifyDataWork) {
   transaction.EnqueueData(op, &buffer);
 
   std::vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
-  ASSERT_EQ(1, data_operations.size());
+  ASSERT_EQ(data_operations.size(), 1ul);
   ASSERT_EQ(1, data_operations[0].vmo);
-  ASSERT_EQ(2, data_operations[0].op.vmo_offset);
-  ASSERT_EQ(3, data_operations[0].op.dev_offset);
-  ASSERT_EQ(4, data_operations[0].op.length);
+  ASSERT_EQ(data_operations[0].op.vmo_offset, 2ul);
+  ASSERT_EQ(data_operations[0].op.dev_offset, 3ul);
+  ASSERT_EQ(data_operations[0].op.length, 4ul);
   ASSERT_EQ(storage::OperationType::kWrite, data_operations[0].op.type);
 }
 
@@ -435,7 +438,7 @@ TEST(TransactionTest, RemovePinnedVnodeContainsVnode) {
   ASSERT_EQ(nullptr, vnode);
 
   std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes = transaction.RemovePinnedVnodes();
-  ASSERT_EQ(1, pinned_vnodes.size());
+  ASSERT_EQ(pinned_vnodes.size(), 1ul);
 
   pinned_vnodes.clear();
   ASSERT_FALSE(vnode_alive);
@@ -469,16 +472,16 @@ TEST(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
 TEST(CachedBlockTransactionTest, FromZeroBlockReservation) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(0, 0, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(0, 0, &transaction), ZX_OK);
   CachedBlockTransaction cached_transaction(
       Transaction::TakeBlockReservations(std::move(transaction)));
-  ASSERT_EQ(cached_transaction.TakeBlockReservations()->GetReserved(), 0);
+  ASSERT_EQ(cached_transaction.TakeBlockReservations()->GetReserved(), 0ul);
 }
 
 TEST(CachedBlockTransactionTest, FewBlocksReserved) {
   FakeMinfs minfs;
   std::unique_ptr<Transaction> transaction;
-  ASSERT_OK(minfs.CreateTransaction(0, kDefaultElements, &transaction));
+  ASSERT_EQ(minfs.CreateTransaction(0, kDefaultElements, &transaction), ZX_OK);
   CachedBlockTransaction cached_transaction(
       Transaction::TakeBlockReservations(std::move(transaction)));
   ASSERT_EQ(cached_transaction.TakeBlockReservations()->GetReserved(), kDefaultElements);

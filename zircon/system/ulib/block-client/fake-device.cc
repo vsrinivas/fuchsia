@@ -8,15 +8,15 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_lock.h>
-#include <zxtest/zxtest.h>
 
+#include "sdk/lib/syslog/cpp/macros.h"
 #include "src/storage/fvm/format.h"
 
 namespace block_client {
 
 FakeBlockDevice::FakeBlockDevice(const FakeBlockDevice::Config& config) : config_(config) {
-  ASSERT_OK(
-      zx::vmo::create(config_.block_count * config_.block_size, ZX_VMO_RESIZABLE, &block_device_));
+  ZX_ASSERT(zx::vmo::create(config_.block_count * config_.block_size, ZX_VMO_RESIZABLE,
+                            &block_device_) == ZX_OK);
 }
 
 void FakeBlockDevice::Pause() {
@@ -84,14 +84,14 @@ void FakeBlockDevice::GetStats(bool clear, fuchsia_hardware_block_BlockStats* ou
 void FakeBlockDevice::ResizeDeviceToAtLeast(uint64_t new_size) {
   fbl::AutoLock lock(&lock_);
   uint64_t size;
-  EXPECT_OK(block_device_.get_size(&size));
+  ZX_ASSERT(block_device_.get_size(&size) == ZX_OK);
   if (size < new_size) {
     AdjustBlockDeviceSizeLocked(new_size);
   }
 }
 
 void FakeBlockDevice::AdjustBlockDeviceSizeLocked(uint64_t new_size) {
-  EXPECT_OK(block_device_.set_size(new_size));
+  ZX_ASSERT(block_device_.set_size(new_size) == ZX_OK);
 }
 
 void FakeBlockDevice::UpdateStats(bool success, zx::ticks start_tick,
@@ -141,13 +141,15 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
           uint64_t offset = (requests[i].dev_offset + j) * block_size;
           zx_status_t status = block_device_.read(buffer, offset, block_size);
           if (status != ZX_OK) {
-            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            FX_LOGS(ERROR) << "Read from device failed: offset=" << offset
+                           << ", block_size=" << block_size;
             return status;
           }
           offset = (requests[i].vmo_offset + j) * block_size;
           status = target_vmoid.write(buffer, offset, block_size);
           if (status != ZX_OK) {
-            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            FX_LOGS(ERROR) << "Write to buffer failed: offset=" << offset
+                           << ", block_size=" << block_size;
             return status;
           }
         }
@@ -168,13 +170,15 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
           uint64_t offset = (requests[i].vmo_offset + j) * block_size;
           zx_status_t status = target_vmoid.read(buffer, offset, block_size);
           if (status != ZX_OK) {
-            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            FX_LOGS(ERROR) << "Read from buffer failed: offset=" << offset
+                           << ", block_size=" << block_size;
             return status;
           }
           offset = (requests[i].dev_offset + j) * block_size;
           status = block_device_.write(buffer, offset, block_size);
           if (status != ZX_OK) {
-            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            FX_LOGS(ERROR) << "Write to device failed: offset=" << offset
+                           << ", block_size=" << block_size;
             return status;
           }
           write_block_count_++;
@@ -195,7 +199,7 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
         UpdateStats(true, start_tick, requests[i]);
         continue;
       case BLOCKIO_CLOSE_VMO:
-        EXPECT_EQ(1, vmos_.erase(requests[i].vmoid));
+        ZX_ASSERT(vmos_.erase(requests[i].vmoid) == 1);
         break;
       default:
         UpdateStats(false, start_tick, requests[i]);
@@ -248,7 +252,7 @@ FakeFVMBlockDevice::FakeFVMBlockDevice(uint64_t block_count, uint32_t block_size
       vslice_count_(fvm::kMaxVSlices) {
   extents_.emplace(0, range::Range<uint64_t>(0, 1));
   pslice_allocated_count_++;
-  EXPECT_GE(slice_capacity, pslice_allocated_count_);
+  ZX_ASSERT(slice_capacity >= pslice_allocated_count_);
   pslice_total_count_ = slice_capacity;
 }
 
@@ -259,9 +263,9 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
   // handles the pause requests.
 
   fuchsia_hardware_block_BlockInfo info = {};
-  EXPECT_OK(BlockGetInfo(&info));
-  EXPECT_GE(slice_size_, info.block_size, "Slice size must be larger than block size");
-  EXPECT_EQ(0, slice_size_ % info.block_size, "Slice size not divisible by block size");
+  ZX_ASSERT(BlockGetInfo(&info) == ZX_OK);
+  ZX_ASSERT_MSG(slice_size_ >= info.block_size, "Slice size must be larger than block size");
+  ZX_ASSERT_MSG(slice_size_ % info.block_size == 0, "Slice size not divisible by block size");
 
   size_t blocks_per_slice = slice_size_ / info.block_size;
 
@@ -288,10 +292,11 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
     if (extent == extents_.end() || extent->first != range.Start()) {
       extent--;
     }
-    EXPECT_NE(extent, extents_.end(), "Could not find matching slices for operation");
-    EXPECT_LE(extent->second.Start(), range.Start(),
-              "Operation does not start within allocated slice");
-    EXPECT_GE(extent->second.End(), range.End(), "Operation does not end within allocated slice");
+    ZX_ASSERT_MSG(extent != extents_.end(), "Could not find matching slices for operation");
+    ZX_ASSERT_MSG(extent->second.Start() <= range.Start(),
+                  "Operation does not start within allocated slice");
+    ZX_ASSERT_MSG(extent->second.End() >= range.End(),
+                  "Operation does not end within allocated slice");
   }
 
   return FakeBlockDevice::FifoTransaction(requests, count);
@@ -323,7 +328,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
     if (extent == extents_.end() || extent->first != slice_start) {
       extent--;
     }
-    EXPECT_NE(extent, extents_.end());
+    ZX_ASSERT(extent != extents_.end());
     if (extent->second.Start() <= slice_start && slice_start < extent->second.End()) {
       // Allocated.
       out_ranges[*out_ranges_count].allocated = true;
@@ -367,7 +372,7 @@ zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
       extension.Merge(range.second);
       uint64_t merged_length = extension.Length();
       uint64_t overlap_length = total_length - merged_length;
-      EXPECT_GE(new_slices, overlap_length, "underflow");
+      ZX_ASSERT_MSG(new_slices >= overlap_length, "underflow");
       new_slices -= overlap_length;
     }
   }
@@ -416,7 +421,7 @@ zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
           new_start = range.End();
           new_end = iter->second.End();
         } else {
-          EXPECT_TRUE(end_overlap);
+          ZX_ASSERT(end_overlap);
           new_start = iter->second.Start();
           new_end = range.Start();
         }
@@ -442,7 +447,7 @@ zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
   if (erased_blocks == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  EXPECT_GE(pslice_allocated_count_, erased_blocks);
+  ZX_ASSERT(pslice_allocated_count_ >= erased_blocks);
   pslice_allocated_count_ -= erased_blocks;
   return ZX_OK;
 }

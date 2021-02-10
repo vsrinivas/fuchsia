@@ -4,8 +4,8 @@
 
 #include "src/storage/minfs/inspector/parser.h"
 
+#include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
-#include <zxtest/zxtest.h>
 
 #include "src/storage/minfs/format.h"
 

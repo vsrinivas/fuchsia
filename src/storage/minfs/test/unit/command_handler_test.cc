@@ -8,7 +8,8 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <disk_inspector/vmo_buffer_factory.h>
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
@@ -78,27 +79,32 @@ WriteSuperblockField [fieldname] [value]
 
 )""";
 
-  EXPECT_STR_EQ(output_stream.str().c_str(), expected.c_str());
+  EXPECT_EQ(output_stream.str(), expected);
 }
 
-std::vector<std::vector<std::string>> test_commands = {{"InvalidCommand", "1", "2", "3"},
-                                                       {"TogglePrintHex"},
-                                                       {"ToggleHideArray"},
-                                                       {"PrintInode", "0"},
-                                                       {"PrintInodes", "5"},
-                                                       {"PrintAllocatedInodes", "5"},
-                                                       {"PrintJournalSuperblock"},
-                                                       {"PrintJournalEntries", "5"},
-                                                       {"PrintJournalHeader", "0"},
-                                                       {"PrintJournalCommit", "0"},
-                                                       {"PrintBackupSuperblock"},
-                                                       {"WriteSuperblockField", "magic0", "0"}};
+using TestCommands = std::vector<std::vector<std::string>>;
+
+const TestCommands& GetTestCommands() {
+  static TestCommands* test_commands = new TestCommands{{"TogglePrintHex"},
+                                                        {"ToggleHideArray"},
+                                                        {"PrintInode", "0"},
+                                                        {"PrintInodes", "5"},
+                                                        {"PrintAllocatedInodes", "5"},
+                                                        {"PrintJournalSuperblock"},
+                                                        {"PrintJournalEntries", "5"},
+                                                        {"PrintJournalHeader", "0"},
+                                                        {"PrintJournalCommit", "0"},
+                                                        {"PrintBackupSuperblock"},
+                                                        {"WriteSuperblockField", "magic0", "0"}};
+  return *test_commands;
+}
 
 void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
                           std::unique_ptr<MinfsInspector>* out) {
   std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
-  ASSERT_OK(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
-                                                                &inspector_handler));
+  ASSERT_EQ(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
+                                                                &inspector_handler),
+            ZX_OK);
   auto buffer_factory =
       std::make_unique<disk_inspector::VmoBufferFactory>(inspector_handler.get(), kMinfsBlockSize);
   auto result = MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
@@ -107,22 +113,18 @@ void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
 }
 // Make sure commands don't fail when running on an unformatted device.
 TEST(MinfsCommandHandler, CheckSupportedCommandsNoFail) {
-  for (auto command : test_commands) {
-    ASSERT_NO_DEATH(
-        [&command]() {
-          auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-          std::unique_ptr<MinfsInspector> inspector;
-          CreateMinfsInspector(std::move(temp), &inspector);
-          CommandHandler handler(std::move(inspector));
+  for (auto command : GetTestCommands()) {
+    auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+    std::unique_ptr<MinfsInspector> inspector;
+    CreateMinfsInspector(std::move(temp), &inspector);
+    CommandHandler handler(std::move(inspector));
 
-          // Hide output since the output will mostly be garbage from using
-          // an uninitialized device.
-          std::ostringstream output_stream;
-          handler.SetOutputStream(&output_stream);
+    // Hide output since the output will mostly be garbage from using
+    // an uninitialized device.
+    std::ostringstream output_stream;
+    handler.SetOutputStream(&output_stream);
 
-          handler.CallCommand(command);
-        },
-        "Failed test calling command: %s\n", command[0].c_str());
+    handler.CallCommand(command);
   }
 }
 
@@ -132,17 +134,17 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsSuccess) {
 
   // Format the device.
   std::unique_ptr<Bcache> bcache;
-  ASSERT_OK(Bcache::Create(std::move(temp), kBlockCount, &bcache));
-  ASSERT_OK(Mkfs(bcache.get()));
+  ASSERT_EQ(Bcache::Create(std::move(temp), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
 
   // Write journal info to the device by creating a minfs and waiting for it
   // to finish.
   std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_OK(minfs::Minfs::Create(std::move(bcache), options, &fs));
+  ASSERT_EQ(minfs::Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
   sync_completion_t completion;
   fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+  ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   // We only care about the disk format written into the fake block device,
   // so we destroy the minfs/bcache used to format it.
@@ -156,11 +158,11 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsSuccess) {
   std::ostringstream output_stream;
   handler.SetOutputStream(&output_stream);
 
-  for (const auto& command : test_commands) {
+  for (const auto& command : GetTestCommands()) {
     if (command[0] == "InvalidCommand") {
-      EXPECT_NOT_OK(handler.CallCommand(command), "Invalid call success?: %s\n", command[0].data());
+      EXPECT_NE(handler.CallCommand(command), ZX_OK) << "Invalid call success?: " << command[0];
     } else {
-      EXPECT_OK(handler.CallCommand(command), "Command call failed: %s\n", command[0].data());
+      EXPECT_EQ(handler.CallCommand(command), ZX_OK) << "Command call failed: " << command[0];
     }
   }
 }

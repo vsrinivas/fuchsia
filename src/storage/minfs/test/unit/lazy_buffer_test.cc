@@ -6,7 +6,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/span.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/format.h"
@@ -37,20 +37,20 @@ class SimpleMapper : public MapperInterface {
   }
 };
 
-class LazyBufferTest : public zxtest::Test {
+class LazyBufferTest : public testing::Test {
  public:
   static constexpr int kNumBlocks = 20;
 
-  LazyBufferTest() {
+  void SetUp() override {
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kMinfsBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_OK(Bcache::Create(std::move(device), kNumBlocks, &bcache_));
+    ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache_), ZX_OK);
     ResetBuffer();
   }
 
   ~LazyBufferTest() {
     if (buffer_)
-      EXPECT_OK(buffer_->Detach(bcache_.get()));
+      EXPECT_EQ(buffer_->Detach(bcache_.get()), ZX_OK);
   }
 
   // Writes |data| at kIndex.
@@ -73,12 +73,12 @@ class LazyBufferTest : public zxtest::Test {
     for (size_t i = 0; i < data.size(); ++i) {
       view.mut_ref(i) = data[i];
     }
-    ASSERT_OK(view.Flush());
+    ASSERT_EQ(view.Flush(), ZX_OK);
   }
 
   void ResetBuffer() {
     if (buffer_)
-      EXPECT_OK(buffer_->Detach(bcache_.get()));
+      EXPECT_EQ(buffer_->Detach(bcache_.get()), ZX_OK);
     buffer_ = LazyBuffer::Create(bcache_.get(), "LazyBufferTest", kMinfsBlockSize).value();
   }
 
@@ -139,13 +139,15 @@ TEST_F(LazyBufferTest, ShrinkClearsLoaded) {
   // To test that loaded was cleared, write to the buffer directly and then see that it can be read
   // back.
   storage::VmoBuffer temp_buffer;
-  ASSERT_OK(temp_buffer.Initialize(bcache_->device(), 1, kMinfsBlockSize, "temp"));
+  ASSERT_EQ(temp_buffer.Initialize(bcache_->device(), 1, kMinfsBlockSize, "temp"), ZX_OK);
   constexpr uint8_t kData = 0xaf;
   memset(temp_buffer.Data(0), kData, 1);
-  EXPECT_OK(bcache_->RunOperation(
-      storage::Operation{
-          .type = storage::OperationType::kWrite, .vmo_offset = 0, .dev_offset = 0, .length = 1},
-      &temp_buffer));
+  EXPECT_EQ(bcache_->RunOperation(storage::Operation{.type = storage::OperationType::kWrite,
+                                                     .vmo_offset = 0,
+                                                     .dev_offset = 0,
+                                                     .length = 1},
+                                  &temp_buffer),
+            ZX_OK);
   view = buffer_->GetView<uint32_t>(0, 1, &reader).value();
   EXPECT_EQ(kData, *view);
 }
@@ -173,9 +175,9 @@ TEST_F(LazyBufferTest, FlushWritesAllBlocksInRange) {
           .value();
   view.mut_ref(0) = 1;
 
-  EXPECT_OK(view.Flush());
+  EXPECT_EQ(view.Flush(), ZX_OK);
 
-  ASSERT_EQ(kViewBlockCount, write_calls.size());
+  ASSERT_EQ(write_calls.size(), size_t{kViewBlockCount});
   for (int i = 0; i < kViewBlockCount; ++i) {
     EXPECT_EQ(BlockRange(i, i + 1), write_calls[i].first);
     EXPECT_EQ(mapper.Map(write_calls[i].first)->device_block(), write_calls[i].second);
@@ -196,7 +198,7 @@ TEST_F(LazyBufferTest, GetViewReturnsAnErrorWhenReadFails) {
   ErrorMapper error_mapper;
   LazyBuffer::Reader reader(bcache_.get(), &error_mapper, buffer_.get());
 
-  EXPECT_STATUS(buffer_->GetView<uint32_t>(0, 1, &reader).status_value(), ZX_ERR_IO);
+  EXPECT_EQ(buffer_->GetView<uint32_t>(0, 1, &reader).status_value(), ZX_ERR_IO);
 }
 
 TEST_F(LazyBufferTest, FlushReturnsErrorWhenMapperFails) {
@@ -211,14 +213,14 @@ TEST_F(LazyBufferTest, FlushReturnsErrorWhenMapperFails) {
                                     /*transaction*/ nullptr, &error_mapper, view,
                                     [&](ResizeableBufferType* resizeable_buffer, BlockRange range,
                                         DeviceBlock device_block) {
-                                      ADD_FAILURE("Writer shouldn't be called.");
+                                      ADD_FAILURE() << "Writer shouldn't be called.";
                                       return ZX_OK;
                                     });
                               })
           .value();
   view.mut_ref(0) = 1;
 
-  EXPECT_STATUS(ZX_ERR_NOT_SUPPORTED, view.Flush());
+  EXPECT_EQ(view.Flush(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(LazyBufferTest, FlushReturnsErrorWhenWriteFails) {
@@ -236,7 +238,7 @@ TEST_F(LazyBufferTest, FlushReturnsErrorWhenWriteFails) {
           .value();
   view.mut_ref(0) = 1;
 
-  EXPECT_STATUS(view.Flush(), ZX_ERR_IO);
+  EXPECT_EQ(view.Flush(), ZX_ERR_IO);
 }
 
 }  // namespace
