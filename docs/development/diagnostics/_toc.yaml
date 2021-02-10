@@ -18,6 +18,8 @@ toc:
       path: /docs/development/diagnostics/inspect/codelab/codelab.md
   - title: "Quickstart"
     path: /docs/development/diagnostics/inspect/quickstart.md
+  - title: "Using Inspect for drivers"
+    path: /docs/development/drivers/diagnostics/inspect.md
 - title: "Log"
   section:
   - title: "Overview"
