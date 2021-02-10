@@ -773,7 +773,7 @@ static const x86_microarch_config_t silvermont_config{
     .has_meltdown = false,
     .has_l1tf = false,
     .has_mds = true,
-    .has_swapgs_bug = false,
+    .has_swapgs_bug = true,
     .has_ssb = false,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -792,7 +792,7 @@ static const x86_microarch_config_t goldmont_config{
     .has_meltdown = true,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = false,
+    .has_swapgs_bug = true,
     .has_ssb = true,
     // [APL30] Apollo Lake SOCs (Goldmont) have an errata which causes stores to not always wake
     // MWAIT-ing cores. Prefer HLT to avoid the issue.
@@ -813,7 +813,7 @@ static const x86_microarch_config_t goldmont_plus_config{
     .has_meltdown = true,
     .has_l1tf = false,
     .has_mds = false,
-    .has_swapgs_bug = false,
+    .has_swapgs_bug = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =

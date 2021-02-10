@@ -430,7 +430,7 @@ static bool test_x64_swapgs_bug_enumeration() {
   }
 
   {
-    // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have SWAPGS bug
+    // Intel(R) Celeron(R) CPU J3455 (Goldmont) has SWAPGS bug
     auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
     ASSERT_TRUE(ac.check(), "");
     data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
@@ -438,7 +438,7 @@ static bool test_x64_swapgs_bug_enumeration() {
     data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
     data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
     cpu_id::FakeCpuId cpu(*data.get());
-    EXPECT_FALSE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+    EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
   }
 
   END_TEST;
