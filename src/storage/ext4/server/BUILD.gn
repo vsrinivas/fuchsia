@@ -3,11 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "ext4_readonly"
@@ -58,69 +57,41 @@ group("server") {
   deps = [ ":ext4_readonly" ]
 }
 
-package("ext4_readonly") {
+fuchsia_component("ext4_readonly_comp") {
+  component_name = "ext4_readonly"
+  manifest = "meta/ext4_readonly.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "ext4_readonly"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/ext4_readonly.cmx"
-      dest = "ext4_readonly.cmx"
-    },
-  ]
 }
 
-test_package("ext4_server_tests") {
+fuchsia_package("ext4_readonly") {
+  deps = [ ":ext4_readonly_comp" ]
+}
+
+fuchsia_unittest_package("ext4_server_tests") {
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "ext4_readonly_bin_test"
-      dest = "ext4_readonly_test"
-      environments = basic_envs
-    },
-  ]
 }
 
-test_package("ext4_server_integration_tests") {
+fuchsia_component("ext4_server_integration_test_comp") {
+  testonly = true
+  component_name = "ext4_server_integration_test"
+  manifest = "meta/ext4_server_integration_test.cmx"
+  deps = [ ":ext4_server_integration_test" ]
+}
+
+resource("ext4_server_integration_test_data") {
+  testonly = true
+  sources = [
+    "../read-only/test_files/1file.img",
+    "../read-only/test_files/nest.img",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_test_package("ext4_server_integration_tests") {
+  test_components = [ ":ext4_server_integration_test_comp" ]
   deps = [
-    ":bin",
-    ":ext4_server_integration_test",
-  ]
-
-  binaries = [
-    {
-      name = "ext4_readonly"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ext4_readonly.cmx")
-      dest = "ext4_readonly.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("../read-only/test_files/1file.img")
-      dest = "1file.img"
-    },
-    {
-      path = rebase_path("../read-only/test_files/nest.img")
-      dest = "nest.img"
-    },
-  ]
-
-  tests = [
-    {
-      name = "ext4_server_integration_test"
-    },
+    ":ext4_readonly_comp",
+    ":ext4_server_integration_test_data",
   ]
 }
 

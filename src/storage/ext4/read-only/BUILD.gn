@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("ext4-read-only") {
   name = "ext4-read-only"
@@ -34,25 +35,18 @@ rustc_library("ext4-read-only") {
   ]
 }
 
-test_package("ext4-read-only-tests") {
-  deps = [ ":ext4-read-only_test" ]
-
-  resources = [
-    {
-      path = "test_files/1file.img"
-      dest = "1file.img"
-    },
-    {
-      path = "test_files/nest.img"
-      dest = "nest.img"
-    },
+resource("test-images") {
+  sources = [
+    "test_files/1file.img",
+    "test_files/nest.img",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  tests = [
-    {
-      name = "ext4_read_only_lib_test"
-      dest = "ext4_read_only_test"
-    },
+fuchsia_unittest_package("ext4-read-only-tests") {
+  deps = [
+    ":ext4-read-only_test",
+    ":test-images",
   ]
 }
 

@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/ext4_server_integration_test"
+        "binary": "bin/ext4_server_integration_test"
     },
     "sandbox": {
         "services": [

@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("parser") {
   name = "ext4_parser"
@@ -22,23 +23,15 @@ rustc_library("parser") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("tests") {
+resource("test-image") {
+  sources = [ "../read-only/test_files/nest.img" ]
+  outputs = [ "data/nest.img" ]
+}
+
+fuchsia_unittest_package("tests") {
   package_name = "storage-ext4-parser-tests"
-
-  deps = [ ":parser_test" ]
-
-  resources = [
-    {
-      path = rebase_path("../read-only/test_files/nest.img")
-      dest = "nest.img"
-    },
-  ]
-
-  tests = [
-    {
-      name = "ext4_parser_lib_test"
-      dest = "ext4_parser_test"
-      environments = basic_envs
-    },
+  deps = [
+    ":parser_test",
+    ":test-image",
   ]
 }
