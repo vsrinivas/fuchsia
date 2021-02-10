@@ -6,6 +6,7 @@ import("//build/rust/rustc_test.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
 rustc_test("rust-tests") {
+  output_name = "rust-tests"
   edition = "2018"
   deps = [
     "//src/lib/fidl/rust/fidl",

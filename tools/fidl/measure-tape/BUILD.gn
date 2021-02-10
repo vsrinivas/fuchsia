@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -12,18 +12,17 @@ group("tests") {
   ]
 }
 
-test_package("integration-tests") {
-  deps = [
-    "hlcpp-tests",
-    "rust-tests",
-  ]
+fuchsia_unittest_component("rust-tests-comp") {
+  deps = [ "rust-tests" ]
+}
 
-  tests = [
-    {
-      name = "rust_tests"
-    },
-    {
-      name = "hlcpp-tests"
-    },
+fuchsia_unittest_component("hlcpp-tests-comp") {
+  deps = [ "hlcpp-tests" ]
+}
+
+fuchsia_test_package("integration-tests") {
+  test_components = [
+    ":rust-tests-comp",
+    ":hlcpp-tests-comp",
   ]
 }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("fidlcat_test_bin") {
   testonly = true
@@ -15,14 +15,8 @@ executable("fidlcat_test_bin") {
   ]
 }
 
-unittest_package("fidlcat_tests") {
+fuchsia_unittest_package("fidlcat_tests") {
   deps = [ ":fidlcat_test_bin" ]
-  tests = [
-    {
-      name = "fidlcat_test_bin"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
