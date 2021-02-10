@@ -61,8 +61,8 @@ class Conversion {
     copy_range_ = std::move(copy_range);
   }
 
-  // A conversion that nests other conversions inside of makes this method
-  // availables in order to ingest the results of those operations.  For
+  // A conversion that nests other conversions inside of itself enables this
+  // method in order to ingest the results of those child conversions.  For
   // example, consider the following alias declaration, written in the old
   // syntax:
   //
@@ -187,7 +187,7 @@ class MemberedDeclarationConversion : public Conversion {
 
 // Handles the conversion of a struct declaration, written in the old syntax as:
 //
-// [resource ][strict|flexible ] struct S {...}
+// [resource] struct S {...}
 //
 // The individual struct member conversions are meant to be nested within this
 // one as NameAndTypeConversions using the AddChildText() method.
@@ -201,6 +201,46 @@ class StructDeclarationConversion : public MemberedDeclarationConversion {
  private:
   std::string get_fidl_type() override {
     return "struct";
+  }
+};
+
+// Handles the conversion of a table declaration, written in the old syntax as:
+//
+// [resource] table T {...}
+//
+// The individual table member conversions are meant to be nested within this
+// one as NameAndTypeConversions using the AddChildText() method.
+class TableDeclarationConversion : public MemberedDeclarationConversion {
+ public:
+  TableDeclarationConversion(
+      const std::unique_ptr<raw::Identifier>& identifier,
+      const std::optional<types::Strictness>& strictness,
+      const types::Resourceness& resourceness)
+      : MemberedDeclarationConversion(identifier, strictness, resourceness) {}
+
+ private:
+  std::string get_fidl_type() override {
+    return "table";
+  }
+};
+
+// Handles the conversion of a union declaration, written in the old syntax as:
+//
+// [resource ][flexible|strict] union U {...}
+//
+// The individual union member conversions are meant to be nested within this
+// one as NameAndTypeConversions using the AddChildText() method.
+class UnionDeclarationConversion : public MemberedDeclarationConversion {
+ public:
+  UnionDeclarationConversion(
+      const std::unique_ptr<raw::Identifier>& identifier,
+      const std::optional<types::Strictness>& strictness,
+      const types::Resourceness& resourceness)
+      : MemberedDeclarationConversion(identifier, strictness, resourceness) {}
+
+ private:
+  std::string get_fidl_type() override {
+    return "union";
   }
 };
 

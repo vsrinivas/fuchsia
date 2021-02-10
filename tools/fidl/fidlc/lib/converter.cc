@@ -9,22 +9,32 @@
 namespace fidl::conv {
 
 // Until FTP-033 is fully implemented, it is possible for "strict" types to not
-// have an actual "strict" keyword preceeding them (ie, "struct struct S {...}"
-// and "struct S {...}" are represented identically in the raw AST).  This
+// have an actual "strict" keyword preceding them (ie, "strict union U {...}"
+// and "union U {...}" are represented identically in the raw AST).  This
 // helper function works around that problem by determining whether or not the
 // actual "strict" keyword was used in the declaration text.
+std::optional<types::Strictness> optional_strictness(types::Strictness strictness, bool specified) {
+  if (!specified) {
+    return {};
+  }
+  return strictness;
+}
+
+// For types that only accept the strictness modifier (currently "bits" and
+// "enum"), we don't store the presence of the modifier keyword as a bool.
+// Instead, we just match the first token to its sub-kind to deduce whether or
+// not the modifier keyword is used.
 std::optional<types::Strictness> optional_strictness(Token& decl_start_token) {
   if (decl_start_token.subkind() == Token::Subkind::kStrict) {
-    return std::make_optional(types::Strictness::kStrict);
+    return types::Strictness::kStrict;
   }
   if (decl_start_token.subkind() == Token::Subkind::kFlexible) {
-    return std::make_optional(types::Strictness::kFlexible);
+    return types::Strictness::kFlexible;
   }
-  return std::nullopt;
+  return {};
 }
 
 void ConvertingTreeVisitor::OnBitsDeclaration(const std::unique_ptr<raw::BitsDeclaration> &element) {
-  Token& start = *element->decl_start_token;
   Token& end = element->identifier->end_;
   if (element->maybe_type_ctor != nullptr) {
     end = element->maybe_type_ctor->end_;
@@ -32,8 +42,8 @@ void ConvertingTreeVisitor::OnBitsDeclaration(const std::unique_ptr<raw::BitsDec
 
   auto ref = element->maybe_type_ctor == nullptr ? std::nullopt :
              std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(element->maybe_type_ctor);
-  std::unique_ptr<Conversion> conv = std::make_unique<BitsDeclarationConversion>(element->identifier, ref, optional_strictness(start));
-  Converting converting(this, std::move(conv), start, end);
+  std::unique_ptr<Conversion> conv = std::make_unique<BitsDeclarationConversion>(element->identifier, ref, optional_strictness(*element->decl_start_token));
+  Converting converting(this, std::move(conv), *element->decl_start_token, end);
   TreeVisitor::OnBitsDeclaration(element);
 }
 
@@ -44,7 +54,6 @@ void ConvertingTreeVisitor::OnConstDeclaration(const std::unique_ptr<raw::ConstD
 }
 
 void ConvertingTreeVisitor::OnEnumDeclaration(const std::unique_ptr<raw::EnumDeclaration> &element) {
-  Token& start = *element->decl_start_token;
   Token& end = element->identifier->end_;
   if (element->maybe_type_ctor != nullptr) {
     end = element->maybe_type_ctor->end_;
@@ -52,8 +61,8 @@ void ConvertingTreeVisitor::OnEnumDeclaration(const std::unique_ptr<raw::EnumDec
 
   auto ref = element->maybe_type_ctor == nullptr ? std::nullopt :
              std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(element->maybe_type_ctor);
-  std::unique_ptr<Conversion> conv = std::make_unique<EnumDeclarationConversion>(element->identifier, ref, optional_strictness(start));
-  Converting converting(this, std::move(conv), start, end);
+  std::unique_ptr<Conversion> conv = std::make_unique<EnumDeclarationConversion>(element->identifier, ref, optional_strictness(*element->decl_start_token));
+  Converting converting(this, std::move(conv), *element->decl_start_token, end);
   TreeVisitor::OnEnumDeclaration(element);
 }
 
@@ -81,11 +90,44 @@ void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMemb
   TreeVisitor::OnStructMember(element);
 }
 
+void ConvertingTreeVisitor::OnTableDeclaration(const std::unique_ptr<raw::TableDeclaration> &element) {
+  std::unique_ptr<Conversion> conv = std::make_unique<TableDeclarationConversion>(element->identifier, std::nullopt, element->resourceness);
+  Converting converting(this, std::move(conv), *element->decl_start_token, element->identifier->end_);
+  TreeVisitor::OnTableDeclaration(element);
+}
+
+void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember> &element) {
+  if (element->maybe_used != nullptr) {
+    std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->maybe_used->identifier, element->maybe_used->type_ctor);
+    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->end_);
+    TreeVisitor::OnTableMember(element);
+  } else {
+    TreeVisitor::OnTableMember(element);
+  }
+}
+
 void ConvertingTreeVisitor::OnTypeConstructor(const std::unique_ptr<raw::TypeConstructor>& element) {
   std::unique_ptr<Conversion> conv = std::make_unique<TypeConversion>(element);
   Converting converting(this, std::move(conv), element->start_, element->end_);
   TreeVisitor::OnTypeConstructor(element);
 }
+
+void ConvertingTreeVisitor::OnUnionDeclaration(const std::unique_ptr<raw::UnionDeclaration> &element) {
+  std::unique_ptr<Conversion> conv = std::make_unique<UnionDeclarationConversion>(element->identifier, optional_strictness(element->strictness, element->strictness_specified), element->resourceness);
+  Converting converting(this, std::move(conv), *element->decl_start_token, element->identifier->end_);
+  TreeVisitor::OnUnionDeclaration(element);
+}
+
+void ConvertingTreeVisitor::OnUnionMember(const std::unique_ptr<raw::UnionMember> &element) {
+  if (element->maybe_used != nullptr) {
+    std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->maybe_used->identifier, element->maybe_used->type_ctor);
+    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->end_);
+    TreeVisitor::OnUnionMember(element);
+  } else {
+    TreeVisitor::OnUnionMember(element);
+  }
+}
+
 
 Converting::Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> conversion, const Token& start, const Token& end)
     : ctv_(ctv) {

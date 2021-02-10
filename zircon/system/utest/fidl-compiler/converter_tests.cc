@@ -723,4 +723,408 @@ type S = struct {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, TableEmpty) {
+  std::string old_version = R"FIDL(
+library example;
+
+table T {};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type T = table {};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, TableWithMember) {
+  std::string old_version = R"FIDL(
+library example;
+
+table T {
+  4: int32 a;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type T = table {
+  4: a int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, TableWithVectors) {
+  std::string old_version = R"FIDL(
+library example;
+
+table T {
+  1: vector<uint8> v1;
+  2: vector<array<uint8>:4>:16 v2;
+  3: vector<vector<array<uint8>:4>:16?>:32 v3;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type T = table {
+  1: v1 vector<uint8>;
+  2: v2 vector<array<uint8,4>>:16;
+  3: v3 vector<vector<array<uint8,4>>:<optional,16>>:32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, TableWithHandleWithSubtype) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource table T {
+  1: handle:VMO h;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type T = resource table {
+  1: h handle:VMO;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, TableWithHandleWithSubtypeAndRights) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource table T {
+  1: handle:<CHANNEL,7> h;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type T = resource table {
+  1: h handle:<CHANNEL,7>;
+};
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, TableWithComments) {
+  std::string old_version = R"FIDL(
+library example;
+
+// Top-level comments should be retained.
+/// Top-level doc comments should be retained.
+// Top-level comments after doc comments should be retained.
+table T {
+  // Inner comments should be retained.
+  /// So should inner doc comments.
+  1: string a;
+
+  /// Doc comment reserved.
+  // Comment reserved.
+  2: reserved;
+
+  // And leading blank lines.
+  // And multiline comments.
+  3: int32 b;
+  // Trailing inner comments should be retained.
+};
+// Trailing comments should be retained.
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+// Top-level comments should be retained.
+/// Top-level doc comments should be retained.
+// Top-level comments after doc comments should be retained.
+type T = table {
+  // Inner comments should be retained.
+  /// So should inner doc comments.
+  1: a string;
+
+  /// Doc comment reserved.
+  // Comment reserved.
+  2: reserved;
+
+  // And leading blank lines.
+  // And multiline comments.
+  3: b int32;
+  // Trailing inner comments should be retained.
+};
+// Trailing comments should be retained.
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithMemberUnmodified) {
+  std::string old_version = R"FIDL(
+library example;
+
+union U {
+  1: int32 a;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = union {
+  1: a int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithMemberFlexible) {
+  std::string old_version = R"FIDL(
+library example;
+
+flexible union U {
+  1: int32 a;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = flexible union {
+  1: a int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithMemberStrict) {
+  std::string old_version = R"FIDL(
+library example;
+
+strict union U {
+  1: int32 a;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = strict union {
+  1: a int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithVectors) {
+  std::string old_version = R"FIDL(
+library example;
+
+union U {
+  1: vector<uint8> v1;
+  2: vector<array<uint8>:4>:16 v2;
+  3: vector<vector<array<uint8>:4>:16?>:32 v3;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = union {
+  1: v1 vector<uint8>;
+  2: v2 vector<array<uint8,4>>:16;
+  3: v3 vector<vector<array<uint8,4>>:<optional,16>>:32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithHandleWithSubtypeUnmodified) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource union U {
+  1: handle:VMO h;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = resource union {
+  1: h handle:VMO;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithHandleWithSubtypeFlexible) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource flexible union U {
+  1: handle:VMO h;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = resource flexible union {
+  1: h handle:VMO;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithHandleWithSubtypeStrict) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource strict union U {
+  1: handle:VMO h;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = resource strict union {
+  1: h handle:VMO;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithHandleWithSubtypeAndRights) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource union U {
+  1: handle:<CHANNEL,7> h;
+};
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+type U = resource union {
+  1: h handle:<CHANNEL,7>;
+};
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, UnionWithComments) {
+  std::string old_version = R"FIDL(
+library example;
+
+// Top-level comments should be retained.
+/// Top-level doc comments should be retained.
+// Top-level comments after doc comments should be retained.
+union U {
+  // Inner comments should be retained.
+  /// So should inner doc comments.
+  1: string a;
+
+
+  2: reserved;
+
+  // And leading blank lines.
+  // And multiline comments.
+  3: int32 b;
+  // Trailing inner comments should be retained.
+};
+// Trailing comments should be retained.
+)FIDL";
+
+  std::string ftp50 = R"FIDL(
+library example;
+
+// Top-level comments should be retained.
+/// Top-level doc comments should be retained.
+// Top-level comments after doc comments should be retained.
+type U = union {
+  // Inner comments should be retained.
+  /// So should inner doc comments.
+  1: a string;
+
+
+  2: reserved;
+
+  // And leading blank lines.
+  // And multiline comments.
+  3: b int32;
+  // Trailing inner comments should be retained.
+};
+// Trailing comments should be retained.
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, Unchanged) {
+  std::string old_version = R"FIDL(
+library example;
+
+// Comment.
+/// Doc Comment.
+// Another Comment.
+using foo;
+
+/// Doc Comment.
+[Transport = "Syscall"]
+protocol Empty {};
+
+service AlsoEmpty {};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(old_version, ToNewSyntax(old_version));
+}
+
 }  // namespace
+

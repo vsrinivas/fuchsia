@@ -39,28 +39,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnSourceElementEnd(const raw::SourceElement& element) override {}
   void OnUsing(std::unique_ptr<raw::Using> const& element) override {}
 
-  // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
-  //   the moment it serves as a useful list of TreeVisitor methods that are
-  //   intended to be left unmodified by the ConvertingTreeVisitor.
-  // void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) override {}
-  // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) override {}
-  // void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) override {}
-  // void OnConstant(std::unique_ptr<Constant> const& element) override {}
-  // void OnHandleSubtype(types::HandleSubtype subtype) override {}
-  // void OnIdentifier(std::unique_ptr<Identifier> const& element) override;
-  // void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const& element) override {}
-  // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) override {}
-  // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const& element) override {}
-  // void OnNullability(types::Nullability nullability) override {}
-  // void OnParameterList(std::unique_ptr<ParameterList> const& element) override {}
-  // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override {}
-  // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {}
-  // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {}
-
   // The remaining "On*" methods are loosely organized by keyword.  All of them
   // must be overwritten by the implementation.
-  // TODO(azaslavsky): convert remaining methods from noops to overrides as more
-  //   types of conversions are supported.
 
   // Bits.
   void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override;
@@ -74,27 +54,23 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // Files.
   void OnFile(std::unique_ptr<raw::File> const& element) override;
 
-  // Protocols.
+  // Method Parameters.
   void OnParameter(std::unique_ptr<raw::Parameter> const& element) override;
-
-  // Resources.
-  void OnResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> const& element) override {}
-  void OnResourceProperty(std::unique_ptr<raw::ResourceProperty> const& element) override {}
 
   // Structs.
   void OnStructDeclaration(std::unique_ptr<raw::StructDeclaration> const& element) override;
   void OnStructMember(std::unique_ptr<raw::StructMember> const& element) override;
 
   // Tables.
-  void OnTableDeclaration(std::unique_ptr<raw::TableDeclaration> const& element) override {}
-  void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override {}
+  void OnTableDeclaration(std::unique_ptr<raw::TableDeclaration> const& element) override;
+  void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override;
 
   // Types.
   void OnTypeConstructor(std::unique_ptr<raw::TypeConstructor> const& element) override;
 
   // Unions.
-  void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override {}
-  void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override {}
+  void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override;
+  void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override;
 
   // Used to return a string with the converted output upon converter
   // completion.

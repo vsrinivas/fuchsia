@@ -1269,8 +1269,9 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTable));
   if (!Ok())
     return Fail();
+  auto decl_start_token = decl_token.value();
 
-  ValidateModifiers<types::Resourceness>(modifiers, decl_token.value());
+  ValidateModifiers<types::Resourceness>(modifiers, decl_start_token);
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -1312,7 +1313,11 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
     Fail();
 
   const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
-  return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::move(attributes),
+  if (resourceness == types::Resourceness::kResource) {
+    decl_start_token = modifiers.resourceness_token.value();
+  }
+
+  return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
                                                  std::move(identifier), std::move(members),
                                                  types::Strictness::kFlexible, resourceness);
 }
@@ -1364,8 +1369,9 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
   if (!Ok())
     return Fail();
+  auto decl_start_token = decl_token.value();
 
-  ValidateModifiers<types::Strictness, types::Resourceness>(modifiers, decl_token.value());
+  ValidateModifiers<types::Strictness, types::Resourceness>(modifiers, decl_start_token);
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -1413,9 +1419,15 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
     return Fail(ErrMustHaveNonReservedMember);
 
   const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
+  if (resourceness == types::Resourceness::kResource) {
+    decl_start_token = modifiers.resourceness_token.value();
+  } else if (modifiers.strictness != std::nullopt) {
+    decl_start_token = modifiers.strictness_token.value();
+  }
+
   return std::make_unique<raw::UnionDeclaration>(
-      scope.GetSourceElement(), std::move(attributes), std::move(identifier), std::move(members),
-      modifiers.strictness.value_or(types::Strictness::kStrict), resourceness);
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes), std::move(identifier), std::move(members),
+      modifiers.strictness.value_or(types::Strictness::kStrict), modifiers.strictness != std::nullopt, resourceness);
 }
 
 std::unique_ptr<raw::File> Parser::ParseFile() {

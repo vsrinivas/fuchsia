@@ -302,7 +302,8 @@ class BitsDeclaration final : public SourceElement {
                   std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
-                  std::vector<std::unique_ptr<BitsMember>> members, types::Strictness strictness)
+                  std::vector<std::unique_ptr<BitsMember>> members,
+                  types::Strictness strictness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
@@ -400,7 +401,8 @@ class EnumDeclaration final : public SourceElement {
                   std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
-                  std::vector<std::unique_ptr<EnumMember>> members, types::Strictness strictness)
+                  std::vector<std::unique_ptr<EnumMember>> members,
+                  types::Strictness strictness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
@@ -576,7 +578,8 @@ class ServiceDeclaration final : public SourceElement {
 
 class StructMember final : public SourceElement {
  public:
-  StructMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+  StructMember(SourceElement const& element,
+               std::unique_ptr<TypeConstructor> type_ctor,
                std::unique_ptr<Identifier> identifier,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
@@ -654,11 +657,15 @@ struct TableMember final : public SourceElement {
 };
 
 struct TableDeclaration final : public SourceElement {
-  TableDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+  TableDeclaration(SourceElement const& element,
+                   std::unique_ptr<Token> decl_start_token,
+                   std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<TableMember>> members, types::Strictness strictness,
+                   std::vector<std::unique_ptr<TableMember>> members,
+                   types::Strictness strictness,
                    types::Resourceness resourceness)
       : SourceElement(element),
+        decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         members(std::move(members)),
@@ -667,6 +674,7 @@ struct TableDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
+  std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<TableMember>> members;
@@ -712,23 +720,31 @@ class UnionMember final : public SourceElement {
 
 class UnionDeclaration final : public SourceElement {
  public:
-  UnionDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+  UnionDeclaration(SourceElement const& element,
+                   std::unique_ptr<Token> decl_start_token,
+                   std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<UnionMember>> members, types::Strictness strictness,
+                   std::vector<std::unique_ptr<UnionMember>> members,
+                   types::Strictness strictness,
+                   bool strictness_specified,
                    types::Resourceness resourceness)
       : SourceElement(element),
+        decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         members(std::move(members)),
         strictness(strictness),
+        strictness_specified(strictness_specified),
         resourceness(resourceness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
+  std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<UnionMember>> members;
   const types::Strictness strictness;
+  const bool strictness_specified;
   const types::Resourceness resourceness;
 };
 
