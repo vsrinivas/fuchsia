@@ -138,6 +138,8 @@ type endpoint struct {
 
 	ns *Netstack
 
+	// gVisor stack clears the hard error on the endpoint on a read, so,
+	// save the error when returned by gVisor endpoint calls.
 	hardError hardError
 }
 
@@ -175,6 +177,13 @@ func (he *hardError) storeAndRetrieveLocked(err tcpip.Error) tcpip.Error {
 		}
 	}
 	return he.mu.err
+}
+
+func (he *hardError) get() tcpip.Error {
+	he.mu.Lock()
+	err := he.mu.err
+	he.mu.Unlock()
+	return err
 }
 
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
@@ -432,10 +441,38 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		linger:  make(chan struct{}),
 	}
 
-	// Handle the case where the endpoint has already seen an error state.
-	// For ex: Accepted endpoints that get a RST by the time we come here.
-	// In such case, we would skip registering for EventHUp as we are
-	// looking at the endpoint post HUp.
+	onHUp := func() {
+		eps.onHUpOnce.Do(func() {
+			if !eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key) {
+				_ = syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", eps.endpoint.key)
+			}
+			// Run this in a separate goroutine to avoid deadlock.
+			//
+			// The waiter.Queue lock is held by the caller of this callback.
+			// close() blocks on completions of `loop*`, which
+			// depend on acquiring waiter.Queue lock to unregister events.
+			go func() {
+				eps.wq.EventUnregister(&eps.onHUp)
+				eps.close()
+			}()
+		})
+	}
+
+	eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
+		onHUp()
+	})
+	eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
+
+	ns.onAddEndpoint(&eps.endpoint)
+
+	// Accepted endpoints which are already reset would not notify hangup event.
+	// Check for the hard error state and handle any cleanup.
+	//
+	// Note that we register a callback for hangup event and add the endpoint
+	// to the internal map before checking for the error state. This is to avoid
+	// losing notification of hangup event with a race between checking for hard
+	// error state in gVisor endpoint and the same endpoint's error state being
+	// updated because of processing of an incoming RST.
 	//
 	// Acquire hard error lock across ep calls to avoid races and store the
 	// hard error deterministically.
@@ -443,38 +480,8 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	hardError := eps.endpoint.hardError.storeAndRetrieveLocked(eps.ep.LastError())
 	eps.endpoint.hardError.mu.Unlock()
 	if hardError != nil {
-		// Run this in a separate goroutine to avoid deadlock.
-		//
-		// close() blocks on completions of `loop*` routines.
-		go eps.close()
-	} else {
-		// Add the endpoint before registering for an EventHUp callback and starting
-		// the loop{read,Write} go-routines. We remove the endpoint from the map on
-		// EventHUp which can be trigerred soon-after the callback registration or
-		// starting of the loop{Read,Write}.
-		ns.onAddEndpoint(&eps.endpoint)
-
-		// Register a callback for error and closing events from gVisor to
-		// trigger a close of the endpoint.
-		eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
-			eps.onHUpOnce.Do(func() {
-				if !eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key) {
-					_ = syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", eps.endpoint.key)
-				}
-				// Run this in a separate goroutine to avoid deadlock.
-				//
-				// The waiter.Queue lock is held by the caller of this callback.
-				// close() blocks on completions of `loop*`, which
-				// depend on acquiring waiter.Queue lock to unregister events.
-				go func() {
-					eps.wq.EventUnregister(&eps.onHUp)
-					eps.close()
-				}()
-			})
-		})
-		eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
+		onHUp()
 	}
-
 	return eps, nil
 }
 
@@ -596,6 +603,25 @@ func (eps *endpointWithSocket) close() {
 			}
 		}
 
+		// Signal the client about hard errors that require special errno
+		// handling by the client for read/write calls.
+		err := eps.endpoint.hardError.get()
+		if err == nil {
+			// The gVisor endpoint could have got a hard error after the
+			// read/write loops have ended, check for that here.
+			err = eps.ep.LastError()
+		}
+		switch err.(type) {
+		case *tcpip.ErrConnectionRefused:
+			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalConnectionRefused); err != nil {
+				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalConnectionRefused) = %s", err))
+			}
+		case *tcpip.ErrConnectionReset:
+			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalConnectionReset); err != nil {
+				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalConnectionReset) = %s", err))
+			}
+		}
+
 		if err := eps.local.Close(); err != nil {
 			panic(err)
 		}
@@ -619,6 +645,9 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	// fail above, so we register the callback only in the success case to avoid
 	// incorrectly handling events on connected sockets.
 	eps.onListen.Do(func() {
+		// Start polling for any shutdown events from the client as shutdown is
+		// allowed on a listening stream socket.
+		eps.startPollLoop()
 		var entry waiter.Entry
 		cb := func() {
 			var err error
@@ -656,7 +685,19 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
 
-func (eps *endpointWithSocket) startLoops(signals zx.Signals) {
+func (eps *endpointWithSocket) startPollLoop() {
+	eps.mu.Lock()
+	defer eps.mu.Unlock()
+	select {
+	case <-eps.closing:
+	default:
+		ch := make(chan struct{})
+		eps.mu.loopPollDone = ch
+		go eps.loopPoll(ch)
+	}
+}
+
+func (eps *endpointWithSocket) startReadWriteLoops(signals zx.Signals) {
 	eps.mu.Lock()
 	defer eps.mu.Unlock()
 	select {
@@ -669,7 +710,6 @@ func (eps *endpointWithSocket) startLoops(signals zx.Signals) {
 			done *<-chan struct{}
 			fn   func(chan<- struct{})
 		}{
-			{&eps.mu.loopPollDone, eps.loopPoll},
 			{&eps.mu.loopReadDone, eps.loopRead},
 			{&eps.mu.loopWriteDone, eps.loopWrite},
 		} {
@@ -707,7 +747,8 @@ func (eps *endpointWithSocket) Connect(ctx fidl.Context, address fidlnet.SocketA
 						signals |= zxsocket.SignalConnected
 					}
 					go eps.wq.EventUnregister(&entry)
-					eps.startLoops(signals)
+					eps.startPollLoop()
+					eps.startReadWriteLoops(signals)
 				})
 			}
 			entry.Callback = callback(func(_ *waiter.Entry, m waiter.EventMask) {
@@ -783,7 +824,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 			return 0, nil, nil, err
 		}
 
-		eps.onConnect.Do(func() { eps.startLoops(zxsocket.SignalOutgoing | zxsocket.SignalConnected) })
+		eps.onConnect.Do(func() { eps.startReadWriteLoops(zxsocket.SignalOutgoing | zxsocket.SignalConnected) })
 
 		return 0, addr, eps, nil
 	}
@@ -791,13 +832,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
 func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
-	triggerClose := false
-	defer func() {
-		close(ch)
-		if triggerClose {
-			eps.close()
-		}
-	}()
+	defer close(ch)
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 
@@ -902,12 +937,10 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			}
 			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
-			triggerClose = true
 			return
 		case *tcpip.ErrTimeout:
 			// The maximum duration of missing ACKs was reached, or the maximum
 			// number of unacknowledged keepalives was reached.
-			triggerClose = true
 			return
 		default:
 			_ = syslog.Errorf("TCP Endpoint.Write(): %s", err)
@@ -917,13 +950,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
 func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
-	triggerClose := false
-	defer func() {
-		close(ch)
-		if triggerClose {
-			eps.close()
-		}
-	}()
+	defer close(ch)
 
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	eps.wq.EventRegister(&inEntry, waiter.EventIn)
@@ -956,7 +983,6 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			//
 			// The connection was alive but now is dead - this is equivalent to
 			// having received a TCP RST.
-			triggerClose = true
 			return
 		case *tcpip.ErrConnectionRefused:
 			// Connection refused is a "hard error" that may be observed on either the
@@ -986,7 +1012,6 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			}
 			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
-			triggerClose = true
 			return
 		case nil, *tcpip.ErrBadBuffer:
 			if err == nil {

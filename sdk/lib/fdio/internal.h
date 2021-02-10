@@ -116,9 +116,15 @@ using fdio_ops_t = struct fdio_ops {
 #define IOFLAG_CLOEXEC (1 << 0)
 #define IOFLAG_EPOLL (1 << 2)
 #define IOFLAG_WAITABLE (1 << 3)
+
+// Socket is connecting to the peer.
 #define IOFLAG_SOCKET_CONNECTING (1 << 4)
+// Socket is connected to the peer.
 #define IOFLAG_SOCKET_CONNECTED (1 << 5)
+// Socket is operating in non-blocking mode.
 #define IOFLAG_NONBLOCK (1 << 6)
+// Socket has an error signal asserted.
+#define IOFLAG_SOCKET_HAS_ERROR (1 << 7)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.cc ensure we aren't colliding.
