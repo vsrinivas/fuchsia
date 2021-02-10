@@ -71,7 +71,7 @@ persistent configuration.
 You can delete the persistent configuration by running (from host machine):
 
 ```posix-terminal
-fx shell run fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx delete_persistent_config
+fx shell basemgr_launcher delete_config
 ```
 
 ## Example

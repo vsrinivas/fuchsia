@@ -26,6 +26,7 @@
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 constexpr char kShutdownBasemgrCommandString[] = "shutdown";
+constexpr char kClearConfigCommandString[] = "delete_config";
 
 // Returns false if no basemgr debug service can be found, because
 // basemgr is not running.
@@ -74,6 +75,32 @@ zx_status_t ShutdownBasemgr(async::Loop* loop) {
   return ZX_OK;
 }
 
+zx_status_t ClearPersistedConfig(async::Loop* loop) {
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kBasemgrUrl;
+  launch_info.arguments = {"delete_persistent_config"};
+
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  fuchsia::sys::LauncherPtr launcher;
+  fuchsia::sys::ComponentControllerPtr controller;
+  context->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  zx_status_t channel_close_status;
+  controller.set_error_handler([&channel_close_status, loop](zx_status_t status) {
+    channel_close_status = status;
+    loop->Quit();
+  });
+  loop->Run();
+  loop->ResetQuit();
+  if (channel_close_status != ZX_OK) {
+    std::cerr << "basemgr delete_peristent_config did not exit cleanly. Expected ZX_OK, got "
+              << zx_status_get_string(channel_close_status);
+  }
+  return ZX_OK;
+}
+
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
   auto dir = std::make_unique<vfs::PseudoDir>();
   dir->AddEntry(modular_config::kStartupConfigFilePath,
@@ -92,9 +119,10 @@ std::string GetUsage() {
 Usage: basemgr_launcher [<command>]
 
   <command>
-    (none)    Launches a new instance of basemgr with a modular JSON configuration
-              read from stdin.
-    shutdown  Terminates the running instance of basemgr, if found.
+    (none)         Launches a new instance of basemgr with a modular JSON configuration
+                   read from stdin.
+    shutdown       Terminates the running instance of basemgr, if found.
+    delete_config  Clears any cached persistent configuration (see below).
 
 # Examples (from host machine):
 
@@ -109,7 +137,7 @@ be stored and used when basemgr restarts and across reboots.
 
 This configuration can be deleted by running (from host machine)
 
-  $ fx shell run fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx delete_persistent_config
+  $ fx shell basemgr_launcher delete_config
 )";
 }
 
@@ -127,6 +155,8 @@ int main(int argc, const char** argv) {
       config_str = modular::ConfigToJsonString(modular::DefaultConfig());
     } else if (cmd == kShutdownBasemgrCommandString) {
       return ShutdownBasemgr(&loop);
+    } else if (cmd == kClearConfigCommandString) {
+      return ClearPersistedConfig(&loop);
     } else {
       std::cerr << GetUsage() << std::endl;
       return ZX_ERR_INVALID_ARGS;

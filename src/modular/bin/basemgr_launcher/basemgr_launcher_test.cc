@@ -100,6 +100,11 @@ TEST_F(BasemgrLauncherTest, NoopShutdownReturnsOk) {
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"shutdown"}));
 }
 
+// Clear persistent config should complete without error.
+TEST_F(BasemgrLauncherTest, ClearConfigRuns) {
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"delete_config"}));
+}
+
 // When shutdown is issued, ensure that basemgr.cmx completely shuts down.
 TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
