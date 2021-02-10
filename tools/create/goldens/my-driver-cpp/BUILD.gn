@@ -9,9 +9,8 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("my-driver-cpp") {
   testonly = true
@@ -75,12 +74,6 @@ test("unit-tests") {
   ]
 }
 
-unittest_package("my-driver-cpp-tests") {
+fuchsia_unittest_package("my-driver-cpp-tests") {
   deps = [ ":unit-tests" ]
-  tests = [
-    {
-      name = "unit-tests"
-      environments = basic_envs
-    },
-  ]
 }
