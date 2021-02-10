@@ -197,7 +197,6 @@ go_library("netstack_lib") {
     "netstack_service_impl_test.go",
     "netstack_test.go",
     "noop_endpoint_test.go",
-    "packetbuffer/packetbuffer.go",
     "pprof/export.go",
     "routes/routes.go",
     "routes/routes_test.go",
