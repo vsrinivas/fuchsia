@@ -47,6 +47,9 @@ executable("unittests") {
 
   # TODO(fxbug.dev/46839): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO(fxbug.dev/69507): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-deprecated-declarations" ]
 }
 
 source_set("util") {

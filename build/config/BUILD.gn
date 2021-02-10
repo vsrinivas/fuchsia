@@ -574,10 +574,6 @@ config("default_warnings") {
     # TODO(fxbug.dev/43681): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-range-loop-analysis",
-
-    # TODO(fxbug.dev/49143): Temporarily disable this warning until we disable it
-    # individually for affected third_party libraries.
-    "-Wno-deprecated-declarations",
   ]
   cflags_cc = [
     # TODO(fxbug.dev/38640): Keep this flag here while it is enabled in ZN to keep the
@@ -619,6 +615,15 @@ config("Wno-unused-function") {
     "//src/devices/i2c/drivers/aml-i2c:aml-i2c",
     "//src/devices/i2c/drivers/intel-i2c",
     "//zircon/third_party/uapp/dash",
+  ]
+}
+
+# TODO(fxbug.dev/69507): clean up instances of this outside of third party code.
+config("Wno-deprecated-declarations") {
+  cflags = [ "-Wno-deprecated-declarations" ]
+  visibility = [
+    "//src/ui/input/lib/hid-input-report/*",
+    "//src/ui/scenic/lib/input/tests/*",
   ]
 }
 
