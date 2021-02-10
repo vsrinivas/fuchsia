@@ -29,9 +29,6 @@
 
 namespace camera {
 
-// Gets the register value from the sequence table.
-// |id| : Index of the sequence table.
-// |address| : Address of the register.
 fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uint8_t index,
                                                                              uint16_t address) {
   TRACE_DURATION("camera", "Imx227Device::GetRegisterValueFromSequence");
@@ -52,6 +49,20 @@ fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uin
     sequence++;
   }
   return fit::error(ZX_ERR_NOT_FOUND);
+}
+
+fit::result<uint16_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence16(uint8_t index,
+                                                                                uint16_t address) {
+  TRACE_DURATION("camera", "Imx227Device::GetRegisterValueFromSequence16");
+  auto result_hi = GetRegisterValueFromSequence(index, address);
+  auto result_lo = GetRegisterValueFromSequence(index, address + 1);
+  if (result_hi.is_error()) {
+    return fit::error(result_hi.error());
+  }
+  if (result_lo.is_error()) {
+    return fit::error(result_lo.error());
+  }
+  return fit::ok(result_hi.value() << 8 | result_lo.value());
 }
 
 zx_status_t Imx227Device::InitPdev() {

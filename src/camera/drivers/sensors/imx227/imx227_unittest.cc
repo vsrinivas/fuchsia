@@ -15,6 +15,7 @@
 
 #include "src/camera/drivers/sensors/imx227/constants.h"
 #include "src/camera/drivers/sensors/imx227/imx227_id.h"
+#include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 #include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"
 
 // The following equality operators are necessary for mocks.
@@ -150,6 +151,13 @@ class FakeImx227Device : public Imx227Device {
     mock_mipi_.VerifyAndClear();
   }
 
+  fit::result<uint8_t, zx_status_t> GetRegValFromSeq(uint8_t index, uint16_t address) {
+    return GetRegisterValueFromSequence(index, address);
+  }
+  fit::result<uint16_t, zx_status_t> GetRegValFromSeq16(uint8_t index, uint16_t address) {
+    return GetRegisterValueFromSequence16(index, address);
+  }
+
   const camera_sensor2_protocol_t* proto() const { return &proto_; }
   mock_i2c::MockI2c& mock_i2c() { return mock_i2c_; }
 
@@ -273,6 +281,47 @@ TEST_F(Imx227DeviceTest, UpdateAnalogGain) {
   // No i2c interactions expected.
   ASSERT_OK(dut().CameraSensor2Update());
   dut().mock_i2c().VerifyAndClear();
+}
+
+TEST_F(Imx227DeviceTest, GetRegisterValueFromSequence) {
+  ASSERT_OK(dut().CameraSensor2Init());
+
+  auto result_good = dut().GetRegValFromSeq(0, kFrameLengthLinesReg);
+  ASSERT_FALSE(result_good.is_error());
+  ASSERT_EQ(result_good.value(), 0x0a);
+
+  auto result_index_too_big = dut().GetRegValFromSeq(kSEQUENCE_TABLE.size(), kFrameLengthLinesReg);
+  ASSERT_TRUE(result_index_too_big.is_error());
+  ASSERT_EQ(result_index_too_big.error(), ZX_ERR_INVALID_ARGS);
+
+  auto result_addr_not_found = dut().GetRegValFromSeq(0, 0xfff0);
+  ASSERT_TRUE(result_addr_not_found.is_error());
+  ASSERT_EQ(result_addr_not_found.error(), ZX_ERR_NOT_FOUND);
+}
+
+TEST_F(Imx227DeviceTest, GetRegisterValueFromSequence16) {
+  ASSERT_OK(dut().CameraSensor2Init());
+
+  auto result_good = dut().GetRegValFromSeq16(0, kFrameLengthLinesReg);
+  ASSERT_FALSE(result_good.is_error());
+  ASSERT_EQ(result_good.value(), 0x0ae0);
+
+  auto result_index_too_big =
+      dut().GetRegValFromSeq16(kSEQUENCE_TABLE.size(), kFrameLengthLinesReg);
+  ASSERT_TRUE(result_index_too_big.is_error());
+  ASSERT_EQ(result_index_too_big.error(), ZX_ERR_INVALID_ARGS);
+
+  auto result_first_addr_not_found = dut().GetRegValFromSeq16(0, 0x0300);
+  ASSERT_TRUE(result_first_addr_not_found.is_error());
+  ASSERT_EQ(result_first_addr_not_found.error(), ZX_ERR_NOT_FOUND);
+
+  auto result_second_addr_not_found = dut().GetRegValFromSeq16(0, 0x0301);
+  ASSERT_TRUE(result_second_addr_not_found.is_error());
+  ASSERT_EQ(result_second_addr_not_found.error(), ZX_ERR_NOT_FOUND);
+
+  auto result_both_addr_not_found = dut().GetRegValFromSeq16(0, 0xfff0);
+  ASSERT_TRUE(result_both_addr_not_found.is_error());
+  ASSERT_EQ(result_both_addr_not_found.error(), ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace

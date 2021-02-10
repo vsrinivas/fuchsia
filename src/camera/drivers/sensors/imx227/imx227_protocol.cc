@@ -321,9 +321,9 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
   switch (id) {
     case TOTAL_RESOLUTION: {
       auto hmax_result =
-          GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg);
+          GetRegisterValueFromSequence16(available_modes[current_mode_].idx, kLineLengthPckReg);
       auto vmax_result =
-          GetRegisterValueFromSequence(available_modes[current_mode_].idx, kFrameLengthLinesReg);
+          GetRegisterValueFromSequence16(available_modes[current_mode_].idx, kFrameLengthLinesReg);
       if (hmax_result.is_error() || vmax_result.is_error()) {
         return ZX_ERR_INTERNAL;
       }
@@ -338,7 +338,7 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
       break;
     case PIXELS_PER_LINE: {
       auto hmax_result =
-          GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg);
+          GetRegisterValueFromSequence16(available_modes[current_mode_].idx, kLineLengthPckReg);
       if (hmax_result.is_error()) {
         return ZX_ERR_INTERNAL;
       }
@@ -346,8 +346,10 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
       break;
     }
     case AGAIN_LOG2_MAX:
-    case DGAIN_LOG2_MAX:
       out_value->int_value = 3 << kLog2GainShift;
+      break;
+    case DGAIN_LOG2_MAX:
+      out_value->int_value = 4 << kLog2GainShift;
       break;
     case AGAIN_ACCURACY:
       out_value->int_value = 1 << kLog2GainShift;

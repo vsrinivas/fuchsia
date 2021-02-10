@@ -146,6 +146,17 @@ class Imx227Device : public DeviceType,
   // Other
   zx_status_t InitPdev();
 
+  // Gets the register value from the sequence table.
+  // |id| : Index of the sequence table.
+  // |address| : Address of the register.
+  fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index, uint16_t address);
+
+  // Gets a 16-bit register value from the sequence table, high byte first.
+  // |id| : Index of the sequence table.
+  // |address| : Address of the register.
+  fit::result<uint16_t, zx_status_t> GetRegisterValueFromSequence16(uint8_t index,
+                                                                    uint16_t address);
+
  private:
   // I2C Helpers
   // Returns ZX_OK and an uint16_t value if the read succeeds.
@@ -174,8 +185,6 @@ class Imx227Device : public DeviceType,
   bool is_streaming_;
   uint32_t num_modes_;
   uint32_t current_mode_;
-
-  fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index, uint16_t address);
 
   // Timing data
   fit::result<uint32_t, zx_status_t> GetLinesPerSecond();
