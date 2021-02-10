@@ -38,6 +38,9 @@ their encoder. These types allow for cross-validating interoperability of log re
 The required metadata for a log record are a record type, the overall length of the record, and a
 timestamp. These are encoded in the first 16 bytes of a record:
 
+Note: For reference on how to read the bit field diagrams, see
+[Bitfield Diagram reference][bitfield-diagram].
+
 ```
 .---------------------------------------------------------------.
 |       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
@@ -205,6 +208,7 @@ Components that call [`LogSink.Connect`] are expected to pass a socket in "datag
 opposed to "streaming") and to write the ["legacy" wire format] into the it. This uses little endian
 integers and a mix of length-prefixed and null-terminated UTF-8 strings.
 
+[bitfield-diagram]: /docs/reference/diagnostics/bitfield-diagram.md
 [`zx_clock_get_monotonic`]: /docs/reference/syscalls/clock_get_monotonic.md
 [`LogSink.Connect`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#Connect
 ["legacy" wire format]: /zircon/system/ulib/syslog/include/lib/syslog/wire_format.h

@@ -75,7 +75,8 @@ This document uses MUST, SHOULD/RECOMMENDED, and MAY keywords as defined in [RFC
 
 All bit field diagrams are stored in little-endian ordering.
 
-[rfc2119]: https://www.ietf.org/rfc/rfc2119.txt
+Note: For reference on how to read the bit field diagrams, see
+[Bitfield Diagram reference][bitfield-diagram].
 
 # Blocks
 
@@ -627,7 +628,8 @@ a new even number. Release ordering ensures that writes to the file are
 visible before the generation count update is visible.
 
 <!-- xrefs -->
-[buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
-[VMO]: /docs/reference/kernel_objects/vm_object.md
+[bitfield-diagram]: /docs/reference/diagnostics/bitfield-diagram.md
 [block.h]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h
-
+[buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
+[rfc2119]: https://www.ietf.org/rfc/rfc2119.txt
+[VMO]: /docs/reference/kernel_objects/vm_object.md

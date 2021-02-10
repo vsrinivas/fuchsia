@@ -69,6 +69,10 @@ toc:
 
   - title: "Access"
     path: /docs/reference/diagnostics/logs/access.md
+- title: "Others"
+  section:
+  - title: "Bitfield diagrams"
+    path: /docs/reference/diagnostics/bitfield-diagram.md
 
 # TODO(fxbug.dev/60813)
 # - title: "Producers"
