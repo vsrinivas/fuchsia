@@ -1,0 +1,40 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test the fx-reentry script
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "scripts/fx-reentry"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+)
+
+BT_SET_UP() {
+  base_dir="${BT_TEMP_DIR}"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+}
+
+TEST_fx-reentry() {
+  local d="${base_dir}/tools/devshell"
+  mkdir -p "$d"
+  cat >"${d}/run_reentry" <<'EOF'
+#!/bin/bash
+${FUCHSIA_DIR}/scripts/fx-reentry "$@"
+EOF
+  cat >"${d}/simple_echo" <<'EOF'
+#!/bin/bash
+echo "$@"
+EOF
+  chmod u+x "${d}/run_reentry" "${d}/simple_echo"
+
+  BT_EXPECT "${fx}" run_reentry simple_echo "here" >/dev/null
+  BT_EXPECT_EQ "$(${fx} run_reentry simple_echo "here")" "here"
+  BT_EXPECT_FAIL "${base_dir}/scripts/fx-reentry" simple_echo "here" > /dev/null 2>&1
+}
+
+BT_RUN_TESTS "$@"

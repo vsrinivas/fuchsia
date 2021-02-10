@@ -262,6 +262,8 @@ for f in $(list_optional_features); do
   export ${_disabled_env_name}=$?
 done
 
+export FX_ENTRY_CMD="$command_name"
+
 declare -r cmd_and_args="$@"
 shift # Removes the command name.
 

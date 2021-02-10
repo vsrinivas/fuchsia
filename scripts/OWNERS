@@ -13,3 +13,5 @@ yifeit@google.com
 
 per-file generate_cargo.py = computerdruid@google.com
 per-file generate_cargo_desc.py = computerdruid@google.com
+
+# per-file-COMPONENT fx,fx-reentry,fx-env.sh,fx-help.awk=Tools>fx

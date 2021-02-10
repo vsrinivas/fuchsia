@@ -1,0 +1,76 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script allows a non-shell fx command to execute another command
+# in a manner similar to fx-command-run for shell fx commands. This script is
+# not intended to be used by end users directly.
+#
+# Non-shell fx commands are commands that are implemented in languages like
+# Dart (eg fx test, fx status) and Rust (eg vdl, ffx). If these non-shell
+# commands need to execute another fx command, they should not execute
+# 'fx <command>', as this would not carry over the global flags from the
+# original invocation and could trigger metrics as if the user had executed
+# the command, which sways usage analysis. `fx-reentry` script solves it by
+# executing a command directly without interpreting any global flag and
+# without triggering metrics, while enforcing the original environment variables
+# set by the original invocation.
+#
+# Usage:
+#
+#   fx-reentry <fx cmd> [args]       Executes the given command using fx-command-exec
+#
+#   fx-reentry -f <function> [args]  Executes a vars.sh function directly with the given
+#                                    arguments
+#
+#
+# This command will fail if it is executed without the environment variables
+# that the main fx entry point sets. Make sure the spawned process in your
+# chosen language inherits the environment that the original command received.
+# For example, in Dart, don't specify the 'environment' argument to
+# Process.run in https://api.dart.dev/stable/dart-io/Process/run.html, so that
+# it will inherit the environment of the parent process. Other languages have
+# similar ways to inherit the environment.
+
+
+if [[ -z "${FX_ENTRY_CMD}" ]]; then
+  echo >&2 "ERROR: $0 can only be executed from a fx command."
+  echo >&2 "If spawning a new process from a non-shell fx command, make sure"
+  echo >&2 "you keep the environment of the original process, so that required"
+  echo >&2 "environment variables set in the initial 'fx' call are defined."
+  exit 1
+fi
+
+if [[ -z "${FUCHSIA_DIR}" || ! -d "${FUCHSIA_DIR}" ]]; then
+  echo >&2 "Invalid Fuchsia root dir: ${FUCHSIA_DIR}"
+  exit 1
+fi
+
+source "${FUCHSIA_DIR}/tools/devshell/lib/vars.sh" || exit $?
+
+is_valid_function() {
+    declare -f "$1" > /dev/null
+}
+
+func=false
+if [[ "$1" == "-f" ]]; then
+  func=true
+  shift
+fi
+
+if [[ $# -eq 0 ]]; then
+  fx-error "No command or function specified."
+  exit 1
+fi
+
+if $func; then
+  if ! is_valid_function "$1"; then
+    fx-error "Invalid function: $1"
+    fx-error "Only functions in vars.sh are valid."
+    exit 1
+  fi
+  "$@"
+else
+  fx-command-exec "$@"
+fi

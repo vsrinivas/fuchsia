@@ -54,11 +54,12 @@ test_scripts = [
   "tests/fx-internal/metrics_test",
   "tests/fx-internal/mock_test",
   "tests/fx-internal/optional-features_test",
+  "tests/fx-internal/reentry_test",
   "tests/fx-internal/vars_test",
   "tests/fx-internal/verify_default_keys_test",
   "tests/subcommands/fx_cp_test",
-  "tests/subcommands/fx_emu_test",
   "tests/subcommands/fx_emu_remote_test",
+  "tests/subcommands/fx_emu_test",
   "tests/subcommands/fx_fdt_test",
   "tests/subcommands/fx_flash_fuchsia_test",
   "tests/subcommands/fx_helpdoc_test",
@@ -103,9 +104,10 @@ host_script_test_data("fx_bash_tests") {
       source_base_dir = "//scripts"
       target_base_dir = "scripts"
       files = [
+        "//scripts/fx",
         "//scripts/fx-env.sh",
         "//scripts/fx-help.awk",
-        "//scripts/fx",
+        "//scripts/fx-reentry",
       ]
     },
     {
@@ -140,7 +142,9 @@ host_script_test_data("fx_bash_tests") {
       files = [
         "//tools/devshell/contrib/blobstats",
         "//tools/devshell/contrib/codesize",
+        "//tools/devshell/contrib/format-code",
         "//tools/devshell/contrib/lib/symbol-index.sh",
+        "//tools/devshell/contrib/lint",
         "//tools/devshell/contrib/regen-goldens",
         "//tools/devshell/cp",
         "//tools/devshell/emu",
@@ -162,7 +166,6 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/lib/image_build_vars.sh",
         "//tools/devshell/lib/metrics.sh",
         "//tools/devshell/lib/platform.sh",
-        "//tools/devshell/lib/updates.sh",
         "//tools/devshell/lib/style.sh",
         "//tools/devshell/lib/vars.sh",
         "//tools/devshell/lib/verify-default-keys.sh",
@@ -173,6 +176,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/ota",
         "//tools/devshell/pave",
         "//tools/devshell/pave-remote",
+        "//tools/devshell/report-bug",
         "//tools/devshell/run-test",
         "//tools/devshell/serve-remote",
         "//tools/devshell/serve-updates",
@@ -187,9 +191,14 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/tests/subcommands/data/fx_blobstats_test/packages.csv",
         "//tools/devshell/tests/subcommands/data/fx_blobstats_test/snapshot_blobs.json",
         "//tools/devshell/tests/subcommands/data/fx_blobstats_test/snapshot_meta.far",
+        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif.so",
         "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif_blobs.json",
         "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif_meta.far",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif.so",
+        "//tools/devshell/tests/subcommands/data/fx_format_code_test/cplusplus.cc",
+        "//tools/devshell/tests/subcommands/data/fx_format_code_test/gn.gn",
+        "//tools/devshell/tests/subcommands/data/fx_format_code_test/gn.gni",
+        "//tools/devshell/tests/subcommands/data/fx_format_code_test/python3.py",
+        "//tools/devshell/tests/subcommands/data/fx_format_code_test/rust.rs",
         "//tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.cmx",
         "//tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.json",
         "//tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.manifest",
@@ -199,8 +208,6 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/tests/subcommands/data/fx_test_test/tests_multiple_in_package.json",
         "//tools/devshell/tests/subcommands/data/fx_test_test/tests_package_server_integration.json",
         "//tools/devshell/vendor",
-        "//tools/devshell/vdl",
-        "//tools/devshell/wait",
       ]
     },
     {
