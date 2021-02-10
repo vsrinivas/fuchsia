@@ -438,10 +438,10 @@ impl Log {
             super_block: SuperBlock::default(),
             log_file_checkpoints: HashMap::new(),
         });
-        stores.set_root_store(ObjectStore::create_child_store(
-            stores.root_parent_store().clone(),
-            StoreOptions { use_parent_to_allocate_object_ids: true, ..Default::default() },
-        )?);
+        stores.set_root_store(stores.root_parent_store().create_child_store(StoreOptions {
+            use_parent_to_allocate_object_ids: true,
+            ..Default::default()
+        })?);
         let root_store = stores.root_store();
         println!("root store object id {:?}", root_store.store_object_id());
         allocator.init(&root_store)?;

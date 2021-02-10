@@ -45,6 +45,8 @@ fxfs_sources = [
   "src/object_store/merge.rs",
   "src/object_store/record.rs",
   "src/object_store/tests.rs",
+  "src/testing/mod.rs",
+  "src/testing/fake_device.rs",
 ]
 
 rustc_library("lib") {

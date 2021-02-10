@@ -84,26 +84,26 @@ pub struct ObjectKey {
 }
 
 impl ObjectKey {
-    pub fn object(object_id: u64) -> ObjectKey {
-        ObjectKey { object_id: object_id, data: ObjectKeyData::Object }
+    pub fn object(object_id: u64) -> Self {
+        Self { object_id: object_id, data: ObjectKeyData::Object }
     }
 
-    pub fn attribute(object_id: u64, attribute_id: u64) -> ObjectKey {
-        ObjectKey { object_id, data: ObjectKeyData::Attribute { attribute_id } }
+    pub fn attribute(object_id: u64, attribute_id: u64) -> Self {
+        Self { object_id, data: ObjectKeyData::Attribute { attribute_id } }
     }
 
-    pub fn extent(object_id: u64, extent_key: ExtentKey) -> ObjectKey {
-        ObjectKey { object_id, data: ObjectKeyData::Extent(extent_key) }
+    pub fn extent(object_id: u64, extent_key: ExtentKey) -> Self {
+        Self { object_id, data: ObjectKeyData::Extent(extent_key) }
     }
 
-    pub fn child(object_id: u64, name: &str) -> ObjectKey {
-        ObjectKey { object_id, data: ObjectKeyData::Child { name: name.to_owned() } }
+    pub fn child(object_id: u64, name: &str) -> Self {
+        Self { object_id, data: ObjectKeyData::Child { name: name.to_owned() } }
     }
 
     // Returns the lower bound for a key.
-    pub fn lower_bound(&self) -> ObjectKey {
-        if let ObjectKey { object_id, data: ObjectKeyData::Extent(e) } = self {
-            ObjectKey::extent(*object_id, e.lower_bound())
+    pub fn lower_bound(&self) -> Self {
+        if let Self { object_id, data: ObjectKeyData::Extent(e) } = self {
+            Self::extent(*object_id, e.lower_bound())
         } else {
             self.clone()
         }
@@ -125,6 +125,7 @@ impl OrdLowerBound for ObjectKey {
 pub enum ObjectType {
     File,
     Directory,
+    Volume,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

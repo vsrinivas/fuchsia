@@ -18,6 +18,7 @@ use {
     crate::{
         lsm_tree::{ItemRef, LSMTree},
         object_handle::{ObjectHandle, ObjectHandleCursor},
+        object_store::constants::INVALID_OBJECT_ID,
     },
     allocator::Allocator,
     anyhow::Error,
@@ -400,6 +401,9 @@ impl ObjectHandle for StoreObjectHandle {
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct StoreInfo {
+    // The root object ID.
+    root_object_id: u64,
+
     // The last used object ID.
     last_object_id: u64,
 
@@ -410,7 +414,7 @@ pub struct StoreInfo {
 
 impl StoreInfo {
     fn new() -> StoreInfo {
-        StoreInfo { last_object_id: 0, layers: Vec::new() }
+        StoreInfo { root_object_id: INVALID_OBJECT_ID, last_object_id: 0, layers: Vec::new() }
     }
 }
 
@@ -475,21 +479,20 @@ impl ObjectStore {
     }
 
     pub fn create_child_store(
-        parent_store: Arc<ObjectStore>,
+        self: &Arc<ObjectStore>,
         options: StoreOptions,
     ) -> Result<Arc<ObjectStore>, Error> {
         // TODO: This should probably all be in a transaction. There should probably be a log
         // record to create a store.
         let mut transaction = Transaction::new();
-        let handle =
-            parent_store.clone().create_object(&mut transaction, HandleOptions::default())?;
-        parent_store.log.upgrade().unwrap().commit(transaction);
+        let handle = self.clone().create_object(&mut transaction, HandleOptions::default())?;
+        self.log.upgrade().unwrap().commit(transaction);
         Ok(Self::new_empty(
-            Some(parent_store.clone()),
+            Some(self.clone()),
             handle.object_id(),
-            parent_store.device.clone(),
-            &parent_store.allocator.upgrade().unwrap(),
-            &parent_store.log.upgrade().unwrap(),
+            self.device.clone(),
+            &self.allocator.upgrade().unwrap(),
+            &self.log.upgrade().unwrap(),
             options,
         ))
     }
@@ -528,6 +531,15 @@ impl ObjectStore {
 
     pub fn store_object_id(&self) -> u64 {
         self.store_object_id
+    }
+
+    pub fn root_object_id(&self) -> u64 {
+        self.store_info.lock().unwrap().root_object_id
+    }
+
+    pub fn set_root_object_id(&self, root_object_id: u64) {
+        let mut store_info = self.store_info.lock().unwrap();
+        store_info.root_object_id = root_object_id;
     }
 
     pub fn open_object(

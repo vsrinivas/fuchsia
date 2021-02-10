@@ -7,7 +7,9 @@ use {
 
 pub fn mount(cache: Cache) -> Result<(), Error> {
     let device = Arc::new(Device::new(cache));
-    let _filesystem = Filesystem::open(device)?;
+    let fs = Filesystem::open(device)?;
+    // TODO don't panic if we can't find the default volume
+    fs.volume("default").unwrap();
     // TODO
     Ok(())
 }

@@ -2,7 +2,6 @@ use {
     crate::{
         lsm_tree::LSMTree,
         object_handle::ObjectHandle,
-        object_store,
         object_store::{
             filesystem::{Filesystem, SyncOptions},
             log::Transaction,
@@ -10,51 +9,16 @@ use {
             record::{ExtentKey, ObjectItem, ObjectKey, ObjectValue},
             HandleOptions,
         },
+        testing::fake_device::FakeDevice,
     },
     anyhow::Error,
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
 };
 
-struct Device {
-    block_size: u64,
-    data: Mutex<Vec<u8>>,
-}
-
-impl Device {
-    fn new(block_size: u64) -> Device {
-        Device { block_size, data: Mutex::new(Vec::new()) }
-    }
-}
-
-impl object_store::Device for Device {
-    fn block_size(&self) -> u64 {
-        self.block_size
-    }
-    fn read(&self, offset: u64, buf: &mut [u8]) -> std::io::Result<()> {
-        assert!(offset % self.block_size == 0);
-        assert!(buf.len() % self.block_size as usize == 0);
-        let required_len = offset as usize + buf.len();
-        let data = self.data.lock().unwrap();
-        assert!(data.len() >= required_len);
-        buf.copy_from_slice(&data[offset as usize..offset as usize + buf.len()]);
-        Ok(())
-    }
-
-    fn write(&self, offset: u64, buf: &[u8]) -> std::io::Result<()> {
-        assert!(buf.len() % self.block_size as usize == 0);
-        let end = offset as usize + buf.len();
-        let mut data = self.data.lock().unwrap();
-        if data.len() < end {
-            data.resize(end, 0);
-        }
-        data[offset as usize..end].copy_from_slice(buf);
-        Ok(())
-    }
-}
 
 #[test]
 fn test_object_store() -> Result<(), Error> {
-    let device = Arc::new(Device::new(512));
+    let device = Arc::new(FakeDevice::new(512));
     let object_id;
     {
         let mut filesystem = Filesystem::new_empty(device.clone())?;
@@ -199,7 +163,7 @@ fn test_extents_merging() -> Result<(), Error> {
 
 #[test]
 fn test_directory() -> Result<(), Error> {
-    let device = Arc::new(Device::new(512));
+    let device = Arc::new(FakeDevice::new(512));
     let directory_id;
     {
         let mut filesystem = Filesystem::new_empty(device.clone())?;

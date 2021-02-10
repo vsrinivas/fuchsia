@@ -10,6 +10,7 @@ use {
 
 pub fn mkfs(cache: Cache) -> Result<(), Error> {
     let mut fs = Filesystem::new_empty(Arc::new(Device::new(cache)))?;
+    fs.new_volume("default")?;
     fs.sync(SyncOptions::default())?;
     Ok(())
 }
