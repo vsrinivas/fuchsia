@@ -24,8 +24,6 @@ protocol Api {
     signals(zx.handle handle, zx.signals data) -> (zx.status status);
     time(zx.handle handle, zx.time data) -> (zx.status status);
     vaddr(zx.handle handle, zx.vaddr data) -> (zx.status status);
-    buffer(zx.handle handle, array<voidptr>:size data, uint32 size) ->
-        (zx.status status);
 
     output_bool(zx.handle handle) -> (zx.status status, bool result);
     output_int8(zx.handle handle) -> (zx.status status, int8 result);
@@ -44,8 +42,6 @@ protocol Api {
     output_signals(zx.handle handle) -> (zx.status status, zx.signals result);
     output_time(zx.handle handle) -> (zx.status status, zx.time result);
     output_vaddr(zx.handle handle) -> (zx.status status, zx.vaddr result);
-    output_buffer(zx.handle handle, array<voidptr>:size data, uint32 size) ->
-        (zx.status status, uint32 actual);
 
     return_void(zx.handle handle) -> ();
     return_status(zx.handle handle) -> (zx.status status);

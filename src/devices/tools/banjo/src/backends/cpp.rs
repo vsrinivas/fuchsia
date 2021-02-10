@@ -85,7 +85,6 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
-        ast::Ty::Voidptr => Ok(String::from("void")),
         ast::Ty::Str { .. } => Ok(String::from("char*")),
         ast::Ty::Array { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
         ast::Ty::Vector { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),

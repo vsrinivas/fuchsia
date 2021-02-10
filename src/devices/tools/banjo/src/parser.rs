@@ -65,7 +65,7 @@ vector_type = { "vector" ~ "<" ~ type_ ~ ">" ~ (":" ~ constant )? ~ reference? }
 
 string_type = { "string" ~ ( ":" ~ constant )? ~ reference? }
 
-primitive_type = { integer_type | "voidptr" | "bool" | "float32" | "float64" }
+primitive_type = { integer_type | "bool" | "float32" | "float64" }
 
 integer_type = { "int8" | "int16" | "int32" | "int64" |
                "uint8" | "uint16" | "uint32" | "uint64" }

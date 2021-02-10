@@ -33,21 +33,6 @@ BanjoAst {
                         },
                         val: None,
                     },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Vector {
-                            ty: Voidptr,
-                            size: None,
-                            nullable: false,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "two",
-                        },
-                        val: None,
-                    },
                 ],
             },
             Struct {
@@ -92,48 +77,6 @@ BanjoAst {
                 },
                 fields: [],
             },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "banjo.examples.buffer",
-                    ),
-                    name: "SomeLongAnonymousPrefix2",
-                },
-                fields: [
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Vector {
-                            ty: Voidptr,
-                            size: None,
-                            nullable: false,
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.buffer",
-                            ),
-                            name: "input_again",
-                        },
-                        val: None,
-                    },
-                ],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "banjo.examples.buffer",
-                    ),
-                    name: "SomeLongAnonymousPrefix3",
-                },
-                fields: [],
-            },
             Protocol {
                 attributes: Attrs(
                     [],
@@ -170,26 +113,6 @@ BanjoAst {
                         ],
                         out_params: [],
                     },
-                    Method {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        name: "DoSomethingToo",
-                        in_params: [
-                            (
-                                "input_again",
-                                Vector {
-                                    ty: Voidptr,
-                                    size: None,
-                                    nullable: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                        out_params: [],
-                    },
                 ],
                 placeholders: [
                     Identifier {
@@ -207,24 +130,6 @@ BanjoAst {
                                 "banjo.examples.buffer",
                             ),
                             name: "SomeLongAnonymousPrefix1",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "banjo.examples.buffer",
-                            ),
-                            name: "SomeLongAnonymousPrefix2",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "banjo.examples.buffer",
-                            ),
-                            name: "SomeLongAnonymousPrefix3",
                         },
                         reference: false,
                     },

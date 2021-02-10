@@ -205,7 +205,6 @@ pub enum HandleTy {
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub enum Ty {
-    Voidptr,
     Bool,
     Int8,
     Int16,
@@ -284,7 +283,6 @@ impl Ty {
                 "uint64" => Ok(Ty::UInt64),
                 "float32" => Ok(Ty::Float32),
                 "float64" => Ok(Ty::Float64),
-                "voidptr" => Ok(Ty::Voidptr),
                 _e => Err(ParseError::UnrecognizedType(pair.as_str().to_string())),
             },
             Rule::handle_type => {
@@ -721,7 +719,6 @@ impl BanjoAst {
             "uint64" => return Some(Ty::UInt64),
             "float32" => return Some(Ty::Float32),
             "float64" => return Some(Ty::Float64),
-            "voidptr" => return Some(Ty::Voidptr),
             _ => {}
         };
 

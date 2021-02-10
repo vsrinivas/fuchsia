@@ -21,7 +21,6 @@ _simple_libraries = [
     name = "api"
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
-    disabled = true  # contains voidptr
   },
   {
     name = "attributes"
@@ -36,7 +35,6 @@ _simple_libraries = [
   {
     name = "buffer"
     backends = [ "c" ]
-    disabled = true  # contains voidptr
   },
   {
     name = "callback"

@@ -52,7 +52,6 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
-        ast::Ty::Voidptr => Ok(String::from("void")),
         ast::Ty::Str { .. } => Ok(String::from("char*")),
         ast::Ty::Vector { ref ty, .. } => ty_to_c_str(ast, ty),
         ast::Ty::Array { ref ty, .. } => ty_to_c_str(ast, ty),
@@ -157,16 +156,16 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
     }
 }
 
-pub fn name_buffer(ty: &str, attrs: &ast::Attrs) -> &'static str {
-    if attrs.has_attribute("Buffer") || ty == "void" {
+pub fn name_buffer(_ty: &str, attrs: &ast::Attrs) -> &'static str {
+    if attrs.has_attribute("Buffer") {
         "buffer"
     } else {
         "list"
     }
 }
 
-pub fn name_size(ty: &str, attrs: &ast::Attrs) -> &'static str {
-    if attrs.has_attribute("Buffer") || ty == "void" {
+pub fn name_size(_ty: &str, attrs: &ast::Attrs) -> &'static str {
+    if attrs.has_attribute("Buffer") {
         "size"
     } else {
         "count"
@@ -324,8 +323,7 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         | ast::Ty::UInt8
                         | ast::Ty::UInt16
                         | ast::Ty::UInt32
-                        | ast::Ty::UInt64
-                        | ast::Ty::Voidptr => {
+                        | ast::Ty::UInt64 => {
                             Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
                         }
                         e => Err(format_err!("unsupported: {}", e)),
@@ -946,7 +944,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
 
-        let helpers = decl_order.iter()
+        let helpers = decl_order
+            .iter()
             .filter_map(|decl| match decl {
                 Decl::Protocol { attributes, name, methods, .. } => {
                     Some(self.codegen_protocol_helper(attributes, name, methods, &ast))

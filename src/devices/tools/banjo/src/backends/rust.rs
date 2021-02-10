@@ -41,7 +41,6 @@ fn can_derive_partialeq(
         | ast::Ty::Float32
         | ast::Ty::Float64
         | ast::Ty::Protocol
-        | ast::Ty::Voidptr
         | ast::Ty::Enum { .. } => {
             return true;
         }
@@ -120,7 +119,6 @@ fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty, parents: &mut HashSet<ast
         | ast::Ty::Float32
         | ast::Ty::Float64
         | ast::Ty::Protocol
-        | ast::Ty::Voidptr
         | ast::Ty::Enum { .. } => {
             return true;
         }
@@ -214,7 +212,6 @@ fn to_rust_type(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
                 size = size.as_str().to_uppercase()
             ))
         }
-        ast::Ty::Voidptr => Ok(String::from("*mut std::ffi::c_void /* Voidptr */ ")),
         ast::Ty::Enum { .. } => Ok(String::from("*mut std::ffi::c_void /* Enum not right*/")),
         ast::Ty::Str { size, .. } => match size {
             Some(Constant(c)) => Ok(format!("[u8; {size} as usize]", size = c.to_uppercase())),

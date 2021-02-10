@@ -37,14 +37,12 @@ macro_rules! codegen_test {
 mod c {
     use super::codegen_test;
 
-    // Note: rationales for disabling tests are available in fidl/tests.gni.
-
     codegen_test!(alias, CBackend, "c/alias.h");
     codegen_test!(alignment, CBackend, "c/alignment.h");
-    // codegen_test!(api, CBackend, "c/api.h");
+    codegen_test!(api, CBackend, "c/api.h");
     codegen_test!(attributes, CBackend, "c/attributes.h");
     codegen_test!(binary, CBackend, "c/binary.h");
-    // codegen_test!(buffer, CBackend, "c/buffer.h");
+    codegen_test!(buffer, CBackend, "c/buffer.h");
     codegen_test!(callback, CBackend, "c/callback.h");
     codegen_test!(constants, CBackend, "c/constants.h");
     codegen_test!(empty, CBackend, "c/empty.h");

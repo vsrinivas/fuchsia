@@ -6,10 +6,8 @@ library banjo.examples.buffer;
 
 struct SomeData {
   [Buffer] vector<uint8> one;
-  vector<voidptr> two;
 };
 
 protocol SomeMethods {
   DoSomething([Buffer] vector<uint8> input) -> ();
-  DoSomethingToo(vector<voidptr> input_again) -> ();
 };

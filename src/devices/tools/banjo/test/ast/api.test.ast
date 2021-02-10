@@ -1369,37 +1369,6 @@ BanjoAst {
                         },
                         val: None,
                     },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Array {
-                            ty: Voidptr,
-                            size: Constant(
-                                "size",
-                            ),
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "data",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: UInt32,
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "size",
-                        },
-                        val: None,
-                    },
                 ],
             },
             Struct {
@@ -1431,6 +1400,19 @@ BanjoAst {
                                 "banjo.examples.api",
                             ),
                             name: "status",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Bool,
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.api",
+                            ),
+                            name: "result",
                         },
                         val: None,
                     },
@@ -1501,7 +1483,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Bool,
+                        ty: Int8,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -1577,7 +1559,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Int8,
+                        ty: Int16,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -1653,7 +1635,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Int16,
+                        ty: Int32,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -1729,7 +1711,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Int32,
+                        ty: Int64,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -1805,7 +1787,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Int64,
+                        ty: UInt8,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -1881,7 +1863,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: UInt8,
+                        ty: UInt16,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -1957,7 +1939,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: UInt16,
+                        ty: UInt32,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -2033,7 +2015,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: UInt32,
+                        ty: UInt64,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -2109,7 +2091,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: UInt64,
+                        ty: Float32,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -2185,7 +2167,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Float32,
+                        ty: Float64,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -2261,7 +2243,15 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Float64,
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "zx",
+                                ),
+                                name: "duration",
+                            },
+                            reference: false,
+                        },
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -2342,7 +2332,7 @@ BanjoAst {
                                 namespace: Some(
                                     "zx",
                                 ),
-                                name: "duration",
+                                name: "koid",
                             },
                             reference: false,
                         },
@@ -2426,7 +2416,7 @@ BanjoAst {
                                 namespace: Some(
                                     "zx",
                                 ),
-                                name: "koid",
+                                name: "paddr",
                             },
                             reference: false,
                         },
@@ -2510,7 +2500,7 @@ BanjoAst {
                                 namespace: Some(
                                     "zx",
                                 ),
-                                name: "paddr",
+                                name: "signals",
                             },
                             reference: false,
                         },
@@ -2594,7 +2584,7 @@ BanjoAst {
                                 namespace: Some(
                                     "zx",
                                 ),
-                                name: "signals",
+                                name: "time",
                             },
                             reference: false,
                         },
@@ -2678,7 +2668,7 @@ BanjoAst {
                                 namespace: Some(
                                     "zx",
                                 ),
-                                name: "time",
+                                name: "vaddr",
                             },
                             reference: false,
                         },
@@ -2731,50 +2721,7 @@ BanjoAst {
                     ),
                     name: "SomeLongAnonymousPrefix69",
                 },
-                fields: [
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Identifier {
-                            id: Ident {
-                                namespace: Some(
-                                    "zx",
-                                ),
-                                name: "status",
-                            },
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "status",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Identifier {
-                            id: Ident {
-                                namespace: Some(
-                                    "zx",
-                                ),
-                                name: "vaddr",
-                            },
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "result",
-                        },
-                        val: None,
-                    },
-                ],
+                fields: [],
             },
             Struct {
                 attributes: Attrs(
@@ -2800,37 +2747,6 @@ BanjoAst {
                                 "banjo.examples.api",
                             ),
                             name: "handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Array {
-                            ty: Voidptr,
-                            size: Constant(
-                                "size",
-                            ),
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "data",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: UInt32,
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "size",
                         },
                         val: None,
                     },
@@ -2865,19 +2781,6 @@ BanjoAst {
                                 "banjo.examples.api",
                             ),
                             name: "status",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: UInt32,
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "actual",
                         },
                         val: None,
                     },
@@ -2922,7 +2825,29 @@ BanjoAst {
                     ),
                     name: "SomeLongAnonymousPrefix73",
                 },
-                fields: [],
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "zx",
+                                ),
+                                name: "ticks",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: Some(
+                                "banjo.examples.api",
+                            ),
+                            name: "result",
+                        },
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
@@ -2973,7 +2898,7 @@ BanjoAst {
                                 namespace: Some(
                                     "zx",
                                 ),
-                                name: "status",
+                                name: "time",
                             },
                             reference: false,
                         },
@@ -2981,7 +2906,7 @@ BanjoAst {
                             namespace: Some(
                                 "banjo.examples.api",
                             ),
-                            name: "status",
+                            name: "result",
                         },
                         val: None,
                     },
@@ -3031,15 +2956,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: Identifier {
-                            id: Ident {
-                                namespace: Some(
-                                    "zx",
-                                ),
-                                name: "ticks",
-                            },
-                            reference: false,
-                        },
+                        ty: UInt32,
                         ident: Ident {
                             namespace: Some(
                                 "banjo.examples.api",
@@ -3088,124 +3005,6 @@ BanjoAst {
                         "banjo.examples.api",
                     ),
                     name: "SomeLongAnonymousPrefix79",
-                },
-                fields: [
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Identifier {
-                            id: Ident {
-                                namespace: Some(
-                                    "zx",
-                                ),
-                                name: "time",
-                            },
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "result",
-                        },
-                        val: None,
-                    },
-                ],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "banjo.examples.api",
-                    ),
-                    name: "SomeLongAnonymousPrefix80",
-                },
-                fields: [
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: None,
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "handle",
-                        },
-                        val: None,
-                    },
-                ],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "banjo.examples.api",
-                    ),
-                    name: "SomeLongAnonymousPrefix81",
-                },
-                fields: [
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: UInt32,
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "result",
-                        },
-                        val: None,
-                    },
-                ],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "banjo.examples.api",
-                    ),
-                    name: "SomeLongAnonymousPrefix82",
-                },
-                fields: [
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: None,
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "handle",
-                        },
-                        val: None,
-                    },
-                ],
-            },
-            Struct {
-                attributes: Attrs(
-                    [],
-                ),
-                name: Ident {
-                    namespace: Some(
-                        "banjo.examples.api",
-                    ),
-                    name: "SomeLongAnonymousPrefix83",
                 },
                 fields: [
                     StructField {
@@ -4000,60 +3799,6 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "buffer",
-                        in_params: [
-                            (
-                                "handle",
-                                Handle {
-                                    ty: None,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "data",
-                                Array {
-                                    ty: Voidptr,
-                                    size: Constant(
-                                        "size",
-                                    ),
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "size",
-                                UInt32,
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                        out_params: [
-                            (
-                                "status",
-                                Identifier {
-                                    id: Ident {
-                                        namespace: Some(
-                                            "zx",
-                                        ),
-                                        name: "status",
-                                    },
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                    },
-                    Method {
-                        attributes: Attrs(
-                            [],
-                        ),
                         name: "output_bool",
                         in_params: [
                             (
@@ -4806,67 +4551,6 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                    },
-                    Method {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        name: "output_buffer",
-                        in_params: [
-                            (
-                                "handle",
-                                Handle {
-                                    ty: None,
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "data",
-                                Array {
-                                    ty: Voidptr,
-                                    size: Constant(
-                                        "size",
-                                    ),
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "size",
-                                UInt32,
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                        ],
-                        out_params: [
-                            (
-                                "status",
-                                Identifier {
-                                    id: Ident {
-                                        namespace: Some(
-                                            "zx",
-                                        ),
-                                        name: "status",
-                                    },
-                                    reference: false,
-                                },
-                                Attrs(
-                                    [],
-                                ),
-                            ),
-                            (
-                                "actual",
-                                UInt32,
                                 Attrs(
                                     [],
                                 ),
@@ -5770,42 +5454,6 @@ BanjoAst {
                                 "banjo.examples.api",
                             ),
                             name: "SomeLongAnonymousPrefix79",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "SomeLongAnonymousPrefix80",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "SomeLongAnonymousPrefix81",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "SomeLongAnonymousPrefix82",
-                        },
-                        reference: false,
-                    },
-                    Identifier {
-                        id: Ident {
-                            namespace: Some(
-                                "banjo.examples.api",
-                            ),
-                            name: "SomeLongAnonymousPrefix83",
                         },
                         reference: false,
                     },

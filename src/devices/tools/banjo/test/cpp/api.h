@@ -76,8 +76,6 @@
 //
 //     zx_status_t Apivaddr(zx::handle handle, zx_vaddr_t data);
 //
-//     zx_status_t Apibuffer(zx::handle handle, const void data[size], uint32_t size);
-//
 //     zx_status_t Apioutput_bool(zx::handle handle, bool* out_result);
 //
 //     zx_status_t Apioutput_int8(zx::handle handle, int8_t* out_result);
@@ -111,8 +109,6 @@
 //     zx_status_t Apioutput_time(zx::handle handle, zx_time_t* out_result);
 //
 //     zx_status_t Apioutput_vaddr(zx::handle handle, zx_vaddr_t* out_result);
-//
-//     zx_status_t Apioutput_buffer(zx::handle handle, const void data[size], uint32_t size, uint32_t* out_actual);
 //
 //     void Apireturn_void(zx::handle handle);
 //
@@ -153,7 +149,6 @@ public:
         api_protocol_ops_.signals = Apisignals;
         api_protocol_ops_.time = Apitime;
         api_protocol_ops_.vaddr = Apivaddr;
-        api_protocol_ops_.buffer = Apibuffer;
         api_protocol_ops_.output_bool = Apioutput_bool;
         api_protocol_ops_.output_int8 = Apioutput_int8;
         api_protocol_ops_.output_int16 = Apioutput_int16;
@@ -171,7 +166,6 @@ public:
         api_protocol_ops_.output_signals = Apioutput_signals;
         api_protocol_ops_.output_time = Apioutput_time;
         api_protocol_ops_.output_vaddr = Apioutput_vaddr;
-        api_protocol_ops_.output_buffer = Apioutput_buffer;
         api_protocol_ops_.return_void = Apireturn_void;
         api_protocol_ops_.return_status = Apireturn_status;
         api_protocol_ops_.return_ticks = Apireturn_ticks;
@@ -260,10 +254,6 @@ private:
         auto ret = static_cast<D*>(ctx)->Apivaddr(zx::handle(handle), data);
         return ret;
     }
-    static zx_status_t Apibuffer(void* ctx, zx_handle_t handle, const void data[size], uint32_t size) {
-        auto ret = static_cast<D*>(ctx)->Apibuffer(zx::handle(handle), data, size);
-        return ret;
-    }
     static zx_status_t Apioutput_bool(void* ctx, zx_handle_t handle, bool* out_result) {
         auto ret = static_cast<D*>(ctx)->Apioutput_bool(zx::handle(handle), out_result);
         return ret;
@@ -330,10 +320,6 @@ private:
     }
     static zx_status_t Apioutput_vaddr(void* ctx, zx_handle_t handle, zx_vaddr_t* out_result) {
         auto ret = static_cast<D*>(ctx)->Apioutput_vaddr(zx::handle(handle), out_result);
-        return ret;
-    }
-    static zx_status_t Apioutput_buffer(void* ctx, zx_handle_t handle, const void data[size], uint32_t size, uint32_t* out_actual) {
-        auto ret = static_cast<D*>(ctx)->Apioutput_buffer(zx::handle(handle), data, size, out_actual);
         return ret;
     }
     static void Apireturn_void(void* ctx, zx_handle_t handle) {
@@ -500,10 +486,6 @@ public:
         return ops_->vaddr(ctx_, handle.release(), data);
     }
 
-    zx_status_t buffer(zx::handle handle, const void data[size], uint32_t size) const {
-        return ops_->buffer(ctx_, handle.release(), data, size);
-    }
-
     zx_status_t output_bool(zx::handle handle, bool* out_result) const {
         return ops_->output_bool(ctx_, handle.release(), out_result);
     }
@@ -570,10 +552,6 @@ public:
 
     zx_status_t output_vaddr(zx::handle handle, zx_vaddr_t* out_result) const {
         return ops_->output_vaddr(ctx_, handle.release(), out_result);
-    }
-
-    zx_status_t output_buffer(zx::handle handle, const void data[size], uint32_t size, uint32_t* out_actual) const {
-        return ops_->output_buffer(ctx_, handle.release(), data, size, out_actual);
     }
 
     void return_void(zx::handle handle) const {

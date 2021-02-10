@@ -63,9 +63,6 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_time, Apiti
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_vaddr, Apivaddr,
         zx_status_t (C::*)(zx::handle handle, zx_vaddr_t data));
 
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_buffer, Apibuffer,
-        zx_status_t (C::*)(zx::handle handle, const void data[size], uint32_t size));
-
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_output_bool, Apioutput_bool,
         zx_status_t (C::*)(zx::handle handle, bool* out_result));
 
@@ -116,9 +113,6 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_output_time
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_output_vaddr, Apioutput_vaddr,
         zx_status_t (C::*)(zx::handle handle, zx_vaddr_t* out_result));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_output_buffer, Apioutput_buffer,
-        zx_status_t (C::*)(zx::handle handle, const void data[size], uint32_t size, uint32_t* out_actual));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_return_void, Apireturn_void,
         void (C::*)(zx::handle handle));
@@ -209,10 +203,6 @@ constexpr void CheckApiProtocolSubclass() {
         "ApiProtocol subclasses must implement "
         "zx_status_t Apivaddr(zx::handle handle, zx_vaddr_t data);");
 
-    static_assert(internal::has_api_protocol_buffer<D>::value,
-        "ApiProtocol subclasses must implement "
-        "zx_status_t Apibuffer(zx::handle handle, const void data[size], uint32_t size);");
-
     static_assert(internal::has_api_protocol_output_bool<D>::value,
         "ApiProtocol subclasses must implement "
         "zx_status_t Apioutput_bool(zx::handle handle, bool* out_result);");
@@ -280,10 +270,6 @@ constexpr void CheckApiProtocolSubclass() {
     static_assert(internal::has_api_protocol_output_vaddr<D>::value,
         "ApiProtocol subclasses must implement "
         "zx_status_t Apioutput_vaddr(zx::handle handle, zx_vaddr_t* out_result);");
-
-    static_assert(internal::has_api_protocol_output_buffer<D>::value,
-        "ApiProtocol subclasses must implement "
-        "zx_status_t Apioutput_buffer(zx::handle handle, const void data[size], uint32_t size, uint32_t* out_actual);");
 
     static_assert(internal::has_api_protocol_return_void<D>::value,
         "ApiProtocol subclasses must implement "

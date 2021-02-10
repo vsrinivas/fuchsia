@@ -43,8 +43,6 @@
 //
 //     void SomeMethodsDoSomething(const uint8_t* input_buffer, size_t input_size);
 //
-//     void SomeMethodsDoSomethingToo(const void* input_again_buffer, size_t input_again_size);
-//
 //     ...
 // };
 
@@ -56,7 +54,6 @@ public:
     SomeMethodsProtocol() {
         internal::CheckSomeMethodsProtocolSubclass<D>();
         some_methods_protocol_ops_.do_something = SomeMethodsDoSomething;
-        some_methods_protocol_ops_.do_something_too = SomeMethodsDoSomethingToo;
 
         if constexpr (internal::is_base_proto<Base>::value) {
             auto dev = static_cast<D*>(this);
@@ -73,9 +70,6 @@ protected:
 private:
     static void SomeMethodsDoSomething(void* ctx, const uint8_t* input_buffer, size_t input_size) {
         static_cast<D*>(ctx)->SomeMethodsDoSomething(input_buffer, input_size);
-    }
-    static void SomeMethodsDoSomethingToo(void* ctx, const void* input_again_buffer, size_t input_again_size) {
-        static_cast<D*>(ctx)->SomeMethodsDoSomethingToo(input_again_buffer, input_again_size);
     }
 };
 
@@ -152,10 +146,6 @@ public:
 
     void DoSomething(const uint8_t* input_buffer, size_t input_size) const {
         ops_->do_something(ctx_, input_buffer, input_size);
-    }
-
-    void DoSomethingToo(const void* input_again_buffer, size_t input_again_size) const {
-        ops_->do_something_too(ctx_, input_again_buffer, input_again_size);
     }
 
 private:
