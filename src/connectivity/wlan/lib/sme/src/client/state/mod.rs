@@ -964,9 +964,11 @@ impl ClientState {
         context: &mut Context,
         user_disconnect_reason: fidl_sme::UserDisconnectReason,
     ) -> Self {
+        let mut disconnected_from_link_up = false;
         let disconnect_source = DisconnectSource::User(user_disconnect_reason);
         if let Self::Associated(state) = &self {
             if let LinkState::LinkUp(link_up) = &state.link_state {
+                disconnected_from_link_up = true;
                 let disconnect_info = DisconnectInfo {
                     connected_duration: link_up.connected_duration(),
                     last_rssi: state.last_rssi,
@@ -983,12 +985,12 @@ impl ClientState {
         let start_state = self.state_name();
         let new_state = Self::new(self.disconnect_internal(context));
 
-        let state_change_ctx = Some(StateChangeContext::Disconnect {
-            msg: format!(
-                "received disconnect command from user; reason {:?}",
-                user_disconnect_reason
-            ),
-            disconnect_source,
+        let msg =
+            format!("received disconnect command from user; reason {:?}", user_disconnect_reason);
+        let state_change_ctx = Some(if disconnected_from_link_up {
+            StateChangeContext::Disconnect { msg, disconnect_source }
+        } else {
+            StateChangeContext::Msg(msg)
         });
         log_state_change(start_state, &new_state, state_change_ctx, context);
         new_state
@@ -2008,6 +2010,18 @@ mod tests {
         let state = exchange_deauth(state, &mut h);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
+
+        assert_inspect_tree!(h._inspector, root: contains {
+            state_events: {
+                // There's no disconnect_ctx node
+                "0": {
+                    "@time": AnyProperty,
+                    ctx: AnyProperty,
+                    from: AnyProperty,
+                    to: AnyProperty,
+                }
+            }
+        });
     }
 
     #[test]
@@ -2018,6 +2032,17 @@ mod tests {
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         let state = exchange_deauth(state, &mut h);
         assert_idle(state);
+
+        assert_inspect_tree!(h._inspector, root: contains {
+            state_events: {
+                "0": contains {
+                    disconnect_ctx: {
+                        reason_code: 3u64,
+                        locally_initiated: true,
+                    }
+                }
+            }
+        });
     }
 
     #[test]
