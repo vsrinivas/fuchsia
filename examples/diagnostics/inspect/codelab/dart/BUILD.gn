@@ -43,9 +43,7 @@ group("unittests") {
     "part_2:inspect_dart_codelab_part_2_unittests($host_toolchain)",
     "part_3:inspect_dart_codelab_part_3_unittests($host_toolchain)",
     "part_4:inspect_dart_codelab_part_4_unittests($host_toolchain)",
-
-    # TODO(49644): Re-enable after migration is finished.
-    # "part_5:inspect_dart_codelab_part_5_unittests($host_toolchain)",
+    "part_5:inspect_dart_codelab_part_5_unittests($host_toolchain)",
   ]
 }
 
@@ -56,8 +54,6 @@ group("integration_tests") {
     "part_2:inspect-dart-codelab-part-2-integration-tests",
     "part_3:inspect-dart-codelab-part-3-integration-tests",
     "part_4:inspect-dart-codelab-part-4-integration-tests",
-
-    # TODO(49644): Re-enable after migration is finished.
-    # "part_5:inspect-dart-codelab-part-5-integration-tests",
+    "part_5:inspect-dart-codelab-part-5-integration-tests",
   ]
 }
