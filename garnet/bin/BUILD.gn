@@ -28,7 +28,6 @@ group("bin") {
     "setui",
     "setui_client",
     "sshd-host",
-    "stash",
     "sysmgr",
     "terminal",
     "test_runner",
