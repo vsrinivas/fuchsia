@@ -250,7 +250,12 @@ class Action(object):
             allowed_reads.add(self.response_file_name)
 
         return AccessConstraints(
-            allowed_reads=_abspaths(allowed_reads),
+            # Follow links in all inputs because fsatrace will log access to link
+            # destination instead of the link.
+            allowed_reads=_abspaths(
+                os.path.realpath(path) for path in allowed_reads),
+            # TODO(fxbug.dev/69049): Should we follow links of outputs as well?
+            # What's our stance on writing to soft links?
             allowed_writes=_abspaths(allowed_writes),
             required_writes=_abspaths(required_writes))
 
@@ -534,9 +539,11 @@ def diagnose_stale_outputs(
     stale_outputs = set()
     newest_input = None
     if used_inputs and untouched_outputs:
-        newest_input = max(used_inputs, key=realpath_ctime)
+        # All links in inputs are followed to their destinations already in
+        # previous steps, so realpath_ctime is unnecessary on them.
+        newest_input = max(used_inputs, key=os.path.getctime)
         # Filter out untouched outputs that are still newer than used inputs.
-        input_timestamp = realpath_ctime(newest_input)
+        input_timestamp = os.path.getctime(newest_input)
         stale_outputs = {
             out for out in untouched_outputs
             if realpath_ctime(out) < input_timestamp
