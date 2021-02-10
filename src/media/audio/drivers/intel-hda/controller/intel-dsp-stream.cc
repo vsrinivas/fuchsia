@@ -44,7 +44,6 @@ zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtRe
   ZX_DEBUG_ASSERT(ring_buffer_channel.is_valid());
 
   fbl::AutoLock lock(obj_lock());
-  audio_proto::StreamSetFmtResp resp = {};
   zx_status_t res = ZX_OK;
 
   // Are we shutting down?
@@ -54,11 +53,61 @@ zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtRe
 
   // The DSP needs to coordinate with ring buffer commands. Set up an additional
   // channel to intercept messages on the ring buffer channel.
-  zx::channel client_endpoint;
-  res = CreateClientRingBufferChannelLocked(std::move(ring_buffer_channel), &client_endpoint);
+
+  zx::channel channel_local;
+  zx::channel channel_remote;
+  res = zx::channel::create(0, &channel_local, &channel_remote);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to set up client ring buffer channel (res %d)\n", res);
-    goto finished;
+    return res;
+  }
+
+  client_rb_channel_ = Channel::Create(std::move(channel_local));
+  if (client_rb_channel_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  client_rb_channel_->SetHandler(
+      [stream = fbl::RefPtr(this)](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                   zx_status_t status, const zx_packet_signal_t* signal) {
+        stream->ClientRingBufferChannelSignalled(dispatcher, wait, status, signal);
+      });
+
+  ZX_DEBUG_ASSERT(channel_remote.is_valid());
+
+  audio_proto::StreamSetFmtResp resp = {};
+  // Respond to the caller, transferring the DMA handle back in the process.
+  resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
+  resp.hdr.transaction_id = set_format_tid();
+  resp.result = ZX_OK;
+  resp.external_delay_nsec = 0;  // report his properly based on the codec path delay.
+  res = stream_channel()->Write(&resp, sizeof(resp), std::move(channel_remote));
+  if (res != ZX_OK) {
+    return res;
+  }
+
+  rb_channel_ = Channel::Create(std::move(ring_buffer_channel));
+  if (rb_channel_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  rb_channel_->SetHandler([stream = fbl::RefPtr(this), channel = rb_channel_.get()](
+                              async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                              zx_status_t status, const zx_packet_signal_t* signal) {
+    stream->RingBufferChannelSignalled(dispatcher, wait, status, signal);
+  });
+
+  // We do not start the wait until we have rb_channel_ and client_rb_channel_ set.
+  res = client_rb_channel_->BeginWait(dispatcher());
+  if (res != ZX_OK) {
+    client_rb_channel_.reset();
+    rb_channel_.reset();
+    return res;
+  }
+  res = rb_channel_->BeginWait(dispatcher());
+  if (res != ZX_OK) {
+    rb_channel_.reset();
+    client_rb_channel_.reset();
+    return res;
   }
 
   // Let the implementation send the commands required to finish changing the
@@ -68,15 +117,6 @@ zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtRe
     LOG(ERROR, "Failed to finish set format (enc fmt 0x%04hx res %d)\n", encoded_fmt(), res);
     goto finished;
   }
-
-  ZX_DEBUG_ASSERT(client_endpoint.is_valid());
-
-  // Respond to the caller, transferring the DMA handle back in the process.
-  resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
-  resp.hdr.transaction_id = set_format_tid();
-  resp.result = ZX_OK;
-  resp.external_delay_nsec = 0;  // report his properly based on the codec path delay.
-  res = stream_channel()->Write(&resp, sizeof(resp), std::move(client_endpoint));
 
   // If we don't have a set format operation in flight, or the stream channel
   // has been closed, this set format operation has been canceled.  Do not
@@ -91,7 +131,6 @@ finished:
   // caller.  Close the stream channel.
   if ((res != ZX_OK) && (stream_channel() != nullptr)) {
     OnChannelDeactivateLocked(*stream_channel());
-    stream_channel()->Deactivate();
     stream_channel() = nullptr;
   }
 
@@ -102,72 +141,56 @@ finished:
   return ZX_OK;
 }
 
-zx_status_t IntelDspStream::CreateClientRingBufferChannelLocked(zx::channel&& ring_buffer_channel,
-                                                                zx::channel* out_client_channel) {
-  // Attempt to allocate a new ring buffer channel and bind it to us.
-  // This channel is connected to the upstream device.
-  auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+void IntelDspStream::RingBufferChannelSignalled(async_dispatcher_t* dispatcher,
+                                                async::WaitBase* wait, zx_status_t status,
+                                                const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
   }
-
-  dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
-        return stream->ProcessRbRequest(channel);
-      });
-
-  dispatcher::Channel::ChannelClosedHandler chandler(
-      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
-        stream->ProcessRbDeactivate(channel);
-      });
-
-  zx_status_t res = channel->Activate(std::move(ring_buffer_channel), domain(), std::move(phandler),
-                                      std::move(chandler));
-  if (res != ZX_OK) {
-    return res;
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    fbl::AutoLock lock(obj_lock());
+    zx_status_t status = ProcessRbRequestLocked(rb_channel_.get());
+    if (status != ZX_OK) {
+      peer_closed_asserted = true;
+    }
   }
-  ZX_DEBUG_ASSERT(rb_channel_ == nullptr);
-  rb_channel_ = channel;
-
-  // Attempt to allocate a new ring buffer channel and bind it to us.
-  // This channel is connected to the client.
-  auto client_channel = dispatcher::Channel::Create();
-  if (client_channel == nullptr) {
-    rb_channel_->Deactivate();
-    rb_channel_ = nullptr;
-    return ZX_ERR_NO_MEMORY;
+  if (peer_closed_asserted) {
+    ProcessRbDeactivate();
+  } else if (readable_asserted) {
+    wait->Begin(dispatcher);
   }
-
-  dispatcher::Channel::ProcessHandler client_phandler(
-      [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
-        return stream->ProcessClientRbRequest(channel);
-      });
-
-  dispatcher::Channel::ChannelClosedHandler client_chandler(
-      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain());
-        stream->ProcessClientRbDeactivate(channel);
-      });
-
-  res = client_channel->Activate(out_client_channel, domain(), std::move(client_phandler),
-                                 std::move(client_chandler));
-  if (res == ZX_OK) {
-    ZX_DEBUG_ASSERT(client_rb_channel_ == nullptr);
-    client_rb_channel_ = client_channel;
-  } else {
-    rb_channel_->Deactivate();
-    rb_channel_ = nullptr;
-  }
-
-  return res;
 }
 
-zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
+void IntelDspStream::ClientRingBufferChannelSignalled(async_dispatcher_t* dispatcher,
+                                                      async::WaitBase* wait, zx_status_t status,
+                                                      const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    fbl::AutoLock lock(obj_lock());
+    zx_status_t status = ProcessClientRbRequestLocked(client_rb_channel_.get());
+    if (status != ZX_OK) {
+      peer_closed_asserted = true;
+    }
+  }
+  if (peer_closed_asserted) {
+    ProcessClientRbDeactivate();
+  } else if (readable_asserted) {
+    wait->Begin(dispatcher);
+  }
+}
+
+zx_status_t IntelDspStream::ProcessRbRequestLocked(Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
-  fbl::AutoLock lock(obj_lock());
 
   // If we have lost our connection to the codec device, or are in the process
   // of shutting down, there is nothing further we can do.  Fail the request
@@ -188,7 +211,7 @@ zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
   // TODO(johngro) : How large is too large?
   static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
 
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size, &rxed_handle);
+  zx_status_t res = channel->Read(&req, sizeof(req), &req_size, rxed_handle);
   if (res != ZX_OK) {
     return res;
   }
@@ -213,26 +236,21 @@ zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
   return client_rb_channel_->Write(&req, req_size, std::move(rxed_handle));
 }
 
-void IntelDspStream::ProcessRbDeactivate(const dispatcher::Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
+void IntelDspStream::ProcessRbDeactivate() {
   fbl::AutoLock lock(obj_lock());
 
   LOG(DEBUG, "ProcessClientRbDeactivate\n");
 
-  ZX_DEBUG_ASSERT(channel == rb_channel_.get());
-  rb_channel_->Deactivate();
   rb_channel_ = nullptr;
 
   // Deactivate the client channel.
   if (client_rb_channel_ != nullptr) {
-    client_rb_channel_->Deactivate();
     client_rb_channel_ = nullptr;
   }
 }
 
-zx_status_t IntelDspStream::ProcessClientRbRequest(dispatcher::Channel* channel) {
+zx_status_t IntelDspStream::ProcessClientRbRequestLocked(Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
-  fbl::AutoLock lock(obj_lock());
 
   // If we have lost our connection to the codec device, or are in the process
   // of shutting down, there is nothing further we can do.  Fail the request
@@ -277,19 +295,15 @@ zx_status_t IntelDspStream::ProcessClientRbRequest(dispatcher::Channel* channel)
   return rb_channel_->Write(&req, req_size);
 }
 
-void IntelDspStream::ProcessClientRbDeactivate(const dispatcher::Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
+void IntelDspStream::ProcessClientRbDeactivate() {
   fbl::AutoLock lock(obj_lock());
 
   LOG(DEBUG, "ProcessClientRbDeactivate\n");
 
-  ZX_DEBUG_ASSERT(channel == client_rb_channel_.get());
-  client_rb_channel_->Deactivate();
   client_rb_channel_ = nullptr;
 
   // Deactivate the upstream channel.
   if (rb_channel_ != nullptr) {
-    rb_channel_->Deactivate();
     rb_channel_ = nullptr;
   }
 }
@@ -315,7 +329,7 @@ zx_status_t IntelDspStream::OnActivateLocked() {
 
 void IntelDspStream::OnDeactivateLocked() { LOG(DEBUG, "OnDeactivateLocked\n"); }
 
-void IntelDspStream::OnChannelDeactivateLocked(const dispatcher::Channel& channel) {
+void IntelDspStream::OnChannelDeactivateLocked(const Channel& channel) {
   LOG(DEBUG, "OnChannelDeactivateLocked\n");
 }
 
@@ -353,7 +367,7 @@ void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
   IntelHDAStreamBase::OnSetGainLocked(req, out_resp);
 }
 
-void IntelDspStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
+void IntelDspStream::OnPlugDetectLocked(Channel* response_channel,
                                         const audio_proto::PlugDetectReq& req,
                                         audio_proto::PlugDetectResp* out_resp) {
   LOG(DEBUG, "OnPlugDetectLocked\n");

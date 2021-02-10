@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/handle.h>
 #include <stdint.h>
@@ -16,11 +17,10 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <intel-hda/codec-utils/channel.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -96,8 +96,12 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
   virtual ~CodecConnection() { ZX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
 
   zx_status_t PublishDevice();
+  void GetChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                           zx_status_t status, const zx_packet_signal_t* signal);
+  void GetDispatcherChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                     zx_status_t status, const zx_packet_signal_t* signal);
 
-  void SendCORBResponse(const fbl::RefPtr<dispatcher::Channel>& channel, const CodecResponse& resp,
+  void SendCORBResponse(const fbl::RefPtr<Channel>& channel, const CodecResponse& resp,
                         uint32_t transaction_id = IHDA_INVALID_TRANSACTION_ID);
 
   // Parsers for device probing
@@ -109,18 +113,14 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
 
   // Thunks for interacting with clients and codec drivers.
   zx_status_t GetChannel(fidl_txn_t* txn);
-  zx_status_t ProcessUserRequest(dispatcher::Channel* channel);
-  zx_status_t ProcessCodecRequest(dispatcher::Channel* channel);
-  void ProcessCodecDeactivate(const dispatcher::Channel* channel);
-  zx_status_t ProcessGetIDs(dispatcher::Channel* channel, const ihda_proto::GetIDsReq& req);
-  zx_status_t ProcessSendCORBCmd(dispatcher::Channel* channel,
-                                 const ihda_proto::SendCORBCmdReq& req);
-  zx_status_t ProcessRequestStream(dispatcher::Channel* channel,
-                                   const ihda_proto::RequestStreamReq& req);
-  zx_status_t ProcessReleaseStream(dispatcher::Channel* channel,
-                                   const ihda_proto::ReleaseStreamReq& req);
-  zx_status_t ProcessSetStreamFmt(dispatcher::Channel* channel,
-                                  const ihda_proto::SetStreamFmtReq& req);
+  zx_status_t ProcessUserRequest(Channel* channel);
+  zx_status_t ProcessCodecRequest(Channel* channel);
+  void ProcessCodecDeactivate(const Channel* channel);
+  zx_status_t ProcessGetIDs(Channel* channel, const ihda_proto::GetIDsReq& req);
+  zx_status_t ProcessSendCORBCmd(Channel* channel, const ihda_proto::SendCORBCmdReq& req);
+  zx_status_t ProcessRequestStream(Channel* channel, const ihda_proto::RequestStreamReq& req);
+  zx_status_t ProcessReleaseStream(Channel* channel, const ihda_proto::ReleaseStreamReq& req);
+  zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req);
 
   // Reference to our owner.
   IntelHDAController& controller_;
@@ -131,7 +131,10 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
 
   // Driver connection state
   fbl::Mutex codec_driver_channel_lock_;
-  fbl::RefPtr<dispatcher::Channel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
+  fbl::RefPtr<Channel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
+
+  fbl::Mutex channel_lock_;
+  fbl::RefPtr<Channel> channel_ TA_GUARDED(channel_lock_);
 
   // Device properties.
   const uint8_t codec_id_;
@@ -149,14 +152,13 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
 
-  // Dispatcher framework state.
-  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
-
   // Active DMA streams
   fbl::Mutex active_streams_lock_;
   IntelHDAStream::Tree active_streams_ TA_GUARDED(active_streams_lock_);
 
   static ProbeCommandListEntry PROBE_COMMANDS[];
+
+  async::Loop loop_;
 };
 
 }  // namespace intel_hda

@@ -8,17 +8,15 @@
 #include <memory>
 #include <utility>
 
-#include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
+#include <intel-hda/codec-utils/channel.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
 namespace audio {
 namespace intel_hda {
-
-class CodecConnection;
 
 class CodecCmdJob;
 using CodecCmdJobAllocTraits = fbl::StaticSlabAllocatorTraits<std::unique_ptr<CodecCmdJob>>;
@@ -32,7 +30,7 @@ class CodecCmdJob : public fbl::DoublyLinkedListable<std::unique_ptr<CodecCmdJob
   uint16_t nid() const { return cmd_.nid(); }
   CodecVerb verb() const { return cmd_.verb(); }
 
-  const fbl::RefPtr<dispatcher::Channel>& response_channel() const { return response_channel_; }
+  const fbl::RefPtr<Channel>& response_channel() const { return response_channel_; }
   zx_txid_t transaction_id() const { return transaction_id_; }
 
  private:
@@ -43,8 +41,7 @@ class CodecCmdJob : public fbl::DoublyLinkedListable<std::unique_ptr<CodecCmdJob
   friend std::default_delete<CodecCmdJob>;
 
   CodecCmdJob(CodecCommand cmd) : cmd_(cmd) {}
-  CodecCmdJob(fbl::RefPtr<dispatcher::Channel>&& response_channel, uint32_t transaction_id,
-              CodecCommand cmd)
+  CodecCmdJob(fbl::RefPtr<Channel>&& response_channel, uint32_t transaction_id, CodecCommand cmd)
       : cmd_(cmd),
         transaction_id_(transaction_id),
         response_channel_(std::move(response_channel)) {}
@@ -53,7 +50,7 @@ class CodecCmdJob : public fbl::DoublyLinkedListable<std::unique_ptr<CodecCmdJob
 
   const CodecCommand cmd_;
   const zx_txid_t transaction_id_ = IHDA_INVALID_TRANSACTION_ID;
-  fbl::RefPtr<dispatcher::Channel> response_channel_ = nullptr;
+  fbl::RefPtr<Channel> response_channel_ = nullptr;
 };
 
 }  // namespace intel_hda

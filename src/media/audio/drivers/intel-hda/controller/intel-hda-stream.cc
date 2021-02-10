@@ -165,10 +165,9 @@ void IntelHDAStream::Configure(Type type, uint8_t tag) {
   tag_ = tag;
 }
 
-zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
-                                            uint16_t encoded_fmt,
+zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint16_t encoded_fmt,
                                             zx::channel* client_endpoint_out) {
-  if ((domain == nullptr) || (client_endpoint_out == nullptr))
+  if (client_endpoint_out == nullptr)
     return ZX_ERR_INVALID_ARGS;
 
   // We are being given a new format.  Reset any client connection we may have
@@ -177,27 +176,29 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
 
   // Attempt to create a channel and activate it, binding it to our Codec
   // owner in the process, but dispatching requests to us.  Binding the
-  // channel to our Codec will cause it to exist in the same serialization
-  // domain as all of the other channels being serviced by this codec owner.
-  dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        return stream->ProcessClientRequest(channel);
-      });
-
-  dispatcher::Channel::ChannelClosedHandler chandler(
-      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-        stream->ProcessClientDeactivate(channel);
-      });
-
-  zx_status_t res;
-  fbl::RefPtr<dispatcher::Channel> local_endpoint;
-  res = CreateAndActivateChannel(domain, std::move(phandler), std::move(chandler), &local_endpoint,
-                                 client_endpoint_out);
+  // dispatcher to our Codec will cause it to exist in the same serialization
+  // loop as all of the other channels being serviced by this codec owner.
+  zx::channel channel_local;
+  zx::channel channel_remote;
+  zx_status_t res = zx::channel::create(0, &channel_local, &channel_remote);
   if (res != ZX_OK) {
-    LOG(DEBUG,
-        "Failed to create and activate ring buffer channel during SetStreamFormat "
-        "(res %d)\n",
-        res);
+    return res;
+  }
+
+  fbl::AutoLock channel_lock(&channel_lock_);
+  channel_ = Channel::Create(std::move(channel_local));
+  if (channel_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  channel_->SetHandler([stream = fbl::RefPtr(this)](async_dispatcher_t* dispatcher,
+                                                    async::WaitBase* wait, zx_status_t status,
+                                                    const zx_packet_signal_t* signal) {
+    stream->ChannelSignalled(dispatcher, wait, status, signal);
+  });
+  res = channel_->BeginWait(dispatcher);
+  if (res != ZX_OK) {
+    channel_.reset();
     return res;
   }
 
@@ -211,11 +212,33 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
   LOG(DEBUG, "Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt_, fifo_depth_);
 
   // Record our new client channel
-  fbl::AutoLock channel_lock(&channel_lock_);
-  channel_ = std::move(local_endpoint);
   bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
+  *client_endpoint_out = std::move(channel_remote);
 
   return ZX_OK;
+}
+
+void IntelHDAStream::ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                      zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    fbl::AutoLock lock(&channel_lock_);
+    zx_status_t status = ProcessClientRequestLocked(channel_.get());
+    if (status != ZX_OK) {
+      peer_closed_asserted = true;
+    }
+  }
+  if (peer_closed_asserted) {
+    ProcessClientDeactivate();
+  } else if (readable_asserted) {
+    wait->Begin(dispatcher);
+  }
 }
 
 void IntelHDAStream::Deactivate() {
@@ -234,7 +257,7 @@ void IntelHDAStream::Deactivate() {
       return ZX_ERR_INVALID_ARGS;                                                                  \
     }                                                                                              \
     return _handler(req._payload);
-zx_status_t IntelHDAStream::ProcessClientRequest(dispatcher::Channel* channel) {
+zx_status_t IntelHDAStream::ProcessClientRequestLocked(Channel* channel) {
   zx_status_t res;
   uint32_t req_size;
   zx::handle rxed_handle;
@@ -247,14 +270,6 @@ zx_status_t IntelHDAStream::ProcessClientRequest(dispatcher::Channel* channel) {
   } req;
   // TODO(johngro) : How large is too large?
   static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
-
-  // Is this request from our currently active channel?  If not, make sure the
-  // channel has been de-activated and ignore the request.
-  fbl::AutoLock channel_lock(&channel_lock_);
-  if (channel_.get() != channel) {
-    channel->Deactivate();
-    return ZX_OK;
-  }
 
   // Read the client request.
   ZX_DEBUG_ASSERT(channel != nullptr);
@@ -291,15 +306,10 @@ zx_status_t IntelHDAStream::ProcessClientRequest(dispatcher::Channel* channel) {
 }
 #undef HANDLE_REQ
 
-void IntelHDAStream::ProcessClientDeactivate(const dispatcher::Channel* channel) {
-  // Is the channel being closed our currently active channel?  If so, go
-  // ahead and deactivate this DMA stream.  Otherwise, just ignore this
-  // request.
+void IntelHDAStream::ProcessClientDeactivate() {
+  LOG(DEBUG, "Client closed channel to stream\n");
   fbl::AutoLock channel_lock(&channel_lock_);
-  if (channel == channel_.get()) {
-    LOG(DEBUG, "Client closed channel to stream\n");
-    DeactivateLocked();
-  }
+  DeactivateLocked();
 }
 
 void IntelHDAStream::ProcessStreamIRQ() {
@@ -345,10 +355,7 @@ void IntelHDAStream::DeactivateLocked() {
   }
 
   // If we have a connection to a client, close it.
-  if (channel_ != nullptr) {
-    channel_->Deactivate();
-    channel_ = nullptr;
-  }
+  channel_ = nullptr;
 
   // Make sure that the stream has been stopped.
   EnsureStoppedLocked();

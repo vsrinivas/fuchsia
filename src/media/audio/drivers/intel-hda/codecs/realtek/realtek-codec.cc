@@ -6,7 +6,6 @@
 
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_lock.h>
 
 #include "debug-logging.h"

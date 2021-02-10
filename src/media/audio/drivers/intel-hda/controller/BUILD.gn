@@ -68,7 +68,6 @@ source_set("src") {
     "//src/devices/lib/driver",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
-    "//zircon/system/ulib/dispatcher-pool",
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.pci",

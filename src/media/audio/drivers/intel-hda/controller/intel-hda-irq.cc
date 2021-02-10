@@ -21,12 +21,6 @@
 namespace audio {
 namespace intel_hda {
 
-void IntelHDAController::WakeupIrqHandler() {
-  LOG(TRACE, "Waking up IRQ handler\n");
-  ZX_DEBUG_ASSERT(irq_wakeup_event_ != nullptr);
-  irq_wakeup_event_->Signal();
-}
-
 fbl::RefPtr<CodecConnection> IntelHDAController::GetCodec(uint id) {
   ZX_DEBUG_ASSERT(id < countof(codecs_));
   fbl::AutoLock codec_lock(&codec_lock_);
@@ -340,11 +334,12 @@ void IntelHDAController::ProcessControllerIRQ() {
   }
 }
 
-zx_status_t IntelHDAController::HandleIrq() {
+void IntelHDAController::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq,
+                                   zx_status_t status, const zx_packet_interrupt_t* interrupt) {
   if (GetState() != State::OPERATING) {
     LOG(WARNING, "IRQ Handler shutting down due to invalid state (%u)!\n",
         static_cast<uint32_t>(GetState()));
-    return ZX_ERR_BAD_STATE;
+    return;
   }
 
   // Take a snapshot of any pending responses ASAP in order to minimize
@@ -369,7 +364,7 @@ zx_status_t IntelHDAController::HandleIrq() {
   ProcessRIRB();
   ProcessCORB();
 
-  return ZX_OK;
+  irq_.ack();
 }
 
 }  // namespace intel_hda

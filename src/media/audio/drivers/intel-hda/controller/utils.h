@@ -13,9 +13,9 @@
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
+#include <intel-hda/codec-utils/channel.h>
 
 namespace audio {
 namespace intel_hda {
@@ -111,18 +111,6 @@ struct StreamFormat {
 
   uint16_t raw_data_ = 0;
 };
-
-// Attempts to create and activate a channel using the supplied dispatcher
-// bindings and binding it to this ExeuctionDomain in the process.  Callers must
-// take ownership of the remote channel endpoint, but may choose to ignore the
-// local channel endpoint by passing nullptr for local_endpoint_out.  Upon
-// success, a reference to the created dispatcher::Channel will be held by the
-// channel's ExeuctionDomain (as a result of the activation operation)
-zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
-                                     dispatcher::Channel::ProcessHandler phandler,
-                                     dispatcher::Channel::ChannelClosedHandler chandler,
-                                     fbl::RefPtr<dispatcher::Channel>* local_endpoint_out,
-                                     zx::channel* remote_endpoint_out);
 
 }  // namespace intel_hda
 }  // namespace audio

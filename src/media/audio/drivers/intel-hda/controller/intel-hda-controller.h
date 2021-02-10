@@ -7,6 +7,8 @@
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/irq.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -22,9 +24,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <dispatcher-pool/dispatcher-interrupt.h>
-#include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <intel-hda/utils/codec-commands.h>
@@ -56,8 +55,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   const char* log_prefix() const { return log_prefix_; }
   const pci_protocol_t* pci() const { return &pci_; }
   const fbl::RefPtr<RefCountedBti>& pci_bti() const { return pci_bti_; }
-
-  const fbl::RefPtr<dispatcher::ExecutionDomain>& default_domain() const { return default_domain_; }
+  async_dispatcher_t* dispatcher() const { return loop_->dispatcher(); }
 
   // CORB/RIRB
   zx_status_t QueueCodecCmd(std::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
@@ -84,6 +82,9 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   MMIO_PTR hda_registers_t* regs() const {
     return &reinterpret_cast<MMIO_PTR hda_all_registers_t*>(mapped_regs_->get())->regs;
   }
+
+  void ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
   // Internal stream bookkeeping.
   void ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& ptr) TA_REQ(stream_pool_lock_);
@@ -128,24 +129,21 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 
   void ProcessStreamIRQ(uint32_t intsts);
   void ProcessControllerIRQ();
-  zx_status_t HandleIrq() TA_REQ(default_domain_->token());
+  void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                 const zx_packet_interrupt_t* interrupt);
   void WakeupIrqHandler();
 
   // Thunk for interacting with client channels
-  zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
-  zx_status_t SnapshotRegs(dispatcher::Channel* channel,
-                           const ihda_controller_snapshot_regs_req_t& req);
+  zx_status_t ProcessClientRequest(Channel* channel);
+  zx_status_t SnapshotRegs(Channel* channel, const ihda_controller_snapshot_regs_req_t& req);
 
   // VMAR for memory mapped registers.
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;
 
-  // Dispatcher framework state
-  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
-
   // State machine and IRQ related events.
   std::atomic<State> state_;
-  fbl::RefPtr<dispatcher::Interrupt> irq_;
-  fbl::RefPtr<dispatcher::WakeupEvent> irq_wakeup_event_;
+  async::IrqMethod<IntelHDAController, &IntelHDAController::HandleIrq> irq_handler_{this};
+  zx::interrupt irq_;
 
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
@@ -212,6 +210,10 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   static fuchsia_hardware_intel_hda_ControllerDevice_ops_t CONTROLLER_FIDL_THUNKS;
   static zx_protocol_device_t CONTROLLER_DEVICE_THUNKS;
   static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
+
+  fbl::Mutex channel_lock_;
+  fbl::RefPtr<Channel> channel_ TA_GUARDED(channel_lock_);
+  std::optional<async::Loop> loop_;
 };
 
 }  // namespace intel_hda

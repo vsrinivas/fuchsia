@@ -92,7 +92,7 @@ zx_status_t HdmiStream::SendGainUpdatesLocked() {
 // (in which case this becomes much simpler).  Moving forward, we need to come
 // back and either simplify or optimize (as the situation warrents) once we know
 // how we are proceeding.
-void HdmiStream::AddPDNotificationTgtLocked(dispatcher::Channel& channel) {
+void HdmiStream::AddPDNotificationTgtLocked(Channel& channel) {
   bool duplicate = false;
   for (auto& tgt : plug_notify_targets_) {
     duplicate = (tgt.channel.get() == &channel);
@@ -101,13 +101,13 @@ void HdmiStream::AddPDNotificationTgtLocked(dispatcher::Channel& channel) {
   }
 
   if (!duplicate) {
-    fbl::RefPtr<dispatcher::Channel> c(&channel);
+    fbl::RefPtr<Channel> c(&channel);
     std::unique_ptr<NotifyTarget> tgt(new NotifyTarget(std::move(c)));
     plug_notify_targets_.push_back(std::move(tgt));
   }
 }
 
-void HdmiStream::RemovePDNotificationTgtLocked(const dispatcher::Channel& channel) {
+void HdmiStream::RemovePDNotificationTgtLocked(const Channel& channel) {
   plug_notify_targets_.erase_if(
       [&channel](const NotifyTarget& target) { return target.channel.get() == &channel; });
 }
@@ -179,7 +179,7 @@ void HdmiStream::OnDeactivateLocked() {
   DisableConverterLocked(true);
 }
 
-void HdmiStream::OnChannelDeactivateLocked(const dispatcher::Channel& channel) {
+void HdmiStream::OnChannelDeactivateLocked(const Channel& channel) {
   RemovePDNotificationTgtLocked(channel);
 }
 
@@ -346,7 +346,7 @@ void HdmiStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
   }
 }
 
-void HdmiStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
+void HdmiStream::OnPlugDetectLocked(Channel* response_channel,
                                     const audio_proto::PlugDetectReq& req,
                                     audio_proto::PlugDetectResp* out_resp) {
   ZX_DEBUG_ASSERT(response_channel != nullptr);

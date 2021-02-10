@@ -21,7 +21,7 @@ fbl::Mutex snapshot_regs_buffer_lock;
 ihda_controller_snapshot_regs_resp_t snapshot_regs_buffer TA_GUARDED(snapshot_regs_buffer_lock);
 }  // namespace
 
-zx_status_t IntelHDAController::SnapshotRegs(dispatcher::Channel* channel,
+zx_status_t IntelHDAController::SnapshotRegs(Channel* channel,
                                              const ihda_controller_snapshot_regs_req_t& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 

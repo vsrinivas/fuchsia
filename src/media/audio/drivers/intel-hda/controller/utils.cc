@@ -13,8 +13,6 @@
 #include <utility>
 
 #include <ddk/driver.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -53,29 +51,6 @@ fbl::RefPtr<fzl::VmarManager> CreateDriverVmars() {
   GLOBAL_LOG(DEBUG, "Allocating 0x%zx byte VMAR for registers.\n", VMAR_SIZE);
 
   return fzl::VmarManager::Create(VMAR_SIZE);
-}
-
-zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
-                                     dispatcher::Channel::ProcessHandler phandler,
-                                     dispatcher::Channel::ChannelClosedHandler chandler,
-                                     fbl::RefPtr<dispatcher::Channel>* local_endpoint_out,
-                                     zx::channel* remote_endpoint_out) {
-  if (remote_endpoint_out == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  zx_status_t res =
-      channel->Activate(remote_endpoint_out, domain, std::move(phandler), std::move(chandler));
-  if ((res == ZX_OK) && (local_endpoint_out != nullptr)) {
-    *local_endpoint_out = std::move(channel);
-  }
-
-  return res;
 }
 
 }  // namespace intel_hda

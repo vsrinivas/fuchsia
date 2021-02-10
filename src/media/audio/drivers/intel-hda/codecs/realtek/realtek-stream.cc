@@ -91,7 +91,7 @@ zx_status_t RealtekStream::SendGainUpdatesLocked() {
 // (in which case this becomes much simpler).  Moving forward, we need to come
 // back and either simplify or optimize (as the situation warrents) once we know
 // how we are proceeding.
-void RealtekStream::AddPDNotificationTgtLocked(dispatcher::Channel* channel) {
+void RealtekStream::AddPDNotificationTgtLocked(Channel* channel) {
   bool duplicate = false;
   for (auto& tgt : plug_notify_targets_) {
     duplicate = (tgt.channel.get() == channel);
@@ -100,13 +100,13 @@ void RealtekStream::AddPDNotificationTgtLocked(dispatcher::Channel* channel) {
   }
 
   if (!duplicate) {
-    fbl::RefPtr<dispatcher::Channel> c(channel);
+    fbl::RefPtr<Channel> c(channel);
     std::unique_ptr<NotifyTarget> tgt(new NotifyTarget(std::move(c)));
     plug_notify_targets_.push_back(std::move(tgt));
   }
 }
 
-void RealtekStream::RemovePDNotificationTgtLocked(const dispatcher::Channel& channel) {
+void RealtekStream::RemovePDNotificationTgtLocked(const Channel& channel) {
   for (auto& tgt : plug_notify_targets_) {
     if (tgt.channel.get() == &channel) {
       plug_notify_targets_.erase(tgt);
@@ -176,7 +176,7 @@ void RealtekStream::OnDeactivateLocked() {
   DisableConverterLocked(true);
 }
 
-void RealtekStream::OnChannelDeactivateLocked(const dispatcher::Channel& channel) {
+void RealtekStream::OnChannelDeactivateLocked(const Channel& channel) {
   RemovePDNotificationTgtLocked(channel);
 }
 
@@ -363,7 +363,7 @@ void RealtekStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
   }
 }
 
-void RealtekStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
+void RealtekStream::OnPlugDetectLocked(Channel* response_channel,
                                        const audio_proto::PlugDetectReq& req,
                                        audio_proto::PlugDetectResp* out_resp) {
   ZX_DEBUG_ASSERT(response_channel != nullptr);

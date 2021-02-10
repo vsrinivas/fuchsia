@@ -34,8 +34,7 @@ class RealtekStream : public IntelHDAStreamBase {
   // IntelHDAStreamBase implementation
   zx_status_t OnActivateLocked() __TA_REQUIRES(obj_lock()) final;
   void OnDeactivateLocked() __TA_REQUIRES(obj_lock()) final;
-  void OnChannelDeactivateLocked(const dispatcher::Channel& channel)
-      __TA_REQUIRES(obj_lock()) final;
+  void OnChannelDeactivateLocked(const Channel& channel) __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp) __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
@@ -46,8 +45,7 @@ class RealtekStream : public IntelHDAStreamBase {
   void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
   void OnSetGainLocked(const audio_proto::SetGainReq& req, audio_proto::SetGainResp* out_resp)
       __TA_REQUIRES(obj_lock()) final;
-  void OnPlugDetectLocked(dispatcher::Channel* response_channel,
-                          const audio_proto::PlugDetectReq& req,
+  void OnPlugDetectLocked(Channel* response_channel, const audio_proto::PlugDetectReq& req,
                           audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock()) final;
   void OnGetStringLocked(const audio_proto::GetStringReq& req, audio_proto::GetStringResp* out_resp)
       __TA_REQUIRES(obj_lock()) final;
@@ -114,8 +112,8 @@ class RealtekStream : public IntelHDAStreamBase {
   // that audio streams have a 1:1 relationship with their clients (instead of
   // 1:many)
   struct NotifyTarget : fbl::DoublyLinkedListable<std::unique_ptr<NotifyTarget>> {
-    explicit NotifyTarget(fbl::RefPtr<dispatcher::Channel>&& ch) : channel(ch) {}
-    fbl::RefPtr<dispatcher::Channel> channel;
+    explicit NotifyTarget(fbl::RefPtr<Channel>&& ch) : channel(ch) {}
+    fbl::RefPtr<Channel> channel;
   };
   using NotifyTargetList = fbl::DoublyLinkedList<std::unique_ptr<NotifyTarget>>;
 
@@ -140,8 +138,8 @@ class RealtekStream : public IntelHDAStreamBase {
   zx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
   float ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
   zx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
-  void AddPDNotificationTgtLocked(dispatcher::Channel* channel) __TA_REQUIRES(obj_lock());
-  void RemovePDNotificationTgtLocked(const dispatcher::Channel& channel) __TA_REQUIRES(obj_lock());
+  void AddPDNotificationTgtLocked(Channel* channel) __TA_REQUIRES(obj_lock());
+  void RemovePDNotificationTgtLocked(const Channel& channel) __TA_REQUIRES(obj_lock());
 
   // Setup state machine methods.
   zx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());

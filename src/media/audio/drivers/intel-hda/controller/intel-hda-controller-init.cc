@@ -4,9 +4,12 @@
 
 #include <lib/device-protocol/pci.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <limits.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/threads.h>
 
 #include <algorithm>
 #include <utility>
@@ -146,7 +149,6 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     return ZX_ERR_BAD_STATE;
   }
 
-  ZX_DEBUG_ASSERT(irq_ != nullptr);
   ZX_DEBUG_ASSERT(!mapped_regs_.has_value());
   ZX_DEBUG_ASSERT(pci_.ops == nullptr);
 
@@ -224,27 +226,13 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   }
 
   // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
-  zx::interrupt irq;
-  res = pci_map_interrupt(&pci_, 0, irq.reset_and_get_address());
+  res = pci_map_interrupt(&pci_, 0, irq_.reset_and_get_address());
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to map IRQ! (res %d)\n", res);
     return res;
   }
 
-  ZX_DEBUG_ASSERT(irq_ != nullptr);
-  auto irq_handler = [controller = fbl::RefPtr(this)](const dispatcher::Interrupt* irq,
-                                                      zx_time_t timestamp) -> zx_status_t {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
-    LOG_EX(TRACE, *controller, "Hard IRQ (ts = %lu)\n", timestamp);
-    return controller->HandleIrq();
-  };
-
-  res = irq_->Activate(default_domain_, std::move(irq), std::move(irq_handler));
-
-  if (res != ZX_OK) {
-    LOG(ERROR, "Failed to activate IRQ dispatcher! (res %d)\n", res);
-    return res;
-  }
+  irq_handler_.set_object(irq_.get());
 
   // Enable Bus Mastering so we can DMA data and receive MSIs
   res = pci_enable_bus_master(&pci_, true);
@@ -252,6 +240,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
     LOG(ERROR, "Failed to enable PCI bus mastering!\n");
     return res;
   }
+  irq_handler_.Begin(loop_->dispatcher());
 
   return ZX_OK;
 }
@@ -533,36 +522,24 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   // split the IRQ handler to run its own dedicated exeuction domain instead
   // of using the default domain.
 
-  zx_handle_t profile;
+  zx::profile profile;
   zx_status_t res = device_get_profile(pci_dev, 24 /* HIGH_PRIORITY */,
-                                       "src/media/audio/drivers/intel-hda/controller", &profile);
+                                       "src/media/audio/drivers/intel-hda/controller",
+                                       profile.reset_and_get_address());
   if (res != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
+  async_loop_config_t config = kAsyncLoopConfigNeverAttachToThread;
+  config.irq_support = true;
+  loop_.emplace(&config);
 
-  default_domain_ = dispatcher::ExecutionDomain::Create(zx::profile(profile));
-  if (default_domain_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  thrd_t out_thread;
+  loop_->StartThread("intel-hda-controller-loop", &out_thread);
 
-  irq_ = dispatcher::Interrupt::Create();
-  if (irq_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  irq_wakeup_event_ = dispatcher::WakeupEvent::Create();
-  if (irq_wakeup_event_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  res = irq_wakeup_event_->Activate(
-      default_domain_,
-      [controller = fbl::RefPtr(this)](const dispatcher::WakeupEvent* evt) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
-        LOG_EX(TRACE, *controller, "SW IRQ Wakeup\n");
-        return controller->HandleIrq();
-      });
+  zx::unowned_thread thread{thrd_get_zx_handle(out_thread)};
+  res = thread->set_profile(profile, 0u);
   if (res != ZX_OK) {
+    zxlogf(ERROR, "zx_object_set_profile failed: %d", res);
     return res;
   }
 

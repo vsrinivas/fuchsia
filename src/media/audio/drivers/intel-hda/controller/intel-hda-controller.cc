@@ -16,7 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <intel-hda/utils/intel-hda-proto.h>
@@ -68,8 +67,11 @@ ihda_codec_protocol_ops_t IntelHDAController::CODEC_PROTO_THUNKS = {
 };
 
 IntelHDAController::IntelHDAController()
-    : state_(State::STARTING), id_(device_id_gen_.fetch_add(1u)) {
+    : state_(State::STARTING),
+      id_(device_id_gen_.fetch_add(1u)),
+      loop_(&kAsyncLoopConfigNeverAttachToThread) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA Controller (unknown BDF)");
+  loop_->StartThread("intel-hda-controller-loop");
 }
 
 IntelHDAController::~IntelHDAController() {
@@ -80,7 +82,7 @@ IntelHDAController::~IntelHDAController() {
   mapped_regs_.reset();
 
   // Release our IRQ.
-  irq_.reset();
+  irq_handler_.Cancel();
 
   // Disable IRQs at the PCI level.
   if (pci_.ops != nullptr) {
@@ -208,10 +210,8 @@ zx_status_t IntelHDAController::DeviceGetProtocol(uint32_t proto_id, void* proto
 }
 
 void IntelHDAController::DeviceShutdown() {
-  // Make sure we have closed all of the event sources (eg. IRQs, wakeup
-  // events, channels clients are using to talk to us, etc..) and that we have
-  // synchronized with any dispatch callbacks in flight.
-  default_domain_->Deactivate();
+  // Loop shutdown.
+  loop_->Shutdown();
 
   // Disable all interrupts and place the device into reset on our way out.
   if (regs() != nullptr) {
@@ -249,22 +249,55 @@ void IntelHDAController::DeviceRelease() {
 }
 
 zx_status_t IntelHDAController::GetChannel(fidl_txn_t* txn) {
-  dispatcher::Channel::ProcessHandler phandler(
-      [controller = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
-        return controller->ProcessClientRequest(channel);
-      });
-
-  zx::channel remote_endpoint_out;
-  zx_status_t res = CreateAndActivateChannel(default_domain_, std::move(phandler), nullptr, nullptr,
-                                             &remote_endpoint_out);
-
-  if (res != ZX_OK) {
-    return res;
+  zx::channel channel_local;
+  zx::channel channel_remote;
+  zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  return fuchsia_hardware_intel_hda_ControllerDeviceGetChannel_reply(txn,
-                                                                     remote_endpoint_out.release());
+  fbl::RefPtr<Channel> channel = Channel::Create(std::move(channel_local));
+  if (channel == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  fbl::AutoLock lock(&channel_lock_);
+  channel_ = std::move(channel);
+  channel_->SetHandler([controller = fbl::RefPtr(this)](async_dispatcher_t* dispatcher,
+                                                        async::WaitBase* wait, zx_status_t status,
+                                                        const zx_packet_signal_t* signal) {
+    controller->ChannelSignalled(dispatcher, wait, status, signal);
+  });
+  status = channel_->BeginWait(loop_->dispatcher());
+  if (status != ZX_OK) {
+    channel_.reset();
+    // We let stream_channel_remote go out of scope to trigger channel deactivation via peer close.
+    return status;
+  }
+  return fuchsia_hardware_intel_hda_ControllerDeviceGetChannel_reply(txn, channel_remote.release());
+}
+
+void IntelHDAController::ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                          zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    fbl::AutoLock lock(&channel_lock_);
+    zx_status_t status = ProcessClientRequest(channel_.get());
+    if (status != ZX_OK) {
+      peer_closed_asserted = true;
+    }
+  }
+  if (peer_closed_asserted) {
+    fbl::AutoLock lock(&channel_lock_);
+    channel_.reset();
+  } else if (readable_asserted) {
+    wait->Begin(dispatcher);
+  }
 }
 
 void IntelHDAController::RootDeviceRelease() {
@@ -274,7 +307,7 @@ void IntelHDAController::RootDeviceRelease() {
   thiz.reset();
 }
 
-zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channel) {
+zx_status_t IntelHDAController::ProcessClientRequest(Channel* channel) {
   zx_status_t res;
   uint32_t req_size;
   union RequestBuffer {
@@ -379,10 +412,7 @@ zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
   return ret;
 }
 
-void IntelHDAController::DriverRelease(void* ctx) {
-  // If we are the last one out the door, turn off the lights in the thread pool.
-  dispatcher::ThreadPool::ShutdownAll();
-}
+void IntelHDAController::DriverRelease(void* ctx) {}
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};

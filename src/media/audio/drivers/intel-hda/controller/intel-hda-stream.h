@@ -13,8 +13,8 @@
 #include <lib/zx/vmo.h>
 
 #include <audio-proto/audio-proto.h>
-#include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -25,8 +25,6 @@
 
 namespace audio {
 namespace intel_hda {
-
-class CodecConnection;
 
 class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
                        public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>> {
@@ -54,10 +52,11 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
     return static_cast<uint16_t>(id() - 1);
   }
   uint16_t GetKey() const { return id(); }
+  void ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
-  zx_status_t SetStreamFormat(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
-                              uint16_t encoded_fmt, zx::channel* client_endpoint_out)
-      TA_EXCL(channel_lock_);
+  zx_status_t SetStreamFormat(async_dispatcher_t* dispatcher, uint16_t encoded_fmt,
+                              zx::channel* client_endpoint_out) TA_EXCL(channel_lock_);
   void Deactivate() TA_EXCL(channel_lock_);
 
   void ProcessStreamIRQ() TA_EXCL(notif_lock_);
@@ -77,8 +76,8 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
 
   // Client request handlers
-  zx_status_t ProcessClientRequest(dispatcher::Channel* channel) TA_EXCL(channel_lock_);
-  void ProcessClientDeactivate(const dispatcher::Channel* channel) TA_EXCL(channel_lock_);
+  zx_status_t ProcessClientRequestLocked(Channel* channel) TA_REQ(channel_lock_);
+  void ProcessClientDeactivate();
   zx_status_t ProcessGetFifoDepthLocked(const audio_proto::RingBufGetFifoDepthReq& req)
       TA_REQ(channel_lock_);
   zx_status_t ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req)
@@ -139,7 +138,7 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   // The channel used by the application to talk to us once our format has
   // been set by the codec.
   fbl::Mutex channel_lock_;
-  fbl::RefPtr<dispatcher::Channel> channel_ TA_GUARDED(channel_lock_);
+  fbl::RefPtr<Channel> channel_ TA_GUARDED(channel_lock_);
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(channel_lock_);
 
   // Parameters determined after stream format configuration.
@@ -156,7 +155,7 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
 
   // State used by the IRQ thread to deliver position update notifications.
   fbl::Mutex notif_lock_ TA_ACQ_AFTER(channel_lock_);
-  fbl::RefPtr<dispatcher::Channel> irq_channel_ TA_GUARDED(notif_lock_);
+  fbl::RefPtr<Channel> irq_channel_ TA_GUARDED(notif_lock_);
 };
 
 }  // namespace intel_hda

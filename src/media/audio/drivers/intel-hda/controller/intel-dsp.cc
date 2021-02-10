@@ -154,38 +154,58 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
   if (!remote_endpoint_out)
     return ZX_ERR_INVALID_ARGS;
 
-  dispatcher::Channel::ProcessHandler phandler(
-      [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->controller_->default_domain());
-        return codec->ProcessClientRequest(channel, true);
-      });
-
-  dispatcher::Channel::ChannelClosedHandler chandler(
-      [codec = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->controller_->default_domain());
-        codec->ProcessClientDeactivate(channel);
-      });
-
-  // Enter the driver channel lock.  If we have already connected to a codec
-  // driver, simply fail the request.  Otherwise, attempt to build a driver channel
-  // and activate it.
-  fbl::AutoLock lock(&codec_driver_channel_lock_);
-
-  if (codec_driver_channel_ != nullptr)
-    return ZX_ERR_BAD_STATE;
-
-  zx::channel client_channel;
-  zx_status_t res;
-  res = CreateAndActivateChannel(controller_->default_domain(), std::move(phandler),
-                                 std::move(chandler), &codec_driver_channel_, &client_channel);
-  if (res == ZX_OK) {
-    // If things went well, release the reference to the remote endpoint
-    // from the zx::channel instance into the unmanaged world of DDK
-    // protocols.
-    *remote_endpoint_out = client_channel.release();
+  zx::channel channel_local;
+  zx::channel channel_remote;
+  zx_status_t res = zx::channel::create(0, &channel_local, &channel_remote);
+  if (res != ZX_OK) {
+    return res;
   }
 
-  return res;
+  fbl::AutoLock lock(&codec_driver_channel_lock_);
+  fbl::RefPtr<Channel> channel = Channel::Create(std::move(channel_local));
+  if (channel == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  codec_driver_channel_ = std::move(channel);
+  codec_driver_channel_->SetHandler(
+      [dsp = fbl::RefPtr(this)](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                zx_status_t status, const zx_packet_signal_t* signal) {
+        dsp->ChannelSignalled(dispatcher, wait, status, signal);
+      });
+  res = codec_driver_channel_->BeginWait(controller_->dispatcher());
+  if (res != ZX_OK) {
+    codec_driver_channel_.reset();
+    return res;
+  }
+
+  // If things went well, release the reference to the remote endpoint
+  // from the zx::channel instance into the unmanaged world of DDK
+  // protocols.
+  *remote_endpoint_out = channel_remote.release();
+  return ZX_OK;
+}
+
+void IntelDsp::ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    zx_status_t status = ProcessClientRequest(true);
+    if (status != ZX_OK) {
+      peer_closed_asserted = true;
+    }
+  }
+  if (peer_closed_asserted) {
+    ProcessClientDeactivate();
+  } else if (readable_asserted) {
+    wait->Begin(dispatcher);
+  }
 }
 
 #define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler)    \
@@ -206,7 +226,7 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
       return ZX_ERR_ACCESS_DENIED;                                             \
     }                                                                          \
     return _handler(channel, req._payload)
-zx_status_t IntelDsp::ProcessClientRequest(dispatcher::Channel* channel, bool is_driver_channel) {
+zx_status_t IntelDsp::ProcessClientRequest(bool is_driver_channel) {
   zx_status_t res;
   uint32_t req_size;
   union {
@@ -219,8 +239,10 @@ zx_status_t IntelDsp::ProcessClientRequest(dispatcher::Channel* channel, bool is
   static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
 
   // Read the client request.
+  fbl::AutoLock lock(&codec_driver_channel_lock_);
+  Channel* channel = codec_driver_channel_.get();
   ZX_DEBUG_ASSERT(channel != nullptr);
-  res = channel->Read(&req, sizeof(req), &req_size);
+  res = codec_driver_channel_->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
     LOG(DEBUG, "Failed to read client request (res %d)\n", res);
     return res;
@@ -254,15 +276,12 @@ zx_status_t IntelDsp::ProcessClientRequest(dispatcher::Channel* channel, bool is
 }
 #undef PROCESS_CMD
 
-void IntelDsp::ProcessClientDeactivate(const dispatcher::Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-
+void IntelDsp::ProcessClientDeactivate() {
   // This should be the driver channel (client channels created with IOCTL do
   // not register a deactivate handler).  Start by releasing the internal
   // channel reference from within the codec_driver_channel_lock.
   {
     fbl::AutoLock lock(&codec_driver_channel_lock_);
-    ZX_DEBUG_ASSERT(channel == codec_driver_channel_.get());
     codec_driver_channel_.reset();
   }
 
@@ -280,7 +299,7 @@ void IntelDsp::ProcessClientDeactivate(const dispatcher::Channel* channel) {
   }
 }
 
-zx_status_t IntelDsp::ProcessRequestStream(dispatcher::Channel* channel,
+zx_status_t IntelDsp::ProcessRequestStream(Channel* channel,
                                            const ihda_proto::RequestStreamReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -314,7 +333,7 @@ zx_status_t IntelDsp::ProcessRequestStream(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelDsp::ProcessReleaseStream(dispatcher::Channel* channel,
+zx_status_t IntelDsp::ProcessReleaseStream(Channel* channel,
                                            const ihda_proto::ReleaseStreamReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -348,7 +367,7 @@ zx_status_t IntelDsp::ProcessReleaseStream(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
+zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel,
                                           const ihda_proto::SetStreamFmtReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -376,8 +395,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
   // this stream is already bound to a client, this will cause that connection
   // to be closed.
   zx::channel client_channel;
-  zx_status_t res =
-      stream->SetStreamFormat(controller_->default_domain(), req.format, &client_channel);
+  zx_status_t res = stream->SetStreamFormat(controller_->dispatcher(), req.format, &client_channel);
   if (res != ZX_OK) {
     LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
         req.stream_id, res);

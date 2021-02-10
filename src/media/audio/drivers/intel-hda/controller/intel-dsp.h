@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/mmio/mmio.h>
 #include <limits.h>
@@ -46,6 +47,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   ~IntelDsp();
 
   Status Init(zx_device_t* dsp_dev);
+  void ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
   const char* log_prefix() const { return log_prefix_; }
 
@@ -99,14 +102,11 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   void IrqDisable();
 
   // Thunks for interacting with clients and codec drivers.
-  zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool is_driver_channel);
-  void ProcessClientDeactivate(const dispatcher::Channel* channel);
-  zx_status_t ProcessRequestStream(dispatcher::Channel* channel,
-                                   const ihda_proto::RequestStreamReq& req);
-  zx_status_t ProcessReleaseStream(dispatcher::Channel* channel,
-                                   const ihda_proto::ReleaseStreamReq& req);
-  zx_status_t ProcessSetStreamFmt(dispatcher::Channel* channel,
-                                  const ihda_proto::SetStreamFmtReq& req);
+  zx_status_t ProcessClientRequest(bool is_driver_channel);
+  void ProcessClientDeactivate();
+  zx_status_t ProcessRequestStream(Channel* channel, const ihda_proto::RequestStreamReq& req);
+  zx_status_t ProcessReleaseStream(Channel* channel, const ihda_proto::ReleaseStreamReq& req);
+  zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req);
 
   zx_status_t CreateAndStartStreams();
 
@@ -156,7 +156,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   // Driver connection state
   fbl::Mutex codec_driver_channel_lock_;
-  fbl::RefPtr<dispatcher::Channel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
+  fbl::RefPtr<Channel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
 
   // Active DMA streams
   fbl::Mutex active_streams_lock_;

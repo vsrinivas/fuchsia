@@ -11,7 +11,6 @@
 #include <iterator>
 #include <utility>
 
-#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
@@ -28,9 +27,8 @@ namespace codecs {
 
 void IntelHDACodecDriverBase::PrintDebugPrefix() const { printf("HDACodec : "); }
 
-IntelHDACodecDriverBase::IntelHDACodecDriverBase() {
-  default_domain_ = dispatcher::ExecutionDomain::Create();
-  ZX_ASSERT(default_domain_ != nullptr);
+IntelHDACodecDriverBase::IntelHDACodecDriverBase() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
+  loop_.StartThread("intel-hda-codec-driver-loop");
 }
 
 #define DEV(_ctx) static_cast<IntelHDACodecDriverBase*>(_ctx)
@@ -61,17 +59,17 @@ Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
     return Status(result, "Failure while attempting to fetch DDK protocol.");
   }
 
-  // Allocate a dispatcher::Channel object which we will use to talk to the codec device
-  fbl::RefPtr<dispatcher::Channel> device_channel = dispatcher::Channel::Create();
-  if (device_channel == nullptr) {
-    return Status(ZX_ERR_NO_MEMORY, "Error creating device channel.");
-  }
+  zx::channel channel;
 
   // Obtain a channel handle from the device
-  zx::channel channel;
   result = client.GetDriverChannel(&channel);
   if (result != ZX_OK) {
     return Status(result, "Error fetching driver channel.");
+  }
+
+  auto device_channel = Channel::Create(std::move(channel));
+  if (device_channel == nullptr) {
+    return Status(ZX_ERR_NO_MEMORY, "Error creating device channel.");
   }
 
   // Stash our reference to our device channel.  If activate succeeds, we
@@ -79,28 +77,16 @@ Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   {
     fbl::AutoLock device_channel_lock(&device_channel_lock_);
     device_channel_ = device_channel;
-  }
-
-  // Activate our device channel.  If something goes wrong, clear out the
-  // internal device_channel_ reference.
-  dispatcher::Channel::ProcessHandler phandler(
-      [codec = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
-        return codec->ProcessClientRequest(channel);
-      });
-
-  dispatcher::Channel::ChannelClosedHandler chandler(
-      [codec = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
-        codec->ProcessClientDeactivate(channel);
-      });
-
-  result = device_channel->Activate(std::move(channel), default_domain_, std::move(phandler),
-                                    std::move(chandler));
-  if (result != ZX_OK) {
-    fbl::AutoLock device_channel_lock(&device_channel_lock_);
-    device_channel_.reset();
-    return Status(result, "Error while activating device.");
+    device_channel_->SetHandler(
+        [codec = fbl::RefPtr(this)](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                    zx_status_t status, const zx_packet_signal_t* signal) {
+          codec->ChannelSignalled(dispatcher, wait, status, signal);
+        });
+    result = device_channel_->BeginWait(loop_.dispatcher());
+    if (result != ZX_OK) {
+      device_channel_.reset();
+      return Status(result, "Error on begin wait.");
+    }
   }
 
   auto codec = fbl::RefPtr<IntelHDACodecDriverBase>(this);
@@ -134,6 +120,35 @@ Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   // that we are the driver for.
   codec_device_ = codec_dev;
   return OkStatus();
+}
+
+void IntelHDACodecDriverBase::ChannelSignalled(async_dispatcher_t* dispatcher,
+                                               async::WaitBase* wait, zx_status_t status,
+                                               const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    // Grab a reference to the device channel, the processing may grab the lock.
+    fbl::RefPtr<Channel> device_channel;
+    {
+      fbl::AutoLock device_channel_lock(&device_channel_lock_);
+      device_channel = device_channel_;
+    }
+    zx_status_t status = ProcessClientRequest(device_channel.get());
+    if (status != ZX_OK) {
+      peer_closed_asserted = true;
+    }
+  }
+  if (peer_closed_asserted) {
+    ProcessClientDeactivate();
+  } else if (readable_asserted) {
+    wait->Begin(dispatcher);
+  }
 }
 
 void IntelHDACodecDriverBase::Shutdown() {
@@ -195,14 +210,14 @@ void IntelHDACodecDriverBase::DeviceRelease() {
     CHECK_RESP_ALLOW_HANDLE(_ioctl, _payload);                  \
   } while (0)
 
-zx_status_t IntelHDACodecDriverBase::ProcessClientRequest(dispatcher::Channel* channel) {
+zx_status_t IntelHDACodecDriverBase::ProcessClientRequest(Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   uint32_t resp_size;
   CodecChannelResponses resp;
   zx::handle rxed_handle;
 
-  zx_status_t res = channel->Read(&resp, sizeof(resp), &resp_size, &rxed_handle);
+  zx_status_t res = channel->Read(&resp, sizeof(resp), &resp_size, rxed_handle);
   if (res != ZX_OK) {
     DEBUG_LOG("Error reading from device channel (res %d)!\n", res);
     return res;
@@ -314,7 +329,7 @@ zx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
 #undef CHECK_RESP
 #undef CHECK_RESP_ALLOW_HANDLE
 
-void IntelHDACodecDriverBase::ProcessClientDeactivate(const dispatcher::Channel* channel) {
+void IntelHDACodecDriverBase::ProcessClientDeactivate() {
   bool do_shutdown = false;
 
   {
@@ -324,10 +339,8 @@ void IntelHDACodecDriverBase::ProcessClientDeactivate(const dispatcher::Channel*
     // internal bookkeeping.
     //
     // TODO(johngro) : We should probably tell our implementation about this.
-    if (channel == device_channel_.get()) {
-      do_shutdown = true;
-      device_channel_.reset();
-    }
+    do_shutdown = true;
+    device_channel_.reset();
   }
 
   if (do_shutdown)
@@ -337,13 +350,12 @@ void IntelHDACodecDriverBase::ProcessClientDeactivate(const dispatcher::Channel*
 void IntelHDACodecDriverBase::UnlinkFromController() {
   fbl::AutoLock device_channel_lock(&device_channel_lock_);
   if (device_channel_ != nullptr) {
-    device_channel_->Deactivate();
     device_channel_ = nullptr;
   }
 }
 
 zx_status_t IntelHDACodecDriverBase::SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack) {
-  fbl::RefPtr<dispatcher::Channel> device_channel;
+  fbl::RefPtr<Channel> device_channel;
   {
     fbl::AutoLock device_channel_lock(&device_channel_lock_);
     device_channel = device_channel_;
@@ -379,7 +391,7 @@ zx_status_t IntelHDACodecDriverBase::ActivateStream(const fbl::RefPtr<IntelHDASt
 
   // Grab a reference to the channel we use to talk to the codec device.  If
   // the channel has already been closed, we cannot activate this stream.
-  fbl::RefPtr<dispatcher::Channel> device_channel;
+  fbl::RefPtr<Channel> device_channel;
   {
     fbl::AutoLock device_channel_lock(&device_channel_lock_);
     if (device_channel_ == nullptr)

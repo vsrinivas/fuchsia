@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
@@ -14,9 +15,11 @@
 #include <audio-proto/audio-proto.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddktl/device-internal.h>
+#include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -25,21 +28,37 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include "channel.h"
+
 namespace audio {
 namespace intel_hda {
 namespace codecs {
 
+// Thread safety token.
+//
+// This token acts like a "no-op mutex", allowing compiler thread safety annotations
+// to be placed on code or data that should only be accessed by a particular thread.
+// Any code that acquires the token makes the claim that it is running on the (single)
+// correct thread, and hence it is safe to access the annotated data and execute the annotated code.
+struct __TA_CAPABILITY("role") Token {};
+class __TA_SCOPED_CAPABILITY ScopedToken {
+ public:
+  explicit ScopedToken(const Token& token) __TA_ACQUIRE(token) {}
+  ~ScopedToken() __TA_RELEASE() {}
+};
+
 class IntelHDACodecDriverBase;
+
+class IntelHDAStreamBase;
 
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
                            public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
   zx_status_t Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
-                       const fbl::RefPtr<dispatcher::Channel>& codec_channel)
-      __TA_EXCLUDES(obj_lock_);
+                       const fbl::RefPtr<Channel>& codec_channel) __TA_EXCLUDES(obj_lock_);
 
-  void Deactivate() __TA_EXCLUDES(obj_lock_, default_domain_->token());
+  void Deactivate() __TA_EXCLUDES(obj_lock_, default_domain_token());
 
   zx_status_t ProcessResponse(const CodecResponse& resp) __TA_EXCLUDES(obj_lock_);
   zx_status_t ProcessRequestStream(const ihda_proto::RequestStreamResp& resp)
@@ -47,10 +66,14 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   virtual zx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp,
                                           zx::channel&& ring_buffer_channel)
       __TA_EXCLUDES(obj_lock_);
+  void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                              zx_status_t status, const zx_packet_signal_t* signal,
+                              Channel* channel, bool priviledged);
 
   uint32_t id() const { return id_; }
   bool is_input() const { return is_input_; }
   uint32_t GetKey() const { return id(); }
+  async_dispatcher_t* dispatcher() const { return loop_.dispatcher(); }
 
  protected:
   friend class fbl::RefPtr<IntelHDAStreamBase>;
@@ -59,7 +82,6 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
     NO,
     YES,
   };
-
   IntelHDAStreamBase(uint32_t id, bool is_input);
   virtual ~IntelHDAStreamBase();
 
@@ -77,10 +99,10 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
 
   fbl::Mutex* obj_lock() __TA_RETURN_CAPABILITY(obj_lock_) { return &obj_lock_; }
 
-  fbl::RefPtr<dispatcher::ExecutionDomain> domain() const { return default_domain_; }
-  fbl::RefPtr<dispatcher::Channel> stream_channel() const __TA_REQUIRES(obj_lock_) {
-    return stream_channel_;
+  const Token& default_domain_token() const __TA_RETURN_CAPABILITY(domain_token_) {
+    return domain_token_;
   }
+  fbl::RefPtr<Channel> stream_channel() const __TA_REQUIRES(obj_lock_) { return stream_channel_; }
   uint32_t set_format_tid() const __TA_REQUIRES(obj_lock_) { return set_format_tid_; }
   uint16_t encoded_fmt() const __TA_REQUIRES(obj_lock_) { return encoded_fmt_; }
 
@@ -97,8 +119,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   // Overloads to control stream behavior.
   virtual zx_status_t OnActivateLocked() __TA_REQUIRES(obj_lock_);
   virtual void OnDeactivateLocked() __TA_REQUIRES(obj_lock_);
-  virtual void OnChannelDeactivateLocked(const dispatcher::Channel& channel)
-      __TA_REQUIRES(obj_lock_);
+  virtual void OnChannelDeactivateLocked(const Channel& channel) __TA_REQUIRES(obj_lock_);
   virtual zx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock_);
   virtual zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp) __TA_REQUIRES(obj_lock_);
   virtual zx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
@@ -109,8 +130,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   virtual void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
   virtual void OnSetGainLocked(const audio_proto::SetGainReq& req,
                                audio_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
-  virtual void OnPlugDetectLocked(dispatcher::Channel* response_channel,
-                                  const audio_proto::PlugDetectReq& req,
+  virtual void OnPlugDetectLocked(Channel* response_channel, const audio_proto::PlugDetectReq& req,
                                   audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock_);
   virtual void OnGetStringLocked(const audio_proto::GetStringReq& req,
                                  audio_proto::GetStringResp* out_resp) __TA_REQUIRES(obj_lock_);
@@ -140,26 +160,26 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   void GetChannel(GetChannelCompleter::Sync& completer) override;
 
   // Thunks for dispatching channel events.
-  zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool privileged);
-  void ProcessClientDeactivate(const dispatcher::Channel* channel, bool privileged);
+  zx_status_t ProcessClientRequest(Channel* channel, bool privileged);
+  void ProcessClientDeactivate(const Channel* channel, bool privileged);
 
-  zx_status_t DoGetStreamFormatsLocked(dispatcher::Channel* channel, bool privileged,
+  zx_status_t DoGetStreamFormatsLocked(Channel* channel, bool privileged,
                                        const audio_proto::StreamGetFmtsReq& req)
       __TA_REQUIRES(obj_lock_);
-  zx_status_t DoSetStreamFormatLocked(dispatcher::Channel* channel, bool privileged,
+  zx_status_t DoSetStreamFormatLocked(Channel* channel, bool privileged,
                                       const audio_proto::StreamSetFmtReq& fmt)
       __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetGainLocked(dispatcher::Channel* channel, bool privileged,
-                              const audio_proto::GetGainReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoSetGainLocked(dispatcher::Channel* channel, bool privileged,
-                              const audio_proto::SetGainReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoPlugDetectLocked(dispatcher::Channel* channel, bool privileged,
+  zx_status_t DoGetGainLocked(Channel* channel, bool privileged, const audio_proto::GetGainReq& req)
+      __TA_REQUIRES(obj_lock_);
+  zx_status_t DoSetGainLocked(Channel* channel, bool privileged, const audio_proto::SetGainReq& req)
+      __TA_REQUIRES(obj_lock_);
+  zx_status_t DoPlugDetectLocked(Channel* channel, bool privileged,
                                  const audio_proto::PlugDetectReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetUniqueIdLocked(dispatcher::Channel* channel, bool privileged,
+  zx_status_t DoGetUniqueIdLocked(Channel* channel, bool privileged,
                                   const audio_proto::GetUniqueIdReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetStringLocked(dispatcher::Channel* channel, bool privileged,
+  zx_status_t DoGetStringLocked(Channel* channel, bool privileged,
                                 const audio_proto::GetStringReq& req) __TA_REQUIRES(obj_lock_);
-  zx_status_t DoGetClockDomainLocked(dispatcher::Channel* channel, bool privileged,
+  zx_status_t DoGetClockDomainLocked(Channel* channel, bool privileged,
                                      const audio_proto::GetClockDomainReq& req)
       __TA_REQUIRES(obj_lock_);
 
@@ -172,8 +192,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   fbl::Mutex obj_lock_;
 
   fbl::RefPtr<IntelHDACodecDriverBase> parent_codec_ __TA_GUARDED(obj_lock_);
-  fbl::RefPtr<dispatcher::Channel> codec_channel_ __TA_GUARDED(obj_lock_);
-  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
+  fbl::RefPtr<Channel> codec_channel_ __TA_GUARDED(obj_lock_);
 
   uint16_t dma_stream_id_ __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_ID;
   uint8_t dma_stream_tag_ __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_TAG;
@@ -181,7 +200,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   zx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
   zx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
-  fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(obj_lock_);
+  fbl::RefPtr<Channel> stream_channel_ __TA_GUARDED(obj_lock_);
   fbl::Vector<audio_proto::FormatRange> supported_formats_ __TA_GUARDED(obj_lock_);
 
   uint32_t set_format_tid_ __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;
@@ -193,6 +212,8 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                                         uint16_t* encoded_fmt_out);
 
   static zx_protocol_device_t STREAM_DEVICE_THUNKS;
+  async::Loop loop_;
+  Token domain_token_;
 };
 
 }  // namespace codecs
