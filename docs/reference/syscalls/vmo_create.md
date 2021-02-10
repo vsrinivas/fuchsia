@@ -22,8 +22,9 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
 which represents a container of zero to *size* bytes of memory managed by the
 operating system.
 
-The size of the VMO will be rounded up to the next page size boundary.
-Use [`zx_vmo_get_size()`] to return the current size of the VMO.
+The size of the VMO will be rounded up to the next system page size boundary,
+as reported by [`zx_system_get_page_size()`]. Use [`zx_vmo_get_size()`] to
+return the current size of the VMO.
 
 One handle is returned on success, representing an object with the requested
 size.
@@ -83,6 +84,7 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
+ - [`zx_system_get_page_size()`]
  - [`zx_vmar_map()`]
  - [`zx_vmo_create_child()`]
  - [`zx_vmo_get_size()`]
