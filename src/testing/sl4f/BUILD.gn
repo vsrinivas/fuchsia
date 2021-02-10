@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "sl4f_lib"
@@ -371,68 +370,43 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
+fuchsia_component("sl4f_comp") {
+  component_name = "sl4f"
+  manifest = "meta/sl4f.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("data_proxy_comp") {
+  component_name = "data_proxy"
+  manifest = "proxy/meta/data_proxy.cmx"
+  deps = [ "proxy:bin" ]
+}
+
 # WARNING: Known to infrastructure.
-package("sl4f") {
-  meta = [
-    {
-      path = "meta/sl4f.cmx"
-      dest = "sl4f.cmx"
-    },
-    {
-      path = rebase_path("proxy/meta/data_proxy.cmx")
-      dest = "data_proxy.cmx"
-    },
-  ]
-
+fuchsia_package("sl4f") {
   deps = [
-    ":bin",
-    "proxy:bin",
-  ]
-
-  binaries = [
-    {
-      name = "sl4f"
-    },
-    {
-      name = "data_proxy"
-    },
+    ":data_proxy_comp",
+    ":sl4f_comp",
   ]
 }
 
-test_package("sl4f-service-tests") {
-  deps = [ ":lib_test" ]
-
-  resources = [
-    {
-      path = rebase_path("testdata/alpha_factory_store.config")
-      dest = "alpha_factory_store.config"
-    },
-    {
-      path = rebase_path("testdata/cast_factory_store.config")
-      dest = "cast_factory_store.config"
-    },
-    {
-      path = rebase_path("testdata/misc_factory_store.config")
-      dest = "misc_factory_store.config"
-    },
-    {
-      path = rebase_path("testdata/playready_factory_store.config")
-      dest = "playready_factory_store.config"
-    },
-    {
-      path = rebase_path("testdata/weave_factory_store.config")
-      dest = "weave_factory_store.config"
-    },
-    {
-      path = rebase_path("testdata/widevine_factory_store.config")
-      dest = "widevine_factory_store.config"
-    },
+resource("sl4f-server-tests-files") {
+  sources = [
+    "testdata/alpha_factory_store.config",
+    "testdata/cast_factory_store.config",
+    "testdata/misc_factory_store.config",
+    "testdata/playready_factory_store.config",
+    "testdata/weave_factory_store.config",
+    "testdata/widevine_factory_store.config",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  tests = [
-    {
-      name = "sl4f_lib_lib_test"
-    },
+fuchsia_unittest_package("sl4f-service-tests") {
+  manifest = "meta/sl4f_lib_lib_test.cmx"
+  deps = [
+    ":lib_test",
+    ":sl4f-server-tests-files",
   ]
 }
 
@@ -448,15 +422,8 @@ config_data("fake-factory-store-providers-config") {
   ]
 }
 
-unittest_package("sl4f-tests") {
+fuchsia_unittest_package("sl4f-tests") {
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "sl4f_bin_test"
-      dest = "sl4f_bin_test"
-    },
-  ]
 }
 
 group("service-tests") {

@@ -4,7 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Used by syz-ci to build with own syz-executor source.
@@ -21,14 +21,8 @@ group("tests") {
   deps = [ ":syz-executor-pkg" ]
 }
 
-package("syz-executor-pkg") {
+fuchsia_shell_package("syz-executor-pkg") {
   deps = [ ":syz-executor" ]
-  binaries = [
-    {
-      name = "syz-executor"
-      shell = true
-    },
-  ]
 }
 
 src = rebase_path(syzkaller_dir)

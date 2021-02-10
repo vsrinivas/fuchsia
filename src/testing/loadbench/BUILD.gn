@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -49,43 +48,26 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("loadbench") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "loadbench"
-    },
+resource("loadbench_files") {
+  sources = [
+    "data/deadline_test.json",
+    "data/default.json",
+    "data/example.json",
+    "data/port_test.json",
+    "data/relative_bandwidth.json",
+    "data/simple_load.json",
+    "data/tests/automated/large_core_counts_overload_test.json",
+    "data/tests/dpc_latency.json",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/loadbench.cmx")
-      dest = "loadbench.cmx"
-    },
-  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  # Add benchmark specification files to this array.
-  json_files = [
-    "deadline_test.json",
-    "default.json",
-    "example.json",
-    "port_test.json",
-    "simple_load.json",
-    "relative_bandwidth.json",
-    "tests/automated/large_core_counts_overload_test.json",
-    "tests/dpc_latency.json",
+fuchsia_package_with_single_component("loadbench") {
+  manifest = "meta/loadbench.cmx"
+  deps = [
+    ":bin",
+    ":loadbench_files",
   ]
-
-  # Build a resource entry for each benchmark specification.
-  resources = []
-  foreach(file, json_files) {
-    resources += [
-      {
-        path = rebase_path("data/$file")
-        dest = "$file"
-      },
-    ]
-  }
 }
 
 executable("loadbench_unittests") {
@@ -106,17 +88,15 @@ executable("loadbench_unittests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("loadbench_tests") {
+fuchsia_unittest_package("loadbench_tests") {
+  component_name = "loadbench_unittests"
+  manifest = "meta/loadbench_unittests.cmx"
   deps = [ ":loadbench_unittests" ]
-
-  tests = [
-    {
-      name = "loadbench_unittests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

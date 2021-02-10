@@ -34,7 +34,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/sl4f_lib_lib_test"
+        "binary": "bin/sl4f_lib_lib_test"
     },
     "sandbox": {
         "features": [
