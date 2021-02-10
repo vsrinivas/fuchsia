@@ -285,4 +285,5 @@ Evolution][ftp-049].
 [rfc-process-prior-art]: /docs/contribute/governance/rfcs/0001_rfc_process.md#prior_art_and_references
 [rfc-process-socialize]: /docs/contribute/governance/rfcs/0001_rfc_process.md#socialize
 [rfc-process]: /docs/contribute/governance/rfcs/0001_rfc_process.md
+[rfc-0006]: /docs/contribute/governance/rfcs/0006_addendum_to_rfc_process_for_zircon.md
 [rfc-template]: /docs/contribute/governance/rfcs/TEMPLATE.md
