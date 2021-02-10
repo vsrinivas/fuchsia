@@ -26,7 +26,8 @@ manifest sources, and component declarations.
 A *component manifest* is a file that encodes a
 [component declaration](#component-declaration), usually distributed as part of
 a [package][doc-packages]. The binary format is a persisted FIDL file mapping
-one-to-one onto the component declaration, typically ending in a `.cm` extension.
+one-to-one onto the component declaration, typically ending in a `.cm`
+extension.
 
 A [fuchsia-pkg URL][doc-package-url] with a component manifest resource path
 identifies a component in a package.
@@ -59,12 +60,12 @@ instead requires components to specify which runtime they need by specifying a
 while other runtimes are implemented as components within the framework. A
 component can use any runner available in its [environment][doc-environments].
 
-The [`program`](#program) section of a component manifest declares to the runner
-how the component is run, such as the program location and any arguments.
-Components using the ELF runner should specify the binary name and arguments, as
-[documented in the ELF runner page](elf_runner.md). [Other
-runners][doc-runners]
-may have other runner-specific details, documented by that runner.
+The [`program`](#program) section of a component manifest designates a runner
+and declares to the runner how the component is run, such as the program
+location and any arguments. Components using the ELF runner should specify the
+binary name and arguments, see [ELF Runner](elf_runner.md).
+[Other runners][doc-runners] may have other runner-specific details, documented
+by that runner.
 
 A component may also have no runtime at all by omitting the `program` section.
 In this case, the component may still route capabilities and host children, but
@@ -89,6 +90,9 @@ The following capabilities can be routed:
     it.
 -   `runner`: A capability that allows a component to use a particular
     [runner][doc-runners].
+-   `resolver`: A capability that, when registered in an
+    [environment](#environment), causes a component with a particular URL scheme
+    to be resolved with that [resolver][doc-resolvers].
 
 `protocol`, `directory` and `storage` capabilities are routed to components that
 `use` them. `runner` capabilities are routed to [environments](#environments)
@@ -249,7 +253,8 @@ A *reference* is a string of the form `#<reference-name>`, where
 
 A reference may refer to:
 
--   A [static child instance][doc-static-children] whose name is `<reference-name>`.
+-   A [static child instance][doc-static-children] whose name is
+    `<reference-name>`.
 -   A [collection][doc-collections] whose name is `<reference-name>`.
 
 ### include {#include}
@@ -262,9 +267,9 @@ include: [ "src/lib/syslog/client.shard.cml" ]
 ```
 
 In the example given above, the component manifest is including contents from a
-manifest shard provided by the `syslog` library, thus ensuring that the component
-functions correctly at runtime if it attempts to write to syslog. By convention
-such files end with `.shard.cml`.
+manifest shard provided by the `syslog` library, thus ensuring that the
+component functions correctly at runtime if it attempts to write to syslog. By
+convention such files end with `.shard.cml`.
 
 If working in fuchsia.git, include paths are relative to the source root of the
 Fuchsia tree.
@@ -280,13 +285,14 @@ Includes can be recursive, meaning that shards can have their own includes.
 
 ### program {#program}
 
-If the component contains executable code, the content of the `program` section
-is determined by the runner the component uses. Some components don't have
-executable code; the declarations for those components lack a `program` section.
+Components that are executable include a `program` section. The `program`
+section must set the `runner` property to select a [runner][doc-runners] to run
+the component. The format of the rest of the `program` section is determined by
+that particular runner.
 
 #### ELF runners {#elf-runners}
 
-If the component uses the ELF runner, `program` is an object with the following
+If the component uses the ELF runner, `program` includes the following
 properties:
 
 -   `binary`: Package-relative path to the executable binary
@@ -294,22 +300,20 @@ properties:
 
 ```json5
 program: {
+    runner: "elf",
     binary: "bin/hippo",
     args: [ "Hello", "hippos!" ],
 },
-use: [
-    { runner: "elf" },
-],
 ```
 
 See also: [ELF Runner](elf_runner.md)
 
 #### Other runners {#other-runners}
 
-If a component uses a custom runner, values inside the `program` stanza are
-specific to the runner. The runner receives the arguments as a dictionary of key
-and value pairs. Refer to the specific runner being used to determine what keys
-it expects to receive, and how it interprets them.
+If a component uses a custom runner, values inside the `program` stanza other
+than `runner` are specific to the runner. The runner receives the arguments as a
+dictionary of key and value pairs. Refer to the specific runner being used to
+determine what keys it expects to receive, and how it interprets them.
 
 ### children {#children}
 
@@ -400,17 +404,17 @@ The `environments` section declares environments as described in
             instance.
     -   `as` _(option)_: An explicit name for the runner as it will be known in
         this environment. If omitted, defaults to `runner`.
--   `resolvers`: The resolvers registered in the environment. An array of objects
-    with the following properties:
-    -   `resolver`: The [name](#capability-names) of a resolver capability, whose
-        source is specified in `from`.
+-   `resolvers`: The resolvers registered in the environment. An array of
+    objects with the following properties:
+    -   `resolver`: The [name](#capability-names) of a resolver capability,
+        whose source is specified in `from`.
     -   `from`: The source of the resolver capability, one of:
         -   `parent`: The component's parent.
         -   `self`: This component.
         -   `#<child-name>`: A [reference](#references) to a child component
             instance.
-    -   `scheme`: The URL scheme for which the resolver should handle resolution.
-
+    -   `scheme`: The URL scheme for which the resolver should handle
+        resolution.
 
 Example:
 
@@ -493,15 +497,14 @@ A definition of a [runner capability][doc-runners].
 -   `runner`: The [name](#capability-names) for this runner capability.
 -   `path`: The path in the component's outgoing directory from which the
     `fuchsia.component.runner.ComponentRunner` protocol is served.
--   `from`: Must be set, but ignored ([fxb/52195](https://fxbug.dev/52195)).
 
 #### resolver {#capability-resolver}
 
 A definition of a [resolver capability][doc-resolvers].
 
 -   `resolver`: The [name](#capability-names) for this resolver capability.
--   `path`: The path in the component's outgoing directory from
-    which the `fuchsia.sys2.ComponentResolver` protocol is served.
+-   `path`: The path in the component's outgoing directory from which the
+    `fuchsia.sys2.ComponentResolver` protocol is served.
 
 ### use {#use}
 
@@ -515,8 +518,6 @@ runtime, as explained in [Routing terminology](#routing-terminology).
         an array of names of protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
     -   `storage`: The [name](#capability-names) of a storage capability.
-    -   `runner`: The [name](#capability-names) of a runner capability. A
-        component can use at most one `runner`.
 -   `path` _(optional)_: The path at which to install the capability in the
     component's namespace. For protocols, defaults to `/svc/${protocol}`.
     Required for `directory` and `storage`. This protocol cannot be used:
@@ -541,9 +542,6 @@ use: [
     {
         storage: "persistent",
         path: "/data",
-    },
-    {
-        runner: "web",
     },
 ],
 ```

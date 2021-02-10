@@ -52,17 +52,22 @@ might send a message over a channel to the component running in another process,
 whereas the Dart runner might directly invoke a callback method in a Dart-based
 component.
 
-## Using a runner
+## Selecting a runner
 
 A component can specify that it should be launched with a particular runner by
-[using][use] a runner from its [environment][environments-runners]. For example,
-a component can use the `web` runner by including the following stanza in its
-`cml` file:
+adding a [`program`][program] section to its manifest. The `program` section
+designates the runner as well as any options to pass to it (which are
+runner-dependent). The runner must be available in the component's
+[environment][environments-runners] to be usable.
+
+For example, component which runs a web page might have a `program` like the
+following:
 
 ```json5
-use: [
-    { runner: "web" },
-],
+program: {
+    runner: "web",
+    mode: "incognito",
+},
 ```
 
 When the component manager attempts to launch this component, it will send a
@@ -166,13 +171,10 @@ like follows:
 
 ```json5
 {
-    runners: [
+    capabilities: [
         {
             // Name for the runner.
-            name: "web",
-
-            // Indicate this component provides the protocol.
-            from: "self",
+            runner: "web",
 
             // Path to the protocol in our outgoing directory.
             path: "/svc/fuchsia.component.runner.ComponentRunner",
@@ -192,6 +194,7 @@ runner available to components.
 [hub]: ../hub.md
 [intro]: ../introduction.md#a-component-is-a-hermetic-composable-isolated-program
 [offer]: ../component_manifests.md#offer
+[program]: ../component_manifests.md#program
 [sdk-component-controller]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-directory]: /sdk/fidl/fuchsia.io/io.fidl
