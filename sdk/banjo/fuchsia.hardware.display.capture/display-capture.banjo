@@ -6,10 +6,7 @@ library fuchsia.hardware.display.capture;
 
 using zx;
 
-// using ZxUnownedHandle = uint32;
-// TODO(bug:33170) replace with normal banjo type.
-enum ZxUnownedHandle : uint32 {
-};
+alias ZxUnownedHandle = uint32;
 
 [BanjoLayout = "ddk-interface"]
 protocol DisplayCaptureInterface {
@@ -47,4 +44,3 @@ protocol DisplayCaptureImpl {
     /// Returns true if capture is completed. False otherwise.
     IsCaptureCompleted() -> (bool b);
 };
-
