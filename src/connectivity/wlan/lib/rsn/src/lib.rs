@@ -31,7 +31,13 @@ use {
     eapol,
     fidl_fuchsia_wlan_mlme::SaeFrame,
     std::sync::{Arc, Mutex},
-    wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe},
+    wlan_common::ie::{
+        rsn::{
+            cipher::Cipher,
+            rsne::{self, Rsne},
+        },
+        wpa::WpaIe,
+    },
     zerocopy::ByteSlice,
 };
 
@@ -39,6 +45,7 @@ pub use crate::{
     auth::psk,
     crypto_utils::nonce,
     key::gtk::{self, GtkProvider},
+    key::igtk::{self, IgtkProvider},
     rsna::NegotiatedProtection,
 };
 
@@ -54,6 +61,15 @@ pub struct Supplicant {
 pub enum ProtectionInfo {
     Rsne(Rsne),
     LegacyWpa(WpaIe),
+}
+
+fn extract_sae_key_helper(update_sink: &UpdateSink) -> Option<Vec<u8>> {
+    for update in &update_sink[..] {
+        if let rsna::SecAssocUpdate::Key(key::exchange::Key::Pmk(pmk)) = update {
+            return Some(pmk.clone());
+        }
+    }
+    None
 }
 
 impl Supplicant {
@@ -88,6 +104,7 @@ impl Supplicant {
                 a_addr,
                 a_protection,
                 nonce_rdr,
+                None,
                 None,
             )?),
             gtk_exch_cfg,
@@ -127,13 +144,7 @@ impl Supplicant {
     }
 
     fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
-        let mut found_pmk = None;
-        for update in &update_sink[..] {
-            if let rsna::SecAssocUpdate::Key(key::exchange::Key::Pmk(pmk)) = update {
-                found_pmk = Some(pmk.clone());
-            }
-        }
-        if let Some(pmk) = found_pmk {
+        if let Some(pmk) = extract_sae_key_helper(&update_sink) {
             self.esssa.on_pmk_available(update_sink, pmk)?;
         }
         Ok(())
@@ -174,7 +185,9 @@ impl Supplicant {
 
 #[derive(Debug)]
 pub struct Authenticator {
+    auth_method: auth::Method,
     esssa: EssSa,
+    pub auth_cfg: auth::Config,
 }
 
 impl Authenticator {
@@ -190,6 +203,8 @@ impl Authenticator {
         a_protection: ProtectionInfo,
     ) -> Result<Authenticator, anyhow::Error> {
         let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
+        let auth_cfg = auth::Config::ComputedPsk(psk.clone());
+        let auth_method = auth::Method::from_config(auth_cfg.clone())?;
         let esssa = EssSa::new(
             Role::Authenticator,
             Some(psk.to_vec()),
@@ -202,12 +217,51 @@ impl Authenticator {
                 a_protection,
                 nonce_rdr,
                 Some(gtk_provider),
+                None,
             )?),
             // Group-Key Handshake does not support Authenticator role yet.
             None,
         )?;
 
-        Ok(Authenticator { esssa })
+        Ok(Authenticator { auth_method, esssa, auth_cfg })
+    }
+
+    /// WPA3 Authenticator which supports 4-Way Handshake.
+    /// The Authenticator does not support GTK rotations.
+    pub fn new_wpa3(
+        nonce_rdr: Arc<nonce::NonceReader>,
+        gtk_provider: Arc<Mutex<gtk::GtkProvider>>,
+        igtk_provider: Arc<Mutex<igtk::IgtkProvider>>,
+        password: Vec<u8>,
+        s_addr: [u8; 6],
+        s_protection: ProtectionInfo,
+        a_addr: [u8; 6],
+        a_protection: ProtectionInfo,
+    ) -> Result<Authenticator, anyhow::Error> {
+        let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
+        let auth_cfg =
+            auth::Config::Sae { password, mac: a_addr.clone(), peer_mac: s_addr.clone() };
+        let auth_method = auth::Method::from_config(auth_cfg.clone())?;
+
+        let esssa = EssSa::new(
+            Role::Authenticator,
+            None,
+            negotiated_protection,
+            exchange::Config::FourWayHandshake(fourway::Config::new(
+                Role::Authenticator,
+                s_addr,
+                s_protection,
+                a_addr,
+                a_protection,
+                nonce_rdr,
+                Some(gtk_provider),
+                Some(igtk_provider),
+            )?),
+            // Group-Key Handshake does not support Authenticator role yet.
+            None,
+        )?;
+
+        Ok(Authenticator { auth_cfg, esssa, auth_method })
     }
 
     pub fn get_negotiated_protection(&self) -> &NegotiatedProtection {
@@ -243,6 +297,26 @@ impl Authenticator {
         frame: eapol::Frame<B>,
     ) -> Result<(), Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
+    }
+
+    fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        if let Some(pmk) = extract_sae_key_helper(&update_sink) {
+            self.esssa.on_pmk_available(update_sink, pmk)?;
+        }
+        Ok(())
+    }
+
+    pub fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        self.auth_method.on_sae_handshake_ind(update_sink).map_err(Error::AuthError)
+    }
+
+    pub fn on_sae_frame_rx(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        frame: SaeFrame,
+    ) -> Result<(), Error> {
+        self.auth_method.on_sae_frame_rx(update_sink, frame).map_err(Error::AuthError)?;
+        self.extract_sae_key(update_sink)
     }
 }
 
@@ -282,6 +356,24 @@ pub enum Error {
     WrongAesKeywrapKey,
     #[error("error deriving IGTK; unsupported cipher suite")]
     IgtkHierarchyUnsupportedCipherError,
+    #[error("no GtkProvider for Authenticator")]
+    MissingGtkProvider,
+    #[error("no IgtkProvider for Authenticator with Management Frame Protection support")]
+    MissingIgtkProvider,
+    #[error("invalid supplicant protection: {}", _0)]
+    InvalidSupplicantProtection(String),
+    #[error("required group mgmt cipher does not match IgtkProvider cipher: {:?} != {:?}", _0, _1)]
+    WrongIgtkProviderCipher(Cipher, Cipher),
+    #[error("error determining group mgmt cipher: {:?} != {:?}", _0, _1)]
+    GroupMgmtCipherMismatch(Cipher, Cipher),
+    #[error("client requires management frame protection and ap is not capable")]
+    MgmtFrameProtectionRequiredByClient,
+    #[error("ap requires management frame protection and client is not capable")]
+    MgmtFrameProtectionRequiredByAp,
+    #[error("client set MFP required bit without setting MFP capability bit")]
+    InvalidClientMgmtFrameProtectionCapabilityBit,
+    #[error("ap set MFP required bit without setting MFP capability bit")]
+    InvalidApMgmtFrameProtectionCapabilityBit,
     #[error("invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0)]
     InvaidKeyDataLength(usize),
     #[error("invalid key data; error code: {:?}", _0)]
@@ -294,6 +386,8 @@ pub enum Error {
     UnknownKeyExchange,
     #[error("cannot initiate Fourway Handshake as Supplicant")]
     UnexpectedInitiationRequest,
+    #[error("cannot initiate Supplicant in current EssSa state")]
+    UnexpectedEsssaInitiation,
     #[error("unsupported Key Descriptor Type: {:?}", _0)]
     UnsupportedKeyDescriptor(eapol::KeyDescriptor),
     #[error("unexpected Key Descriptor Type {:?}; expected {:?}", _0, _1)]
@@ -388,9 +482,20 @@ pub enum Error {
     EapolError(eapol::Error),
     #[error("auth error, {}", _0)]
     AuthError(auth::AuthError),
+    #[error("rsne error, {}", _0)]
+    RsneError(rsne::Error),
+    #[error("rsne invalid subset, supplicant: {:?}, authenticator: {:?}", _0, _1)]
+    RsneInvalidSubset(rsne::Rsne, rsne::Rsne),
     #[error("error, {}", _0)]
     GenericError(String),
 }
+
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        format!("{:?}", self) == format!("{:?}", other)
+    }
+}
+impl Eq for Error {}
 
 #[macro_export]
 macro_rules! rsn_ensure {
@@ -439,14 +544,21 @@ impl From<auth::AuthError> for Error {
     }
 }
 
+impl From<rsne::Error> for Error {
+    fn from(e: rsne::Error) -> Self {
+        Error::RsneError(e)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::key::exchange::Key;
     use crate::rsna::{test_util, SecAssocStatus, SecAssocUpdate};
+    use wlan_common::assert_variant;
 
     #[test]
     fn supplicant_extract_sae_key() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa3_supplicant();
         let mut dummy_update_sink = vec![
             SecAssocUpdate::ScheduleSaeTimeout(123),
             SecAssocUpdate::Key(Key::Pmk(vec![1, 2, 3, 4, 5, 6, 7, 8])),
@@ -465,9 +577,41 @@ mod tests {
 
     #[test]
     fn supplicant_extract_sae_key_no_key() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa3_supplicant();
         let mut dummy_update_sink = vec![SecAssocUpdate::ScheduleSaeTimeout(123)];
         supplicant.extract_sae_key(&mut dummy_update_sink).expect("Failed to extract key");
+        // No PMK means no new update.
+        assert_eq!(dummy_update_sink, vec![SecAssocUpdate::ScheduleSaeTimeout(123)]);
+    }
+
+    #[test]
+    fn authenticator_extract_sae_key() {
+        let mut authenticator = test_util::get_wpa3_authenticator();
+        let mut dummy_update_sink = vec![
+            SecAssocUpdate::ScheduleSaeTimeout(123),
+            SecAssocUpdate::Key(Key::Pmk(vec![1, 2, 3, 4, 5, 6, 7, 8])),
+        ];
+        authenticator.extract_sae_key(&mut dummy_update_sink).expect("Failed to extract key");
+        // ESSSA should register the new PMK and report this.
+        assert_eq!(
+            &dummy_update_sink[0..3],
+            vec![
+                SecAssocUpdate::ScheduleSaeTimeout(123),
+                SecAssocUpdate::Key(Key::Pmk(vec![1, 2, 3, 4, 5, 6, 7, 8])),
+                SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished),
+            ]
+            .as_slice(),
+        );
+
+        // ESSSA should also transmit an EAPOL frame since this is the Authenticator.
+        assert_variant!(&dummy_update_sink[3], &SecAssocUpdate::TxEapolKeyFrame(_));
+    }
+
+    #[test]
+    fn authenticator_extract_sae_key_no_key() {
+        let mut authenticator = test_util::get_wpa3_authenticator();
+        let mut dummy_update_sink = vec![SecAssocUpdate::ScheduleSaeTimeout(123)];
+        authenticator.extract_sae_key(&mut dummy_update_sink).expect("Failed to extract key");
         // No PMK means no new update.
         assert_eq!(dummy_update_sink, vec![SecAssocUpdate::ScheduleSaeTimeout(123)]);
     }

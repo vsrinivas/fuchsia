@@ -198,7 +198,11 @@ impl EssSa {
         // This function will not succeed unless called on a new Esssa or one that was reset.
         match (self.ptksa.as_ref(), self.gtksa.as_ref(), self.igtksa.as_ref()) {
             (Ptksa::Uninitialized { .. }, Gtksa::Uninitialized { .. }, Igtksa::Uninitialized) => (),
-            _ => return Err(Error::UnexpectedInitiationRequest),
+            // TODO (fxbug.dev/69388): The Ptksa can be in the Initialized state
+            // if the auth method was SAE and the Pmksa key was
+            // confirmed prior to initiate()'ing this Esssa.
+            (Ptksa::Initialized { .. }, Gtksa::Uninitialized { .. }, Igtksa::Uninitialized) => (),
+            _ => return Err(Error::UnexpectedEsssaInitiation),
         };
         info!("establishing ESSSA...");
 
@@ -487,7 +491,8 @@ mod tests {
     use crate::key::exchange::compute_mic;
     use crate::rsna::test_util;
     use crate::rsna::test_util::expect_eapol_resp;
-    use crate::Supplicant;
+    use crate::rsna::AuthStatus;
+    use crate::{Authenticator, Supplicant};
     use wlan_common::ie::{get_rsn_ie_bytes, rsn::fake_wpa2_s_rsne};
 
     const ANONCE: [u8; 32] = [0x1A; 32];
@@ -496,65 +501,68 @@ mod tests {
     const GTK_REKEY_2: [u8; 16] = [0x2F; 16];
 
     #[test]
-    fn test_supplicant_with_authenticator() {
-        let mut supplicant = test_util::get_supplicant();
-        let mut authenticator = test_util::get_authenticator();
+    fn test_supplicant_with_wpa3_authenticator() {
+        let mut supplicant = test_util::get_wpa3_supplicant();
+        let mut authenticator = test_util::get_wpa3_authenticator();
         supplicant.start().expect("Failed starting Supplicant");
 
-        // Initiate Authenticator.
+        // Send Supplicant SAE commit
+        let mut s_updates = vec![];
+        let result = supplicant.on_sae_handshake_ind(&mut s_updates);
+        assert!(result.is_ok(), "Supplicant failed to ind SAE handshake");
+        let s_sae_frame_vec = test_util::expect_sae_frame_vec(&s_updates[..]);
+        test_util::expect_schedule_sae_timeout(&s_updates[..]);
+        assert_eq!(s_updates.len(), 2, "{:?}", s_updates);
+
+        // Respond to Supplicant SAE commit
         let mut a_updates = vec![];
-        let result = authenticator.initiate(&mut a_updates);
-        assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
-        assert_eq!(a_updates.len(), 2);
+        for s_sae_frame in s_sae_frame_vec {
+            let result = authenticator.on_sae_frame_rx(&mut a_updates, s_sae_frame);
+            assert!(result.is_ok(), "Authenticator failed to rx SAE handshake message");
+        }
+        let a_sae_frame_vec = test_util::expect_sae_frame_vec(&a_updates[..]);
+        test_util::expect_schedule_sae_timeout(&a_updates[..]);
+        assert_eq!(a_updates.len(), 3, "{:?}", a_updates);
+
+        // Receive Authenticator SAE confirm
+        let mut s_updates = vec![];
+        for a_sae_frame in a_sae_frame_vec {
+            let result = supplicant.on_sae_frame_rx(&mut s_updates, a_sae_frame);
+            assert!(result.is_ok(), "Supplicant failed to rx SAE handshake message");
+        }
+        let s_sae_frame_vec = test_util::expect_sae_frame_vec(&s_updates[..]);
+        test_util::expect_schedule_sae_timeout(&s_updates[..]);
+        test_util::expect_reported_pmk(&s_updates[..]);
+        test_util::expect_reported_sae_auth_status(&s_updates[..], AuthStatus::Success);
+        test_util::expect_reported_status(&s_updates[..], SecAssocStatus::PmkSaEstablished);
+        assert_eq!(s_updates.len(), 5, "{:?}", s_updates);
+
+        // Receive Supplicant SAE confirm
+        let mut a_updates = vec![];
+        for s_sae_frame in s_sae_frame_vec {
+            let result = authenticator.on_sae_frame_rx(&mut a_updates, s_sae_frame);
+            assert!(result.is_ok(), "Authenticator failed to rx SAE handshake message");
+        }
+        test_util::expect_reported_pmk(&a_updates[..]);
+        test_util::expect_reported_sae_auth_status(&a_updates[..], AuthStatus::Success);
+        test_util::expect_reported_status(&a_updates[..], SecAssocStatus::PmkSaEstablished);
         let msg1 = test_util::expect_eapol_resp(&a_updates[..]);
-        let a_status = test_util::expect_reported_status(&a_updates);
-        assert_eq!(a_status, SecAssocStatus::PmkSaEstablished);
+        assert_eq!(a_updates.len(), 4, "{:?}", a_updates);
 
-        // Send msg #1 to Supplicant and wait for response.
-        let mut s_updates = vec![];
-        let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg1.keyframe()));
-        assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
-        assert_eq!(s_updates.len(), 1);
-        let msg2 = test_util::expect_eapol_resp(&s_updates[..]);
+        test_eapol_exchange(&mut supplicant, &mut authenticator, Some(msg1), true);
+    }
 
-        // Send msg #2 to Authenticator and wait for response.
-        let mut a_updates = vec![];
-        let result =
-            authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg2.keyframe()));
-        assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
-        assert_eq!(a_updates.len(), 1);
-        let msg3 = test_util::expect_eapol_resp(&a_updates[..]);
-
-        // Send msg #3 to Supplicant and wait for response.
-        let mut s_updates = vec![];
-        let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg3.keyframe()));
-        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
-        assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
-        let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
-        let s_ptk = test_util::expect_reported_ptk(&s_updates[..]);
-        let s_gtk = test_util::expect_reported_gtk(&s_updates[..]);
-        let s_status = test_util::expect_reported_status(&s_updates);
-
-        // Send msg #4 to Authenticator.
-        let mut a_updates = vec![];
-        let result =
-            authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg4.keyframe()));
-        assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
-        assert_eq!(a_updates.len(), 3);
-        let a_ptk = test_util::expect_reported_ptk(&a_updates[..]);
-        let a_gtk = test_util::expect_reported_gtk(&a_updates[..]);
-        let a_status = test_util::expect_reported_status(&a_updates);
-
-        // Verify derived keys match and status reports ESS-SA as established.
-        assert_eq!(a_ptk, s_ptk);
-        assert_eq!(a_gtk, s_gtk);
-        assert_eq!(a_status, SecAssocStatus::EssSaEstablished);
-        assert_eq!(s_status, SecAssocStatus::EssSaEstablished);
+    #[test]
+    fn test_supplicant_with_wpa2_authenticator() {
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        let mut authenticator = test_util::get_wpa2_authenticator();
+        supplicant.start().expect("Failed starting Supplicant");
+        test_eapol_exchange(&mut supplicant, &mut authenticator, None, false);
     }
 
     #[test]
     fn test_replay_first_message() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send first message of handshake.
@@ -581,7 +589,7 @@ mod tests {
 
     #[test]
     fn test_first_message_does_not_change_replay_counter() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
         assert_eq!(0, supplicant.esssa.key_replay_counter);
 
@@ -612,7 +620,7 @@ mod tests {
 
     #[test]
     fn test_zero_key_replay_counter_msg1() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
@@ -624,7 +632,7 @@ mod tests {
 
     #[test]
     fn test_nonzero_key_replay_counter_msg1() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
@@ -636,7 +644,7 @@ mod tests {
 
     #[test]
     fn test_zero_key_replay_counter_lower_msg3_counter() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
         assert_eq!(0, supplicant.esssa.key_replay_counter);
 
@@ -667,7 +675,7 @@ mod tests {
 
     #[test]
     fn test_key_replay_counter_updated_after_msg3() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
@@ -706,7 +714,7 @@ mod tests {
 
     #[test]
     fn test_zero_key_replay_counter_valid_msg3() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
@@ -726,7 +734,7 @@ mod tests {
 
     #[test]
     fn test_zero_key_replay_counter_replayed_msg3() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
         assert_eq!(0, supplicant.esssa.key_replay_counter);
 
@@ -771,7 +779,7 @@ mod tests {
     // (3) the Supplicant only reports a new PTK if the 4-Way Handshake was completed successfully.
     #[test]
     fn test_replayed_msg1_ptk_installation_different_anonces() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send 1st message of 4-Way Handshake for the first time and derive PTK.
@@ -819,7 +827,7 @@ mod tests {
     // Regression test for: fxbug.dev/29713
     #[test]
     fn test_replayed_msg1_ptk_installation_same_anonces() {
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send 1st message of 4-Way Handshake for the first time and derive PTK.
@@ -860,7 +868,7 @@ mod tests {
     #[test]
     fn test_supplicant_wpa2_ccmp128_psk() {
         // Create ESS Security Association
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send first message
@@ -926,7 +934,8 @@ mod tests {
         assert_eq!(&GTK[..], &reported_gtk.gtk[..]);
 
         // Verify ESS was reported to be established.
-        let reported_status = test_util::expect_reported_status(&updates[..]);
+        let reported_status =
+            test_util::expect_reported_status(&updates[..], SecAssocStatus::EssSaEstablished);
         assert_eq!(reported_status, SecAssocStatus::EssSaEstablished);
 
         // Cause re-keying of GTK via Group-Key Handshake.
@@ -969,7 +978,7 @@ mod tests {
     #[test]
     fn test_supplicant_no_gtk_reinstallation_from_4way() {
         // Create ESS Security Association
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         // Complete 4-Way Handshake.
@@ -1016,7 +1025,7 @@ mod tests {
     #[test]
     fn test_supplicant_no_gtk_reinstallation() {
         // Create ESS Security Association
-        let mut supplicant = test_util::get_supplicant();
+        let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
         // Complete 4-Way Handshake.
@@ -1052,6 +1061,92 @@ mod tests {
     // Timeouts
     // Nonce reuse
     // (in)-compatible protocol and RSNE versions
+
+    fn test_eapol_exchange(
+        supplicant: &mut Supplicant,
+        authenticator: &mut Authenticator,
+        msg1: Option<eapol::KeyFrameBuf>,
+        wpa3: bool,
+    ) {
+        // Initiate Authenticator.
+        let mut a_updates = vec![];
+        let result = authenticator.initiate(&mut a_updates);
+        assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
+
+        if wpa3 {
+            assert!(
+                msg1.is_some(),
+                "WPA3 EAPOL exchange starting without message constructed immediately after SAE"
+            );
+        }
+        // If msg1 is provided, we expect no updates from the Authenticator. Otherwise, we
+        // expect the Authenticator to establish the PmkSa and produce msg1.
+        let msg1 = match msg1 {
+            Some(msg1) => {
+                assert_eq!(a_updates.len(), 0, "{:?}", a_updates);
+                msg1
+            }
+            None => {
+                assert_eq!(a_updates.len(), 2);
+                test_util::expect_reported_status(&a_updates, SecAssocStatus::PmkSaEstablished);
+                test_util::expect_eapol_resp(&a_updates[..])
+            }
+        };
+
+        // Send msg #1 to Supplicant and wait for response.
+        let mut s_updates = vec![];
+        let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg1.keyframe()));
+        assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
+        let msg2 = test_util::expect_eapol_resp(&s_updates[..]);
+        assert_eq!(s_updates.len(), 1, "{:?}", s_updates);
+
+        // Send msg #2 to Authenticator and wait for response.
+        let mut a_updates = vec![];
+        let result =
+            authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg2.keyframe()));
+        assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
+        let msg3 = test_util::expect_eapol_resp(&a_updates[..]);
+        assert_eq!(a_updates.len(), 1, "{:?}", a_updates);
+
+        // Send msg #3 to Supplicant and wait for response.
+        let mut s_updates = vec![];
+        let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg3.keyframe()));
+        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
+        let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
+        let s_ptk = test_util::expect_reported_ptk(&s_updates[..]);
+        let s_gtk = test_util::expect_reported_gtk(&s_updates[..]);
+        let s_igtk = if wpa3 {
+            assert_eq!(s_updates.len(), 5, "{:?}", s_updates);
+            Some(test_util::expect_reported_igtk(&s_updates[..]))
+        } else {
+            assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
+            None
+        };
+        test_util::expect_reported_status(&s_updates, SecAssocStatus::EssSaEstablished);
+
+        // Send msg #4 to Authenticator.
+        let mut a_updates = vec![];
+        let result =
+            authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg4.keyframe()));
+        assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
+        let a_ptk = test_util::expect_reported_ptk(&a_updates[..]);
+        let a_gtk = test_util::expect_reported_gtk(&a_updates[..]);
+
+        let a_igtk = if wpa3 {
+            assert_eq!(a_updates.len(), 4, "{:?}", a_updates);
+            Some(test_util::expect_reported_igtk(&a_updates[..]))
+        } else {
+            assert_eq!(a_updates.len(), 3, "{:?}", a_updates);
+            None
+        };
+
+        test_util::expect_reported_status(&a_updates, SecAssocStatus::EssSaEstablished);
+
+        // Verify derived keys match and status reports ESS-SA as established.
+        assert_eq!(a_ptk, s_ptk);
+        assert_eq!(a_gtk, s_gtk);
+        assert_eq!(a_igtk, s_igtk);
+    }
 
     fn send_fourway_msg1<F>(
         supplicant: &mut Supplicant,

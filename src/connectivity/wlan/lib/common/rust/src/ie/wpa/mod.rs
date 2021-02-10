@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod fake_wpa_ies;
+
 use super::rsn::{akm, cipher, suite_selector};
 
 use crate::appendable::{Appendable, BufferTooSmall};

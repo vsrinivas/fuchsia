@@ -392,6 +392,28 @@ impl State {
         }
     }
 
+    pub fn ptk(&self) -> Option<Ptk> {
+        match self {
+            State::AwaitingMsg3 { ptk, .. } => Some(ptk.clone()),
+            State::KeysInstalled { ptk, .. } => Some(ptk.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn gtk(&self) -> Option<Gtk> {
+        match self {
+            State::KeysInstalled { gtk, .. } => gtk.clone(),
+            _ => None,
+        }
+    }
+
+    pub fn igtk(&self) -> Option<Igtk> {
+        match self {
+            State::KeysInstalled { igtk, .. } => igtk.clone(),
+            _ => None,
+        }
+    }
+
     pub fn destroy(self) -> fourway::Config {
         match self {
             State::AwaitingMsg1 { cfg, .. } => cfg,
