@@ -70,7 +70,7 @@ static uint32_t ARGB8888_to_RGB332(uint32_t in) {
 static uint32_t ARGB8888_to_RGB2220(uint32_t in) {
   uint8_t out = 0;
 
-  out = ((in >> 6) & 0x3) << 2;
+  out = (uint8_t)(((in >> 6) & 0x3) << 2);
   out |= ((in >> 14) & 0x3) << 4;
   out |= ((in >> 22) & 0x3) << 6;
 
@@ -190,7 +190,7 @@ static void putpixel8(gfx_surface* surface, unsigned x, unsigned y, unsigned col
     for (unsigned i = font->height; i > 0; i--) {                                       \
       uint16_t xdata = *cdata++;                                                        \
       for (unsigned j = fw; j > 0; j--) {                                               \
-        *dest++ = (xdata & 1) ? fg : bg;                                                \
+        *dest++ = (xdata & 1) ? (TYPE)fg : (TYPE)bg;                                    \
         xdata >>= 1;                                                                    \
       }                                                                                 \
       dest += (surface->stride - fw);                                                   \
