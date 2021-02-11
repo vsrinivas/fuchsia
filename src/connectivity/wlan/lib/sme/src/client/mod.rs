@@ -34,7 +34,7 @@ use {
         timer::{self, TimedEvent},
         InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
-    anyhow::{format_err, Context as _},
+    anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
     fidl_fuchsia_wlan_sme as fidl_sme,
@@ -716,6 +716,14 @@ fn filter_to_viable_bss<'a>(
     })
 }
 
+enum SelectedAssocType {
+    Open,
+    Wep,
+    Wpa1,
+    Wpa2,
+    Wpa3,
+}
+
 fn get_protection(
     device_info: &DeviceInfo,
     client_config: &ClientConfig,
@@ -726,8 +734,33 @@ fn get_protection(
     let ssid_hash = hasher.hash_ssid(bss.ssid());
     let bssid_hash = hasher.hash_mac_addr(&bss.bssid);
 
-    match bss.protection() {
-        wlan_common::bss::Protection::Open => match credential {
+    let selected_assoc_type = match bss.protection() {
+        wlan_common::bss::Protection::Open => SelectedAssocType::Open,
+        wlan_common::bss::Protection::Wep => SelectedAssocType::Wep,
+        wlan_common::bss::Protection::Wpa1 => SelectedAssocType::Wpa1,
+        wlan_common::bss::Protection::Wpa3Personal if client_config.wpa3_supported => {
+            SelectedAssocType::Wpa3
+        }
+        // Only a password credential is valid for Wpa3, so downgrade to Wpa2 in other
+        // cases if possible.
+        wlan_common::bss::Protection::Wpa2Wpa3Personal => match credential {
+            fidl_sme::Credential::Password(_) if client_config.wpa3_supported => {
+                SelectedAssocType::Wpa3
+            }
+            _ => SelectedAssocType::Wpa2,
+        },
+        wlan_common::bss::Protection::Wpa1Wpa2PersonalTkipOnly
+        | wlan_common::bss::Protection::Wpa2PersonalTkipOnly
+        | wlan_common::bss::Protection::Wpa1Wpa2Personal
+        | wlan_common::bss::Protection::Wpa2Personal => SelectedAssocType::Wpa2,
+        wlan_common::bss::Protection::Unknown => {
+            bail!("Unknown protection type for {} ({})", ssid_hash, bssid_hash)
+        }
+        _ => bail!("Unsupported protection type for {} ({})", ssid_hash, bssid_hash),
+    };
+
+    match selected_assoc_type {
+        SelectedAssocType::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
             _ => Err(format_err!(
                 "Open network {} ({}) not compatible with credentials.",
@@ -735,7 +768,7 @@ fn get_protection(
                 bssid_hash
             )),
         },
-        wlan_common::bss::Protection::Wep => match credential {
+        SelectedAssocType::Wep => match credential {
             fidl_sme::Credential::Password(pwd) => {
                 wep_deprecated::derive_key(&pwd[..]).map(Protection::Wep).with_context(|| {
                     format!(
@@ -751,42 +784,25 @@ fn get_protection(
                 credential
             )),
         },
-        wlan_common::bss::Protection::Wpa1 => {
-            get_legacy_wpa_association(device_info, credential, bss).with_context(|| {
+        SelectedAssocType::Wpa1 => get_legacy_wpa_association(device_info, credential, bss)
+            .with_context(|| {
                 format!(
                     "WPA1 network {} ({}) protection cannot be retrieved with credential {:?}",
                     ssid_hash, bssid_hash, credential
                 )
-            })
-        }
-        // If WPA3 is supported, we will only treat Wpa2/Wpa3 transition APs as WPA3.
-        wlan_common::bss::Protection::Wpa3Personal
-        | wlan_common::bss::Protection::Wpa2Wpa3Personal
-            if client_config.wpa3_supported =>
-        {
-            get_wpa3_rsna(device_info, credential, bss).with_context(|| {
-                format!(
-                    "WPA3 network {} ({}) protection cannot be retrieved with credential {:?}:",
-                    ssid_hash, bssid_hash, credential
-                )
-            })
-        }
-        wlan_common::bss::Protection::Wpa1Wpa2PersonalTkipOnly
-        | wlan_common::bss::Protection::Wpa2PersonalTkipOnly
-        | wlan_common::bss::Protection::Wpa1Wpa2Personal
-        | wlan_common::bss::Protection::Wpa2Personal
-        | wlan_common::bss::Protection::Wpa2Wpa3Personal => {
-            get_wpa2_rsna(device_info, credential, bss).with_context(|| {
-                format!(
-                    "WPA2 network {} ({}) protection cannot be retrieved with credential {:?}",
-                    ssid_hash, bssid_hash, credential
-                )
-            })
-        }
-        wlan_common::bss::Protection::Unknown => {
-            Err(format_err!("Unknown protection type for {} ({})", ssid_hash, bssid_hash,))
-        }
-        _ => Err(format_err!("Unsupported protection type for {} ({})", ssid_hash, bssid_hash)),
+            }),
+        SelectedAssocType::Wpa2 => get_wpa2_rsna(device_info, credential, bss).with_context(|| {
+            format!(
+                "WPA2 network {} ({}) protection cannot be retrieved with credential {:?}",
+                ssid_hash, bssid_hash, credential
+            )
+        }),
+        SelectedAssocType::Wpa3 => get_wpa3_rsna(device_info, credential, bss).with_context(|| {
+            format!(
+                "WPA3 network {} ({}) protection cannot be retrieved with credential {:?}:",
+                ssid_hash, bssid_hash, credential
+            )
+        }),
     }
 }
 
@@ -945,6 +961,14 @@ mod tests {
         let bss = fake_bss!(Wpa3);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Err(_));
+
+        // WPA2/3, WPA3 supported but PSK credential, downgrade to WPA2
+        let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
+        let bss = fake_bss!(Wpa2Wpa3);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
+        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
+            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::PSK)
+        });
 
         // WPA2/3, WPA3 unsupported, downgrade to WPA2
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
