@@ -420,6 +420,16 @@ class TestNonHardwareMsdArmDevice {
                                             std::make_unique<MockBusMapper>());
     EXPECT_TRUE(device->IsProtectedModeSupported());
   }
+
+  void ResetOnStart() {
+    auto driver = MsdArmDriver::Create();
+    auto device = driver->CreateDeviceForTesting(std::make_unique<FakePlatformDevice>(),
+                                                 std::make_unique<MockBusMapper>());
+    ASSERT_TRUE(device);
+
+    EXPECT_EQ(registers::GpuCommand::kCmdSoftReset,
+              device->register_io_->Read32(registers::GpuCommand::kOffset));
+  }
 };
 
 TEST(NonHardwareMsdArmDevice, MockDump) {
@@ -455,4 +465,9 @@ TEST(NonHardwareMsdArmDevice, Inspect) {
 TEST(NonHardwareMsdArmDevice, MaliProtocol) {
   TestNonHardwareMsdArmDevice test;
   test.MaliProtocol();
+}
+
+TEST(NonHardwareMsdArmDevice, ResetOnStart) {
+  TestNonHardwareMsdArmDevice test;
+  test.ResetOnStart();
 }

@@ -141,6 +141,9 @@ class MsdArmDevice : public msd_device_t,
   AddressManager* address_manager() override { return address_manager_.get(); }
   MsdArmConnection::Owner* connection_owner() override { return this; }
 
+  // Used for testing - allows the driver to assume reset happened without an interrupt.
+  void set_assume_reset_happened(bool assume) { assume_reset_happened_ = assume; }
+
  private:
 #define CHECK_THREAD_IS_CURRENT(x) \
   if (x)                           \
@@ -178,6 +181,7 @@ class MsdArmDevice : public msd_device_t,
   }
 
   void Destroy();
+  void StartGpuInterruptThread();
   void StartDeviceThread();
   int DeviceThreadLoop();
   int GpuInterruptThreadLoop();
@@ -259,6 +263,7 @@ class MsdArmDevice : public msd_device_t,
 
   // Triggered on device reset.
   std::unique_ptr<magma::PlatformSemaphore> reset_semaphore_;
+  bool assume_reset_happened_ = false;
 
   std::mutex schedule_mutex_;
   __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;

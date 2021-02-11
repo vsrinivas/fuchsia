@@ -241,7 +241,15 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   if (!InitializeInterrupts())
     return false;
 
-  return InitializeHardware();
+  // Start interrupt thread so ResetDevice can wait for the reset interrupt.
+  StartGpuInterruptThread();
+
+  return ResetDevice();
+}
+
+void MsdArmDevice::StartGpuInterruptThread() {
+  DASSERT(!gpu_interrupt_thread_.joinable());
+  gpu_interrupt_thread_ = std::thread([this] { this->GpuInterruptThreadLoop(); });
 }
 
 void MsdArmDevice::InitInspect() {
@@ -723,7 +731,6 @@ void MsdArmDevice::StartDeviceThread() {
   DASSERT(!device_thread_.joinable());
   device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
 
-  gpu_interrupt_thread_ = std::thread([this] { this->GpuInterruptThreadLoop(); });
   job_interrupt_thread_ = std::thread([this] { this->JobInterruptThreadLoop(); });
   mmu_interrupt_thread_ = std::thread([this] { this->MmuInterruptThreadLoop(); });
 }
@@ -1340,10 +1347,14 @@ bool MsdArmDevice::ResetDevice() {
   DLOG("Resetting device protected mode");
   // Reset semaphore shouldn't already be signaled.
   DASSERT(!reset_semaphore_->Wait(0));
+  registers::GpuIrqFlags::GetIrqMask()
+      .ReadFrom(register_io_.get())
+      .set_reset_completed(1)
+      .WriteTo(register_io_.get());
 
   register_io_->Write32(registers::GpuCommand::kOffset, registers::GpuCommand::kCmdSoftReset);
 
-  if (!reset_semaphore_->Wait(1000)) {
+  if (!assume_reset_happened_ && !reset_semaphore_->Wait(1000)) {
     MAGMA_LOG(WARNING, "Hardware reset timed out");
     return false;
   }
@@ -1353,7 +1364,7 @@ bool MsdArmDevice::ResetDevice() {
     return false;
   }
 
-  if (!power_manager_->WaitForShaderReady(register_io_.get())) {
+  if (!assume_reset_happened_ && !power_manager_->WaitForShaderReady(register_io_.get())) {
     MAGMA_LOG(WARNING, "Waiting for shader ready failed");
     return false;
   }

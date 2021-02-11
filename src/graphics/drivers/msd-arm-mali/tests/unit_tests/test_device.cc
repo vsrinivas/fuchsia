@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <chrono>
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include "helper/platform_device_helper.h"
@@ -79,11 +82,22 @@ class TestMsdArmDevice {
     std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), false);
     EXPECT_NE(device, nullptr);
 
-    MsdArmDevice::DumpState dump_state;
-    device->Dump(&dump_state, false);
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
 
-    // Ensure that the GPU is idle and not doing anything at this point. A
-    // failure in this may be caused by a previous test.
+    MsdArmDevice::DumpState dump_state;
+    do {
+      device->Dump(&dump_state, false);
+
+      // Ensure that the GPU is idle and not doing anything at this point. A
+      // failure in this may be caused by a previous test.
+      if (dump_state.gpu_status == 0)
+        return;
+
+      // On reset the GPU may have to do some extra work before it becomes idle, so retry.
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    } while (std::chrono::steady_clock::now() < deadline);
+
+    // Waiting must have timed out.
     EXPECT_EQ(0u, dump_state.gpu_status);
   }
 
