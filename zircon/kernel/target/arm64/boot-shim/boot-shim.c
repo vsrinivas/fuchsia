@@ -409,6 +409,9 @@ boot_shim_return_t boot_shim(void* device_tree) {
 
       memmove(zbi + 1, payload, header.length);
       *zbi = header;
+#else
+      // Just mark the original kernel item as to be ignored.
+      ((zircon_kernel_t*)zbi)->hdr_kernel.type = ZBI_TYPE_DISCARD;
 #endif
 
 #if RELOCATE_KERNEL
