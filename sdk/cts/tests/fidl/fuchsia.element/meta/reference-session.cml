@@ -1,0 +1,35 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/reference-session",
+    },
+    children: [
+        {
+            name: "element_manager",
+            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+            startup: "eager",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.element.Manager" },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#element_manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#element_manager",
+        },
+    ],
+}
