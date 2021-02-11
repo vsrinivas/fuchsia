@@ -331,23 +331,18 @@ zx_status_t OpteeClient::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 void OpteeClient::OpenSession2(
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) {
-  auto [session_id, op_result] = OpenSessionInternal(application_uuid_, std::move(parameter_set));
-  completer.Reply(session_id, op_result.to_llcpp());
-}
-
-std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
-    Uuid ta_uuid, fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
   constexpr uint32_t kInvalidSession = 0;
 
   OpResult result;
 
   auto create_result = OpenSessionMessage::TryCreate(
-      controller_->driver_pool(), controller_->client_pool(), ta_uuid, std::move(parameter_set));
+      controller_->driver_pool(), controller_->client_pool(), application_uuid_, std::move(parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
+    return;
   }
 
   OpenSessionMessage message = create_result.take_value();
@@ -357,14 +352,16 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
+    return;
   }
 
   LOG(TRACE, "OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
       message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
+    return;
   }
 
   ParameterSet out_parameter_set;
@@ -374,31 +371,27 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
     CloseSession(message.session_id());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
+    return;
   }
   result.set_parameter_set(std::move(out_parameter_set));
   open_sessions_.insert(message.session_id());
 
-  return std::pair(message.session_id(), std::move(result));
+  completer.Reply(message.session_id(), result.to_llcpp());
+  return;
 }
 
 void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) {
-  auto result = InvokeCommandInternal(session_id, command_id, std::move(parameter_set));
-  completer.Reply(result.to_llcpp());
-}
-
-OpResult OpteeClient::InvokeCommandInternal(
-    uint32_t session_id, uint32_t command_id,
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
   OpResult result;
 
   if (open_sessions_.find(session_id) == open_sessions_.end()) {
     result.set_return_code(TEEC_ERROR_BAD_STATE);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
+    return;
   }
 
   auto create_result =
@@ -408,7 +401,8 @@ OpResult OpteeClient::InvokeCommandInternal(
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
+    return;
   }
 
   InvokeCommandMessage message = create_result.take_value();
@@ -418,25 +412,29 @@ OpResult OpteeClient::InvokeCommandInternal(
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
+    return;
   }
 
   LOG(TRACE, "InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
       message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-    return result;
+    completer.Reply(result.to_llcpp());
+    return;
   }
 
   ParameterSet out_parameter_set;
   if (message.CreateOutputParameterSet(&out_parameter_set) != ZX_OK) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
+    return;
   }
   result.set_parameter_set(std::move(out_parameter_set));
 
-  return result;
+  completer.Reply(result.to_llcpp());
+  return;
 }
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
