@@ -32,28 +32,6 @@ namespace ti {
 constexpr uint32_t kMmioRegSize = sizeof(uint32_t);
 constexpr uint32_t kMmioRegCount = (kAOBrightnessStickyReg + kMmioRegSize) / kMmioRegSize;
 
-class Bind : fake_ddk::Bind {
- public:
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                size_t* actual) override {
-    if (metadata_.find(type) == metadata_.end()) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    const fbl::Span<const uint8_t>& entry = metadata_[type];
-    *actual = entry.size_bytes();
-    memcpy(data, entry.data(), std::min(length, entry.size_bytes()));
-    return ZX_OK;
-  }
-
-  void SetMetadata(uint32_t type, const void* data, size_t data_length) {
-    metadata_[type] = fbl::Span(reinterpret_cast<const uint8_t*>(data), data_length);
-  }
-
- private:
-  std::map<uint32_t, fbl::Span<const uint8_t>> metadata_;
-};
-
 class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper {
  public:
   Lp8556DeviceTest()
@@ -95,7 +73,8 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
 
   void VerifySetBrightness(bool power, double brightness) {
     if (brightness != dev_->GetDeviceBrightness()) {
-      uint16_t brightness_reg_value = static_cast<uint16_t>(ceil(brightness * kBrightnessRegMaxValue));
+      uint16_t brightness_reg_value =
+          static_cast<uint16_t>(ceil(brightness * kBrightnessRegMaxValue));
       mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg,
                                  static_cast<uint8_t>(brightness_reg_value & kBrightnessLsbMask)});
       // An I2C bus read is a write of the address followed by a read of the data.
@@ -177,7 +156,7 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
   //     0x01, 0x85, 0xa2, 0x30, 0xa3, 0x32, 0xa5, 0x54, 0xa7, 0xf4, 0xa9, 0x60, 0xae, 0x09,
   // };
 
-  Bind ddk;
+  fake_ddk::Bind ddk;
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWriteStop({0x01, 0x85})
@@ -202,7 +181,7 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
 }
 
 TEST_F(Lp8556DeviceTest, InitNoRegisters) {
-  Bind ddk;
+  fake_ddk::Bind ddk;
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
@@ -223,7 +202,7 @@ TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
       0x01, 0x85, 0xa2, 0x30, 0xa3, 0x32, 0xa5, 0x54, 0xa7, 0xf4, 0xa9, 0x60, 0xae,
   };
 
-  Bind ddk;
+  fake_ddk::Bind ddk;
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
 
   EXPECT_NOT_OK(dev_->Init());
@@ -235,7 +214,7 @@ TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
 TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
   constexpr uint8_t kInitialRegisterValues[514] = {};
 
-  Bind ddk;
+  fake_ddk::Bind ddk;
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
 
   EXPECT_NOT_OK(dev_->Init());
@@ -260,7 +239,7 @@ TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
       .register_count = 4,
   };
 
-  Bind ddk;
+  fake_ddk::Bind ddk;
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xab})
@@ -340,7 +319,7 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
 }
 
 TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
-  Bind ddk;
+  fake_ddk::Bind ddk;
 
   constexpr double kMaxBrightnessInNits = 350.0;
   ddk.SetMetadata(DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS, &kMaxBrightnessInNits,
