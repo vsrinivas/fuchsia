@@ -2,39 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
 
-test_package("transaction-elimination-test") {
-  tests = [
-    {
-      name = "transaction-elimination-test"
-      environments = magma_libvulkan_arm_hardware_envs
-    },
+fuchsia_component("transaction_elimination_test") {
+  testonly = true
+  manifest = "meta/transaction-elimination-test.cmx"
+  deps = [
+    ":bin",
+    "//src/graphics/examples/vkproto:shaders",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
   ]
-  deps = [ ":bin" ]
-
-  resources = [
-    {
-      path = "../common/shaders/vert.spv"
-      dest = "shaders/vert.spv"
-    },
-    {
-      path = "../common/shaders/frag.spv"
-      dest = "shaders/frag.spv"
-    },
-  ]
-
-  public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain_fb.loadable_modules
-  resources +=
-      vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
 }
 
 executable("bin") {
@@ -69,4 +49,12 @@ executable("bin") {
 
   # HWCPipe uses exceptions to report errors, so they must be left enabled.
   configs -= [ "//build/config:no_exceptions" ]
+}
+
+fuchsia_test_package("transaction-elimination-test") {
+  test_components = [ ":transaction_elimination_test" ]
+
+  test_specs = {
+    environments = magma_libvulkan_arm_hardware_envs
+  }
 }
