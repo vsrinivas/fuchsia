@@ -20,6 +20,8 @@
 #include <third_party/bcmdhd/crossdriver/dhd.h>
 #include <third_party/bcmdhd/crossdriver/wl_cfg80211.h>
 
+#include "third_party/bcmdhd/include/devctrl_if/wlioctl_defs.h"
+
 namespace {
 
 using ::testing::Each;
@@ -74,6 +76,7 @@ TEST(BcmdhdCrossdriver, ControlChannelFromGoodChspec) {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(ctl_chan, 36);
 }
+
 // This is a smoke test. A wl_wstats_cnt_t with empty histograms is possible.
 TEST(BcmdhdCrossdriver, GetHistogramsSucceedsWithEmptyWstatsCounters) {
   const wl_wstats_cnt_t wstats_cnt = {};
@@ -183,6 +186,72 @@ TEST(BcmdhdCrossdriver, GetHistogramsFailsWithInvalidChanspec) {
   const uint32_t rxchain = 1;
   histograms_report_t report;
   EXPECT_FALSE(get_histograms(wstats_cnt, chanspec, version, rxchain, &report));
+}
+
+TEST(BcmdhdCrossdriver, RspecToRateInfoFailsWithEmptyRatespec) {
+  rate_info_t rate_info;
+  uint32_t invalid_ratespec = 0;
+  EXPECT_FALSE(rspec_to_rate_info(invalid_ratespec, &rate_info));
+}
+
+TEST(BcmdhdCrossdriver, RspecToRateInfoParsesLegacyRatespec) {
+  rate_info_t rate_info;
+  // Valid ratespec with data rate parameters as shown below.
+  uint32_t ratespec = 0x0001006c;
+  ASSERT_TRUE(rspec_to_rate_info(ratespec, &rate_info));
+  ASSERT_EQ(rate_info.type, RATE_LEGACY);
+  EXPECT_EQ(rate_info.bw, RATE_INFO_BW_20_MHZ);
+  EXPECT_EQ(rate_info.idx.b, 7);
+  EXPECT_EQ(rate_info.idx.b, rate_info.idx.g);
+  EXPECT_EQ(rate_info.sgi, 0);
+}
+
+TEST(BcmdhdCrossdriver, RspecToRateInfoParsesHtSgiRatespec) {
+  rate_info_t rate_info;
+  // Valid ratespec with data rate parameters as shown below.
+  uint32_t ratespec = 0x01820007;
+  ASSERT_TRUE(rspec_to_rate_info(ratespec, &rate_info));
+  ASSERT_EQ(rate_info.type, RATE_HT);
+  EXPECT_EQ(rate_info.bw, RATE_INFO_BW_40_MHZ);
+  EXPECT_EQ(rate_info.idx.mcs, 7);
+  EXPECT_EQ(rate_info.nss, 1);
+  EXPECT_EQ(rate_info.sgi, 1);
+}
+
+TEST(BcmdhdCrossdriver, RspecToRateInfoParsesHtNoSgiRatespec) {
+  rate_info_t rate_info;
+  // Valid ratespec with data rate parameters as shown below.
+  uint32_t ratespec = 0x01420007;
+  ASSERT_TRUE(rspec_to_rate_info(ratespec, &rate_info));
+  ASSERT_EQ(rate_info.type, RATE_HT);
+  EXPECT_EQ(rate_info.bw, RATE_INFO_BW_40_MHZ);
+  EXPECT_EQ(rate_info.idx.mcs, 7);
+  EXPECT_EQ(rate_info.nss, 1);
+  EXPECT_EQ(rate_info.sgi, 0);
+}
+
+TEST(BcmdhdCrossdriver, RspecToRateInfoParsesVhtSgiRatespec) {
+  rate_info_t rate_info;
+  // Valid ratespec with data rate parameters as shown below.
+  uint32_t ratespec = 0x02c30019;
+  ASSERT_TRUE(rspec_to_rate_info(ratespec, &rate_info));
+  ASSERT_EQ(rate_info.type, RATE_VHT);
+  EXPECT_EQ(rate_info.bw, RATE_INFO_BW_80_MHZ);
+  EXPECT_EQ(rate_info.idx.vhtmcs, 9);
+  EXPECT_EQ(rate_info.nss, 1);
+  EXPECT_EQ(rate_info.sgi, 1);
+}
+
+TEST(BcmdhdCrossdriver, RspecToRateInfoParsesVhtNoSgiRatespec) {
+  rate_info_t rate_info;
+  // Valid ratespec with data rate parameters as shown below.
+  uint32_t ratespec = 0x02430019;
+  ASSERT_TRUE(rspec_to_rate_info(ratespec, &rate_info));
+  ASSERT_EQ(rate_info.type, RATE_VHT);
+  EXPECT_EQ(rate_info.bw, RATE_INFO_BW_80_MHZ);
+  EXPECT_EQ(rate_info.idx.vhtmcs, 9);
+  EXPECT_EQ(rate_info.nss, 1);
+  EXPECT_EQ(rate_info.sgi, 0);
 }
 
 }  // namespace
