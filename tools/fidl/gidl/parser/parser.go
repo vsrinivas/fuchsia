@@ -76,6 +76,7 @@ const (
 	tRacco
 	tComma
 	tColon
+	tPlus
 	tNeg
 	tLparen
 	tRparen
@@ -94,6 +95,7 @@ var tokenKindStrings = []string{
 	"}",
 	",",
 	":",
+	"+",
 	"-",
 	"(",
 	")",
@@ -964,11 +966,61 @@ func (p *Parser) parseHandleDef() (ir.HandleDef, error) {
 	if err != nil {
 		return ir.HandleDef{}, err
 	}
+	rights, ok := ir.HandleRightsByName("same_rights")
+	if !ok {
+		panic("'same_rights' is missing")
+	}
+	if p.peekTokenKind(tText) {
+		tok, err := p.consumeToken(tText)
+		if err != nil {
+			return ir.HandleDef{}, err
+		}
+		if tok.value != "rights" {
+			return ir.HandleDef{}, p.newParseError(tok, "expected 'rights', got %s", tok.value)
+		}
+		tok, err = p.consumeToken(tColon)
+		if err != nil {
+			return ir.HandleDef{}, err
+		}
+		tok, err = p.consumeToken(tText)
+		if err != nil {
+			return ir.HandleDef{}, err
+		}
+		rights, ok = ir.HandleRightsByName(tok.value)
+		if !ok {
+			return ir.HandleDef{}, p.newParseError(tok, "expected handle right: %s", tok.value)
+		}
+		for p.peekTokenKind(tPlus) || p.peekTokenKind(tNeg) {
+			opTok, err := p.nextToken()
+			if err != nil {
+				return ir.HandleDef{}, err
+			}
+			tok, err := p.consumeToken(tText)
+			if err != nil {
+				return ir.HandleDef{}, err
+			}
+			opRights, ok := ir.HandleRightsByName(tok.value)
+			if !ok {
+				return ir.HandleDef{}, p.newParseError(tok, "expected handle right: %s", tok.value)
+			}
+			switch opTok.kind {
+			case tPlus:
+				rights |= opRights
+			case tNeg:
+				rights &= ^opRights
+			default:
+				panic("unexpected state")
+			}
+		}
+	}
 	tok, err = p.consumeToken(tRparen)
 	if err != nil {
 		return ir.HandleDef{}, err
 	}
-	return ir.HandleDef{Subtype: subtype}, nil
+	return ir.HandleDef{
+		Subtype: subtype,
+		Rights:  rights,
+	}, nil
 }
 
 func (p *Parser) parseWireFormatMapping(handler func([]ir.WireFormat) error) error {

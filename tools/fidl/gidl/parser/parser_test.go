@@ -14,6 +14,8 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+const SAME_RIGHTS = 2147483648
+
 func TestParseValues(t *testing.T) {
 	type testCase struct {
 		gidl          string
@@ -574,16 +576,56 @@ func TestParseHandleDefs(t *testing.T) {
 		{
 			gidl: `{ #0 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidl.Event},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
 			},
 		},
 		// several handles
 		{
 			gidl: `{ #0 = event(), #1 = event(), #2 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidl.Event},
-				{Subtype: fidl.Event},
-				{Subtype: fidl.Event},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+			},
+		},
+		// handle rights
+		{
+			gidl: `{ #0 = event(rights: execute) }`,
+			expectedValue: []ir.HandleDef{
+				{
+					Subtype: fidl.Event,
+					Rights:  16,
+				},
+			},
+		},
+		// handle rights groups
+		{
+			gidl: `{ #0 = event(rights: basic) }`,
+			expectedValue: []ir.HandleDef{
+				{
+					Subtype: fidl.Event,
+					Rights:  49155,
+				},
+			},
+		},
+		// adding handle rights
+		{
+			gidl: `{ #0 = event(rights: execute + write ) }`,
+			expectedValue: []ir.HandleDef{
+				{
+					Subtype: fidl.Event,
+					Rights:  24,
+				},
+			},
+		},
+		// subtracting handle rights
+		{
+			gidl: `{ #0 = event(rights: basic - transfer ) }`,
+			expectedValue: []ir.HandleDef{
+				{
+					Subtype: fidl.Event,
+					Rights:  49153,
+				},
 			},
 		},
 	}
@@ -617,6 +659,18 @@ func TestParseHandleDefsFailures(t *testing.T) {
 		{
 			gidl:         `{ #0 = event }`,
 			errSubstring: `want "(", got "}"`,
+		},
+		{
+			gidl:         `{ #0 = event(rights) }`,
+			errSubstring: `want ":", got ")"`,
+		},
+		{
+			gidl:         `{ #0 = event(rights:) }`,
+			errSubstring: `want "<text>", got ")"`,
+		},
+		{
+			gidl:         `{ #0 = event(rights: + basic) }`,
+			errSubstring: `want "<text>", got "+"`,
 		},
 	}
 	for _, tc := range testCases {
@@ -1211,7 +1265,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
 			},
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
@@ -1231,7 +1285,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
 			},
 		}},
 	}
@@ -1276,7 +1330,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
 			},
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
@@ -1296,7 +1350,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event},
+				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
 			},
 		}},
 	}
