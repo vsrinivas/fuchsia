@@ -163,17 +163,25 @@ impl PluginManager {
         }
 
         // Attach the consumer tag to all dependencies.
+        let mut dep_instance_ids = HashSet::new();
         for dep_desc in deps.iter() {
             let dep_instance = self.plugins.get_mut(&dep_desc).unwrap();
             dep_instance.consumers.insert(desc.clone());
+            dep_instance_ids.insert(dep_instance.instance_id.clone());
         }
 
         let plugin_instance = self.plugins.get_mut(desc).unwrap();
+        // Retrieve the set of plugin instance_ids that this plugin depends on.
         let hooks = plugin_instance.plugin.hooks();
         // Hook all the collectors into the worker scheduler.
         let mut scheduler = self.scheduler.lock().unwrap();
         for (name, collector) in hooks.collectors.iter() {
-            scheduler.add(plugin_instance.instance_id, name, Arc::clone(&collector));
+            scheduler.add(
+                plugin_instance.instance_id,
+                name,
+                dep_instance_ids.clone(),
+                Arc::clone(&collector),
+            );
         }
         // Hook all the controllers into the dispatcher.
         let mut dispatcher = self.dispatcher.write().unwrap();

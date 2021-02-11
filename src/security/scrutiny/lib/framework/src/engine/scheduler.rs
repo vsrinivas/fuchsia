@@ -8,15 +8,23 @@ use {
     anyhow::Result,
     log::{error, info},
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::fmt,
-    std::sync::{mpsc, Arc, Mutex},
+    std::sync::{mpsc, Arc, Condvar, Mutex},
     std::thread,
+    thiserror::Error,
     uuid::Uuid,
 };
 
+#[derive(Error, Debug)]
+pub enum SchedulerError {
+    #[error("Scheduled tasks have unmet dependencies")]
+    UnmetDependencies,
+}
+
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Deserialize, Serialize)]
 pub enum CollectorState {
+    Scheduled,
     Running,
     Idle,
     Terminated,
@@ -25,6 +33,7 @@ pub enum CollectorState {
 impl fmt::Display for CollectorState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            CollectorState::Scheduled => write!(f, "Scheduled"),
             CollectorState::Running => write!(f, "Running"),
             CollectorState::Idle => write!(f, "Idle"),
             CollectorState::Terminated => write!(f, "Terminated"),
@@ -43,15 +52,21 @@ enum CollectorMessage {
 struct CollectorInstance {
     pub instance_id: Uuid,
     pub name: String,
-    pub state: Arc<Mutex<CollectorState>>,
+    pub dependencies: HashSet<Uuid>,
+    pub state: Arc<(Mutex<CollectorState>, Condvar)>,
     sender: mpsc::Sender<CollectorMessage>,
     worker: Option<thread::JoinHandle<()>>,
 }
 
 impl CollectorInstance {
-    pub fn new(instance_id: Uuid, name: String, collector: Arc<dyn DataCollector>) -> Self {
+    pub fn new(
+        instance_id: Uuid,
+        name: String,
+        dependencies: HashSet<Uuid>,
+        collector: Arc<dyn DataCollector>,
+    ) -> Self {
         let (sender, recv) = mpsc::channel();
-        let state = Arc::new(Mutex::new(CollectorState::Idle));
+        let state = Arc::new((Mutex::new(CollectorState::Idle), Condvar::new()));
         // Clone these so that we can pass references to the worker thread.
         let collector_state = Arc::clone(&state);
         let data_collector = Arc::clone(&collector);
@@ -60,8 +75,10 @@ impl CollectorInstance {
             match message {
                 CollectorMessage::Collect(model) => {
                     {
-                        let mut state = collector_state.lock().unwrap();
+                        let (state_lock, cvar) = &*collector_state;
+                        let mut state = state_lock.lock().unwrap();
                         *state = CollectorState::Running;
+                        cvar.notify_one();
                     }
 
                     if let Err(e) = data_collector.collect(Arc::clone(&model)) {
@@ -69,28 +86,32 @@ impl CollectorInstance {
                     }
 
                     {
-                        let mut state = collector_state.lock().unwrap();
+                        let (state_lock, cvar) = &*collector_state;
+                        let mut state = state_lock.lock().unwrap();
                         *state = CollectorState::Idle;
+                        cvar.notify_one();
                     }
                 }
                 CollectorMessage::Terminate => {
-                    let mut state = collector_state.lock().unwrap();
+                    let (state_lock, cvar) = &*collector_state;
+                    let mut state = state_lock.lock().unwrap();
                     *state = CollectorState::Terminated;
+                    cvar.notify_one();
                     break;
                 }
             }
         });
-        Self { instance_id, name, state, sender, worker: Some(worker) }
+        Self { instance_id, name, dependencies, state, sender, worker: Some(worker) }
     }
 
     /// Sends a message to the collector instance worker to run this collector.
     /// If the worker is currently busy this message will be queued.
     pub fn run(&self, model: Arc<DataModel>) {
-        // Set the collector state to running as soon as possible in a
-        // synchronous setting.
-        let mut state = self.state.lock().unwrap();
+        let (state_lock, cvar) = &*self.state;
+        let mut state = state_lock.lock().unwrap();
         if *state != CollectorState::Terminated {
-            *state = CollectorState::Running;
+            *state = CollectorState::Scheduled;
+            cvar.notify_one();
         }
         self.sender.send(CollectorMessage::Collect(model)).unwrap();
     }
@@ -111,13 +132,13 @@ type CollectorHandle = usize;
 /// It provides a simple way to collectively run the data collectors.
 pub struct CollectorScheduler {
     model: Arc<DataModel>,
-    collectors: HashMap<CollectorHandle, CollectorInstance>,
+    collectors: Arc<Mutex<HashMap<CollectorHandle, CollectorInstance>>>,
     next_handle: usize,
 }
 
 impl CollectorScheduler {
     pub fn new(model: Arc<DataModel>) -> Self {
-        Self { model: model, collectors: HashMap::new(), next_handle: 1 }
+        Self { model: model, collectors: Arc::new(Mutex::new(HashMap::new())), next_handle: 1 }
     }
 
     /// Adds a collector associated with a particular `instance_id` to the collector
@@ -127,62 +148,134 @@ impl CollectorScheduler {
         &mut self,
         instance_id: Uuid,
         name: impl Into<String>,
+        dependencies: HashSet<Uuid>,
         collector: Arc<dyn DataCollector>,
     ) -> CollectorHandle {
+        let mut collectors = self.collectors.lock().unwrap();
         let handle = self.next_handle;
         self.next_handle += 1;
-        self.collectors.insert(handle, CollectorInstance::new(instance_id, name.into(), collector));
+        collectors.insert(
+            handle,
+            CollectorInstance::new(instance_id, name.into(), dependencies, collector),
+        );
         handle
     }
 
     /// Returns a list of all the scheduled collectors.
     pub fn collectors_all(&self) -> Vec<(CollectorHandle, String)> {
-        let mut collectors = Vec::new();
-        for (handle, instance) in self.collectors.iter() {
-            collectors.push((handle.clone(), instance.name.clone()))
+        let collectors = self.collectors.lock().unwrap();
+        let mut collector_list = Vec::new();
+        for (handle, instance) in collectors.iter() {
+            collector_list.push((handle.clone(), instance.name.clone()))
         }
-        collectors
+        collector_list
     }
 
     /// Returns a list of all associated collector handles and names for each
     /// collector. Collector names should be unique per instance_id but not
     /// globally.
     pub fn collectors(&self, instance_id: Uuid) -> Vec<(CollectorHandle, String)> {
-        let mut collectors = Vec::new();
-        for (handle, instance) in self.collectors.iter() {
+        let collectors = self.collectors.lock().unwrap();
+        let mut collector_list = Vec::new();
+        for (handle, instance) in collectors.iter() {
             if instance.instance_id == instance_id {
-                collectors.push((handle.clone(), instance.name.clone()))
+                collector_list.push((handle.clone(), instance.name.clone()))
             }
         }
-        collectors
+        collector_list
     }
 
     /// Removes all `CollectorInstance` objects with a matching instance-id.
     /// This effectively unhooks all the plugins collectors.
     pub fn remove_all(&mut self, instance_id: Uuid) {
-        self.collectors.retain(|_, v| v.instance_id != instance_id);
+        let mut collectors = self.collectors.lock().unwrap();
+        collectors.retain(|_, v| v.instance_id != instance_id);
     }
 
     /// Removes all `CollectorInstance` objects with a matching instance-id.
     /// This effectively unhooks all the plugins collectors.
     pub fn remove(&mut self, handle: &CollectorHandle) {
-        self.collectors.remove(handle);
+        let mut collectors = self.collectors.lock().unwrap();
+        collectors.remove(handle);
     }
 
-    /// Runs all of the tasks.
+    /// Runs all of the collector instances taking into account dependencies.
+    /// For example if Collector A depends on Collector B the scheduler will
+    /// first run Collector A wait until it has finished and then Schedule
+    /// Collector B. This schedule will terminate once all collectors
+    /// have been run.
     pub fn schedule(&self) -> Result<()> {
-        info!("Collector Scheduler: Scheduling {} Tasks", self.collectors.len());
-        for (_, instance) in self.collectors.iter() {
-            instance.run(Arc::clone(&self.model));
+        let collectors = self.collectors.lock().unwrap();
+        info!("Collector Scheduler: Scheduling {} Tasks", collectors.len());
+        // The set of instances that have finished.
+        let mut collectors_to_schedule: HashSet<CollectorHandle> =
+            collectors.iter().map(|(handle, _)| handle.clone()).collect();
+        let mut collector_finished = HashSet::new();
+
+        while !collectors_to_schedule.is_empty() {
+            let mut collectors_to_run = HashSet::new();
+            // Select all collectors that have their dependencies met.
+            for handle in collectors_to_schedule.iter() {
+                let collector_deps = &collectors.get(handle).unwrap().dependencies;
+                if collector_deps.iter().all(|&id| collector_finished.contains(&id)) {
+                    collectors_to_run.insert(handle.clone());
+                }
+            }
+
+            // Safe guard against infinite looping.
+            if collectors_to_run.is_empty() && !collectors_to_schedule.is_empty() {
+                error!(
+                    "Collector Scheduler: Fatal error {} tasks have unmet dependencies.",
+                    collectors_to_schedule.len()
+                );
+                for handle in collectors_to_schedule.iter() {
+                    error!("Failed to schedule: {}", collectors.get(handle).unwrap().name);
+                }
+                error!("Collector Scheduler: Aborting collection tasks");
+                return Err(SchedulerError::UnmetDependencies.into());
+            }
+
+            // Execute the current batch of collectors that are unblocked.
+            info!("Collector Scheduler: Batching {} Independent Tasks", collectors_to_run.len());
+            for handle in collectors_to_run.iter() {
+                let collector = collectors.get(handle).unwrap();
+                info!(
+                    "Running Collector {} from Plugin Instance {}",
+                    collector.name, collector.instance_id
+                );
+                collector.run(Arc::clone(&self.model));
+            }
+            // Wait for the current set of handles to finish. A cvar is used
+            // to sleep this thread waking it up only on state changes from
+            // one of the collectors.
+            info!("Collector Scheduler: Batched Tasks Started");
+            for handle in collectors_to_run.iter() {
+                let collector = collectors.get(handle).unwrap();
+                let (state_lock, cvar) = &*collector.state;
+                let mut state = state_lock.lock().unwrap();
+                while *state != CollectorState::Idle {
+                    state = cvar.wait(state).unwrap();
+                }
+            }
+            info!("Collector Scheduler: Batched Tasks Finished");
+            // Update the collector state sets.
+            for handle in collectors_to_run.iter() {
+                let instance_id = collectors.get(handle).unwrap().instance_id;
+                collector_finished.insert(instance_id);
+                collectors_to_schedule.remove(handle);
+            }
         }
+        info!("Collector Scheduler: Finished {} Tasks", collectors.len());
         Ok(())
     }
 
     /// Returns true if all collectors are currently idle. This function is not
     /// thread safe.
     pub fn all_idle(&self) -> bool {
-        for (_, instance) in self.collectors.iter() {
-            if *instance.state.lock().unwrap() == CollectorState::Running {
+        let collectors = self.collectors.lock().unwrap();
+        for (_, instance) in collectors.iter() {
+            let (state_lock, _cvar) = &*instance.state;
+            if *state_lock.lock().unwrap() == CollectorState::Running {
                 return false;
             }
         }
@@ -191,8 +284,10 @@ impl CollectorScheduler {
 
     /// Retrieve the collector state of a particular collector.
     pub fn state(&self, handle: &CollectorHandle) -> Option<CollectorState> {
-        if let Some(collector) = self.collectors.get(handle) {
-            let state = collector.state.lock().unwrap();
+        let collectors = self.collectors.lock().unwrap();
+        if let Some(collector) = collectors.get(handle) {
+            let (state_lock, _cvar) = &*collector.state;
+            let state = state_lock.lock().unwrap();
             Some(*state)
         } else {
             None
@@ -201,28 +296,28 @@ impl CollectorScheduler {
 }
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::model::ModelEnvironment, std::sync::Barrier, tempfile::tempdir};
+    use {super::*, crate::model::model::ModelEnvironment, tempfile::tempdir};
 
     struct MockCollector {
-        barrier_pre: Arc<Barrier>,
-        barrier_post: Arc<Barrier>,
+        id: u32,
+        sequence: Arc<Mutex<Vec<u32>>>,
     }
 
     impl MockCollector {
         /// The default collector does not block.
         pub fn default() -> Self {
-            MockCollector::new(Arc::new(Barrier::new(1)), Arc::new(Barrier::new(1)))
+            MockCollector::new(0, Arc::new(Mutex::new(Vec::new())))
         }
 
-        pub fn new(barrier_pre: Arc<Barrier>, barrier_post: Arc<Barrier>) -> Self {
-            Self { barrier_pre, barrier_post }
+        pub fn new(id: u32, sequence: Arc<Mutex<Vec<u32>>>) -> Self {
+            Self { id, sequence }
         }
     }
 
     impl DataCollector for MockCollector {
         fn collect(&self, _: Arc<DataModel>) -> Result<()> {
-            self.barrier_pre.wait();
-            self.barrier_post.wait();
+            // Push the id to the shared sequence.
+            self.sequence.lock().unwrap().push(self.id);
             Ok(())
         }
     }
@@ -242,7 +337,7 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", HashSet::new(), collector.clone());
         let state = scheduler.state(&handle).unwrap();
         assert_eq!(state, CollectorState::Idle);
     }
@@ -252,25 +347,8 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        scheduler.add(instance_id.clone(), "foo", collector.clone());
+        scheduler.add(instance_id.clone(), "foo", HashSet::new(), collector.clone());
         assert_eq!(scheduler.all_idle(), true);
-    }
-
-    #[test]
-    fn test_task_add_running() {
-        let mut scheduler = create_scheduler();
-        let pre = Arc::new(Barrier::new(2));
-        let post = Arc::new(Barrier::new(2));
-        let collector = Arc::new(MockCollector::new(pre.clone(), post.clone()));
-        let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
-        let state = scheduler.state(&handle).unwrap();
-        assert_eq!(state, CollectorState::Idle);
-        scheduler.schedule().unwrap();
-        pre.wait();
-        let running_state = scheduler.state(&handle).unwrap();
-        assert_eq!(running_state, CollectorState::Running);
-        post.wait();
     }
 
     #[test]
@@ -278,7 +356,7 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", HashSet::new(), collector.clone());
         scheduler.remove(&handle);
         assert_eq!(scheduler.state(&handle).is_none(), true);
     }
@@ -288,8 +366,25 @@ mod tests {
         let mut scheduler = create_scheduler();
         let collector = Arc::new(MockCollector::default());
         let instance_id = Uuid::new_v4();
-        let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
+        let handle = scheduler.add(instance_id.clone(), "foo", HashSet::new(), collector.clone());
         scheduler.remove_all(instance_id);
         assert_eq!(scheduler.state(&handle).is_none(), true);
+    }
+
+    #[test]
+    fn test_plugin_dependency_ordering() {
+        let sequence = Arc::new(Mutex::new(Vec::new()));
+        let mut scheduler = create_scheduler();
+        let instance_id_a = Uuid::new_v4();
+        let collector_a = Arc::new(MockCollector::new(1, Arc::clone(&sequence)));
+        let plugin_a_deps = HashSet::new();
+        let instance_id_b = Uuid::new_v4();
+        let collector_b = Arc::new(MockCollector::new(2, Arc::clone(&sequence)));
+        let mut plugin_b_deps = HashSet::new();
+        plugin_b_deps.insert(instance_id_a);
+        scheduler.add(instance_id_a.clone(), "A", plugin_a_deps, collector_a.clone());
+        scheduler.add(instance_id_b.clone(), "B", plugin_b_deps, collector_b.clone());
+        scheduler.schedule().unwrap();
+        assert_eq!(*sequence.lock().unwrap(), vec![1, 2]);
     }
 }

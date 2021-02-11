@@ -82,6 +82,7 @@ mod tests {
         scrutiny_testing::fake::*,
         serde_json::json,
         std::boxed::Box,
+        std::collections::HashSet,
         uuid::Uuid,
     };
 
@@ -172,7 +173,12 @@ mod tests {
     fn test_collector_list_controller() {
         let model = data_model();
         let scheduler = scheduler(model.clone());
-        scheduler.lock().unwrap().add(Uuid::new_v4(), "foo", Arc::new(FakeCollector {}));
+        scheduler.lock().unwrap().add(
+            Uuid::new_v4(),
+            "foo",
+            HashSet::new(),
+            Arc::new(FakeCollector {}),
+        );
         let collector_list = CollectorListController::new(scheduler);
         let response = collector_list.query(model.clone(), json!("")).unwrap();
         let list: Vec<CollectorListEntry> = serde_json::from_value(response).unwrap();

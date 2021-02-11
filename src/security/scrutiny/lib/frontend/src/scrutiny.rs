@@ -239,12 +239,8 @@ impl Scrutiny {
         self.scheduler.lock().unwrap().schedule()?;
 
         if let Some(command) = &self.config.launch.command {
-            // Spin lock on the schedulers to finish.
-            while !self.scheduler.lock().unwrap().all_idle() {}
             self.shell.execute(command.to_string());
         } else if let Some(script) = &self.config.launch.script_path {
-            // Spin lock on the schedulers to finish.
-            while !self.scheduler.lock().unwrap().all_idle() {}
             let script_file = BufReader::new(File::open(script)?);
             for line in script_file.lines() {
                 self.shell.execute(line?);
