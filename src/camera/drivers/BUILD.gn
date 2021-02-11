@@ -11,7 +11,6 @@ group("drivers") {
     "hw_accel",
     "sensors",
     "test_utils",
-    "usb_video",
   ]
 }
 
@@ -23,7 +22,6 @@ group("tests") {
     "hw_accel:tests",
     "sensors:tests",
     "test_utils:tests",
-    "usb_video:tests",
   ]
 }
 
@@ -37,7 +35,6 @@ group("all") {
     "controller/sherlock",
     "hw_accel",
     "sensors",
-    "usb_video",
   ]
 }
 
