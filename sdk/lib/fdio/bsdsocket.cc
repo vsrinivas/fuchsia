@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <ifaddrs.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <net/if.h>
@@ -30,25 +31,29 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace fnet = ::llcpp::fuchsia::net;
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
-#define MAKE_GET_SERVICE(fn_name, symbol)                        \
-  zx_status_t fn_name(symbol::SyncClient** out) {                \
-    static symbol::SyncClient* saved;                            \
-    static std::once_flag once;                                  \
-    static zx_status_t status;                                   \
-    std::call_once(once, [&]() {                                 \
-      zx::channel out;                                           \
-      status = fdio_service_connect_by_name(symbol::Name, &out); \
-      if (status != ZX_OK) {                                     \
-        return;                                                  \
-      }                                                          \
-      static symbol::SyncClient client(std::move(out));          \
-      saved = &client;                                           \
-    });                                                          \
-    if (status != ZX_OK) {                                       \
-      return status;                                             \
-    }                                                            \
-    *out = saved;                                                \
-    return ZX_OK;                                                \
+#define MAKE_GET_SERVICE(fn_name, symbol)                                     \
+  zx_status_t fn_name(symbol::SyncClient** out) {                             \
+    static symbol::SyncClient* saved;                                         \
+    static std::once_flag once;                                               \
+    static zx_status_t status;                                                \
+    std::call_once(once, [&]() {                                              \
+      zx::channel out, request;                                               \
+      status = zx::channel::create(0, &out, &request);                        \
+      if (status != ZX_OK) {                                                  \
+        return;                                                               \
+      }                                                                       \
+      status = fdio_service_connect_by_name(symbol::Name, request.release()); \
+      if (status != ZX_OK) {                                                  \
+        return;                                                               \
+      }                                                                       \
+      static symbol::SyncClient client(std::move(out));                       \
+      saved = &client;                                                        \
+    });                                                                       \
+    if (status != ZX_OK) {                                                    \
+      return status;                                                          \
+    }                                                                         \
+    *out = saved;                                                             \
+    return ZX_OK;                                                             \
   }
 
 namespace {

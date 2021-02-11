@@ -71,7 +71,8 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
       .status();
 }
 
-zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out) {
+__EXPORT
+zx_status_t fdio_service_connect_by_name(const char name[], zx_handle_t request) {
   static zx_handle_t service_root;
 
   {
@@ -95,17 +96,10 @@ zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out) {
     }
   }
 
-  zx::channel c0, c1;
-  zx_status_t status = zx::channel::create(0, &c0, &c1);
+  zx_status_t status = fdio_service_connect_at(service_root, name, request);
   if (status != ZX_OK) {
     return status;
   }
-
-  status = fdio_service_connect_at(service_root, name, c0.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out = std::move(c1);
   return ZX_OK;
 }
 

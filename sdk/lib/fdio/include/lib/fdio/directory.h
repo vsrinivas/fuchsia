@@ -66,6 +66,9 @@ zx_status_t fdio_service_connect(const char* path, ZX_HANDLE_RELEASE zx_handle_t
 zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path,
                                     ZX_HANDLE_RELEASE zx_handle_t request);
 
+// Connect to a service named |name| in /svc.
+zx_status_t fdio_service_connect_by_name(const char* name, ZX_HANDLE_RELEASE zx_handle_t request);
+
 // Opens the remote object at the given |path| relative to the root of the namespace with the given
 // |flags| asynchronously.
 //

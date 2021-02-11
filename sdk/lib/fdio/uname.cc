@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fuchsia/device/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/utsname.h>
@@ -25,8 +26,13 @@ static zx_status_t get_name_provider(llcpp::fuchsia::device::NameProvider::SyncC
     static std::once_flag once;
     static zx_status_t status;
     std::call_once(once, [&]() {
-      zx::channel out;
-      status = fdio_service_connect_by_name(llcpp::fuchsia::device::NameProvider::Name, &out);
+      zx::channel out, request;
+      status = zx::channel::create(0, &out, &request);
+      if (status != ZX_OK) {
+        return;
+      }
+      status = fdio_service_connect_by_name(llcpp::fuchsia::device::NameProvider::Name,
+                                            request.release());
       if (status != ZX_OK) {
         return;
       }

@@ -64,6 +64,7 @@ fdio_service_clone
 fdio_service_clone_to
 fdio_service_connect
 fdio_service_connect_at
+fdio_service_connect_by_name
 fdio_spawn
 fdio_spawn_etc
 fdio_spawn_vmo

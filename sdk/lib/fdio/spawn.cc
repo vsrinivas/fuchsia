@@ -136,8 +136,13 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) 
 static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
                                 zx::channel* out_ldsvc, char* err_msg) {
   fprocess::Resolver::SyncClient resolver;
-  zx_status_t status =
-      fdio_service_connect_by_name(fprocess::Resolver::Name, resolver.mutable_channel());
+  zx::channel request;
+  zx_status_t status = zx::channel::create(0, &request, resolver.mutable_channel());
+  if (status != ZX_OK) {
+    report_error(err_msg, "failed to create channel for resolver service: %d", status);
+    return ZX_ERR_INTERNAL;
+  }
+  status = fdio_service_connect_by_name(fprocess::Resolver::Name, request.release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to resolver service: %d", status);
     return ZX_ERR_INTERNAL;
@@ -609,6 +614,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   size_t handle_capacity = 0;
   std::vector<std::string_view> shared_dirs;
   fprocess::Launcher::SyncClient launcher;
+  zx::channel request;
   zx::channel ldsvc;
   const char* process_name = nullptr;
   size_t process_name_size = 0;
@@ -744,7 +750,12 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     ++handle_capacity;
   }
 
-  status = fdio_service_connect_by_name(fprocess::Launcher::Name, launcher.mutable_channel());
+  status = zx::channel::create(0, &request, launcher.mutable_channel());
+  if (status != ZX_OK) {
+    report_error(err_msg, "failed to create channel for launcher service: %d", status);
+    goto cleanup;
+  }
+  status = fdio_service_connect_by_name(fprocess::Launcher::Name, request.release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to launcher service: %d", status);
     goto cleanup;
