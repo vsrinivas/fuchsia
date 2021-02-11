@@ -1049,16 +1049,15 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
   memcpy(&static_cast<uint8_t*>(bdata)[kSelfSize], parent.raw, kParentSize);
 }
 
-zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,
-                                     std::unique_ptr<SuperblockManager> sb,
-                                     const MountOptions& mount_options,
-                                     std::unique_ptr<Minfs>* out_minfs) {
+zx::status<std::pair<std::unique_ptr<Allocator>, std::unique_ptr<InodeManager>>>
+Minfs::ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& superblock,
+                         const MountOptions& mount_options) {
 #ifdef __Fuchsia__
-  const blk_t abm_start_block = sb->Info().abm_block;
-  const blk_t ibm_start_block = sb->Info().ibm_block;
-  const blk_t ino_start_block = sb->Info().ino_block;
+  const blk_t abm_start_block = superblock.Info().abm_block;
+  const blk_t ibm_start_block = superblock.Info().ibm_block;
+  const blk_t ino_start_block = superblock.Info().ino_block;
 #else
-  BlockOffsets offsets(*bc, *sb);
+  BlockOffsets offsets(bc, superblock);
   const blk_t abm_start_block = offsets.AbmStartBlock();
   const blk_t ibm_start_block = offsets.IbmStartBlock();
   const blk_t ino_start_block = offsets.InoStartBlock();
@@ -1068,70 +1067,54 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
   // Block Bitmap allocator initialization.
   AllocatorFvmMetadata block_allocator_fvm =
-      AllocatorFvmMetadata(sb.get(), SuperblockAllocatorAccess::Blocks());
+      AllocatorFvmMetadata(&superblock, SuperblockAllocatorAccess::Blocks());
   AllocatorMetadata block_allocator_meta = AllocatorMetadata(
       info.dat_block, abm_start_block, (info.flags & kMinfsFlagFVM) != 0,
-      std::move(block_allocator_fvm), sb.get(), SuperblockAllocatorAccess::Blocks());
+      std::move(block_allocator_fvm), &superblock, SuperblockAllocatorAccess::Blocks());
 
   std::unique_ptr<PersistentStorage> storage(
 #ifdef __Fuchsia__
-      new PersistentStorage(bc->device(), sb.get(), sb->Info().BlockSize(), nullptr,
-                            std::move(block_allocator_meta), sb->BlockSize()));
+      new PersistentStorage(bc.device(), &superblock, superblock.Info().BlockSize(), nullptr,
+                            std::move(block_allocator_meta), superblock.BlockSize()));
 #else
-      new PersistentStorage(sb.get(), sb->Info().BlockSize(), nullptr,
-                            std::move(block_allocator_meta), sb->BlockSize()));
+      new PersistentStorage(&superblock, superblock.Info().BlockSize(), nullptr,
+                            std::move(block_allocator_meta), superblock.BlockSize()));
 #endif
 
   std::unique_ptr<Allocator> block_allocator;
   zx_status_t status = Allocator::Create(&builder, std::move(storage), &block_allocator);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << ":Create failed to initialize block allocator: " << status;
-    return status;
+    FX_LOGS(ERROR) << "Create failed to initialize block allocator: " << status;
+    return zx::error(status);
   }
 
   // Inode Bitmap allocator initialization.
   AllocatorFvmMetadata inode_allocator_fvm =
-      AllocatorFvmMetadata(sb.get(), SuperblockAllocatorAccess::Inodes());
+      AllocatorFvmMetadata(&superblock, SuperblockAllocatorAccess::Inodes());
   AllocatorMetadata inode_allocator_meta = AllocatorMetadata(
       ino_start_block, ibm_start_block, (info.flags & kMinfsFlagFVM) != 0,
-      std::move(inode_allocator_fvm), sb.get(), SuperblockAllocatorAccess::Inodes());
+      std::move(inode_allocator_fvm), &superblock, SuperblockAllocatorAccess::Inodes());
 
   std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
-  status = InodeManager::Create(bc->device(), sb.get(), &builder, std::move(inode_allocator_meta),
+  status = InodeManager::Create(bc.device(), &superblock, &builder, std::move(inode_allocator_meta),
                                 ino_start_block, info.inode_count, &inodes);
 #else
-  status = InodeManager::Create(bc.get(), sb.get(), &builder, std::move(inode_allocator_meta),
+  status = InodeManager::Create(&bc, &superblock, &builder, std::move(inode_allocator_meta),
                                 ino_start_block, info.inode_count, &inodes);
 #endif
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << ":Create failed to initialize inodes: " << status;
-    return status;
+    FX_LOGS(ERROR) << "Create failed to initialize inodes: " << status;
+    return zx::error(status);
   }
 
-  status = bc->RunRequests(builder.TakeOperations());
+  status = bc.RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << ":Create failed to read initial blocks: " << status;
-    return status;
+    FX_LOGS(ERROR) << "Create failed to read initial blocks: " << status;
+    return zx::error(status);
   }
 
-#ifdef __Fuchsia__
-  uint64_t id;
-  status = Minfs::CreateFsId(&id);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create fs_id: " << status;
-    return status;
-  }
-
-  *out_minfs =
-      std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                       std::move(inodes), id, mount_options));
-#else
-  *out_minfs =
-      std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                       std::move(inodes), offsets, mount_options));
-#endif
-  return ZX_OK;
+  return zx::ok(std::make_pair(std::move(block_allocator), std::move(inodes)));
 }
 
 zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
@@ -1177,17 +1160,25 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
 #endif
 
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << ":Create failed to initialize superblock: " << status;
+    FX_LOGS(ERROR) << "Create failed to initialize superblock: " << status;
     return status;
   }
 
-  std::unique_ptr<Minfs> fs;
-  status = Minfs::ReadInitialBlocks(info, std::move(bc), std::move(sb), options, &fs);
-  if (status != ZX_OK) {
-    return status;
-  }
+  auto result = Minfs::ReadInitialBlocks(info, *bc, *sb, options);
+  if (result.is_error())
+    return result.error_value();
+  auto [block_allocator, inodes] = std::move(result).value();
 
 #ifdef __Fuchsia__
+  uint64_t id;
+  status = Minfs::CreateFsId(&id);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to create fs_id: " << status;
+    return status;
+  }
+
+  auto fs = std::unique_ptr<Minfs>(new Minfs(
+      std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id, options));
   if (!options.readonly) {
     status = fs->InitializeJournal(std::move(journal_superblock));
     if (status != ZX_OK) {
@@ -1255,9 +1246,13 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
                                           std::to_string(fs->Info().oldest_revision),
                                       {}, 1);
   }
-#endif  // defined(__Fuchsia__)
-
   *out = std::move(fs);
+#else
+  BlockOffsets offsets(*bc, *sb);
+  *out = std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
+                                          std::move(inodes), offsets, options));
+#endif  // !defined(__Fuchsia__)
+
   return ZX_OK;
 }  // namespace minfs
 

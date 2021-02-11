@@ -75,5 +75,21 @@ TEST(MountTest, VersionLoggedWithCobalt) {
   EXPECT_EQ(iter->second, 1u);
 }
 
+TEST(MountTest, ReadsExceptForSuperBlockFail) {
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto* device_ptr = device.get();
+  std::unique_ptr<Bcache> bcache;
+  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+
+  // Fail request for block 8 which should be the first block of the inode bitmap.
+  device_ptr->set_hook([](const block_fifo_request_t& request, const zx::vmo*) {
+    return request.dev_offset == 8 * kMinfsBlockSize / kBlockSize ? ZX_ERR_IO : ZX_OK;
+  });
+
+  std::unique_ptr<Minfs> fs;
+  EXPECT_EQ(Minfs::Create(std::move(bcache), {}, &fs), ZX_ERR_IO);
+}
+
 }  // namespace
 }  // namespace minfs

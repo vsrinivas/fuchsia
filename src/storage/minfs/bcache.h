@@ -137,8 +137,6 @@ class Bcache : public fs::TransactionHandler {
   Bcache(Bcache&&) = delete;
   Bcache& operator=(Bcache&&) = delete;
 
-  ~Bcache() {}
-
   ////////////////
   // fs::TransactionHandler interface.
 

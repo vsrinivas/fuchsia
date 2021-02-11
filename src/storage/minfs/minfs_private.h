@@ -56,6 +56,7 @@
 
 #include "src/storage/minfs/allocator/allocator.h"
 #include "src/storage/minfs/allocator/inode_manager.h"
+#include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/vnode.h"
 
 constexpr uint32_t kExtentCount = 6;
@@ -453,11 +454,9 @@ class Minfs :
   [[nodiscard]] static zx_status_t CreateFsId(uint64_t* out);
 
   // Reads blocks from disk. Only to be called during "construction".
-  [[nodiscard]] static zx_status_t ReadInitialBlocks(const Superblock& info,
-                                                     std::unique_ptr<Bcache> bc,
-                                                     std::unique_ptr<SuperblockManager> sb,
-                                                     const MountOptions& mount_options,
-                                                     std::unique_ptr<Minfs>* out_minfs);
+  static zx::status<std::pair<std::unique_ptr<Allocator>, std::unique_ptr<InodeManager>>>
+  ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& superblock_manager,
+                    const MountOptions& mount_options);
 
   // Updates the clean bit and oldest revision in the super block.
   [[nodiscard]] zx_status_t UpdateCleanBitAndOldestRevision(bool is_clean);
