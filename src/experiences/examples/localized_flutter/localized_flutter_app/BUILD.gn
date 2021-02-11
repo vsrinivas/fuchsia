@@ -34,7 +34,7 @@ fuchsia_package("localized-flutter-app") {
   deps = [ ":component" ]
 }
 
-flutter_test2("localized_flutter_app_unittests") {
+flutter_test("localized_flutter_app_unittests") {
   sources = [ "sample_test.dart" ]
 
   deps = [ "//third_party/dart-pkg/pub/test" ]

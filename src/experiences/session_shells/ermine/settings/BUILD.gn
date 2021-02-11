@@ -40,7 +40,7 @@ dart_library("settings") {
   ]
 }
 
-flutter_test2("ermine_settings_unittests") {
+flutter_test("ermine_settings_unittests") {
   sources = [
     "battery_test.dart",
     "bluetooth_test.dart",

@@ -27,7 +27,7 @@ fuchsia_package("hello-experiences") {
   deps = [ ":component" ]
 }
 
-flutter_test2("hello_experiences_unittests") {
+flutter_test("hello_experiences_unittests") {
   sources = [ "sample_test.dart" ]
 
   deps = [ "//third_party/dart-pkg/pub/test" ]

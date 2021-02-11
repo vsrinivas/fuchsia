@@ -28,7 +28,7 @@ dart_library("keyboard_shortcuts") {
 }
 
 #fx run-host-tests keyboard_shortcuts_unittests
-flutter_test2("keyboard_shortcuts_unittests") {
+flutter_test("keyboard_shortcuts_unittests") {
   sources = [ "keyboard_shortcuts_test.dart" ]
 
   deps = [

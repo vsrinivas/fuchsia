@@ -21,7 +21,7 @@ dart_library("tiler") {
   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
 }
 
-flutter_test2("tiler_unittests") {
+flutter_test("tiler_unittests") {
   sources = [ "tiler_test.dart" ]
 
   deps = [

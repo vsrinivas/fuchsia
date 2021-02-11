@@ -87,7 +87,7 @@ fuchsia_package("simple-browser") {
 }
 
 # fx run-host-tests simple_browser_unittests
-flutter_test2("simple_browser_unittests") {
+flutter_test("simple_browser_unittests") {
   sources = [
     "browser_shortcuts_test.dart",
     "sanitize_url_test.dart",
