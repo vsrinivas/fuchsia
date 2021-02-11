@@ -552,6 +552,12 @@ def main(args_list=None):
         '--output-archive',
         help='Path to add the SDK archive file (e.g. "path/to/gn.tar.gz")')
     parser.add_argument(
+        '--output-archive-only',
+        help=
+        'Whether to output the SDK archive and skip installing to a directory',
+        default=False,
+    )
+    parser.add_argument(
         '--tests', help='Path to the directory where to generate tests')
     parser.add_argument(
         '--jiri-manifest',
@@ -569,6 +575,7 @@ def main(args_list=None):
         output=args.output,
         tests=args.tests,
         output_archive=args.output_archive,
+        output_archive_only=args.output_archive_only,
         jiri_manifest=args.jiri_manifest)
 
 
@@ -576,6 +583,7 @@ def run_generator(
         archive,
         directory,
         output,
+        output_archive_only=False,
         tests='',
         output_archive='',
         jiri_manifest=None):
@@ -623,6 +631,9 @@ def run_generator(
     if output_archive:
         if not create_archive(output_archive, output):
             return 1
+
+    if output_archive_only:
+        shutil.rmtree(output)
 
     return 0
 

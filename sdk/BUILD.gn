@@ -34,6 +34,7 @@ group("sdk.modular") {
     ":host_tools.all",
     ":modular_testing",
     ":zircon_sysroot",
+    "//scripts/sdk/gn:gn.modular.tar.gz",
   ]
 }
 
