@@ -46,6 +46,11 @@ toc:
   # - title: "Severity"
   #   path: /docs/concepts/diagnostics/logs/severity.md
 
+- title: "Lifecycle events"
+  section:
+  - title: "Overview"
+    path: /docs/concepts/diagnostics/lifecycle_events/README.md
+
 # TODO(fxbug.dev/60772)
 # - title: "Triage & Detect"
 #   path: /docs/concepts/diagnostics/triage.md
