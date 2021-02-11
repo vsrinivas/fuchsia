@@ -258,6 +258,8 @@ pub enum Error {
     InvalidAesKeywrapDataLength(usize),
     #[error("error wrong key for AES Keywrap unwrapping")]
     WrongAesKeywrapKey,
+    #[error("error deriving IGTK; unsupported cipher suite")]
+    IgtkHierarchyUnsupportedCipherError,
     #[error("invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0)]
     InvaidKeyDataLength(usize),
     #[error("invalid key data; error code: {:?}", _0)]
