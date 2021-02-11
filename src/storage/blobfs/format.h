@@ -47,12 +47,16 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 // field in the header.
 //
 // See //src/storage/docs/versioning.md for more.
-
+//
 // *************************************************************************************************
-// * IMPORTANT: When changing either kBlobfsCurrentMajorVersion or kBlobfsCurrentMinorVersion, be  *
-// * sure to make an appropriate change to                                                         *
-// * //third_party/cobalt_config/fuchsia/local_storage/versions.txt (submission order does not     *
-// * matter).                                                                                      *
+//
+// IMPORTANT: When changing either kBlobfsCurrentMajorVersion or kBlobfsCurrentMinorVersion:
+//
+//   * Update //third_party/cobalt_config/fuchsia/local_storage/versions.txt
+//     (submission order does not matter).
+//
+//   * Update //src/storage/blobfs/README.md with what changed.
+//
 // *************************************************************************************************
 
 constexpr uint32_t kBlobfsCurrentMajorVersion = 0x00000009;
@@ -60,7 +64,8 @@ constexpr uint32_t kBlobfsCurrentMajorVersion = 0x00000009;
 // When this next changes, consider enabling the OldestMinorVersionNotUpdated test.
 constexpr uint64_t kBlobfsCurrentMinorVersion = 0x00000004;
 
-// Version 9 introduced a compact merkle tree version.
+// Version 9 introduced a compact merkle tree version. Version 8 uses padded merkle trees. This
+// format is controlled by a build flag so version 9 is not necessarily newer (see README.md).
 constexpr uint32_t kBlobfsCompactMerkleTreeVersion = 0x00000009;
 
 // Revision 2: introduced a backup superblock.
