@@ -229,6 +229,7 @@ if (current_toolchain == dart_toolchain) {
       _rebased_packages_path = rebase_path(_packages_file)
 
       args = [
+        "--verbosity=warning",
         "--snapshot=$_rebased_snapshot",
         "--snapshot-depfile=$_rebased_depfile",
         "--packages=$_rebased_packages_path",

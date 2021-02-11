@@ -250,6 +250,7 @@ template("dart_tool") {
     }
 
     args = [
+      "--verbosity=warning",
       "--no-sound-null-safety",
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",

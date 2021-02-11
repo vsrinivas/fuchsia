@@ -66,7 +66,7 @@ def main():
 
 cd "$$(dirname $$0)/$wd"
 
-$dart $snapshot \\
+$dart --verbosity=warning $snapshot \\
   --packages=$dot_packages \\
   --shell=$flutter_shell \\
   --tests=$tests \\

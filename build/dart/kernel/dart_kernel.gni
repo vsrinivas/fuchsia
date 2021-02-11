@@ -219,6 +219,7 @@ template("dart_kernel") {
     hermetic_deps = false
     script = _gen_kernel_path
     args += [
+      "--verbosity=warning",
       "--no-sound-null-safety",
       "--target",
       invoker.platform_name,
