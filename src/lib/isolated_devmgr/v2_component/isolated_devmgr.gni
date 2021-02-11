@@ -15,6 +15,11 @@ template("isolated_devmgr_unittest_v2_component") {
           "sdk/lib/diagnostics/syslog/client.shard.cml",
         ]
         program = {
+          if (defined(invoker.runner)) {
+            runner = invoker.runner
+          } else {
+            runner = "gtest_runner"
+          }
           binary = invoker.executable_path
         }
         children = [
@@ -31,14 +36,7 @@ template("isolated_devmgr_unittest_v2_component") {
         ]
         use = [
           {
-            if (defined(invoker.runner)) {
-              runner = invoker.runner
-            } else {
-              runner = "gtest_runner"
-            }
-          },
-          {
-            protocol = [ "fuchsia.process.Launcher" ]
+            protocol = "fuchsia.process.Launcher"
           },
           {
             protocol = "fuchsia.sys2.Realm"

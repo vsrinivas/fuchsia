@@ -246,12 +246,8 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure we don't have a component with a "program" block which fails
-        // to specify exactly one runner.
-        self.validate_runner_specified(
-            self.document.program.as_ref(),
-            self.document.r#use.as_ref(),
-        )?;
+        // Ensure we don't have a component with a "program" block which fails to specify a runner.
+        self.validate_runner_specified(self.document.program.as_ref())?;
 
         // Validate "environments".
         if let Some(environments) = &self.document.environments {
@@ -384,10 +380,6 @@ impl<'a> ValidationContext<'a> {
         }
         if use_.directory.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"directory\""));
-        }
-
-        if use_.runner.is_some() && use_.r#as.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used with \"runner\""));
         }
         if use_.event.is_some() && use_.from.is_none() {
             return Err(Error::validate("\"from\" should be present with \"event\""));
@@ -959,34 +951,17 @@ impl<'a> ValidationContext<'a> {
         Ok(())
     }
 
-    /// Ensure we don't have a component with a "program" block which fails
-    /// to specify exactly one runner either as a `use` or in the `program` block itself.
-    fn validate_runner_specified(
-        &self,
-        program: Option<&cml::Program>,
-        use_: Option<&Vec<cml::Use>>,
-    ) -> Result<(), Error> {
-        let mut runners_used = 0;
-        if let Some(use_) = use_ {
-            runners_used = use_.iter().filter(|u| u.runner.is_some()).count();
-        }
-        if let Some(_) = program.and_then(|p| p.runner.as_ref()) {
-            runners_used += 1;
-        }
-        match (runners_used, program.is_some()) {
-            (0, false) => Ok(()),
-            (_, false) => {
-                Err(Error::validate("Component is missing `program` block but uses a runner."))
-            }
-            (0, true) => Err(Error::validate(
-                "Component has a `program` block defined, but doesn't `use` \
-                a runner capability or specify a runner in `program`. Components need to use \
-                a runner to actually execute code.",
-            )),
-            (1, true) => Ok(()),
-            (_, true) => {
-                Err(Error::validate("Component uses multiple runners! Must specify exactly one."))
-            }
+    /// Ensure we don't have a component with a "program" block which fails to specify a runner.
+    fn validate_runner_specified(&self, program: Option<&cml::Program>) -> Result<(), Error> {
+        match program {
+            Some(program) => match program.runner {
+                Some(_) => Ok(()),
+                None => Err(Error::validate(
+                    "Component has a `program` block defined, but doesn't specify a `runner`. \
+                    Components need to use a runner to actually execute code.",
+                )),
+            },
+            None => Ok(()),
         }
     }
 
@@ -1292,15 +1267,6 @@ mod tests {
         test_cml_program(
             json!(
                 {
-                    "program": { "binary": "bin/app" },
-                    "use": [ { "runner": "elf" } ],
-                }
-            ),
-            Ok(())
-        ),
-        test_cml_program_runner(
-            json!(
-                {
                     "program": {
                         "runner": "elf",
                         "binary": "bin/app",
@@ -1312,48 +1278,13 @@ mod tests {
         test_cml_program_no_runner(
             json!({"program": { "binary": "bin/app" }}),
             Err(Error::Validate { schema_name: None, err, .. }) if &err ==
-                "Component has a `program` block defined, but doesn't `use` \
-                a runner capability or specify a runner in `program`. Components need to use \
-                a runner to actually execute code."
-        ),
-        test_cml_program_two_use_runners(
-            json!({
-                "program": { "binary": "bin/app" },
-                "use": [
-                    { "runner": "elf" },
-                    { "runner": "elf2" },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
-                "Component uses multiple runners! Must specify exactly one."
-        ),
-        test_cml_runner_without_program(
-            json!({
-                "use": [
-                    { "runner": "elf" },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
-                "Component is missing `program` block but uses a runner."
-        ),
-        test_cml_program_runner_in_use_and_program(
-            json!({
-                "program": {
-                    "runner": "elf",
-                    "binary": "bin/app",
-                },
-                "use": [
-                    { "runner": "elf2" },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
-                "Component uses multiple runners! Must specify exactly one."
+                "Component has a `program` block defined, but doesn't specify a `runner`. \
+                Components need to use a runner to actually execute code."
         ),
 
         // use
         test_cml_use(
             json!({
-                "program": {},
                 "use": [
                   { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
@@ -1379,7 +1310,6 @@ mod tests {
                   { "storage": "meta" },
                   { "storage": "ephemral" },
                   { "storage": "hippos", "path": "/i-love-hippos" },
-                  { "runner": "elf" },
                   { "event": [ "started", "stopped"], "from": "parent" },
                   { "event": [ "launched"], "from": "framework" },
                   { "event": "destroyed", "from": "framework", "as": "destroyed_x" },
@@ -1462,13 +1392,6 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"directory\""
         ),
-        test_cml_use_as_with_runner(
-            json!({
-                "program": {},
-                "use": [ { "runner": "elf", "as": "xxx" } ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"runner\""
-        ),
         test_cml_use_as_with_storage(
             json!({
                 "use": [ { "storage": "cache", "as": "mystorage" } ]
@@ -1549,7 +1472,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`"
         ),
 
         test_cml_use_disallows_nested_dirs(
@@ -4319,8 +4242,10 @@ mod tests {
         test_deny_unknown_fields(
             json!(
                 {
-                    "program": { "binary": "bin/app" },
-                    "use": [ { "runner": "elf" } ],
+                    "program": {
+                        "runner": "elf",
+                        "binary": "bin/app",
+                    },
                     "unknown_field": {},
                 }
             ),

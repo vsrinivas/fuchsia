@@ -4,6 +4,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/reference-session",
     },
     children: [
@@ -15,9 +16,6 @@
     ],
     capabilities: [
         { protocol: "fuchsia.element.Manager" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     offer: [
         {

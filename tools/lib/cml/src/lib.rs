@@ -679,7 +679,11 @@ macro_rules! merge_from_field {
 }
 
 impl Document {
-    pub fn merge_from(&mut self, other: &mut Document, include_path: &path::Path) -> Result<(), Error> {
+    pub fn merge_from(
+        &mut self,
+        other: &mut Document,
+        include_path: &path::Path,
+    ) -> Result<(), Error> {
         merge_from_field!(self, other, include);
         merge_from_field!(self, other, r#use);
         merge_from_field!(self, other, expose);
@@ -700,7 +704,11 @@ impl Document {
         Ok(())
     }
 
-    fn merge_program(&mut self, other: &mut Document, include_path: &path::Path) -> Result<(), Error> {
+    fn merge_program(
+        &mut self,
+        other: &mut Document,
+        include_path: &path::Path,
+    ) -> Result<(), Error> {
         if let None = other.program {
             return Ok(());
         }
@@ -1009,7 +1017,6 @@ pub struct Use {
     pub protocol: Option<OneOrMany<Name>>,
     pub directory: Option<Name>,
     pub storage: Option<Name>,
-    pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
     pub path: Option<Path>,
     pub r#as: Option<Name>,
@@ -1311,7 +1318,7 @@ impl CapabilityClause for Use {
         &self.storage
     }
     fn runner(&self) -> &Option<Name> {
-        &self.runner
+        &None
     }
     fn resolver(&self) -> &Option<Name> {
         &None
@@ -1331,8 +1338,6 @@ impl CapabilityClause for Use {
             "directory"
         } else if self.storage.is_some() {
             "storage"
-        } else if self.runner.is_some() {
-            "runner"
         } else if self.event.is_some() {
             "event"
         } else if self.event_stream.is_some() {
@@ -1798,7 +1803,6 @@ mod tests {
             protocol: None,
             directory: None,
             storage: None,
-            runner: None,
             from: None,
             path: None,
             r#as: None,

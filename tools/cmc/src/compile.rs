@@ -254,11 +254,6 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 target_path: Some(target_path.into()),
                 ..fsys::UseStorageDecl::EMPTY
             }));
-        } else if let Some(n) = use_.runner() {
-            out_uses.push(fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                source_name: Some(n.clone().into()),
-                ..fsys::UseRunnerDecl::EMPTY
-            }))
         } else if let Some(n) = use_.event() {
             let source = extract_use_event_source(use_)?;
             let target_names = all_target_capability_names(use_, use_)
@@ -1113,35 +1108,6 @@ mod tests {
         test_compile_program => {
             input = json!({
                 "program": {
-                    "binary": "bin/app",
-                },
-                "use": [
-                    { "runner": "elf" }
-                ]
-            }),
-            output = fsys::ComponentDecl {
-                program: Some(fsys::ProgramDecl {
-                    info: Some(fdata::Dictionary {
-                        entries: Some(vec![fdata::DictionaryEntry {
-                            key: "binary".to_string(),
-                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
-                        }]),
-                        ..fdata::Dictionary::EMPTY
-                    }),
-                    ..fsys::ProgramDecl::EMPTY
-                }),
-                uses: Some(vec![fsys::UseDecl::Runner (
-                    fsys::UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..fsys::UseRunnerDecl::EMPTY
-                    }
-                )]),
-                ..default_component_decl()
-            },
-        },
-        test_compile_program_with_runner => {
-            input = json!({
-                "program": {
                     "runner": "elf",
                     "binary": "bin/app",
                 },
@@ -1165,17 +1131,16 @@ mod tests {
         test_compile_program_with_lifecycle => {
             input = json!({
                 "program": {
+                    "runner": "elf",
                     "binary": "bin/app",
                     "lifecycle": {
                         "stop_event": "notify",
                     }
                 },
-                "use": [
-                    { "runner": "elf" }
-                ]
             }),
             output = fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: Some(vec![
                             fdata::DictionaryEntry {
@@ -1191,19 +1156,12 @@ mod tests {
                     }),
                     ..fsys::ProgramDecl::EMPTY
                 }),
-                uses: Some(vec![fsys::UseDecl::Runner (
-                    fsys::UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..fsys::UseRunnerDecl::EMPTY
-                    }
-                )]),
                 ..default_component_decl()
             },
         },
 
         test_compile_use => {
             input = json!({
-                "program": {},
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "service": "fuchsia.sys2.Realm", "from": "framework" },
@@ -1221,7 +1179,6 @@ mod tests {
                     },
                     { "storage": "hippos", "path": "/hippos" },
                     { "storage": "cache", "path": "/tmp" },
-                    { "runner": "elf" },
                     { "event": "destroyed", "from": "parent" },
                     { "event": ["started", "stopped"], "from": "framework" },
                     {
@@ -1240,13 +1197,6 @@ mod tests {
                 ]
             }),
             output = fsys::ComponentDecl {
-                program: Some(fsys::ProgramDecl {
-                    info: Some(fdata::Dictionary {
-                        entries: Some(vec![]),
-                        ..fdata::Dictionary::EMPTY
-                    }),
-                    ..fsys::ProgramDecl::EMPTY
-                }),
                 uses: Some(vec![
                     fsys::UseDecl::Service (
                         fsys::UseServiceDecl {
@@ -1328,12 +1278,6 @@ mod tests {
                             source_name: Some("cache".to_string()),
                             target_path: Some("/tmp".to_string()),
                             ..fsys::UseStorageDecl::EMPTY
-                        }
-                    ),
-                    fsys::UseDecl::Runner (
-                        fsys::UseRunnerDecl {
-                            source_name: Some("elf".to_string()),
-                            ..fsys::UseRunnerDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Event (
@@ -2642,6 +2586,7 @@ mod tests {
         test_compile_all_sections => {
             input = json!({
                 "program": {
+                    "runner": "elf",
                     "binary": "bin/app",
                 },
                 "use": [
@@ -2649,7 +2594,6 @@ mod tests {
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": [ "ReallyGoodFonts", "IWouldNeverUseTheseFonts"]},
                     { "protocol":  "DebugProtocol", "from": "debug"},
-                    { "runner": "elf" },
                 ],
                 "expose": [
                     { "directory": "blobfs", "from": "self", "rights": ["r*"]},
@@ -2721,6 +2665,7 @@ mod tests {
             }),
             output = fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
                             key: "binary".to_string(),
@@ -2769,12 +2714,6 @@ mod tests {
                             source_name: Some("DebugProtocol".to_string()),
                             target_path: Some("/svc/DebugProtocol".to_string()),
                             ..fsys::UseProtocolDecl::EMPTY
-                        }
-                    ),
-                    fsys::UseDecl::Runner (
-                        fsys::UseRunnerDecl {
-                            source_name: Some("elf".to_string()),
-                            ..fsys::UseRunnerDecl::EMPTY
                         }
                     ),
                 ]),
@@ -3008,7 +2947,7 @@ mod tests {
         let foo_path = tmp_dir.path().join("foo.cml");
         fs::File::create(&foo_path)
             .unwrap()
-            .write_all(format!("{}", json!({ "use": [ { "runner": "elf" } ] })).as_bytes())
+            .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
             .unwrap();
 
         let in_path = tmp_dir.path().join("test.cml");
@@ -3023,6 +2962,7 @@ mod tests {
             }),
             fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
                             key: "binary".to_string(),
@@ -3034,10 +2974,6 @@ mod tests {
                     }),
                     ..fsys::ProgramDecl::EMPTY
                 }),
-                uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                    source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::EMPTY
-                })]),
                 ..default_component_decl()
             },
         )
@@ -3056,7 +2992,7 @@ mod tests {
         let bar_path = tmp_dir.path().join("bar.cml");
         fs::File::create(&bar_path)
             .unwrap()
-            .write_all(format!("{}", json!({ "use": [ { "runner": "elf" } ] })).as_bytes())
+            .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
             .unwrap();
 
         let in_path = tmp_dir.path().join("test.cml");
@@ -3071,6 +3007,7 @@ mod tests {
             }),
             fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
                             key: "binary".to_string(),
@@ -3082,10 +3019,6 @@ mod tests {
                     }),
                     ..fsys::ProgramDecl::EMPTY
                 }),
-                uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                    source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::EMPTY
-                })]),
                 ..default_component_decl()
             },
         )
@@ -3115,8 +3048,10 @@ mod tests {
             Some(tmp_dir.into_path()),
             json!({
                 "include": [ "foo.cml" ],
-                "program": { "binary": "bin/test" },
-                "use": [ { "runner": "elf" } ],
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/test",
+                },
             }),
             default_component_decl(),
         );
@@ -3153,8 +3088,10 @@ mod tests {
             Some(tmp_dir.into_path()),
             json!({
                 "include": [ "foo.cml", "bar.cml" ],
-                "program": { "binary": "bin/test" },
-                "use": [ { "runner": "elf" } ],
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/test",
+                },
             }),
             default_component_decl(),
         );
@@ -3188,11 +3125,14 @@ mod tests {
             Some(tmp_dir.into_path()),
             json!({
                 "include": [ "foo1.cml", "foo2.cml" ],
-                "program": { "binary": "bin/test" },
-                "use": [ { "runner": "elf" } ],
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/test",
+                },
             }),
             fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
                             key: "binary".to_string(),
@@ -3204,18 +3144,12 @@ mod tests {
                     }),
                     ..fsys::ProgramDecl::EMPTY
                 }),
-                uses: Some(vec![
-                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..fsys::UseRunnerDecl::EMPTY
-                    }),
-                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_name: Some("foo".to_string()),
-                        target_path: Some("/svc/foo".to_string()),
-                        ..fsys::UseProtocolDecl::EMPTY
-                    }),
-                ]),
+                uses: Some(vec![fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                    source_name: Some("foo".to_string()),
+                    target_path: Some("/svc/foo".to_string()),
+                    ..fsys::UseProtocolDecl::EMPTY
+                })]),
                 ..default_component_decl()
             },
         );
