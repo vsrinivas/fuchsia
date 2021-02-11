@@ -235,3 +235,16 @@
   reviewers: ['vaas@google.com']
   submitted: '2020-12-14'
   reviewed: '2020-02-08'
+
+- name: 'RFC-0068'
+  title: 'Page Eviction Hints'
+  short_description: 'Mechanism for userspace applications to hint to the kernel a relative order of eviction for user pager backed memory.'
+  authors: ['rashaeqbal@google.com']
+  file: '0068_eviction_hints.md'
+  area: ['Zircon']
+  issue: ['65334']
+  gerrit_change_id: ['468630']
+  status: 'Accepted'
+  reviewers: ['adanis@google.com', 'cpu@google.com', 'scottmg@google.com']
+  submitted: '2021-01-08'
+  reviewed: '2021-02-10'
