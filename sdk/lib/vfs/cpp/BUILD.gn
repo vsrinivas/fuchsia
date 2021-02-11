@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 sdk_source_set("cpp") {
   category = "partner"
@@ -88,12 +88,7 @@ test("vfs_cpp_unittests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("vfs_cpp_tests") {
+fuchsia_unittest_package("vfs_cpp_tests") {
   deps = [ ":vfs_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "vfs_cpp_unittests"
-    },
-  ]
+  manifest = "meta/vfs_cpp_unittests.cmx"
 }
