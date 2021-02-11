@@ -7,12 +7,12 @@ use {
     crate::io::{DirectoryProxyExt, MapChildren},
     anyhow::{Context, Result},
     async_trait::async_trait,
+    cs::{io::Directory, v2::V2Component},
     ffx_component_list_args::ComponentListCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     futures::future::ready,
-    std::io::{stdout, Write},
 };
 
 mod component;
@@ -20,14 +20,10 @@ mod io;
 
 #[ffx_plugin()]
 pub async fn list(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentListCommand) -> Result<()> {
-    list_impl(rcs_proxy, cmd, Box::new(stdout())).await
+    list_impl(rcs_proxy, cmd).await
 }
 
-async fn list_impl<W: Write>(
-    rcs_proxy: rc::RemoteControlProxy,
-    _cmd: ComponentListCommand,
-    mut writer: W,
-) -> Result<()> {
+async fn list_impl(rcs_proxy: rc::RemoteControlProxy, _cmd: ComponentListCommand) -> Result<()> {
     let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .context("creating hub root proxy")?;
     rcs_proxy
@@ -35,8 +31,9 @@ async fn list_impl<W: Write>(
         .await?
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
-    let c = root.to_component_v2().await?;
-    writeln!(writer, "{}", c.tree_formatter(0))?;
+    let hub_dir = Directory::from_proxy(root);
+    let component = V2Component::explore(hub_dir).await;
+    component.print_tree();
     Ok(())
 }
 

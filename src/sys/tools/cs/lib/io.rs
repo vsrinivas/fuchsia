@@ -8,8 +8,6 @@ use {
     anyhow::{Error, Result},
     fidl_fuchsia_io as fio,
     files_async::*,
-    fuchsia_async::TimeoutExt,
-    futures::FutureExt,
     io_util::{directory::*, file::*},
 };
 
@@ -38,9 +36,6 @@ pub struct Directory {
     pub proxy: fio::DirectoryProxy,
 }
 
-// Time to wait before giving up on opening a directory
-static DIR_OPEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
-
 impl Directory {
     // Create a Directory object from a path in the namespace
     #[cfg(target_os = "fuchsia")]
@@ -59,26 +54,21 @@ impl Directory {
     }
 
     // Open a file that already exists in the directory with the given |filename|.
-    async fn open_file(&self, filename: &str) -> Result<File, Error> {
+    fn open_file(&self, filename: &str) -> Result<File, Error> {
         let proxy = open_file_no_describe(&self.proxy, filename, fio::OPEN_RIGHT_READABLE).unwrap();
         Ok(File { proxy })
     }
 
     // Open a directory that already exists in the directory with the given |filename|.
-    pub async fn open_dir(&self, filename: &str) -> Directory {
-        let proxy = open_directory(&self.proxy, filename, fio::OPEN_RIGHT_READABLE).await.unwrap();
+    pub fn open_dir(&self, filename: &str) -> Directory {
+        let proxy =
+            open_directory_no_describe(&self.proxy, filename, fio::OPEN_RIGHT_READABLE).unwrap();
         Directory { proxy }
-    }
-
-    // Open a directory with a timeout. If the directory could not be opened in time,
-    // None is returned.
-    pub async fn open_dir_timeout(&self, filename: &str) -> Option<Directory> {
-        self.open_dir(filename).map(|d| Some(d)).on_timeout(DIR_OPEN_TIMEOUT, || None).await
     }
 
     // Returns the contents of a file in this directory as a string
     pub async fn read_file(&self, filename: &str) -> Result<String, Error> {
-        let file = self.open_file(filename).await?;
+        let file = self.open_file(filename)?;
         let data = file.read_string().await?;
         file.close().await;
         Ok(data)

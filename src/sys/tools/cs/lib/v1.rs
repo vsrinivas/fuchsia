@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::get_capabilities,
     crate::io::Directory,
     futures::future::{BoxFuture, FutureExt},
 };
@@ -16,7 +17,7 @@ async fn open_id_directories(id_dir: Directory) -> Vec<Directory> {
     let mut realms = vec![];
     for id in id_dir.entries().await {
         assert!(id.chars().all(char::is_numeric));
-        let realm = id_dir.open_dir(&id).await;
+        let realm = id_dir.open_dir(&id);
         realms.push(realm);
     }
     realms
@@ -29,7 +30,7 @@ fn visit_child_realms(child_realms_dir: Directory) -> BoxFuture<'static, Vec<V1R
         // visit all entries within <realm id>/r/
         for realm_name in child_realms_dir.entries().await {
             // visit <realm id>/r/<child realm name>/<child realm id>/
-            let id_dir = child_realms_dir.open_dir(&realm_name).await;
+            let id_dir = child_realms_dir.open_dir(&realm_name);
             for realm_dir in open_id_directories(id_dir).await.drain(..) {
                 child_realms.push(V1Realm::create(realm_dir).await);
             }
@@ -48,7 +49,7 @@ fn visit_child_components(child_components_dir: Directory) -> BoxFuture<'static,
 
         for component_name in child_components_dir.entries().await {
             // Visits */c/<component name>/<component instance id>.
-            let id_dir = child_components_dir.open_dir(&component_name).await;
+            let id_dir = child_components_dir.open_dir(&component_name);
             for component_dir in open_id_directories(id_dir).await.drain(..) {
                 child_components.push(V1Component::create(component_dir).await);
             }
@@ -57,23 +58,6 @@ fn visit_child_components(child_components_dir: Directory) -> BoxFuture<'static,
         child_components
     }
     .boxed()
-}
-
-async fn get_capabilities(capability_dir: Directory) -> Vec<String> {
-    let mut entries = capability_dir.entries().await;
-
-    for (index, name) in entries.iter().enumerate() {
-        if name == "svc" {
-            entries.remove(index);
-            let svc_dir = capability_dir.open_dir("svc").await;
-            let mut svc_entries = svc_dir.entries().await;
-            entries.append(&mut svc_entries);
-            break;
-        }
-    }
-
-    entries.sort_unstable();
-    entries
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -88,8 +72,8 @@ impl V1Realm {
     pub async fn create(realm_dir: Directory) -> V1Realm {
         let name = realm_dir.read_file("name").await.unwrap();
         let job_id = realm_dir.read_file("job-id").await.unwrap().parse::<u32>().unwrap();
-        let child_realms_dir = realm_dir.open_dir("r").await;
-        let child_components_dir = realm_dir.open_dir("c").await;
+        let child_realms_dir = realm_dir.open_dir("r");
+        let child_components_dir = realm_dir.open_dir("c");
         V1Realm {
             name,
             job_id,
@@ -155,10 +139,10 @@ impl V1Component {
         };
         let url = component_dir.read_file("url").await.unwrap();
         let name = component_dir.read_file("name").await.unwrap();
-        let in_dir = component_dir.open_dir("in").await;
+        let in_dir = component_dir.open_dir("in");
 
         let merkle_root = if in_dir.exists("pkg").await {
-            let pkg_dir = in_dir.open_dir("pkg").await;
+            let pkg_dir = in_dir.open_dir("pkg");
             if pkg_dir.exists("meta").await {
                 match pkg_dir.read_file("meta").await {
                     Ok(file) => Some(file),
@@ -172,22 +156,17 @@ impl V1Component {
         };
 
         let child_components = if component_dir.exists("c").await {
-            let child_components_dir = component_dir.open_dir("c").await;
+            let child_components_dir = component_dir.open_dir("c");
             visit_child_components(child_components_dir).await
         } else {
             vec![]
         };
 
-        let incoming_capabilities = get_capabilities(in_dir).await;
+        let incoming_capabilities =
+            get_capabilities(in_dir).await.expect("Failed to get incoming capabilities.");
 
         let outgoing_capabilities = if component_dir.exists("out").await {
-            if let Some(out_dir) = component_dir.open_dir_timeout("out").await {
-                Some(get_capabilities(out_dir).await)
-            } else {
-                // The directory exists, but it couldn't be opened.
-                // This is probably because it isn't being served.
-                None
-            }
+            get_capabilities(component_dir.open_dir("out")).await
         } else {
             // The directory doesn't exist. This is probably because
             // there is no runtime on the component.
@@ -260,30 +239,6 @@ mod tests {
         std::io::Write,
         tempfile::TempDir,
     };
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn get_capabilities_returns_capabilities() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // <root>
-        // |- fuchsia.foo
-        // |- hub
-        // |- svc
-        //    |- fuchsia.bar
-        File::create(root.join("fuchsia.foo")).unwrap();
-        File::create(root.join("hub")).unwrap();
-        fs::create_dir(root.join("svc")).unwrap();
-        File::create(root.join("svc/fuchsia.bar")).unwrap();
-
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let capabilities = get_capabilities(root_dir).await;
-        assert_eq!(
-            capabilities,
-            vec!["fuchsia.bar".to_string(), "fuchsia.foo".to_string(), "hub".to_string()]
-        );
-    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn v1_component_loads_job_id_and_name_and_process_id_and_url() {
