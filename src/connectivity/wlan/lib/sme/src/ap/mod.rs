@@ -35,7 +35,7 @@ use {
 };
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
-const DEFAULT_DTIM_PERIOD: u8 = 1;
+const DEFAULT_DTIM_PERIOD: u8 = 2;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
@@ -877,7 +877,7 @@ mod tests {
             );
             assert_eq!(start_req.bss_type, fidl_internal::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
-            assert_ne!(start_req.dtim_period, 0);
+            assert_eq!(start_req.dtim_period, DEFAULT_DTIM_PERIOD);
             assert_eq!(
                 start_req.channel,
                 unprotected_config().radio_cfg.primary_chan.expect("invalid config")
