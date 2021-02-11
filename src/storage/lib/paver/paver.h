@@ -22,7 +22,7 @@
 
 namespace paver {
 
-class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
+class Paver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface {
   using Interface::FindSysconfig;
   using Interface::UseBlockDevice;
 
@@ -101,7 +101,7 @@ class DataSinkImpl {
   std::unique_ptr<DevicePartitioner> partitioner_;
 };
 
-class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
+class DataSink : public ::llcpp::fuchsia::paver::DataSink::RawChannelInterface {
  public:
   DataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
@@ -149,7 +149,7 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
   DataSinkImpl sink_;
 };
 
-class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interface {
+class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface {
  public:
   DynamicDataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}

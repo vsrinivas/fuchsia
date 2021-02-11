@@ -32,7 +32,7 @@ using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
 class AddressSpaceDevice
     : public DeviceType,
       public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
-      public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface {
+      public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::RawChannelInterface {
   using Interface::OpenChildDriver;
 
  public:

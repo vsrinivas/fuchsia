@@ -212,7 +212,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
-class MockDirectoryAdminOpener : public fio::DirectoryAdmin::TypedChannelInterface {
+class MockDirectoryAdminOpener : public fio::DirectoryAdmin::Interface {
  public:
   void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
             OpenCompleter::Sync& completer) override {

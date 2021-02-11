@@ -115,7 +115,7 @@ struct IpPktHdr {
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
 class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
-               llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
+               llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannelInterface {
  public:
   explicit Device(zx_device_t* parent);
 

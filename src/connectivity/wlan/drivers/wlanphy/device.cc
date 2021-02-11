@@ -30,7 +30,7 @@ namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 
-class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
+class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::RawChannelInterface {
  public:
   DeviceConnector(Device* device) : device_(device) {}
   void Connect(::zx::channel request, ConnectCompleter::Sync& _completer) override {

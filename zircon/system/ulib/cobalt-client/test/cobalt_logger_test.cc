@@ -38,7 +38,8 @@ using Status = ::llcpp::fuchsia::cobalt::Status;
 using EventData = ::llcpp::fuchsia::cobalt::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
-class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory::Interface {
+class FakeLoggerFactoryService
+    : public ::llcpp::fuchsia::cobalt::LoggerFactory::RawChannelInterface {
  public:
   void CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger,
                                  CreateLoggerFromProjectIdCompleter::Sync& completer) final {

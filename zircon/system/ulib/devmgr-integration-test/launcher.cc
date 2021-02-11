@@ -46,7 +46,7 @@ namespace {
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
-class FakeRealm : public llcpp::fuchsia::sys2::Realm::Interface {
+class FakeRealm : public llcpp::fuchsia::sys2::Realm::RawChannelInterface {
  public:
   void BindChild(llcpp::fuchsia::sys2::ChildRef child, zx::channel exposed_dir,
                  BindChildCompleter::Sync& completer) override {
@@ -71,7 +71,7 @@ class FakeRealm : public llcpp::fuchsia::sys2::Realm::Interface {
 };
 
 class FakePowerRegistration
-    : public llcpp::fuchsia::power::manager::DriverManagerRegistration::Interface {
+    : public llcpp::fuchsia::power::manager::DriverManagerRegistration::RawChannelInterface {
  public:
   void Register(zx::channel transition, zx::channel dir,
                 RegisterCompleter::Sync& completer) override {

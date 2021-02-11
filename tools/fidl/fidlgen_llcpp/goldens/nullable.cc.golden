@@ -163,10 +163,9 @@ void SimpleProtocolDispatchAdd(void* interface, void* bytes,
                                ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       ::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest*>(bytes);
-  ::llcpp::fidl::test::nullable::SimpleProtocol::TypedChannelInterface::
-      AddCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::llcpp::fidl::test::nullable::SimpleProtocol::TypedChannelInterface*>(
+  ::llcpp::fidl::test::nullable::SimpleProtocol::Interface::AddCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::nullable::SimpleProtocol::Interface*>(
       interface)
       ->Add(std::move(message->a), std::move(message->b), completer);
 }
@@ -183,7 +182,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult SimpleProtocol::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult SimpleProtocol::TryDispatch(Interface* impl,
                                                    fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -192,7 +191,7 @@ namespace entries {
                                     sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult SimpleProtocol::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult SimpleProtocol::Dispatch(Interface* impl,
                                                 fidl_incoming_msg_t* msg,
                                                 ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -204,18 +203,17 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult SimpleProtocol::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult SimpleProtocol::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return SimpleProtocol::Dispatch(this, msg, txn);
 }
 
-::fidl::Result SimpleProtocol::TypedChannelInterface::AddCompleterBase::Reply(
-    int32_t sum) {
+::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
   ::fidl::internal::EncodedMessageTypes<AddResponse>::OwnedByte _response{sum};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result SimpleProtocol::TypedChannelInterface::AddCompleterBase::Reply(
+::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int32_t sum) {
   AddResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                                sum);

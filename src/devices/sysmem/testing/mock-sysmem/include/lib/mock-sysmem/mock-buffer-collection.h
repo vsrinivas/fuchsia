@@ -11,7 +11,7 @@
 
 namespace mock_sysmem {
 
-class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::Interface {
+class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::RawChannelInterface {
  public:
   void SetEventSink(::zx::channel events, SetEventSinkCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);

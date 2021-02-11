@@ -6,7 +6,7 @@ package codegen
 
 const fragmentSyncServerTmpl = `
 {{- define "SyncServerDispatchMethodSignature" -}}
-(TypedChannelInterface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)
+(Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)
 {{- end }}
 
 {{- define "SyncServerDispatchMoveParams" }}
@@ -25,8 +25,8 @@ void {{ .LLProps.ProtocolName.Name }}Dispatch{{ .Name }}(void* interface, void* 
   {{- if .Request }}
   auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
   {{- end }}
-  {{ .LLProps.ProtocolName }}::TypedChannelInterface::{{ .Name }}Completer::Sync completer(txn);
-  reinterpret_cast<{{ .LLProps.ProtocolName }}::TypedChannelInterface*>(interface)
+  {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync completer(txn);
+  reinterpret_cast<{{ .LLProps.ProtocolName }}::Interface*>(interface)
       ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .Request }}{{ if .Request }},{{ end }}
                     completer);
 }
@@ -74,7 +74,7 @@ namespace entries {
   {{- end }}
 }
 
-::fidl::DispatchResult {{ .Name }}::TypedChannelInterface::dispatch_message(fidl_incoming_msg_t* msg,
+::fidl::DispatchResult {{ .Name }}::Interface::dispatch_message(fidl_incoming_msg_t* msg,
                                                          ::fidl::Transaction* txn) {
   return {{ .Name }}::Dispatch(this, msg, txn);
 }

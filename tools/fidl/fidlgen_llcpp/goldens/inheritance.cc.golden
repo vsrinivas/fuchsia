@@ -139,10 +139,9 @@ void superDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message =
       reinterpret_cast<::llcpp::fidl::test::inheritance::super::fooRequest*>(
           bytes);
-  ::llcpp::fidl::test::inheritance::super::TypedChannelInterface::fooCompleter::
-      Sync completer(txn);
-  reinterpret_cast<
-      ::llcpp::fidl::test::inheritance::super::TypedChannelInterface*>(
+  ::llcpp::fidl::test::inheritance::super::Interface::fooCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::inheritance::super::Interface*>(
       interface)
       ->foo(std::move(message->s), completer);
 }
@@ -159,7 +158,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult super::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult super::TryDispatch(Interface* impl,
                                           fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -168,7 +167,7 @@ namespace entries {
           sizeof(entries::super) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult super::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult super::Dispatch(Interface* impl,
                                        fidl_incoming_msg_t* msg,
                                        ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -180,18 +179,17 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult super::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult super::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return super::Dispatch(this, msg, txn);
 }
 
-::fidl::Result super::TypedChannelInterface::fooCompleterBase::Reply(
-    int64_t y) {
+::fidl::Result super::Interface::fooCompleterBase::Reply(int64_t y) {
   ::fidl::internal::EncodedMessageTypes<fooResponse>::OwnedByte _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result super::TypedChannelInterface::fooCompleterBase::Reply(
+::fidl::Result super::Interface::fooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   fooResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                                y);
@@ -336,10 +334,9 @@ void subDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message =
       reinterpret_cast<::llcpp::fidl::test::inheritance::sub::fooRequest*>(
           bytes);
-  ::llcpp::fidl::test::inheritance::sub::TypedChannelInterface::fooCompleter::
-      Sync completer(txn);
-  reinterpret_cast<
-      ::llcpp::fidl::test::inheritance::sub::TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::inheritance::sub::Interface::fooCompleter::Sync
+      completer(txn);
+  reinterpret_cast<::llcpp::fidl::test::inheritance::sub::Interface*>(interface)
       ->foo(std::move(message->s), completer);
 }
 
@@ -354,7 +351,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult sub::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult sub::TryDispatch(Interface* impl,
                                         fidl_incoming_msg_t* msg,
                                         ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -363,8 +360,7 @@ namespace entries {
           sizeof(entries::sub) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult sub::Dispatch(TypedChannelInterface* impl,
-                                     fidl_incoming_msg_t* msg,
+::fidl::DispatchResult sub::Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
                                      ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
@@ -375,17 +371,17 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult sub::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult sub::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return sub::Dispatch(this, msg, txn);
 }
 
-::fidl::Result sub::TypedChannelInterface::fooCompleterBase::Reply(int64_t y) {
+::fidl::Result sub::Interface::fooCompleterBase::Reply(int64_t y) {
   ::fidl::internal::EncodedMessageTypes<fooResponse>::OwnedByte _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result sub::TypedChannelInterface::fooCompleterBase::Reply(
+::fidl::Result sub::Interface::fooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   fooResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                                y);

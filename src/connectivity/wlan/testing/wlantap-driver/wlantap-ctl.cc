@@ -45,7 +45,7 @@ class WlantapDriver {
   std::unique_ptr<async::Loop> loop_;
 };
 
-struct WlantapCtl : wlantap::WlantapCtl::Interface {
+struct WlantapCtl : wlantap::WlantapCtl::RawChannelInterface {
   WlantapCtl(WlantapDriver* driver) : driver_(driver) {}
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapCtl*>(ctx); }

@@ -65,10 +65,11 @@ class TransferQueue {
 };
 
 // Actual virtio console implementation
-class ConsoleDevice : public Device,
-                      public ddk::Device<ConsoleDevice, ddk::Messageable>,
-                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
-                      public ::llcpp::fuchsia::hardware::virtioconsole::Device::Interface {
+class ConsoleDevice
+    : public Device,
+      public ddk::Device<ConsoleDevice, ddk::Messageable>,
+      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
+      public ::llcpp::fuchsia::hardware::virtioconsole::Device::RawChannelInterface {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;

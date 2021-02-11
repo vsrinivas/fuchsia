@@ -328,7 +328,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
   // All the StreamConfig::Interface methods are forwarded to SimpleAudioStream.
   class StreamChannel : public Channel,
-                        public audio_fidl::StreamConfig::Interface,
+                        public audio_fidl::StreamConfig::RawChannelInterface,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     // Does not take ownership of stream, which must refer to a valid SimpleAudioStream that

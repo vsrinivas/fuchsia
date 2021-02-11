@@ -23,9 +23,10 @@ namespace network {
 class NetworkDevice;
 using DeviceType = ddk::Device<NetworkDevice, ddk::Messageable, ddk::Unbindable>;
 
-class NetworkDevice : public DeviceType,
+class NetworkDevice
+    : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE>,
-                      public ::llcpp::fuchsia::hardware::network::DeviceInstance::Interface {
+      public ::llcpp::fuchsia::hardware::network::DeviceInstance::RawChannelInterface {
  public:
   explicit NetworkDevice(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}

@@ -73,7 +73,7 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
 //
 // Connections have a strong reference to the server object (through std::shared_ptr), which keeps
 // the loader service alive as long as any open client connections exist.
-class LoaderConnection : public llcpp::fuchsia::ldsvc::Loader::Interface {
+class LoaderConnection : public llcpp::fuchsia::ldsvc::Loader::RawChannelInterface {
  public:
   LoaderConnection(std::shared_ptr<LoaderServiceBase> server) : server_(server) {}
 

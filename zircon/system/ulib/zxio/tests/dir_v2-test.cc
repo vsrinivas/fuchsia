@@ -20,7 +20,7 @@ namespace {
 
 namespace fio2 = ::llcpp::fuchsia::io2;
 
-class TestServerBase : public fio2::Directory::Interface {
+class TestServerBase : public fio2::Directory::RawChannelInterface {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
@@ -61,7 +61,7 @@ class TestServerBase : public fio2::Directory::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void AddInotifyFilter(fio2::InotifyWatchMask filters, fidl::StringView  path,
+  void AddInotifyFilter(fio2::InotifyWatchMask filters, fidl::StringView path,
                         uint32_t watch_descriptor, zx::socket socket, zx::channel controller,
                         AddInotifyFilterCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);

@@ -44,7 +44,7 @@ class SyncTimeline;
 
 class SyncDevice : public SyncDeviceType,
                    public ddk::GoldfishSyncProtocol<SyncDevice, ddk::base_protocol>,
-                   public llcpp::fuchsia::hardware::goldfish::SyncDevice::Interface {
+                   public llcpp::fuchsia::hardware::goldfish::SyncDevice::RawChannelInterface {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

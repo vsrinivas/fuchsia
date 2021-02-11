@@ -18,7 +18,7 @@ namespace devmgr {
 namespace fshost {
 
 // The fshost Vnode represents access to a registry of filesystems.
-class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::Interface,
+class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::RawChannelInterface,
                             public fs::Service {
  public:
   // Constructs the vnode, providing a |filesystems| node to which this node will

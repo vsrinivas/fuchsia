@@ -63,13 +63,13 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult SomeProtocol::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult SomeProtocol::TryDispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
 
-::fidl::DispatchResult SomeProtocol::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -78,7 +78,7 @@ namespace entries {
   return ::fidl::DispatchResult::kNotFound;
 }
 
-::fidl::DispatchResult SomeProtocol::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult SomeProtocol::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return SomeProtocol::Dispatch(this, msg, txn);
 }

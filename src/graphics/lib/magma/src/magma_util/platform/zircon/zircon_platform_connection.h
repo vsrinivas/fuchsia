@@ -42,7 +42,7 @@ inline void CopyNotification(const msd_notification_t* src, msd_notification_t* 
   }
 }
 
-class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Interface,
+class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::RawChannelInterface,
                                  public PlatformConnection {
  public:
   struct AsyncWait : public async_wait {

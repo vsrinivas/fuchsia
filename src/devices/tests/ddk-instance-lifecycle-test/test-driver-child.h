@@ -44,7 +44,7 @@ using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Un
 using llcpp::fuchsia::device::instancelifecycle::test::InstanceDevice;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,
-                                         public InstanceDevice::Interface {
+                                         public InstanceDevice::RawChannelInterface {
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}

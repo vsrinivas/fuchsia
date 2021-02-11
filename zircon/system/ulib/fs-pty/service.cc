@@ -21,7 +21,8 @@
 
 namespace fs_pty::internal {
 
-void DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
+void DispatchPtyDeviceMessage(
+    ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface* interface,
                               fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   ::llcpp::fuchsia::hardware::pty::Device::Dispatch(interface, msg, txn);
 }

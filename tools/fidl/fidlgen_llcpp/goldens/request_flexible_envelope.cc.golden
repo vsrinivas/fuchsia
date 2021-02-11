@@ -352,11 +352,11 @@ void ProtocolDispatchRequestStrictResponseFlexible(void* interface, void* bytes,
   auto message =
       reinterpret_cast<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestStrictResponseFlexibleRequest*>(bytes);
-  ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
-      TypedChannelInterface::RequestStrictResponseFlexibleCompleter::Sync
-          completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
-                       TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::requestflexibleenvelope::Protocol::Interface::
+      RequestStrictResponseFlexibleCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::requestflexibleenvelope::Protocol::Interface*>(
+      interface)
       ->RequestStrictResponseFlexible(std::move(message->s), completer);
 }
 
@@ -365,11 +365,11 @@ void ProtocolDispatchRequestFlexibleResponseStrict(void* interface, void* bytes,
   auto message =
       reinterpret_cast<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrictRequest*>(bytes);
-  ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
-      TypedChannelInterface::RequestFlexibleResponseStrictCompleter::Sync
-          completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
-                       TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::requestflexibleenvelope::Protocol::Interface::
+      RequestFlexibleResponseStrictCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::requestflexibleenvelope::Protocol::Interface*>(
+      interface)
       ->RequestFlexibleResponseStrict(std::move(message->s), completer);
 }
 
@@ -390,7 +390,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Protocol::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult Protocol::TryDispatch(Interface* impl,
                                              fidl_incoming_msg_t* msg,
                                              ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -399,7 +399,7 @@ namespace entries {
           sizeof(entries::Protocol) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Protocol::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult Protocol::Dispatch(Interface* impl,
                                           fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -411,40 +411,40 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult Protocol::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult Protocol::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Protocol::Dispatch(this, msg, txn);
 }
 
-::fidl::Result Protocol::TypedChannelInterface::
-    RequestStrictResponseFlexibleCompleterBase::Reply(
-        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f) {
+::fidl::Result
+Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::internal::EncodedMessageTypes<
       RequestStrictResponseFlexibleResponse>::OwnedByte _response{f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result Protocol::TypedChannelInterface::
-    RequestStrictResponseFlexibleCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
-        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f) {
+::fidl::Result
+Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
+    ::fidl::BufferSpan _buffer,
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f) {
   RequestStrictResponseFlexibleResponse::UnownedEncodedMessage _response(
       _buffer.data, _buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result Protocol::TypedChannelInterface::
-    RequestFlexibleResponseStrictCompleterBase::Reply(
-        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f) {
+::fidl::Result
+Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::internal::EncodedMessageTypes<
       RequestFlexibleResponseStrictResponse>::OwnedByte _response{f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result Protocol::TypedChannelInterface::
-    RequestFlexibleResponseStrictCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
-        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f) {
+::fidl::Result
+Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
+    ::fidl::BufferSpan _buffer,
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f) {
   RequestFlexibleResponseStrictResponse::UnownedEncodedMessage _response(
       _buffer.data, _buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

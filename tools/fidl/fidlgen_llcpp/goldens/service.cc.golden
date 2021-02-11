@@ -52,10 +52,9 @@ namespace methods {
 
 void SecondProtocolDispatchMethodOnSecond(void* interface, void* bytes,
                                           ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::service::SecondProtocol::TypedChannelInterface::
+  ::llcpp::fidl::test::service::SecondProtocol::Interface::
       MethodOnSecondCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::llcpp::fidl::test::service::SecondProtocol::TypedChannelInterface*>(
+  reinterpret_cast<::llcpp::fidl::test::service::SecondProtocol::Interface*>(
       interface)
       ->MethodOnSecond(completer);
 }
@@ -72,7 +71,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult SecondProtocol::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult SecondProtocol::TryDispatch(Interface* impl,
                                                    fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -81,7 +80,7 @@ namespace entries {
                                     sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult SecondProtocol::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult SecondProtocol::Dispatch(Interface* impl,
                                                 fidl_incoming_msg_t* msg,
                                                 ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -93,7 +92,7 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult SecondProtocol::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult SecondProtocol::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return SecondProtocol::Dispatch(this, msg, txn);
 }
@@ -147,10 +146,9 @@ namespace methods {
 
 void FirstProtocolDispatchMethodOnFirst(void* interface, void* bytes,
                                         ::fidl::Transaction* txn) {
-  ::llcpp::fidl::test::service::FirstProtocol::TypedChannelInterface::
+  ::llcpp::fidl::test::service::FirstProtocol::Interface::
       MethodOnFirstCompleter::Sync completer(txn);
-  reinterpret_cast<
-      ::llcpp::fidl::test::service::FirstProtocol::TypedChannelInterface*>(
+  reinterpret_cast<::llcpp::fidl::test::service::FirstProtocol::Interface*>(
       interface)
       ->MethodOnFirst(completer);
 }
@@ -167,7 +165,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult FirstProtocol::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult FirstProtocol::TryDispatch(Interface* impl,
                                                   fidl_incoming_msg_t* msg,
                                                   ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -176,7 +174,7 @@ namespace entries {
                                    sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult FirstProtocol::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult FirstProtocol::Dispatch(Interface* impl,
                                                fidl_incoming_msg_t* msg,
                                                ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -188,7 +186,7 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult FirstProtocol::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult FirstProtocol::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return FirstProtocol::Dispatch(this, msg, txn);
 }

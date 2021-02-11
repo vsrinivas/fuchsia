@@ -54,7 +54,7 @@ using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
-                        public fuchsia_hardware_tee::DeviceConnector::Interface {
+                        public fuchsia_hardware_tee::DeviceConnector::RawChannelInterface {
  public:
   explicit OpteeController(zx_device_t* parent) : DeviceType(parent) {}
 

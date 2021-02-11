@@ -28,7 +28,7 @@ using InstanceType = ddk::Device<Instance, ddk::Messageable, ddk::Closable>;
 // an instance of this class will be created to service a new channel
 // to the virtual device.
 class Instance : public InstanceType,
-                 public llcpp::fuchsia::hardware::goldfish::PipeDevice::Interface {
+                 public llcpp::fuchsia::hardware::goldfish::PipeDevice::RawChannelInterface {
  public:
   explicit Instance(zx_device_t* parent);
   ~Instance();

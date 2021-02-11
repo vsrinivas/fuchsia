@@ -18,7 +18,8 @@ namespace sysmem_driver {
 
 class BufferCollectionToken;
 
-class BufferCollectionToken : public llcpp::fuchsia::sysmem::BufferCollectionToken::Interface,
+class BufferCollectionToken
+    : public llcpp::fuchsia::sysmem::BufferCollectionToken::RawChannelInterface,
                               public LoggingMixin,
                               public fbl::RefCounted<BufferCollectionToken> {
  public:

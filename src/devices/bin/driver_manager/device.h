@@ -94,7 +94,7 @@ struct DeviceAllDevicesListTag {};
 
 class Device
     : public fbl::RefCounted<Device>,
-      public llcpp::fuchsia::device::manager::Coordinator::Interface,
+      public llcpp::fuchsia::device::manager::Coordinator::RawChannelInterface,
       public AsyncLoopRefCountedRpcHandler<Device>,
       public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,
@@ -384,9 +384,7 @@ class Device
     ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
     composite_ = composite;
   }
-  bool is_composite() const {
-    return composite() != nullptr;
-  }
+  bool is_composite() const { return composite() != nullptr; }
   void disassociate_from_composite() { composite_ = UnassociatedWithComposite{}; }
 
   void set_host(fbl::RefPtr<DriverHost> host);

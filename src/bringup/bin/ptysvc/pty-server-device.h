@@ -15,7 +15,7 @@
 
 #include "pty-server.h"
 
-class PtyServerDevice : public ::llcpp::fuchsia::hardware::pty::Device::Interface {
+class PtyServerDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface {
  public:
   explicit PtyServerDevice(fbl::RefPtr<PtyServer> server) : server_(std::move(server)) {}
 

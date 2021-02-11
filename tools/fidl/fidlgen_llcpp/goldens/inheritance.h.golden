@@ -696,16 +696,12 @@ class super final {
   // Pure-virtual interface to be implemented by a server.
   // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
   // and |fidl::ServerEnd<SomeProtocol>|).
-  // TODO(fxbug.dev/65212): Rename this to |Interface| after all users have
-  // migrated to the typed channels API.
-  class TypedChannelInterface
-      : public ::fidl::internal::IncomingMessageDispatcher {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
-    TypedChannelInterface() = default;
-    virtual ~TypedChannelInterface() = default;
+    Interface() = default;
+    virtual ~Interface() = default;
 
-    // The marker protocol type within which this |TypedChannelInterface| class
-    // is defined.
+    // The marker protocol type within which this |Interface| class is defined.
     using _EnclosingProtocol = super;
 
     class fooCompleterBase : public ::fidl::CompleterBase {
@@ -736,23 +732,12 @@ class super final {
                                             ::fidl::Transaction* txn) final;
   };
 
-  // Pure-virtual interface to be implemented by a server.
-  class Interface : public TypedChannelInterface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using TypedChannelInterface::_EnclosingProtocol;
-    using TypedChannelInterface::fooCompleter;
-  };
-
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
   // leaving the message and transaction intact. In all other cases, it consumes
   // the message and returns true. It is possible to chain multiple TryDispatch
   // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(TypedChannelInterface* impl,
+  static ::fidl::DispatchResult TryDispatch(Interface* impl,
                                             fidl_incoming_msg_t* msg,
                                             ::fidl::Transaction* txn);
 
@@ -760,18 +745,17 @@ class super final {
   // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(TypedChannelInterface* impl,
+  static ::fidl::DispatchResult Dispatch(Interface* impl,
                                          fidl_incoming_msg_t* msg,
                                          ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of
-  // |TypedChannelInterface*|. Only used with |fidl::BindServer| to reduce
-  // template expansion. Do not call this method manually. Use |Dispatch|
-  // instead.
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
   static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
                                                    fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<TypedChannelInterface*>(impl), msg, txn);
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
   class EventSender;
@@ -1427,16 +1411,12 @@ class sub final {
   // Pure-virtual interface to be implemented by a server.
   // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
   // and |fidl::ServerEnd<SomeProtocol>|).
-  // TODO(fxbug.dev/65212): Rename this to |Interface| after all users have
-  // migrated to the typed channels API.
-  class TypedChannelInterface
-      : public ::fidl::internal::IncomingMessageDispatcher {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
-    TypedChannelInterface() = default;
-    virtual ~TypedChannelInterface() = default;
+    Interface() = default;
+    virtual ~Interface() = default;
 
-    // The marker protocol type within which this |TypedChannelInterface| class
-    // is defined.
+    // The marker protocol type within which this |Interface| class is defined.
     using _EnclosingProtocol = sub;
 
     class fooCompleterBase : public ::fidl::CompleterBase {
@@ -1467,23 +1447,12 @@ class sub final {
                                             ::fidl::Transaction* txn) final;
   };
 
-  // Pure-virtual interface to be implemented by a server.
-  class Interface : public TypedChannelInterface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using TypedChannelInterface::_EnclosingProtocol;
-    using TypedChannelInterface::fooCompleter;
-  };
-
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
   // leaving the message and transaction intact. In all other cases, it consumes
   // the message and returns true. It is possible to chain multiple TryDispatch
   // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(TypedChannelInterface* impl,
+  static ::fidl::DispatchResult TryDispatch(Interface* impl,
                                             fidl_incoming_msg_t* msg,
                                             ::fidl::Transaction* txn);
 
@@ -1491,18 +1460,17 @@ class sub final {
   // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(TypedChannelInterface* impl,
+  static ::fidl::DispatchResult Dispatch(Interface* impl,
                                          fidl_incoming_msg_t* msg,
                                          ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of
-  // |TypedChannelInterface*|. Only used with |fidl::BindServer| to reduce
-  // template expansion. Do not call this method manually. Use |Dispatch|
-  // instead.
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
   static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
                                                    fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<TypedChannelInterface*>(impl), msg, txn);
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
   class EventSender;

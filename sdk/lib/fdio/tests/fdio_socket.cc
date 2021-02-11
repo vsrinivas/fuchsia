@@ -29,7 +29,7 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interface {
+class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::RawChannelInterface {
  public:
   explicit Server(zx::socket peer) : peer_(std::move(peer)) {
     // We need the FDIO to act like it's connected.

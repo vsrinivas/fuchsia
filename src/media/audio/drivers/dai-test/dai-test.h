@@ -24,7 +24,7 @@ using DaiTestDeviceType = ddk::Device<DaiTest, ddk::Messageable>;
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,
-                public ::llcpp::fuchsia::hardware::audio::Device::Interface,
+                public ::llcpp::fuchsia::hardware::audio::Device::RawChannelInterface,
                 public ::fuchsia::hardware::audio::StreamConfig {
  public:
   explicit DaiTest(zx_device_t* parent, bool is_input);

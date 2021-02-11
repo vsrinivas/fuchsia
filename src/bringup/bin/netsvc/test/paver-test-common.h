@@ -76,18 +76,18 @@ constexpr AbrData kInitAbrData = {
         },
 };
 
-class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
+class FakePaver : public ::llcpp::fuchsia::paver::Paver::RawChannelInterface,
                   public ::llcpp::fuchsia::paver::BootManager::Interface,
-                  public ::llcpp::fuchsia::paver::DynamicDataSink::Interface {
+                  public ::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     dispatcher_ = dispatcher;
-    return fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::Paver::Interface>(
+    return fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::Paver::RawChannelInterface>(
         dispatcher, std::move(request), this);
   }
 
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& _completer) override {
-    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(
+    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface>(
         dispatcher_, std::move(data_sink), this);
   }
 
@@ -102,7 +102,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     if (std::string(path.data(), path.size()) != expected_block_device_) {
       return;
     }
-    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(
+    fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface>(
         dispatcher_, std::move(dynamic_data_sink), this);
   }
 
@@ -185,8 +185,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     completer.Reply(ZX_OK);
   }
 
-  void Flush(::llcpp::fuchsia::paver::DynamicDataSink::Interface::FlushCompleter::Sync& completer)
-      override {
+  void Flush(::llcpp::fuchsia::paver::DynamicDataSink::RawChannelInterface::FlushCompleter::Sync&
+                 completer) override {
     AppendCommand(Command::kDataSinkFlush);
     completer.Reply(ZX_OK);
   }

@@ -92,10 +92,11 @@ void ParentDispatchFirst(void* interface, void* bytes,
   auto message = reinterpret_cast<
       ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest*>(
       bytes);
-  ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
-      TypedChannelInterface::FirstCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
-                       TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::Interface::
+      FirstCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::Interface*>(
+      interface)
       ->First(std::move(message->request), completer);
 }
 
@@ -112,7 +113,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Parent::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult Parent::TryDispatch(Interface* impl,
                                            fidl_incoming_msg_t* msg,
                                            ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -121,7 +122,7 @@ namespace entries {
           sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Parent::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult Parent::Dispatch(Interface* impl,
                                         fidl_incoming_msg_t* msg,
                                         ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -133,7 +134,7 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult Parent::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult Parent::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Parent::Dispatch(this, msg, txn);
 }
@@ -299,10 +300,11 @@ void ChildDispatchFirst(void* interface, void* bytes,
   auto message = reinterpret_cast<
       ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest*>(
       bytes);
-  ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-      TypedChannelInterface::FirstCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-                       TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::Interface::
+      FirstCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::Interface*>(
+      interface)
       ->First(std::move(message->request), completer);
 }
 
@@ -311,10 +313,11 @@ void ChildDispatchSecond(void* interface, void* bytes,
   auto message = reinterpret_cast<
       ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest*>(
       bytes);
-  ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-      TypedChannelInterface::SecondCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
-                       TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::Interface::
+      SecondCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::Interface*>(
+      interface)
       ->Second(std::move(message->request), completer);
 }
 
@@ -335,7 +338,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Child::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult Child::TryDispatch(Interface* impl,
                                           fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -344,7 +347,7 @@ namespace entries {
           sizeof(entries::Child) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Child::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult Child::Dispatch(Interface* impl,
                                        fidl_incoming_msg_t* msg,
                                        ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -356,7 +359,7 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult Child::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult Child::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Child::Dispatch(this, msg, txn);
 }

@@ -11,7 +11,8 @@ Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
 {{- end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::TypedChannelInterface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateMethodSignature" . }} {
+::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
+{{- template "ReplyCallerAllocateMethodSignature" . }} {
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
   {{- template "CommaPassthroughMessageParams" .Response -}}
   );
@@ -25,7 +26,8 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::TypedChannelInterface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
+::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
+{{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl.Wire }}> response;
   {{- range .Result.ValueMembers }}
   response.value.{{ .Name }} = std::move({{ .Name }});

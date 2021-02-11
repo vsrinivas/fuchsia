@@ -17,7 +17,7 @@
 
 namespace {
 
-class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::Interface {
+class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::RawChannelInterface {
  public:
   FakeCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     loop_.StartThread("driver_host-test-coordinator-loop");

@@ -57,7 +57,7 @@ class DriverBinder {
 };
 
 class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface,
-             public llcpp::fuchsia::driver::framework::Node::Interface,
+             public llcpp::fuchsia::driver::framework::Node::RawChannelInterface,
              public fbl::DoublyLinkedListable<std::unique_ptr<Node>> {
  public:
   using Offers = std::vector<fidl::StringView>;
@@ -80,7 +80,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
  private:
   // llcpp::fuchsia::driver::framework::NodeController::Interface
   void Remove(RemoveCompleter::Sync& completer) override;
-  // llcpp::fuchsia::driver::framework::Node::Interface
+  // llcpp::fuchsia::driver::framework::Node::RawChannelInterface
   void AddChild(llcpp::fuchsia::driver::framework::NodeAddArgs args, zx::channel controller,
                 zx::channel node, AddChildCompleter::Sync& completer) override;
 
@@ -120,7 +120,7 @@ struct DriverArgs {
   Node* node;
 };
 
-class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::Interface,
+class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::RawChannelInterface,
                      public DriverBinder {
  public:
   DriverRunner(zx::channel realm, DriverIndex* driver_index, async_dispatcher_t* dispatcher);
@@ -129,7 +129,7 @@ class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::
   zx::status<> StartRootDriver(std::string_view name);
 
  private:
-  // llcpp::fuchsia::component::runner::ComponentRunner::Interface
+  // llcpp::fuchsia::component::runner::ComponentRunner::RawChannelInterface
   void Start(llcpp::fuchsia::component::runner::ComponentStartInfo start_info,
              zx::channel controller, StartCompleter::Sync& completer) override;
   // DriverBinder

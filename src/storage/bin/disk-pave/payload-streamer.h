@@ -14,7 +14,7 @@
 
 namespace disk_pave {
 
-class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::TypedChannelInterface {
+class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
  public:
   PayloadStreamer(fidl::ServerEnd<llcpp::fuchsia::paver::PayloadStream> server_end,
                   fbl::unique_fd payload);

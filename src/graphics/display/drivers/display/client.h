@@ -175,7 +175,7 @@ class DisplayControllerBindingState {
 // The Client class manages all state associated with an open display client
 // connection. Other than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
-class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
+class Client : public llcpp::fuchsia::hardware::display::Controller::RawChannelInterface {
  public:
   // |controller| must outlive this and |proxy|.
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);

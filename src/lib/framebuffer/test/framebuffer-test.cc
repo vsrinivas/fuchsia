@@ -85,7 +85,7 @@ namespace {
 
 constexpr uint32_t kBytesPerRowDivisor = 128;
 
-class StubDisplayController : public fhd::Controller::Interface {
+class StubDisplayController : public fhd::Controller::RawChannelInterface {
  public:
   StubDisplayController(bool use_ram_domain) : use_ram_domain_(use_ram_domain) {
     zx::channel sysmem_server, sysmem_client;

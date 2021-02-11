@@ -19,7 +19,7 @@ namespace fs {
 namespace internal {
 
 class DirectoryConnection final : public Connection,
-                                  public llcpp::fuchsia::io::DirectoryAdmin::TypedChannelInterface {
+                                  public llcpp::fuchsia::io::DirectoryAdmin::Interface {
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,

@@ -7,6 +7,7 @@
 
 // NOTE: this header is included first on purpose to avoid clashing with
 // Banjo-generated ones below.
+// clang-format off
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 
 #include <fuchsia/hardware/audiotypes/c/banjo.h>
@@ -14,6 +15,7 @@
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
+// clang-format on
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -90,7 +92,7 @@ class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
-                   private llcpp::fuchsia::hardware::display::Provider::Interface {
+                   private llcpp::fuchsia::hardware::display::Provider::RawChannelInterface {
  public:
   Controller(zx_device_t* parent);
   ~Controller();

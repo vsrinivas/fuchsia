@@ -110,12 +110,11 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     // |Protocol| should be an LLCPP generated class e.g. |llcpp::fuchsia::io::File|.
     // |protocol_impl| should be the |this| pointer when used from a subclass.
     template <typename Protocol>
-    static FidlProtocol Create(typename Protocol::TypedChannelInterface* protocol_impl) {
+    static FidlProtocol Create(typename Protocol::Interface* protocol_impl) {
       return FidlProtocol(static_cast<void*>(protocol_impl),
                           [](void* impl, fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
                             return Protocol::TryDispatch(
-                                static_cast<typename Protocol::TypedChannelInterface*>(impl), msg,
-                                txn);
+                                static_cast<typename Protocol::Interface*>(impl), msg, txn);
                           });
     }
 

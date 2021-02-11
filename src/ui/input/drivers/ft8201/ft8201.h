@@ -51,7 +51,7 @@ class Ft8201Device;
 using DeviceType = ddk::Device<Ft8201Device, ddk::Messageable, ddk::Unbindable>;
 
 class Ft8201Device : public DeviceType,
-                     fuchsia_input_report::InputDevice::Interface,
+                     fuchsia_input_report::InputDevice::RawChannelInterface,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   Ft8201Device(zx_device_t* parent, ddk::I2cChannel i2c) : Ft8201Device(parent, i2c, {}, {}) {}

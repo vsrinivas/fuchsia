@@ -20,8 +20,7 @@ namespace fs {
 
 namespace internal {
 
-class NodeConnection final : public Connection,
-                             public llcpp::fuchsia::io::Node::TypedChannelInterface {
+class NodeConnection final : public Connection, public llcpp::fuchsia::io::Node::Interface {
  public:
   // Refer to documentation for |Connection::Connection|.
   NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,

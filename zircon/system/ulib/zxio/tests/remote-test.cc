@@ -20,7 +20,7 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-class TestServerBase : public fio::Node::Interface {
+class TestServerBase : public fio::Node::RawChannelInterface {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;

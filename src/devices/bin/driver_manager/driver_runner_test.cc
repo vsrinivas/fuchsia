@@ -217,8 +217,8 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &controller_client_end, &controller_server_end));
     TestTransaction transaction(driver.close);
     {
-      frunner::ComponentRunner::Interface::StartCompleter::Sync completer(&transaction);
-      static_cast<frunner::ComponentRunner::Interface*>(driver_runner)
+      frunner::ComponentRunner::RawChannelInterface::StartCompleter::Sync completer(&transaction);
+      static_cast<frunner::ComponentRunner::RawChannelInterface*>(driver_runner)
           ->Start(start_info.build(), std::move(controller_server_end), completer);
     }
     loop().RunUntilIdle();

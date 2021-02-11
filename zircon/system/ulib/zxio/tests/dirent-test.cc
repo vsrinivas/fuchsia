@@ -21,7 +21,7 @@ namespace {
 namespace fio = ::llcpp::fuchsia::io;
 namespace fio2 = ::llcpp::fuchsia::io2;
 
-class TestServer final : public fio::Directory::Interface {
+class TestServer final : public fio::Directory::RawChannelInterface {
  public:
   TestServer() = default;
 

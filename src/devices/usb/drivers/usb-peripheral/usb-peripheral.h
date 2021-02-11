@@ -92,10 +92,11 @@ struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
 // This is the main class for the USB peripheral role driver.
 // It binds against the USB DCI driver device and manages a list of UsbFunction devices,
 // one for each USB function in the peripheral role configuration.
-class UsbPeripheral : public UsbPeripheralType,
-                      public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
-                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
-                      public ::llcpp::fuchsia::hardware::usb::peripheral::Device::Interface {
+class UsbPeripheral
+    : public UsbPeripheralType,
+      public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
+      public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
+      public ::llcpp::fuchsia::hardware::usb::peripheral::Device::RawChannelInterface {
  public:
   UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 

@@ -187,9 +187,11 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
   child->set_controller_binding(bind_controller.take_value());
 
   if (node.is_valid()) {
-    auto bind_node = fidl::BindServer<fdf::Node::Interface>(
+    auto bind_node = fidl::BindServer<fdf::Node::RawChannelInterface>(
         dispatcher_, std::move(node), child.get(),
-        [](fdf::Node::Interface* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+        [](fdf::Node::RawChannelInterface* node, auto, auto) {
+          static_cast<Node*>(node)->Remove();
+        });
     if (bind_node.is_error()) {
       LOGF(ERROR, "Failed to bind channel to Node '%.*s': %s", name.size(), name.data(),
            zx_status_get_string(bind_node.error()));
@@ -325,9 +327,10 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
   }
 
   // Bind the Node associated with the driver.
-  auto bind_node = fidl::BindServer<fdf::Node::Interface>(
+  auto bind_node = fidl::BindServer<fdf::Node::RawChannelInterface>(
       dispatcher_, std::move(server_end), driver_args.node,
-      [driver_binding = bind_driver.take_value()](fdf::Node::Interface* node, auto, auto) mutable {
+      [driver_binding = bind_driver.take_value()](fdf::Node::RawChannelInterface* node, auto,
+                                                  auto) mutable {
         driver_binding.Unbind();
         static_cast<Node*>(node)->Remove();
       });

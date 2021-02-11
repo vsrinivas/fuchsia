@@ -13,7 +13,7 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::io::Node::Interface {
+class Server final : public llcpp::fuchsia::io::Node::RawChannelInterface {
  public:
   explicit Server(llcpp::fuchsia::io::NodeInfo describe_info)
       : describe_info_(std::move(describe_info)) {}

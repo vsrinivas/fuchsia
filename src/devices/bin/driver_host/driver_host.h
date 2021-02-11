@@ -48,8 +48,9 @@ namespace internal {
 DriverHostContext* ContextForApi();
 void RegisterContextForApi(DriverHostContext* context);
 
-class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
-                                    public fuchsia::device::manager::DevhostController::Interface {
+class DevhostControllerConnection
+    : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
+      public fuchsia::device::manager::DevhostController::RawChannelInterface {
  public:
   // |ctx| must outlive this connection
   explicit DevhostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}

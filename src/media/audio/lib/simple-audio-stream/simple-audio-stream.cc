@@ -196,14 +196,15 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   auto stream_channel = StreamChannel::Create<StreamChannel>(this);
   // We keep alive all channels in stream_channels_ (protected by channel_lock_).
   stream_channels_.push_back(stream_channel);
-  fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
-      [this, stream_channel](audio_fidl::StreamConfig::Interface*, fidl::UnbindInfo, zx::channel) {
+  fidl::OnUnboundFn<audio_fidl::StreamConfig::RawChannelInterface> on_unbound =
+      [this, stream_channel](audio_fidl::StreamConfig::RawChannelInterface*, fidl::UnbindInfo,
+                             zx::channel) {
         ScopedToken t(domain_token());
         fbl::AutoLock channel_lock(&channel_lock_);
         this->DeactivateStreamChannel(stream_channel.get());
       };
 
-  fidl::BindServer<audio_fidl::StreamConfig::Interface>(
+  fidl::BindServer<audio_fidl::StreamConfig::RawChannelInterface>(
       dispatcher(), std::move(stream_channel_local), stream_channel.get(), std::move(on_unbound));
 
   if (privileged) {
@@ -255,7 +256,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
 
 void SimpleAudioStream::CreateRingBuffer(
     StreamChannel* channel, audio_fidl::Format format, zx::channel ring_buffer,
-    audio_fidl::StreamConfig::Interface::CreateRingBufferCompleter::Sync& completer) {
+    audio_fidl::StreamConfig::RawChannelInterface::CreateRingBufferCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   zx::channel rb_channel_local;
   zx::channel rb_channel_remote;
@@ -477,7 +478,7 @@ void SimpleAudioStream::SetGain(audio_fidl::GainState target_state,
 }
 
 void SimpleAudioStream::GetProperties(
-    audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync& completer) {
+    audio_fidl::StreamConfig::RawChannelInterface::GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   auto builder = audio_fidl::StreamProperties::UnownedBuilder();
   fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
@@ -516,7 +517,7 @@ void SimpleAudioStream::GetProperties(
 }
 
 void SimpleAudioStream::GetSupportedFormats(
-    audio_fidl::StreamConfig::Interface::GetSupportedFormatsCompleter::Sync& completer) {
+    audio_fidl::StreamConfig::RawChannelInterface::GetSupportedFormatsCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
   // Build formats compatible with FIDL from a vector of audio_stream_format_range_t.

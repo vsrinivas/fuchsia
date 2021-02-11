@@ -38,7 +38,7 @@ using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable, ddk:
 
 class ControllerDevice : public ControllerDeviceType,
                          public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA>,
-                         public llcpp::fuchsia::hardware::camera::Device::Interface {
+                         public llcpp::fuchsia::hardware::camera::Device::RawChannelInterface {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, zx::event event)

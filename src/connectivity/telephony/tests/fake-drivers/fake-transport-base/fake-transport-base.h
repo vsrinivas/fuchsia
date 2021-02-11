@@ -29,7 +29,7 @@ typedef enum {
 } DevicePacketEnum;
 
 // TODO (jiamingw): change the name of FIDL protocol in next CL.
-class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
+class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::RawChannelInterface {
  public:
   explicit Device(zx_device_t* device);
 

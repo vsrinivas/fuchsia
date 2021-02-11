@@ -115,10 +115,11 @@ void ExampleProtocolDispatchMethod(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<::llcpp::fidl::test::placementofattributes::
                                       ExampleProtocol::MethodRequest*>(bytes);
-  ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
-      TypedChannelInterface::MethodCompleter::Sync completer(txn);
-  reinterpret_cast<::llcpp::fidl::test::placementofattributes::ExampleProtocol::
-                       TypedChannelInterface*>(interface)
+  ::llcpp::fidl::test::placementofattributes::ExampleProtocol::Interface::
+      MethodCompleter::Sync completer(txn);
+  reinterpret_cast<
+      ::llcpp::fidl::test::placementofattributes::ExampleProtocol::Interface*>(
+      interface)
       ->Method(std::move(message->arg), completer);
 }
 
@@ -135,7 +136,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult ExampleProtocol::TryDispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult ExampleProtocol::TryDispatch(Interface* impl,
                                                     fidl_incoming_msg_t* msg,
                                                     ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -144,7 +145,7 @@ namespace entries {
                                      sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult ExampleProtocol::Dispatch(TypedChannelInterface* impl,
+::fidl::DispatchResult ExampleProtocol::Dispatch(Interface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -156,7 +157,7 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult ExampleProtocol::TypedChannelInterface::dispatch_message(
+::fidl::DispatchResult ExampleProtocol::Interface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ExampleProtocol::Dispatch(this, msg, txn);
 }

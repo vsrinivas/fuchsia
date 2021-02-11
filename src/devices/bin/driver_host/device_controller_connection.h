@@ -20,7 +20,7 @@ struct zx_device;
 class DeviceControllerConnection
     : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
       public llcpp::fuchsia::device::manager::DeviceController::Interface,
-      public llcpp::fuchsia::io::Directory::Interface {
+      public llcpp::fuchsia::io::Directory::RawChannelInterface {
  public:
   // |ctx| must outlive this connection
   DeviceControllerConnection(
@@ -66,8 +66,7 @@ class DeviceControllerConnection
 
   // All methods below are intentionally unimplemented.
   void AddInotifyFilter(::llcpp::fuchsia::io2::InotifyWatchMask filters, ::fidl::StringView path,
-                        uint32_t watch_descriptor, ::zx::socket socket,
-                        ::zx::channel controller,
+                        uint32_t watch_descriptor, ::zx::socket socket, ::zx::channel controller,
                         AddInotifyFilterCompleter::Sync& _completer) override {}
 
   void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& _completer) override {}

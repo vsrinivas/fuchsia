@@ -15,7 +15,7 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interface {
+class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::RawChannelInterface {
  public:
   Server(zx_handle_t channel, zx::socket peer) : channel_(channel), peer_(std::move(peer)) {}
 

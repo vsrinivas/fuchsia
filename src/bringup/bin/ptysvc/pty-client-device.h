@@ -15,7 +15,7 @@
 
 #include "pty-client.h"
 
-class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::Interface {
+class PtyClientDevice : public ::llcpp::fuchsia::hardware::pty::Device::RawChannelInterface {
  public:
   explicit PtyClientDevice(fbl::RefPtr<PtyClient> client) : client_(std::move(client)) {}
 

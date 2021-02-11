@@ -36,7 +36,7 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver>> binding_;
 };
 
-class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::Interface {
+class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::RawChannelInterface {
  public:
   // DriverHost does not take ownership of |loop|.
   explicit DriverHost(async::Loop* loop);

@@ -35,7 +35,7 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
 // [START launcher-impl]
 // Implementation of EchoLauncher. Each method creates an instance of EchoImpl
 // with the specified prefix.
-class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::Interface {
+class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::RawChannelInterface {
  public:
   explicit EchoLauncherImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 

@@ -29,7 +29,7 @@ class Blobfs;
 
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
 #ifdef __Fuchsia__
-class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::Interface {
+class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::RawChannelInterface {
 #else
 class Directory final : public fs::Vnode {
 #endif
