@@ -21,6 +21,7 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 
 #include <block-client/cpp/client.h>
@@ -96,17 +97,23 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
-  PartitionInfo() : pd(nullptr), active(false) {}
+  PartitionInfo() = default;
 
-  fvm::PartitionDescriptor* pd;
+  fvm::PartitionDescriptor* pd = nullptr;
+  fvm::PartitionDescriptor aligned_pd = {};
   fbl::unique_fd new_part;
-  bool active;
+  bool active = false;
 };
 
-inline fvm::ExtentDescriptor* GetExtent(fvm::PartitionDescriptor* pd, size_t extent) {
-  return reinterpret_cast<fvm::ExtentDescriptor*>(reinterpret_cast<uintptr_t>(pd) +
-                                                  sizeof(fvm::PartitionDescriptor) +
-                                                  extent * sizeof(fvm::ExtentDescriptor));
+ptrdiff_t GetExtentOffset(size_t extent) {
+  return sizeof(fvm::PartitionDescriptor) + extent * sizeof(fvm::ExtentDescriptor);
+}
+
+fvm::ExtentDescriptor GetExtent(fvm::PartitionDescriptor* pd, size_t extent) {
+  fvm::ExtentDescriptor descriptor = {};
+  const auto* descriptor_ptr = reinterpret_cast<uint8_t*>(pd) + GetExtentOffset(extent);
+  memcpy(&descriptor, descriptor_ptr, sizeof(fvm::ExtentDescriptor));
+  return descriptor;
 }
 
 // Registers a FIFO
@@ -160,11 +167,11 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
                                size_t block_size, block_fifo_request_t* request) {
   size_t slice_size = reader->Image()->slice_size;
   const size_t vmo_cap = mapper.size();
-  for (size_t e = 0; e < part->pd->extent_count; e++) {
+  for (size_t e = 0; e < part->aligned_pd.extent_count; e++) {
     LOG("Writing extent %zu... \n", e);
-    fvm::ExtentDescriptor* ext = GetExtent(part->pd, e);
-    size_t offset = ext->slice_start * slice_size;
-    size_t bytes_left = ext->extent_length;
+    fvm::ExtentDescriptor ext = GetExtent(part->pd, e);
+    size_t offset = ext.slice_start * slice_size;
+    size_t bytes_left = ext.extent_length;
 
     // Write real data
     while (bytes_left > 0) {
@@ -207,9 +214,9 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
 
     // Write trailing zeroes (which are implied, but were omitted from
     // transfer).
-    bytes_left = (ext->slice_count * slice_size) - ext->extent_length;
+    bytes_left = (ext.slice_count * slice_size) - ext.extent_length;
     if (bytes_left > 0) {
-      LOG("%zu bytes written, %zu zeroes left\n", ext->extent_length, bytes_left);
+      LOG("%zu bytes written, %zu zeroes left\n", ext.extent_length, bytes_left);
       memset(mapper.start(), 0, vmo_cap);
     }
     while (bytes_left > 0) {
@@ -398,13 +405,13 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     return status;
   }
 
-  fvm::ExtentDescriptor* ext = GetExtent(part->pd, 0);
+  fvm::ExtentDescriptor ext = GetExtent(part->pd, 0);
   size_t reserved = volume->reserved_slices();
 
   // |Create| guarantees at least |reserved| + 1 slices are allocated.  If the first extent had a
   // single slice, we're done.
-  size_t allocated = std::max(reserved + 1, ext->slice_count);
-  size_t needed = reserved + ext->slice_count;
+  size_t allocated = std::max(reserved + 1, ext.slice_count);
+  size_t needed = reserved + ext.slice_count;
   if (allocated >= needed) {
     return ZX_OK;
   }
@@ -499,6 +506,7 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
   size_t requested_slices = 0;
   for (size_t p = 0; p < hdr->partition_count; p++) {
     parts[p].pd = part;
+    memcpy(&parts[p].aligned_pd, part, sizeof(fvm::PartitionDescriptor));
     if (parts[p].pd->magic != fvm::kPartitionDescriptorMagic) {
       ERROR("Bad partition magic\n");
       return ZX_ERR_IO;
@@ -510,51 +518,52 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
       return status;
     }
 
-    fvm::ExtentDescriptor* ext = GetExtent(parts[p].pd, 0);
-    if (ext->magic != fvm::kExtentDescriptorMagic) {
+    fvm::ExtentDescriptor ext = GetExtent(parts[p].pd, 0);
+    if (ext.magic != fvm::kExtentDescriptorMagic) {
       ERROR("Bad extent magic\n");
       return ZX_ERR_IO;
     }
-    if (ext->slice_start != 0) {
+    if (ext.slice_start != 0) {
       ERROR("First slice must start at zero\n");
       return ZX_ERR_IO;
     }
-    if (ext->slice_count == 0) {
+    if (ext.slice_count == 0) {
       ERROR("Extents must have > 0 slices\n");
       return ZX_ERR_IO;
     }
-    if (ext->extent_length > ext->slice_count * hdr->slice_size) {
+    if (ext.extent_length > ext.slice_count * hdr->slice_size) {
       ERROR("Extent length(%lu) must fit within allocated slice count(%lu * %lu)\n",
-            ext->extent_length, ext->slice_count, hdr->slice_size);
+            ext.extent_length, ext.slice_count, hdr->slice_size);
       return ZX_ERR_IO;
     }
 
     // Filter drivers may require additional space.
-    if ((parts[p].pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
+    if ((parts[p].aligned_pd.flags & fvm::kSparseFlagZxcrypt) != 0) {
       requested_slices += kZxcryptExtraSlices;
     }
 
-    for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
+    for (size_t e = 1; e < parts[p].aligned_pd.extent_count; e++) {
       ext = GetExtent(parts[p].pd, e);
-      if (ext->magic != fvm::kExtentDescriptorMagic) {
+      if (ext.magic != fvm::kExtentDescriptorMagic) {
         ERROR("Bad extent magic\n");
         return ZX_ERR_IO;
-      } else if (ext->slice_count == 0) {
+      } else if (ext.slice_count == 0) {
         ERROR("Extents must have > 0 slices\n");
         return ZX_ERR_IO;
-      } else if (ext->extent_length > ext->slice_count * hdr->slice_size) {
+      } else if (ext.extent_length > ext.slice_count * hdr->slice_size) {
         char name[BLOCK_NAME_LEN + 1];
         name[BLOCK_NAME_LEN] = '\0';
-        memcpy(&name, parts[p].pd->name, sizeof(BLOCK_NAME_LEN));
+        memcpy(&name, parts[p].aligned_pd.name, sizeof(BLOCK_NAME_LEN));
         ERROR("Partition(%s) extent length(%lu) must fit within allocated slice count(%lu * %lu)\n",
-              name, ext->extent_length, ext->slice_count, hdr->slice_size);
+              name, ext.extent_length, ext.slice_count, hdr->slice_size);
         return ZX_ERR_IO;
       }
 
-      requested_slices += ext->slice_count;
+      requested_slices += ext.slice_count;
     }
-    part = reinterpret_cast<fvm::PartitionDescriptor*>(reinterpret_cast<uintptr_t>(ext) +
-                                                       sizeof(fvm::ExtentDescriptor));
+    part = reinterpret_cast<fvm::PartitionDescriptor*>(
+        reinterpret_cast<uint8_t*>(parts[p].pd) + sizeof(fvm::PartitionDescriptor) +
+       parts[p].aligned_pd.extent_count * sizeof(fvm::ExtentDescriptor));
   }
 
   *out_requested_slices = requested_slices;
@@ -568,12 +577,12 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
 zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::unique_fd& fvm_fd,
                                fbl::Array<PartitionInfo>* parts) {
   for (size_t p = 0; p < parts->size(); p++) {
-    fvm::ExtentDescriptor* ext = GetExtent((*parts)[p].pd, 0);
+    fvm::ExtentDescriptor ext = GetExtent((*parts)[p].pd, 0);
     alloc_req_t alloc = {};
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
     alloc.flags = (*parts)[p].active ? 0 : volume::ALLOCATE_PARTITION_FLAG_INACTIVE;
-    alloc.slice_count = ext->slice_count;
+    alloc.slice_count = ext.slice_count;
     memcpy(&alloc.type, (*parts)[p].pd->type, sizeof(alloc.type));
     memcpy(&alloc.guid, uuid::Uuid::Generate().bytes(), uuid::kUuidSize);
     memcpy(&alloc.name, (*parts)[p].pd->name, sizeof(alloc.name));
@@ -598,8 +607,8 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
     // begin indexing from the 1st extent here.
     for (size_t e = 1; e < (*parts)[p].pd->extent_count; e++) {
       ext = GetExtent((*parts)[p].pd, e);
-      uint64_t offset = ext->slice_start;
-      uint64_t length = ext->slice_count;
+      uint64_t offset = ext.slice_start;
+      uint64_t length = ext.slice_count;
 
       fdio_cpp::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
       auto result = volume::Volume::Call::Extend(partition_connection.channel(), offset, length);
