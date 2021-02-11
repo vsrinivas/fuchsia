@@ -113,7 +113,7 @@ the test, there are two additional manual steps:
 
 * Rename the FIDL library used in the test. For example,
   replace all instances of `protocolmethoadd` with `protocolmethodremove` inside
-  of of the `protocol-method-remove/` test.
+  of the `protocol-method-remove/` test.
 * Update the transition instructions for the test. Generally, this will involve
   negating any existing instructions. For example, an instruction of
   `"add method foo"`, would become `"remove method foo"` in the reversed test.

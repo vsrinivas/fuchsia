@@ -4,6 +4,7 @@
 """ The types in this file correspond directly to the test.json structure. """
 
 from dataclasses import asdict, dataclass
+import json
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 

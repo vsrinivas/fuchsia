@@ -1,0 +1,110 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_before.dart",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Writers can now produce instances of the new enum member."
+                    ],
+                    "source": "dart/step_03_after.dart",
+                    "step_num": 3
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_before.go",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Writers can now produce instances of the new enum member."
+                    ],
+                    "source": "go/step_03_after.go",
+                    "step_num": 3
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Writers can now produce instances of the new enum member."
+                    ],
+                    "source": "hlcpp/step_03_after.cc",
+                    "step_num": 3
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Writers can now produce instances of the new enum member."
+                    ],
+                    "source": "llcpp/step_03_after.cc",
+                    "step_num": 3
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "instructions": [
+                        "Replace any unknown match arm macros with a catch-all case to handle the soon-to-be-added variant."
+                    ],
+                    "source": "rust/step_01_during.rs",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Writers can now produce instances of the new enum member.",
+                        "Replace the catch-all case with the unknown macro."
+                    ],
+                    "source": "rust/step_03_after.rs",
+                    "step_num": 3
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_02_after": {
+            "instructions": [
+                "Add the new member"
+            ],
+            "source": "fidl/step_02_after.test.fidl"
+        }
+    },
+    "title": "Add an enum member"
+}

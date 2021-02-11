@@ -1,0 +1,109 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_before.dart",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove all references to the soon-to-be-removed member."
+                    ],
+                    "source": "dart/step_01_after.dart",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_before.go",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove all references to the soon-to-be-removed member."
+                    ],
+                    "source": "go/step_01_after.go",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove all references to the soon-to-be-removed member."
+                    ],
+                    "source": "hlcpp/step_01_after.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove all references to the soon-to-be-removed member."
+                    ],
+                    "source": "llcpp/step_01_after.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove all references to the soon-to-be-removed member. For readers, the member should be temporarily handled as part of a catch-all case."
+                    ],
+                    "source": "rust/step_01_during.rs",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Readers no longer need to handle the removed enum member in any switch statements."
+                    ],
+                    "source": "rust/step_03_after.rs",
+                    "step_num": 3
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_02_after": {
+            "instructions": [
+                "Remove the old member"
+            ],
+            "source": "fidl/step_02_after.test.fidl"
+        }
+    },
+    "title": "Remove an enum member"
+}

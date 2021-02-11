@@ -9,12 +9,16 @@ group("tests") {
     "bits-flexible-strict:tests",
     "bits-strict-flexible:tests",
     "enum-flexible-strict:tests",
+    "enum-member-add:tests",
+    "enum-member-remove:tests",
     "enum-strict-flexible:tests",
     "protocol-event-add:tests",
     "protocol-event-remove:tests",
     "protocol-method-add:tests",
     "protocol-method-remove:tests",
     "union-flexible-strict:tests",
+    "union-member-add:tests",
+    "union-member-remove:tests",
     "union-strict-flexible:tests",
   ]
 }
