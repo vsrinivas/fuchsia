@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO(fxbug.dev/69442) remove this allowance
-#![allow(legacy_derive_helpers)]
-
 pub mod ansi;
 pub mod clipboard;
 pub mod config;
