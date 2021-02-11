@@ -36,11 +36,12 @@ fuchsia_component("fvm-no-crash") {
   deps = [ "fvm:stressor-bin" ]
 }
 
-fuchsia_component("fvm-crash") {
-  testonly = true
-  manifest = "fvm/meta/crash.cmx"
-  deps = [ "fvm:stressor-bin" ]
-}
+# TODO(70180): Re-enable this test after fixing state bug
+#fuchsia_component("fvm-crash") {
+#  testonly = true
+#  manifest = "fvm/meta/crash.cmx"
+#  deps = [ "fvm:stressor-bin" ]
+#}
 
 fuchsia_component("blobfs-short") {
   testonly = true
@@ -65,7 +66,7 @@ fuchsia_component("minfs-short") {
 # in this package, each running for exactly 22 hours.
 fuchsia_test_package("storage-stress-tests") {
   test_components = [
-    ":fvm-crash",
+    # ":fvm-crash",
     ":fvm-no-crash",
     ":blobfs-crash",
     ":blobfs-no-crash",
