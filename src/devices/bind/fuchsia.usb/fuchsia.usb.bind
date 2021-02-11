@@ -18,6 +18,7 @@ extend uint fuchsia.BIND_PROTOCOL {
   INTERFACE = 38,
   PERIPHERAL = 39,
   FUNCTION = 40,
+  HCI = 42,
 };
 
 extend uint fuchsia.BIND_USB_VID {
