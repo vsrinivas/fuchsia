@@ -314,7 +314,7 @@ impl Log {
         }));
         let super_block: SuperBlock = deserialize_from(&mut reader)?;
         println!("super-block: {:?}", super_block);
-        stores.new_store(ObjectStore::new_empty(
+        stores.new_store(&ObjectStore::new_empty(
             None,
             ROOT_PARENT_STORE_OBJECT_ID,
             device,
@@ -386,7 +386,6 @@ impl Log {
                             }
                             if !found_end_of_super_block {
                                 let root_parent = stores.root_parent_store();
-                                println!("opening object store");
                                 stores.set_root_store(root_parent.open_store(
                                     super_block.root_store_object_id,
                                     StoreOptions {
@@ -398,7 +397,6 @@ impl Log {
                                 reader.read_offset = super_block.log_checkpoint.file_offset;
                                 reader.last_check_sum = super_block.log_checkpoint.check_sum;
                                 reader.last_read_check_sum = super_block.log_checkpoint.check_sum;
-                                println!("opening log file");
                                 reader.handle = Box::new(stores.root_store().open_object(
                                     super_block.log_object_id,
                                     log_handle_options(),
@@ -543,6 +541,10 @@ impl Log {
     pub fn commit(&self, transaction: Transaction) {
         self.log().as_mut().unwrap().commit(transaction, None);
     }
+
+    pub fn register_store(&self, store: &Arc<ObjectStore>) {
+        self.log().as_ref().unwrap().stores.new_store(store);
+    }
 }
 
 pub struct InitializedLog {
@@ -635,6 +637,16 @@ impl InitializedLog {
         return true;
     }
 
+    fn get_store(&self, store_object_id: u64) -> Arc<ObjectStore> {
+        if let Some(store) = self.stores.store(store_object_id) {
+            return store;
+        }
+        let store =
+            self.stores.root_store().lazy_open_store(store_object_id, StoreOptions::default());
+        self.stores.new_store(&store);
+        store
+    }
+
     fn apply_mutation(
         &mut self,
         object_id: u64,
@@ -642,12 +654,10 @@ impl InitializedLog {
         mutation: Mutation,
         log_file_offsets: Option<&HashMap<u64, u64>>,
     ) {
-        // If a store isn't found below, that's OK --- it means it must have been deleted in a
-        // later log message. TODO: is there a nicer way?
         match mutation {
             Mutation::Insert { item } => {
                 if self.should_apply(object_id, log_file_checkpoint, log_file_offsets) {
-                    self.stores.store(object_id).map(|s| s.insert(item));
+                    self.get_store(object_id).insert(item);
                 }
             }
             Mutation::ReplaceExtent { item } => {
@@ -668,12 +678,12 @@ impl InitializedLog {
                     );
                 }
                 if self.should_apply(object_id, log_file_checkpoint, log_file_offsets) {
-                    self.stores.store(object_id).map(|s| s.replace_extent(item));
+                    self.get_store(object_id).replace_extent(item);
                 }
             }
             Mutation::ReplaceOrInsert { item } => {
                 if self.should_apply(object_id, log_file_checkpoint, log_file_offsets) {
-                    self.stores.store(object_id).map(|s| s.replace_or_insert(item));
+                    self.get_store(object_id).replace_or_insert(item);
                 }
             }
             Mutation::Deallocate(item) => {

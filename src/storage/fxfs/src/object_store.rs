@@ -18,11 +18,11 @@ use {
     crate::{
         lsm_tree::{ItemRef, LSMTree},
         object_handle::{ObjectHandle, ObjectHandleCursor},
-        object_store::constants::INVALID_OBJECT_ID,
     },
     allocator::Allocator,
     anyhow::Error,
     bincode::{deserialize_from, serialize_into},
+    constants::{LOWEST_SPECIAL_OBJECT_ID, RESERVED_OBJECT_ID},
     log::{Log, Mutation},
     record::{decode_extent, ExtentKey, ObjectItem, ObjectKey, ObjectKeyData, ObjectValue},
     serde::{Deserialize, Serialize},
@@ -42,6 +42,7 @@ pub struct HandleOptions {
 
 #[derive(Default)]
 pub struct StoreOptions {
+    // TODO: This is horrible, and we should revisit this to see if it's necessary.
     use_parent_to_allocate_object_ids: bool,
 }
 
@@ -401,9 +402,6 @@ impl ObjectHandle for StoreObjectHandle {
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct StoreInfo {
-    // The root object ID.
-    root_object_id: u64,
-
     // The last used object ID.
     last_object_id: u64,
 
@@ -414,7 +412,7 @@ pub struct StoreInfo {
 
 impl StoreInfo {
     fn new() -> StoreInfo {
-        StoreInfo { root_object_id: INVALID_OBJECT_ID, last_object_id: 0, layers: Vec::new() }
+        StoreInfo { last_object_id: RESERVED_OBJECT_ID, layers: Vec::new() }
     }
 }
 
@@ -428,6 +426,12 @@ pub struct ObjectStore {
     options: StoreOptions,
     store_info: Mutex<StoreInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
+
+    // When replaying the log, the store cannot read StoreInfo until the whole log
+    // has been replayed, so during that time, opened will be false and records
+    // just get sent to the tree. Once the log has been replayed, we can open the store
+    // and load all the other layer information.
+    opened: Mutex<bool>,
 }
 
 impl ObjectStore {
@@ -440,6 +444,7 @@ impl ObjectStore {
         store_info: StoreInfo,
         tree: LSMTree<ObjectKey, ObjectValue>,
         options: StoreOptions,
+        opened: bool,
     ) -> Arc<ObjectStore> {
         Arc::new(ObjectStore {
             parent_store,
@@ -451,6 +456,7 @@ impl ObjectStore {
             options,
             store_info: Mutex::new(store_info),
             tree,
+            opened: Mutex::new(opened),
         })
     }
 
@@ -471,6 +477,7 @@ impl ObjectStore {
             StoreInfo::new(),
             LSMTree::new(merge::merge),
             options,
+            true,
         )
     }
 
@@ -482,19 +489,73 @@ impl ObjectStore {
         self: &Arc<ObjectStore>,
         options: StoreOptions,
     ) -> Result<Arc<ObjectStore>, Error> {
+        self.ensure_open()?;
         // TODO: This should probably all be in a transaction. There should probably be a log
         // record to create a store.
         let mut transaction = Transaction::new();
         let handle = self.clone().create_object(&mut transaction, HandleOptions::default())?;
-        self.log.upgrade().unwrap().commit(transaction);
-        Ok(Self::new_empty(
+        let log = self.log.upgrade().unwrap();
+        log.commit(transaction);
+
+        // Write a default StoreInfo file.  TODO: this should be part of a bigger transaction i.e.
+        // this function should take transaction as an arg.
+        let mut writer = BufWriter::new(ObjectHandleCursor::new(&handle as &dyn ObjectHandle, 0));
+        serialize_into(&mut writer, &StoreInfo::default())?;
+        writer.flush()?;
+
+        let new_store = Self::new_empty(
             Some(self.clone()),
             handle.object_id(),
             self.device.clone(),
             &self.allocator.upgrade().unwrap(),
             &self.log.upgrade().unwrap(),
             options,
-        ))
+        );
+        log.register_store(&new_store);
+        Ok(new_store)
+    }
+
+    pub fn lazy_open_store(
+        self: &Arc<ObjectStore>,
+        store_object_id: u64,
+        options: StoreOptions,
+    ) -> Arc<ObjectStore> {
+        Self::new(
+            Some(self.clone()),
+            store_object_id,
+            self.device.clone(),
+            &self.allocator.upgrade().unwrap(),
+            &self.log.upgrade().unwrap(),
+            StoreInfo::default(),
+            LSMTree::new(merge::merge),
+            options,
+            false,
+        )
+    }
+
+    // TODO: find a way to make sure this is always called at the right time. Any time we add
+    // mutation records to a transaction, this needs to be called prior to that.
+    fn ensure_open(&self) -> Result<(), Error> {
+        let mut opened = self.opened.lock().unwrap();
+        if *opened {
+            return Ok(());
+        }
+
+        let parent_store = self.parent_store.as_ref().unwrap();
+        let handle = parent_store.open_object(self.store_object_id, HandleOptions::default())?;
+        let store_info: StoreInfo =
+            deserialize_from(ObjectHandleCursor::new(&handle as &dyn ObjectHandle, 0))?;
+        let mut handles = Vec::new();
+        for object_id in &store_info.layers {
+            handles.push(parent_store.open_object(*object_id, HandleOptions::default())?);
+        }
+        self.tree.set_layers(handles.into());
+        let mut current_store_info = self.store_info_for_last_object_id().lock().unwrap();
+        if store_info.last_object_id > current_store_info.last_object_id {
+            current_store_info.last_object_id = store_info.last_object_id
+        }
+        *opened = true;
+        Ok(())
     }
 
     pub fn open_store(
@@ -502,44 +563,13 @@ impl ObjectStore {
         store_object_id: u64,
         options: StoreOptions,
     ) -> Result<Arc<ObjectStore>, Error> {
-        println!("opening handle");
-        let handle = self.clone().open_object(store_object_id, HandleOptions::default())?;
-        println!("deserializing");
-        let store_info: StoreInfo =
-            deserialize_from(ObjectHandleCursor::new(&handle as &dyn ObjectHandle, 0))?;
-        println!("opening handles");
-        let mut handles = Vec::new();
-        for object_id in &store_info.layers {
-            handles.push(self.clone().open_object(*object_id, HandleOptions::default())?);
-        }
-        if options.use_parent_to_allocate_object_ids {
-            if store_info.last_object_id > self.store_info.lock().unwrap().last_object_id {
-                self.store_info.lock().unwrap().last_object_id = store_info.last_object_id;
-            }
-        }
-        Ok(Self::new(
-            Some(self.clone()),
-            store_object_id,
-            self.device.clone(),
-            &self.allocator.upgrade().unwrap(),
-            &self.log.upgrade().unwrap(),
-            store_info,
-            LSMTree::open(merge::merge, handles.into_boxed_slice()),
-            StoreOptions::default(),
-        ))
+        let store = self.lazy_open_store(store_object_id, options);
+        store.ensure_open()?;
+        Ok(store)
     }
 
     pub fn store_object_id(&self) -> u64 {
         self.store_object_id
-    }
-
-    pub fn root_object_id(&self) -> u64 {
-        self.store_info.lock().unwrap().root_object_id
-    }
-
-    pub fn set_root_object_id(&self, root_object_id: u64) {
-        let mut store_info = self.store_info.lock().unwrap();
-        store_info.root_object_id = root_object_id;
     }
 
     pub fn open_object(
@@ -547,6 +577,7 @@ impl ObjectStore {
         object_id: u64,
         options: HandleOptions,
     ) -> std::io::Result<StoreObjectHandle> {
+        self.ensure_open().map_err(map_to_io_error)?;
         let item = self
             .tree
             .find(&ObjectKey::attribute(object_id, 0))
@@ -572,6 +603,7 @@ impl ObjectStore {
         object_id: u64,
         options: HandleOptions,
     ) -> std::io::Result<StoreObjectHandle> {
+        self.ensure_open().map_err(map_to_io_error)?;
         transaction.add(
             self.store_object_id,
             Mutation::Insert {
@@ -601,6 +633,7 @@ impl ObjectStore {
     }
 
     pub fn create_directory(self: &Arc<Self>) -> std::io::Result<directory::Directory> {
+        self.ensure_open().map_err(map_to_io_error)?;
         let object_id = self.get_next_object_id();
         let mut transaction = Transaction::new();
         transaction.add(
@@ -662,6 +695,7 @@ impl ObjectStore {
     // Push all in-memory structures to the device. This is not necessary for sync since the log
     // will take care of it. This will panic if called on the root parent store.
     pub fn flush(&self, force: bool) -> Result<(), Error> {
+        self.ensure_open()?;
         let log = self.log();
         let mut object_sync = log.begin_object_sync(self.store_object_id);
         if !force && !object_sync.needs_sync() {
@@ -694,7 +728,9 @@ impl ObjectStore {
     // -- Methods only to be called by Log --
     pub fn insert(&self, item: ObjectItem) {
         let store_info = self.store_info_for_last_object_id();
-        if item.key.object_id > store_info.lock().unwrap().last_object_id {
+        if item.key.object_id < LOWEST_SPECIAL_OBJECT_ID
+            && item.key.object_id > store_info.lock().unwrap().last_object_id
+        {
             store_info.lock().unwrap().last_object_id = item.key.object_id;
         }
         self.tree.insert(item);

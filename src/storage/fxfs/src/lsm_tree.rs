@@ -32,7 +32,13 @@ pub trait Key:
 {
 }
 pub trait Value:
-    std::fmt::Debug + Send + Sync + serde::de::DeserializeOwned + serde::Serialize + std::marker::Unpin + 'static
+    std::fmt::Debug
+    + Send
+    + Sync
+    + serde::de::DeserializeOwned
+    + serde::Serialize
+    + std::marker::Unpin
+    + 'static
 {
 }
 
@@ -49,7 +55,13 @@ impl<K> Key for K where
 {
 }
 impl<V> Value for V where
-    V: std::fmt::Debug + Send + Sync + std::marker::Unpin + serde::de::DeserializeOwned + serde::Serialize + 'static
+    V: std::fmt::Debug
+        + Send
+        + Sync
+        + std::marker::Unpin
+        + serde::de::DeserializeOwned
+        + serde::Serialize
+        + 'static
 {
 }
 
@@ -253,6 +265,7 @@ where
             let mut merger = merge::Merger::new(iterators, self.merge_fn);
             merger.advance()?;
             while let Some(item_ref) = merger.get() {
+                eprintln!("{:?}", item_ref);
                 writer.write(item_ref)?;
                 merger.advance()?;
             }
