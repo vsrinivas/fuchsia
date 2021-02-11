@@ -171,7 +171,6 @@ class TreeVisitor {
     element->Accept(this);
   }
   virtual void OnFile(std::unique_ptr<File> const& element) { element->Accept(this); }
-  virtual void OnHandleSubtype(types::HandleSubtype subtype) {}
   virtual void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) {}
   virtual void OnNullability(types::Nullability nullability) {}
 };

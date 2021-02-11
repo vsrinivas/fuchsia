@@ -131,10 +131,14 @@ struct StringType final : public Type {
 };
 
 struct HandleType final : public Type {
-  HandleType(const Name& name, types::HandleSubtype subtype, const Constant* rights,
-             types::Nullability nullability)
-      : Type(name, Kind::kHandle, nullability), subtype(subtype), rights(rights) {}
+  HandleType(const Name& name, uint32_t obj_type, types::HandleSubtype subtype,
+             const Constant* rights, types::Nullability nullability)
+      : Type(name, Kind::kHandle, nullability),
+        obj_type(obj_type),
+        subtype(subtype),
+        rights(rights) {}
 
+  const uint32_t obj_type;
   const types::HandleSubtype subtype;
   const Constant* rights;
 

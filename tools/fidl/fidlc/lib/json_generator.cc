@@ -171,6 +171,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
       }
       case flat::Type::Kind::kHandle: {
         auto type = static_cast<const flat::HandleType*>(value);
+        GenerateObjectMember("obj_type", type->obj_type);
         GenerateObjectMember("subtype", type->subtype);
         GenerateObjectMember(
             "rights",
@@ -564,8 +565,6 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
 
     if (value.maybe_size)
       GenerateObjectMember("maybe_size", value.maybe_size);
-    if (value.handle_subtype)
-      GenerateObjectMember("maybe_handle_subtype", value.handle_subtype.value());
     if (value.handle_rights)
       GenerateObjectMember("handle_rights", value.handle_rights);
   });

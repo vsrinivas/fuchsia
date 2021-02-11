@@ -104,6 +104,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
             "nullable": false
@@ -125,6 +126,7 @@
             "kind": "vector",
             "element_type": {
               "kind": "handle",
+              "obj_type": 3,
               "subtype": "vmo",
               "rights": 2147483648,
               "nullable": false
@@ -148,6 +150,7 @@
             "kind": "array",
             "element_type": {
               "kind": "handle",
+              "obj_type": 3,
               "subtype": "vmo",
               "rights": 2147483648,
               "nullable": false
@@ -173,6 +176,7 @@
               "kind": "array",
               "element_type": {
                 "kind": "handle",
+                "obj_type": 3,
                 "subtype": "vmo",
                 "rights": 2147483648,
                 "nullable": false
@@ -257,6 +261,7 @@
           "reserved": false,
           "type": {
             "kind": "handle",
+            "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
             "nullable": false
@@ -299,6 +304,7 @@
           "name": "h",
           "type": {
             "kind": "handle",
+            "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
             "nullable": false

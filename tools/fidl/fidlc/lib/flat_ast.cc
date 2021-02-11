@@ -305,13 +305,14 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
 }
 
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
+                       const std::optional<uint32_t>& obj_type,
                        const std::optional<types::HandleSubtype>& handle_subtype,
                        const Constant* handle_rights, const Size* size,
                        types::Nullability nullability, const Type** out_type,
                        std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   std::unique_ptr<Type> type;
-  if (!CreateNotOwned(name, arg_type, handle_subtype, handle_rights, size, nullability, &type,
-                      out_from_type_alias))
+  if (!CreateNotOwned(name, arg_type, obj_type, handle_subtype, handle_rights, size, nullability,
+                      &type, out_from_type_alias))
     return false;
   types_.push_back(std::move(type));
   *out_type = types_.back().get();
@@ -319,6 +320,7 @@ bool Typespace::Create(const flat::Name& name, const Type* arg_type,
 }
 
 bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
+                               const std::optional<uint32_t>& obj_type,
                                const std::optional<types::HandleSubtype>& handle_subtype,
                                const Constant* handle_rights, const Size* size,
                                types::Nullability nullability, std::unique_ptr<Type>* out_type,
@@ -334,6 +336,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
   }
   return type_template->Create({.span = name.span(),
                                 .arg_type = arg_type,
+                                .obj_type = obj_type,
                                 .handle_subtype = handle_subtype,
                                 .handle_rights = handle_rights,
                                 .size = size,
@@ -507,13 +510,17 @@ class HandleTypeTemplate final : public TypeTemplate {
     if (args.size != nullptr)
       return Fail(ErrCannotHaveSize, args.span);
 
+    // TODO(fxbug.dev/64629): When we are ready to create handle types, we
+    // should have an object type (and/or subtype) determined and not require
+    // these hardcoded defaults.
+    auto obj_type = args.obj_type.value_or(static_cast<uint32_t>(types::HandleSubtype::kHandle));
     auto handle_subtype = args.handle_subtype.value_or(types::HandleSubtype::kHandle);
     const Constant* handle_rights = args.handle_rights;
     if (handle_rights == nullptr)
       handle_rights = same_rights.get();
 
-    *out_type =
-        std::make_unique<HandleType>(name_, handle_subtype, handle_rights, args.nullability);
+    *out_type = std::make_unique<HandleType>(name_, obj_type, handle_subtype, handle_rights,
+                                             args.nullability);
     return true;
   }
 
@@ -653,18 +660,16 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       size = args.size;
     }
 
+    std::optional<uint32_t> obj_type;
     std::optional<types::HandleSubtype> handle_subtype;
-    if (decl_->partial_type_ctor->handle_subtype) {
+    if (decl_->partial_type_ctor->handle_subtype_identifier) {
       if (args.handle_subtype) {
         return Fail(ErrCannotParametrizeTwice, args.span);
       }
-      handle_subtype = decl_->partial_type_ctor->handle_subtype;
-    } else if (decl_->partial_type_ctor->handle_subtype_identifier) {
-      if (args.handle_subtype) {
-        return Fail(ErrCannotParametrizeTwice, args.span);
-      }
+      obj_type = decl_->partial_type_ctor->handle_obj_type_resolved;
       handle_subtype = decl_->partial_type_ctor->handle_subtype_identifier_resolved;
     } else {
+      obj_type = args.obj_type;
       handle_subtype = args.handle_subtype;
     }
 
@@ -678,9 +683,9 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       nullability = args.nullability;
     }
 
-    if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type, handle_subtype,
-                                    decl_->partial_type_ctor->handle_rights.get(), size,
-                                    nullability, out_type, nullptr))
+    if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type, obj_type,
+                                    handle_subtype, decl_->partial_type_ctor->handle_rights.get(),
+                                    size, nullability, out_type, nullptr))
       return false;
     if (out_from_type_alias)
       *out_from_type_alias = TypeConstructor::FromTypeAlias(decl_, args.arg_type, args.size,
@@ -1491,20 +1496,15 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
       return false;
   }
 
-  // Only one of these should be set, either handle_subtype for "old",
-  // or handle_subtype_identifier for "new". (Neither set is OK too for
-  // an untyped handle.)
   std::optional<Name> handle_subtype_identifier;
-  assert(!(raw_type_ctor->handle_subtype && raw_type_ctor->handle_subtype_identifier));
   if (raw_type_ctor->handle_subtype_identifier) {
     handle_subtype_identifier =
         Name::CreateSourced(this, raw_type_ctor->handle_subtype_identifier->span());
   }
 
   *out_type_ctor = std::make_unique<TypeConstructor>(
-      std::move(name.value()), std::move(maybe_arg_type_ctor), raw_type_ctor->handle_subtype,
-      std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
-      raw_type_ctor->nullability);
+      std::move(name.value()), std::move(maybe_arg_type_ctor), std::move(handle_subtype_identifier),
+      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability);
   return true;
 }
 
@@ -1798,10 +1798,10 @@ bool Library::ConsumeResourceDeclaration(
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
                                                                 types::Nullability nullability) {
-  return std::make_unique<TypeConstructor>(
-      decl->name, nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
-      std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
-      nullptr /* maybe_size */, nullability);
+  return std::make_unique<TypeConstructor>(decl->name, nullptr /* maybe_arg_type */,
+                                           std::optional<Name>() /* handle_subtype_identifier */,
+                                           nullptr /* handle_rights */, nullptr /* maybe_size */,
+                                           nullability);
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
@@ -3670,24 +3670,25 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   }
 
   std::optional<types::HandleSubtype> handle_subtype;
-  if (type_ctor->handle_subtype) {
-    assert(!type_ctor->handle_subtype_identifier &&
-           "cannot have both new and old style handle syntax");
-    handle_subtype = type_ctor->handle_subtype;
-  } else if (type_ctor->handle_subtype_identifier) {
-    if (!ResolveHandleSubtypeIdentifier(type_ctor,
+  if (type_ctor->handle_subtype_identifier) {
+    if (!ResolveHandleSubtypeIdentifier(type_ctor, &type_ctor->handle_obj_type_resolved,
                                         &type_ctor->handle_subtype_identifier_resolved)) {
       return Fail(ErrCouldNotResolveHandleSubtype, type_ctor->name.span(),
                   type_ctor->handle_subtype_identifier.value());
     }
     handle_subtype = type_ctor->handle_subtype_identifier_resolved;
+  } else {
+    // TODO(fxbug.dev/64629): We need to allow setting a default obj_type in
+    // resource_definition declarations rather than hard-coding.
+    type_ctor->handle_obj_type_resolved = static_cast<uint32_t>(types::HandleSubtype::kHandle);
   }
+  std::optional<uint32_t> obj_type = type_ctor->handle_obj_type_resolved;
 
   if (type_ctor->handle_rights)
     if (!ResolveConstant(type_ctor->handle_rights.get(), &kRightsType))
       return Fail(ErrCouldNotResolveHandleRights);
 
-  if (!typespace_->Create(type_ctor->name, maybe_arg_type, handle_subtype,
+  if (!typespace_->Create(type_ctor->name, maybe_arg_type, obj_type, handle_subtype,
                           type_ctor->handle_rights.get(), size, type_ctor->nullability,
                           &type_ctor->type, &type_ctor->from_type_alias))
     return false;
@@ -3695,8 +3696,8 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   return true;
 }
 
-bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor,
-                                             types::HandleSubtype* subtype) {
+bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
+                                             types::HandleSubtype* out_subtype) {
   assert(type_ctor->handle_subtype_identifier);
 
   // We only support an extremely limited form of resource suitable for
@@ -3731,8 +3732,11 @@ bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor,
         return false;
       }
       const flat::ConstantValue& value = member.value->Value();
-      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value);
-      *subtype = types::HandleSubtype(static_cast<uint32_t>(numeric_constant));
+      auto obj_type = static_cast<uint32_t>(
+          reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value));
+      *out_obj_type = obj_type;
+      // TODO(fxbug.dev/64629): Remove.
+      *out_subtype = types::HandleSubtype(obj_type);
       return true;
     }
   }
@@ -3922,8 +3926,8 @@ const std::set<Library*>& Library::dependencies() const { return dependencies_.d
 std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   return std::make_unique<TypeConstructor>(
       Name::CreateIntrinsic("uint32"), nullptr /* maybe_arg_type */,
-      std::optional<types::HandleSubtype>(), std::optional<Name>() /* handle_subtype_identifier */,
-      nullptr /* handle_rights */, nullptr /* maybe_size */, types::Nullability::kNonnullable);
+      std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
+      nullptr /* maybe_size */, types::Nullability::kNonnullable);
 }
 
 }  // namespace flat

@@ -240,6 +240,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
             "nullable": false
@@ -264,6 +265,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
             "nullable": false
@@ -288,6 +290,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
             "nullable": true

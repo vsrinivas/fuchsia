@@ -359,6 +359,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
             "nullable": true

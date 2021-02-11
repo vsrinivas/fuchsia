@@ -45,6 +45,22 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnSourceElementEnd(const raw::SourceElement& element) override {}
   void OnUsing(std::unique_ptr<raw::Using> const& element) override {}
 
+  // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
+  //   the moment it serves as a useful list of TreeVisitor methods that are
+  //   intended to be left unmodified by the ConvertingTreeVisitor.
+  // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) override {}
+  // void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) override {}
+  // void OnConstant(std::unique_ptr<Constant> const& element) override {}
+  // void OnIdentifier(std::unique_ptr<Identifier> const& element) override;
+  // void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const& element) override {}
+  // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) override {}
+  // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const& element) override {}
+  // void OnNullability(types::Nullability nullability) override {}
+  // void OnParameterList(std::unique_ptr<ParameterList> const& element) override {}
+  // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override {}
+  // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {}
+  // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {}
+
   // The remaining "On*" methods are loosely organized by keyword.  All of them
   // must be overwritten by the implementation.
 

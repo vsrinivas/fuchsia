@@ -26,13 +26,13 @@ TEST(FlatAstTests, implicit_assumptions) {
 
 TEST(FlatAstTests, compare_handles) {
   auto name_not_important = Name::CreateIntrinsic("ignore");
-  HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,
+  HandleType nonnullable_channel(name_not_important, 4, HandleSubtype::kChannel, nullptr,
                                  Nullability::kNonnullable);
-  HandleType nullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,
+  HandleType nullable_channel(name_not_important, 4, HandleSubtype::kChannel, nullptr,
                               Nullability::kNullable);
-  HandleType nonnullable_event(name_not_important, HandleSubtype::kEvent, nullptr,
+  HandleType nonnullable_event(name_not_important, 5, HandleSubtype::kEvent, nullptr,
                                Nullability::kNonnullable);
-  HandleType nullable_event(name_not_important, HandleSubtype::kEvent, nullptr,
+  HandleType nullable_event(name_not_important, 5, HandleSubtype::kEvent, nullptr,
                             Nullability::kNullable);
 
   // Comparison is nullability, then type.

@@ -894,6 +894,7 @@
             {
               "type": {
                 "kind": "handle",
+                "obj_type": 0,
                 "subtype": "handle",
                 "rights": 2147483648,
                 "nullable": false
@@ -948,6 +949,7 @@
             {
               "type": {
                 "kind": "handle",
+                "obj_type": 14,
                 "subtype": "socket",
                 "rights": 2147483648,
                 "nullable": false
@@ -980,6 +982,7 @@
             {
               "type": {
                 "kind": "handle",
+                "obj_type": 14,
                 "subtype": "socket",
                 "rights": 2147483648,
                 "nullable": false
@@ -1887,6 +1890,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 0,
             "subtype": "handle",
             "rights": 2147483648,
             "nullable": false
@@ -1928,6 +1932,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 14,
             "subtype": "socket",
             "rights": 2147483648,
             "nullable": false
@@ -1969,6 +1974,7 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 14,
             "subtype": "socket",
             "rights": 2147483648,
             "nullable": false

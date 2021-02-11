@@ -272,7 +272,6 @@ class TypeConstructor final : public SourceElement {
 
   std::unique_ptr<CompoundIdentifier> identifier;
   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
-  std::optional<types::HandleSubtype> handle_subtype;
   std::unique_ptr<Identifier> handle_subtype_identifier;
   std::unique_ptr<Constant> handle_rights;
   std::unique_ptr<Constant> maybe_size;

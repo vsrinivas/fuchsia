@@ -121,13 +121,11 @@ struct TypeConstructor final {
   };
 
   TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-                  std::optional<types::HandleSubtype> handle_subtype,
                   std::optional<Name> handle_subtype_identifier,
                   std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
                   types::Nullability nullability)
       : name(std::move(name)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
-        handle_subtype(handle_subtype),
         handle_subtype_identifier(std::move(handle_subtype_identifier)),
         handle_rights(std::move(handle_rights)),
         maybe_size(std::move(maybe_size)),
@@ -139,7 +137,6 @@ struct TypeConstructor final {
   // Set during construction.
   const Name name;
   const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
-  const std::optional<types::HandleSubtype> handle_subtype;
   const std::optional<Name> handle_subtype_identifier;
   const std::unique_ptr<Constant> handle_rights;
   const std::unique_ptr<Constant> maybe_size;
@@ -149,6 +146,7 @@ struct TypeConstructor final {
   bool compiling = false;
   bool compiled = false;
   const Type* type = nullptr;
+  uint32_t handle_obj_type_resolved  = std::numeric_limits<uint32_t>::max();
   types::HandleSubtype handle_subtype_identifier_resolved;
   std::optional<FromTypeAlias> from_type_alias;
 };
@@ -548,6 +546,7 @@ class TypeTemplate {
   struct CreateInvocation {
     const std::optional<SourceSpan>& span;
     const Type* arg_type;
+    const std::optional<uint32_t>& obj_type;
     const std::optional<types::HandleSubtype>& handle_subtype;
     const Constant* handle_rights;
     const Size* size;
@@ -576,7 +575,7 @@ class Typespace {
  public:
   explicit Typespace(Reporter* reporter) : reporter_(reporter) {}
 
-  bool Create(const flat::Name& name, const Type* arg_type,
+  bool Create(const flat::Name& name, const Type* arg_type, const std::optional<uint32_t>& obj_type,
               const std::optional<types::HandleSubtype>& handle_subtype,
               const Constant* handle_rights, const Size* size, types::Nullability nullability,
               const Type** out_type,
@@ -598,6 +597,7 @@ class Typespace {
   friend class TypeAliasTypeTemplate;
 
   bool CreateNotOwned(const flat::Name& name, const Type* arg_type,
+                      const std::optional<uint32_t>& obj_type,
                       const std::optional<types::HandleSubtype>& handle_subtype,
                       const Constant* handle_rights, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
@@ -864,7 +864,8 @@ class Library {
   bool CompileTypeConstructor(TypeConstructor* type);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
-  bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, types::HandleSubtype* subtype);
+  bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
+                                      types::HandleSubtype* out_subtype);
   bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
   bool ResolveOrOperatorConstant(Constant* constant, const Type* type,
                                  const ConstantValue& left_operand,
