@@ -29,6 +29,7 @@ source_set("generic-arm") {
     "//zircon/kernel/dev/uart/mt8167",
     "//zircon/kernel/dev/uart/nxp-imx",
     "//zircon/kernel/dev/uart/pl011",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cbuf",
     "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",

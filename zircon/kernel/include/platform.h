@@ -112,6 +112,12 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <ktl/string_view.h>
+
+// TODO(53594): Eventually `gCmdline` will be entirely replaced by
+// `gBootOptions` and physboot will hand off the latter;
+void ParseBootOptions(ktl::string_view cmdline);
+
 namespace affine {
 class Ratio;  // Fwd decl.
 }  // namespace affine

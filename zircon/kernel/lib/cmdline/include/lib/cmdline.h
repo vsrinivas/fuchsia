@@ -122,7 +122,7 @@ class Cmdline {
 
 extern Cmdline gCmdline;
 
-// Kernel command line options, sorted alphabetically.
+// TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
 static constexpr const char kArm64DisableSpecMitigations[] =
     "kernel.arm64.disable_spec_mitigations";
@@ -142,7 +142,6 @@ static constexpr const char kCprngSeedRequireJitterEntropy[] =
 static constexpr const char kDebugUartPoll[] = "kernel.debug_uart_poll";
 static constexpr const char kEnableDebuggingSyscalls[] = "kernel.enable-debugging-syscalls";
 static constexpr const char kEnableSerialSysaclls[] = "kernel.enable-serial-syscalls";
-static constexpr const char kEntropyMixin[] = "kernel.entropy-mixin";
 static constexpr const char kEntropyTestLen[] = "kernel.entropy-test.len";
 static constexpr const char kEntropyTestSrc[] = "kernel.entropy-test.src";
 static constexpr const char kForceWatchdogDisabled[] = "kernel.force-watchdog-disabled";

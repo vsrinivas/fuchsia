@@ -6,6 +6,7 @@
 
 source_set("platform") {
   sources = [
+    "boot-options.cc",
     "crashlog.cc",
     "halt_helper.cc",
     "hw_reboot_reason.cc",
@@ -13,6 +14,7 @@ source_set("platform") {
   ]
   deps = [
     "//zircon/kernel/dev/pdev/hw_watchdog",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",

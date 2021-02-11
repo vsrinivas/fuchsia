@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
@@ -26,6 +27,7 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
+#include <ktl/string_view.h>
 #include <lk/init.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
@@ -51,34 +53,25 @@ PRNG* GetInstance() {
 // TODO(security): Remove this in favor of virtio-rng once it is available and
 // we decide we don't need it for getting entropy from elsewhere.
 static bool IntegrateCmdlineEntropy() {
-  const char* entropy = gCmdline.GetString(kernel_option::kEntropyMixin);
-  if (!entropy) {
+  ktl::string_view entropy{gBootOptions->entropy_mixin};
+  if (entropy.empty()) {
     return false;
   }
 
-  const size_t kMaxEntropyArgumentLen = 128;
-  const size_t hex_len = ktl::min(strlen(entropy), kMaxEntropyArgumentLen);
+  constexpr size_t kMaxEntropyArgumentLen = 128;
+  const size_t hex_len = ktl::min(entropy.size(), kMaxEntropyArgumentLen);
+  entropy = entropy.substr(hex_len);
 
-  for (size_t i = 0; i < hex_len; ++i) {
-    if (!isxdigit(entropy[i])) {
-      panic("Invalid entropy string: idx %zu is not an ASCII hex digit\n", i);
+  for (char c : entropy) {
+    if (!isxdigit(c)) {
+      panic("Invalid entropy string %.*s: '%c' is not an ASCII hex digit\n",
+            static_cast<int>(entropy.size()), entropy.data(), c);
     }
   }
 
   uint8_t digest[SHA256_DIGEST_LENGTH];
-  SHA256(reinterpret_cast<const uint8_t*>(entropy), hex_len, digest);
+  SHA256(reinterpret_cast<const uint8_t*>(entropy.data()), entropy.size(), digest);
   kGlobalPrng->AddEntropy(digest, sizeof(digest));
-
-  // We have a pointer to const, but it's actually a pointer to the
-  // mutable global state in __kernel_cmdline that is still live (it
-  // will be copied into the userboot bootstrap message later).  So
-  // it's fully well-defined to cast away the const and mutate this
-  // here so the bits can't leak to userboot.  While we're at it,
-  // prettify the result a bit so it's obvious what one is looking at.
-  mandatory_memset(const_cast<char*>(entropy), 'x', hex_len);
-  if (hex_len >= sizeof(".redacted=") - 1) {
-    memcpy(const_cast<char*>(entropy) - 1, ".redacted=", sizeof(".redacted=") - 1);
-  }
 
   const size_t entropy_added = ktl::max(hex_len / 2, sizeof(digest));
   LTRACEF("Collected %zu bytes of entropy from the kernel cmdline.\n", entropy_added);

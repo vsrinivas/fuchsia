@@ -8,6 +8,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/items/mem_config.h>
@@ -196,7 +197,8 @@ static void platform_save_bootloader_data(void) {
           break;
         }
         payload.back() = std::byte{'\0'};
-        gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
+        ParseBootOptions(
+            ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
 
         // The CMDLINE might include entropy for the zircon cprng.
         // We don't want that information to be accesible after it has
