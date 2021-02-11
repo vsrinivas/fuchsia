@@ -11,7 +11,9 @@
 
 #include "conversion.h"
 #include "flat_ast.h"
+#include "flat/name.h"
 #include "tree_visitor.h"
+#include "underlying_type.h"
 
 namespace fidl::conv {
 
@@ -21,7 +23,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   friend Converting;
 
  public:
-  explicit ConvertingTreeVisitor(Conversion::Syntax syntax, const flat::Library* library)
+  explicit ConvertingTreeVisitor(Conversion::Syntax syntax,
+                                 const flat::Library* library)
       : to_syntax_(syntax),
         last_conversion_end_(nullptr),
         library_(library) {
@@ -106,7 +109,16 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // A pointer to the flat::Library representation of the file being visited.
   // This will be used when resolving and converting type definitions that
   // are behind aliases, defined in the imported libraries, and so forth.
-  [[maybe_unused]] const flat::Library* library_;
+  const flat::Library* library_;
+
+  // Meant to be called from inside the "OnTypeConstructor" method in the
+  // implementation.  For that method to do its work properly, it must be able
+  // to deduce the built-in type underpinning the type declaration.  For
+  // example, if OnTypeConstructor is currently looking at the type declaration
+  // "Foo<Bar>:4," what do "Foo" and "Bar" represent?  The conversion applied
+  // will look very different depending on which built-ins those identifiers
+  // resolve to.
+  std::optional<UnderlyingType> resolve(const std::unique_ptr<raw::TypeConstructor>& type_ctor);
 };
 
 class Converting {

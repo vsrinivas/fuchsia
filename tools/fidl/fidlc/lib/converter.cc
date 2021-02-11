@@ -25,13 +25,121 @@ std::optional<types::Strictness> optional_strictness(types::Strictness strictnes
 // Instead, we just match the first token to its sub-kind to deduce whether or
 // not the modifier keyword is used.
 std::optional<types::Strictness> optional_strictness(Token& decl_start_token) {
-  if (decl_start_token.subkind() == Token::Subkind::kStrict) {
-    return types::Strictness::kStrict;
+  switch (decl_start_token.subkind()) {
+    case Token::Subkind::kStrict:
+      return types::Strictness::kStrict;
+    case Token::Subkind::kFlexible:
+      return types::Strictness::kFlexible;
+    default:
+      return {};
   }
-  if (decl_start_token.subkind() == Token::Subkind::kFlexible) {
-    return types::Strictness::kFlexible;
+}
+
+// Returns the "builtin" definition underpinning a type.  If named declaration
+// is actually an alias, this method will recurse until all aliases are
+// dereferenced and actual, FIDL-native type can be deduced.
+std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& name, bool is_behind_alias) {
+  const flat::Library* lib = name.library();
+  const flat::Decl* decl_ptr = lib->LookupDeclByName(name);
+  if (decl_ptr == nullptr) {
+    return {};
   }
-  return {};
+
+  const flat::Decl::Kind& kind = decl_ptr->kind;
+  if (kind != flat::Decl::Kind::kTypeAlias) {
+    return std::make_optional(UnderlyingType(decl_ptr->kind, is_behind_alias));
+  }
+
+  auto type_alias_ptr = static_cast<const flat::TypeAlias*>(decl_ptr);
+  auto underlying_type = resolve_as_user_defined_type(type_alias_ptr->partial_type_ctor->name, true);
+  if (underlying_type != std::nullopt) {
+    return underlying_type;
+  }
+  return UnderlyingType(type_alias_ptr->partial_type_ctor->type->kind, true);
+}
+
+// Matches a string keyword to the "builtin" representing the FIDL-native type
+// it represents.
+std::optional<UnderlyingType> resolve_as_user_defined_type(const std::string& keyword) {
+  const flat::Typespace root = flat::Typespace::RootTypes(nullptr);
+  const flat::Name instrinsic = flat::Name::CreateIntrinsic(keyword);
+  const flat::TypeTemplate* t = root.LookupTemplate(instrinsic);
+  if (t == nullptr) {
+    return {};
+  }
+
+  if (keyword == "array") {
+    return UnderlyingType(flat::Type::Kind::kArray, false);
+  } else if (keyword == "vector") {
+    return UnderlyingType(flat::Type::Kind::kVector, false);
+  } else if (keyword == "bytes") {
+    return UnderlyingType(flat::Type::Kind::kVector, false);
+  } else if (keyword == "string") {
+    return UnderlyingType(flat::Type::Kind::kString, false);
+  } else if (keyword == "handle") {
+    return UnderlyingType(flat::Type::Kind::kHandle, false);
+  } else if (keyword == "request") {
+    return UnderlyingType(flat::Type::Kind::kRequestHandle, false);
+  } else {
+    return UnderlyingType(flat::Type::Kind::kPrimitive, false);
+  }
+}
+
+// Given a non-compound identifier, and a reference to the library in which
+// that identifier is defined, we should be able to resolve the underlying
+// built-in type underpinning that identifier.
+std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Identifier>& identifier, const flat::Library* lib) {
+  std::string type_decl = identifier->copy_to_str();
+
+  // Break up the type declaration - discard any "wrapped" types.
+  size_t bracket_pos = type_decl.find_first_of('<');
+  if (bracket_pos != std::string::npos) {
+    type_decl = type_decl.substr(0, bracket_pos);
+  };
+
+  // We'll need to make a flat::Name from the type_decl string, which can then
+  // be used to search the library for the name's definition recursively until
+  // its underlying type can be deduced.
+  auto underlying_type = resolve_as_user_defined_type(flat::Name::CreateSourced(lib, identifier->span()), false);
+  if (underlying_type) {
+    return underlying_type;
+  }
+  return resolve_as_user_defined_type(type_decl);
+}
+
+// Lookup the definition of a type's "key" identifier (ie, "vector" in the
+// identifier "vector<array<uint8>:>" or "Foo" in "some.lib.Foo") in a given
+// library.
+std::optional<UnderlyingType> resolve_type(const std::unique_ptr<raw::TypeConstructor>& type_ctor, const flat::Library* lib) {
+  std::unique_ptr<raw::CompoundIdentifier>& id = type_ctor->identifier;
+  std::string type_decl = id->copy_to_str();
+
+  // If there is at least one period in the declaration identifier, there is a
+  // possibility that this is a reference to an imported library.  To verify
+  // this, we'll construct the library name (ex, "some.library.Foo" becomes
+  // just "some.library") and see if we can find it in the final library's
+  // dependent libraries.
+  size_t last_dot_pos = type_decl.find_last_of('.');
+  if (last_dot_pos != std::string::npos) {
+    flat::Library* dep_lib = nullptr;
+    std::vector<std::string_view> lib_name;
+    for (size_t i = 0; i < id->components.size() - 1; i++) {
+      lib_name.emplace_back(id->components[i]->span().data());
+    }
+
+    const flat::Libraries* libs = lib->GetLibraries();
+    if (libs->Lookup(lib_name, &dep_lib)) {
+      return resolve_identifier(id->components.back(), dep_lib);
+    }
+  };
+
+  // Looks like this was not a reference to a definition in an imported
+  // library after all.  Go ahead and look for it in our current library.
+  return resolve_identifier(id->components.back(), lib);
+}
+
+std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(const std::unique_ptr<raw::TypeConstructor>& type_ctor) {
+  return resolve_type(type_ctor, library_);
 }
 
 void ConvertingTreeVisitor::OnBitsDeclaration(const std::unique_ptr<raw::BitsDeclaration> &element) {
@@ -107,7 +215,15 @@ void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember
 }
 
 void ConvertingTreeVisitor::OnTypeConstructor(const std::unique_ptr<raw::TypeConstructor>& element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<TypeConversion>(element);
+  std::optional<UnderlyingType> underlying_type = resolve(element);
+
+  // We should never get a null Builtin - if we do, there is a mistake in the
+  // converter code.  Failing this assert means we are looking at an
+  // identifier that is neither explicitly defined in the source, nor
+  // intrinsic to the language.  If that's the case, where did it come from?
+  assert(underlying_type.has_value() && "must resolve underlying builtin value for type");
+
+  std::unique_ptr<Conversion> conv = std::make_unique<TypeConversion>(element, underlying_type.value());
   Converting converting(this, std::move(conv), element->start_, element->end_);
   TreeVisitor::OnTypeConstructor(element);
 }

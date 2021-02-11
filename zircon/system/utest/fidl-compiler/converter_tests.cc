@@ -1,27 +1,26 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include <fidl/converter.h>
 #include <fidl/conversion.h>
 #include <zxtest/zxtest.h>
 
-#include "error_test.h"
 #include "test_library.h"
 
 namespace {
-
-std::string Convert(const std::string& in, std::vector<std::string>& deps, fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
+std::string Convert(const std::string& in, const std::vector<std::string>& deps, fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
   // Convert the test file, along with its deps, into a flat AST.
-  TestLibrary flat_lib(in, flags);
+  SharedAmongstLibraries shared;
+  TestLibrary flat_lib("example.fidl", in, &shared, flags);
   for (size_t i = 0; i < deps.size(); i++) {
-    const std::string& dep = deps[i];
-    flat_lib.AddSource("dep_lib_" + std::to_string(i) + ".file", dep);
+    TestLibrary dependency("dep" + std::to_string(i + 1) + ".fidl", deps[i], &shared, flags);
+    dependency.Compile();
+    flat_lib.AddDependentLibrary(std::move(dependency));
   }
   flat_lib.Compile();
 
   // Read the file again, and convert it into a raw AST.
-  TestLibrary raw_lib(in, flags);
+  TestLibrary raw_lib("example.fidl", in, flags);
   std::unique_ptr<fidl::raw::File> ast;
   raw_lib.Parse(&ast);
 
@@ -42,6 +41,10 @@ std::string ToOldSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
 }
 
+std::string ToOldSyntax(const std::string& in, const std::vector<std::string>& deps, fidl::ExperimentalFlags flags) {
+  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
+}
+
 std::string ToNewSyntax(const std::string& in) {
   fidl::ExperimentalFlags flags;
   std::vector<std::string> deps;
@@ -50,6 +53,10 @@ std::string ToNewSyntax(const std::string& in) {
 
 std::string ToNewSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   std::vector<std::string> deps;
+  return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
+}
+
+std::string ToNewSyntax(const std::string& in, const std::vector<std::string>& deps, fidl::ExperimentalFlags flags) {
   return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 
@@ -64,6 +71,31 @@ alias foo = array<uint8>:5;
 library example;
 
 alias foo = array<uint8,5>;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, AliasOfProtocols) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol P {};
+alias foo = P;
+alias bar = request<P>;
+alias baz = array<P>:4;
+alias quux = vector<request<P>>:4;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol P {};
+alias foo = client_end:P;
+alias bar = server_end:P;
+alias baz = array<client_end:P,4>;
+alias quux = vector<server_end:P>:4;
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -563,7 +595,38 @@ library example;
 type O = struct {};
 
 type S = struct {
-  o O:optional;
+  o box<O>:optional;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, StructWithProtocols) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol P {};
+
+struct S {
+  P p;
+  P? po;
+  request<P> r;
+  request<P>? ro;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol P {};
+
+type S = struct {
+  p client_end:P;
+  po client_end:<optional,P>;
+  r server_end:P;
+  ro server_end:<optional,P>;
 };
 )FIDL";
 
@@ -745,14 +808,14 @@ library example;
 table T {};
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type T = table {};
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, TableWithMember) {
@@ -764,7 +827,7 @@ table T {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type T = table {
@@ -773,7 +836,34 @@ type T = table {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, TableWithProtocols) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol P {};
+
+table T {
+  1: P p;
+  2: request<P> r;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol P {};
+
+type T = table {
+  1: p client_end:P;
+  2: r server_end:P;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, TableWithVectors) {
@@ -787,7 +877,7 @@ table T {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type T = table {
@@ -798,7 +888,7 @@ type T = table {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, TableWithHandleWithSubtype) {
@@ -810,7 +900,7 @@ resource table T {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type T = resource table {
@@ -819,7 +909,7 @@ type T = resource table {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, TableWithHandleWithSubtypeAndRights) {
@@ -831,7 +921,7 @@ resource table T {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type T = resource table {
@@ -843,7 +933,7 @@ type T = resource table {
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
 }
 
 TEST(ConverterTests, TableWithComments) {
@@ -870,7 +960,7 @@ table T {
 // Trailing comments should be retained.
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 // Top-level comments should be retained.
@@ -894,7 +984,7 @@ type T = table {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithMemberUnmodified) {
@@ -906,7 +996,7 @@ union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = union {
@@ -915,7 +1005,7 @@ type U = union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithMemberFlexible) {
@@ -927,7 +1017,7 @@ flexible union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = flexible union {
@@ -936,7 +1026,7 @@ type U = flexible union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithMemberStrict) {
@@ -948,7 +1038,7 @@ strict union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = strict union {
@@ -957,7 +1047,34 @@ type U = strict union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, UnionWithProtocols) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol P {};
+
+union U {
+  1: P p;
+  2: request<P> r;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol P {};
+
+type U = union {
+  1: p client_end:P;
+  2: r server_end:P;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithVectors) {
@@ -971,7 +1088,7 @@ union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = union {
@@ -982,7 +1099,7 @@ type U = union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithHandleWithSubtypeUnmodified) {
@@ -994,7 +1111,7 @@ resource union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = resource union {
@@ -1003,7 +1120,7 @@ type U = resource union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithHandleWithSubtypeFlexible) {
@@ -1015,7 +1132,7 @@ resource flexible union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = resource flexible union {
@@ -1024,7 +1141,7 @@ type U = resource flexible union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithHandleWithSubtypeStrict) {
@@ -1036,7 +1153,7 @@ resource strict union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = resource strict union {
@@ -1045,7 +1162,7 @@ type U = resource strict union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, UnionWithHandleWithSubtypeAndRights) {
@@ -1057,7 +1174,7 @@ resource union U {
 };
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 type U = resource union {
@@ -1069,7 +1186,7 @@ type U = resource union {
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
 }
 
 TEST(ConverterTests, UnionWithComments) {
@@ -1095,7 +1212,7 @@ union U {
 // Trailing comments should be retained.
 )FIDL";
 
-  std::string ftp50 = R"FIDL(
+  std::string new_version = R"FIDL(
 library example;
 
 // Top-level comments should be retained.
@@ -1118,7 +1235,7 @@ type U = union {
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(ftp50, ToNewSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
 TEST(ConverterTests, Unchanged) {
@@ -1141,5 +1258,571 @@ service AlsoEmpty {};
   ASSERT_STR_EQ(old_version, ToNewSyntax(old_version));
 }
 
-}  // namespace
+TEST(ConverterTests, TypesInline) {
+  std::string old_version = R"FIDL(
+library example;
 
+bits B {
+  BM = 1;
+};
+enum E : uint64 {
+  EM = 1;
+};
+table T {
+  1: string TM;
+};
+strict union U {
+  1: string UM;
+};
+struct S {};
+protocol P {};
+
+resource struct Foo {
+  array<uint8>:4 a1;
+  array<B>:4 a2;
+  array<S?>:4 a3;
+  bytes? b1;
+  string? b2;
+  vector<E>:16 v1;
+  vector<T>:16 v2;
+  vector<U>:16? v3;
+  P p1;
+  P? p2;
+  request<P> r1;
+  request<P>? r2;
+  handle? h1;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type B = bits {
+  BM = 1;
+};
+type E = enum : uint64 {
+  EM = 1;
+};
+type T = table {
+  1: TM string;
+};
+type U = strict union {
+  1: UM string;
+};
+type S = struct {};
+protocol P {};
+
+type Foo = resource struct {
+  a1 array<uint8,4>;
+  a2 array<B,4>;
+  a3 array<box<S>:optional,4>;
+  b1 bytes:optional;
+  b2 string:optional;
+  v1 vector<E>:16;
+  v2 vector<T>:16;
+  v3 vector<U>:<optional,16>;
+  p1 client_end:P;
+  p2 client_end:<optional,P>;
+  r1 server_end:P;
+  r2 server_end:<optional,P>;
+  h1 handle:optional;
+};
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+// One can name top-level FIDL types using names previously used for built-in
+// types (for example, a struct called "uint16").  This test ensures that the
+// converter is not fooled by such shenanigans.
+TEST(ConverterTests, TypesConfusing) {
+  std::string old_version = R"FIDL(
+library example;
+
+bits bool {
+  BM = 1;
+};
+enum int8 : uint64 {
+  EM = 1;
+};
+table int16 {
+  1: string TM;
+};
+strict union uint8 {
+  1: string UM;
+};
+struct uint16 {};
+protocol uint32 {};
+alias int32 = handle;
+alias uint64 = bytes;
+alias handle = string;
+
+resource struct Foo {
+  array<int64>:4 a1;
+  array<bool>:4 a2;
+  array<uint16?>:4 a3;
+  uint64? b1;
+  handle? b2;
+  vector<int8>:16 v1;
+  vector<int16>:16 v2;
+  vector<uint8>:16? v3;
+  uint32 p1;
+  uint32? p2;
+  request<uint32> r1;
+  request<uint32>? r2;
+  int32? h1;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type bool = bits {
+  BM = 1;
+};
+type int8 = enum : uint64 {
+  EM = 1;
+};
+type int16 = table {
+  1: TM string;
+};
+type uint8 = strict union {
+  1: UM string;
+};
+type uint16 = struct {};
+protocol uint32 {};
+alias int32 = handle;
+alias uint64 = bytes;
+alias handle = string;
+
+type Foo = resource struct {
+  a1 array<int64,4>;
+  a2 array<bool,4>;
+  a3 array<box<uint16>:optional,4>;
+  b1 uint64:optional;
+  b2 handle:optional;
+  v1 vector<int8>:16;
+  v2 vector<int16>:16;
+  v3 vector<uint8>:<optional,16>;
+  p1 client_end:uint32;
+  p2 client_end:<optional,uint32>;
+  r1 server_end:uint32;
+  r2 server_end:<optional,uint32>;
+  h1 int32:optional;
+};
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, TypesBehindAlias) {
+  std::string old_version = R"FIDL(
+library example;
+
+bits BB {
+  BM = 1;
+};
+enum EE : uint64 {
+  EM = 1;
+};
+table TT {
+  1: string TM;
+};
+strict union UU {
+  1: string UM;
+};
+struct SS {};
+protocol PP {};
+
+alias A = array<uint8>:4;
+alias B = BB;
+alias E = EE;
+alias H = handle?;
+alias P = PP;
+alias S = SS;
+alias T = TT;
+alias U = UU;
+alias V = vector<U>?;
+alias Y = bytes?;
+alias Z = string?;
+
+resource struct Foo {
+  A a1;
+  array<B>:4 a2;
+  array<S?>:4 a3;
+  Y b1;
+  Z b2;
+  vector<E>:16 v1;
+  vector<T>:16 v2;
+  V:16 v3;
+  P p1;
+  P? p2;
+  request<P> r1;
+  request<P>? r2;
+  H h1;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type BB = bits {
+  BM = 1;
+};
+type EE = enum : uint64 {
+  EM = 1;
+};
+type TT = table {
+  1: TM string;
+};
+type UU = strict union {
+  1: UM string;
+};
+type SS = struct {};
+protocol PP {};
+
+alias A = array<uint8,4>;
+alias B = BB;
+alias E = EE;
+alias H = handle:optional;
+alias P = client_end:PP;
+alias S = SS;
+alias T = TT;
+alias U = UU;
+alias V = vector<U>:optional;
+alias Y = bytes:optional;
+alias Z = string:optional;
+
+type Foo = resource struct {
+  a1 A;
+  a2 array<B,4>;
+  a3 array<box<S>:optional,4>;
+  b1 Y;
+  b2 Z;
+  v1 vector<E>:16;
+  v2 vector<T>:16;
+  v3 V:16;
+  p1 P;
+  p2 P:optional;
+  r1 server_end:P;
+  r2 server_end:<optional,P>;
+  h1 H;
+};
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, TypesBehindTwoAliases) {
+  std::string old_version = R"FIDL(
+library example;
+
+bits BBB {
+  BM = 1;
+};
+enum EEE : uint64 {
+  EM = 1;
+};
+table TTT {
+  1: string TM;
+};
+strict union UUU {
+  1: string UM;
+};
+struct SSS {};
+protocol PPP {};
+
+alias AA = array<uint8>:4;
+alias BB = BBB;
+alias EE = EEE;
+alias HH = handle?;
+alias PP = PPP;
+alias SS = SSS;
+alias TT = TTT;
+alias UU = UUU;
+alias VV = vector<UU>?;
+alias YY = bytes?;
+alias ZZ = string?;
+
+alias A = AA;
+alias B = BB;
+alias E = EE;
+alias H = HH;
+alias P = PP;
+alias S = SS;
+alias T = TT;
+alias U = UU;
+alias V = VV;
+alias Y = YY;
+alias Z = ZZ;
+
+resource struct Foo {
+  A a1;
+  array<B>:4 a2;
+  array<S?>:4 a3;
+  Y b1;
+  Z b2;
+  vector<E>:16 v1;
+  vector<T>:16 v2;
+  V:16 v3;
+  P p1;
+  P? p2;
+  request<P> r1;
+  request<P>? r2;
+  H h1;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type BBB = bits {
+  BM = 1;
+};
+type EEE = enum : uint64 {
+  EM = 1;
+};
+type TTT = table {
+  1: TM string;
+};
+type UUU = strict union {
+  1: UM string;
+};
+type SSS = struct {};
+protocol PPP {};
+
+alias AA = array<uint8,4>;
+alias BB = BBB;
+alias EE = EEE;
+alias HH = handle:optional;
+alias PP = client_end:PPP;
+alias SS = SSS;
+alias TT = TTT;
+alias UU = UUU;
+alias VV = vector<UU>:optional;
+alias YY = bytes:optional;
+alias ZZ = string:optional;
+
+alias A = AA;
+alias B = BB;
+alias E = EE;
+alias H = HH;
+alias P = PP;
+alias S = SS;
+alias T = TT;
+alias U = UU;
+alias V = VV;
+alias Y = YY;
+alias Z = ZZ;
+
+type Foo = resource struct {
+  a1 A;
+  a2 array<B,4>;
+  a3 array<box<S>:optional,4>;
+  b1 Y;
+  b2 Z;
+  v1 vector<E>:16;
+  v2 vector<T>:16;
+  v3 V:16;
+  p1 P;
+  p2 P:optional;
+  r1 server_end:P;
+  r2 server_end:<optional,P>;
+  h1 H;
+};
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, TypesBehindImport) {
+  std::string dep1 = R"FIDL(
+library dep1;
+
+bits B {
+  BM = 1;
+};
+enum E : uint64 {
+  EM = 1;
+};
+table T {
+  1: string TM;
+};
+strict union U {
+  1: string UM;
+};
+struct S {};
+protocol P {};
+
+alias A = array<uint8>:4;
+alias H = handle?;
+alias V = vector<U>?;
+alias Y = bytes?;
+alias Z = string?;
+)FIDL";
+
+  std::string old_version = R"FIDL(
+library example;
+
+using dep1;
+
+resource struct Foo {
+  dep1.A a1;
+  array<dep1.B>:4 a2;
+  array<dep1.S?>:4 a3;
+  dep1.Y b1;
+  dep1.Z b2;
+  vector<dep1.E>:16 v1;
+  vector<dep1.T>:16 v2;
+  dep1.V:16 v3;
+  dep1.P p1;
+  dep1.P? p2;
+  request<dep1.P> r1;
+  request<dep1.P>? r2;
+  dep1.H h1;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+using dep1;
+
+type Foo = resource struct {
+  a1 dep1.A;
+  a2 array<dep1.B,4>;
+  a3 array<box<dep1.S>:optional,4>;
+  b1 dep1.Y;
+  b2 dep1.Z;
+  v1 vector<dep1.E>:16;
+  v2 vector<dep1.T>:16;
+  v3 dep1.V:16;
+  p1 client_end:dep1.P;
+  p2 client_end:<optional,dep1.P>;
+  r1 server_end:dep1.P;
+  r2 server_end:<optional,dep1.P>;
+  h1 dep1.H;
+};
+)FIDL";
+  std::vector<std::string> deps;
+  deps.emplace_back(dep1);
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
+}
+
+TEST(ConverterTests, TypesBehindTwoImports) {
+  std::string dep1 = R"FIDL(
+library dep1;
+
+bits B {
+  BM = 1;
+};
+enum E : uint64 {
+  EM = 1;
+};
+table T {
+  1: string TM;
+};
+strict union U {
+  1: string UM;
+};
+struct S {};
+protocol P {};
+
+alias A = array<uint8>:4;
+alias H = handle?;
+alias V = vector<U>?;
+alias Y = bytes?;
+alias Z = string?;
+)FIDL";
+
+  std::string dep2 = R"FIDL(
+library dep2;
+
+using dep1 as imported;
+
+alias A = imported.A;
+alias B = imported.B;
+alias E = imported.E;
+alias H = imported.H;
+alias P = imported.P;
+alias S = imported.S;
+alias T = imported.T;
+alias U = imported.U;
+alias V = imported.V;
+alias Y = imported.Y;
+alias Z = imported.Z;
+)FIDL";
+
+  std::string old_version = R"FIDL(
+library example;
+
+using dep2;
+
+resource struct Foo {
+  dep2.A a1;
+  array<dep2.B>:4 a2;
+  array<dep2.S?>:4 a3;
+  dep2.Y b1;
+  dep2.Z b2;
+  vector<dep2.E>:16 v1;
+  vector<dep2.T>:16 v2;
+  dep2.V:16 v3;
+  dep2.P p1;
+  dep2.P? p2;
+  request<dep2.P> r1;
+  request<dep2.P>? r2;
+  dep2.H h1;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+using dep2;
+
+type Foo = resource struct {
+  a1 dep2.A;
+  a2 array<dep2.B,4>;
+  a3 array<box<dep2.S>:optional,4>;
+  b1 dep2.Y;
+  b2 dep2.Z;
+  v1 vector<dep2.E>:16;
+  v2 vector<dep2.T>:16;
+  v3 dep2.V:16;
+  p1 dep2.P;
+  p2 dep2.P:optional;
+  r1 server_end:dep2.P;
+  r2 server_end:<optional,dep2.P>;
+  h1 dep2.H;
+};
+)FIDL";
+  std::vector<std::string> deps;
+  deps.emplace_back(dep1);
+  deps.emplace_back(dep2);
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
+}
+
+}  // namespace

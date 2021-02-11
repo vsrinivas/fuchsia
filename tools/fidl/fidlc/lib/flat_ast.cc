@@ -2504,6 +2504,10 @@ Decl* Library::LookupDeclByName(Name::Key name) const {
   return iter->second;
 }
 
+const Libraries* Library::GetLibraries() const {
+  return all_libraries_;
+}
+
 template <typename NumericType>
 bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
                                   NumericType* out_value) const {

@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "raw_ast.h"
+#include "underlying_type.h"
 
 namespace fidl::conv {
 
@@ -100,11 +101,14 @@ class Conversion {
 class TypeConversion : public Conversion {
  public:
   explicit TypeConversion(
-      const std::unique_ptr<raw::TypeConstructor>& type_ctor)
-      : type_ctor_(type_ctor) {}
+      const std::unique_ptr<raw::TypeConstructor>& type_ctor,
+      const UnderlyingType underlying_type)
+      : type_ctor_(type_ctor),
+        underlying_type_(underlying_type) {}
   ~TypeConversion() override = default;
 
   const std::unique_ptr<raw::TypeConstructor>& type_ctor_;
+  const UnderlyingType underlying_type_;
   std::string wrapped_type_text_;
 
   void AddChildText(std::string child) override {

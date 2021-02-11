@@ -584,6 +584,11 @@ class Typespace {
 
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
+  // TODO(azaslavsky): this method has been made public solely for the benefit
+  //   of fidlconv.  Once the conversion using that tool is completed and the
+  //   tool has been removed, this method should be re-privatized as well.
+  const TypeTemplate* LookupTemplate(const flat::Name& name) const;
+
   // RootTypes creates a instance with all primitive types. It is meant to be
   // used as the top-level types lookup mechanism, providing definitional
   // meaning to names such as `int64`, or `bool`.
@@ -597,7 +602,6 @@ class Typespace {
                       const Constant* handle_rights, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
-  const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
   std::vector<std::unique_ptr<Type>> types_;
@@ -890,6 +894,11 @@ class Library {
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
+
+  // TODO(azaslavsky): this method has been created solely for the benefit of
+  //   fidlconv.  Once the conversion using that tool is completed and the tool
+  //   has been removed, this method should be removed as well.
+  const Libraries* GetLibraries() const;
 
   template <typename NumericType>
   bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
