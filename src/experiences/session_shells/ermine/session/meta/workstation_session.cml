@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/workstation_session",
     },
     collections: [
@@ -22,7 +23,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "dev-input-report",
             rights: [ "r*" ],
