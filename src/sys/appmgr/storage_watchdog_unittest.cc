@@ -22,6 +22,8 @@
 #define TMPDATA "abcdefghijklmnopqrstuvwxyz1234567890"
 #define TMPDATA_SIZE 36
 
+namespace fio = ::llcpp::fuchsia::io;
+
 namespace {
 
 class StorageWatchdogTest : public ::testing::Test {
@@ -59,7 +61,7 @@ class TestStorageWatchdog : public StorageWatchdog {
   TestStorageWatchdog(std::string path_to_watch, std::string path_to_clean)
       : StorageWatchdog(path_to_watch, path_to_clean) {}
 
-  zx_status_t GetFilesystemInfo(zx_handle_t directory, fuchsia_io_FilesystemInfo* out_info) {
+  zx_status_t GetFilesystemInfo(zx_handle_t directory, fio::FilesystemInfo* out_info) {
     if (directory == ZX_HANDLE_INVALID) {
       return ZX_ERR_BAD_HANDLE;
     }
@@ -67,7 +69,7 @@ class TestStorageWatchdog : public StorageWatchdog {
     return ZX_OK;
   }
 
-  fuchsia_io_FilesystemInfo info = {};
+  fio::FilesystemInfo info = {};
 };
 
 TEST_F(StorageWatchdogTest, Basic) {
