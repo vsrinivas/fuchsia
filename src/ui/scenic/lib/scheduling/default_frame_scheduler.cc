@@ -592,14 +592,13 @@ void DefaultFrameScheduler::SignalPresentCallbacksUpTo(
   std::unordered_map<SessionId, std::map<PresentId, zx::time>> latched_times;
   while (!latched_updates_.empty() && latched_updates_.front().frame_number <= frame_number) {
     for (const auto& [session_id, present_id] : latched_updates_.front().updated_sessions) {
-      latched_times[session_id] = ExtractLatchTimestampsUpTo({session_id, present_id});
-
       last_updates[session_id] = present_id;
     }
     latched_updates_.pop();
   }
 
   for (const auto& [session_id, present_id] : last_updates) {
+    latched_times[session_id] = ExtractLatchTimestampsUpTo({session_id, present_id});
     SignalPresent1CallbacksUpTo({session_id, present_id}, presentation_info);
     SignalPresent2CallbackForInfosUpTo({session_id, present_id},
                                        zx::time(presentation_info.presentation_time));

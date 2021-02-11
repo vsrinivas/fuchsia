@@ -1522,5 +1522,68 @@ TEST_F(FrameSchedulerTest, ReleaseFences_ShouldFireInOrder) {
   EXPECT_THAT(fence_order, ::testing::ElementsAreArray({1, 2, 3}));
 }
 
+TEST_F(FrameSchedulerTest, Present2sSubmittedWhileRendering_ShouldNotBeSquashed) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+  uint64_t total_infos = 0;
+  scheduler->SetOnFramePresentedCallbackForSession(
+      kSessionId, [&](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        total_infos += info.presentation_infos.size();
+      });
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 0u);
+
+  // Schedule an update for now.
+  zx::time now = Now();
+  SchedulePresent2Update(scheduler, kSessionId, now);
+
+  // Wait for one vsync period.
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 1u);
+
+  // Schedule 2 other updates for now, while Scenic is still rendering.
+  SchedulePresent2Update(scheduler, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+
+  // Updates should be applied, but not rendered.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 1u);
+
+  // Schedule 2 other updates for now, again while Scenic is still rendering.
+  SchedulePresent2Update(scheduler, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+
+  // Updates should be applied, but not rendered.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 3u);
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 1u);
+
+  // End previous frame.
+  mock_renderer_->EndFrame();
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 0u);
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+
+  // We expect 1 latched time submitted in the first frame.
+  EXPECT_EQ(mock_updater_->last_latched_times()[kSessionId].size(), 1u);
+
+  // Second render should have occurred.
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 1u);
+
+  // End second frame.
+  mock_renderer_->EndFrame();
+  EXPECT_EQ(mock_renderer_->GetNumPendingFrames(), 0u);
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+
+  // We expect 4 latched times submitted in the second frame.
+  EXPECT_EQ(mock_updater_->last_latched_times()[kSessionId].size(), 4u);
+
+  EXPECT_EQ(total_infos, 5u);
+}
+
 }  // namespace test
 }  // namespace scheduling
