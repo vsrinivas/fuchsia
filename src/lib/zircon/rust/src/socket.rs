@@ -162,12 +162,7 @@ impl Socket {
                 &mut actual,
             )
         };
-        ok(status).map(|()| actual).map_err(|status| {
-            // If an error is returned then actual is undefined, so to be safe
-            // we set it to 0 and ignore any data that is set in bytes.
-            actual = 0;
-            status
-        })
+        ok(status).map(|()| actual)
     }
 
     /// Close half of the socket, so attempts by the other side to write will fail.
