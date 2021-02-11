@@ -1125,24 +1125,20 @@ From //build/images/args.gni:41
 
 ### flutter_default_build_cfg
 Non-product AOT
-flutter_default_build_cfg = flutter_profile_build_cfg
-TODO(fxbug.dev/67583) Disabling aot builds until this crash
-is resolved. This is not the flutter_debug_build_cfg because it
-does not enable asserts.
 
 **Current value (from the default):**
 ```
 {
   enable_asserts = false
-  is_aot = false
+  is_aot = true
   is_product = false
   platform_name = "flutter_runner"
-  runner_dep = "//src/flutter:flutter_jit_runner"
-  runtime_meta = "//build/flutter/meta/jit_runtime"
+  runner_dep = "//src/flutter:flutter_aot_runner"
+  runtime_meta = "//build/flutter/meta/aot_runtime"
 }
 ```
 
-From //build/flutter/config.gni:26
+From //build/flutter/config.gni:22
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
