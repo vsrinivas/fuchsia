@@ -190,7 +190,7 @@ void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
 
   auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
-    AUDIO_LOG(DEBUG) << "Capturer " << &capturer << " was not present in graph.";
+    FX_LOGS(WARNING) << "Capturer " << &capturer << " was not present in graph.";
     return;
   }
 

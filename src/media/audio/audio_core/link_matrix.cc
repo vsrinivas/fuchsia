@@ -66,6 +66,7 @@ void LinkMatrix::Unlink(AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
     auto& sources = SourceLinkSet(dest.key);
     auto source = sources.find(Link(&key));
     if (source == sources.end()) {
+      FX_LOGS(WARNING) << "Trying to unlink " << &key << " -- no source found";
       return;
     }
 
@@ -83,6 +84,7 @@ void LinkMatrix::Unlink(AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
     auto& dests = DestLinkSet(source.key);
     auto dest = dests.find(Link(&key));
     if (dest == dests.end()) {
+      FX_LOGS(WARNING) << "Trying to unlink " << &key << " -- no dest found";
       return;
     }
 
