@@ -59,6 +59,7 @@ typedef MetricsProcessor = List<TestCaseResults> Function(
 const defaultMetricsRegistry = {
   'cpu': cpuMetricsProcessor,
   'drm_fps': drmFpsMetricsProcessor,
+  'system_drm_fps': systemDrmFpsMetricsProcessor,
   'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
   'gpu': gpuMetricsProcessor,
   'input_latency': inputLatencyMetricsProcessor,
