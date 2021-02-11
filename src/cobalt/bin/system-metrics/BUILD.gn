@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
-import("//third_party/protobuf/proto_library.gni")
 
 metrics_registry("metrics_registry") {
   # This must match the ID of our Cobalt project as specified in:
@@ -70,7 +69,7 @@ source_set("system_metrics_daemon_lib") {
 }
 
 executable("system-metrics") {
-  output_name = "cobalt_system_metrics_bin"
+  output_name = "cobalt_system_metrics"
 
   sources = [ "system_metrics_main.cc" ]
 
@@ -92,22 +91,9 @@ config_data("config") {
   ]
 }
 
-package("cobalt_system_metrics") {
+fuchsia_package_with_single_component("cobalt_system_metrics") {
+  manifest = "meta/cobalt_system_metrics.cmx"
   deps = [ ":system-metrics" ]
-
-  meta = [
-    {
-      path = rebase_path("meta/cobalt_system_metrics.cmx")
-      dest = "cobalt_system_metrics.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "cobalt_system_metrics_bin"
-      dest = "cobalt_system_metrics"
-    },
-  ]
 }
 
 executable("cobalt_system_metrics_unittests") {
