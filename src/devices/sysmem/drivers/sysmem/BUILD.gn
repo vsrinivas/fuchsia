@@ -55,7 +55,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
