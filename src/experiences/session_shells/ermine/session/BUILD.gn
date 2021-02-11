@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/session/build/session_config.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -12,7 +12,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
-  name = "workstation_session"
+  output_name = "workstation_session"
   with_unit_tests = true
   edition = "2018"
 
@@ -66,49 +66,14 @@ rustc_binary("bin") {
   ]
 }
 
-package("workstation_session") {
+fuchsia_package_with_single_component("workstation_session") {
+  manifest = "meta/workstation_session.cml"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "workstation_session"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/workstation_session.cml")
-      dest = "workstation_session.cm"
-    },
-  ]
 }
 
-package("workstation_session_tests") {
-  testonly = true
-
-  deps = [
-    ":bin",
-    ":bin_test",
-  ]
-
-  binaries = [
-    {
-      name = "workstation_session"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/workstation_session_bin_test.cml"
-      dest = "workstation_session_bin_test.cm"
-    },
-  ]
-
-  tests = [
-    {
-      name = "workstation_session_bin_test"
-    },
-  ]
+fuchsia_unittest_package("workstation_session_tests") {
+  manifest = "meta/workstation_session_bin_test.cml"
+  deps = [ ":bin_test" ]
 }
 
 session_config("session_config") {

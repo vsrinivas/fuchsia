@@ -2,7 +2,7 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "rust_test_runner",
-        binary: "test/workstation_session_bin_test",
+        binary: "bin/workstation_session_bin_test",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
