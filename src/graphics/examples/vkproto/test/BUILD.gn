@@ -5,44 +5,17 @@
 import("//build/package.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
 import("//src/sys/build/components.gni")
 
-resource("shaders") {
-  sources = [
-    "../common/shaders/frag.spv",
-    "../common/shaders/vert.spv",
-  ]
-  outputs = [ "data/shaders/{{source_file_part}}" ]
-}
-
-resource("layers") {
-  sources = []
-  foreach(resource, vulkan_validation_layers.resources) {
-    sources += [ resource.path ]
-  }
-  foreach(resource, image_pipe_swapchain_fb.resources) {
-    sources += [ resource.path ]
-  }
-  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
-}
-
-fuchsia_component("vkproto-test-component") {
+fuchsia_component("vkproto_test") {
   testonly = true
-  component_name = "vkproto-test"
-  manifest = "meta/vkproto-test.cmx"
+  manifest = "meta/vkproto_test.cmx"
   deps = [
     ":bin",
-    ":layers",
-    ":shaders",
-    "//third_party/Vulkan-Loader:libvulkan",
+    "//src/graphics/examples/vkproto:shaders",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
   ]
-
-  if (is_fuchsia) {
-    deps += vulkan_validation_layers.public_deps +
-            image_pipe_swapchain_fb.public_deps
-  }
 }
 
 config("vulkan_sdk_linux_config") {
@@ -130,10 +103,15 @@ group("vkproto-test-glfw") {
   deps = [ ":bin($host_toolchain)" ]
 }
 
-fuchsia_test_package("test") {
+fuchsia_test_package("vkproto-test") {
   package_name = "vkproto-test"
-  test_components = [ ":vkproto-test-component" ]
+  test_components = [ ":vkproto_test" ]
   test_specs = {
     environments = magma_hardware_envs
   }
+}
+
+group("test") {
+  testonly = true
+  deps = [ ":vkproto-test" ]
 }

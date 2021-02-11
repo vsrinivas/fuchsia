@@ -109,6 +109,6 @@ group("vkproto_glfw") {
 }
 
 group("vkproto") {
-  deps = [ ":vkproto-pkg" ]
   testonly = true
+  deps = [ ":vkproto-pkg" ]
 }
