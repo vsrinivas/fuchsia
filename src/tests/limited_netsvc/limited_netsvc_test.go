@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator"
 )
 
 // Boots an instance, |crash_cmd|, waits for the system to reboot, prints the

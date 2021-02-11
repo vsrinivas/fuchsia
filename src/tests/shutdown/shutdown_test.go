@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator"
 )
 
 func TestShutdown(t *testing.T) {

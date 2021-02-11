@@ -33,7 +33,7 @@ if (is_linux) {
     go_library(target_name) {
       testonly = true
       source_dir = "//src/tests/disable_shell/$split_name"
-      deps = [ "//src/testing/emulator" ]
+      deps = [ "//tools/emulator" ]
       forward_variables_from(invoker, [ "sources" ])
     }
 

@@ -17,7 +17,7 @@ group("bringup_tests") {
 if (is_linux) {
   go_library("lib") {
     testonly = true
-    deps = [ "//src/testing/emulator" ]
+    deps = [ "//tools/emulator" ]
     sources = [ "drivers_serial_log_test.go" ]
   }
 

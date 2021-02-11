@@ -15,7 +15,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "emulator:tests",
     "fuzzing:tests",
     "host-target-testing:tests",
     "loadbench:tests",

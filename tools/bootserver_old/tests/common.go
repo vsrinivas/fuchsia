@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 

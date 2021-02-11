@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator"
 )
 
 // TestSerial verifies that the serial shell is enabled for recovery-eng.

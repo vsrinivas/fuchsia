@@ -11,7 +11,7 @@ group("tests") {
 
   deps = []
 
-  # //src/testing/emulator only works on linux.
+  # //tools/emulator only works on linux.
   if (host_os == "linux") {
     deps += [ ":femu_test($host_toolchain)" ]
   }
@@ -21,7 +21,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
     sources = [ "femu_test.go" ]
-    deps = [ "//src/testing/emulator" ]
+    deps = [ "//tools/emulator" ]
   }
 
   go_test("femu_test") {

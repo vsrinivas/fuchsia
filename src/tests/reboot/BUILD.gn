@@ -27,7 +27,7 @@ if (is_linux) {
 
     source_dir = "//src/tests/reboot/support"
 
-    deps = [ "//src/testing/emulator" ]
+    deps = [ "//tools/emulator" ]
 
     sources = [ "reboot.go" ]
   }

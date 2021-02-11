@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator"
 )
 
 var cmdline = []string{"devmgr.log-to-debuglog", "kernel.oom.behavior=reboot"}
