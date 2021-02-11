@@ -122,17 +122,6 @@ class Ddk : public fake_ddk::Bind {
     void* device_ctx;  // The test should not dereference this if the device has been released.
   };
 
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                size_t* actual) override {
-    uint32_t magic_numbers[8] = {};
-    if ((type != DEVICE_METADATA_PRIVATE) || (length != sizeof(magic_numbers))) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(data, magic_numbers, sizeof(magic_numbers));
-    *actual = sizeof(magic_numbers);
-    return ZX_OK;
-  }
-
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
     auto dev = std::make_shared<zx_device>();
@@ -249,8 +238,10 @@ class Ddk : public fake_ddk::Bind {
 class AmlUsbPhyTest : public zxtest::Test {
  public:
   AmlUsbPhyTest() : root_device_(std::make_shared<zx_device_t>()) {
-    static constexpr size_t kNumBindFragments = 2;
+    static constexpr uint32_t kMagicNumbers[8] = {};
+    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kMagicNumbers, sizeof(kMagicNumbers));
 
+    static constexpr size_t kNumBindFragments = 2;
     loop_.StartThread();
     registers_device_ = std::make_unique<mock_registers::MockRegistersDevice>(loop_.dispatcher());
 
