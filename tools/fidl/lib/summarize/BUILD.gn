@@ -28,7 +28,7 @@ if (is_host) {
     deps = [
       ":summarize_test_lib",
       "//third_party/golibs:github.com/google/go-cmp",
-      "//tools/fidl/lib/fidlgen_testing",
+      "//tools/fidl/lib/fidlgentest",
     ]
     non_go_deps = [ ":copy_fidlc" ]
   }

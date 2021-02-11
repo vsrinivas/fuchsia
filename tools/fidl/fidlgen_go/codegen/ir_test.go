@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing"
+	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
 func TestStackOfBoundsTag(t *testing.T) {

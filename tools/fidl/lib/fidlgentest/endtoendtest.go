@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package fidlgen_testing
+package fidlgentest
 
 import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -47,49 +48,27 @@ func (t EndToEndTest) Single(content string) fidlgen.Root {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	dotFidlFile, err := ioutil.TempFile("", "*.fidl")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dotFidlFile.Name())
-	if _, err := dotFidlFile.Write([]byte(content)); err != nil {
-		t.Fatal(err)
-	}
-	if err := dotFidlFile.Close(); err != nil {
-		t.Fatal(err)
-	}
+	var (
+		base        = t.TempDir()
+		dotFidlFile = filepath.Join(base, "main.fidl")
+		dotJSONFile = filepath.Join(base, "main.fidl.json")
+		params      = []string{
+			"--json", dotJSONFile,
+		}
+	)
 
-	dotJSONFile, err := ioutil.TempFile("", "*.fidl.json")
-	if err != nil {
+	if err := ioutil.WriteFile(dotFidlFile, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(dotJSONFile.Name())
-	if err := dotJSONFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	params := []string{
-		"--json", dotJSONFile.Name(),
-	}
-
-	for _, dep := range t.deps {
-		depFidlFile, err := ioutil.TempFile("", "*.fidl")
-		if err != nil {
+	for i, dep := range t.deps {
+		depFidlFile := filepath.Join(base, fmt.Sprintf("dep_%d.fidl", i))
+		if err := ioutil.WriteFile(depFidlFile, []byte(dep), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(depFidlFile.Name())
-		defer func() {
-			if err := depFidlFile.Close(); err != nil {
-				t.Fatal(err)
-			}
-		}()
-		if _, err := depFidlFile.Write([]byte(dep)); err != nil {
-			t.Fatal(err)
-		}
-		params = append(params, "--files", depFidlFile.Name())
+		params = append(params, "--files", depFidlFile)
 	}
 
-	params = append(params, "--files", dotFidlFile.Name())
+	params = append(params, "--files", dotFidlFile)
 	var (
 		cmd         = exec.CommandContext(ctx, *fidlcPath, params...)
 		fidlcStdout = new(bytes.Buffer)
@@ -105,7 +84,7 @@ func (t EndToEndTest) Single(content string) fidlgen.Root {
 		t.Fatal(err)
 	}
 
-	root, err := fidlgen.ReadJSONIr(dotJSONFile.Name())
+	root, err := fidlgen.ReadJSONIr(dotJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}

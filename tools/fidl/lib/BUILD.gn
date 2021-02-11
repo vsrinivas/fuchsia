@@ -8,7 +8,7 @@ group("lib") {
   deps = [
     "fidlgen",
     "fidlgen_cpp",
-    "fidlgen_testing",
+    "fidlgentest",
     "summarize",
   ]
 }
@@ -19,7 +19,7 @@ group("tests") {
   deps = [
     "fidlgen:tests",
     "fidlgen_cpp:tests",
-    "fidlgen_testing:tests",
+    "fidlgentest:tests",
     "summarize:tests",
   ]
 }

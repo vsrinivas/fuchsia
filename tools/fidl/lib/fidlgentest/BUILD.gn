@@ -5,7 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("fidlgen_testing") {
+go_library("fidlgentest") {
   sources = [
     "endtoendtest.go",
     "endtoendtest_test.go",
@@ -16,8 +16,8 @@ go_library("fidlgen_testing") {
 if (is_host) {
   fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
 
-  go_test("fidlgen_testing_lib_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing" ]
+  go_test("fidlgentest_lib_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest" ]
 
     fidlc_binary = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
     args = [
@@ -25,7 +25,7 @@ if (is_host) {
       rebase_path(fidlc_binary, root_build_dir),
     ]
 
-    deps = [ ":fidlgen_testing" ]
+    deps = [ ":fidlgentest" ]
     non_go_deps = [ ":copy_fidlc" ]
   }
 
@@ -37,5 +37,5 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":fidlgen_testing_lib_test($host_toolchain)" ]
+  deps = [ ":fidlgentest_lib_test($host_toolchain)" ]
 }

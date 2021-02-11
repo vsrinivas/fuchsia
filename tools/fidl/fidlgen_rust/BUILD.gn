@@ -15,7 +15,7 @@ go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
   deps = [
     "//tools/fidl/lib/fidlgen",
-    "//tools/fidl/lib/fidlgen_testing",
+    "//tools/fidl/lib/fidlgentest",
   ]
   sources = [
     "codegen/bits.tmpl.go",

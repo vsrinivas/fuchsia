@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
-	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing"
+	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
 var (
