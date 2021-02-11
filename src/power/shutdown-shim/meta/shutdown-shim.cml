@@ -1,5 +1,6 @@
 {
     program: {
+        runner: "elf",
         binary: "bin/shutdown-shim",
         lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
@@ -8,7 +9,6 @@
         { protocol: "fuchsia.hardware.power.statecontrol.Admin" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",

@@ -1,13 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/mock_sys_launcher",
     },
     capabilities: [
         { protocol: "fuchsia.sys.Launcher" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.process.Launcher" ],
             from: "parent",

@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/archivist",
         args: [
             "--disable-klog",
@@ -20,7 +21,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.sys2.EventSource",
             from: "parent",

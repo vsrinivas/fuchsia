@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/setui_service",
     },
     capabilities: [
@@ -22,7 +23,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.accessibility.SettingsManager",

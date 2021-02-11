@@ -4,6 +4,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/launcher",
         args: [
             "detect",
@@ -17,7 +18,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.feedback.CrashReporter",
             from: "parent",

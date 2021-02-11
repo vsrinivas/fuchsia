@@ -15,16 +15,16 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
 
-    // The binary to run for this component.
+    // Information about the program to run.
     program: {
+        // Use the built-in ELF runner to run native binaries.
+        runner: "elf",
+        // The binary to run for this component.
         binary: "bin/my-component-v2-cpp",
     },
 
     // Capabilities used by this component.
     use: [
-        // Use the built-in ELF runner to run native binaries.
-        { runner: "elf" },
-
         // List your component's dependencies here, ex:
         // { protocol: "fuchsia.net.NameLookup" }
     ],

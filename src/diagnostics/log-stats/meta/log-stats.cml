@@ -7,6 +7,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/launcher",
         args: [ "log-stats" ],
     },
@@ -16,7 +17,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
         },

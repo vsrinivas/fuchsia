@@ -1,10 +1,10 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/a11y_tts_log_engine",
     },
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.accessibility.tts.EngineEngineRegistry" ],
         },

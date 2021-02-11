@@ -1,5 +1,6 @@
 {
     program: {
+        runner: "elf",
         binary: "bin/virtual-console",
     },
     capabilities: [
@@ -8,7 +9,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "input-report",
             rights: [ "rw*" ],

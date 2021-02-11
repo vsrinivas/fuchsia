@@ -4,9 +4,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/inspect_publisher",
     },
-    use: [
-        { runner: "elf" },
-    ],
 }

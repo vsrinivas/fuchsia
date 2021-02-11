@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/a11y_manager",
     },
     capabilities: [
@@ -18,7 +19,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.settings.Accessibility",

@@ -4,6 +4,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/decompressor",
         args: [],
     },
@@ -11,7 +12,6 @@
         { protocol: "fuchsia.blobfs.internal.DecompressorCreator" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.scheduler.ProfileProvider",

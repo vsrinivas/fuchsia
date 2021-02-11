@@ -1,13 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/driver_host2",
     },
     capabilities: [
         { protocol: "fuchsia.driver.framework.DriverHost" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.boot.WriteOnlyLog" ],
         },

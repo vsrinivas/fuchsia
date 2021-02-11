@@ -3,6 +3,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/echo_client",
         args: [
             "Hippos",
@@ -10,7 +11,6 @@
         ],
     },
     use: [
-        { runner: "elf" },
         { protocol: "fidl.examples.routing.echo.Echo" },
     ],
 }

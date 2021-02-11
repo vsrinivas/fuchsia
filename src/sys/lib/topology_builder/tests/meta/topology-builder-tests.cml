@@ -1,6 +1,7 @@
 {
     include: [ "src/sys/lib/topology_builder/meta/topology_builder.shard.cml" ],
     program: {
+        runner: "rust_test_runner",
         binary: "bin/topology_builder_tests_bin",
     },
     capabilities: [
@@ -8,9 +9,6 @@
             protocol: "fuchsia.test.Suite",
             path: "/svc/fuchsia.test.Suite",
         },
-    ],
-    use: [
-        { runner: "rust_test_runner" },
     ],
     expose: [
         {

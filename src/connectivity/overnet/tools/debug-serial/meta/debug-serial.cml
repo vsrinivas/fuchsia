@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/debug_serial",
     },
     capabilities: [
@@ -9,7 +10,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [ "fuchsia.boot.RootResource" ],
         },

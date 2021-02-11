@@ -4,6 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "rust_test_runner",
         binary: "bin/driver_index_bin_test",
     },
     capabilities: [
@@ -12,7 +13,6 @@
     ],
     use: [
         // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
-        { runner: "rust_test_runner" },
     ],
     expose: [
         // The Test Runner Framework expects this protocol to be exposed

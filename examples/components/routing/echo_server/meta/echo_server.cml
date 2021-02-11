@@ -3,13 +3,11 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/echo_server",
     },
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

@@ -1,10 +1,10 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/input_session",
     },
     use: [
-        { runner: "elf" },
         {
             directory: "dev-input-report",
             from: "parent",

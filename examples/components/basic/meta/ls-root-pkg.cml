@@ -1,10 +1,10 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/ls_root_pkg",
     },
     use: [
-        { runner: "elf" },
         {
             directory: "pkg",
             rights: [ "rw*" ],

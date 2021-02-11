@@ -4,6 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/base_resolver_fake_pkgfs_bin",
     },
     capabilities: [
@@ -12,9 +13,6 @@
             rights: [ "rx*" ],
             path: "/pkgfs",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

@@ -4,13 +4,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/pkg_local_mirror",
     },
     capabilities: [
         { protocol: "fuchsia.pkg.LocalMirror" },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "usb",
             from: "parent",

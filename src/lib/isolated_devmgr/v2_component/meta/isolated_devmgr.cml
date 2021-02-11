@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/support",
     },
     children: [
@@ -16,9 +17,6 @@
                 "fuchsia.kernel.RootJob",
             ],
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     offer: [
         {

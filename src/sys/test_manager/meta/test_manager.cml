@@ -4,6 +4,7 @@
         "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/test_manager",
     },
     children: [
@@ -53,7 +54,6 @@
         { protocol: "fuchsia.test.manager.Harness" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

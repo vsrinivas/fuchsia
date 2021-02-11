@@ -1,14 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/device-name-provider",
     },
     capabilities: [
         { protocol: "fuchsia.device.NameProvider" },
     ],
     use: [
-        { runner: "elf" },
-
         // For ethernet and network device access.
         {
             directory: "dev",

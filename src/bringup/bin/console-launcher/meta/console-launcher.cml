@@ -8,10 +8,10 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/console-launcher",
     },
     use: [
-        { runner: "elf" },
         {
             directory: "bin",
             rights: [ "rx*" ],

@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/inspect/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/archivist",
         args: [
             "--consume-own-logs",
@@ -24,7 +25,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",

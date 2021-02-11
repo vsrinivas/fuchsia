@@ -1,10 +1,8 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/lifecycle_full",
         lifecycle: { stop_event: "notify" },
     },
-    use: [
-        { runner: "elf" },
-    ],
 }

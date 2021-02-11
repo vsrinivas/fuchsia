@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/element_manager",
     },
     collections: [
@@ -15,7 +16,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

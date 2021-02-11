@@ -4,13 +4,13 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/temperature_logger",
     },
     capabilities: [
         { protocol: "fuchsia.thermal.test.TemperatureLogger" },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "config-data",
             rights: [ "r*" ],

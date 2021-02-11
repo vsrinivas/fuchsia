@@ -255,12 +255,12 @@ mod tests {
             ..fdata::Dictionary::EMPTY
         });
         let expected_decl = ComponentDecl {
-            program: Some(fsys::ProgramDecl { info, ..fsys::ProgramDecl::EMPTY }),
+            program: Some(fsys::ProgramDecl {
+                runner: Some("elf".to_string()),
+                info,
+                ..fsys::ProgramDecl::EMPTY
+            }),
             uses: Some(vec![
-                fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                    source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::EMPTY
-                }),
                 fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     source_name: Some("fuchsia.logger.LogSink".to_string()),

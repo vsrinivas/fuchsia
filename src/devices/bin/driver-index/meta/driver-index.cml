@@ -6,6 +6,7 @@
 
     // The binary to run for this component.
     program: {
+        runner: "elf",
         binary: "bin/driver_index",
     },
     capabilities: [
@@ -17,7 +18,6 @@
     // Capabilities used by this component.
     use: [
         // Use the built-in ELF runner to run native binaries.
-        { runner: "elf" },
     ],
     expose: [
         {

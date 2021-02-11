@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/activity",
     },
     capabilities: [
@@ -11,9 +12,6 @@
                 "fuchsia.ui.activity.Tracker",
             ],
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

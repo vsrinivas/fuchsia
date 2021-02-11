@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/remote_control_bin",
         args: [ "remote-control" ],
     },
@@ -8,7 +9,6 @@
         { protocol: "fuchsia.developer.remotecontrol.RemoteControl" },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "hub",
             from: "parent",

@@ -1,5 +1,6 @@
 {
     program: {
+        runner: "elf",
         binary: "bin/miscsvc",
     },
     capabilities: [
@@ -11,8 +12,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
-
         // For access to filesystem binaries under /boot/bin/ for mounting.
         // For access to drivers under /boot/drivers/ for dynamic binding.
         {

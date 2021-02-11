@@ -4,6 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/universe_resolver",
     },
     capabilities: [
@@ -13,7 +14,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         { protocol: "fuchsia.pkg.PackageResolver" },
     ],
     expose: [

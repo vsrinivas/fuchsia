@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/session_manager",
     },
     collections: [
@@ -25,7 +26,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             // The Realm service allows session_manager to start components.
             protocol: "fuchsia.sys2.Realm",

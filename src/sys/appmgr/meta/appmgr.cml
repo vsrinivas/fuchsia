@@ -4,6 +4,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/appmgr",
 
         // Run appmgr in a job with ZX_POL_AMBIENT_MARK_VMO_EXEC job policy, so that it can in turn
@@ -81,7 +82,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "blob",
             rights: [ "rw*" ],

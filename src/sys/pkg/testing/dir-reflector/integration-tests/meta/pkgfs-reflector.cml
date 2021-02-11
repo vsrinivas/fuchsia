@@ -4,6 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/dir_reflector",
     },
     capabilities: [
@@ -13,9 +14,6 @@
             rights: [ "rw*" ],
             path: "/reflected",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

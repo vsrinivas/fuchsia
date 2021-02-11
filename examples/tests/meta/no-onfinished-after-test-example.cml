@@ -1,13 +1,11 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/no-onfinished-after-test-example",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

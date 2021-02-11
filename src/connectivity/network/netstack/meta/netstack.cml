@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     program: {
+        runner: "elf",
         binary: "bin/netstack",
     },
     capabilities: [
@@ -21,7 +22,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             // TODO(fxbug.dev/63680) rename this to the correct replacement for
             // isolated-cache-storage once it is implemented.

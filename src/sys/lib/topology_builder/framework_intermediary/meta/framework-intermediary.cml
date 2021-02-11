@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/topology_builder_framework_intermediary",
     },
     capabilities: [
@@ -13,9 +14,6 @@
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
         { protocol: "fuchsia.topology.builder.FrameworkIntermediary" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

@@ -4,13 +4,11 @@
         "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
     ],
     program: {
+        runner: "rust_test_runner",
         binary: "bin/shutdown_shim_integration_test_bin",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "rust_test_runner" },
     ],
     offer: [
         {

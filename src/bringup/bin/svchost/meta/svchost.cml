@@ -1,5 +1,6 @@
 {
     program: {
+        runner: "elf",
         binary: "bin/svchost",
     },
     capabilities: [
@@ -14,7 +15,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "sysmem",
             rights: [ "rw*" ],

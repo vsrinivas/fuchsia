@@ -2,6 +2,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/realm",
     },
     collections: [
@@ -11,8 +12,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
-
         // Needed to instantiate dynamic components.
         {
             protocol: "fuchsia.sys2.Realm",
@@ -21,7 +20,7 @@
         {
             event: "destroyed",
             from: "framework",
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
     ],
 }

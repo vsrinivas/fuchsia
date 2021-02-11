@@ -1,13 +1,11 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/failing-test-example",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

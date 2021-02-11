@@ -4,13 +4,13 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/system_update_committer",
     },
     capabilities: [
         { protocol: "fuchsia.update.CommitStatusProvider" },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.hardware.power.statecontrol.Admin",

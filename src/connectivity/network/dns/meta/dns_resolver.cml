@@ -4,6 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/dns_resolver",
     },
     capabilities: [
@@ -15,7 +16,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: [
                 "fuchsia.net.routes.State",

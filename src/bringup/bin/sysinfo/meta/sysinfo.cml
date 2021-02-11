@@ -1,12 +1,12 @@
 {
     program: {
+        runner: "elf",
         binary: "bin/sysinfo",
     },
     capabilities: [
         { protocol: "fuchsia.sysinfo.SysInfo" },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "dev",
             rights: [ "rw*" ],

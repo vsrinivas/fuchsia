@@ -17,11 +17,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "parent",
-            to: [ "#isolated-devmgr" ],
-        },
-        {
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",

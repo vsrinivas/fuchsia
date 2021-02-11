@@ -1,13 +1,11 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/mock_font_resolver",
     },
     capabilities: [
         { protocol: "fuchsia.pkg.FontResolver" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

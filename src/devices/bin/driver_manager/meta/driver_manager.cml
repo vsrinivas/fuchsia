@@ -1,6 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/driver_manager",
         lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
@@ -49,7 +50,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "boot",
             rights: [ "rx*" ],

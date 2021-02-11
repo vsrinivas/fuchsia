@@ -1,9 +1,9 @@
 {
     program: {
+        runner: "elf",
         binary: "bin/pwrbtn-monitor",
     },
     use: [
-        { runner: "elf" },
         {
             directory: "input",
             rights: [ "rw*" ],

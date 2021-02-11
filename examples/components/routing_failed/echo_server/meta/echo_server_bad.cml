@@ -7,14 +7,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
+
         // Wrong binary name.
         binary: "bin/routing_failed_echo_server_oops",
     },
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo2" },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

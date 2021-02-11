@@ -4,6 +4,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/dir_reflector",
     },
     capabilities: [
@@ -29,9 +30,6 @@
             protocol: "fuchsia.update.verify.BlobfsVerifier",
             path: "/reflected/fuchsia.update.verify.BlobfsVerifier",
         },
-    ],
-    use: [
-        { runner: "elf" },
     ],
     expose: [
         {

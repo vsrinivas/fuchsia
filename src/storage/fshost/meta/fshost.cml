@@ -4,6 +4,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/fshost",
         lifecycle: { stop_event: "notify" },
     },
@@ -106,7 +107,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         {
             directory: "dev",
             rights: [ "rw*" ],

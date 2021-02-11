@@ -1,9 +1,7 @@
 // This is a v2 component manifest.
 {
     program: {
+        runner: "elf",
         binary: "hello_bin",
     },
-    use: [
-        { runner: "elf" },
-    ],
 }

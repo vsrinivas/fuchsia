@@ -1,13 +1,13 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/echo_test_client",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
     ],
     use: [
-        { runner: "elf" },
         { protocol: "fidl.examples.routing.echo.Echo" },
     ],
     expose: [
