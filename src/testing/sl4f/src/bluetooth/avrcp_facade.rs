@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::types::CustomPlayStatus;
+use super::types::{CustomAvcPanelCommand, CustomPlayStatus};
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl::endpoints::create_endpoints;
@@ -108,6 +108,24 @@ impl AvrcpFacade {
                 ),
             },
             None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        }
+    }
+
+    /// Sends an AVCPanelCommand to the controller.
+    ///
+    /// # Arguments
+    /// * `command` - an enum representing the AVCPanelCommand
+    pub async fn send_command(&self, command: CustomAvcPanelCommand) -> Result<(), Error> {
+        let tag = "AvrcpFacade::send_command";
+        let result = match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => proxy.send_command(command.into()).await?,
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        };
+        match result {
+            Ok(res) => Ok(res),
+            Err(err) => {
+                fx_err_and_bail!(&with_line!(tag), format!("Error sending command:{:?}", err))
+            }
         }
     }
 

@@ -19,9 +19,12 @@ use std::io::Read;
 use std::sync::Arc;
 
 // Standardized sl4f types and constants
-use crate::server::sl4f_types::{
-    AsyncCommandRequest, AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
-    Facade, MethodId, RequestId,
+use crate::{
+    bluetooth::avrcp_facade::AvrcpFacade,
+    server::sl4f_types::{
+        AsyncCommandRequest, AsyncRequest, AsyncResponse, ClientData, CommandRequest,
+        CommandResponse, Facade, MethodId, RequestId,
+    },
 };
 
 // Adc related includes
@@ -210,6 +213,7 @@ impl Sl4f {
                 "adc_facade" => AdcFacade::new(),
                 "audio_facade" => AudioFacade::new()?,
                 "avdtp_facade" => AvdtpFacade::new(),
+                "avrcp_facade" => AvrcpFacade::new(),
                 "backlight_facade" => BacklightFacade::new(),
                 "basemgr_facade" => BaseManagerFacade::new(),
                 "battery_simulator" => BatterySimulatorFacade::new(),

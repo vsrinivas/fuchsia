@@ -475,6 +475,11 @@ impl Facade for AvrcpFacade {
                 let result = self.get_play_status().await?;
                 Ok(to_value(result)?)
             }
+            "AvrcpSendCommand" => {
+                let command_str = parse_arg!(args, as_str, "command")?;
+                let result = self.send_command(command_str.to_string().into()).await?;
+                Ok(to_value(result)?)
+            }
             _ => bail!("Invalid AVRCP FIDL method: {:?}", method),
         }
     }
