@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/mock-cobalt-unittests"
+        "binary": "bin/mock_cobalt_bin_test"
     }
 }

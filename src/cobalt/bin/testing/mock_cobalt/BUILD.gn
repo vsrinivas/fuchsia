@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
@@ -37,32 +35,12 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-# TODO: migrate to `fuchsia_package`.
-package("mock_cobalt") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "mock_cobalt"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/mock_cobalt.cmx")
-      dest = "mock_cobalt.cmx"
-    },
-  ]
+fuchsia_package("mock_cobalt") {
+  testonly = true
+  deps = [ ":component" ]
 }
 
-test_package("tests") {
-  package_name = "mock-cobalt-tests"
-
+fuchsia_unittest_package("mock-cobalt-tests") {
+  manifest = "meta/mock-cobalt-unittests.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "mock_cobalt_bin_test"
-      dest = "mock-cobalt-unittests"
-    },
-  ]
 }
