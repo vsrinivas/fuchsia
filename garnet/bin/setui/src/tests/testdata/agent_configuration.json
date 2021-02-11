@@ -2,6 +2,7 @@
     "agent_types": [
         "MediaButtons",
         "Earcons",
-        "Restore"
+        "Restore",
+        "Inspect"
     ]
 }

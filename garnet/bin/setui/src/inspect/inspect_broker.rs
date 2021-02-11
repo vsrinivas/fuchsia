@@ -33,8 +33,8 @@ pub struct InspectBroker {
 
 /// Information about a setting to be written to inspect.
 ///
-/// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
-/// once they go out of scope.
+/// Inspect nodes are not used, but need to be held as they're deleted from inspect once they go
+/// out of scope.
 struct SettingInspectInfo {
     /// Node of this info.
     _node: inspect::Node,

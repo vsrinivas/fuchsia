@@ -406,23 +406,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             handler_factory.register(setting_type, handler);
         }
 
-        let mapping_func_present_without_inspect =
-            !agent_types.contains(&AgentType::Inspect) && self.agent_mapping_func.is_some();
-
-        let mut agent_blueprints = self
+        let agent_blueprints = self
             .agent_mapping_func
             .map(|agent_mapping_func| {
                 agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
             })
             .unwrap_or(self.agent_blueprints);
-
-        // TODO(fxbug.dev/68437): remove once Inspect is included in
-        // configurations. The following inserts the InspectAgent blueprint if
-        // An agent mapping funtion is present (only done in production) and
-        // the agent type isn't already present.
-        if mapping_func_present_without_inspect {
-            agent_blueprints.push(crate::agent::inspect::blueprint::create());
-        }
 
         create_environment(
             service_dir,

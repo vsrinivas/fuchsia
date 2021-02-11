@@ -77,9 +77,6 @@ impl RequestTypeInfo {
 }
 
 /// Information about a switchboard request to be written to inspect.
-///
-/// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
-/// once they go out of scope.
 #[derive(Inspect)]
 struct RequestInfo {
     /// Debug string representation of this Request.
