@@ -75,6 +75,7 @@ enum StepType {
     CommunicatingWithRcs,
     TargetSummary(Vec<String>, Vec<String>),
     RcsTerminalFailure,
+    GeneratingRecord,
     RecordGenerated(PathBuf),
 }
 
@@ -177,6 +178,7 @@ impl std::fmt::Display for StepType {
                 "{}\n{}",
                 RCS_TERMINAL_FAILURE, RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS
             )),
+            StepType::GeneratingRecord => "Generating record...".to_string(),
             StepType::RecordGenerated(path) => {
                 format!("Record generated at: {}", path.to_string_lossy().into_owned())
             }
@@ -330,12 +332,17 @@ async fn doctor(
         daemon_log.push("ffx.daemon.log");
         let mut fe_log = record_params.log_root.clone();
         fe_log.push("ffx.log");
-        let mut r = record_params.recorder.lock().await;
 
-        r.add_sources(vec![daemon_log, fe_log]);
-        step_handler
-            .output_step(StepType::RecordGenerated(r.generate(record_params.output_dir)?))
-            .await?;
+        step_handler.step(StepType::GeneratingRecord).await?;
+
+        let final_path = {
+            let mut r = record_params.recorder.lock().await;
+            r.add_sources(vec![daemon_log, fe_log]);
+            r.generate(record_params.output_dir)?
+        };
+
+        step_handler.result(StepResult::Success).await?;
+        step_handler.output_step(StepType::RecordGenerated(final_path.canonicalize()?)).await?;
     }
     Ok(())
 }
@@ -656,7 +663,7 @@ mod test {
         }
 
         fn result_path() -> PathBuf {
-            PathBuf::from("/tmp")
+            PathBuf::from("/tmp").canonicalize().unwrap()
         }
     }
 
@@ -1455,6 +1462,8 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
                 TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+                TestStepEntry::step(StepType::GeneratingRecord),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::RecordGenerated(FakeRecorder::result_path())),
             ])
             .await;
