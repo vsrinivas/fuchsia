@@ -456,7 +456,7 @@ impl Migrator {
         file.write_all(source_output.as_bytes()).unwrap();
 
         let mut bind_file_data = String::new();
-        bind_file_data.push_str("// Copyright 2020 The Fuchsia Authors. All rights reserved.\n");
+        bind_file_data.push_str("// Copyright 2021 The Fuchsia Authors. All rights reserved.\n");
         bind_file_data.push_str(
             "// Use of this source code is governed by a BSD-style license that can be\n",
         );
