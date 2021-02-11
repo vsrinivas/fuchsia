@@ -4,11 +4,6 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/icd_load"
-    },
-    "sandbox": {
-        "features": [
-            "isolated-temp"
-        ]
+        "binary": "bin/icd_load"
     }
 }

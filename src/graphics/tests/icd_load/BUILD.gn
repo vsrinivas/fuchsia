@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("icd_load_src") {
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
+
+source_set("src") {
   testonly = true
 
   sources = [
@@ -16,8 +19,34 @@ source_set("icd_load_src") {
   public_deps += [ "//src/lib/vulkan" ]
 }
 
-executable("icd_load") {
+executable("icd_load_bin") {
   testonly = true
+  output_name = "icd_load"
 
-  deps = [ ":icd_load_src" ]
+  deps = [ ":src" ]
+}
+
+fuchsia_component("icd_load_cmp") {
+  testonly = true
+  component_name = "icd_load"
+  deps = [
+    ":icd_load_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+
+  manifest = "meta/icd_load.cmx"
+}
+
+fuchsia_test_package("icd-load") {
+  package_name = "icd_load"
+  test_components = [ ":icd_load_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+  }
+}
+
+group("icd_load") {
+  testonly = true
+  deps = [ ":icd-load" ]
 }

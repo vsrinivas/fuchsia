@@ -2,29 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
 
-package("vulkaninfo") {
+fuchsia_component("vulkaninfo_cmp") {
+  manifest = "meta/vulkaninfo.cmx"
+  component_name = "vulkaninfo"
+
   deps = [ "//src/lib/vulkan:vulkaninfo" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/vulkaninfo.cmx")
-      dest = "vulkaninfo.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "vulkaninfo"
-    },
-  ]
-  public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain.loadable_modules
-  resources =
-      vulkan_validation_layers.resources + image_pipe_swapchain.resources
+fuchsia_package("vulkaninfo") {
+  deps = [ ":vulkaninfo_cmp" ]
 }
