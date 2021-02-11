@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/helper_proc"
+        "binary": "bin/helper_proc_bin"
     }
 }

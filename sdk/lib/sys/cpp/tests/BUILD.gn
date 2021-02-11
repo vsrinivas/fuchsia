@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test("component_cpp_unittests") {
+test("component_cpp_unittests_bin") {
   sources = [
     "component_context_unittest.cc",
     "echo_server.h",
@@ -28,7 +28,12 @@ test("component_cpp_unittests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test("component_cpp_testing_unittests") {
+fuchsia_unittest_component("component_cpp_unittests") {
+  manifest = "meta/component_cpp_unittests.cmx"
+  deps = [ ":component_cpp_unittests_bin" ]
+}
+
+test("component_cpp_testing_unittests_bin") {
   sources = [
     "component_context_provider_unittest.cc",
     "echo_server.h",
@@ -45,7 +50,12 @@ test("component_cpp_testing_unittests") {
   ]
 }
 
-test("component_cpp_testing_tests") {
+fuchsia_unittest_component("component_cpp_testing_unittests") {
+  deps = [ ":component_cpp_testing_unittests_bin" ]
+  manifest = "meta/component_cpp_testing_unittests.cmx"
+}
+
+test("component_cpp_testing_tests_bin") {
   sources = [
     "component_interceptor_unittest.cc",
     "enclosing_environment_test.cc",
@@ -65,7 +75,12 @@ test("component_cpp_testing_tests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("helper_proc") {
+fuchsia_unittest_component("component_cpp_testing_tests") {
+  deps = [ ":component_cpp_testing_tests_bin" ]
+  manifest = "meta/component_cpp_testing_tests.cmx"
+}
+
+executable("helper_proc_bin") {
   testonly = true
 
   sources = [ "helper.cc" ]
@@ -79,6 +94,12 @@ executable("helper_proc") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_component("helper_proc") {
+  deps = [ ":helper_proc_bin" ]
+  manifest = "meta/helper_proc.cmx"
+  testonly = true
 }
 
 executable("constructor_helper_proc") {
@@ -98,40 +119,14 @@ executable("constructor_helper_proc") {
   ]
 }
 
-test_package("component_cpp_tests") {
-  deps = [
+fuchsia_test_package("component_cpp_tests") {
+  test_components = [
     ":component_cpp_testing_tests",
     ":component_cpp_testing_unittests",
     ":component_cpp_unittests",
+  ]
+  deps = [
     ":constructor_helper_proc",
     ":helper_proc",
-  ]
-
-  binaries = [
-    {
-      name = "constructor_helper_proc"
-    },
-    {
-      name = "helper_proc"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/helper_proc.cmx")
-      dest = "helper_proc.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "component_cpp_unittests"
-    },
-    {
-      name = "component_cpp_testing_unittests"
-    },
-    {
-      name = "component_cpp_testing_tests"
-    },
   ]
 }
