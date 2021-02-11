@@ -277,6 +277,16 @@ class FormatAccessSetTest(unittest.TestCase):
                    b
                    c"""))
 
+    def test_writes(self):
+        self.assertEqual(
+            str(action_tracer.FSAccessSet(writes={"e", "f", "d"})),
+            textwrap.dedent(
+                """\
+                 Writes:
+                   d
+                   e
+                   f"""))
+
     def test_reads_writes(self):
         files = {"c", "a", "b"}
         self.assertEqual(
@@ -400,6 +410,20 @@ class CheckAccessPermissionsTests(unittest.TestCase):
                 action_tracer.FSAccessSet(writes=bad_writes),
                 action_tracer.AccessConstraints()),
             action_tracer.FSAccessSet(writes=bad_writes),
+        )
+
+    def test_read_from_temporary_writes_ok(self):
+        temp_file = "__file.tmp"
+        reads = {temp_file}
+        writes = {
+            "unwriteable.txt",
+            temp_file,
+        }
+        self.assertEqual(
+            action_tracer.check_access_permissions(
+                action_tracer.FSAccessSet(reads=reads, writes=writes),
+                action_tracer.AccessConstraints()),
+            action_tracer.FSAccessSet(reads=set(), writes=writes),
         )
 
 

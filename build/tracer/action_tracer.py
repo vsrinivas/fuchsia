@@ -281,7 +281,7 @@ class FSAccessSet(object):
         if self.reads:
             text += "\nReads:\n  " + _sorted_join(self.reads, "\n  ")
         if self.writes:
-            text += "\nWrites:\n  " + _sorted_join(self.reads, "\n  ")
+            text += "\nWrites:\n  " + _sorted_join(self.writes, "\n  ")
         # trim first newline if there is one
         return text.lstrip("\n")
 
@@ -314,9 +314,6 @@ def finalize_filesystem_accesses(accesses: Iterable[FSAccess]) -> FSAccessSet:
             # temporary/deleted files.
             writes.discard(access.path)
 
-    # TODO(fangism): reading from temporary files should be allowed,
-    # and not count towards the overall set of read files.
-
     # writes contains the set of files that were not deleted
     return FSAccessSet(reads=reads, writes=writes)
 
@@ -334,7 +331,12 @@ def check_access_permissions(
     Returns:
       Subset of not-permitted file accesses.
     """
-    unexpected_reads = accesses.reads - constraints.allowed_reads
+    # Suppress diagnostics on reading files that are written,
+    # regardless of whether or not those writes were allowed.
+    # For example, temporarily written files (not declared as outputs)
+    # should be allowed to be read without issue.
+    allowed_reads = constraints.allowed_reads | accesses.writes
+    unexpected_reads = accesses.reads - allowed_reads
     unexpected_writes = accesses.writes - constraints.allowed_writes
     return FSAccessSet(reads=unexpected_reads, writes=unexpected_writes)
 
