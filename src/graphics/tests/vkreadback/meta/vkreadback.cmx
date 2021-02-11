@@ -4,7 +4,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/vkreadback"
+        "binary": "bin/vkreadback"
     },
     "sandbox": {
         "features": [

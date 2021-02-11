@@ -1,8 +1,11 @@
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+#
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
-source_set("vkreadback_src") {
+source_set("src") {
   testonly = true
 
   sources = [
@@ -19,15 +22,43 @@ source_set("vkreadback_src") {
   public_deps += [ "//src/lib/vulkan" ]
 }
 
-executable("vkreadback") {
+executable("vkreadback_bin") {
   testonly = true
+  output_name = "vkreadback"
 
   sources = [ "main.cc" ]
 
-  deps = [ ":vkreadback_src" ]
+  deps = [ ":src" ]
 }
 
 group("linux_arm64") {
   testonly = true
-  deps = [ ":vkreadback(//build/toolchain:linux_arm64)" ]
+  deps = [ ":vkreadback_bin(//build/toolchain:linux_arm64)" ]
+}
+
+fuchsia_component("vkreadback_cmp") {
+  testonly = true
+  component_name = "vkreadback"
+  deps = [
+    ":vkreadback_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+
+  manifest = "meta/vkreadback.cmx"
+}
+
+fuchsia_test_package("vkreadback-pkg") {
+  package_name = "vkreadback"
+  test_components = [ ":vkreadback_cmp" ]
+  test_specs = {
+    # TODO(fxbug.dev/47373): Restore astro_env when fxbug.dev/44570 is fixed.
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs +
+                   [ astro_env ] - [ astro_env ]
+  }
+}
+
+group("vkreadback") {
+  testonly = true
+  deps = [ ":vkreadback-pkg" ]
 }

@@ -30,6 +30,7 @@ group("hw_tests") {
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
     "icd_load",
+    "vkreadback",
     "vkvalidation:test-vk-validation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]
@@ -51,20 +52,12 @@ test_package("vulkan-tests") {
     "vkext",
     "vkloop",
     "vkpriority",
-    "vkreadback",
   ]
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
   public_deps = vulkan_validation_layers.public_deps
 
   tests = [
-    {
-      name = "vkreadback"
-
-      # TODO(fxbug.dev/47373): Restore astro_env when fxbug.dev/44570 is fixed.
-      environments = [ aemu_env ] + magma_libvulkan_hardware_envs +
-                     [ astro_env ] - [ astro_env ]
-    },
     {
       name = "vkloop"
       environments = magma_libvulkan_hardware_envs
