@@ -520,7 +520,6 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
 
 TEST_F(DeviceEnumerationTest, LuisTest) {
   static const char* kDevicePaths[] = {
-      "imx355-sensor",
       "sys/platform/05:04:13/luis-audio-pdm-in",
       "luis-i2s-audio-out",
       "sherlock-buttons/hid-buttons",

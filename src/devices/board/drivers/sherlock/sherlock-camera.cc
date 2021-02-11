@@ -216,7 +216,6 @@ static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36),  // sherlock
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x1a),  // luis camera sensor
 };
 static const zx_bind_inst_t gpio_reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
@@ -230,27 +229,6 @@ static const zx_bind_inst_t gpio_vdig_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VDIG_ENABLE),
 };
-
-// Additional definitions for Luis.
-// The reset and digital voltage enables are the same
-static const zx_bind_inst_t gpio_cam_mute_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_MUTE),
-};
-static const zx_bind_inst_t gpio_cam_vif_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_VIF_ENABLE),
-};
-static const zx_bind_inst_t gpio_cam_vana_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_VANA_ENABLE),
-};
-static const zx_bind_inst_t i2c_eeprom_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x51),  // luis camera module EEPROM
-};
-
 static const zx_bind_inst_t clk_sensor_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_CAM_INCK_24M),
@@ -274,25 +252,6 @@ static const device_fragment_part_t gpio_vdig_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_vdig_match), gpio_vdig_match},
 };
-
-// Additions for Luis
-static const device_fragment_part_t gpio_cam_mute_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(gpio_cam_mute_match), gpio_cam_mute_match},
-};
-static const device_fragment_part_t gpio_cam_vif_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(gpio_cam_vif_match), gpio_cam_vif_match},
-};
-static const device_fragment_part_t gpio_cam_vana_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(gpio_cam_vana_match), gpio_cam_vana_match},
-};
-static const device_fragment_part_t i2c_eeprom_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(i2c_eeprom_match), i2c_eeprom_match},
-};
-
 static const device_fragment_part_t clk_sensor_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk_sensor_match), clk_sensor_match},
@@ -307,17 +266,6 @@ static const device_fragment_t imx227_sensor_fragments[] = {
     {"gpio-vana", countof(gpio_vana_fragment), gpio_vana_fragment},
     {"gpio-vdig", countof(gpio_vdig_fragment), gpio_vdig_fragment},
     {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-    {"clock-sensor", countof(clk_sensor_fragment), clk_sensor_fragment},
-};
-static const device_fragment_t imx355_sensor_fragments[] = {
-    {"mipicsi", countof(mipicsi_fragment), mipicsi_fragment},
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"i2c-eeprom", countof(i2c_eeprom_fragment), i2c_eeprom_fragment},
-    {"gpio-cam-mute", countof(gpio_cam_mute_fragment), gpio_cam_mute_fragment},
-    {"gpio-cam-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-    {"gpio-cam-vana", countof(gpio_cam_vana_fragment), gpio_cam_vana_fragment},
-    {"gpio-vdig", countof(gpio_vdig_fragment), gpio_vdig_fragment},
-    {"gpio-cam-vif", countof(gpio_cam_vif_fragment), gpio_cam_vif_fragment},
     {"clock-sensor", countof(clk_sensor_fragment), clk_sensor_fragment},
 };
 
@@ -426,15 +374,6 @@ const pbus_dev_t sensor_dev_sherlock = []() {
   return dev;
 }();
 
-const pbus_dev_t sensor_dev_luis = []() {
-  pbus_dev_t dev = {};
-  dev.name = "imx355-sensor";
-  dev.vid = PDEV_VID_SONY;
-  dev.pid = PDEV_PID_SONY_IMX355;
-  dev.did = PDEV_DID_CAMERA_SENSOR;
-  return dev;
-}();
-
 }  // namespace
 
 // Refer to camera design document for driver
@@ -450,15 +389,9 @@ zx_status_t Sherlock::CameraInit() {
     return status;
   }
 
-  if (pid_ == PDEV_PID_LUIS) {
-    status = pbus_.CompositeDeviceAdd(&sensor_dev_luis,
-                                      reinterpret_cast<uint64_t>(imx355_sensor_fragments),
-                                      countof(imx355_sensor_fragments), 1);
-  } else {
-    status = pbus_.CompositeDeviceAdd(&sensor_dev_sherlock,
-                                      reinterpret_cast<uint64_t>(imx227_sensor_fragments),
-                                      countof(imx227_sensor_fragments), 1);
-  }
+  status = pbus_.CompositeDeviceAdd(&sensor_dev_sherlock,
+                                    reinterpret_cast<uint64_t>(imx227_sensor_fragments),
+                                    countof(imx227_sensor_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
     return status;
