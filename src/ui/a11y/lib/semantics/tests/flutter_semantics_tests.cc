@@ -138,7 +138,7 @@ TEST_F(FlutterSemanticsTests, PerformAction) {
 }
 
 // Loads ally-demo flutter app and validates scroll-to-make-visible
-TEST_F(FlutterSemanticsTests, ScrollToMakeVisible) {
+TEST_F(FlutterSemanticsTests, DISABLED_ScrollToMakeVisible) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // The "Yellow" node should be off-screen in a scrollable list
