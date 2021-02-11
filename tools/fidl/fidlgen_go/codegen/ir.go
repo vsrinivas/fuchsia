@@ -564,15 +564,19 @@ func (c *compiler) computeHandleRights(t fidl.Type) (fidl.HandleRights, bool) {
 // Handle subtype annotations are added to fields that contain handles
 // or arrays and vectors of handles (recursively).
 func (c *compiler) computeHandleSubtype(t fidl.Type) (fidl.ObjectType, bool) {
-	// TODO(fxbug.dev/45998): clean up once numeric subtype is emitted in IR
 	switch t.Kind {
 	case fidl.HandleType:
-		// TODO(fxbug.dev/48012): subtypes of aliased handle types are not currently
-		// set in the JSON, so they are unchecked.
-		return fidl.ObjectTypeFromHandleSubtype(t.HandleSubtype), true
+		return fidl.ObjectType(t.ObjType), true
 	case fidl.RequestType:
+		// TODO(fxbug.dev/45998 & fxb/64629): Currently, fidlc does not emit an
+		// object type for request types. Internally, fidlc does not interpret
+		// request types as special channel handles.
 		return fidl.ObjectTypeChannel, true
 	case fidl.IdentifierType:
+		// TODO(fxbug.dev/45998 & fxb/64629): Same issue as above, but for the
+		// reciprocal. Once we properly represent `client_end:P` and
+		// `server_end:P` as further constraints on a handle, we can solve this
+		// cleanly.
 		declInfo, ok := c.decls[t.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", t.Identifier))

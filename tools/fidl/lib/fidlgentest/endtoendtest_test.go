@@ -20,3 +20,26 @@ func TestEndToEndExample(t *testing.T) {
 		t.Errorf("expected 'example', was '%s'", root.Name)
 	}
 }
+
+func TestHandleObjType(t *testing.T) {
+	root := EndToEndTest{T: t}.Single(`library example;
+
+	enum obj_type : uint32 {
+		NONE = 0;
+		VMO = 3;
+	};
+
+	resource_definition handle : uint32 {
+		properties {
+			obj_type subtype;
+		};
+	};
+
+	resource struct MyStruct {
+		handle:VMO field;
+	};`)
+
+	if root.Structs[0].Members[0].Type.ObjType != 3 {
+		t.Errorf("expected '3', was '%d'", root.Structs[0].Members[0].Type.ObjType)
+	}
+}

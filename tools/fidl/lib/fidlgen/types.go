@@ -229,8 +229,15 @@ const (
 	Vmo          HandleSubtype = "vmo"
 )
 
-// Copied from third_party/go/src/syscall/zx/types.go
-type ObjectType uint32 // zx_obj_type_t
+// TODO(fxb/64629): Remove, source of truth is library zx.
+//
+// One complication is that GIDL parses nice handle subtypes in its grammar,
+// e.g. `#0 = event(rights: execute + write )`. And some GIDL backends care
+// about the object type. This means that we need to duplicate this mapping :/
+// It would be cleaner to limit this to GIDL and GIDL backends, rather than
+// offer that in the general purpose lib/fidlgen.
+type ObjectType uint32
+
 const (
 	ObjectTypeNone = ObjectType(iota)
 	ObjectTypeProcess
@@ -261,21 +268,26 @@ const (
 	ObjectTypePmt
 	ObjectTypeSuspendToken
 	ObjectTypePager
+	ObjectTypeException
+	ObjectTypeClock
 )
 
-// TODO(fxbug.dev/45998): emit the numeric value of the subtype in fidlc
 func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 	switch val {
 	case Bti:
 		return ObjectTypeBti
 	case Channel:
 		return ObjectTypeChannel
+	case Clock:
+		return ObjectTypeClock
 	case DebugLog:
 		return ObjectTypeLog
 	case Event:
 		return ObjectTypeEvent
 	case Eventpair:
 		return ObjectTypeEventPair
+	case Exception:
+		return ObjectTypeException
 	case Fifo:
 		return ObjectTypeFifo
 	case Guest:
@@ -371,6 +383,7 @@ type Type struct {
 	PrimitiveSubtype PrimitiveSubtype
 	Identifier       EncodedCompoundIdentifier
 	Nullable         bool
+	ObjType          uint32
 }
 
 // UnmarshalJSON customizes the JSON unmarshalling for Type.
@@ -434,6 +447,10 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(*obj["obj_type"], &t.ObjType)
 		if err != nil {
 			return err
 		}

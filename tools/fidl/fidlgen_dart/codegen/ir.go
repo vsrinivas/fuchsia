@@ -692,7 +692,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
 		baseType := fmt.Sprintf("$fidl.%sType(objectType: %d, rights: %d)",
-			subtype, fidl.ObjectTypeFromHandleSubtype(val.HandleSubtype), val.HandleRights)
+			subtype, val.ObjType, val.HandleRights)
 		if val.Nullable {
 			r.typeExpr = fmt.Sprintf("$fidl.NullableHandleType(%s)", baseType)
 		} else {

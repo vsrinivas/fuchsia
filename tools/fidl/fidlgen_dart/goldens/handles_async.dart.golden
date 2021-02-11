@@ -512,7 +512,7 @@ class Handles extends $fidl.Struct {
   static const $fieldType2 =
       $fidl.ChannelType(objectType: 4, rights: 2147483648);
   static const $fieldType3 =
-      $fidl.HandleType(objectType: 0, rights: 2147483648);
+      $fidl.HandleType(objectType: 30, rights: 2147483648);
   static const $fieldType4 =
       $fidl.HandleType(objectType: 12, rights: 2147483648);
   static const $fieldType5 =
@@ -520,7 +520,7 @@ class Handles extends $fidl.Struct {
   static const $fieldType6 =
       $fidl.EventPairType(objectType: 16, rights: 2147483648);
   static const $fieldType7 =
-      $fidl.HandleType(objectType: 0, rights: 2147483648);
+      $fidl.HandleType(objectType: 29, rights: 2147483648);
   static const $fieldType8 =
       $fidl.HandleType(objectType: 19, rights: 2147483648);
   static const $fieldType9 =

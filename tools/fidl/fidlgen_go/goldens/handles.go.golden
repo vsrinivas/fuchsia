@@ -221,11 +221,11 @@ type Handles struct {
 	PlainHandle               _zx.Handle                          `fidl_offset_v1:"0" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	BtiHandle                 _zx.Handle                          `fidl_offset_v1:"4" fidl_handle_subtype:"24" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	ChannelHandle             _zx.Channel                         `fidl_offset_v1:"8" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ClockHandle               _zx.Handle                          `fidl_offset_v1:"12" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ClockHandle               _zx.Handle                          `fidl_offset_v1:"12" fidl_handle_subtype:"30" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	DebuglogHandle            _zx.Log                             `fidl_offset_v1:"16" fidl_handle_subtype:"12" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	EventHandle               _zx.Event                           `fidl_offset_v1:"20" fidl_handle_subtype:"5" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	EventpairHandle           _zx.Handle                          `fidl_offset_v1:"24" fidl_handle_subtype:"16" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ExceptionHandle           _zx.Handle                          `fidl_offset_v1:"28" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ExceptionHandle           _zx.Handle                          `fidl_offset_v1:"28" fidl_handle_subtype:"29" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	FifoHandle                _zx.Handle                          `fidl_offset_v1:"32" fidl_handle_subtype:"19" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	GuestHandle               _zx.Handle                          `fidl_offset_v1:"36" fidl_handle_subtype:"20" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	InterruptHandle           _zx.Handle                          `fidl_offset_v1:"40" fidl_handle_subtype:"9" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
