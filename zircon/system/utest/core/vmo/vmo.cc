@@ -1679,7 +1679,7 @@ TEST(VmoTestCase, V1Info) {
 TEST(VmoTestCase, Discardable) {
   // Create a discardable VMO.
   zx::vmo vmo;
-  constexpr size_t kSize = 3 * ZX_PAGE_SIZE;
+  const size_t kSize = 3 * zx_system_get_page_size();
   ASSERT_OK(zx::vmo::create(kSize, ZX_VMO_DISCARDABLE, &vmo));
 
   // Verify that the discardable bit is set.
@@ -1694,7 +1694,8 @@ TEST(VmoTestCase, Discardable) {
   // Make sure we read zeros.
   uint8_t buf[kSize];
   EXPECT_OK(vmo.read(buf, 0, sizeof(buf)));
-  uint8_t comp[kSize] = {0};
+  uint8_t comp[kSize];
+  memset(comp, 0, sizeof(comp));
   EXPECT_BYTES_EQ(buf, comp, sizeof(buf));
 
   // Write something to verify later.
@@ -1745,7 +1746,7 @@ TEST(VmoTestCase, Discardable) {
 TEST(VmoTestCase, LockUnlock) {
   // Lock/unlock only works with discardable VMOs.
   zx::vmo vmo;
-  constexpr size_t kSize = 3 * ZX_PAGE_SIZE;
+  const size_t kSize = 3 * zx_system_get_page_size();
   ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, kSize, nullptr, 0));
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, nullptr, 0));
@@ -1782,22 +1783,26 @@ TEST(VmoTestCase, LockUnlock) {
   ASSERT_OK(zx::vmo::create(kSize, ZX_VMO_DISCARDABLE, &vmo));
 
   // Lock/unlock work only on the entire VMO.
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, ZX_PAGE_SIZE, nullptr, 0));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-            vmo.op_range(ZX_VMO_OP_LOCK, 0, ZX_PAGE_SIZE, &lock_state, sizeof(lock_state)));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_UNLOCK, 0, ZX_PAGE_SIZE, nullptr, 0));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-            vmo.op_range(ZX_VMO_OP_TRY_LOCK, ZX_PAGE_SIZE, kSize - ZX_PAGE_SIZE, nullptr, 0));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_LOCK, ZX_PAGE_SIZE, kSize - ZX_PAGE_SIZE,
+            vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_LOCK, 0, zx_system_get_page_size(),
                                               &lock_state, sizeof(lock_state)));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-            vmo.op_range(ZX_VMO_OP_UNLOCK, ZX_PAGE_SIZE, kSize - ZX_PAGE_SIZE, nullptr, 0));
+            vmo.op_range(ZX_VMO_OP_UNLOCK, 0, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_TRY_LOCK, zx_system_get_page_size(),
+                                              kSize - zx_system_get_page_size(), nullptr, 0));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-            vmo.op_range(ZX_VMO_OP_TRY_LOCK, ZX_PAGE_SIZE, ZX_PAGE_SIZE, nullptr, 0));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_LOCK, ZX_PAGE_SIZE, ZX_PAGE_SIZE,
-                                              &lock_state, sizeof(lock_state)));
+            vmo.op_range(ZX_VMO_OP_LOCK, zx_system_get_page_size(),
+                         kSize - zx_system_get_page_size(), &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_UNLOCK, zx_system_get_page_size(),
+                                              kSize - zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_TRY_LOCK, zx_system_get_page_size(),
+                                              zx_system_get_page_size(), nullptr, 0));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-            vmo.op_range(ZX_VMO_OP_UNLOCK, ZX_PAGE_SIZE, ZX_PAGE_SIZE, nullptr, 0));
+            vmo.op_range(ZX_VMO_OP_LOCK, zx_system_get_page_size(), zx_system_get_page_size(),
+                         &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_UNLOCK, zx_system_get_page_size(),
+                                              zx_system_get_page_size(), nullptr, 0));
 
   // Lock requires a zx_vmo_lock_state_t arg.
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, nullptr, 0));
