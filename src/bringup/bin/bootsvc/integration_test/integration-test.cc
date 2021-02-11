@@ -17,6 +17,7 @@
 #include <lib/zx/vmo.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
@@ -168,6 +169,21 @@ TEST(BootsvcIntegrationTest, BootfsExecutability) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_get_vmo_exec(fd.get(), vmo.reset_and_get_address()),
               "get_vmo_exec %s", file);
   }
+}
+
+// Bootfs times should always be zero rather than following a system UTC thats isn't always
+// available or reliable early in boot.
+TEST(BootsvcIntegrationTest, BootfsFileTimes) {
+  const char* kTestPath = "/boot/pkg";
+  fbl::unique_fd fd;
+  struct stat s;
+
+  ASSERT_EQ(ZX_OK,
+            fdio_open_fd(kTestPath, fio::OPEN_RIGHT_READABLE, fd.reset_and_get_address()),
+            "open %s for file time check", kTestPath);
+  ASSERT_EQ(0, fstat(fd.get(), &s), "get %s attributes", kTestPath);
+  EXPECT_EQ(0, s.st_ctim.tv_sec);
+  EXPECT_EQ(0, s.st_mtim.tv_sec);
 }
 
 // Make sure that bootsvc passed along program arguments from bootsvc.next

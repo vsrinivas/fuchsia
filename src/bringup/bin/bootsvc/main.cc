@@ -18,8 +18,10 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/clock.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
+#include <zircon/utc.h>
 
 #include <iterator>
 #include <memory>
@@ -68,6 +70,25 @@ zx_status_t SetupStdout(const zx::debuglog& log) {
   int fd = fdio_bind_to_fd(logger, 1, 0);
   if (fd != 1) {
     return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
+}
+
+// Create and install a userspace UTC clock that will remain fixed at zero.
+zx_status_t InitializeClock() {
+  zx_clock_create_args_v1_t args = {};
+  zx_handle_t clock, prev_clock;
+  zx_status_t status = zx_clock_create(ZX_CLOCK_ARGS_VERSION(1), &args, &clock);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = zx_utc_reference_swap(clock, &prev_clock);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (prev_clock != ZX_HANDLE_INVALID) {
+    printf("bootsvc: UTC clock was not empty during initialization\n");
+    zx_handle_close(prev_clock);
   }
   return ZX_OK;
 }
@@ -362,6 +383,12 @@ int main(int argc, char** argv) {
 #endif
   resources.root.reset(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
   ZX_ASSERT_MSG(resources.root.is_valid(), "Invalid root resource handle\n");
+
+  // Memfs attempts to read the UTC clock to set file times, but bootsvc starts
+  // before component_manager has created the standard UTC clock. Create a
+  // process-local clock fixed to zero to avoid clock read errors.
+  status = InitializeClock();
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to create clock: %s\n", zx_status_get_string(status));
 
   // Create a VMEX resource object to provide the bootfs service.
   // TODO(smpham): Pass VMEX resource from kernel.
