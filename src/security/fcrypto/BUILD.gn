@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("transitional") {
-  include_dirs = [ "include" ]
-}
-
 source_set("fcrypto") {
   sources = [
     "aead.cc",
@@ -26,9 +22,6 @@ source_set("fcrypto") {
     "digest.h",
     "hkdf.h",
     "hmac.h",
-
-    # transitional target for non-fuchsia.git clients
-    "include/crypto/secret.h",
     "secret.h",
   ]
 
