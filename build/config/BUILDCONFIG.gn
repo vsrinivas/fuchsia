@@ -625,12 +625,14 @@ foreach(_target_type,
           "--trace-output",
         ]
         if (_target_type == "action") {
-          args += [ rebase_path("${target_gen_dir}/${target_name}_trace.txt",
-                                root_build_dir) ]
+          gen_path = rebase_path("${target_gen_dir}/${target_name}_trace.txt",
+                                 root_build_dir)
+          args += [ ".traces/${gen_path}" ]
         } else if (_target_type == "action_foreach") {
-          args += [ rebase_path(
+          gen_path = rebase_path(
                   "${target_gen_dir}/${target_name}_{{source_name_part}}_trace.txt",
-                  root_build_dir) ]
+                  root_build_dir)
+          args += [ ".traces/${gen_path}" ]
         }
 
         # Fail the action when tracing detects an issue.
