@@ -101,7 +101,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     handle_dispositions = new zx_handle_disposition_t[message.handles().size()];
     for (uint32_t i = 0; i < message.handles().size(); ++i) {
       handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;
-      handle_dispositions[i].handle = message.handles().data()[i];
+      handle_dispositions[i].handle = message.handles().data()[i].handle;
       handle_dispositions[i].type = ZX_OBJ_TYPE_NONE;
       handle_dispositions[i].rights = 0;
       handle_dispositions[i].result = ZX_OK;
@@ -1597,7 +1597,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
     handle_dispositions = new zx_handle_disposition_t[message.handles().size()];
     for (uint32_t i = 0; i < message.handles().size(); ++i) {
       handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;
-      handle_dispositions[i].handle = message.handles().data()[i];
+      handle_dispositions[i].handle = message.handles().data()[i].handle;
       handle_dispositions[i].type = ZX_OBJ_TYPE_NONE;
       handle_dispositions[i].rights = 0;
       handle_dispositions[i].result = ZX_OK;

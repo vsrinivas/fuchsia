@@ -65,16 +65,6 @@ class MessageDecoderTest : public ::testing::Test {
   // `syscall_type` interprets the FIDL message as received or sent.
   void AssertDecoded(const fidl::HLCPPIncomingMessage& message, SyscallFidlType syscall_type,
                      const char* expected) {
-    std::unique_ptr<zx_handle_info_t[]> handle_infos;
-    if (message.handles().size() > 0) {
-      handle_infos = std::make_unique<zx_handle_info_t[]>(message.handles().size());
-      for (uint32_t i = 0; i < message.handles().size(); ++i) {
-        handle_infos[i].handle = message.handles().data()[i];
-        handle_infos[i].type = ZX_OBJ_TYPE_NONE;
-        handle_infos[i].rights = 0;
-      }
-    }
-
     DecodedMessage decoded_message;
     std::stringstream error_stream;
     decoded_message.DecodeMessage(decoder(), process_koid(), ZX_HANDLE_INVALID,

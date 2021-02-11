@@ -18,8 +18,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   state->DeclareStep("Teardown/WallTime");
 
   std::vector<uint8_t> buffer;
-  std::vector<zx_handle_t> handles;
-  std::vector<zx_handle_disposition_t> handle_dispositions;
+  std::vector<zx_handle_info_t> handle_infos;
   while (state->KeepRunning()) {
     // construct a new object each iteration so that the handle close cost is included in the
     // decode time.
@@ -31,15 +30,11 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::HLCPPOutgoingMessage encode_msg = enc.GetMessage();
 
     buffer.resize(encode_msg.bytes().actual());
-    handle_dispositions.resize(encode_msg.handles().actual());
     memcpy(buffer.data(), encode_msg.bytes().data(), encode_msg.bytes().actual());
-    memcpy(handle_dispositions.data(), encode_msg.handles().data(),
-           encode_msg.handles().actual() * sizeof(zx_handle_disposition_t));
-
-    handles.resize(encode_msg.handles().actual());
-    for (uint32_t i = 0; i < handles.size(); i++) {
-      handles[i] = handle_dispositions[i].handle;
-    }
+    handle_infos.resize(encode_msg.handles().actual());
+    ZX_ASSERT(ZX_OK == FidlHandleDispositionsToHandleInfos(encode_msg.handles().data(),
+                                                           handle_infos.data(),
+                                                           encode_msg.handles().actual()));
 
     state->NextStep();  // End: Setup. Begin: Decode.
 
@@ -47,8 +42,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
       fidl::HLCPPIncomingMessage decode_msg(
           fidl::BytePart(buffer.data(), static_cast<uint32_t>(buffer.size()),
                          static_cast<uint32_t>(buffer.size())),
-          fidl::HandlePart(handles.data(), static_cast<uint32_t>(handles.size()),
-                           static_cast<uint32_t>(handles.size())));
+          fidl::HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
+                               static_cast<uint32_t>(handle_infos.size())));
       const char* error_msg;
       ZX_ASSERT_MSG(ZX_OK == decode_msg.Decode(FidlType::FidlType, &error_msg), "%s", error_msg);
       fidl::Decoder decoder(std::move(decode_msg));

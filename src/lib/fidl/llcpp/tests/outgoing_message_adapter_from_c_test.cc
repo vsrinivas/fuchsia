@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#ifndef __Fuchsia__
+
 TEST(OutgoingMessageAdaptorFromC, Byte) {
   uint8_t bytes[1];
   zx_handle_disposition_t handles[2];
@@ -49,3 +51,5 @@ TEST(OutgoingMessageAdaptorFromC, Iovec) {
   EXPECT_EQ(orig_msg.iovec.num_iovecs, new_msg.iovec.num_iovecs);
   EXPECT_EQ(orig_msg.iovec.num_handles, new_msg.iovec.num_handles);
 }
+
+#endif

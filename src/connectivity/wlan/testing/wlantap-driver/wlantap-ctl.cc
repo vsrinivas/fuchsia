@@ -68,7 +68,7 @@ struct WlantapCtl : wlantap::WlantapCtl::RawChannelInterface {
         completer.Reply(encoded.status());
         return;
       }
-      fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+      auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
       ZX_ASSERT(converted.ok());
       fidl::DecodedMessage<wlantap::WlantapPhyConfig> decoded(converted.incoming_message());
       if (!decoded.ok()) {
@@ -77,7 +77,7 @@ struct WlantapCtl : wlantap::WlantapCtl::RawChannelInterface {
       }
       fidl::Decoder dec(fidl::HLCPPIncomingMessage(
           ::fidl::BytePart(decoded.bytes(), decoded.byte_actual(), decoded.byte_actual()),
-          fidl::HandlePart()));
+          fidl::HandleInfoPart()));
       ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
     }
 

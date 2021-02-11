@@ -12,8 +12,9 @@ TEST(OutgoingToIncomingMessage, ByteMessage) {
   fidl::OutgoingByteMessage msg(bytes, sizeof(bytes), sizeof(bytes), nullptr, 0, 0);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(bytes, result.incoming_message()->bytes);
   ASSERT_EQ(sizeof(bytes), result.incoming_message()->num_bytes);
+  EXPECT_EQ(0,
+            memcmp(result.incoming_message()->bytes, bytes, result.incoming_message()->num_bytes));
   ASSERT_EQ(0u, result.incoming_message()->num_handles);
 }
 
@@ -50,13 +51,6 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
   EXPECT_EQ(0u, output->num_handles);
 }
 
-TEST(OutgoingToIncomingMessage, TooManyHandles) {
-  constexpr uint32_t num_handles = ZX_CHANNEL_MAX_MSG_HANDLES + 1;
-  fidl::OutgoingByteMessage msg(nullptr, 0, 0, nullptr, num_handles, num_handles);
-  auto result = fidl::OutgoingToIncomingMessage(msg);
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, result.status());
-}
-
 #ifdef __Fuchsia__
 TEST(OutgoingToIncomingMessage, Handles) {
   uint8_t bytes[16];
@@ -65,19 +59,51 @@ TEST(OutgoingToIncomingMessage, Handles) {
   zx_handle_disposition_t hd[1] = {zx_handle_disposition_t{
       .operation = ZX_HANDLE_OP_MOVE,
       .handle = ev.get(),
-      .type = ZX_OBJ_TYPE_NONE,
-      .rights = ZX_RIGHT_SAME_RIGHTS,
+      .type = ZX_OBJ_TYPE_EVENT,
+      .rights = ZX_DEFAULT_EVENT_RIGHTS,
       .result = ZX_OK,
   }};
   fidl::OutgoingByteMessage msg(bytes, 16, 16, hd, 1, 1);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
   fidl_incoming_msg_t* output = result.incoming_message();
-  EXPECT_EQ(output->bytes, bytes);
   EXPECT_EQ(output->num_bytes, 16u);
+  EXPECT_EQ(0, memcmp(output->bytes, bytes, output->num_bytes));
   EXPECT_EQ(output->num_handles, 1u);
   EXPECT_EQ(output->handles[0].handle, ev.get());
   EXPECT_EQ(output->handles[0].type, ZX_OBJ_TYPE_EVENT);
   EXPECT_EQ(output->handles[0].rights, ZX_DEFAULT_EVENT_RIGHTS);
+}
+
+TEST(OutgoingToIncomingMessage, HandlesWrongType) {
+  uint8_t bytes[16];
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_disposition_t hd[1] = {zx_handle_disposition_t{
+      .operation = ZX_HANDLE_OP_MOVE,
+      .handle = ev.get(),
+      .type = ZX_OBJ_TYPE_CHANNEL,
+      .rights = ZX_RIGHT_SAME_RIGHTS,
+      .result = ZX_OK,
+  }};
+  fidl::OutgoingByteMessage msg(bytes, 16, 16, hd, 1, 1);
+  auto result = fidl::OutgoingToIncomingMessage(msg);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+}
+
+TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
+  uint8_t bytes[16];
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_disposition_t hd[1] = {zx_handle_disposition_t{
+      .operation = ZX_HANDLE_OP_MOVE,
+      .handle = ev.get(),
+      .type = ZX_OBJ_TYPE_EVENT,
+      .rights = ZX_RIGHT_DESTROY,
+      .result = ZX_OK,
+  }};
+  fidl::OutgoingByteMessage msg(bytes, 16, 16, hd, 1, 1);
+  auto result = fidl::OutgoingToIncomingMessage(msg);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
 }
 #endif

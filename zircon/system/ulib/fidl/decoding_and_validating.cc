@@ -174,47 +174,15 @@ class FidlDecoder final : public BaseVisitor<Byte> {
       return Status::kConstraintViolationError;
     }
 
-    // Note: objects returned from the kernel should never have type
-    // ZX_OBJ_TYPE_NONE, however this is used for backwards compatibility in
-    // some places.
-    if (unlikely(required_handle_subtype != received_handle_info.type &&
-                 required_handle_subtype != ZX_OBJ_TYPE_NONE &&
-                 received_handle_info.type != ZX_OBJ_TYPE_NONE)) {
-      SetError("decoded handle object type does not match expected type");
+    const char* error = nullptr;
+    zx_status_t status = FidlEnsureHandleRights(
+        &received_handle, received_handle_info.type, received_handle_info.rights,
+        required_handle_subtype, required_handle_rights, &error);
+    if (unlikely(status != ZX_OK)) {
+      SetError(error);
       return Status::kConstraintViolationError;
     }
 
-    // Special case: ZX_HANDLE_SAME_RIGHTS allows all handles through unchanged.
-    // Note: objects returned from the kernel should never have rights
-    // ZX_RIGHT_SAME_RIGHTS, however this is used for backwards compatibility
-    // in some places.
-    if (required_handle_rights == ZX_RIGHT_SAME_RIGHTS ||
-        received_handle_info.rights == ZX_RIGHT_SAME_RIGHTS) {
-      AssignInDecode<mode>(handle, received_handle);
-      handle_idx_++;
-      return Status::kSuccess;
-    }
-    // Check for required rights that are not present on the received handle.
-    if (unlikely(subtract_rights(required_handle_rights, received_handle_info.rights) != 0)) {
-      SetError("decoded handle missing required rights");
-      return Status::kConstraintViolationError;
-    }
-    // Check for non-requested rights that are present on the received handle.
-    if (subtract_rights(received_handle_info.rights, required_handle_rights)) {
-#ifdef __Fuchsia__
-      // The handle has more rights than required. Reduce the rights.
-      zx_status_t status =
-          zx_handle_replace(received_handle_info.handle, required_handle_rights, &received_handle);
-      assert(status != ZX_ERR_BAD_HANDLE);
-      if (unlikely(status != ZX_OK)) {
-        SetError("failed to replace handle");
-        return Status::kConstraintViolationError;
-      }
-#else
-      SetError("more rights received than required");
-      return Status::kConstraintViolationError;
-#endif
-    }
     AssignInDecode<mode>(handle, received_handle);
     handle_idx_++;
     return Status::kSuccess;

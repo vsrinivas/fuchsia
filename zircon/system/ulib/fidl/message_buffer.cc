@@ -47,7 +47,7 @@ Builder OutgoingMessageBuffer::CreateBuilder() { return Builder(bytes(), bytes_c
 
 IncomingMessageBuffer::IncomingMessageBuffer(uint32_t bytes_capacity, uint32_t handles_capacity)
     : buffer_(static_cast<uint8_t*>(
-          malloc(GetAllocSize<zx_handle_t>(bytes_capacity, handles_capacity)))),
+          malloc(GetAllocSize<zx_handle_info_t>(bytes_capacity, handles_capacity)))),
       bytes_capacity_(bytes_capacity),
       handles_capacity_(handles_capacity) {
   ZX_ASSERT_MSG(buffer_, "malloc returned NULL in IncomingMessageBuffer::IncomingMessageBuffer()");
@@ -55,13 +55,14 @@ IncomingMessageBuffer::IncomingMessageBuffer(uint32_t bytes_capacity, uint32_t h
 
 IncomingMessageBuffer::~IncomingMessageBuffer() { free(buffer_); }
 
-zx_handle_t* IncomingMessageBuffer::handles() const {
-  return reinterpret_cast<zx_handle_t*>(buffer_ + AddPadding<zx_handle_t>(bytes_capacity_));
+zx_handle_info_t* IncomingMessageBuffer::handles() const {
+  return reinterpret_cast<zx_handle_info_t*>(buffer_ +
+                                             AddPadding<zx_handle_info_t>(bytes_capacity_));
 }
 
 HLCPPIncomingMessage IncomingMessageBuffer::CreateEmptyIncomingMessage() {
   return HLCPPIncomingMessage(BytePart(bytes(), bytes_capacity()),
-                              HandlePart(handles(), handles_capacity()));
+                              HandleInfoPart(handles(), handles_capacity()));
 }
 
 }  // namespace fidl

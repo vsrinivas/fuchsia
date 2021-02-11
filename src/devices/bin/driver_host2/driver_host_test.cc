@@ -181,7 +181,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
           fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
     }
     loop().RunUntilIdle();
-    EXPECT_EQ(ZX_OK, epitaph);
+    EXPECT_EQ(expected_start_epitaph_, epitaph);
 
     return {
         .driver = std::move(driver_client_end),
@@ -189,11 +189,16 @@ class DriverHostTest : public gtest::TestLoopFixture {
     };
   }
 
+  void SetExpectedStartEpitaph(zx_status_t expected_start_epitaph) {
+    expected_start_epitaph_ = expected_start_epitaph;
+  }
+
  private:
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   DriverHost driver_host_{&loop_};
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  zx_status_t expected_start_epitaph_ = ZX_OK;
 };
 
 // Start a single driver in the driver host.
@@ -368,6 +373,7 @@ TEST_F(DriverHostTest, InvalidHandleRights) {
   ASSERT_EQ(ZX_OK, client.replace(ZX_RIGHT_TRANSFER, &client));
   fidl::ClientEnd<fdf::Node> client_end(std::move(client));
   // This should fail when node rights are not ZX_DEFAULT_CHANNEL_RIGHTS.
+  SetExpectedStartEpitaph(ZX_ERR_INVALID_ARGS);
   StartDriver({}, fidl::unowned_ptr(&client_end));
   EXPECT_FALSE(connected);
 }

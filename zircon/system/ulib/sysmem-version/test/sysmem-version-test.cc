@@ -71,17 +71,22 @@ class LinearSnap {
            outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t));
     snap_handles_count_ = outgoing_message.handle_actual();
 
-    fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
     ZX_ASSERT(converted.ok());
     auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
     ZX_ASSERT(decoded.ok());
     ZX_ASSERT(decoded.error() == nullptr);
+
+    memcpy(linear_data_, decoded.bytes(), decoded.byte_actual());
+
     // Release the ownership of the primary object (the handles are closed by the LinearSnap
     // destructor).
     decoded.ReleasePrimaryObject();
 
     // At this point, the handles are in linear_data_ and value_'s message() is stored directly in
     // linear_data_.
+
+    converted.ReleaseHandles();  // Release handles so they aren't closed.
   }
 
   // During MoveFrom, used for linearizing, encoding, decoding.  After MoveFrom(), holds the

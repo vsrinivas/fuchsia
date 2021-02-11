@@ -66,6 +66,7 @@ cts_source_set("test_sources") {
     "binding_set_unittest.cc",
     "binding_unittest.cc",
     "collision_unittest.cc",
+    "decode_handle_rights_test.cc",
     "encode_decode_unittest.cc",
     "event_sender_unittest.cc",
     "interface_handle_unittest.cc",
@@ -172,7 +173,10 @@ cts_fidl("union_migration_test_fidl") {
 cts_source_set("test_util") {
   testonly = true
 
-  sources = [ "test/test_util.h" ]
+  sources = [
+    "test/test_util.cc",
+    "test/test_util.h",
+  ]
 
   public_deps = [
     "//sdk/lib/fidl/cpp:cpp_base",

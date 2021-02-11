@@ -26,7 +26,7 @@ zx_status_t DecodeObject(uint8_t* bytes, size_t bytes_length, T* object,
                          const char** error_msg_out) {
   HLCPPIncomingMessage msg(
       BytePart(bytes, static_cast<uint32_t>(bytes_length), static_cast<uint32_t>(bytes_length)),
-      HandlePart());
+      HandleInfoPart());
   zx_status_t status = msg.Decode(T::FidlType, error_msg_out);
   if (status != ZX_OK) {
     return status;

@@ -18,14 +18,12 @@ namespace fidl {
 
 HLCPPIncomingMessage::HLCPPIncomingMessage() = default;
 
-HLCPPIncomingMessage::HLCPPIncomingMessage(BytePart bytes, HandlePart handles)
+HLCPPIncomingMessage::HLCPPIncomingMessage(BytePart bytes, HandleInfoPart handles)
     : bytes_(std::move(bytes)), handles_(std::move(handles)) {}
 
 HLCPPIncomingMessage::~HLCPPIncomingMessage() {
 #ifdef __Fuchsia__
-  if (handles_.actual() > 0) {
-    zx_handle_close_many(handles_.data(), handles_.actual());
-  }
+  FidlHandleInfoCloseMany(handles_.data(), handles_.actual());
 #endif
   ClearHandlesUnsafe();
 }
@@ -41,7 +39,7 @@ HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& oth
 
 zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  zx_status_t status = fidl_decode_skip_unknown_handles(
+  zx_status_t status = fidl_decode_etc_skip_unknown_handles(
       type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
   fidl_trace(DidHLCPPDecode);
 
@@ -55,8 +53,8 @@ zx_status_t HLCPPIncomingMessage::Read(zx_handle_t channel, uint32_t flags) {
   uint32_t actual_handles = 0u;
   fidl_trace(WillHLCPPChannelRead);
   zx_status_t status =
-      zx_channel_read(channel, flags, bytes_.data(), handles_.data(), bytes_.capacity(),
-                      handles_.capacity(), &actual_bytes, &actual_handles);
+      zx_channel_read_etc(channel, flags, bytes_.data(), handles_.data(), bytes_.capacity(),
+                          handles_.capacity(), &actual_bytes, &actual_handles);
   if (status != ZX_OK) {
     return status;
   }
@@ -134,12 +132,11 @@ zx_status_t HLCPPOutgoingMessage::Write(zx_handle_t channel, uint32_t flags) {
 
 zx_status_t HLCPPOutgoingMessage::Call(zx_handle_t channel, uint32_t flags, zx_time_t deadline,
                                        HLCPPIncomingMessage* response) {
-  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
   zx_channel_call_etc_args_t args;
   args.wr_bytes = bytes_.data();
   args.wr_handles = handles_.data();
   args.rd_bytes = response->bytes().data();
-  args.rd_handles = handle_infos;
+  args.rd_handles = response->handles().data();
   args.wr_num_bytes = bytes_.actual();
   args.wr_num_handles = handles_.actual();
   args.rd_num_bytes = response->bytes().capacity();
@@ -152,9 +149,6 @@ zx_status_t HLCPPOutgoingMessage::Call(zx_handle_t channel, uint32_t flags, zx_t
   if (status == ZX_OK) {
     response->bytes().set_actual(actual_bytes);
     response->handles().set_actual(actual_handles);
-    for (uint32_t i = 0; i < actual_handles; ++i) {
-      response->handles().data()[i] = handle_infos[i].handle;
-    }
   }
   return status;
 }

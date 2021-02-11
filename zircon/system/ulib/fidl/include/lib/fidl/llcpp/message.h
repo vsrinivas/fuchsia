@@ -392,23 +392,25 @@ using UnownedEncodedMessage = typename internal::EncodedMessageTypes<FidlType>::
 template <typename FidlType>
 using DecodedMessage = typename FidlType::DecodedMessage;
 
-// Converts an outgoing message to an incoming message and stores the
-// result alongside needed buffers.
+// Holds the result of a call to |OutgoingToIncomingMessage|.
 //
-// In doing so, it will make syscalls to fetch rights and type information
-// of any provided handles. The caller is responsible for ensuring that
-// outputted handle rights and object types are checked appropriately.
-//
-// |OutgoingToIncomingMessage| must be in scope when |incoming_message|
-// is referenced, because buffers used by |incoming_message| are held by
-// |OutgoingToIncomingMessage|.
-class OutgoingToIncomingMessage {
+// |OutgoingToIncomingMessageResult| objects own the bytes and handles resulting from
+// conversion.
+class OutgoingToIncomingMessageResult {
  public:
-  explicit OutgoingToIncomingMessage(OutgoingMessage& outgoing_msg);
+  explicit OutgoingToIncomingMessageResult(fidl_incoming_msg_t incoming_message, zx_status_t status,
+                                           std::unique_ptr<uint8_t[]> buf_bytes,
+                                           std::unique_ptr<zx_handle_info_t[]> buf_handles)
+      : incoming_message_(incoming_message),
+        status_(status),
+        buf_bytes_(std::move(buf_bytes)),
+        buf_handles_(std::move(buf_handles)) {}
+  ~OutgoingToIncomingMessageResult();
   fidl_incoming_msg_t* incoming_message() {
     ZX_DEBUG_ASSERT(ok());
     return &incoming_message_;
   }
+  void ReleaseHandles() { incoming_message_.num_handles = 0; }
   zx_status_t status() const { return status_; }
   bool ok() const { return status_ == ZX_OK; }
 
@@ -419,6 +421,16 @@ class OutgoingToIncomingMessage {
   std::unique_ptr<uint8_t[]> buf_bytes_;
   std::unique_ptr<zx_handle_info_t[]> buf_handles_;
 };
+
+// Converts an outgoing message to an incoming message.
+//
+// In doing so, it will make syscalls to fetch rights and type information
+// of any provided handles. The caller is responsible for ensuring that
+// returned handle rights and object types are checked appropriately.
+//
+// The returned |OutgoingToIncomingMessageResult| will take ownership over
+// handles from the input |OutgoingMessage|.
+OutgoingToIncomingMessageResult OutgoingToIncomingMessage(OutgoingMessage& input);
 
 }  // namespace fidl
 

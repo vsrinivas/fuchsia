@@ -43,7 +43,9 @@ class Decoder final {
     }
   }
 
-  zx::handle ClaimHandle() { return zx::handle(message_.handles().data()[handle_index_++]); }
+  zx::handle ClaimUnknownHandle() {
+    return zx::handle(message_.handles().data()[handle_index_++].handle);
+  }
 #endif
 
  private:

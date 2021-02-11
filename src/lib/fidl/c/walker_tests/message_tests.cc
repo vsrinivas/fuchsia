@@ -18,7 +18,7 @@ namespace {
 
 TEST(Message, BasicTests) {
   uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handle_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handle_info_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
   zx_handle_disposition_t handle_disposition_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl::Builder builder(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES);
@@ -59,7 +59,7 @@ TEST(Message, BasicTests) {
 
   fidl::HLCPPIncomingMessage incoming_message(
       fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
-      fidl::HandlePart(handle_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
+      fidl::HandleInfoPart(handle_info_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
   EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0u));
 
   EXPECT_EQ(incoming_message.txid(), 5u);
@@ -70,7 +70,8 @@ TEST(Message, ReadErrorCodes) {
   // Create a Message buffer.
   constexpr size_t kBufferSize = 100;
   uint8_t byte_buffer[kBufferSize];
-  fidl::HLCPPIncomingMessage message(fidl::BytePart::WrapEmpty(byte_buffer), fidl::HandlePart());
+  fidl::HLCPPIncomingMessage message(fidl::BytePart::WrapEmpty(byte_buffer),
+                                     fidl::HandleInfoPart());
 
   // Create a channel.
   zx::channel client, server;

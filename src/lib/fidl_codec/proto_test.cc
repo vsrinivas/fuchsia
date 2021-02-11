@@ -35,16 +35,6 @@ class ProtoValueTest : public ::testing::Test {
   Library* library() const { return library_; }
 
   std::unique_ptr<FidlMessageValue> CreateFidlMessage(const fidl::HLCPPIncomingMessage& message) {
-    std::unique_ptr<zx_handle_info_t[]> handle_infos;
-    if (message.handles().size() > 0) {
-      handle_infos = std::make_unique<zx_handle_info_t[]>(message.handles().size());
-      for (uint32_t i = 0; i < message.handles().size(); ++i) {
-        handle_infos[i].handle = message.handles().data()[i];
-        handle_infos[i].type = ZX_OBJ_TYPE_NONE;
-        handle_infos[i].rights = 0;
-      }
-    }
-
     DisplayOptions display_options;
     MessageDecoderDispatcher decoder(loader(), display_options);
 

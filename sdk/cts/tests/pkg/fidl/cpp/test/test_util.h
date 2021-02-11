@@ -39,6 +39,8 @@ bool cmp_payload(const T* actual, size_t actual_size, const T* expected, size_t 
   return pass;
 }
 
+std::vector<zx_handle_info_t> ToHandleInfos(std::vector<zx_handle_t> handles);
+
 template <class Output, class Input>
 Output RoundTrip(const Input& input) {
   fidl::Encoder encoder(fidl::Encoder::NoHeader::NO_HEADER);
@@ -48,12 +50,13 @@ Output RoundTrip(const Input& input) {
   const char* err_msg = nullptr;
   EXPECT_EQ(ZX_OK, outgoing_msg.Validate(Output::FidlType, &err_msg), "%s", err_msg);
 
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  for (uint32_t i = 0; i < outgoing_msg.handles().actual(); i++) {
-    handles[i] = outgoing_msg.handles().data()[i].handle;
-  }
-  fidl::HLCPPIncomingMessage incoming_message(std::move(outgoing_msg.bytes()),
-                                              HandlePart(handles, outgoing_msg.handles().actual()));
+  std::vector<zx_handle_info_t> handle_infos(outgoing_msg.handles().actual());
+  EXPECT_EQ(ZX_OK,
+            FidlHandleDispositionsToHandleInfos(outgoing_msg.handles().data(), handle_infos.data(),
+                                                outgoing_msg.handles().actual()));
+  fidl::HLCPPIncomingMessage incoming_message(
+      std::move(outgoing_msg.bytes()),
+      HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size())));
   outgoing_msg.ClearHandlesUnsafe();
   EXPECT_EQ(ZX_OK, incoming_message.Decode(Output::FidlType, &err_msg), "%s", err_msg);
   fidl::Decoder decoder(std::move(incoming_message));
@@ -66,7 +69,7 @@ template <class Output>
 Output DecodedBytes(std::vector<uint8_t> input) {
   HLCPPIncomingMessage message(BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
                                         static_cast<uint32_t>(input.size())),
-                               HandlePart());
+                               HandleInfoPart());
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error), "%s", error);
@@ -80,10 +83,12 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 
 template <class Output>
 Output DecodedBytes(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
-  HLCPPIncomingMessage message(BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()),
-                                        static_cast<uint32_t>(bytes.size())),
-                               HandlePart(handles.data(), static_cast<uint32_t>(handles.capacity()),
-                                          static_cast<uint32_t>(handles.size())));
+  auto handle_infos = ToHandleInfos(std::move(handles));
+  HLCPPIncomingMessage message(
+      BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()),
+               static_cast<uint32_t>(bytes.size())),
+      HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.capacity()),
+                     static_cast<uint32_t>(handle_infos.size())));
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error), "%s", error);
@@ -134,10 +139,12 @@ bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
 template <class Output>
 void CheckDecodeFailure(std::vector<uint8_t> input, std::vector<zx_handle_t> handles,
                         const zx_status_t expected_failure_code) {
-  HLCPPIncomingMessage message(BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
-                                        static_cast<uint32_t>(input.size())),
-                               HandlePart(handles.data(), static_cast<uint32_t>(handles.capacity()),
-                                          static_cast<uint32_t>(handles.size())));
+  auto handle_infos = ToHandleInfos(std::move(handles));
+  HLCPPIncomingMessage message(
+      BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
+               static_cast<uint32_t>(input.size())),
+      HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.capacity()),
+                     static_cast<uint32_t>(handle_infos.size())));
 
   const char* error = nullptr;
   EXPECT_EQ(expected_failure_code, message.Decode(Output::FidlType, &error), "%s", error);

@@ -75,11 +75,12 @@ void Driver::set_binding(
 }
 
 zx::status<> Driver::Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
-  fidl::OutgoingToIncomingMessage converted(message);
+  auto converted = fidl::OutgoingToIncomingMessage(message);
   if (converted.status() != ZX_OK) {
     return zx::make_status(converted.status());
   }
   record_->start(converted.incoming_message(), dispatcher, &opaque_);
+  converted.ReleaseHandles();
   return zx::make_status(converted.status());
 }
 

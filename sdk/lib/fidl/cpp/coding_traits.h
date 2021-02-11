@@ -270,7 +270,7 @@ template <class DecoderImpl>
 void DecodeUnknownDataContents(DecoderImpl* decoder, UnknownData* value, size_t offset) {
   DecodeUnknownBytesContents(decoder, &value->bytes, offset);
   for (auto& h : value->handles) {
-    h = decoder->ClaimHandle();
+    h = decoder->ClaimUnknownHandle();
   }
 }
 

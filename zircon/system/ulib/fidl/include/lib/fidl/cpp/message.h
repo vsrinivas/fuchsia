@@ -31,7 +31,7 @@ class HLCPPIncomingMessage {
   // The constructed |Message| object does not take ownership of the given
   // storage, although does take ownership of zircon handles contained withing
   // handles.
-  HLCPPIncomingMessage(BytePart bytes, HandlePart handles);
+  HLCPPIncomingMessage(BytePart bytes, HandleInfoPart handles);
 
   ~HLCPPIncomingMessage();
 
@@ -89,8 +89,8 @@ class HLCPPIncomingMessage {
   // When the message is encoded, the handle values are stored in this part of
   // the message. When the message is decoded, this part of the message is
   // empty and the handle values are stored in the bytes().
-  HandlePart& handles() { return handles_; }
-  const HandlePart& handles() const { return handles_; }
+  HandleInfoPart& handles() { return handles_; }
+  const HandleInfoPart& handles() const { return handles_; }
 
   // Decodes the message in-place.
   //
@@ -116,7 +116,7 @@ class HLCPPIncomingMessage {
 
  private:
   BytePart bytes_;
-  HandlePart handles_;
+  HandleInfoPart handles_;
 };
 
 // An outgoing FIDL message.

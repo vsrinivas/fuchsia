@@ -81,7 +81,7 @@ TEST(LlcppTypesTests, DecodedMessageFromBytesTest) {
   fidl::OwnedEncodedMessage<NonNullableChannelRequest> encoded(&msg);
 
   {
-    fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
     auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(converted.incoming_message());
 
     HelperExpectPeerValid(channel_1);
@@ -101,7 +101,7 @@ TEST(LlcppTypesTests, DecodedMessageFromIovecTest) {
   fidl::internal::EncodedMessageTypes<NonNullableChannelRequest>::OwnedIovec encoded(&msg);
 
   {
-    fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
     auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(converted.incoming_message());
 
     HelperExpectPeerValid(channel_1);
@@ -140,7 +140,7 @@ void RunRountripTest(BuildUnowned build_unowned, AssertBytesEqual assert_bytes_e
   HelperExpectPeerValid(channel_1);
 
   // Decode
-  fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
+  auto converted = fidl::OutgoingToIncomingMessage(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
   auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(converted.incoming_message());
   ASSERT_TRUE(decoded.ok());

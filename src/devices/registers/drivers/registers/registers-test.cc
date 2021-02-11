@@ -136,7 +136,7 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
   EXPECT_EQ(msg.GetOutgoingMessage().handle_actual(), 0);
   EXPECT_EQ(msg.GetOutgoingMessage().handles(), nullptr);
 
-  fidl::OutgoingToIncomingMessage converted(msg.GetOutgoingMessage());
+  auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
   auto metadata = Metadata::DecodedMessage(converted.incoming_message());
   ASSERT_TRUE(metadata.ok(), "%s", metadata.error());
   ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
@@ -167,7 +167,7 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
 
 TEST_F(RegistersDeviceTest, InvalidDecodeTest) {
   fidl::OwnedEncodedMessage<Metadata> msg(nullptr);
-  fidl::OutgoingToIncomingMessage converted(msg.GetOutgoingMessage());
+  auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
   auto metadata = Metadata::DecodedMessage(converted.incoming_message());
   EXPECT_FALSE(metadata.ok());

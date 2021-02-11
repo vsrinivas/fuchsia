@@ -24,14 +24,14 @@ class CopyingMessageHandler : public MessageHandler {
   int message_count_ = 0;
   int channel_gone_count_ = 0;
   std::vector<uint8_t> bytes_;
-  std::vector<zx_handle_t> handles_;
+  std::vector<zx_handle_info_t> handles_;
 
   zx_status_t OnMessage(HLCPPIncomingMessage message) override {
     ++message_count_;
     auto& bytes = message.bytes();
     bytes_ = std::vector<uint8_t>(bytes.data(), bytes.data() + bytes.actual());
     auto& handles = message.handles();
-    handles_ = std::vector<zx_handle_t>(handles.data(), handles.data() + handles.actual());
+    handles_ = std::vector<zx_handle_info_t>(handles.data(), handles.data() + handles.actual());
     return ZX_OK;
   }
 

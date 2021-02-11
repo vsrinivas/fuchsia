@@ -1719,7 +1719,7 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_wrong_subtyp
                                 handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  ASSERT_SUBSTR(error, "decoded handle object type does not match expected type");
+  ASSERT_SUBSTR(error, "object type does not match expected type");
 }
 
 TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_missing_required_rights) {
