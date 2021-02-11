@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
-import("//third_party/protobuf/proto_library.gni")
 
 declare_args() {
   # Selects the Cobalt environment to send data to. Choices:
@@ -128,57 +127,62 @@ config_data("userdebug_config") {
   outputs = [ "config.json" ]
 }
 
-package("cobalt") {
+fuchsia_component("component") {
+  component_name = "cobalt"
+  manifest = "meta/cobalt.cmx"
   deps = [ ":app" ]
+}
 
-  binaries = [
-    {
-      name = "cobalt"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/cobalt.cmx")
-      dest = "cobalt.cmx"
-    },
-  ]
+resource("cobalt_environment") {
+  # Environment selection for cobalt.
+  if (cobalt_environment == "PROD") {
+    sources = [ "configs/prod_environment" ]
+  } else if (cobalt_environment == "DEVEL") {
+    sources = [ "configs/devel_environment" ]
+  } else if (cobalt_environment == "LOCAL") {
+    sources = [ "configs/local_environment" ]
+  } else {
+    assert(false, "Unknown cobalt_environment: $cobalt_environment")
+  }
+  outputs = [ "data/cobalt_environment" ]
+}
 
-  resources = [
-    {
-      # Environment selection for cobalt.
-      if (cobalt_environment == "PROD") {
-        path = "configs/prod_environment"
-      } else if (cobalt_environment == "DEVEL") {
-        path = "configs/devel_environment"
-      } else if (cobalt_environment == "LOCAL") {
-        path = "configs/local_environment"
-      } else {
-        assert(false, "Unknown cobalt_environment: $cobalt_environment")
-      }
-      dest = "cobalt_environment"
-    },
-    {
-      # Cobalt 1.0 analyzer public key for devel environment.
-      path = rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key")
-      dest = "keys/analyzer_devel_public"
-    },
-    {
-      # Cobalt 1.0 shuffler public key for devel environment.
-      path = rebase_path("//third_party/cobalt/keys/shuffler_public.cobalt_key")
-      dest = "keys/shuffler_devel_public"
-    },
-    {
-      # Cobalt 1.0 analyzer public key for prod environment.
-      path = rebase_path(
-              "//third_party/cobalt/keys/analyzer_prod_public.cobalt_key")
-      dest = "keys/analyzer_prod_public"
-    },
-    {
-      # Cobalt 1.0 shuffler public key for prod environment.
-      path = rebase_path(
-              "//third_party/cobalt/keys/shuffler_prod_public.cobalt_key")
-      dest = "keys/shuffler_prod_public"
-    },
+resource("analyzer_devel_public") {
+  # Cobalt 1.0 analyzer public key for devel environment.
+  sources =
+      [ rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key") ]
+  outputs = [ "data/keys/analyzer_devel_public" ]
+}
+
+resource("shuffler_devel_public") {
+  # Cobalt 1.0 shuffler public key for devel environment.
+  sources =
+      [ rebase_path("//third_party/cobalt/keys/shuffler_public.cobalt_key") ]
+  outputs = [ "data/keys/shuffler_devel_public" ]
+}
+
+resource("analyzer_prod_public") {
+  # Cobalt 1.0 analyzer public key for prod environment.
+  sources = [ rebase_path(
+          "//third_party/cobalt/keys/analyzer_prod_public.cobalt_key") ]
+  outputs = [ "data/keys/analyzer_prod_public" ]
+}
+
+resource("shuffler_prod_public") {
+  # Cobalt 1.0 shuffler public key for prod environment.
+  sources = [ rebase_path(
+          "//third_party/cobalt/keys/shuffler_prod_public.cobalt_key") ]
+  outputs = [ "data/keys/shuffler_prod_public" ]
+}
+
+fuchsia_package("cobalt") {
+  deps = [
+    ":analyzer_devel_public",
+    ":analyzer_prod_public",
+    ":cobalt_environment",
+    ":component",
+    ":shuffler_devel_public",
+    ":shuffler_prod_public",
   ]
 }
 
