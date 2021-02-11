@@ -24,6 +24,7 @@ if (current_toolchain == default_toolchain) {
       os = "win"
       environment = "efi"
       with_shared = false
+      toolchain_tags = [ "efi" ]
       exclude_variant_tags = [
         "instrumented",
         "gcc",
@@ -43,7 +44,7 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
+if (is_efi_toolchain) {
   # This is the top config for all code in the efi_toolchain.
   config("efi_config") {
     configs = [

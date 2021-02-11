@@ -8,14 +8,6 @@ import("//build/config/clang/clang.gni")
 # build system. This should only be used when processing Zircon-specific target
 # rules under //zircon/ which invoke zx_library() or zx_host_tool()
 
-# `is_gcc` is true for GCC-based toolchains.
-is_gcc =
-    toolchain_variant.tags + [ "gcc" ] - [ "gcc" ] != toolchain_variant.tags
-
-# `is_kernel` is true for kernel-specific toolchains.
-is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
-            toolchain_variant.tags
-
 # `toolchain` is a scope used by the Zircon build to describe the current toolchain.
 # Its layout is very different from `toolchain_variant` so try to mimic it here.
 toolchain = {

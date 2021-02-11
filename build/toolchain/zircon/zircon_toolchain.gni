@@ -677,7 +677,6 @@ template("zircon_toolchain") {
       #     Zircon build rules in several places.
       #   link_output_suffix: [string] Suffix to append to linkable binaries
       #     with debug information.
-      #   is_gcc: [boolean] True if this toolchain uses gcc.
       #
       #   include_dirs: [list of paths]
       #     Supported to add an `-isystem <dir>` parameter per list item during
@@ -737,9 +736,6 @@ template("zircon_toolchain") {
         if (!defined(lib_dirs)) {
           lib_dirs = []
         }
-
-        # NOTE: This was a global variable in the Zircon build.
-        is_gcc = use_gcc
       }
     }
   }

@@ -9,11 +9,11 @@ zx_library("gfx") {
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
   sdk_migrated = true
-  if (toolchain.environment != "efi") {
+  if (is_efi_toolchain) {
+    sources = []
+  } else {
     sources = [ "gfx.c" ]
     deps = [ "//src/zircon/lib/zircon" ]
-  } else {
-    sources = []
   }
 }
 

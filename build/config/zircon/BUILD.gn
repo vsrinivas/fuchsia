@@ -9,7 +9,6 @@ import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
 import("//build/config/zircon/levels.gni")
 import("//build/toolchain/goma.gni")
-import("//build/unification/global_variables.gni")
 
 # NOTE: This file provides the GN configs used by Zircon toolchains
 # exclusively. See //build/toolchain/zircon/zircon_toolchain.gni.

@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/zircon/migrated_targets.gni")
-
 # Device-side library. This doesn't play well with the host compiler, mostly
 # due to re-definition of a bunch of built-in types and functions, so as we
 # expand our host-side unittests we'll probably want to move more of the
 # portable code into the "shared" library below.
-if (toolchain.environment == "efi") {
+if (is_efi_toolchain) {
   source_set("lib") {
     sources = [
       "cmdline.c",

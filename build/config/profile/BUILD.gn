@@ -32,9 +32,6 @@ variant("profile") {
     common_flags += [ "-fprofile-list=" + rebase_path(file, root_build_dir) ]
   }
 
-  is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
-              toolchain_variant.tags
-
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!

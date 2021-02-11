@@ -21,6 +21,9 @@ all_toolchain_tags += [
   # tag.
   "kernel",
 
+  # Used by the EFI toolchain used to build the Gigaboot bootloader.
+  "efi",
+
   # This tag is used by Zircon toolchains that generate static PIE executable
   # binaries.
   "static-pie",

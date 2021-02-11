@@ -44,7 +44,7 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "multiboot") {
     asmflags = compiler_flags
     cflags = compiler_flags
     ldflags = compiler_flags
-    if (zircon_toolchain.is_gcc) {
+    if (is_gcc) {
       ldflags += [ "-no-pie" ]
     } else {
       ldflags += [ "-Wl,--no-pie" ]

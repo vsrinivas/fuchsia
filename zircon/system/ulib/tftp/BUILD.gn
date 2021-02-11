@@ -12,7 +12,7 @@ zx_library("tftp") {
   host = true
   static = true
   sources = [ "tftp.c" ]
-  if (toolchain.environment == "efi") {
+  if (is_efi_toolchain) {
     defines = [ "TFTP_EFILIB" ]
   } else if (is_host) {
     defines = [ "TFTP_HOSTLIB" ]

@@ -6,7 +6,6 @@
 
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
-import("//build/unification/global_variables.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 if (current_toolchain == default_toolchain) {

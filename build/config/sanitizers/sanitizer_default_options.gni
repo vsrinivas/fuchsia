@@ -81,13 +81,11 @@ if (zircon_toolchain == false) {
   _sanitizer_config_dir = "//build/config/sanitizers"
   _hidden_config = "//build/config:symbol_visibility_hidden"
   _no_sanitizers_config = "//build/config:no_sanitizers"
-  _is_kernel = false
+  assert(!is_kernel)
 } else {
   _sanitizer_config_dir = "//build/config/zircon/instrumentation"
   _hidden_config = "//build/config/zircon:visibility_hidden"
   _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
-  _is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
-               toolchain_variant.tags
 }
 
 if (defined(toolchain_variant.tags)) {
@@ -100,7 +98,7 @@ if (defined(toolchain_variant.tags)) {
 # file is defined, with differing defines depending on the invoker.
 template("_sanitizer_default_options_target") {
   string = string_join(":", invoker.args)
-  nonempty = (string != "" || invoker.default) && !_is_kernel
+  nonempty = (string != "" || invoker.default) && !is_kernel
   if (nonempty) {
     # This might only be in the executable() target's deps transitively via a
     # static_library() or rust_library() target.  In that case, a source_set()

@@ -226,6 +226,18 @@ if (toolchain_variant.base == host_x64_toolchain ||
   host_toolchain += toolchain_variant.suffix
 }
 
+# Whether we are in the context of the GCC toolchain.
+is_gcc =
+    toolchain_variant.tags + [ "gcc" ] - [ "gcc" ] != toolchain_variant.tags
+
+# Whether we are in the context of a kernel toolchain.
+is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
+            toolchain_variant.tags
+
+# Whether we are in the context of the EFI toolchain.
+is_efi_toolchain =
+    toolchain_variant.tags + [ "efi" ] - [ "efi" ] != toolchain_variant.tags
+
 # References should use `"label($shlib_toolchain)"` rather than
 # `"label(${target_toolchain}-shared)"` or anything else.
 shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
