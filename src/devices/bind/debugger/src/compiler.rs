@@ -62,6 +62,17 @@ impl fmt::Display for BindProgramEncodeError {
     }
 }
 
+#[derive(Debug, Error, Clone, PartialEq)]
+pub enum BindProgramDecodeError {
+    InvalidBinaryLength,
+}
+
+impl fmt::Display for BindProgramDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", UserError::from(self.clone()))
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct BindProgram<'a> {
     pub symbol_table: SymbolTable,

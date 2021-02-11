@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::{BindProgram, BindProgramEncodeError, Symbol};
+use crate::compiler::{BindProgram, BindProgramDecodeError, BindProgramEncodeError, Symbol};
 use crate::instruction::{Condition, Instruction, InstructionInfo};
 use bitfield::bitfield;
+use byteorder::ByteOrder;
 use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 use std::fmt;
@@ -131,6 +132,22 @@ pub fn encode_instruction(
     raw_instruction.set_ast_location(info.debug.ast_location as u32);
     raw_instruction.set_extra(info.debug.extra);
     Ok(raw_instruction)
+}
+
+pub fn decode_from_bytecode_v1(
+    bytes: &Vec<u8>,
+) -> Result<Vec<RawInstruction<[u32; 3]>>, BindProgramDecodeError> {
+    if bytes.len() % 12 != 0 {
+        return Err(BindProgramDecodeError::InvalidBinaryLength);
+    }
+    let mut instructions = Vec::<RawInstruction<[u32; 3]>>::new();
+    for i in (0..bytes.len()).step_by(12) {
+        let first = byteorder::LittleEndian::read_u32(&bytes[i..(i + 4)]);
+        let second = byteorder::LittleEndian::read_u32(&bytes[(i + 4)..(i + 8)]);
+        let third = byteorder::LittleEndian::read_u32(&bytes[(i + 8)..(i + 12)]);
+        instructions.push(RawInstruction([first, second, third]));
+    }
+    Ok(instructions)
 }
 
 pub fn encode_to_bytecode_v1(bind_program: BindProgram) -> Result<Vec<u8>, BindProgramEncodeError> {
@@ -310,5 +327,33 @@ mod tests {
             Err(BindProgramEncodeError::IntegerOutOfRange),
             encode_to_bytecode_v1(bind_program)
         );
+    }
+
+    #[test]
+    fn test_decode_wrong_size() {
+        let bytes = vec![1u8; 3];
+        assert_eq!(
+            decode_from_bytecode_v1(&bytes).err(),
+            Some(BindProgramDecodeError::InvalidBinaryLength)
+        );
+
+        let bytes = vec![1u8; 13];
+        assert_eq!(
+            decode_from_bytecode_v1(&bytes).err(),
+            Some(BindProgramDecodeError::InvalidBinaryLength)
+        );
+    }
+
+    #[test]
+    fn test_encode_and_decode() {
+        let bytes = vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        let instructions = decode_from_bytecode_v1(&bytes).unwrap();
+        let new_bytes = instructions
+            .into_iter()
+            .flat_map(|RawInstruction([a, b, c])| {
+                [a.to_le_bytes(), b.to_le_bytes(), c.to_le_bytes()].concat()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(bytes, new_bytes);
     }
 }

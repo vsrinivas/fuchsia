@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::{BindProgramEncodeError, CompilerError};
+use crate::compiler::{BindProgramDecodeError, BindProgramEncodeError, CompilerError};
 use crate::debugger;
 use crate::dependency_graph::DependencyError;
 use crate::linter::LinterError;
@@ -421,6 +421,22 @@ impl From<BindProgramEncodeError> for UserError {
                 "Match instructions are not supported in the new bytecode",
                 None,
                 true,
+            ),
+        }
+    }
+}
+
+impl From<BindProgramDecodeError> for UserError {
+    fn from(error: BindProgramDecodeError) -> Self {
+        match error {
+            BindProgramDecodeError::InvalidBinaryLength => UserError::new(
+                "E700",
+                &format!(
+                    "The bind binary cannot be divided into instructions. \
+                    The binary size must be divisible by 12",
+                ),
+                None,
+                false,
             ),
         }
     }
