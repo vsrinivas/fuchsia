@@ -40,7 +40,6 @@ pub(crate) enum PhyManagerError {
 #[derive(PartialEq)]
 pub(crate) enum CreateClientIfacesReason {
     StartClientConnections,
-    #[cfg(test)]
     RecoverClientIfaces,
 }
 

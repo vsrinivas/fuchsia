@@ -521,9 +521,46 @@ impl IfaceManagerService {
     }
 
     async fn handle_removed_iface(&mut self, iface_id: u16) {
+        // Delete the reference from the PhyManager.
         self.phy_manager.lock().await.on_iface_removed(iface_id);
 
-        self.clients.retain(|client_container| client_container.iface_id != iface_id);
+        // If the interface was deleted, but IfaceManager still has a reference to it, then the
+        // driver has likely performed some low-level recovery or the interface driver has crashed.
+        // In this case, remove the old reference to the interface ID and then create a new
+        // interface of the appropriate type.
+        if let Some(iface_index) =
+            self.clients.iter().position(|client_container| client_container.iface_id == iface_id)
+        {
+            self.clients.remove(iface_index);
+            let client_ifaces = match self
+                .phy_manager
+                .lock()
+                .await
+                .create_all_client_ifaces(CreateClientIfacesReason::RecoverClientIfaces)
+                .await
+            {
+                Ok(iface_ids) => iface_ids,
+                Err((iface_ids, e)) => {
+                    warn!("failed to recover some client interfaces: {:?}", e);
+                    iface_ids
+                }
+            };
+
+            for iface_id in client_ifaces {
+                match self.get_client(Some(iface_id)).await {
+                    Ok(iface) => self.clients.push(iface),
+                    Err(e) => {
+                        error!("failed to recreate client {}: {:?}", iface_id, e);
+                    }
+                };
+            }
+        }
+
+        // While client behavior is automated based on saved network configs and available SSIDs
+        // observed in scan results, the AP behavior is largely controlled by API clients.  The AP
+        // state machine will send back a failure notification in the event that the interface was
+        // destroyed unexpectedly.  For the AP, simply remove the reference to the interface.  If
+        // the API client so desires, they may ask the policy layer to start another AP interface.
         self.aps.retain(|ap_container| ap_container.iface_id != iface_id);
     }
 
@@ -2424,13 +2461,15 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_client_iface() {
+    fn test_recover_removed_client_iface() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager with a client and an AP.
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
+        let removed_iface_id = 123;
+        iface_manager.clients[0].iface_id = removed_iface_id;
 
         let ap_iface = ApIfaceContainer {
             iface_id: TEST_AP_IFACE_ID,
@@ -2445,23 +2484,42 @@ mod tests {
 
         // Notify the IfaceManager that the client interface has been removed.
         {
-            let fut = iface_manager.handle_removed_iface(TEST_CLIENT_IFACE_ID);
+            let fut = iface_manager.handle_removed_iface(removed_iface_id);
             pin_mut!(fut);
+
+            // Expect a DeviceService request an SME proxy.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                }))) => {
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK)
+                        .expect("failed to send AP SME response.");
+                }
+            );
+
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         }
 
-        assert!(iface_manager.clients.is_empty());
         assert!(!iface_manager.aps.is_empty());
+
+        // Verify that a new client interface was created.
+        assert_eq!(iface_manager.clients.len(), 1);
+        assert_eq!(iface_manager.clients[0].iface_id, TEST_CLIENT_IFACE_ID);
     }
 
     #[test]
-    fn test_remove_ap_iface() {
+    fn test_client_iface_recovery_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create an IfaceManager with a client and an AP.
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _next_sme_req) =
             create_iface_manager_with_client(&test_values, true);
+        let removed_iface_id = 123;
+        iface_manager.clients[0].iface_id = removed_iface_id;
 
         let ap_iface = ApIfaceContainer {
             iface_id: TEST_AP_IFACE_ID,
@@ -2474,14 +2532,66 @@ mod tests {
         };
         iface_manager.aps.push(ap_iface);
 
+        // Notify the IfaceManager that the client interface has been removed.
+        {
+            let fut = iface_manager.handle_removed_iface(removed_iface_id);
+            pin_mut!(fut);
+
+            // Expect a DeviceService request an SME proxy.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                }))) => {
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
+                        .expect("failed to send AP SME response.");
+                }
+            );
+
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        assert!(!iface_manager.aps.is_empty());
+
+        // Verify that a new client interface was created.
+        assert!(iface_manager.clients.is_empty());
+    }
+
+    #[test]
+    fn test_do_not_recover_removed_ap_iface() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create an IfaceManager with a client and an AP.
+        let test_values = test_setup(&mut exec);
+        let (mut iface_manager, _next_sme_req) =
+            create_iface_manager_with_client(&test_values, true);
+
+        let removed_iface_id = 123;
+        let ap_iface = ApIfaceContainer {
+            iface_id: removed_iface_id,
+            config: None,
+            ap_state_machine: Box::new(FakeAp {
+                start_succeeds: true,
+                stop_succeeds: true,
+                exit_succeeds: true,
+            }),
+        };
+        iface_manager.aps.push(ap_iface);
+
         // Notify the IfaceManager that the AP interface has been removed.
         {
-            let fut = iface_manager.handle_removed_iface(TEST_AP_IFACE_ID);
+            let fut = iface_manager.handle_removed_iface(removed_iface_id);
             pin_mut!(fut);
+
+            // The future should now run to completion.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         }
 
         assert!(!iface_manager.clients.is_empty());
+
+        // Verify that a new AP interface was not created.
         assert!(iface_manager.aps.is_empty());
     }
 
@@ -3364,8 +3474,7 @@ mod tests {
 
         // Notify of interface removal.
         let (remove_iface_sender, remove_iface_receiver) = oneshot::channel();
-        let req =
-            RemoveIfaceRequest { iface_id: TEST_CLIENT_IFACE_ID, responder: remove_iface_sender };
+        let req = RemoveIfaceRequest { iface_id: 123, responder: remove_iface_sender };
         let req = IfaceManagerRequest::RemoveIface(req);
 
         run_service_test_with_unit_return(
