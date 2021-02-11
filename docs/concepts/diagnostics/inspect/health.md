@@ -54,7 +54,7 @@ c.cmx:
 ```
 
 ```none
-$ iquery show a.cmx:root/fuchsia.inspect.Health:status b.cmx:root/fuchsia.inspect.Healh:status c.cmx:root/fuchsia.inspect.Health:status
+$ iquery show 'a.cmx:root/fuchsia.inspect.Health:status' 'b.cmx:root/fuchsia.inspect.Healh:status' 'c.cmx:root/fuchsia.inspect.Health:status'
 a:
   root:
     fuchsia.inspectHealth:

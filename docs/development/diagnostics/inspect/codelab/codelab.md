@@ -491,8 +491,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      $ fx iquery show codelab_\*/inspect_cpp_codelab_part_1.cmx
-      # or `fx iquery show --manifest_inspect_cpp_codelab_part_1`
+      $ fx iquery show 'codelab_*/inspect_cpp_codelab_part_1.cmx'
+      # or `fx iquery show --manifest inspect_cpp_codelab_part_1`
       /hub/r/codelab/1234/c/inspect_cpp_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
@@ -500,8 +500,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Rust}
 
       ```
-      $ fx iquery show codelab_\*/inspect_rust_codelab_part_1.cmx
-      # or `fx iquery show --manifest_inspect_rust_codelab_part_1`
+      $ fx iquery show 'codelab_*/inspect_rust_codelab_part_1.cmx'
+      # or `fx iquery show --manifest inspect_rust_codelab_part_1`
       /hub/r/codelab/1234/c/inspect_rust_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
@@ -509,8 +509,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      $ fx iquery show codelab_\*/inspect_dart_codelab_part_1.cmx
-      # or `fx iquery show --manifest_inspect_dart_codelab_part_1`
+      $ fx iquery show 'codelab_*/inspect_dart_codelab_part_1.cmx'
+      # or `fx iquery show --manifest inspect_dart_codelab_part_1`
       /hub/r/codelab/1234/c/inspect_dart_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
@@ -520,7 +520,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      $ fx iquery -f json show codelab_\*/inspect_cpp_codelab_part_1.cmx
+      $ fx iquery -f json show 'codelab_*/inspect_cpp_codelab_part_1.cmx'
       [
           {
               "contents": {
@@ -536,7 +536,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Rust}
 
       ```
-      $ fx iquery -f json show codelab_\*/inspect_rust_codelab_part_1.cmx
+      $ fx iquery -f json show 'codelab_*/inspect_rust_codelab_part_1.cmx'
       [
           {
               "contents": {
@@ -552,7 +552,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      $ fx iquery -f json show codelab_\*/inspect_dart_codelab_part_1.cmx
+      $ fx iquery -f json show 'codelab_*/inspect_dart_codelab_part_1.cmx'
       [
           {
               "contents": {

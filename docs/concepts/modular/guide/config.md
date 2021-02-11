@@ -23,7 +23,7 @@ Use [`iquery`][docs-iquery] or `fx iquery` to query the configuration
 of a running `basemgr`:
 
 ```posix-terminal
-iquery show basemgr.cmx:root:config
+iquery show 'basemgr.cmx:root:config'
 ```
 
 When using a session launcher component, the launcher provides a different
@@ -32,7 +32,7 @@ For the launched session, you can query a running `sessionmgr` to get
 this configuration:
 
 ```posix-terminal
-iquery show sessionmgr.cmx:root:config
+iquery show 'sessionmgr.cmx:root:config'
 ```
 
 ## Launching Modular with custom configuration

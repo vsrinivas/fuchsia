@@ -155,7 +155,7 @@ with Inspect included, see the following [example test driver][example_test_driv
     fx iquery show-file /dev/diagnostics/class/ethernet/000.inspect
 
     // To view all of driver_manager and driver host
-    fx iquery show bootstrap/driver_manager
+    fx iquery show 'bootstrap/driver_manager'
     ```
 
 1. Run `fx snapshot` and check if your inspect data is present in `inspect.json`. Note that the

@@ -522,13 +522,13 @@ See below for the quick start guide in your language of choice.
   Use the moniker that `list` printed above, and run:
 
   ```sh
-  $ iquery show realm/my_component.cmx
+  $ iquery show 'realm/my_component.cmx'
   ```
 
   You can also spcify a node/property using selectors:
 
   ```sh
-  $ iquery show realm/my_component.cmx:root/path/to/some:property
+  $ iquery show 'realm/my_component.cmx:root/path/to/some:property'
   ```
 
   Navigate to the `out/` directory that was printed above, and run:

@@ -14,6 +14,10 @@ iquery [--format <format>] <command> [<args>]
 [Inspect API]. It accepts a set of options and a command with
 its respective options.
 
+To prevent hard to debug issues in selectors where your shell is escaping some
+character or others, it's recommended to always wrap selectors in single or
+double quotes so your shell passes them as raw strings to iquery.
+
 ## Options
 
 ### `--format`
@@ -106,7 +110,7 @@ If a full selector (component + tree) is provided, it lists all selectors under 
 Example usage:
 
 ```
-$ iquery selectors archivist.cmx:root/fuchsia.inspect.Health timekeeper.cmx
+$ iquery selectors 'archivist.cmx:root/fuchsia.inspect.Health' 'timekeeper.cmx'
 archivist.cmx:root/fuchsia.inspect.Health:start_timestamp_nanos
 archivist.cmx:root/fuchsia.inspect.Health:status
 timekeeper.cmx:root/current:system_uptime_monotonic_nanos
@@ -132,7 +136,7 @@ Prints the inspect hierarchies that match the given selectors.
 Example usage:
 
 ```
-$ iquery show archivist.cmx:root/fuchsia.inspect.Health timekeeper.cmx
+$ iquery show 'archivist.cmx:root/fuchsia.inspect.Health' 'timekeeper.cmx'
 archivist.cmx:
   root:
     fuchsia.inspect.Health:
