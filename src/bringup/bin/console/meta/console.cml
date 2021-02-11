@@ -13,6 +13,8 @@
             "--allow-log-tag",
             "netstack",
             "--deny-log-tag",
+            "NUD",
+            "--deny-log-tag",
             "klog",
             "--allow-log-tag",
             "fshost.cm",
