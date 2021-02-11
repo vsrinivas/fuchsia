@@ -107,13 +107,6 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::R
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-                      DirectoryWatchCompleter::Sync& completer) override {
-    llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-  }
 
   uint32_t bind_count() { return bind_count_.load(); }
 

@@ -278,12 +278,6 @@ protocol Coordinator {
     AddCompositeDevice(string:DEVICE_NAME_MAX name, CompositeDeviceDescriptor comp_desc)
         -> () error zx.status;
 
-    /// Watches a directory, receiving events of added messages on the
-    /// watcher request channel.
-    /// See fuchsia.io.Directory for more information.
-    DirectoryWatch(uint32 mask, uint32 options, zx.handle:CHANNEL watcher)
-        -> () error zx.status;
-
     /// Run Compatibility tests for the driver that binds to this device.
     /// The hook_wait_time is the time that the driver expects to take for
     /// each device hook in nanoseconds.

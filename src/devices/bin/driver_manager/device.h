@@ -130,8 +130,6 @@ class Device
   void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& _completer) override;
   void RunCompatibilityTests(int64_t hook_wait_time,
                              RunCompatibilityTestsCompleter::Sync& _completer) override;
-  void DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-                      DirectoryWatchCompleter::Sync& _completer) override;
 
   // This iterator provides access to a list of devices that does not provide
   // mechanisms for mutating that list.  With this, a user can get mutable

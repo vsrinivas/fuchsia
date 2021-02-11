@@ -1048,27 +1048,6 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   }
 }
 
-void Device::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-                            DirectoryWatchCompleter::Sync& completer) {
-  llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result response;
-  if (mask & (~fio::WATCH_MASK_ALL) || options != 0) {
-    zx_status_t status = ZX_ERR_INVALID_ARGS;
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-    return;
-  }
-
-  zx_status_t status = devfs_watch(this->self, std::move(watcher), mask);
-  if (status != ZX_OK) {
-    response.set_err(fidl::unowned_ptr(&status));
-    completer.Reply(std::move(response));
-  } else {
-    fidl::aligned<llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response> resp;
-    response.set_response(fidl::unowned_ptr(&resp));
-    completer.Reply(std::move(response));
-  }
-}
-
 void Device::AddCompositeDevice(
     ::fidl::StringView name_view,
     llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
