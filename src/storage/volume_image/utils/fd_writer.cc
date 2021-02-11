@@ -35,7 +35,7 @@ fit::result<void, std::string> FdWriter::Write(uint64_t offset, fbl::Span<const 
     const uint8_t* source = buffer.data() + bytes_written;
     size_t remaining_bytes = buffer.size() - bytes_written;
     off_t target_offset = offset + bytes_written;
-    int result = pwrite(fd_.get(), source, remaining_bytes, target_offset);
+    ssize_t result = pwrite(fd_.get(), source, remaining_bytes, target_offset);
 
     if (result < 0) {
       return fit::error("Write failed from " + name_ + ". More specifically " + strerror(errno));

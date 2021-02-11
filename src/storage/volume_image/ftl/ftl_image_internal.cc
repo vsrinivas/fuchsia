@@ -10,6 +10,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/span.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/volume_image/ftl/options.h"
 #include "src/storage/volume_image/ftl/raw_nand_image_utils.h"
@@ -75,7 +76,8 @@ fit::result<void, std::string> WriteMapBlock(
     return fit::error("OOB Size must be greater or equal to 16 bytes per page.");
   }
 
-  uint32_t mappings_per_page = ftl_options.page_size / sizeof(uint32_t);
+  uint32_t mappings_per_page =
+      safemath::checked_cast<uint32_t>(ftl_options.page_size / sizeof(uint32_t));
   uint32_t total_map_pages =
       fbl::round_up(ftl_options.page_count, mappings_per_page) / mappings_per_page;
 

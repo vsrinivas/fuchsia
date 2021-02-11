@@ -12,6 +12,7 @@
 #include <type_traits>
 
 #include <fbl/algorithm.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/volume_image/ftl/ftl_image_internal.h"
 #include "src/storage/volume_image/ftl/options.h"
@@ -53,14 +54,15 @@ FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
     }
 
     ftl_options.page_size = device_options.page_size * multiplier;
-    ftl_options.oob_bytes_size = device_options.oob_bytes_size * multiplier;
+    ftl_options.oob_bytes_size =
+        safemath::checked_cast<uint8_t>(device_options.oob_bytes_size * multiplier);
     ftl_options.page_count = device_options.page_count / multiplier;
     ftl_options.pages_per_block = device_options.pages_per_block / multiplier;
   }
 
   RawNandImageHeader header;
   header.format = format;
-  header.page_size = device_options.page_size;
+  header.page_size = safemath::checked_cast<uint32_t>(device_options.page_size);
   header.oob_size = device_options.oob_bytes_size;
   for (auto flag : flags) {
     header.flags |= static_cast<std::underlying_type<RawNandImageFlag>::type>(flag);

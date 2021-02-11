@@ -13,6 +13,7 @@
 
 #include <fbl/span.h>
 #include <fbl/unique_fd.h>
+#include <safemath/safe_conversions.h>
 
 namespace storage::volume_image {
 
@@ -43,7 +44,7 @@ fit::result<void, std::string> FdReader::Read(uint64_t offset, fbl::Span<uint8_t
     uint8_t* destination = buffer.data() + bytes_read;
     size_t remaining_bytes = buffer.size() - bytes_read;
     off_t source_offset = offset + bytes_read;
-    int result = pread(fd_.get(), destination, remaining_bytes, source_offset);
+    ssize_t result = pread(fd_.get(), destination, remaining_bytes, source_offset);
 
     if (result < 0) {
       std::string_view error_description(strerror(errno));

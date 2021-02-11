@@ -32,9 +32,6 @@ source_set("lz4-compression") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("lz4-compression-test") {
@@ -48,9 +45,6 @@ source_set("lz4-compression-test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("guid") {
@@ -59,10 +53,8 @@ source_set("guid") {
   public_deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/safemath",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("guid-test") {
@@ -112,10 +104,8 @@ source_set("fd-io") {
     ":io-interfaces",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/safemath",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fd-test-helper") {
@@ -138,9 +128,6 @@ source_set("fd-io-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("block-utils") {

@@ -184,10 +184,6 @@ static_library("blobfs") {
     ]
     deps += [ "//zircon/system/ulib/fs-host" ]
   }
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 
   if (blobfs_page_in_metrics_recording) {
     defines = [

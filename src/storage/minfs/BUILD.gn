@@ -192,10 +192,6 @@ static_library("minfs") {
       "//zircon/system/ulib/fs/journal",
     ]
   }
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 group("tests") {

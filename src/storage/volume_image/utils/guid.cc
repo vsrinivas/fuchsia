@@ -10,6 +10,8 @@
 #include <iterator>
 #include <string>
 
+#include <safemath/safe_conversions.h>
+
 namespace storage::volume_image {
 namespace {
 
@@ -26,7 +28,7 @@ struct GuidSection {
   constexpr int8_t end() const { return multiplier * (reversed ? start - 1 : start + length); }
 
   // Returns the distance between two consecutive elements in the section, measured in bytes.
-  constexpr int8_t next() const { return multiplier * (reversed ? -1 : +1); }
+  constexpr int8_t next() const { return static_cast<int8_t>(multiplier * (reversed ? -1 : +1)); }
 
   // Start of the section.
   uint8_t start;
@@ -161,7 +163,7 @@ fit::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString(
     for (const char* it = begin; it != end; it = it + section.next()) {
       uint8_t high = GetValue(*it);
       uint8_t low = GetValue(*(it + 1));
-      out_guid[current_byte] = (high << 4) | low;
+      out_guid[current_byte] = safemath::checked_cast<uint8_t>((high << 4) | low);
       current_byte++;
     }
     current_section++;

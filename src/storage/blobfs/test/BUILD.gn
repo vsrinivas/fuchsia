@@ -45,9 +45,6 @@ source_set("test_utils") {
     "//zircon/public/lib/fbl",
   ]
   public_deps = [ "//src/storage/blobfs" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("blobfs_unittest") {
@@ -107,9 +104,6 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("blobfs-unittest") {

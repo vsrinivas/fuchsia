@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <fbl/span.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/ftl/ftl_image_internal.h"
@@ -42,18 +43,20 @@ class FtlPageWriter {
                                                  Writer* writer) {
     std::vector<uint8_t> oob_byte_buffer(options_.oob_bytes_size, 0xFF);
     ftl_image_internal::WriteOutOfBandBytes<ftl_image_internal::PageType::kVolumePage>(
-        logical_page, oob_byte_buffer);
+        safemath::checked_cast<uint32_t>(logical_page), oob_byte_buffer);
     uint64_t page_offset = RawNandImageGetPageOffset(physical_page_count_, options_);
 
     auto write_result = RawNandImageWritePage(page_content, oob_byte_buffer, page_offset, writer);
     if (write_result.is_error()) {
       return write_result.take_error_result();
     }
-    if (logical_to_physical_map_.find(logical_page) != logical_to_physical_map_.end()) {
+    if (logical_to_physical_map_.find(safemath::checked_cast<uint32_t>(logical_page)) !=
+        logical_to_physical_map_.end()) {
       return fit::error("FTL Image: |Partition::address().mappings| may not share pages.");
     }
 
-    logical_to_physical_map_[logical_page] = physical_page_count_;
+    logical_to_physical_map_[safemath::checked_cast<uint32_t>(logical_page)] =
+        safemath::checked_cast<uint32_t>(physical_page_count_);
     physical_page_count_++;
     return fit::ok();
   }
