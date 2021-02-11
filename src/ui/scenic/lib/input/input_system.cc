@@ -178,45 +178,42 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       this->context(),
       /*on_register=*/
       [this] {
-        FX_CHECK(!pointer_event_buffer_)
+        FX_CHECK(!a11y_legacy_contender_)
             << "on_disconnect must be called before registering a new listener";
-        // In case a11y is turned on mid execution make sure to send active pointer event streams to
-        // their final location and do not send them to the a11y listener.
-        pointer_event_buffer_ = std::make_unique<PointerEventBuffer>(
-            /* DispatchEventFunction */
-            [this](PointerEventBuffer::DeferredPointerEvent views_and_event) {
-              DispatchDeferredPointerEvent(std::move(views_and_event));
-            },
-            /* ReportAccessibilityEventFunction */
-            [this](fuchsia::ui::input::accessibility::PointerEvent pointer) {
-              ChattyA11yLog(pointer);
-              accessibility_pointer_event_listener()->OnEvent(std::move(pointer));
-            });
-        FX_LOGS(INFO) << "PointerEventBuffer created";
 
-        for (const auto& kv : touch_targets_) {
-          // Force a reject in all active pointer IDs. When a new stream arrives,
-          // they will automatically be sent for the a11y listener decide
-          // what to do with them as the status will change to WAITING_RESPONSE.
-          pointer_event_buffer_->SetActiveStreamInfo(
-              /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED);
-        }
-        // Registers an event handler for this listener. This callback captures a pointer to the
-        // event buffer that we own, so we need to clear it before we destroy it (see below).
+        a11y_legacy_contender_ = std::make_unique<A11yLegacyContender>(
+            /*respond*/
+            [this](StreamId stream_id, GestureResponse response) {
+              RecordGestureDisambiguationResponse(stream_id, a11y_contender_id_, {response});
+            },
+            /*deliver_to_client*/
+            [this](const InternalPointerEvent& event) {
+              if (!scene_graph_)
+                return;
+
+              const gfx::ViewTree& view_tree = scene_graph_->view_tree();
+              auto a11y_event = CreateAccessibilityEvent(event, view_tree);
+              ChattyA11yLog(a11y_event);
+              accessibility_pointer_event_listener()->OnEvent(std::move(a11y_event));
+            });
+        FX_LOGS(INFO) << "A11yLegacyContender created.";
+        contenders_.emplace(a11y_contender_id_, a11y_legacy_contender_.get());
+
         accessibility_pointer_event_listener().events().OnStreamHandled =
-            [buffer = pointer_event_buffer_.get()](
-                uint32_t device_id, uint32_t pointer_id,
-                fuchsia::ui::input::accessibility::EventHandling handled) {
-              buffer->UpdateStream(pointer_id, handled);
+            [this](uint32_t device_id, uint32_t pointer_id,
+                   fuchsia::ui::input::accessibility::EventHandling handled) {
+              FX_DCHECK(a11y_legacy_contender_);
+              a11y_legacy_contender_->OnStreamHandled(pointer_id, handled);
             };
       },
       /*on_disconnect=*/
       [this] {
-        FX_CHECK(pointer_event_buffer_) << "can not disconnect before registering";
+        FX_CHECK(a11y_legacy_contender_) << "can not disconnect before registering";
         // The listener disconnected. Release held events, delete the buffer.
         accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
-        pointer_event_buffer_.reset();
-        FX_LOGS(INFO) << "PointerEventBuffer destroyed";
+        contenders_.erase(a11y_contender_id_);
+        a11y_legacy_contender_.reset();
+        FX_LOGS(INFO) << "A11yLegacyContender destroyed";
       });
 
   this->context()->app_context()->outgoing()->AddPublicService(injector_registry_.GetHandler(this));
@@ -259,6 +256,36 @@ void A11yPointerEventRegistry::Register(
     // An accessibility listener is already registered.
     callback(/*success=*/false);
   }
+}
+
+fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibilityEvent(
+    const InternalPointerEvent& event, const gfx::ViewTree& view_tree) {
+  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
+  {
+    // Find top-hit target and send it to accessibility.
+    gfx::TopHitAccumulator top_hit;
+    HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ true);
+
+    if (top_hit.hit()) {
+      view_ref_koid = top_hit.hit()->view_ref_koid;
+    }
+  }
+
+  glm::vec2 top_hit_view_local;
+  if (view_ref_koid != ZX_KOID_INVALID) {
+    std::optional<glm::mat4> view_from_context = GetDestinationViewFromSourceViewTransform(
+        /*source*/ event.context, /*destination*/ view_ref_koid, view_tree);
+    FX_DCHECK(view_from_context)
+        << "Failed to create world space ray. Either the |event.context| ViewRef is invalid, "
+           "we're out of sync with the ViewTree, or the ViewTree callback returned std::nullopt.";
+
+    const glm::mat4 view_from_viewport =
+        view_from_context.value() * event.viewport.context_from_viewport_transform;
+    top_hit_view_local = TransformPointerCoords(event.position_in_viewport, view_from_viewport);
+  }
+  const glm::vec2 ndc = GetViewportNDCPoint(event);
+
+  return BuildAccessibilityPointerEvent(event, ndc, top_hit_view_local, view_ref_koid);
 }
 
 void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
@@ -306,7 +333,7 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
       break;
     case fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET:
       inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
-        InjectTouchEventHitTested(event, stream_id, /*parallel_dispatch*/ false);
+        InjectTouchEventHitTested(event, stream_id);
       };
       break;
     default:
@@ -328,6 +355,49 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
   FX_CHECK(success) << "Injector already exists.";
 
   callback();
+}
+
+ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t view_ref_koid) {
+  FX_DCHECK(view_ref_koid != ZX_KOID_INVALID);
+
+  const ContenderId contender_id = next_contender_id_++;
+  gfx_legacy_contenders_.try_emplace(
+      contender_id,
+      /*respond*/
+      [this, stream_id, contender_id](GestureResponse response) {
+        RecordGestureDisambiguationResponse(stream_id, contender_id, {response});
+      },
+      /*deliver_events_to_client*/
+      [this, view_ref_koid](const std::vector<InternalPointerEvent>& events) {
+        if (!scene_graph_)
+          return;
+
+        const gfx::ViewTree& view_tree = scene_graph_->view_tree();
+        for (const auto& event : events) {
+          ReportPointerEventToPointerCaptureListener(event, view_tree);
+          ReportPointerEventToGfxLegacyView(event, view_ref_koid,
+                                            fuchsia::ui::input::PointerEventType::TOUCH, view_tree);
+
+          // Update focus if necessary.
+          // TODO(fxbug.dev/59858): Figure out how to handle focus with real GD clients.
+          if (event.phase == Phase::ADD) {
+            if (view_tree.IsConnectedToScene(view_ref_koid)) {
+              if (view_tree.MayReceiveFocus(view_ref_koid)) {
+                RequestFocusChange(view_ref_koid);
+              }
+            } else if (focus_chain_root() != ZX_KOID_INVALID) {
+              RequestFocusChange(focus_chain_root());
+            }
+          }
+        }
+      },
+      /*self_destruct*/
+      [this, contender_id] {
+        contenders_.erase(contender_id);
+        gfx_legacy_contenders_.erase(contender_id);
+      });
+  contenders_.emplace(contender_id, &gfx_legacy_contenders_.at(contender_id));
+  return contender_id;
 }
 
 void InputSystem::RegisterListener(
@@ -367,7 +437,7 @@ void InputSystem::HitTest(const gfx::ViewTree& view_tree, const InternalPointerE
 }
 
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
-                                         scheduling::SessionId session_id, bool parallel_dispatch) {
+                                         scheduling::SessionId session_id) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
   if (command.pointer_event.phase == fuchsia::ui::input::PointerEventPhase::HOVER) {
     FX_LOGS(WARNING) << "Injected pointer event had unexpected HOVER event.";
@@ -433,8 +503,9 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH: {
       // Get stream id. Create one if this is a new stream.
-      const uint64_t stream_key =
-          ((uint64_t)internal_event.device_id << 32) | (uint64_t)internal_event.pointer_id;
+      const std::pair<uint32_t, uint32_t> stream_key{internal_event.device_id,
+                                                     internal_event.pointer_id};
+      // ((uint64_t)internal_event.device_id << 32) | (uint64_t)internal_event.pointer_id;
       if (!gfx_legacy_streams_.count(stream_key)) {
         if (internal_event.phase != Phase::ADD) {
           FX_LOGS(WARNING) << "Attempted to start a stream without an initial ADD.";
@@ -457,7 +528,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
       TRACE_FLOW_END(
           "input", "dispatch_event_to_scenic",
           PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor));
-      InjectTouchEventHitTested(internal_event, stream_id, parallel_dispatch);
+      InjectTouchEventHitTested(internal_event, stream_id);
       break;
     }
     case PointerEventType::MOUSE: {
@@ -480,8 +551,8 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event) {
   if (!scene_graph_)
     return;
 
-  ReportPointerEventToView(event, event.target, fuchsia::ui::input::PointerEventType::TOUCH,
-                           scene_graph_->view_tree());
+  ReportPointerEventToGfxLegacyView(
+      event, event.target, fuchsia::ui::input::PointerEventType::TOUCH, scene_graph_->view_tree());
 }
 
 // The touch state machine comprises ADD/DOWN/MOVE*/UP/REMOVE. Some notes:
@@ -491,130 +562,131 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event) {
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id,
-                                            bool parallel_dispatch) {
+void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id) {
   FX_DCHECK(scene_graph_);
+
+  // New stream. Collect contenders and set up a new arena.
+  if (event.phase == Phase::ADD) {
+    std::vector<ContenderId> contenders = CollectContenders(stream_id, event);
+    if (!contenders.empty()) {
+      gesture_arenas_.emplace(stream_id, GestureArena{std::move(contenders)});
+    } else if (focus_chain_root() != ZX_KOID_INVALID) {
+      // No node was hit. Transfer focus to root.
+      RequestFocusChange(focus_chain_root());
+    }
+  }
+
+  // No arena means the contest is over and no one won.
+  if (!gesture_arenas_.count(stream_id)) {
+    return;
+  }
+
+  UpdateGestureContest(event, stream_id);
+}
+
+std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
+                                                        const InternalPointerEvent& event) {
+  FX_DCHECK(event.phase == Phase::ADD);
+  FX_DCHECK(scene_graph_);
+
   const gfx::ViewTree& view_tree = scene_graph_->view_tree();
-  const uint32_t pointer_id = event.pointer_id;
-  const Phase pointer_phase = event.phase;
+  std::vector<ContenderId> contenders;
 
-  // The a11y listener is only enabled if the root view is the context. This will later be handled
-  // implicitly by scene graph structure when gesture disambiguation is implemented.
-  // TODO(fxbug.dev/52134): Remove when gesture disambiguation makes it obsolete.
-  const bool a11y_enabled =
-      IsA11yListenerEnabled() && IsOwnedByRootSession(view_tree, event.context);
+  // Add an A11yLegacyContender.
+  // TODO(fxbug.dev/50549): Remove when a11y is a native GD client.
+  if (a11y_legacy_contender_ && IsOwnedByRootSession(view_tree, event.context)) {
+    contenders.push_back(a11y_contender_id_);
+  }
 
-  if (pointer_phase == Phase::ADD) {
-    gfx::ViewHitAccumulator accumulator;
+  {  // Add a GfxLegacyContender.
+    // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
+    gfx::TopHitAccumulator accumulator;
     HitTest(view_tree, event, accumulator, /*semantic_hit_test*/ false);
-    const auto& hits = accumulator.hits();
+    if (accumulator.hit()) {
+      const zx_koid_t hit_view_koid = accumulator.hit()->view_ref_koid;
+      FX_VLOGS(1) << "View hit: [ViewRefKoid=" << hit_view_koid << "]";
 
-    // Find input targets.  Honor the "input masking" view property.
-    std::vector<zx_koid_t> hit_views;
-    for (const gfx::ViewHit& hit : hits) {
-      hit_views.push_back(hit.view_ref_koid);
+      const ContenderId contender_id = AddGfxLegacyContender(stream_id, hit_view_koid);
+      contenders.push_back(contender_id);
     }
+  }
 
-    FX_VLOGS(1) << "View hits: ";
-    for (auto view_ref_koid : hit_views) {
-      FX_VLOGS(1) << "[ViewRefKoid=" << view_ref_koid << "]";
+  return contenders;
+}
+
+void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, StreamId stream_id) {
+  auto arena_it = gesture_arenas_.find(stream_id);
+  if (arena_it == gesture_arenas_.end())
+    return;  // Contest already ended, with no winner.
+  auto& arena = arena_it->second;
+
+  const bool is_end_of_stream = event.phase == Phase::REMOVE || event.phase == Phase::CANCEL;
+  arena.UpdateStream(/*length*/ 1, is_end_of_stream);
+
+  // Update remaining contenders.
+  // Copy the vector to avoid problems if the arena is destroyed inside of UpdateStream().
+  const std::vector<ContenderId> contenders = arena.contenders();
+  for (const auto contender_id : contenders) {
+    auto contender_it = contenders_.find(contender_id);
+    if (contender_it != contenders_.end()) {
+      contender_it->second->UpdateStream(stream_id, event, is_end_of_stream);
     }
+  }
 
-    // Save targets for consistent delivery of touch events.
-    touch_targets_[pointer_id] = hit_views;
+  DestroyArenaIfComplete(stream_id);
+}
 
-    // If there is an accessibility pointer event listener enabled, an ADD event means that a new
-    // pointer id stream started. Perform it unconditionally, even if the view stack is empty.
-    if (a11y_enabled) {
-      pointer_event_buffer_->AddStream(pointer_id);
-    }
-  } else if (pointer_phase == Phase::DOWN) {
-    // If accessibility listener is on, focus change events must be sent only if
-    // the stream is rejected. This way, this operation is deferred.
-    if (!a11y_enabled) {
-      if (!touch_targets_[pointer_id].empty()) {
-        // Request that focus be transferred to the top view.
-        RequestFocusChange(touch_targets_[pointer_id].front());
-      } else if (focus_chain_root() != ZX_KOID_INVALID) {
-        // The touch event stream has no designated receiver.
-        // Request that focus be transferred to the root view, so that (1) the currently focused
-        // view becomes unfocused, and (2) the focus chain remains under control of the root view.
-        RequestFocusChange(focus_chain_root());
+void InputSystem::RecordGestureDisambiguationResponse(
+    StreamId stream_id, ContenderId contender_id, const std::vector<GestureResponse>& responses) {
+  auto arena_it = gesture_arenas_.find(stream_id);
+  if (arena_it == gesture_arenas_.end() || !arena_it->second.contains(contender_id)) {
+    FX_LOGS(ERROR) << "Failed to record GestureResponse";
+    return;
+  }
+  auto& arena = arena_it->second;
+
+  // No need to record after the contest has ended.
+  if (!arena.contest_has_ended()) {
+    // Update the arena.
+    const ContestResults result = arena.RecordResponse(contender_id, responses);
+    for (auto loser_id : result.losers) {
+      auto contender = contenders_.find(loser_id);
+      if (contender != contenders_.end()) {
+        contenders_.at(loser_id)->EndContest(stream_id, /*awarded_win*/ false);
       }
     }
-  }
-
-  // Input delivery must be parallel; needed for gesture disambiguation.
-  std::vector<zx_koid_t> deferred_event_receivers;
-  for (zx_koid_t view_ref_koid : touch_targets_[pointer_id]) {
-    if (a11y_enabled) {
-      deferred_event_receivers.emplace_back(view_ref_koid);
-    } else {
-      ReportPointerEventToView(event, view_ref_koid, fuchsia::ui::input::PointerEventType::TOUCH,
-                               view_tree);
-    }
-    if (!parallel_dispatch) {
-      break;  // TODO(fxbug.dev/24258): Remove when gesture disambiguation is ready.
-    }
-  }
-
-  FX_DCHECK(a11y_enabled || deferred_event_receivers.empty())
-      << "When a11y pointer forwarding is off, never defer events.";
-
-  if (a11y_enabled) {
-    // We handle both latched (!deferred_event_receivers.empty()) and unlatched
-    // (deferred_event_receivers.empty()) touch events, for two reasons.
-    //
-    // (1) We must notify accessibility about events regardless of latch, so that it has full
-    // information about a gesture stream. E.g., the gesture could start traversal in empty space
-    // before MOVE-ing onto a rect; accessibility needs both the gesture and the rect.
-    //
-    // (2) We must trigger a potential focus change request, even if no view receives the triggering
-    // DOWN event, so that (a) the focused view receives an unfocus event, and (b) the focus chain
-    // gets updated and dispatched accordingly.
-    //
-    // NOTE: Do not rely on the latched view stack for "top hit" information; elevation can change
-    // dynamically (it's only guaranteed correct for DOWN). Instead, perform an independent query
-    // for "top hit".
-    zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-    {
-      // Find top-hit target and send it to accessibility.
-      gfx::TopHitAccumulator top_hit;
-      HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ true);
-
-      if (top_hit.hit()) {
-        view_ref_koid = top_hit.hit()->view_ref_koid;
+    if (result.winner) {
+      auto contender_it = contenders_.find(result.winner.value());
+      if (contender_it != contenders_.end()) {
+        contender_it->second->EndContest(stream_id, /*awarded_win*/ true);
       }
+      FX_DCHECK(arena.contenders().size() == 1u);
     }
-
-    glm::vec2 top_hit_view_local;
-    if (view_ref_koid != ZX_KOID_INVALID) {
-      std::optional<glm::mat4> view_from_context = GetDestinationViewFromSourceViewTransform(
-          /*source*/ event.context, /*destination*/ view_ref_koid, view_tree);
-      FX_DCHECK(view_from_context)
-          << "Failed to create world space ray. Either the |event.context| ViewRef is invalid, "
-             "we're out of sync with the ViewTree, or the ViewTree callback returned std::nullopt.";
-
-      const glm::mat4 view_from_viewport =
-          view_from_context.value() * event.viewport.context_from_viewport_transform;
-      top_hit_view_local = TransformPointerCoords(event.position_in_viewport, view_from_viewport);
-    }
-    const glm::vec2 ndc = GetViewportNDCPoint(event);
-
-    AccessibilityPointerEvent packet =
-        BuildAccessibilityPointerEvent(event, ndc, top_hit_view_local, view_ref_koid);
-    pointer_event_buffer_->AddEvent(
-        pointer_id,
-        {.event = std::move(event),
-         .parallel_event_receivers = std::move(deferred_event_receivers)},
-        std::move(packet));
-  } else {
-    // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
-    ReportPointerEventToPointerCaptureListener(event, view_tree);
   }
 
-  if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
-    touch_targets_.erase(pointer_id);
+  DestroyArenaIfComplete(stream_id);
+}
+
+void InputSystem::DestroyArenaIfComplete(StreamId stream_id) {
+  const auto arena_it = gesture_arenas_.find(stream_id);
+  if (arena_it == gesture_arenas_.end()) {
+    return;
+  }
+
+  const auto& arena = arena_it->second;
+
+  if (arena.contenders().empty()) {
+    // If no one won the contest then it will appear as if nothing was hit. Transfer focus to root.
+    // TODO(fxbug.dev/59858): This probably needs to change when we figure out the exact semantics
+    // we want.
+    if (focus_chain_root() != ZX_KOID_INVALID) {
+      RequestFocusChange(focus_chain_root());
+    }
+    gesture_arenas_.erase(stream_id);
+  } else if (arena.contest_has_ended() && arena.stream_has_ended()) {
+    // If both the contest and the stream is over, destroy the arena.
+    // This branch will always be reached eventually.
+    gesture_arenas_.erase(stream_id);
   }
 }
 
@@ -642,8 +714,6 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
 
   if (pointer_phase == Phase::DOWN) {
     // Find top-hit target and associated properties.
-    // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
-    // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
     HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ false);
 
@@ -674,8 +744,8 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   if (mouse_targets_.count(device_id) > 0 &&   // Tracking this device, and
       mouse_targets_[device_id].size() > 0) {  // target view exists.
     const zx_koid_t top_view_koid = mouse_targets_[device_id].front();
-    ReportPointerEventToView(event, top_view_koid, fuchsia::ui::input::PointerEventType::MOUSE,
-                             view_tree);
+    ReportPointerEventToGfxLegacyView(event, top_view_koid,
+                                      fuchsia::ui::input::PointerEventType::MOUSE, view_tree);
   }
 
   if (pointer_phase == Phase::UP || pointer_phase == Phase::CANCEL) {
@@ -692,41 +762,9 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
 
     if (top_hit.hit()) {
       const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;
-      ReportPointerEventToView(event, top_view_koid, fuchsia::ui::input::PointerEventType::MOUSE,
-                               view_tree);
+      ReportPointerEventToGfxLegacyView(event, top_view_koid,
+                                        fuchsia::ui::input::PointerEventType::MOUSE, view_tree);
     }
-  }
-}
-
-void InputSystem::DispatchDeferredPointerEvent(
-    PointerEventBuffer::DeferredPointerEvent views_and_event) {
-  if (!scene_graph_)
-    return;
-
-  // If this parallel dispatch of events corresponds to a DOWN event, this
-  // triggers a possible deferred focus change event.
-  if (views_and_event.event.phase == Phase::DOWN) {
-    if (!views_and_event.parallel_event_receivers.empty()) {
-      // Request that focus be transferred to the top view.
-      const zx_koid_t view_koid = views_and_event.parallel_event_receivers.front();
-      FX_DCHECK(view_koid != ZX_KOID_INVALID) << "invariant";
-      RequestFocusChange(view_koid);
-    } else if (focus_chain_root() != ZX_KOID_INVALID) {
-      // The touch event stream has no designated receiver.
-      // Request that focus be transferred to the root view, so that (1) the currently focused
-      // view becomes unfocused, and (2) the focus chain remains under control of the root view.
-      RequestFocusChange(focus_chain_root());
-    }
-  }
-
-  const gfx::ViewTree& view_tree = scene_graph_->view_tree();
-  for (zx_koid_t view_ref_koid : views_and_event.parallel_event_receivers) {
-    ReportPointerEventToView(views_and_event.event, view_ref_koid,
-                             fuchsia::ui::input::PointerEventType::TOUCH, view_tree);
-  }
-
-  {  // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
-    ReportPointerEventToPointerCaptureListener(views_and_event.event, view_tree);
   }
 }
 
@@ -808,10 +846,10 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(const InternalPoint
   listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
 }
 
-void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
-                                           zx_koid_t view_ref_koid,
-                                           fuchsia::ui::input::PointerEventType type,
-                                           const gfx::ViewTree& view_tree) const {
+void InputSystem::ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event,
+                                                    zx_koid_t view_ref_koid,
+                                                    fuchsia::ui::input::PointerEventType type,
+                                                    const gfx::ViewTree& view_tree) const {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   EventReporterWeakPtr event_reporter = view_tree.EventReporterOf(view_ref_koid);
   if (!event_reporter)
