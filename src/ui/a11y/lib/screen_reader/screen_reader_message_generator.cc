@@ -177,13 +177,11 @@ ScreenReaderMessageGenerator::DescribeToggleSwitch(
     const fuchsia::accessibility::semantics::Node* node) {
   FX_DCHECK(node->has_role() &&
             node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH);
-  // TODO(fxb/67666): Update the following describe logic for toggle switch when the appropriate
-  // message string is supported.
   const auto message_id =
       node->has_states() && node->states().has_toggled_state() &&
               node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
-          ? MessageIds::RADIO_BUTTON_SELECTED
-          : MessageIds::RADIO_BUTTON_UNSELECTED;
+          ? MessageIds::ELEMENT_TOGGLED_ON
+          : MessageIds::ELEMENT_TOGGLED_OFF;
   const auto name_value =
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
 
