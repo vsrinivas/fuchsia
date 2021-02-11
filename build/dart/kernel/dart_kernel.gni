@@ -293,10 +293,3 @@ template("dart_kernel") {
     deps = _group_deps
   }
 }
-
-# TODO(fxb/69628): Remove after soft transition.
-template("dart_kernel2") {
-  dart_kernel(target_name) {
-    forward_variables_from(invoker, "*")
-  }
-}

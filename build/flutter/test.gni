@@ -387,10 +387,3 @@ if (current_toolchain == dart_toolchain) {
     }
   }
 }
-
-# TODO(fxb/69628): Remove after soft transition.
-template("flutter_test2") {
-  flutter_test(target_name) {
-    forward_variables_from(invoker, "*")
-  }
-}

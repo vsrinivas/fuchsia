@@ -40,7 +40,7 @@ dart_library("fuchsia_scenic_flutter") {
 
 # Runs these tests using:
 #   fx run-host-tests fuchsia_scenic_flutter_unittests
-flutter_test2("fuchsia_scenic_flutter_unittests") {
+flutter_test("fuchsia_scenic_flutter_unittests") {
   sources = [
     "child_view_test.dart",
     "fuchsia_view_connection_test.dart",
