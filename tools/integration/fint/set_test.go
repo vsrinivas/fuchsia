@@ -292,7 +292,6 @@ func TestGenArgs(t *testing.T) {
 			expectedArgs: []string{
 				`rustc_prefix="/tmp/rust_toolchain/bin"`,
 				`use_goma=true`,
-				fmt.Sprintf(`goma_dir="%s/prebuilt/third_party/goma/%s"`, checkoutDir, platform),
 			},
 		},
 		{

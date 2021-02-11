@@ -156,11 +156,6 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 	}
 
 	vars["use_goma"] = staticSpec.UseGoma
-	if staticSpec.UseGoma {
-		vars["goma_dir"] = filepath.Join(
-			contextSpec.CheckoutDir, "prebuilt", "third_party", "goma", platform,
-		)
-	}
 
 	if staticSpec.Product != "" {
 		basename := filepath.Base(staticSpec.Product)
