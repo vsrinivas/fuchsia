@@ -11,7 +11,7 @@ import 'package:webdriver/sync_io.dart' show By;
 import 'ermine_driver.dart';
 
 const _timeoutSeconds = 10;
-const _timeout = Duration(milliseconds: _timeoutSeconds * 1000);
+const _timeout = Duration(seconds: _timeoutSeconds);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
 
@@ -24,6 +24,9 @@ void main() {
   final nextTabFinder = find.text('Next Page');
   final popupTabFinder = find.text('Popup Page');
   final videoTabFinder = find.text('Video Test');
+  final redTabFinder = find.text('Red Page');
+  final greenTabFinder = find.text('Green Page');
+  final blueTabFinder = find.text('Blue Page');
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -62,6 +65,23 @@ void main() {
     await sl4f.stopServer();
     sl4f?.close();
   });
+
+  Future<bool> _waitForColor(
+    int hex, {
+    Rectangle rect = const Rectangle(100, 100, 100, 100),
+    Duration timeout = _timeout,
+  }) async {
+    final end = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(end)) {
+      final sampleImage = await ermine.screenshot(rect);
+      bool isTheColor =
+          sampleImage.data.every((pixel) => (pixel & hex) == (hex & hex));
+      if (!isTheColor) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input once
   // fxb/69277 is fixed.
@@ -182,46 +202,77 @@ void main() {
     FlutterDriver browser;
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
+    /// Tab Switching Test
+
     // TODO(fxb/69334): Get rid of the space in the hint text.
     const newTabHintText = '     SEARCH';
-    const indexUrl = 'http://127.0.0.1:8080/index.html';
-    const nextUrl = 'http://127.0.0.1:8080/next.html';
-    const popupUrl = 'http://127.0.0.1:8080/popup.html';
+    const redUrl = 'http://127.0.0.1:8080/red.html';
+    const greenUrl = 'http://127.0.0.1:8080/green.html';
+    const blueUrl = 'http://127.0.0.1:8080/blue.html';
 
-    // Opens index.html in the second tab leaving the first tab as an empty tab.
-    await browser.requestData(indexUrl);
-    await browser.waitFor(indexTabFinder, timeout: _timeout);
+    // Opens red.html in the second tab leaving the first tab as an empty tab.
+    await browser.requestData(redUrl);
+    await browser.waitFor(redTabFinder, timeout: _timeout);
 
-    // Opens next.html in the third tab.
+    // Opens green.html in the third tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
-    await browser.requestData(nextUrl);
-    await browser.waitFor(nextTabFinder, timeout: _timeout);
+    await browser.requestData(greenUrl);
+    await browser.waitFor(greenTabFinder, timeout: _timeout);
 
-    // Opens popup.html in the forth tab.
+    // Opens blue.html in the forth tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeout);
-    await browser.requestData(popupUrl);
-    await browser.waitFor(popupTabFinder, timeout: _timeout);
+    await browser.requestData(blueUrl);
+    await browser.waitFor(blueTabFinder, timeout: _timeout);
 
-    // Should have 4 tabs and the Popup Page should be focused.
+    // Should have 4 tabs and the forth tab should be focused.
     expect(await browser.getText(newTabFinder), isNotNull);
-    expect(await browser.getText(indexTabFinder), isNotNull);
-    expect(await browser.getText(nextTabFinder), isNotNull);
-    expect(await browser.getText(popupTabFinder), isNotNull);
-    expect(await browser.getText(find.text(popupUrl)), isNotNull);
+    expect(await browser.getText(redTabFinder), isNotNull);
+    expect(await browser.getText(greenTabFinder), isNotNull);
+    expect(await browser.getText(blueTabFinder), isNotNull);
+    expect(await browser.getText(find.text(blueUrl)), isNotNull);
 
     // The second tab should be focused when tapped.
-    await browser.tap(indexTabFinder);
-    await browser.waitFor(find.text(indexUrl));
-    expect(await browser.getText(find.text(indexUrl)), isNotNull);
+    await browser.tap(redTabFinder);
+    await browser.waitFor(find.text(redUrl));
+    expect(await browser.getText(find.text(redUrl)), isNotNull);
 
     // The thrid tab should be focused when tapped.
-    await browser.tap(nextTabFinder);
-    await browser.waitFor(find.text(nextUrl));
-    expect(await browser.getText(find.text(nextUrl)), isNotNull);
+    await browser.tap(greenTabFinder);
+    await browser.waitFor(find.text(greenUrl));
+    expect(await browser.getText(find.text(greenUrl)), isNotNull);
 
-    // TODO(fxb/68719): Test tab rearranging.
+    // Makes sure the web page is loaded before proceeding image diff tests.
+    final isGreen = await _waitForColor(0x0000ff00);
+    expect(isGreen, true, reason: 'The green web page has not been loaded.');
+
+    /// Tab Rearranging Test
+
+    const String goldenBefore = 'simple_browser_rearranging_tab_before.png';
+    const String goldenAfter = 'simple_browser_rearranging_tab_after.png';
+
+    // Gets the view rect.
+    final viewRect = await ermine.getViewRect(simpleBrowserUrl);
+
+    // Image-diff test before rearranging a tab.
+    final screenshotBefore = await ermine.screenshot(viewRect);
+    final goldenDiffBefore = ermine.goldenDiff(screenshotBefore, goldenBefore);
+    expect(goldenDiffBefore, 0,
+        reason: 'Failed at the scuba test with $goldenBefore');
+
+    // Drags the index.html tab to the right end of the tab list.
+    await browser.scroll(redTabFinder, 600, 0, Duration(seconds: 1));
+
+    final isRed = await _waitForColor(0x00ff0000);
+    expect(isRed, true, reason: 'The red web page has not been loaded.');
+
+    // Image-diff test after rearranging a tab.
+    final screenshotAfter = await ermine.screenshot(viewRect);
+    final goldenDiffAfter = ermine.goldenDiff(screenshotAfter, goldenAfter);
+    expect(goldenDiffAfter, 0,
+        reason: 'Failed at the scuba test with $goldenAfter');
+
     // TODO(fxb/68719): Test tab closing.
 
     await ermine.driver.requestData('close');

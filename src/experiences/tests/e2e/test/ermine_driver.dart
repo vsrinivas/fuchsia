@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:image/image.dart';
@@ -282,5 +283,59 @@ class ErmineDriver {
     }
     final diffRate = (diff / a.data.length);
     return diffRate;
+  }
+
+  /// Saves a screenshot of a View as a png image file.
+  ///
+  /// Mainly used to create initial golden images for image diff tests.
+  /// To do this, call it in your `test()` before writing your image-diff test.
+  /// For example,
+  /// ```
+  /// test('Image diff test' () async {
+  ///   ErmineDriver ermine = ErmineDriver(sl4f);
+  ///   await ermine.launch(componentUrl);
+  ///   final viewRect = await ermine.getViewRect(componentUrl);
+  ///
+  ///   ermine.saveScreenshotAs(viewRect, 'screenshot.png');
+  /// });
+  /// ```
+  /// You will be able to find the output files under //out/default/ on your host
+  /// machine once you run the test successfully. If they look as you want,
+  /// move them under //src/experiences/tests/e2e/test/scuba_goldens so that
+  /// you can use them as your golden images. Once you have them there and in
+  /// BUILD, you are good to write your image diff test using [screenshot] and
+  /// [goldenDiff] and remove this method call.
+  Future<void> saveScreenshotAsGolden(Rectangle rect, String goldenName) async {
+    final fileName = _sanitizeGoldenFileName(goldenName);
+    final scubaImage = await screenshot(rect);
+
+    // Saves the image to disk as a PNG
+    File(fileName).writeAsBytesSync(encodePng(scubaImage));
+  }
+
+  /// Returns the difference rate between an image and the correspondant golden
+  /// image stored in the host. The range is from 0 to 1, and the closer to 0
+  /// the rate is, the more identical the two images.
+  double goldenDiff(Image image, String golden) {
+    final goldenFileName = _sanitizeGoldenFileName(golden);
+    final goldenImage = decodePng(
+        File('dartlang/scuba_goldens/$goldenFileName').readAsBytesSync());
+    return screenshotsDiff(image, goldenImage);
+  }
+
+  String _sanitizeGoldenFileName(String file) {
+    if (file.contains('.')) {
+      final splits = file.split('.');
+      assert(
+        splits.length == 2,
+        'The golden file name can contain only one dot(.) for its extension.',
+      );
+      final fileType = splits.last;
+      assert(fileType == 'png' || fileType == 'PNG',
+          'The file type should be png');
+      return file;
+    } else {
+      return '$file.png';
+    }
   }
 }

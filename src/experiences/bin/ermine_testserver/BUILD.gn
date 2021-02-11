@@ -23,9 +23,12 @@ dart_library("lib") {
 
 resource("browser_test_files") {
   sources = [
+    "public/simple_browser_test/blue.html",
+    "public/simple_browser_test/green.html",
     "public/simple_browser_test/index.html",
     "public/simple_browser_test/next.html",
     "public/simple_browser_test/popup.html",
+    "public/simple_browser_test/red.html",
     "public/simple_browser_test/sample_video.mp4",
     "public/simple_browser_test/style.css",
     "public/simple_browser_test/video.html",

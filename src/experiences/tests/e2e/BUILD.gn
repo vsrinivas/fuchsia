@@ -14,6 +14,14 @@ group("end_to_end_deps") {
   public_deps = [ "//src/experiences/bin/ermine_testserver" ]
 }
 
+host_test_data("scuba_goldens") {
+  sources = [
+    "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_after.png",
+    "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_before.png",
+  ]
+  outputs = [ "$root_out_dir/scuba_goldens/{{source_file_part}}" ]
+}
+
 dart_test("experiences_ermine_session_shell_e2e_test") {
   sources = [
     "ermine_driver.dart",
@@ -27,6 +35,7 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
   ]
 
   deps = [
+    ":scuba_goldens",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",

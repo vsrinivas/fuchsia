@@ -21,9 +21,12 @@ final fileGroups = <TestCase, FileGroup>{
   TestCase.simpleBrowserTest: FileGroup(
     'simple_browser_test',
     <String>[
+      'blue.html',
+      'green.html',
       'index.html',
       'next.html',
       'popup.html',
+      'red.html',
       'video.html',
       'style.css',
       'sample_video.mp4',
