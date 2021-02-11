@@ -135,12 +135,15 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
         "flib/fence_listener_unittest.cc",
         "flib/fence_queue_unittest.cc",
         "flib/fence_set_listener_unittest.cc",
+        "flib/frame_unittest.cc",
         "flib/util.cc",
         "flib/util.h",
         "profiling/timestamp_profiler_unittest.cc",
       ]
       deps += [
         "//garnet/public/lib/gtest",
+        "//zircon/system/ulib/async:async-cpp",
+        "//zircon/system/ulib/async-default",
         "//zircon/system/ulib/async-loop:async-loop-cpp",
         "//zircon/system/ulib/async-loop:async-loop-default",
       ]
