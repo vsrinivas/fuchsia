@@ -1809,6 +1809,17 @@ action("flash_script_archive") {
       "--fvm=${fvm_partition}",
     ]
   }
+
+  metadata = {
+    images = [
+      {
+        archive = true
+        name = "flash"
+        type = "sh"
+        path = "flash-archive.sh"
+      },
+    ]
+  }
 }
 
 paver_targets = [
@@ -1908,6 +1919,18 @@ archive_formats = [
   "tar",
   "tgz",
 ]
+
+generated_file("archive-images-manifest") {
+  testonly = true
+  outputs = [ "$root_build_dir/archive-images-manifest.json" ]
+  output_conversion = "json"
+  data_keys = [ "images" ]
+  deps = [
+    ":archive-extras",
+    ":bootserver",
+    ":images",
+  ]
+}
 foreach(format, archive_formats) {
   paver_targets += [
     {
@@ -1962,7 +1985,7 @@ foreach(target, paver_targets) {
     }
 
     args += [
-      "images.json",
+      "archive-images-manifest.json",
       "checkout_artifacts.json",
     ]
 
@@ -2461,6 +2484,7 @@ copy("fastboot") {
 }
 
 group("archive-extras") {
+  deps = [ ":flash_script_archive" ]
   metadata = {
     # Not actually images, but historically required entries to be included in
     # the relevant build archives.
@@ -2470,12 +2494,6 @@ group("archive-extras") {
         name = "buildargs"
         type = "gn"
         path = "args.gn"
-      },
-      {
-        archive = true
-        name = "flash"
-        type = "sh"
-        path = "flash-archive.sh"
       },
     ]
   }
