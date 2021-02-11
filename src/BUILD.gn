@@ -84,3 +84,11 @@ group("tests") {
     "//zircon/tools:tests",
   ]
 }
+
+group("e2e_tests") {
+  testonly = true
+  deps = [
+    "//src/storage/lib/paver/e2e_tests",
+    "//src/sys/pkg:e2e_tests",
+  ]
+}

@@ -163,3 +163,41 @@ func TestOverrideVBMetaA(t *testing.T) {
 		t.Fatalf("Missing vbmeta A image in paver arguments.")
 	}
 }
+
+func TestPaveMode(t *testing.T) {
+	bootserverPath := createScript(t)
+	var output bytes.Buffer
+	paver, err := NewBuildPaver(bootserverPath, filepath.Dir(bootserverPath), Stdout(&output))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		if err := paver.PaveWithOptions(context.Background(), "a-fake-device-name", Options{Mode: ZedbootOnly}); err != nil {
+			t.Fatal(err)
+		}
+		outputs := strings.Split(output.String(), "\n")
+		args := strings.Split(outputs[0], " ")
+		if args[4] != "pave-zedboot" {
+			t.Errorf("Paver called with wrong mode")
+		}
+		if len(outputs[1]) != 0 {
+			t.Errorf("Unexpected extra command")
+		}
+	}
+
+	{
+		output.Reset()
+		if err := paver.PaveWithOptions(context.Background(), "a-fake-device-name", Options{Mode: SkipZedboot}); err != nil {
+			t.Fatal(err)
+		}
+		outputs := strings.Split(output.String(), "\n")
+		args := strings.Split(outputs[0], " ")
+		if args[4] != "pave" {
+			t.Fatalf("Paver called with wrong mode")
+		}
+		if len(outputs[1]) != 0 {
+			t.Errorf("Unexpected extra command")
+		}
+	}
+}

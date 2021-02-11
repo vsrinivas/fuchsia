@@ -503,7 +503,7 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	}
 
 	// Actually pave the device.
-	if err = paver.Pave(ctx, c.deviceResolver.Name()); err != nil {
+	if err = paver.Pave(ctx, c.Name()); err != nil {
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
@@ -517,6 +517,10 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	logger.Infof(ctx, "device booted")
 
 	return nil
+}
+
+func (c *Client) Name() string {
+	return c.deviceResolver.Name()
 }
 
 type addrResolver struct {

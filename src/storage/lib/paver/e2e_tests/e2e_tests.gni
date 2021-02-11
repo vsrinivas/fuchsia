@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test.gni")
+
+# A template that configures a System Test pave test against a given release builder.  The SSH key,
+# upgrade build ID and target device must come environment variables.
+template("e2e_tests_pave") {
+  _service_account =
+      "internal-artifacts-readers@fuchsia-infra.iam.gserviceaccount.com"
+  if (defined(invoker.service_account)) {
+    assert(invoker.service_account != "",
+           "'$target_name' cannot have an empty service_account")
+    _service_account = invoker.service_account
+  }
+
+  host_test(target_name) {
+    binary_path = "$root_out_dir/e2e_tests_pave"
+    args = [
+      "-downgrade-builder-name",
+      invoker.release_builder,
+    ]
+    deps = [ "//src/storage/lib/paver/e2e_tests:e2e_tests_pave" ]
+    environments = []
+    foreach(env, invoker.environments) {
+      env.service_account = _service_account
+      environments += [ env ]
+    }
+  }
+}
