@@ -118,3 +118,19 @@ group("banjo") {
     "zircon.syscalls.pci",
   ]
 }
+
+_translated = [
+  "fuchsia.hardware.acpi",
+  "fuchsia.hardware.amlogiccanvas",
+  "fuchsia.hardware.display.capture",
+  "fuchsia.hardware.goldfish.control",
+  "fuchsia.hardware.i2c",
+  "fuchsia.hardware.spi",
+]
+
+group("translated") {
+  deps = []
+  foreach(library, _translated) {
+    deps += [ "$library:${library}_banjo_c" ]
+  }
+}

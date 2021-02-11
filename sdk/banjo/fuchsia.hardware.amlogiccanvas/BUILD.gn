@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.amlogiccanvas") {
+  translate_to_fidl = true
   sources = [ "amlogic-canvas.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }

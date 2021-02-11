@@ -32,10 +32,24 @@ template("fidl_adapter") {
   }
 
   if (current_toolchain == fidl_toolchain) {
+    deps = []
+    if (defined(invoker.deps)) {
+      foreach(dep, invoker.deps) {
+        if (dep == "//sdk/banjo/zx") {
+          deps += [ "//zircon/vdso/zx" ]
+        } else {
+          name = get_label_info(dep, "name")
+          dir = get_label_info(dep, "dir")
+          deps += [ "$dir:$name.fidl" ]
+        }
+      }
+    }
+
     fidl_library(main_target_name) {
       name = library_name
       sources = invoker.sources
       should_lint = false
+      public_deps = deps
     }
   } else if (is_fuchsia) {
     not_needed(invoker, "*")
@@ -71,7 +85,7 @@ template("fidl_adapter") {
         "--output",
         rebase_path(header_file, root_build_dir),
         "--backend",
-        "dummy_c",
+        "c",
       ]
     }
 

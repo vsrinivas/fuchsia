@@ -6,7 +6,7 @@ library fuchsia.hardware.acpi;
 
 using zx;
 
-struct AcpiMmio {
+resource struct AcpiMmio {
     /// Offset from beginning of VMO where the mmio region begins.
     zx.off offset;
     /// Size of mmio region.
@@ -18,7 +18,7 @@ struct AcpiMmio {
 protocol Acpi {
     GetPio(uint32 index) -> (zx.status s, zx.handle:RESOURCE pio);
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
-    MapInterrupt(int64 index) -> (zx.status s, zx.handle:INTERRUPT @handle);
+    MapInterrupt(int64 index) -> (zx.status s, zx.handle:INTERRUPT handle);
     GetBti(uint32 bdf, uint32 index) -> (zx.status s, zx.handle:BTI bti);
     ConnectSysmem(zx.handle:CHANNEL connection) -> (zx.status s);
     RegisterSysmemHeap(uint64 heap, zx.handle:CHANNEL connection) -> (zx.status s);

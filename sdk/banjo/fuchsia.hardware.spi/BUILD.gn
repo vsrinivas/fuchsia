@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.spi") {
+  translate_to_fidl = true
   sources = [ "spi.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
