@@ -153,7 +153,7 @@ class RequestBase {
   // Future transfers using this request will determine where in the VMO to store read/write data.
   // using the scatter gather list.
   // This will free any existing scatter gather list stored in the request.
-  zx_status_t SetScatterGatherList(const phys_iter_sg_entry_t* sg_list, size_t sg_count) {
+  zx_status_t SetScatterGatherList(const sg_entry_t* sg_list, size_t sg_count) {
     return usb_request_set_sg_list(request(), sg_list, sg_count);
   }
 
@@ -195,12 +195,16 @@ class RequestBase {
   // |max_length| is the maximum length of a range returned the iterator.
   // |max_length| must be either a positive multiple of PAGE_SIZE, or zero for no limit.
   ddk::PhysIter phys_iter(size_t max_length) {
-    phys_iter_buffer_t buf = {.phys = request()->phys_list,
-                              .phys_count = request()->phys_count,
-                              .length = request()->header.length,
-                              .vmo_offset = request()->offset,
-                              .sg_list = request()->sg_list,
-                              .sg_count = request()->sg_count};
+    static_assert(sizeof(phys_iter_sg_entry_t) == sizeof(sg_entry_t) &&
+                  offsetof(phys_iter_sg_entry_t, length) == offsetof(sg_entry_t, length) &&
+                  offsetof(phys_iter_sg_entry_t, offset) == offsetof(sg_entry_t, offset));
+    phys_iter_buffer_t buf = {
+        .phys = request()->phys_list,
+        .phys_count = request()->phys_count,
+        .length = request()->header.length,
+        .vmo_offset = request()->offset,
+        .sg_list = reinterpret_cast<phys_iter_sg_entry_t*>(request()->sg_list),
+        .sg_count = request()->sg_count};
     return ddk::PhysIter(buf, max_length);
   }
 

@@ -31,6 +31,7 @@ zx_library("usb") {
     "//zircon/public/lib/fit",
   ]
   deps = [
+    "//sdk/banjo/ddk.hw.physiter",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
     "//sdk/banjo/fuchsia.hardware.usb.request",

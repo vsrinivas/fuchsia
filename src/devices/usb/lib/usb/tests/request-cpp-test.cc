@@ -715,14 +715,14 @@ TEST(UsbRequestTest, SetScatterGatherList) {
   std::optional<Request> request;
   ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 3, 1, kParentReqSize), ZX_OK);
   // Wrap around the end of the request.
-  constexpr phys_iter_sg_entry_t kWrapped[] = {{.length = 10, .offset = (3 * PAGE_SIZE) - 10},
-                                               {.length = 50, .offset = 0}};
+  constexpr sg_entry_t kWrapped[] = {{.length = 10, .offset = (3 * PAGE_SIZE) - 10},
+                                     {.length = 50, .offset = 0}};
   EXPECT_EQ(request->SetScatterGatherList(kWrapped, std::size(kWrapped)), ZX_OK);
   EXPECT_EQ(request->request()->header.length, 60u);
 
-  constexpr phys_iter_sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
-                                                 {.length = 50, .offset = 500},
-                                                 {.length = 10, .offset = 2000}};
+  constexpr sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
+                                       {.length = 50, .offset = 500},
+                                       {.length = 10, .offset = 2000}};
   EXPECT_EQ(request->SetScatterGatherList(kUnordered, std::size(kUnordered)), ZX_OK);
   EXPECT_EQ(request->request()->header.length, 160u);
 }
@@ -733,13 +733,13 @@ TEST(UsbRequestTest, InvalidScatterGatherList) {
   std::optional<Request> request;
   ASSERT_EQ(Request::AllocVmo(&request, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, kParentReqSize), ZX_OK);
 
-  constexpr phys_iter_sg_entry_t kOutOfBounds[] = {
+  constexpr sg_entry_t kOutOfBounds[] = {
       {.length = 10, .offset = PAGE_SIZE * 3},
   };
   EXPECT_NE(request->SetScatterGatherList(kOutOfBounds, std::size(kOutOfBounds)), ZX_OK,
             "entry ends past end of vmo");
 
-  constexpr phys_iter_sg_entry_t kEmpty[] = {
+  constexpr sg_entry_t kEmpty[] = {
       {.length = 0, .offset = 0},
   };
   EXPECT_NE(request->SetScatterGatherList(kEmpty, std::size(kEmpty)), ZX_OK, "empty entry");
@@ -754,9 +754,9 @@ TEST(UsbRequestTest, ScatterGatherPhysIter) {
 
   ASSERT_EQ(request->PhysMap(bti), ZX_OK);
 
-  constexpr phys_iter_sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
-                                                 {.length = 50, .offset = 500},
-                                                 {.length = 10, .offset = 2000}};
+  constexpr sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
+                                       {.length = 50, .offset = 500},
+                                       {.length = 10, .offset = 2000}};
   EXPECT_EQ(request->SetScatterGatherList(kUnordered, std::size(kUnordered)), ZX_OK);
 
   auto* req = request->take();

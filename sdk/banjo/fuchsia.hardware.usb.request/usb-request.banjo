@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.usb.request;
 
-using ddk.physiter;
+using ddk.hw.physiter;
 using zircon.hw.usb;
 using zx;
 
@@ -55,7 +55,7 @@ struct UsbRequest {
     /// Phys addresses of the payload.
     [Mutable] vector<zx.paddr> phys;
 
-    [Mutable] vector<ddk.physiter.PhysIterSgEntry> sg;
+    [Mutable] vector<ddk.hw.physiter.SgEntry> sg;
 
     UsbResponse response;
 

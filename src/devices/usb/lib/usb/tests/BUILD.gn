@@ -20,6 +20,7 @@ test("usb-request-test-bin") {
     "request-cpp-test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.hw.physiter",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.function",
     "//sdk/banjo/fuchsia.hardware.usb.request",

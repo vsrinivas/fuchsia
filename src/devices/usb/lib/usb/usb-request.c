@@ -11,6 +11,8 @@
 #include <zircon/syscalls.h>
 
 #include <ddk/debug.h>
+#include <ddk/hw/physiter/c/banjo.h>
+#include <ddk/phys-iter.h>
 #include <usb/usb-request.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -160,8 +162,8 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
   return ZX_OK;
 }
 
-__EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req,
-                                             const phys_iter_sg_entry_t* sg_list, size_t sg_count) {
+__EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req, const sg_entry_t* sg_list,
+                                             size_t sg_count) {
   if (req->sg_list) {
     free(req->sg_list);
     req->sg_list = NULL;
@@ -170,13 +172,13 @@ __EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req,
   size_t total_length = 0;
   // TODO(jocelyndang): disallow overlapping entries?
   for (size_t i = 0; i < sg_count; ++i) {
-    const phys_iter_sg_entry_t* entry = &sg_list[i];
+    const sg_entry_t* entry = &sg_list[i];
     if (entry->length == 0 || (req_buffer_size(req, entry->offset) < entry->length)) {
       return ZX_ERR_INVALID_ARGS;
     }
     total_length += entry->length;
   }
-  size_t num_bytes = sg_count * sizeof(phys_iter_sg_entry_t);
+  size_t num_bytes = sg_count * sizeof(sg_entry_t);
   req->sg_list = malloc(num_bytes);
   if (req->sg_list == NULL) {
     zxlogf(ERROR, "usb_request_set_sg_list: out of memory");
@@ -324,7 +326,7 @@ __EXPORT void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, 
                             .vmo_offset = req->offset,
                             .phys = req->phys_list,
                             .phys_count = req->phys_count,
-                            .sg_list = req->sg_list,
+                            .sg_list = (phys_iter_sg_entry_t*)(req->sg_list),
                             .sg_count = req->sg_count};
   phys_iter_init(iter, &buf, max_length);
 }

@@ -37,7 +37,6 @@ library_headers("ddk-headers") {
     "ddk/metadata.h",
     "ddk/mmio-buffer.h",
     "ddk/phys-iter.h",
-    "ddk/physiter.h",
     "ddk/protodefs.h",
     "hw/arch_ops.h",
     "hw/inout.h",

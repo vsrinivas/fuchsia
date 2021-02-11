@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <zircon/syscalls/iommu.h>
 
+#include <ddk/hw/physiter/c/banjo.h>
 #include <usb/usb-request.h>
 #include <zxtest/zxtest.h>
 
@@ -443,14 +444,14 @@ TEST(UsbRequestCTest, SetSgList) {
   usb_request_t* req;
   ASSERT_OK(usb_request_alloc(&req, 3 * PAGE_SIZE, 1, sizeof(usb_request_t)));
   // Wrap around the end of the request.
-  phys_iter_sg_entry_t wrapped[2] = {{.length = 10, .offset = (3 * PAGE_SIZE) - 10},
-                                     {.length = 50, .offset = 0}};
+  sg_entry_t wrapped[2] = {{.length = 10, .offset = (3 * PAGE_SIZE) - 10},
+                           {.length = 50, .offset = 0}};
   ASSERT_OK(usb_request_set_sg_list(req, wrapped, 2));
   ASSERT_EQ(req->header.length, 60u, "");
 
-  phys_iter_sg_entry_t unordered[3] = {{.length = 100, .offset = 2 * PAGE_SIZE},
-                                       {.length = 50, .offset = 500},
-                                       {.length = 10, .offset = 2000}};
+  sg_entry_t unordered[3] = {{.length = 100, .offset = 2 * PAGE_SIZE},
+                             {.length = 50, .offset = 500},
+                             {.length = 10, .offset = 2000}};
   ASSERT_OK(usb_request_set_sg_list(req, unordered, 3));
   ASSERT_EQ(req->header.length, 160u, "");
 
@@ -465,10 +466,10 @@ TEST(UsbRequestCTest, InvalidSgList) {
   ASSERT_EQ(usb_request_alloc_vmo(&req, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, sizeof(usb_request_t)),
             ZX_OK, "");
 
-  phys_iter_sg_entry_t out_of_bounds[1] = {{.length = 10, .offset = PAGE_SIZE * 3}};
+  sg_entry_t out_of_bounds[1] = {{.length = 10, .offset = PAGE_SIZE * 3}};
   ASSERT_NE(usb_request_set_sg_list(req, out_of_bounds, 1), ZX_OK, "entry ends past end of vmo");
 
-  phys_iter_sg_entry_t empty[1] = {{.length = 0, .offset = 0}};
+  sg_entry_t empty[1] = {{.length = 0, .offset = 0}};
   ASSERT_NE(usb_request_set_sg_list(req, empty, 1), ZX_OK, "empty entry");
 
   usb_request_release(req);
@@ -491,9 +492,9 @@ TEST(UsbRequestCTest, PhysIterSgAlignedContig) {
   req->phys_list[2] = 0x12347000;
   req->phys_list[3] = 0x12348000;
 
-  phys_iter_sg_entry_t sg_list[3] = {{.length = 100, .offset = 0},
-                                     {.length = 2 * PAGE_SIZE, .offset = 500},
-                                     {.length = PAGE_SIZE - 100, .offset = 3 * PAGE_SIZE}};
+  sg_entry_t sg_list[3] = {{.length = 100, .offset = 0},
+                           {.length = 2 * PAGE_SIZE, .offset = 500},
+                           {.length = PAGE_SIZE - 100, .offset = 3 * PAGE_SIZE}};
   ASSERT_OK(usb_request_set_sg_list(req, sg_list, 3));
 
   phys_iter_t iter;
@@ -543,8 +544,8 @@ TEST(UsbRequestCTest, PhysIterSgAlignedNoncontig) {
   req->phys_list[2] = 0x12345000;
   req->phys_list[3] = 0x12347000;
 
-  phys_iter_sg_entry_t sg_list[2] = {{.length = PAGE_SIZE, .offset = (2 * PAGE_SIZE) + 128},
-                                     {.length = 2 * PAGE_SIZE, .offset = 10}};
+  sg_entry_t sg_list[2] = {{.length = PAGE_SIZE, .offset = (2 * PAGE_SIZE) + 128},
+                           {.length = 2 * PAGE_SIZE, .offset = 10}};
   ASSERT_OK(usb_request_set_sg_list(req, sg_list, 2));
 
   phys_iter_t iter;
@@ -608,8 +609,8 @@ TEST(UsbRequestCTest, PhysIterSgUnalignedContig) {
   req->phys_list[4] = 0x12349000;
   req->phys_list[5] = 0x1234a000;
 
-  phys_iter_sg_entry_t sg_list[2] = {{.length = 4000, .offset = 2 * PAGE_SIZE},
-                                     {.length = 5000, .offset = (3 * PAGE_SIZE) + 1000}};
+  sg_entry_t sg_list[2] = {{.length = 4000, .offset = 2 * PAGE_SIZE},
+                           {.length = 5000, .offset = (3 * PAGE_SIZE) + 1000}};
   ASSERT_OK(usb_request_set_sg_list(req, sg_list, 2));
 
   phys_iter_t iter;
@@ -655,8 +656,8 @@ TEST(UsbRequestCTest, PhysIterSgUnalignedNoncontig) {
   req->phys_list[4] = 0x1234d000;
   req->phys_list[5] = 0x1234f000;
 
-  phys_iter_sg_entry_t sg_list[2] = {{.length = PAGE_SIZE, .offset = (3 * PAGE_SIZE) + 1},
-                                     {.length = 2 * PAGE_SIZE, .offset = PAGE_SIZE}};
+  sg_entry_t sg_list[2] = {{.length = PAGE_SIZE, .offset = (3 * PAGE_SIZE) + 1},
+                           {.length = 2 * PAGE_SIZE, .offset = PAGE_SIZE}};
   ASSERT_OK(usb_request_set_sg_list(req, sg_list, 2));
 
   phys_iter_t iter;
@@ -715,7 +716,7 @@ TEST(UsbRequestCTest, PhysIterSgTinyAligned) {
   req->phys_count = 1;
   req->phys_list[0] = 0x12345000;
 
-  phys_iter_sg_entry_t sg_list[2] = {{.length = 10, .offset = 0}, {.length = 20, .offset = 100}};
+  sg_entry_t sg_list[2] = {{.length = 10, .offset = 0}, {.length = 20, .offset = 100}};
   ASSERT_OK(usb_request_set_sg_list(req, sg_list, 2));
 
   phys_iter_t iter;
@@ -756,7 +757,7 @@ TEST(UsbRequestCTest, PhysIterSgTinyUnaligned) {
   req->phys_count = 1;
   req->phys_list[0] = 0x12345000;
 
-  phys_iter_sg_entry_t sg_list[2] = {{.length = 10, .offset = 0}, {.length = 20, .offset = 128}};
+  sg_entry_t sg_list[2] = {{.length = 10, .offset = 0}, {.length = 20, .offset = 128}};
   ASSERT_OK(usb_request_set_sg_list(req, sg_list, 2));
 
   phys_iter_t iter;

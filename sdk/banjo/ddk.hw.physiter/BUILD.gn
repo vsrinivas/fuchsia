@@ -4,6 +4,6 @@
 
 import("//build/banjo/banjo.gni")
 
-banjo_dummy("ddk.physiter") {
+banjo("ddk.hw.physiter") {
   sources = [ "phys-iter.banjo" ]
 }
