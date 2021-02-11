@@ -276,6 +276,8 @@ pub enum Error {
     PtkHierarchyUnsupportedCipherError,
     #[error("error deriving GTK; unsupported cipher suite")]
     GtkHierarchyUnsupportedCipherError,
+    #[error("error deriving IGTK; unsupported cipher suite")]
+    IgtkHierarchyUnsupportedCipherError,
     #[error("AES operation failed: {}", _0)]
     Aes(AesError),
     #[error("invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0)]

@@ -39,7 +39,7 @@ pub const CIPHER_BIP_CMAC_128: Cipher = Cipher::new_dot11(BIP_CMAC_128);
 pub const CIPHER_GCMP_256: Cipher = Cipher::new_dot11(GCMP_256);
 pub const CIPHER_BIP_CMAC_256: Cipher = Cipher::new_dot11(BIP_CMAC_256);
 
-#[derive(PartialOrd, PartialEq, Eq, Clone, Hash)]
+#[derive(PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Cipher {
     pub oui: Oui,
     pub suite_type: u8,
