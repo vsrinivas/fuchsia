@@ -87,6 +87,7 @@ void print_version() {
   dprintf(ALWAYS, "\tarch:     %s\n", ARCH);
   dprintf(ALWAYS, "\tzx_system_get_version_string: %s\n", kVersionString);
   dprintf(ALWAYS, "\tELF build ID: %s\n", gElfBuildIdString);
+  dprintf(ALWAYS, "\tLK_DEBUGLEVEL: %d\n", LK_DEBUGLEVEL);
 }
 
 void PrintSymbolizerContext(FILE* f) {
