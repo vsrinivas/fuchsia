@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/cobalt_lib_unittests"
+        "binary": "bin/cobalt_lib_unittests"
     },
     "sandbox": {
         "services": [

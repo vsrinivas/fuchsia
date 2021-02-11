@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("cobalt") {
   testonly = true
@@ -24,28 +23,25 @@ executable("unittests") {
   ]
 }
 
-test_package("cobalt_lib_tests") {
-  deps = [
-    ":unittests",
-    "//src/lib/cobalt/rust:fuchsia-cobalt_test",
-  ]
+fuchsia_unittest_component("cobalt_lib_unittests") {
+  deps = [ ":unittests" ]
+  manifest = "meta/cobalt_lib_unittests.cmx"
+}
 
-  tests = [
-    {
-      name = "cobalt_lib_unittests"
-      environments = basic_envs
-      log_settings = {
-        max_severity = "FATAL"
-      }
-    },
-    {
-      name = "fuchsia_cobalt_lib_test"
-      environments = basic_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
+fuchsia_unittest_component("fuchsia_cobalt_lib_test") {
+  deps = [ "//src/lib/cobalt/rust:fuchsia-cobalt_test" ]
+}
+
+fuchsia_test_package("cobalt_lib_tests") {
+  test_components = [
+    ":cobalt_lib_unittests",
+    ":fuchsia_cobalt_lib_test",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
 }
 
 group("tests") {
