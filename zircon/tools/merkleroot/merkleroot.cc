@@ -17,10 +17,11 @@
 #include <thread>
 #include <vector>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
+
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 
 namespace {
 

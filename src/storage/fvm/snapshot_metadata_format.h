@@ -9,8 +9,7 @@
 
 #include <string>
 
-#include <digest/digest.h>
-
+#include "src/lib/digest/digest.h"
 #include "src/storage/fvm/format.h"
 
 // FVM supports A/B copies of metadata within FVM-managed partitions (see

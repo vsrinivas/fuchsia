@@ -12,13 +12,13 @@
 #include <numeric>
 #include <utility>
 
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <soc/aml-s912/s912-audio.h>
 
 #include "hdmitx.h"
 #include "src/devices/lib/audio/audio.h"
+#include "src/lib/digest/digest.h"
 #include "vim-display.h"
 
 #define SHIFTED_MASK(_name) ((_name##_MASK) << (_name##_SHIFT))

@@ -14,8 +14,8 @@ import("//build/sdk/sdk_host_tool.gni")
 executable("merkleroot") {
   sources = [ "merkleroot.cc" ]
   deps = [
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/digest",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

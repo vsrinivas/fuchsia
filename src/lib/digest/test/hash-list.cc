@@ -1,18 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/lib/digest/hash-list.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
 #include <algorithm>
 
-#include <digest/digest.h>
-#include <digest/hash-list.h>
-#include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace digest {

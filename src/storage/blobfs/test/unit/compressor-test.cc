@@ -12,10 +12,10 @@
 #include <memory>
 
 #include <block-client/cpp/fake-device.h>
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/blob-compressor.h"

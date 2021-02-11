@@ -14,12 +14,12 @@
 #include <set>
 
 #include <block-client/cpp/fake-device.h>
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
-#include <digest/node-digest.h>
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blobfs.h"

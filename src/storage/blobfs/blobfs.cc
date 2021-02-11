@@ -31,8 +31,6 @@
 #include <block-client/cpp/pass-through-read-only-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fs/journal/journal.h>
@@ -42,6 +40,8 @@
 #include <fs/ticker.h>
 #include <fs/vfs_types.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 #include "src/storage/blobfs/allocator/node-reserver.h"
 #include "src/storage/blobfs/blob-loader.h"

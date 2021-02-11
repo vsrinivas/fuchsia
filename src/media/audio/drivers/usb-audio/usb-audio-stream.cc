@@ -19,12 +19,12 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 
+#include "src/lib/digest/digest.h"
 #include "usb-audio-device.h"
 #include "usb-audio-stream-interface.h"
 #include "usb-audio.h"

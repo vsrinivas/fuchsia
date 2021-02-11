@@ -33,13 +33,13 @@ test("digest") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/digest",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//third_party/boringssl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -58,7 +58,7 @@ fuchsia_test_package("digest-unit-tests") {
 
 fuzzer("merkle-tree-fuzzer") {
   sources = [ "merkle-tree-fuzzer.cc" ]
-  deps = [ "//zircon/system/ulib/digest" ]
+  deps = [ "//src/lib/digest" ]
 }
 
 fuzzers_package("digest-fuzzers") {

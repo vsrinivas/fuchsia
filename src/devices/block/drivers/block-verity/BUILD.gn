@@ -13,9 +13,9 @@ source_set("verified-volume-client") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
   ]
@@ -42,9 +42,9 @@ source_set("sealer") {
     "sealer.cc",
   ]
   deps = [
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -56,21 +56,21 @@ test("sealer-test") {
   deps = [
     ":geometry",
     ":sealer",
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/digest",
   ]
 }
 
 source_set("block-verifier") {
   sources = [ "block-verifier.cc" ]
   deps = [
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -82,12 +82,12 @@ test("block-verifier-test") {
   deps = [
     ":block-verifier",
     ":geometry",
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -152,9 +152,9 @@ driver_module("block-verity") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -166,10 +166,10 @@ test("block-verity-test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/digest",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fvm-devices",

@@ -76,6 +76,8 @@ static_library("blobfs") {
     "iterator/vector-extent-iterator.h",
   ]
   public_deps = [
+    # format.h includes digest.h.
+    "//src/lib/digest",
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fit",
@@ -85,14 +87,12 @@ static_library("blobfs") {
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
-
-    # format.h has #include <digest/digest.h>.
-    "//zircon/system/ulib/digest",
   ]
   deps = [
     "compression/configs",
     "//sdk/lib/syslog/cpp",
     "//src/lib/chunked-compression",
+    "//src/lib/digest",
     "//src/storage/fvm",
     "//third_party/boringssl",
     "//third_party/zstd:zstdseek",
@@ -104,7 +104,6 @@ static_library("blobfs") {
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
@@ -221,8 +220,8 @@ source_set("decompressor-impl") {
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp:cpp",
     "//src/lib/chunked-compression",
+    "//src/lib/digest",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
@@ -237,10 +236,10 @@ executable("decompressor") {
     "//sdk/lib/fidl/cpp:cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp:cpp",
+    "//src/lib/digest",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",

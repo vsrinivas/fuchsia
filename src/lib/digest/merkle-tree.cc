@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/digest/merkle-tree.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -10,11 +12,11 @@
 
 #include <memory>
 
-#include <digest/digest.h>
-#include <digest/hash-list.h>
-#include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/hash-list.h"
 
 namespace digest {
 namespace internal {

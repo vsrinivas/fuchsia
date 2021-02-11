@@ -9,11 +9,11 @@
 
 #include <vector>
 
-#include <digest/digest.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
 #include <fs-host/common.h>
 
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/host.h"
 

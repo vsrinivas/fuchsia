@@ -1,16 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef DIGEST_NODE_DIGEST_H_
-#define DIGEST_NODE_DIGEST_H_
+#ifndef SRC_LIB_DIGEST_NODE_DIGEST_H_
+#define SRC_LIB_DIGEST_NODE_DIGEST_H_
 
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
+
+#include "src/lib/digest/digest.h"
 
 namespace digest {
 
@@ -95,4 +96,4 @@ class NodeDigest {
 
 }  // namespace digest
 
-#endif  // DIGEST_NODE_DIGEST_H_
+#endif  // SRC_LIB_DIGEST_NODE_DIGEST_H_

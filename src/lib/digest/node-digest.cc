@@ -1,6 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/lib/digest/node-digest.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -9,7 +11,6 @@
 
 #include <algorithm>
 
-#include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 
 namespace digest {

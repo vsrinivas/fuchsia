@@ -10,10 +10,10 @@
 #include <ostream>
 #include <sstream>
 
-#include <digest/digest.h>
-#include <digest/node-digest.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {

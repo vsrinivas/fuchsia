@@ -14,13 +14,13 @@
 #include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/blob-cache.h"
 
 namespace blobfs {

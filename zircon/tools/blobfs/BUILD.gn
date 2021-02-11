@@ -12,11 +12,11 @@
 executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
+    "//src/lib/digest",
     "//src/storage/blobfs",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fs-host",
   ]
 

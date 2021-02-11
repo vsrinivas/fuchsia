@@ -13,7 +13,6 @@
 #include <iostream>
 #include <memory>
 
-#include <digest/digest.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
 
@@ -23,6 +22,8 @@
 
 #include <openssl/mem.h>
 #include <openssl/sha.h>
+
+#include "src/lib/digest/digest.h"
 
 namespace digest {
 

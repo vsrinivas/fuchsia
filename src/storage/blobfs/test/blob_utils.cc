@@ -17,13 +17,13 @@
 #include <limits>
 #include <memory>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/blob-layout.h"
 
 namespace blobfs {

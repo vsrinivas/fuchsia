@@ -18,11 +18,11 @@
 #include <memory>
 #include <optional>
 
-#include <digest/digest.h>
-#include <digest/node-digest.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blobfs-checker.h"
 #include "src/storage/blobfs/common.h"

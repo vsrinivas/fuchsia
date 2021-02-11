@@ -9,11 +9,11 @@
 #include <limits>
 #include <memory>
 
-#include <digest/merkle-tree.h>
-#include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/digest/merkle-tree.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {

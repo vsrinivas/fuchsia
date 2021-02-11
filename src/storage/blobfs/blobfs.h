@@ -27,7 +27,6 @@
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
 #include <cobalt-client/cpp/collector.h>
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
@@ -39,6 +38,7 @@
 #include <fs/vnode.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 #include "src/storage/blobfs/allocator/node-reserver.h"

@@ -28,18 +28,18 @@ static_library("fvm") {
   ]
 
   deps = [
+    "//src/lib/digest",
     "//src/lib/uuid",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/range",
     "//zircon/third_party/ulib/lz4",
     "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
+    "//src/lib/digest",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/gpt",
     "//zircon/third_party/ulib/lz4",
   ]

@@ -10,11 +10,10 @@
 #include <memory>
 #include <vector>
 
-#include <digest/digest.h>
-
 #include "src/devices/block/drivers/block-verity/constants.h"
 #include "src/devices/block/drivers/block-verity/geometry.h"
 #include "src/devices/block/drivers/block-verity/hash-block-accumulator.h"
+#include "src/lib/digest/digest.h"
 
 namespace block_verity {
 

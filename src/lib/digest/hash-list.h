@@ -1,16 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef DIGEST_HASH_LIST_H_
-#define DIGEST_HASH_LIST_H_
+#ifndef SRC_LIB_DIGEST_HASH_LIST_H_
+#define SRC_LIB_DIGEST_HASH_LIST_H_
 
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <digest/digest.h>
-#include <digest/node-digest.h>
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/node-digest.h"
 
 namespace digest {
 namespace internal {
@@ -169,4 +169,4 @@ size_t CalculateHashListSize(size_t data_size, size_t node_size);
 
 }  // namespace digest
 
-#endif  // DIGEST_HASH_LIST_H_
+#endif  // SRC_LIB_DIGEST_HASH_LIST_H_

@@ -25,9 +25,6 @@
 #include <string>
 #include <utility>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
-#include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -38,6 +35,9 @@
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression-settings.h"

@@ -8,11 +8,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fs/trace.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/blob-layout.h"
 
 namespace blobfs {

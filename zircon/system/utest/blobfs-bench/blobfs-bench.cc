@@ -11,8 +11,6 @@
 #include <memory>
 #include <utility>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -25,6 +23,8 @@
 #include <perftest/perftest.h>
 #include <unittest/unittest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/format.h"
 
 namespace {

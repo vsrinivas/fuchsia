@@ -33,7 +33,6 @@
 #include <vector>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -41,6 +40,7 @@
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"

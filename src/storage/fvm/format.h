@@ -15,9 +15,10 @@
 #include <string>
 #include <type_traits>
 
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <gpt/gpt.h>
+
+#include "src/lib/digest/digest.h"
 
 // FVM is a virtual volume manager that allows partitions inside of it to be dynamically sized. It
 // allocates data to partitions in units of fixed-size "slices".

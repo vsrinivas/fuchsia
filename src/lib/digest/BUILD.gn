@@ -2,17 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
-
-zx_library("digest") {
-  sdk = "source"
-  sdk_headers = [
-    "digest/digest.h",
-    "digest/hash-list.h",
-    "digest/merkle-tree.h",
-    "digest/node-digest.h",
+source_set("digest") {
+  public = [
+    "digest.h",
+    "hash-list.h",
+    "merkle-tree.h",
+    "node-digest.h",
   ]
-  host = true
 
   sources = [
     "digest.cc",
@@ -22,7 +18,10 @@ zx_library("digest") {
   ]
 
   deps = [ "//third_party/boringssl" ]
-  public_deps = [ "//zircon/public/lib/fbl" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/system/public",
+  ]
 }
 
 group("tests") {

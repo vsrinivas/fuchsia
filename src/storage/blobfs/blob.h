@@ -20,7 +20,6 @@
 #include <memory>
 #include <mutex>
 
-#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
@@ -32,6 +31,7 @@
 #include <fs/vnode.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 #include "src/storage/blobfs/allocator/node-reserver.h"

@@ -4,8 +4,7 @@
 
 #include "src/storage/blobfs/cache-node.h"
 
-#include <digest/digest.h>
-
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/blob-cache.h"
 
 using digest::Digest;

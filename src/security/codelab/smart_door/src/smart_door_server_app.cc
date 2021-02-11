@@ -14,7 +14,7 @@
 #include <fstream>
 #include <vector>
 
-#include <digest/digest.h>
+#include "src/lib/digest/digest.h"
 
 #define HASH_SIZE (digest::kSha256Length)
 #define SALT_SIZE (16)

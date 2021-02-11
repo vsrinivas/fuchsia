@@ -16,8 +16,6 @@
 #include <random>
 #include <thread>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -26,6 +24,8 @@
 #include <fbl/mutex.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blob-verifier.h"
 #include "src/storage/blobfs/compression-settings.h"

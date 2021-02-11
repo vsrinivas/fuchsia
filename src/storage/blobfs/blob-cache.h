@@ -9,7 +9,6 @@
 #error Fuchsia-only Header
 #endif
 
-#include <digest/digest.h>
 #include <fbl/condition_variable.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -17,6 +16,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/vnode.h>
 
+#include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/cache-node.h"
 #include "src/storage/blobfs/cache-policy.h"
 #include "src/storage/blobfs/metrics.h"

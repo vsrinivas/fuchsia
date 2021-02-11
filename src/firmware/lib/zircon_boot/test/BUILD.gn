@@ -25,11 +25,11 @@ test("firmware_zircon_boot_test") {
     "//src/firmware/lib/abr:in_tree",
     "//src/firmware/lib/zbi:in_tree",
     "//src/firmware/lib/zircon_boot:in_tree",
+    "//src/lib/digest",
     "//third_party/android/platform/external/avb",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/digest",
     "//zircon/third_party/ulib/cksum",
   ]
 }

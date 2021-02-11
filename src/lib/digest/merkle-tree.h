@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIGEST_MERKLE_TREE_H_
-#define DIGEST_MERKLE_TREE_H_
+#ifndef SRC_LIB_DIGEST_MERKLE_TREE_H_
+#define SRC_LIB_DIGEST_MERKLE_TREE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -13,10 +13,11 @@
 
 #include <memory>
 
-#include <digest/digest.h>
-#include <digest/hash-list.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
+
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/hash-list.h"
 
 namespace digest {
 namespace internal {
@@ -126,4 +127,4 @@ size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size, bool use_comp
 
 }  // namespace digest
 
-#endif  // DIGEST_MERKLE_TREE_H_
+#endif  // SRC_LIB_DIGEST_MERKLE_TREE_H_

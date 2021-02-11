@@ -40,9 +40,9 @@ source_set("test-utils") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/digest",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/digest",
   ]
   public_deps = [ "//src/storage/blobfs" ]
 

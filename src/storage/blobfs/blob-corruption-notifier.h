@@ -9,7 +9,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <digest/digest.h>
+#include "src/lib/digest/digest.h"
 
 namespace blobfs {
 using digest::Digest;

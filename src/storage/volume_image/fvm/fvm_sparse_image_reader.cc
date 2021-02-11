@@ -10,8 +10,7 @@
 
 #include <string>
 
-#include <digest/digest.h>
-
+#include "src/lib/digest/digest.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/metadata.h"

@@ -8,11 +8,12 @@
 
 #include <utility>
 
-#include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fs/trace.h>
+
+#include "src/lib/digest/digest.h"
 
 using digest::Digest;
 

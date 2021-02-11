@@ -1,12 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include <zircon/status.h>
 
 #include <vector>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
-#include <digest/node-digest.h>
 #include <fuzzer/FuzzedDataProvider.h>
 #include <sanitizer/asan_interface.h>
+
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
+#include "src/lib/digest/node-digest.h"
 
 // The only valid node sizes are the powers of 2 between 512 and 32768.
 constexpr size_t kValidNodeSizes[] = {

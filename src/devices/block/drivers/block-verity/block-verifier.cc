@@ -8,13 +8,13 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/block/drivers/block-verity/block-loader-interface.h"
 #include "src/devices/block/drivers/block-verity/constants.h"
 #include "src/devices/block/drivers/block-verity/geometry.h"
+#include "src/lib/digest/digest.h"
 
 namespace block_verity {
 namespace {
@@ -62,8 +62,7 @@ zx_status_t BlockVerifier::PrepareAsync(void* cookie, BlockVerifierCallback call
     constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     uintptr_t address;
     if ((rc = zx::vmar::root_self()->map(flags, 0, integrity_block_vmo_, 0,
-                                         GetIntegritySectionSizeInBytes(), &address)) !=
-        ZX_OK) {
+                                         GetIntegritySectionSizeInBytes(), &address)) != ZX_OK) {
       return rc;
     }
     integrity_block_base_ = reinterpret_cast<const uint8_t*>(address);

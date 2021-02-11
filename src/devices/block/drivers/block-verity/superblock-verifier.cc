@@ -10,10 +10,10 @@
 #include <array>
 
 #include <ddk/debug.h>
-#include <digest/digest.h>
 
 #include "src/devices/block/drivers/block-verity/constants.h"
 #include "src/devices/block/drivers/block-verity/superblock.h"
+#include "src/lib/digest/digest.h"
 
 namespace block_verity {
 namespace {

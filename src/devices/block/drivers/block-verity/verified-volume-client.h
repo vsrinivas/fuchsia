@@ -8,8 +8,9 @@
 #include <fuchsia/hardware/block/verified/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
-#include <digest/digest.h>
 #include <fbl/unique_fd.h>
+
+#include "src/lib/digest/digest.h"
 
 namespace block_verity {
 

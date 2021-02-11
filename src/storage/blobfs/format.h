@@ -18,8 +18,6 @@
 #include <limits>
 #include <ostream>
 
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fs/journal/format.h>
@@ -27,6 +25,9 @@
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
 #endif
+
+#include "src/lib/digest/digest.h"
+#include "src/lib/digest/merkle-tree.h"
 
 namespace blobfs {
 

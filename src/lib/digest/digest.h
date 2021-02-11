@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIGEST_DIGEST_H_
-#define DIGEST_DIGEST_H_
+#ifndef SRC_LIB_DIGEST_DIGEST_H_
+#define SRC_LIB_DIGEST_DIGEST_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -107,4 +107,4 @@ std::ostream& operator<<(std::ostream&, const Digest&);
 
 }  // namespace digest
 
-#endif  // DIGEST_DIGEST_H_
+#endif  // SRC_LIB_DIGEST_DIGEST_H_

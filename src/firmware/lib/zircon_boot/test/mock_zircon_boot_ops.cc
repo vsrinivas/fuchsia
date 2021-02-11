@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <zircon/hw/gpt.h>
 
-#include <digest/digest.h>
+#include "src/lib/digest/digest.h"
 
 zx::status<fbl::Span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* part_name,
                                                                    size_t offset, size_t size) {

@@ -9,12 +9,12 @@
 #include <lib/zx/channel.h>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <digest/digest.h>
 #include <fbl/unique_fd.h>
 #include <fs/vfs.h>
 
-#include "corrupt_blob.h"
-#include "fs_block_client.h"
+#include "src/lib/digest/digest.h"
+#include "src/storage/blobfs-corrupt/corrupt_blob.h"
+#include "src/storage/blobfs-corrupt/fs_block_client.h"
 
 using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;

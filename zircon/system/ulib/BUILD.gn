@@ -30,7 +30,6 @@ group("tests") {
     "cmdline:tests",
     "cobalt-client:tests",
     "debugdata:tests",
-    "digest:tests",
     "driver-unit-test:tests",
     "edid:tests",
     "elfload:tests",
