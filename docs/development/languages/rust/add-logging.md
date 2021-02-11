@@ -29,7 +29,7 @@ the `fx` tool.
 Run `fx set`, replacing `PRODUCT` and `BOARD` with your chosen product and board.
 
 <pre class="prettyprint">
-    fx set <b>PRODUCT</b>.<b>BOARD</b>  --with //examples/hello_world
+    fx set <var>PRODUCT</var>.<var>BOARD</var>  --with //examples/hello_world
 </pre>
 
 Note:
@@ -165,7 +165,8 @@ package. In this guide, the source file is `main.rs`.
 
     ```
     fx shell run fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx
-    ":hello-world-rust-component-v1"    ```
+    ":hello-world-rust-component-v1"
+    ```
 
 1.  Navigate to the shell tab where you ran `fx log`.
 
