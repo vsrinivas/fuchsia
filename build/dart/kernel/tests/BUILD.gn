@@ -22,7 +22,7 @@ dart_package_config("package_config") {
   deps = [ ":sources" ]
 }
 
-dart_kernel2("verify_dart_kernel_flutter") {
+dart_kernel("verify_dart_kernel_flutter") {
   platform_name = flutter_platform_name
   is_aot = false
   is_product = true

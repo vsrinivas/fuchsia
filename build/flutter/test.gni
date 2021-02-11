@@ -34,7 +34,7 @@ import("//build/testing/test_spec.gni")
 #     ]
 #   }
 if (current_toolchain == dart_toolchain) {
-  template("flutter_test2") {
+  template("flutter_test") {
     assert(defined(invoker.sources),
            "flutter_test() requires 'sources' be defined")
     if (defined(invoker.source_dir)) {
@@ -149,7 +149,7 @@ if (current_toolchain == dart_toolchain) {
           outputs = [ "${target_gen_dir}/${_test_target_name}/pubspec.yaml" ]
         }
 
-        dart_kernel2(_kernel_target_name) {
+        dart_kernel(_kernel_target_name) {
           platform_name = "flutter_runner"
           packages_path = _packages_file
           main_dart_file = _bootstrap_filename
@@ -338,7 +338,7 @@ if (current_toolchain == dart_toolchain) {
   }
 } else {
   # Not the Dart toolchain.
-  template("flutter_test2") {
+  template("flutter_test") {
     _main_target_name = target_name
     _spec_target_name = "${target_name}_spec"
     _invocation_file = "$target_gen_dir/$target_name"
@@ -384,5 +384,12 @@ if (current_toolchain == dart_toolchain) {
         data_deps = [ ":$_spec_target_name" ]
       }
     }
+  }
+}
+
+# TODO(fxb/69628): Remove after soft transition.
+template("flutter_test2") {
+  flutter_test(target_name) {
+    forward_variables_from(invoker, "*")
   }
 }

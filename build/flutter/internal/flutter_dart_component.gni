@@ -189,7 +189,7 @@ template("flutter_dart_component") {
   _kernel_target_dep_name = _kernel_target_name + "_gen_file"
   _kernel_path = "$target_gen_dir/${target_name}.dil"
 
-  dart_kernel2(_kernel_target_name) {
+  dart_kernel(_kernel_target_name) {
     kernel_path = _kernel_path
 
     # establishes a dependency chain for the snapshot since

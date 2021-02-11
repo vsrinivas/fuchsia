@@ -36,7 +36,7 @@ dart_library("fuchsia_services") {
   ]
 }
 
-flutter_test2("fuchsia_services_package_unittests") {
+flutter_test("fuchsia_services_package_unittests") {
   sources = [
     "service_provider_impl_test.dart",
     "startup_context_test.dart",

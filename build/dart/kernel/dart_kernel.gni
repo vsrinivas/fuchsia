@@ -112,7 +112,7 @@ template("_convert_kernel_manifest") {
 #    Whether the kernel compiler should link the current platform.dill into
 #    the build. If false, the --no-link-platform flag will be passed to the
 #    compiler. Defaults to false
-template("dart_kernel2") {
+template("dart_kernel") {
   assert(defined(invoker.platform_name), "dart_kernel() requires platform_name")
   assert(defined(invoker.packages_path),
          "dart_kernel() requires the path to the package config")
@@ -290,5 +290,12 @@ template("dart_kernel2") {
                              "visibility",
                            ])
     deps = _group_deps
+  }
+}
+
+# TODO(fxb/69628): Remove after soft transition.
+template("dart_kernel2") {
+  dart_kernel(target_name) {
+    forward_variables_from(invoker, "*")
   }
 }
