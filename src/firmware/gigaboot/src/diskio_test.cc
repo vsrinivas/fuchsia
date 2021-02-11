@@ -26,9 +26,13 @@ using testing::DoAll;
 using testing::Return;
 using testing::SetArgPointee;
 
+// Arbitrary values chosen for testing, these can be modified if needed.
+// The block size just has to be 8-byte aligned for easy casting.
 constexpr uint32_t kBootMediaId = 3;
 constexpr uint32_t kBootMediaBlockSize = 512;
-constexpr uint64_t kBootMediaNumBlocks = 4;
+constexpr uint64_t kBootMediaNumBlocks = 8;
+constexpr uint64_t kBootMediaSize = kBootMediaBlockSize * kBootMediaNumBlocks;
+static_assert(kBootMediaBlockSize % 8 == 0, "Block size must be 8-byte aligned");
 
 // These values don't matter, they're just arbitrary handles, but make them
 // somewhat recognizable so that if a failure occurs it's easy to tell which
@@ -154,6 +158,127 @@ TEST(DiskFindBoot, Success) {
   EXPECT_EQ(result.last, kBootMediaNumBlocks - 1);
   EXPECT_EQ(result.blksz, kBootMediaBlockSize);
   EXPECT_EQ(result.id, kBootMediaId);
+}
+
+// Writes a primary GPT to |fake_disk| such that it will contain the given
+// |partitions|. Partition contents on disk are unchanged.
+//
+// Should be called with ASSERT_NO_FATAL_FAILURES().
+void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
+                         const std::vector<gpt_entry_t>& partitions) {
+  std::vector<uint8_t>& contents = fake_disk.contents(kBootMediaId);
+  contents.resize(kBootMediaSize);
+
+  // Fake disk contents are heap-allocated so will always be properly aligned.
+  // Find the header pointer at block 1.
+  gpt_header_t* header = reinterpret_cast<gpt_header_t*>(&contents[kBootMediaBlockSize]);
+  *header = {
+      .magic = GPT_MAGIC,
+      .revision = 0,
+      .size = GPT_HEADER_SIZE,
+      .crc32 = 0,  // Gigaboot doesn't check CRCs yet.
+      .reserved0 = 0,
+      .current = 1,
+      .backup = 0,  // No backup GPT support yet.
+      .first = 3,
+      .last = kBootMediaNumBlocks - 1,
+      .guid = {},
+      .entries = 2,
+      .entries_count = static_cast<uint32_t>(partitions.size()),
+      .entries_size = GPT_ENTRY_SIZE,
+      .entries_crc = 0,
+  };
+
+  // Copy in the GPT entry array.
+  // For simplicitly, only allow a single block's worth of partition entries.
+  size_t total_entry_size = partitions.size() * sizeof(partitions[0]);
+  ASSERT_LE(total_entry_size, kBootMediaBlockSize);
+  memcpy(&contents[kBootMediaBlockSize * header->entries], partitions.data(), total_entry_size);
+
+  // Make sure the media has declared enough space for all the partitions.
+  ASSERT_LT(header->last, kBootMediaNumBlocks);
+}
+
+TEST(DiskFindPartition, SinglePartitionSuccess) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk_protocol;
+
+  std::vector<gpt_entry_t> partitions = {{.type = GPT_ZIRCON_ABR_TYPE_GUID, .first = 3, .last = 5}};
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
+
+  disk_t disk = {
+      .io = fake_disk_protocol.protocol(),
+      .h = kBlockHandle,
+      .bs = mock_services.services(),
+      .img = kImageHandle,
+      .first = 0,
+      .last = kBootMediaNumBlocks - 1,
+      .blksz = kBootMediaBlockSize,
+      .id = kBootMediaId,
+  };
+  EXPECT_EQ(0, disk_find_partition(&disk, false, partitions[0].type, nullptr));
+  EXPECT_EQ(3u, disk.first);
+  EXPECT_EQ(5u, disk.last);
+}
+
+TEST(DiskFindPartition, MultiPartitionSuccess) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk_protocol;
+
+  std::vector<gpt_entry_t> partitions = {{.type = GPT_ZIRCON_ABR_TYPE_GUID, .first = 3, .last = 5},
+                                         {.type = GPT_VBMETA_ABR_TYPE_GUID, .first = 8, .last = 8},
+                                         {.type = GPT_FVM_TYPE_GUID, .first = 6, .last = 7}};
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
+
+  const disk_t disk = {
+      .io = fake_disk_protocol.protocol(),
+      .h = kBlockHandle,
+      .bs = mock_services.services(),
+      .img = kImageHandle,
+      .first = 0,
+      .last = kBootMediaNumBlocks - 1,
+      .blksz = kBootMediaBlockSize,
+      .id = kBootMediaId,
+  };
+  // disk_find_partition() returns the result by overwriting disk_t fields,
+  // make a copy so we can call it again afterwards using the original.
+  disk_t disk_copy = disk;
+  EXPECT_EQ(0, disk_find_partition(&disk_copy, false, partitions[0].type, nullptr));
+  EXPECT_EQ(3u, disk_copy.first);
+  EXPECT_EQ(5u, disk_copy.last);
+
+  disk_copy = disk;
+  EXPECT_EQ(0, disk_find_partition(&disk_copy, false, partitions[1].type, nullptr));
+  EXPECT_EQ(8u, disk_copy.first);
+  EXPECT_EQ(8u, disk_copy.last);
+
+  disk_copy = disk;
+  EXPECT_EQ(0, disk_find_partition(&disk_copy, false, partitions[2].type, nullptr));
+  EXPECT_EQ(6u, disk_copy.first);
+  EXPECT_EQ(7u, disk_copy.last);
+}
+
+TEST(DiskFindPartition, UnknownPartitionFailure) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk_protocol;
+
+  std::vector<gpt_entry_t> partitions = {{.type = GPT_ZIRCON_ABR_TYPE_GUID, .first = 3, .last = 5},
+                                         {.type = GPT_VBMETA_ABR_TYPE_GUID, .first = 8, .last = 8},
+                                         {.type = GPT_FVM_TYPE_GUID, .first = 6, .last = 7}};
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
+
+  disk_t disk = {
+      .io = fake_disk_protocol.protocol(),
+      .h = kBlockHandle,
+      .bs = mock_services.services(),
+      .img = kImageHandle,
+      .first = 0,
+      .last = kBootMediaNumBlocks - 1,
+      .blksz = kBootMediaBlockSize,
+      .id = kBootMediaId,
+  };
+  uint8_t unknown_guid[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
+  EXPECT_NE(0, disk_find_partition(&disk, false, unknown_guid, nullptr));
 }
 
 TEST(GuidValueFromName, KnownPartitionNames) {
