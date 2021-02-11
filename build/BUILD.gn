@@ -214,7 +214,6 @@ group("deprecated_package") {
     "//src/camera/drivers/hw_accel/gdc/*",
     "//src/camera/drivers/hw_accel/ge2d/*",
     "//src/camera/drivers/sensors/imx227/*",
-    "//src/camera/drivers/usb_video/*",
     "//src/cobalt/bin/*",
     "//src/cobalt/bin/app/*",
     "//src/cobalt/bin/system-metrics/*",
