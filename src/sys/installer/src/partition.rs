@@ -38,6 +38,32 @@ static WORKSTATION_INSTALLER_GPT: [u8; 16] = [
     0xce, 0x98, 0xce, 0x4d, 0x7e, 0xe7, 0xc1, 0x45, 0xa8, 0x63, 0xca, 0xf9, 0x2f, 0x13, 0x30, 0xc1,
 ];
 
+/// These GUIDs are used by the installer to identify partitions that contain
+/// data that will be installed to disk from a usb disk. The `fx make-fuchsia-vol`
+/// tool generates images containing partitions with these GUIDs.
+static WORKSTATION_PARTITION_GPTS: [[u8; 16]; 5] = [
+    [
+        0x28, 0x73, 0x2A, 0xC1, 0x1F, 0xF8, 0xD2, 0x11, 0xBA, 0x4B, 0x00, 0xA0, 0xC9, 0x3E, 0xC9,
+        0x3B,
+    ], // efi
+    [
+        0x5D, 0x39, 0x75, 0x1D, 0xC6, 0xF2, 0x6B, 0x47, 0xA8, 0xB7, 0x45, 0xCC, 0x1C, 0x97, 0xB4,
+        0x76,
+    ], // misc
+    [
+        0x86, 0xCC, 0x30, 0xDE, 0x4A, 0x1F, 0x31, 0x4A, 0x93, 0xC4, 0x66, 0xF1, 0x47, 0xD3, 0x3E,
+        0x05,
+    ], // zircon-a
+    [
+        0xDF, 0x04, 0xCC, 0x23, 0x78, 0xC2, 0xE7, 0x4C, 0x84, 0x71, 0x89, 0x7D, 0x1A, 0x4B, 0xCD,
+        0xF7,
+    ], // zircon-b
+    [
+        0x57, 0xCF, 0xE5, 0xA0, 0xEF, 0x2D, 0xBE, 0x46, 0xA8, 0x0C, 0xA2, 0x06, 0x7C, 0x37, 0xCD,
+        0x49,
+    ], // zircon-r
+];
+
 impl Partition {
     /// Creates a new partition. Returns `None` if the partition is not
     /// a partition that should be paved to the disk.
@@ -57,19 +83,20 @@ impl Partition {
             return Err(Error::new(zx_status::Status::from_raw(status)));
         }
 
-        let guid = guid.unwrap();
-        if guid.value != WORKSTATION_INSTALLER_GPT {
-            return Ok(None);
-        }
-
         let (_status, name) = part.get_name().await.context("Get name failed")?;
         let pave_type;
         if let Some(string) = name {
+            let guid = guid.unwrap();
+            if guid.value != WORKSTATION_INSTALLER_GPT
+                && !(src.contains("usb-bus") && WORKSTATION_PARTITION_GPTS.contains(&guid.value))
+            {
+                return Ok(None);
+            }
             // TODO(fxbug.dev/44595) support any other partitions that might be needed
             if string == "storage-sparse" {
                 pave_type = Some(PartitionPaveType::Volume);
             } else if bootloader == BootloaderType::Efi {
-                pave_type = Partition::get_efi_pave_type(&string);
+                pave_type = Partition::get_efi_pave_type(&string.to_lowercase());
             } else if bootloader == BootloaderType::Coreboot {
                 pave_type = Partition::get_coreboot_pave_type(&string);
             } else {
@@ -99,7 +126,7 @@ impl Partition {
         if label.starts_with("zircon-") && label.len() == "zircon-x".len() {
             let configuration = Partition::letter_to_configuration(label.chars().last().unwrap());
             Some(PartitionPaveType::Asset { r#type: Asset::Kernel, config: configuration })
-        } else if label == "efi" {
+        } else if label.starts_with("efi") {
             Some(PartitionPaveType::Bootloader)
         } else {
             None
@@ -481,6 +508,75 @@ mod tests {
         let part =
             Partition::new("zircon-a.signed".to_string(), proxy, BootloaderType::Efi).await?;
         assert!(part.is_none());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_partition_usb_bad_guid() -> Result<(), Error> {
+        let proxy = mock_partition("zircon-a", 512, 1000, [0xaa; 16])?;
+        let part = Partition::new("/dev/usb-bus".to_string(), proxy, BootloaderType::Efi).await?;
+        assert!(part.is_none());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_partition_usb_zircona() -> Result<(), Error> {
+        let proxy = mock_partition("zircon-a", 512, 1000, WORKSTATION_PARTITION_GPTS[2])?;
+        let part = Partition::new("/dev/usb-bus".to_string(), proxy, BootloaderType::Efi).await?;
+        assert!(part.is_some());
+        let part = part.unwrap();
+        assert_eq!(
+            part.pave_type,
+            PartitionPaveType::Asset { r#type: Asset::Kernel, config: Configuration::A }
+        );
+        assert_eq!(part.size, 512 * 1000);
+        assert_eq!(part.src, "/dev/usb-bus");
+        assert!(part.is_ab());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_partition_usb_zirconb() -> Result<(), Error> {
+        let proxy = mock_partition("zircon-b", 20, 1000, WORKSTATION_PARTITION_GPTS[3])?;
+        let part = Partition::new("/dev/usb-bus".to_string(), proxy, BootloaderType::Efi).await?;
+        assert!(part.is_some());
+        let part = part.unwrap();
+        assert_eq!(
+            part.pave_type,
+            PartitionPaveType::Asset { r#type: Asset::Kernel, config: Configuration::A }
+        );
+        assert_eq!(part.size, 20 * 1000);
+        assert_eq!(part.src, "/dev/usb-bus");
+        assert!(part.is_ab());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_partition_usb_zirconr() -> Result<(), Error> {
+        let proxy = mock_partition("zircon-r", 40, 200, WORKSTATION_PARTITION_GPTS[4])?;
+        let part = Partition::new("/dev/usb-bus".to_string(), proxy, BootloaderType::Efi).await?;
+        assert!(part.is_some());
+        let part = part.unwrap();
+        assert_eq!(
+            part.pave_type,
+            PartitionPaveType::Asset { r#type: Asset::Kernel, config: Configuration::Recovery }
+        );
+        assert_eq!(part.size, 40 * 200);
+        assert_eq!(part.src, "/dev/usb-bus");
+        assert!(!part.is_ab());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_partition_usb_efi() -> Result<(), Error> {
+        let proxy = mock_partition("efi-system", 512, 1000, WORKSTATION_PARTITION_GPTS[0])?;
+        let part = Partition::new("/dev/usb-bus".to_string(), proxy, BootloaderType::Efi).await?;
+        assert!(part.is_some());
+        let part = part.unwrap();
+        assert_eq!(part.pave_type, PartitionPaveType::Bootloader);
+        assert_eq!(part.size, 512 * 1000);
+        assert_eq!(part.src, "/dev/usb-bus");
+        assert!(!part.is_ab());
         Ok(())
     }
 }
