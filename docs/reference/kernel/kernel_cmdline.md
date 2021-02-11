@@ -1,7 +1,8 @@
 # Zircon Kernel Command Line Options
 
-Note: kernel_cmdlind.md is slated to be replaced by [//docs/gen/boot-options.md](/docs/gen/boot-options.md)
-      Tracked in [fxbug.dev/53594](https://fxbug.dev/53594).
+TODO(53594): [//docs/gen/boot-options.md](/docs/gen/boot-options.md) is now the
+source of truth. kernel_cmdlind.md is in the process of being replaced. Please
+do not update it without coordinating with the migration effort.
 
 The Zircon kernel receives a textual command line from the bootloader,
 which can be used to alter some behaviours of the system.  Kernel command line

@@ -9,6 +9,7 @@
 #include <bits.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/cache.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/code_patching.h>
 #include <stdint.h>
@@ -203,8 +204,7 @@ void x86_cpu_feature_init() {
   }
 
   // Evaluate speculative execution mitigation settings.
-  g_disable_spec_mitigations = gCmdline.GetBool(kernel_option::kX86DisableSpecMitigations,
-                                                /*default_value=*/false);
+  g_disable_spec_mitigations = gBootOptions->disable_spec_mitigations;
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
@@ -223,9 +223,7 @@ void x86_cpu_feature_init() {
     g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) && g_has_mds_taa &&
-                                g_has_md_clear &&
-                                gCmdline.GetBool(kernel_option::kX86MdClearOnUserReturn,
-                                                 /*default_value=*/true);
+                                g_has_md_clear && gBootOptions->md_clear_on_user_return;
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
@@ -258,8 +256,7 @@ void x86_cpu_feature_init() {
   // specification - Enhanced IBRS processors may not be retpoline-safe.
   g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) && g_has_enhanced_ibrs;
   g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
-                    gCmdline.GetBool(kernel_option::kX86DisableSpecStoreBypassDisable,
-                                     /*default_value=*/false);
+                    gBootOptions->spec_store_bypass_disable;
 }
 
 // Invoked on each CPU during boot, after platform init has taken place.

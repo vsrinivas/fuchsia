@@ -196,13 +196,8 @@ static constexpr const char kVdsoClockGetMonotonicForceSyscall[] =
     "vdso.clock_get_monotonic_force_syscall";
 static constexpr const char kVdsoTicksGetForceSyscall[] = "vdso.ticks_get_force_syscall";
 static constexpr const char kWallclock[] = "kernel.wallclock";
-static constexpr const char kX86DisableSpecMitigations[] = "kernel.x86.disable_spec_mitigations";
-static constexpr const char kX86DisableSpecStoreBypassDisable[] =
-    "kernel.x86.spec_store_bypass_disable";
 static constexpr const char kX86Hwp[] = "kernel.x86.hwp";
 static constexpr const char kX86HwpPolicy[] = "kernel.x86.hwp_policy";
-static constexpr const char kX86MdClearOnUserReturn[] = "kernel.x86.md_clear_on_user_return";
-static constexpr const char kX86PtiEnable[] = "kernel.x86.pti.enable";
 static constexpr const char kX86Turbo[] = "kernel.x86.turbo";
 }  // namespace kernel_option
 
