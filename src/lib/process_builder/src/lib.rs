@@ -148,6 +148,12 @@ pub struct BuiltProcess {
     /// The initial thread's stack pointer.
     pub stack: usize,
 
+    /// The base address of the stack for the initial thread.
+    pub stack_base: usize,
+
+    /// The VMO of the stack for the initial thread.
+    pub stack_vmo: zx::Vmo,
+
     /// The bootstrap channel, to be passed to the process on start as arg1 in zx_process_start /
     /// zx::Process::start.
     pub bootstrap: zx::Channel,
@@ -159,6 +165,17 @@ pub struct BuiltProcess {
     /// The base address where the ELF executable, or the dynamic linker if the ELF was dynamically
     /// linked, was loaded in the process's VMAR.
     pub elf_base: usize,
+}
+
+struct StackInfo {
+    /// The initial thread's stack pointer.
+    pub stack_ptr: usize,
+
+    /// The base address of the stack for the initial thread.
+    pub stack_base: usize,
+
+    /// The VMO of the stack for the initial thread.
+    pub stack_vmo: zx::Vmo,
 }
 
 impl ProcessBuilder {
@@ -497,7 +514,7 @@ impl ProcessBuilder {
         // Allocate the initial thread's stack, map it, and add a handle to the bootstrap message.
         let stack_vmo_name =
             CString::new(stack_vmo_name).expect("Stack VMO name must not contain interior nul's");
-        let stack_ptr = self.create_stack(stack_size, &stack_vmo_name)?;
+        let stack_info = self.create_stack(stack_size, &stack_vmo_name)?;
 
         // Build and send the primary bootstrap message.
         let msg = processargs::Message::build(self.msg_contents)?;
@@ -514,7 +531,9 @@ impl ProcessBuilder {
             root_vmar: self.common.root_vmar,
             thread: self.common.thread,
             entry: loaded_elf.entry,
-            stack: stack_ptr,
+            stack: stack_info.stack_ptr,
+            stack_base: stack_info.stack_base,
+            stack_vmo: stack_info.stack_vmo,
             bootstrap: bootstrap_rd,
             vdso_base: vdso_base,
             elf_base: loaded_elf.vmar_base,
@@ -603,7 +622,7 @@ impl ProcessBuilder {
         &mut self,
         stack_size: usize,
         vmo_name: &CStr,
-    ) -> Result<usize, ProcessBuilderError> {
+    ) -> Result<StackInfo, ProcessBuilderError> {
         let stack_vmo = zx::Vmo::create(stack_size as u64).map_err(|s| {
             ProcessBuilderError::GenericStatus("Failed to create VMO for initial thread stack", s)
         })?;
@@ -616,17 +635,20 @@ impl ProcessBuilder {
                 ProcessBuilderError::GenericStatus("Failed to map initial stack", s)
             })?;
         let stack_ptr = compute_initial_stack_pointer(stack_base, stack_size);
+        let dup_stack_vmo = stack_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|s| {
+            ProcessBuilderError::GenericStatus("Failed to duplicate initial stack", s)
+        })?;
 
         // Pass the stack VMO to the process. Our protocol with the new process is that we warrant
         // that this is the VMO from which the initial stack is mapped and that we've exactly
         // mapped the entire thing, so vm_object_get_size on this in concert with the initial SP
         // value tells it the exact bounds of its stack.
         self.msg_contents.handles.push(StartupHandle {
-            handle: stack_vmo.into_handle(),
+            handle: dup_stack_vmo.into_handle(),
             info: HandleInfo::new(HandleType::StackVmo, 0),
         });
 
-        Ok(stack_ptr)
+        Ok(StackInfo { stack_ptr, stack_base, stack_vmo })
     }
 }
 
