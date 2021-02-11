@@ -38,7 +38,6 @@ rustc_library("lib") {
 
   sources = [
     "src/backends/c.rs",
-    "src/backends/dummy_c.rs",
     "src/backends/mod.rs",
     "src/backends/util.rs",
     "src/fidl.rs",
@@ -53,7 +52,6 @@ rustc_library("lib") {
     "src/backends/templates/c/protocol_ops.h",
     "src/backends/templates/c/protocol.h",
     "src/backends/templates/c/struct.h",
-    "src/backends/templates/dummy_c/dummy_c.h",
   ]
 
   source_root = "src/lib.rs"
