@@ -28,7 +28,7 @@ namespace blobfs {
 
 zx_status_t BlobfsChecker::CheckBackupSuperblock() {
   if ((blobfs_->Info().flags & kBlobFlagFVM) == 0 ||
-      blobfs_->Info().oldest_revision < kBlobfsRevisionBackupSuperblock)
+      blobfs_->Info().oldest_minor_version < kBlobfsMinorVersionBackupSuperblock)
     return ZX_OK;
   auto superblock_or = blobfs_->ReadBackupSuperblock();
   if (superblock_or.is_error()) {

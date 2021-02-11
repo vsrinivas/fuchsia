@@ -32,8 +32,8 @@ namespace {
 // Dumps the content of superblock.
 std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
   return stream << "\ninfo.magic0: " << info.magic0 << "\ninfo.magic1: " << info.magic1
-                << "\ninfo.format_version: " << info.format_version
-                << "\ninfo.flags: " << info.flags << "\ninfo.block_size: " << info.block_size
+                << "\ninfo.major_version: " << info.major_version << "\ninfo.flags: " << info.flags
+                << "\ninfo.block_size: " << info.block_size
                 << "\ninfo.data_block_count: " << info.data_block_count
                 << "\ninfo.journal_block_count: " << info.journal_block_count
                 << "\ninfo.inode_count: " << info.inode_count
@@ -44,27 +44,27 @@ std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
                 << "\ninfo.ino_slices: " << info.ino_slices
                 << "\ninfo.dat_slices: " << info.dat_slices
                 << "\ninfo.journal_slices: " << info.journal_slices
-                << "\ninfo.oldest_revision: " << info.oldest_revision;
+                << "\ninfo.oldest_minor_version: " << info.oldest_minor_version;
 }
 
-uint32_t GetBlobfsFormatVersionFromOptions(const FilesystemOptions& options) {
+uint32_t GetBlobfsMajorVersionFromOptions(const FilesystemOptions& options) {
   if (options.blob_layout_format == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
     return kBlobfsCompactMerkleTreeVersion;
   }
   return 0x8;
 }
 
-bool CheckFilesystemAndDriverCompatibility(uint32_t format_version) {
-  if (format_version == kBlobfsCurrentFormatVersion) {
+bool CheckFilesystemAndDriverCompatibility(uint32_t major_version) {
+  if (major_version == kBlobfsCurrentMajorVersion) {
     return true;
   }
   // Driver version 9 is compatible with filesystem version 8.
-  if (format_version == 0x8 && kBlobfsCurrentFormatVersion == 0x9) {
+  if (major_version == 0x8 && kBlobfsCurrentMajorVersion == 0x9) {
     return true;
   }
   FX_LOGS(ERROR) << "Filesystem and Driver are incompatible. FS Version: " << std::setfill('0')
-                 << std::setw(8) << std::hex << format_version
-                 << ". Driver version: " << std::setw(8) << kBlobfsCurrentFormatVersion;
+                 << std::setw(8) << std::hex << major_version
+                 << ". Driver version: " << std::setw(8) << kBlobfsCurrentMajorVersion;
   return false;
 }
 
@@ -78,7 +78,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
       FX_LOGS(ERROR) << "bad magic";
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!CheckFilesystemAndDriverCompatibility(info->format_version)) {
+  if (!CheckFilesystemAndDriverCompatibility(info->major_version)) {
     if (!quiet)
       FX_LOGS(ERROR) << *info;
     return ZX_ERR_INVALID_ARGS;
@@ -220,7 +220,7 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
   info->magic1 = kBlobfsMagic1;
-  info->format_version = GetBlobfsFormatVersionFromOptions(options);
+  info->major_version = GetBlobfsMajorVersionFromOptions(options);
   info->flags = kBlobFlagClean;
   info->block_size = kBlobfsBlockSize;
   // TODO(planders): Consider modifying the inode count if we are low on space.
@@ -228,7 +228,7 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
   info->inode_count = inodes;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
-  info->oldest_revision = options.oldest_revision;
+  info->oldest_minor_version = options.oldest_minor_version;
 
   // Temporarily set the data_block_count to the total block_count so we can estimate the number
   // of pre-data blocks.
@@ -263,7 +263,7 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
 }
 
 BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
-  if (info.format_version >= 0x9) {
+  if (info.major_version >= 0x9) {
     return BlobLayoutFormat::kCompactMerkleTreeAtEnd;
   }
   return BlobLayoutFormat::kPaddedMerkleTreeAtStart;

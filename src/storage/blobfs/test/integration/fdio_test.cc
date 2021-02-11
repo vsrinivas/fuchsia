@@ -29,7 +29,7 @@ void FdioTest::SetUp() {
   ASSERT_EQ(FormatFilesystem(block_device_,
                              FilesystemOptions{
                                  .blob_layout_format = GetBlobLayoutFormat(),
-                                 .oldest_revision = GetOldestRevision(),
+                                 .oldest_minor_version = GetOldestMinorVersion(),
                              }),
             ZX_OK);
 

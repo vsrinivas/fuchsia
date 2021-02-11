@@ -70,13 +70,13 @@ zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* info
   return status;
 }
 
-template <uint64_t oldest_revision, uint64_t num_blocks = kNumBlocks,
+template <uint64_t oldest_minor_version, uint64_t num_blocks = kNumBlocks,
           typename Device = MockBlockDevice>
 class BlobfsTestAtRevision : public testing::Test {
  public:
   void SetUp() final {
     FilesystemOptions options{.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
-                              .oldest_revision = oldest_revision};
+                              .oldest_minor_version = oldest_minor_version};
     auto device = Device::CreateAndFormat(options, num_blocks);
     ASSERT_TRUE(device);
     device_ = device.get();
@@ -95,7 +95,7 @@ class BlobfsTestAtRevision : public testing::Test {
   std::unique_ptr<Blobfs> fs_;
 };
 
-using BlobfsTest = BlobfsTestAtRevision<blobfs::kBlobfsCurrentRevision>;
+using BlobfsTest = BlobfsTestAtRevision<blobfs::kBlobfsCurrentMinorVersion>;
 
 TEST_F(BlobfsTest, GetDevice) { ASSERT_EQ(device_, fs_->GetDevice()); }
 
@@ -229,7 +229,7 @@ TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
 }
 
 using BlobfsTestWithLargeDevice =
-    BlobfsTestAtRevision<blobfs::kBlobfsCurrentRevision,
+    BlobfsTestAtRevision<blobfs::kBlobfsCurrentMinorVersion,
                          /*num_blocks=*/2560 * kBlobfsBlockSize / kBlockSize>;
 
 TEST_F(BlobfsTestWithLargeDevice, WritingBlobLargerThanWritebackCapacitySucceeds) {
@@ -483,7 +483,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   auto device = MockBlockDevice::CreateAndFormat(
       {
           .blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
-          .oldest_revision = kBlobfsCurrentRevision,
+          .oldest_minor_version = kBlobfsCurrentMinorVersion,
       },
       kNumBlocks);
   ASSERT_TRUE(device);

@@ -35,39 +35,40 @@ namespace blobfs {
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 
-// Current version of the format and the revision of the software. The format version determines
-// backwards-compatibility. The revision can be freely incremented at any time and does not impact
-// backwards-compatibility; the more often it is updated, the more granularly we can find out what
-// the oldest revision of the driver is that has touched a filesystem instance.
-// Minimally, the revision should be incremented whenever a (backwards-compatible) format change is
-// made, but it can also be incremented when major logic changes are made in case there is chance of
-// bugs being introduced and we would like to be able to detect if the filesystem has been touched
-// by a potentially buggy driver.
-// The revision is used to updated the oldest_revision field in the header.
+// Current version of the format. The major version determines backwards-compatibility. The minor
+// version can be freely incremented at any time and does not impact backwards-compatibility; the
+// more often it is updated, the more granularly we can find out what the oldest revision of the
+// driver is that has touched a filesystem instance.
+//
+// Minimally, the minor version should be incremented whenever a (backwards-compatible) format
+// change is made, but it can also be incremented when major logic changes are made in case there is
+// chance of bugs being introduced and we would like to be able to detect if the filesystem has been
+// touched by a potentially buggy driver. The revision is used to updated the oldest_minor_version
+// field in the header.
 //
 // See //src/storage/docs/versioning.md for more.
 
 // *************************************************************************************************
-// * IMPORTANT: When changing either kBlobfsCurrentFormatVersion or kBlobfsCurrentRevision, be     *
+// * IMPORTANT: When changing either kBlobfsCurrentMajorVersion or kBlobfsCurrentMinorVersion, be  *
 // * sure to make an appropriate change to                                                         *
 // * //third_party/cobalt_config/fuchsia/local_storage/versions.txt (submission order does not     *
 // * matter).                                                                                      *
 // *************************************************************************************************
 
-constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000009;
+constexpr uint32_t kBlobfsCurrentMajorVersion = 0x00000009;
+
+// When this next changes, consider enabling the OldestMinorVersionNotUpdated test.
+constexpr uint64_t kBlobfsCurrentMinorVersion = 0x00000004;
 
 // Version 9 introduced a compact merkle tree version.
 constexpr uint32_t kBlobfsCompactMerkleTreeVersion = 0x00000009;
 
 // Revision 2: introduced a backup superblock.
-constexpr uint64_t kBlobfsRevisionBackupSuperblock = 0x00000002;
+constexpr uint64_t kBlobfsMinorVersionBackupSuperblock = 0x00000002;
 // Revision 3: migrated away from old compression formats.
-constexpr uint64_t kBlobfsRevisionNoOldCompressionFormats = 0x00000003;
+constexpr uint64_t kBlobfsMinorVersionNoOldCompressionFormats = 0x00000003;
 // Revision 4: fixed host-side tool bug which generated a zero-length extent for the null blob.
-constexpr uint64_t kBlobfsRevisionHostToolHandlesNullBlobCorrectly = 0x00000004;
-
-// When this next changes, consider enabling the OldestRevisionNotUpdated test.
-constexpr uint64_t kBlobfsCurrentRevision = 0x00000004;
+constexpr uint64_t kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly = 0x00000004;
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
@@ -138,7 +139,7 @@ constexpr size_t kMinimumDataBlocks = 2;
 struct __PACKED alignas(8) Superblock {
   uint64_t magic0;
   uint64_t magic1;
-  uint32_t format_version;
+  uint32_t major_version;
   uint32_t flags;
   uint32_t block_size;           // 8K typical.
   uint32_t reserved1;            // Unused, reserved (for padding).
@@ -162,13 +163,15 @@ struct __PACKED alignas(8) Superblock {
   // End FVM-specific fields
 
   uint8_t zeroes[8];  // Padding. Set to zeroes, can be reclaimed.
-  // The oldest revision of the software that has written to this blobfs instance. When opening for
-  // writes, the driver should check this and lower it if the current revision is lower than the one
-  // stored in this header. This does not say anything about backwards-compatibility, that is
-  // determined by format_version above.
+
+  // The oldest minor version corresponding to the kBlobfsCurrentMinorVersion of the software that
+  // has written to this blobfs instance. When opening for writes, the driver should check this and
+  // lower it if the current revision is lower than the one stored in this header. This does not say
+  // anything about backwards-compatibility, that is determined by major_version above.
   //
   // See //src/storage/docs/versioning.md for more.
-  uint64_t oldest_revision;
+  uint64_t oldest_minor_version;
+
   uint8_t reserved[8064];
 };
 

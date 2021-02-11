@@ -194,8 +194,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
       FX_LOGS(ERROR) << "Failed to re-load superblock";
       return status;
     }
-    if ((fs->Info().format_version >= kBlobfsCompactMerkleTreeVersion ||
-         fs->Info().oldest_revision >= kBlobfsRevisionNoOldCompressionFormats) &&
+    if ((fs->Info().major_version >= kBlobfsCompactMerkleTreeVersion ||
+         fs->Info().oldest_minor_version >= kBlobfsMinorVersionNoOldCompressionFormats) &&
         options.compression_settings.compression_algorithm != CompressionAlgorithm::CHUNKED &&
         options.compression_settings.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED) {
       FX_LOGS(ERROR) << "Unsupported compression algorithm";
@@ -311,25 +311,25 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // flag to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
   // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
   //
-  // Additionally, we can now update the oldest_revision field if it needs to be updated.
-  FX_LOGS(INFO) << "detected oldest_revision " << fs->info_.oldest_revision << ", current revision "
-                << kBlobfsCurrentRevision;
+  // Additionally, we can now update the oldest_minor_version field if it needs to be updated.
+  FX_LOGS(INFO) << "detected oldest_minor_version " << fs->info_.oldest_minor_version
+                << ", current minor version " << kBlobfsCurrentMinorVersion;
   if (options.writability == blobfs::Writability::Writable) {
     BlobTransaction transaction;
     fs->info_.flags &= ~kBlobFlagClean;
-    if (fs->info_.oldest_revision > kBlobfsCurrentRevision) {
-      FX_LOGS(INFO) << "Setting oldest_revision to " << kBlobfsCurrentRevision;
-      fs->info_.oldest_revision = kBlobfsCurrentRevision;
+    if (fs->info_.oldest_minor_version > kBlobfsCurrentMinorVersion) {
+      FX_LOGS(INFO) << "Setting oldest_minor_version to " << kBlobfsCurrentMinorVersion;
+      fs->info_.oldest_minor_version = kBlobfsCurrentMinorVersion;
     }
     // Write a backup superblock if there's an old version of blobfs.
     bool write_backup = false;
-    if (fs->info_.oldest_revision < kBlobfsRevisionBackupSuperblock) {
-      FX_LOGS(INFO) << "Upgrading to revision " << kBlobfsRevisionBackupSuperblock;
+    if (fs->info_.oldest_minor_version < kBlobfsMinorVersionBackupSuperblock) {
+      FX_LOGS(INFO) << "Upgrading to revision " << kBlobfsMinorVersionBackupSuperblock;
       if (fs->Info().flags & kBlobFlagFVM) {
         FX_LOGS(INFO) << "Writing backup superblock";
         write_backup = true;
       }
-      fs->info_.oldest_revision = kBlobfsRevisionBackupSuperblock;
+      fs->info_.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
     }
     fs->WriteInfo(transaction, write_backup);
     transaction.Commit(*fs->journal());
@@ -361,7 +361,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // Here we deliberately use a '/' separator rather than '.' to avoid looking like a conventional
   // version number, since they are not --- format version and revision can increment independently.
   fs->Metrics()->cobalt_metrics().RecordOldestVersionMounted(
-      std::to_string(fs->Info().format_version) + "/" + std::to_string(fs->Info().oldest_revision));
+      std::to_string(fs->Info().major_version) + "/" +
+      std::to_string(fs->Info().oldest_minor_version));
 
   *out = std::move(fs);
   return ZX_OK;
@@ -1056,10 +1057,10 @@ zx_status_t Blobfs::Migrate() {
 zx_status_t Blobfs::MigrateToRev3() {
   if (writability_ != Writability::Writable ||
       write_compression_settings_.compression_algorithm != CompressionAlgorithm::CHUNKED ||
-      info_.oldest_revision != kBlobfsRevisionNoOldCompressionFormats - 1) {
+      info_.oldest_minor_version != kBlobfsMinorVersionNoOldCompressionFormats - 1) {
     return ZX_OK;
   }
-  FX_LOGS(INFO) << "Migrating to revision " << kBlobfsRevisionNoOldCompressionFormats;
+  FX_LOGS(INFO) << "Migrating to minor version " << kBlobfsMinorVersionNoOldCompressionFormats;
   constexpr size_t kBufferSize = 128 * 1024;
   auto buffer = std::make_unique<uint8_t[]>(kBufferSize);
   int migrated = 0;
@@ -1116,7 +1117,7 @@ zx_status_t Blobfs::MigrateToRev3() {
   }
   FX_LOGS(INFO) << "Migrated " << migrated << " blob(s)";
   BlobTransaction transaction;
-  info_.oldest_revision = kBlobfsRevisionNoOldCompressionFormats;
+  info_.oldest_minor_version = kBlobfsMinorVersionNoOldCompressionFormats;
   WriteInfo(transaction);
   transaction.Commit(*journal_);
   return ZX_OK;
@@ -1124,10 +1125,10 @@ zx_status_t Blobfs::MigrateToRev3() {
 
 zx_status_t Blobfs::MigrateToRev4() {
   if (writability_ != Writability::Writable ||
-      info_.oldest_revision != kBlobfsRevisionHostToolHandlesNullBlobCorrectly - 1) {
+      info_.oldest_minor_version != kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly - 1) {
     return ZX_OK;
   }
-  FX_LOGS(INFO) << "Migrating to revision " << kBlobfsRevisionHostToolHandlesNullBlobCorrectly;
+  FX_LOGS(INFO) << "Migrating to revision " << kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly;
   BlobTransaction transaction;
   for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
     auto inode = GetNode(node_index);
@@ -1143,7 +1144,7 @@ zx_status_t Blobfs::MigrateToRev4() {
     inode->extent_count = 0;
     WriteNode(node_index, transaction);
   }
-  info_.oldest_revision = kBlobfsRevisionHostToolHandlesNullBlobCorrectly;
+  info_.oldest_minor_version = kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly;
   WriteInfo(transaction);
   transaction.Commit(*journal_);
   return ZX_OK;

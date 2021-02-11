@@ -265,7 +265,7 @@ class ExternalDecompressorE2eUnpagedTest : public FdioTest {
   }
 
   // The ZSTD algorithm requires an older revision.
-  uint64_t GetOldestRevision() const override { return kBlobfsRevisionBackupSuperblock; }
+  uint64_t GetOldestMinorVersion() const override { return kBlobfsMinorVersionBackupSuperblock; }
 
   // Using the kCompactMerkleTreeAtEnd requires a higher version of blobfs that doesn't support
   // ZSTD.

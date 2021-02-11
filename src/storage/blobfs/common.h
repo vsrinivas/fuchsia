@@ -31,10 +31,10 @@ struct FilesystemOptions {
   // Which layout to use to store blobs.
   BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart;
 
-  // The oldest revision to mark the filesystem as formatted by.
-  // This should be left unset (to the default value of kBlobfsCurrentRevision); it is exposed for
-  // overriding during tests.
-  uint64_t oldest_revision = kBlobfsCurrentRevision;
+  // The oldest minor version to mark the filesystem as formatted by.
+  // This should be left unset (to the default value of kBlobfsCurrentMinorVersion); it is exposed
+  // for overriding during tests.
+  uint64_t oldest_minor_version = kBlobfsCurrentMinorVersion;
 };
 
 // The minimum size of a blob that we will consider for compression. Attempting

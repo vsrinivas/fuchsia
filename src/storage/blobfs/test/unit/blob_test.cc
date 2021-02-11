@@ -38,7 +38,7 @@ namespace fio = ::llcpp::fuchsia::io;
 
 class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
  public:
-  virtual uint64_t GetOldestRevision() const { return kBlobfsCurrentRevision; }
+  virtual uint64_t GetOldestMinorVersion() const { return kBlobfsCurrentMinorVersion; }
 
   void SetUp() override {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
@@ -46,7 +46,7 @@ class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, Comp
     ASSERT_EQ(FormatFilesystem(device.get(),
                                FilesystemOptions{
                                    .blob_layout_format = std::get<0>(GetParam()),
-                                   .oldest_revision = GetOldestRevision(),
+                                   .oldest_minor_version = GetOldestMinorVersion(),
                                }),
               ZX_OK);
 
@@ -76,9 +76,9 @@ class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, Comp
 };
 
 // Return an old revsions so we can test migrating blobs.
-class BlobTestWithOldRevision : public BlobTest {
+class BlobTestWithOldMinorVersion : public BlobTest {
  public:
-  uint64_t GetOldestRevision() const override { return kBlobfsRevisionBackupSuperblock; }
+  uint64_t GetOldestMinorVersion() const override { return kBlobfsMinorVersionBackupSuperblock; }
 };
 
 TEST_P(BlobTest, TruncateWouldOverflow) {
@@ -204,7 +204,7 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   }
 }
 
-TEST_P(BlobTestWithOldRevision, ReadWriteAllCompressionFormats) {
+TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
   auto root = OpenRoot();
   std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
 
@@ -232,7 +232,7 @@ TEST_P(BlobTestWithOldRevision, ReadWriteAllCompressionFormats) {
       // Check that it got migrated.
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
       EXPECT_TRUE(SupportsPaging(blob->GetNode()));
-      EXPECT_GE(fs_->Info().oldest_revision, kBlobfsRevisionNoOldCompressionFormats);
+      EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
     } else {
       // Remount
       ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), MountOptions(),
@@ -390,7 +390,7 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
   EXPECT_TRUE(deleted);
 }
 
-using BlobMigrationTest = BlobTestWithOldRevision;
+using BlobMigrationTest = BlobTestWithOldMinorVersion;
 
 TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
   auto root = OpenRoot();
@@ -424,7 +424,7 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
 
   auto blob = fbl::RefPtr<Blob>::Downcast(file);
   EXPECT_TRUE(SupportsPaging(blob->GetNode()));
-  EXPECT_GE(fs_->Info().oldest_revision, kBlobfsRevisionNoOldCompressionFormats);
+  EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
 
   EXPECT_EQ(Fsck(Blobfs::Destroy(std::move(fs_)), MountOptions()), ZX_OK);
 }
@@ -459,8 +459,9 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
   EXPECT_EQ(info->size_data, actual);
   EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
 
-  // The blob shouldn't have been migrated and the filesystem revision shouldn't have changed.
-  EXPECT_GE(fs_->Info().oldest_revision, kBlobfsRevisionBackupSuperblock);
+  // The blob shouldn't have been migrated and the filesystem oldest minor version shouldn't have
+  // changed.
+  EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionBackupSuperblock);
 
   EXPECT_EQ(Fsck(Blobfs::Destroy(std::move(fs_)), MountOptions()), ZX_OK);
 }
@@ -479,7 +480,7 @@ INSTANTIATE_TEST_SUITE_P(
     GetTestParamName);
 
 INSTANTIATE_TEST_SUITE_P(
-    /*no prefix*/, BlobTestWithOldRevision,
+    /*no prefix*/, BlobTestWithOldMinorVersion,
     testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart),
                      testing::Values(CompressionAlgorithm::UNCOMPRESSED, CompressionAlgorithm::LZ4,
                                      CompressionAlgorithm::ZSTD,

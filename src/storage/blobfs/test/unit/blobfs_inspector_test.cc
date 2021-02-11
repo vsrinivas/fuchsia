@@ -175,7 +175,7 @@ TEST(BlobfsInspector, InspectSuperblock) {
 
   EXPECT_EQ(kBlobfsMagic0, sb.magic0);
   EXPECT_EQ(kBlobfsMagic1, sb.magic1);
-  EXPECT_EQ(kBlobfsCurrentFormatVersion, sb.format_version);
+  EXPECT_EQ(kBlobfsCurrentMajorVersion, sb.major_version);
   EXPECT_EQ(kBlobFlagClean, sb.flags);
   EXPECT_EQ(kBlobfsBlockSize, sb.block_size);
   EXPECT_EQ(1ul, sb.alloc_block_count);
@@ -368,11 +368,11 @@ TEST(BlobfsInspector, WriteSuperblock) {
   // Test original values are correct.
   EXPECT_EQ(kBlobfsMagic0, sb.magic0);
   EXPECT_EQ(kBlobfsMagic1, sb.magic1);
-  EXPECT_EQ(kBlobfsCurrentFormatVersion, sb.format_version);
+  EXPECT_EQ(kBlobfsCurrentMajorVersion, sb.major_version);
 
   // Edit values and write.
   sb.magic0 = 0;
-  sb.format_version = 0;
+  sb.major_version = 0;
   auto result = inspector->WriteSuperblock(sb);
   ASSERT_TRUE(result.is_ok());
 
@@ -380,14 +380,14 @@ TEST(BlobfsInspector, WriteSuperblock) {
   Superblock edit_sb = inspector->InspectSuperblock();
   EXPECT_EQ(0ul, edit_sb.magic0);
   EXPECT_EQ(kBlobfsMagic1, edit_sb.magic1);
-  EXPECT_EQ(0u, edit_sb.format_version);
+  EXPECT_EQ(0u, edit_sb.major_version);
 
   // Test reloading from disk.
   ASSERT_EQ(inspector->ReloadSuperblock(), ZX_OK);
   Superblock reload_sb = inspector->InspectSuperblock();
   EXPECT_EQ(0ul, reload_sb.magic0);
   EXPECT_EQ(kBlobfsMagic1, reload_sb.magic1);
-  EXPECT_EQ(0u, reload_sb.format_version);
+  EXPECT_EQ(0u, reload_sb.major_version);
 }
 
 std::vector<Inode> AlternateAddInodesAndExtentContainers(uint64_t inode_count) {

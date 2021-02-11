@@ -65,7 +65,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
       case CompressionAlgorithm::ZSTD:
       case CompressionAlgorithm::ZSTD_SEEKABLE:
       case CompressionAlgorithm::LZ4:
-        options.oldest_revision = kBlobfsRevisionBackupSuperblock;
+        options.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
         break;
     }
     ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);

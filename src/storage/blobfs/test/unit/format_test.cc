@@ -353,7 +353,7 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultJournalBlocks) {
 }
 
 TEST(FormatFilesystemTest, FormattedFilesystemHasSpecifiedOldestRevision) {
-  const FilesystemOptions options{.oldest_revision = 1234u};
+  const FilesystemOptions options{.oldest_minor_version = 1234u};
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = 512;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
@@ -363,10 +363,10 @@ TEST(FormatFilesystemTest, FormattedFilesystemHasSpecifiedOldestRevision) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(1234u, info->oldest_revision);
+  EXPECT_EQ(1234u, info->oldest_minor_version);
 }
 
-TEST(FormatFilesystemTest, FormattedFilesystemHasCurrentRevisionIfUnspecified) {
+TEST(FormatFilesystemTest, FormattedFilesystemHasCurrentMinorVersionIfUnspecified) {
   const FilesystemOptions options;
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = 512;
@@ -377,7 +377,7 @@ TEST(FormatFilesystemTest, FormattedFilesystemHasCurrentRevisionIfUnspecified) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(kBlobfsCurrentRevision, info->oldest_revision);
+  EXPECT_EQ(kBlobfsCurrentMinorVersion, info->oldest_minor_version);
 }
 
 }  // namespace

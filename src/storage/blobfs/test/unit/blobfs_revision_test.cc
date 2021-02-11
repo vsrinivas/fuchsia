@@ -31,10 +31,10 @@ std::unique_ptr<BlockDevice> CreateFakeFVMBlockDevice(uint64_t num_blocks) {
                                               /*slice_capacity=*/500);
 }
 
-template <uint64_t oldest_revision,
+template <uint64_t oldest_minor_version,
           std::unique_ptr<BlockDevice> (*DeviceFactory)(uint64_t) = CreateFakeBlockDevice,
           uint64_t num_blocks = kNumBlocks>
-class BlobfsTestAtRevision : public testing::Test {
+class BlobfsTestAtMinorVersion : public testing::Test {
  public:
   void SetUp() final {
     loop_.StartThread();
@@ -43,7 +43,7 @@ class BlobfsTestAtRevision : public testing::Test {
 
   std::unique_ptr<BlockDevice> CreateAndFormat() {
     FilesystemOptions options{.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
-                              .oldest_revision = oldest_revision};
+                              .oldest_minor_version = oldest_minor_version};
     std::unique_ptr<BlockDevice> device = DeviceFactory(num_blocks);
     EXPECT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
     return device;
@@ -70,15 +70,16 @@ class BlobfsTestAtRevision : public testing::Test {
   std::unique_ptr<Blobfs> fs_;
 };
 
-using BlobfsTestAtRev1 = BlobfsTestAtRevision<kBlobfsRevisionBackupSuperblock - 1>;
+using BlobfsTestAtRev1 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock - 1>;
 using BlobfsTestAtRev1WithFvm =
-    BlobfsTestAtRevision<kBlobfsRevisionBackupSuperblock - 1, CreateFakeFVMBlockDevice>;
-using BlobfsTestAtRev2 = BlobfsTestAtRevision<kBlobfsRevisionBackupSuperblock>;
-using BlobfsTestAtRev3 = BlobfsTestAtRevision<kBlobfsRevisionNoOldCompressionFormats>;
-using BlobfsTestAtRev4 = BlobfsTestAtRevision<kBlobfsRevisionHostToolHandlesNullBlobCorrectly>;
-using BlobfsTestAtFutureRev = BlobfsTestAtRevision<kBlobfsCurrentRevision + 1>;
+    BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock - 1, CreateFakeFVMBlockDevice>;
+using BlobfsTestAtRev2 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock>;
+using BlobfsTestAtRev3 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionNoOldCompressionFormats>;
+using BlobfsTestAtRev4 =
+    BlobfsTestAtMinorVersion<kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly>;
+using BlobfsTestAtFutureRev = BlobfsTestAtMinorVersion<kBlobfsCurrentMinorVersion + 1>;
 
-TEST_F(BlobfsTestAtRev1, UpgradedToLaterRevision) {
+TEST_F(BlobfsTestAtRev1, UpgradedToLaterMinorVersion) {
   Mount(CreateAndFormat(), ReadWriteOptions());
   auto device = Unmount();
 
@@ -91,7 +92,7 @@ TEST_F(BlobfsTestAtRev1, UpgradedToLaterRevision) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_revision, kBlobfsRevisionHostToolHandlesNullBlobCorrectly);
+  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
 
   ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
 }
@@ -110,12 +111,12 @@ TEST_F(BlobfsTestAtRev1WithFvm, OldInstanceTriggersWriteToBackupSuperblock) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_revision, kBlobfsRevisionHostToolHandlesNullBlobCorrectly);
+  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
 
   ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
 }
 
-TEST_F(BlobfsTestAtRev2, UpgradedToLaterRevision) {
+TEST_F(BlobfsTestAtRev2, UpgradedToLaterMinorVersion) {
   Mount(CreateAndFormat(), ReadWriteOptions());
   auto device = Unmount();
 
@@ -127,12 +128,12 @@ TEST_F(BlobfsTestAtRev2, UpgradedToLaterRevision) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_revision, kBlobfsRevisionHostToolHandlesNullBlobCorrectly);
+  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
 
   ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
 }
 
-TEST_F(BlobfsTestAtRev3, UpgradedToLaterRevision) {
+TEST_F(BlobfsTestAtRev3, UpgradedToLaterMinorVersion) {
   Mount(CreateAndFormat(), ReadWriteOptions());
   auto device = Unmount();
 
@@ -143,7 +144,7 @@ TEST_F(BlobfsTestAtRev3, UpgradedToLaterRevision) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_revision, kBlobfsRevisionHostToolHandlesNullBlobCorrectly);
+  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
 
   ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
 }
@@ -157,12 +158,12 @@ TEST_F(BlobfsTestAtRev4, NotUpgraded) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_revision, kBlobfsRevisionHostToolHandlesNullBlobCorrectly);
+  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
 
   ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
 }
 
-TEST_F(BlobfsTestAtFutureRev, OldestRevisionSetToDriverRevision) {
+TEST_F(BlobfsTestAtFutureRev, OldestMinorVersionSetToDriverMinorVersion) {
   Mount(CreateAndFormat(), ReadWriteOptions());
   auto device = Unmount();
 
@@ -171,7 +172,7 @@ TEST_F(BlobfsTestAtFutureRev, OldestRevisionSetToDriverRevision) {
   static_assert(sizeof(block) >= sizeof(Superblock));
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_revision, kBlobfsCurrentRevision);
+  EXPECT_EQ(info->oldest_minor_version, kBlobfsCurrentMinorVersion);
 
   ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
 }

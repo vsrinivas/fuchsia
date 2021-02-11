@@ -56,7 +56,7 @@ class FdioTest : public testing::Test {
   void GetUintMetric(const std::vector<std::string>& path, const std::string& property,
                      uint64_t* value);
 
-  virtual uint64_t GetOldestRevision() const { return kBlobfsCurrentRevision; }
+  virtual uint64_t GetOldestMinorVersion() const { return kBlobfsCurrentMinorVersion; }
 
   virtual BlobLayoutFormat GetBlobLayoutFormat() const {
     return BlobLayoutFormat::kPaddedMerkleTreeAtStart;

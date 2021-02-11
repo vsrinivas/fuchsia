@@ -83,7 +83,7 @@ TEST(FsckTest, TestNoBackupSuperblockOnOldRevsiionPassesFsck) {
 
   Superblock superblock;
   DeviceBlockRead(device.get(), &superblock, sizeof(superblock), 0);
-  superblock.oldest_revision = kBlobfsRevisionBackupSuperblock - 1;
+  superblock.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock - 1;
   DeviceBlockWrite(device.get(), &superblock, sizeof(superblock), 0);
   memset(&superblock, 0xaf, sizeof(superblock));
   DeviceBlockWrite(device.get(), &superblock, sizeof(superblock), kBlobfsBlockSize);
