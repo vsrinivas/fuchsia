@@ -17,6 +17,7 @@
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
+#include "fbl/unique_fd.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/devices/bin/driver_host/test-metadata.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -51,7 +52,7 @@ void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::Isol
 }
 
 // Test restarting a driver host containing only one driver.
-TEST(HotReloadIntegrationTest, DISABLED_TestRestartOneDriver) {
+TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   driver_integration_test::IsolatedDevmgr devmgr;
   fuchsia::device::manager::DriverHostDevelopmentSyncPtr development_;
 
@@ -83,11 +84,20 @@ TEST(HotReloadIntegrationTest, DISABLED_TestRestartOneDriver) {
   ASSERT_FALSE(result_before->result.is_err(), "GetPid failed: %s",
                zx_status_get_string(result_before->result.err()));
 
+  // Need to create a DirWatcher to wait for the device to close.
+  fbl::unique_fd fd(
+      openat(devmgr.devfs_root().get(), "sys/platform/11:17:0", O_DIRECTORY | O_RDONLY));
+  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd), &watcher));
+
   // Restart the driver host of the test driver.
   fuchsia::device::manager::DriverHostDevelopment_RestartDriverHosts_Result result;
   auto resp =
       development_->RestartDriverHosts("/boot/driver/driver-host-restart-driver.so", &result);
   ASSERT_OK(resp);
+
+  // Make sure device has shut so that it isnt opened before it is restarted.
+  ASSERT_OK(watcher->WaitForRemoval("driver-host-restart-driver", zx::duration::infinite()));
 
   // Get pid of driver after restarting.
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
@@ -108,7 +118,7 @@ TEST(HotReloadIntegrationTest, DISABLED_TestRestartOneDriver) {
 
 // Test restarting a driver host containing a parent and child driver by calling restart on
 // the parent.
-TEST(HotReloadIntegrationTest, DISABLED_TestRestartTwoDriversParent) {
+TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   driver_integration_test::IsolatedDevmgr devmgr;
   fuchsia::device::manager::DriverHostDevelopmentSyncPtr development_;
 
@@ -152,10 +162,20 @@ TEST(HotReloadIntegrationTest, DISABLED_TestRestartTwoDriversParent) {
   ASSERT_FALSE(parent_before->result.is_err(), "GetPid for parent failed: %s",
                zx_status_get_string(parent_before->result.err()));
 
+  // Need to create DirWatchers to wait for the device to close.
+  fbl::unique_fd fd_watcher(
+      openat(devmgr.devfs_root().get(), "sys/platform/11:0e:0", O_DIRECTORY | O_RDONLY));
+  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_watcher), &watcher));
+
   // Restart the driver host of the parent driver.
   fuchsia::device::manager::DriverHostDevelopment_RestartDriverHosts_Result result;
   auto resp = development_->RestartDriverHosts("/boot/driver/driver-host-test-driver.so", &result);
   ASSERT_OK(resp);
+
+  // Make sure device has shut so that it isn't opened before it is restarted.
+  // Child is a subdirectory of this so if the parent is gone so must the child.
+  ASSERT_OK(watcher->WaitForRemoval("devhost-test-parent", zx::duration::infinite()));
 
   // Reopen parent.
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
@@ -187,7 +207,7 @@ TEST(HotReloadIntegrationTest, DISABLED_TestRestartTwoDriversParent) {
 
 // Test restarting a driver host containing a parent and child driver by calling restart on
 // the child.
-TEST(HotReloadIntegrationTest, DISABLED_TestRestartTwoDriversChild) {
+TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   driver_integration_test::IsolatedDevmgr devmgr;
   fuchsia::device::manager::DriverHostDevelopmentSyncPtr development_;
 
@@ -225,6 +245,12 @@ TEST(HotReloadIntegrationTest, DISABLED_TestRestartTwoDriversChild) {
   ASSERT_NE(chan_child.get(), ZX_HANDLE_INVALID);
   ASSERT_TRUE(chan_child.is_valid());
 
+  // Need to create DirWatchers to wait for the device to close.
+  fbl::unique_fd fd_watcher(
+      openat(devmgr.devfs_root().get(), "sys/platform/11:0e:0", O_DIRECTORY | O_RDONLY));
+  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_watcher), &watcher));
+
   // Get pid of parent driver before restarting.
   auto parent_before = TestDevice::Call::GetPid(zx::unowned(chan_parent));
   ASSERT_OK(parent_before.status());
@@ -236,6 +262,10 @@ TEST(HotReloadIntegrationTest, DISABLED_TestRestartTwoDriversChild) {
   auto resp =
       development_->RestartDriverHosts("/boot/driver/driver-host-test-child-driver.so", &result);
   ASSERT_OK(resp);
+
+  // Make sure device has shut so that it isn't opened before it is restarted.
+  // Child is a subdirectory of this so if the parent is gone so must the child.
+  ASSERT_OK(watcher->WaitForRemoval("devhost-test-parent", zx::duration::infinite()));
 
   // Reopen parent.
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
