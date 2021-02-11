@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/net/routes/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 // clang-format off
@@ -29,6 +30,10 @@ using fuchsia::lowpan::device::DeviceSyncPtr;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::LookupSyncPtr;
 using fuchsia::lowpan::device::Protocols;
+using fuchsia::net::IpAddress;
+using fuchsia::net::Ipv4Address;
+using fuchsia::net::Ipv6Address;
+using fuchsia::net::routes::State_Resolve_Result;
 
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::Internal::DeviceNetworkInfo;
@@ -131,7 +136,48 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
 }
 
 bool ThreadStackManagerDelegateImpl::HaveRouteToAddress(const IPAddress& destAddr) {
-  return false;  // TODO(fxbug.dev/55857)
+  fuchsia::net::routes::StateSyncPtr routes;
+  State_Resolve_Result result;
+  IpAddress netstack_addr;
+  zx_status_t status;
+
+  status = PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(routes.NewRequest());
+  if (status != ZX_OK) {
+    // Unfortunately, no way to inform of error status.
+    return false;
+  }
+
+  if (destAddr.IsIPv6()) {
+    Ipv6Address netstack_v6_addr;
+    static_assert(sizeof(netstack_v6_addr.addr) == sizeof(destAddr.Addr));
+    std::memcpy(&netstack_v6_addr.addr, destAddr.Addr, sizeof(destAddr.Addr));
+    netstack_addr.set_ipv6(std::move(netstack_v6_addr));
+  } else if (destAddr.IsIPv4()) {
+    Ipv4Address netstack_v4_addr;
+    static_assert(sizeof(netstack_v4_addr.addr) == sizeof(destAddr.Addr[3]));
+    std::memcpy(&netstack_v4_addr.addr, &destAddr.Addr[3], sizeof(destAddr.Addr[3]));
+    netstack_addr.set_ipv4(std::move(netstack_v4_addr));
+  } else {
+    // No route to the "unspecified address".
+    FX_LOGS(ERROR) << "HaveRouteToAddress recieved unspecified IP address.";
+    return false;
+  }
+
+  status = routes->Resolve(std::move(netstack_addr), &result);
+  if (status != ZX_OK) {
+    // Unfortunately, no way to inform of error status.
+    return false;
+  } else if (result.is_err()) {
+    // Result will be ZX_ERR_ADDRESS_UNREACHABLE if unreachable.
+    if (result.err() != ZX_ERR_ADDRESS_UNREACHABLE) {
+      FX_LOGS(ERROR) << "Result from resolving route was error "
+                     << zx_status_get_string(result.err());
+    }
+    return false;
+  }
+
+  // Result resolved, a route exists.
+  return true;
 }
 
 void ThreadStackManagerDelegateImpl::OnPlatformEvent(const WeaveDeviceEvent* event) {}

@@ -53,6 +53,7 @@ openweave_adaptation_layer("adaptation") {
     "//sdk/fidl/fuchsia.lowpan",
     "//sdk/fidl/fuchsia.lowpan.device",
     "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.routes",
     "//sdk/fidl/fuchsia.weave",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

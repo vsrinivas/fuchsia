@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/lowpan/device/cpp/fidl_test_base.h>
+#include <fuchsia/net/routes/cpp/fidl.h>
+#include <fuchsia/net/routes/cpp/fidl_test_base.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -39,12 +41,29 @@ using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
+using fuchsia::net::IpAddress;
+using fuchsia::net::Ipv4Address;
+using fuchsia::net::Ipv6Address;
+using fuchsia::net::routes::Destination;
+using fuchsia::net::routes::Resolved;
+using fuchsia::net::routes::State_Resolve_Response;
+using fuchsia::net::routes::State_Resolve_Result;
 
 using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
+using nl::Inet::IPAddress;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
 
+namespace routes = fuchsia::net::routes;
+
 const char kFakeInterfaceName[] = "fake0";
+
+constexpr char kTestV4AddrStr[] = "1.2.3.4";
+constexpr char kTestV6AddrStr[] = "0102:0304:0506:0708:090A:0B0C:0D0E:0F00";
+constexpr char kTestV4AddrBad[] = "4.3.2.1";
+constexpr char kTestV6AddrBad[] = "0A0B:0C0D:0E0F:0001:0203:0405:0607:0809";
+constexpr char kTestV4AddrVal[] = { 1, 2, 3, 4 };
+constexpr char kTestV6AddrVal[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0 };
 
 // The required size of a buffer supplied to GetPrimary802154MACAddress.
 constexpr size_t k802154MacAddressBufSize =
@@ -256,6 +275,44 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   fidl::Binding<Lookup> binding_{this};
 };
 
+class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void Resolve(IpAddress dest, ResolveCallback callback) override {
+    State_Resolve_Result result;
+    if (dest.is_ipv4()) {
+      static_assert(sizeof(dest.ipv4().addr) == sizeof(kTestV4AddrVal));
+      if (std::memcmp(dest.ipv4().addr.data(), kTestV4AddrVal, sizeof(kTestV4AddrVal)) == 0) {
+        State_Resolve_Response response(Resolved::WithDirect(std::move(
+            Destination().set_address(std::move(dest)))));
+        result.set_response(std::move(response));
+      } else {
+        result.set_err(ZX_ERR_ADDRESS_UNREACHABLE);
+      }
+    } else {
+      static_assert(sizeof(dest.ipv6().addr) == sizeof(kTestV6AddrVal));
+      if (std::memcmp(dest.ipv6().addr.data(), kTestV6AddrVal, sizeof(kTestV6AddrVal)) == 0) {
+        State_Resolve_Response response(Resolved::WithDirect(std::move(
+            Destination().set_address(std::move(dest)))));
+        result.set_response(std::move(response));
+      } else {
+        result.set_err(ZX_ERR_ADDRESS_UNREACHABLE);
+      }
+    }
+    callback(std::move(result));
+  }
+
+  fidl::InterfaceRequestHandler<routes::State> GetHandler(async_dispatcher_t* dispatcher) {
+    return [this, dispatcher](fidl::InterfaceRequest<routes::State> request) {
+      binding_.Bind(std::move(request), dispatcher);
+    };
+  }
+
+ private:
+  fidl::Binding<routes::State> binding_{this};
+};
+
 class OverridableThreadConfigurationManagerDelegate : public ConfigurationManagerDelegateImpl {
  private:
   bool is_thread_enabled_ = true;
@@ -270,6 +327,8 @@ class ThreadStackManagerTest : public WeaveTestFixture {
   ThreadStackManagerTest() {
     context_provider_.service_directory_provider()->AddService(
         fake_lookup_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
+        fake_routes_.GetHandler(dispatcher()));
   }
 
   void SetUp() override {
@@ -292,6 +351,7 @@ class ThreadStackManagerTest : public WeaveTestFixture {
 
  protected:
   FakeLowpanLookup fake_lookup_;
+  FakeNetRoutes fake_routes_;
   OverridableThreadConfigurationManagerDelegate* config_delegate_;
 
  private:
@@ -566,6 +626,19 @@ TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
             WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false),
             WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+}
+
+TEST_F(ThreadStackManagerTest, HaveRouteToAddress) {
+  IPAddress addr;
+
+  ASSERT_TRUE(IPAddress::FromString(kTestV4AddrStr, addr));
+  EXPECT_TRUE(ThreadStackMgr().HaveRouteToAddress(addr));
+  ASSERT_TRUE(IPAddress::FromString(kTestV4AddrBad, addr));
+  EXPECT_FALSE(ThreadStackMgr().HaveRouteToAddress(addr));
+  ASSERT_TRUE(IPAddress::FromString(kTestV6AddrStr, addr));
+  EXPECT_TRUE(ThreadStackMgr().HaveRouteToAddress(addr));
+  ASSERT_TRUE(IPAddress::FromString(kTestV6AddrBad, addr));
+  EXPECT_FALSE(ThreadStackMgr().HaveRouteToAddress(addr));
 }
 
 TEST_F(ThreadStackManagerTest, GetPrimary802154MacAddress) {
