@@ -11,6 +11,7 @@
 #include <lib/async/dispatcher.h>
 #include <threads.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/threads.h>
 
 #include <iterator>
@@ -386,7 +387,10 @@ void SyncTimeline::CreateFence(zx::eventpair event, std::optional<uint64_t> seqn
         fence_ptr->event.get(), ZX_EVENTPAIR_PEER_CLOSED, 0u,
         [fence = fence_ptr, this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                   zx_status_t status, const zx_packet_signal_t* signal) {
-          if (signal->observed & ZX_EVENTPAIR_PEER_CLOSED) {
+          if (signal == nullptr || (signal->observed & ZX_EVENTPAIR_PEER_CLOSED)) {
+            if (status != ZX_OK && status != ZX_ERR_CANCELED) {
+              zxlogf(ERROR, "CreateFence: Unexpected Wait status: %d", status);
+            }
             fbl::AutoLock lock(&lock_);
             ZX_DEBUG_ASSERT(fence->InContainer());
             fence->RemoveFromContainer();
