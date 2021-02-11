@@ -31,6 +31,7 @@ executable("unittests") {
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
+    "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
   ]
 }

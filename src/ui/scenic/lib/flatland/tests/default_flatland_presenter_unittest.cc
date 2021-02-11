@@ -16,6 +16,7 @@
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 using flatland::DefaultFlatlandPresenter;
 
@@ -23,37 +24,6 @@ namespace flatland {
 namespace test {
 
 namespace {
-
-// TODO(fxbug.dev/56879): consolidate the following 3 helper functions when splitting escher into
-// multiple libraries.
-
-zx::event CreateEvent() {
-  zx::event event;
-  FX_CHECK(zx::event::create(0, &event) == ZX_OK);
-  return event;
-}
-
-std::vector<zx::event> CreateEventArray(size_t n) {
-  std::vector<zx::event> events;
-  for (size_t i = 0; i < n; i++) {
-    events.push_back(CreateEvent());
-  }
-  return events;
-}
-
-zx::event CopyEvent(const zx::event& event) {
-  zx::event event_copy;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK) {
-    FX_LOGS(ERROR) << "Copying zx::event failed.";
-  }
-  return event_copy;
-}
-
-bool IsEventSignaled(const zx::event& fence, zx_signals_t signal) {
-  zx_signals_t pending = 0u;
-  fence.wait_one(signal, zx::time(), &pending);
-  return (pending & signal) != 0u;
-}
 
 // This harness uses a real loop instead of a test loop since the multithreading test requires the
 // tasks posted by the DefaultFlatlandPresenter to run without blocking the worker threads.
@@ -132,9 +102,9 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
   const scheduling::SessionId kSessionId = 2;
 
   // Create release fences to verify they are plumbed through to the FrameScheduler.
-  std::vector<zx::event> release_fences = CreateEventArray(2);
-  zx::event release1_dup = CopyEvent(release_fences[0]);
-  zx::event release2_dup = CopyEvent(release_fences[1]);
+  std::vector<zx::event> release_fences = utils::CreateEventArray(2);
+  zx::event release1_dup = utils::CopyEvent(release_fences[0]);
+  zx::event release2_dup = utils::CopyEvent(release_fences[1]);
 
   scheduling::PresentId present_id =
       presenter.RegisterPresent(kSessionId, std::move(release_fences));
@@ -145,16 +115,16 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
   EXPECT_EQ(last_release_fences.size(), 2ul);
 
   // Signal the fences one at a time and verify they are in the correct order.
-  EXPECT_FALSE(IsEventSignaled(last_release_fences[0], ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(IsEventSignaled(last_release_fences[1], ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(last_release_fences[0], ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(last_release_fences[1], ZX_EVENT_SIGNALED));
 
   release1_dup.signal(0, ZX_EVENT_SIGNALED);
-  EXPECT_TRUE(IsEventSignaled(last_release_fences[0], ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(IsEventSignaled(last_release_fences[1], ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(last_release_fences[0], ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(last_release_fences[1], ZX_EVENT_SIGNALED));
 
   release2_dup.signal(0, ZX_EVENT_SIGNALED);
-  EXPECT_TRUE(IsEventSignaled(last_release_fences[0], ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(IsEventSignaled(last_release_fences[1], ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(last_release_fences[0], ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(last_release_fences[1], ZX_EVENT_SIGNALED));
 }
 
 TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameScheduler) {

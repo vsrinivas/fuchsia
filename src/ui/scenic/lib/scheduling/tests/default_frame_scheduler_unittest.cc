@@ -8,8 +8,9 @@
 
 #include <gmock/gmock.h>
 
-#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
+#include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 using scheduling::Present2Info;
 
@@ -1300,15 +1301,15 @@ TEST_F(FrameSchedulerTest, ReleaseFences_ShouldBeFiredAfterSubsequentFramePresen
   constexpr SessionId kSession = 1;
 
   // Create release fences
-  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(2);
-  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
-  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(1));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  std::vector<zx::event> release_fences1 = utils::CreateEventArray(2);
+  zx::event release_fence1 = utils::CopyEvent(release_fences1.at(0));
+  zx::event release_fence2 = utils::CopyEvent(release_fences1.at(1));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
 
-  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  std::vector<zx::event> release_fences2 = utils::CreateEventArray(1);
+  zx::event release_fence3 = utils::CopyEvent(release_fences2.at(0));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   bool callback1_fired = false;
   ScheduleUpdateAndCallback(
@@ -1318,9 +1319,9 @@ TEST_F(FrameSchedulerTest, ReleaseFences_ShouldBeFiredAfterSubsequentFramePresen
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame();
   EXPECT_TRUE(callback1_fired);
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   bool callback2_fired = false;
   ScheduleUpdateAndCallback(
@@ -1331,9 +1332,9 @@ TEST_F(FrameSchedulerTest, ReleaseFences_ShouldBeFiredAfterSubsequentFramePresen
   RunLoopFor(zx::sec(1));
   mock_renderer_->EndFrame();
   EXPECT_TRUE(callback2_fired);
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 }
 
 // Tests creating a session and calling Present2 several times with release fences. Fences should
@@ -1345,15 +1346,15 @@ TEST_F(FrameSchedulerTest, ReleaseFences_WithPresent2_ShouldBeFiredAfterSubseque
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
   // Create release fences
-  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(2);
-  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
-  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(1));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  std::vector<zx::event> release_fences1 = utils::CreateEventArray(2);
+  zx::event release_fence1 = utils::CopyEvent(release_fences1.at(0));
+  zx::event release_fence2 = utils::CopyEvent(release_fences1.at(1));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
 
-  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  std::vector<zx::event> release_fences2 = utils::CreateEventArray(1);
+  zx::event release_fence3 = utils::CopyEvent(release_fences2.at(0));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   bool callback1_fired = false;
 
@@ -1362,9 +1363,9 @@ TEST_F(FrameSchedulerTest, ReleaseFences_WithPresent2_ShouldBeFiredAfterSubseque
   EXPECT_FALSE(callback1_fired);
   RunLoopFor(zx::sec(3));
   mock_renderer_->EndFrame();
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   SchedulePresent2Update(scheduler, kSessionId,
                          Now() + (vsync_timing_->vsync_interval() + zx::duration(1)), zx::time(1),
@@ -1372,9 +1373,9 @@ TEST_F(FrameSchedulerTest, ReleaseFences_WithPresent2_ShouldBeFiredAfterSubseque
 
   RunLoopFor(zx::sec(1));
   mock_renderer_->EndFrame();
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FrameSchedulerTest, SquashedPresents_ShouldHaveAllPreviousFencesSignaled) {
@@ -1383,12 +1384,12 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldHaveAllPreviousFencesSignaled)
   constexpr SessionId kSessionId = 1;
 
   // Create release fences
-  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
-  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
-  std::vector<zx::event> release_fences3 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences3.at(0));
+  std::vector<zx::event> release_fences1 = utils::CreateEventArray(1);
+  zx::event release_fence1 = utils::CopyEvent(release_fences1.at(0));
+  std::vector<zx::event> release_fences2 = utils::CreateEventArray(1);
+  zx::event release_fence2 = utils::CopyEvent(release_fences2.at(0));
+  std::vector<zx::event> release_fences3 = utils::CreateEventArray(1);
+  zx::event release_fence3 = utils::CopyEvent(release_fences3.at(0));
 
   int64_t present_count = 0;
   scheduler->SetOnFramePresentedCallbackForSession(
@@ -1407,34 +1408,34 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldHaveAllPreviousFencesSignaled)
                          std::move(release_fences3));
 
   // No fences are signalled yet.
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   // After 1 second, we've latched on the first two updates. The resources for the first update are
   // therefore released.
   RunLoopFor(zx::sec(1));
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
   EXPECT_EQ(present_count, 0);
 
   // After rendering the first frame (update 1 and 2), no new fences have been signalled.
   mock_renderer_->EndFrame();
   EXPECT_EQ(present_count, 2);
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   // After two more seconds, the third update has been latched. Even though it hasn't been rendered,
   // we know we will never use the resources from the second update, so it is safe to release them.
   RunLoopFor(zx::sec(2));
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 
   // Rendering the second frame does not signal any new fences.
   mock_renderer_->EndFrame();
   EXPECT_EQ(present_count, 3);
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FrameSchedulerTest, SkippedPresents_ShouldHaveAllPreviousFencesSignaled) {
@@ -1443,14 +1444,14 @@ TEST_F(FrameSchedulerTest, SkippedPresents_ShouldHaveAllPreviousFencesSignaled) 
   constexpr SessionId kSessionId = 1;
 
   // Create release fences
-  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
-  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
-  std::vector<zx::event> release_fences3 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences3.at(0));
-  std::vector<zx::event> release_fences4 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence4 = scenic_impl::gfx::test::CopyEvent(release_fences4.at(0));
+  std::vector<zx::event> release_fences1 = utils::CreateEventArray(1);
+  zx::event release_fence1 = utils::CopyEvent(release_fences1.at(0));
+  std::vector<zx::event> release_fences2 = utils::CreateEventArray(1);
+  zx::event release_fence2 = utils::CopyEvent(release_fences2.at(0));
+  std::vector<zx::event> release_fences3 = utils::CreateEventArray(1);
+  zx::event release_fence3 = utils::CopyEvent(release_fences3.at(0));
+  std::vector<zx::event> release_fences4 = utils::CreateEventArray(1);
+  zx::event release_fence4 = utils::CopyEvent(release_fences4.at(0));
 
   int64_t callback_count = 0;
   // These will never get scheduled, but will be skipped and fences should be signaled.
@@ -1472,10 +1473,10 @@ TEST_F(FrameSchedulerTest, SkippedPresents_ShouldHaveAllPreviousFencesSignaled) 
   mock_renderer_->EndFrame();
   RunLoopUntilIdle();
   EXPECT_EQ(callback_count, 3);
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence4, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_fence4, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FrameSchedulerTest, ReleaseFences_ShouldFireInOrder) {
@@ -1486,20 +1487,20 @@ TEST_F(FrameSchedulerTest, ReleaseFences_ShouldFireInOrder) {
   std::vector<int> fence_order;
 
   // Create release fences
-  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
+  std::vector<zx::event> release_fences1 = utils::CreateEventArray(1);
+  zx::event release_fence1 = utils::CopyEvent(release_fences1.at(0));
   async::Wait waiter1(release_fence1.get(), ZX_EVENT_SIGNALED, 0,
                       [&fence_order](auto...) { fence_order.push_back(1); });
   waiter1.Begin(dispatcher());
 
-  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
+  std::vector<zx::event> release_fences2 = utils::CreateEventArray(1);
+  zx::event release_fence2 = utils::CopyEvent(release_fences2.at(0));
   async::Wait waiter2(release_fence2.get(), ZX_EVENT_SIGNALED, 0,
                       [&fence_order](auto...) { fence_order.push_back(2); });
   waiter2.Begin(dispatcher());
 
-  std::vector<zx::event> release_fences3 = scenic_impl::gfx::test::CreateEventArray(1);
-  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences3.at(0));
+  std::vector<zx::event> release_fences3 = utils::CreateEventArray(1);
+  zx::event release_fence3 = utils::CopyEvent(release_fences3.at(0));
   async::Wait waiter3(release_fence3.get(), ZX_EVENT_SIGNALED, 0,
                       [&fence_order](auto...) { fence_order.push_back(3); });
   waiter3.Begin(dispatcher());

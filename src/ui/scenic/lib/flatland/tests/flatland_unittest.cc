@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtx/matrix_transform_2d.hpp>
 
@@ -156,37 +157,6 @@ struct GlobalIdPair {
   }
 
 namespace {
-
-// TODO(fxbug.dev/56879): consolidate the following 3 helper functions when splitting escher into
-// multiple libraries.
-
-zx::event CreateEvent() {
-  zx::event event;
-  FX_CHECK(zx::event::create(0, &event) == ZX_OK);
-  return event;
-}
-
-std::vector<zx::event> CreateEventArray(size_t n) {
-  std::vector<zx::event> events;
-  for (size_t i = 0; i < n; i++) {
-    events.push_back(CreateEvent());
-  }
-  return events;
-}
-
-zx::event CopyEvent(const zx::event& event) {
-  zx::event event_copy;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK) {
-    FX_LOGS(ERROR) << "Copying zx::event failed.";
-  }
-  return event_copy;
-}
-
-bool IsEventSignaled(const zx::event& fence, zx_signals_t signal) {
-  zx_signals_t pending = 0u;
-  fence.wait_one(signal, zx::time(), &pending);
-  return (pending & signal) != 0u;
-}
 
 const float kDefaultSize = 1.f;
 const glm::vec2 kDefaultPixelScale = {1.f, 1.f};
@@ -521,13 +491,13 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   // Create two events to serve as acquire fences.
   PresentArgs args;
-  args.acquire_fences = CreateEventArray(2);
-  auto acquire1_copy = CopyEvent(args.acquire_fences[0]);
-  auto acquire2_copy = CopyEvent(args.acquire_fences[1]);
+  args.acquire_fences = utils::CreateEventArray(2);
+  auto acquire1_copy = utils::CopyEvent(args.acquire_fences[0]);
+  auto acquire2_copy = utils::CopyEvent(args.acquire_fences[1]);
 
   // Create an event to serve as a release fence.
-  args.release_fences = CreateEventArray(1);
-  auto release_copy = CopyEvent(args.release_fences[0]);
+  args.release_fences = utils::CreateEventArray(1);
+  auto release_copy = utils::CopyEvent(args.release_fences[0]);
 
   // Because the Present includes acquire fences, it should only be registered with the
   // FlatlandPresenter. The UberStructSystem shouldn't have any entries and applying session
@@ -539,7 +509,7 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
 
-  EXPECT_FALSE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
   // Signal the second fence and ensure the Present is still registered, the UberStructSystem
   // doesn't update, and the release fence isn't signaled.
@@ -552,7 +522,7 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
 
-  EXPECT_FALSE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
   // Signal the first fence and ensure the Present is no longer registered (because it has been
   // applied), the UberStructSystem contains an UberStruct for the instance, and the release fence
@@ -569,7 +539,7 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   EXPECT_NE(GetUberStruct(flatland), nullptr);
 
-  EXPECT_TRUE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
@@ -580,8 +550,8 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
 
   PresentArgs args;
   args.requested_presentation_time = requested_presentation_time;
-  args.acquire_fences = CreateEventArray(1);
-  auto acquire_copy = CopyEvent(args.acquire_fences[0]);
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto acquire_copy = utils::CopyEvent(args.acquire_fences[0]);
 
   // Because the Present includes acquire fences, it should only be registered with the
   // FlatlandPresenter. There should be no requested presentation time.
@@ -618,12 +588,12 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
 
   // Create an event to serve as the acquire fence.
   PresentArgs args;
-  args.acquire_fences = CreateEventArray(1);
-  auto acquire_copy = CopyEvent(args.acquire_fences[0]);
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto acquire_copy = utils::CopyEvent(args.acquire_fences[0]);
 
   // Create an event to serve as a release fence.
-  args.release_fences = CreateEventArray(1);
-  auto release_copy = CopyEvent(args.release_fences[0]);
+  args.release_fences = utils::CreateEventArray(1);
+  auto release_copy = utils::CopyEvent(args.release_fences[0]);
 
   // Signal the event before the Present() call.
   acquire_copy.signal(0, ZX_EVENT_SIGNALED);
@@ -640,7 +610,7 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
 
   EXPECT_NE(GetUberStruct(flatland), nullptr);
 
-  EXPECT_TRUE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
@@ -648,12 +618,12 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   // Create an event to serve as the acquire fence for the first Present().
   PresentArgs args1;
-  args1.acquire_fences = CreateEventArray(1);
-  auto acquire1_copy = CopyEvent(args1.acquire_fences[0]);
+  args1.acquire_fences = utils::CreateEventArray(1);
+  auto acquire1_copy = utils::CopyEvent(args1.acquire_fences[0]);
 
   // Create an event to serve as a release fence.
-  args1.release_fences = CreateEventArray(1);
-  auto release1_copy = CopyEvent(args1.release_fences[0]);
+  args1.release_fences = utils::CreateEventArray(1);
+  auto release1_copy = utils::CopyEvent(args1.release_fences[0]);
 
   // Present, but do not signal the fence, and ensure Present is registered, the UberStructSystem is
   // empty, and the release fence is unsignaled.
@@ -664,7 +634,7 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
 
-  EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
 
   // Create a transform and make it the root.
   const TransformId kId = 1;
@@ -674,12 +644,12 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   // Create another event to serve as the acquire fence for the second Present().
   PresentArgs args2;
-  args2.acquire_fences = CreateEventArray(1);
-  auto acquire2_copy = CopyEvent(args2.acquire_fences[0]);
+  args2.acquire_fences = utils::CreateEventArray(1);
+  auto acquire2_copy = utils::CopyEvent(args2.acquire_fences[0]);
 
   // Create an event to serve as a release fence.
-  args2.release_fences = CreateEventArray(1);
-  auto release2_copy = CopyEvent(args2.release_fences[0]);
+  args2.release_fences = utils::CreateEventArray(1);
+  auto release2_copy = utils::CopyEvent(args2.release_fences[0]);
 
   // Present, but do not signal the fence, and ensure there are two Presents registered, but the
   // UberStructSystem is still empty and both release fences are unsignaled.
@@ -690,8 +660,8 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
 
-  EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
 
   // Signal the fence for the second Present(). Since the first one is not done, there should still
   // be two Presents registered, no UberStruct for the instance, and neither fence should be
@@ -705,8 +675,8 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
 
-  EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
 
   // Signal the fence for the first Present(). This should trigger both Presents(), resulting no
   // registered Presents and an UberStruct with a 2-element topology: the local root, and kId.
@@ -724,8 +694,8 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   EXPECT_NE(uber_struct, nullptr);
   EXPECT_EQ(uber_struct->local_topology.size(), 2ul);
 
-  EXPECT_TRUE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
@@ -1356,8 +1326,8 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
   EXPECT_FALSE(graph_token.value.is_valid());
 
   PresentArgs args;
-  args.acquire_fences = CreateEventArray(1);
-  auto event_copy = CopyEvent(args.acquire_fences[0]);
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto event_copy = utils::CopyEvent(args.acquire_fences[0]);
 
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
@@ -1513,8 +1483,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_TRUE(graph_link.is_bound());
 
   PresentArgs args;
-  args.acquire_fences = CreateEventArray(1);
-  auto event_copy = CopyEvent(args.acquire_fences[0]);
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto event_copy = utils::CopyEvent(args.acquire_fences[0]);
 
   PRESENT_WITH_ARGS(parent, std::move(args), true);
 
@@ -1545,8 +1515,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_TRUE(graph_link.is_bound());
 
   PresentArgs args2;
-  args2.acquire_fences = CreateEventArray(1);
-  event_copy = CopyEvent(args2.acquire_fences[0]);
+  args2.acquire_fences = utils::CreateEventArray(1);
+  event_copy = utils::CopyEvent(args2.acquire_fences[0]);
 
   PRESENT_WITH_ARGS(child, std::move(args2), true);
 
@@ -2368,8 +2338,8 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
   EXPECT_FALSE(content_token.value.is_valid());
 
   PresentArgs args;
-  args.acquire_fences = CreateEventArray(1);
-  auto event_copy = CopyEvent(args.acquire_fences[0]);
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto event_copy = utils::CopyEvent(args.acquire_fences[0]);
 
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 

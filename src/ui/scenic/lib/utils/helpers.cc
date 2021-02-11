@@ -8,13 +8,6 @@
 
 namespace utils {
 
-zx::event CopyEvent(const zx::event& event) {
-  zx::event event_copy;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK)
-    FX_LOGS(ERROR) << "Copying zx::event failed.";
-  return event_copy;
-}
-
 fuchsia::ui::scenic::Present2Args CreatePresent2Args(zx_time_t requested_presentation_time,
                                                      std::vector<zx::event> acquire_fences,
                                                      std::vector<zx::event> release_fences,
@@ -36,6 +29,33 @@ zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
   }
 
   return info.koid;
+}
+
+zx::event CopyEvent(const zx::event& event) {
+  zx::event event_copy;
+  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK)
+    FX_LOGS(ERROR) << "Copying zx::event failed.";
+  return event_copy;
+}
+
+bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
+  zx_signals_t pending = 0u;
+  fence.wait_one(signal, zx::time(), &pending);
+  return (pending & signal) != 0u;
+}
+
+zx::event CreateEvent() {
+  zx::event event;
+  FX_CHECK(zx::event::create(0, &event) == ZX_OK);
+  return event;
+}
+
+std::vector<zx::event> CreateEventArray(size_t n) {
+  std::vector<zx::event> events;
+  for (size_t i = 0; i < n; i++) {
+    events.push_back(CreateEvent());
+  }
+  return events;
 }
 
 }  // namespace utils
