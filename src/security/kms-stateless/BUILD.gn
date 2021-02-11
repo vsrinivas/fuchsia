@@ -13,7 +13,7 @@ source_set("kms-stateless") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/keysafe",
+    "//src/security/keysafe",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/tee-client-api",
   ]
