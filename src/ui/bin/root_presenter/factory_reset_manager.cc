@@ -88,34 +88,32 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
   }
 }
 
-bool FactoryResetManager::OnMediaButtonReport(
+void FactoryResetManager::OnMediaButtonReport(
     const fuchsia::ui::input::MediaButtonsReport& report) {
-  bool consumed = false;
+  bool handled = false;
   switch (factory_reset_state_) {
     case FactoryResetState::ALLOWED: {
-      consumed = HandleReportOnAllowedState(report);
+      handled = HandleReportOnAllowedState(report);
       break;
     }
     case FactoryResetState::DISALLOWED: {
-      consumed = HandleReportOnDisallowedState(report);
+      handled = HandleReportOnDisallowedState(report);
       break;
     }
     case FactoryResetState::BUTTON_COUNTDOWN: {
-      consumed = HandleReportOnButtonCountdown(report);
+      handled = HandleReportOnButtonCountdown(report);
       break;
     }
     case FactoryResetState::RESET_COUNTDOWN: {
-      consumed = HandleReportOnResetCountdown(report);
+      handled = HandleReportOnResetCountdown(report);
       break;
     }
     default: {
-      return false;
     }
   }
-  if (consumed) {
+  if (handled) {
     ChattyLog(report);
   }
-  return consumed;
 }
 
 void FactoryResetManager::PlayCompleteSoundThenReset() {

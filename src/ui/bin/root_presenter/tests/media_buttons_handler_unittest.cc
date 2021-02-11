@@ -214,5 +214,22 @@ TEST_F(MediaButtonsHandlerTest, MicCameraSeparate) {
   EXPECT_FALSE(listener->GetLastEvent()->camera_disable());
 }
 
+// This test ensures that the button state is delivered to media button
+// listeners when FDR is active.
+TEST_F(MediaButtonsHandlerTest, MediaButtonListeningDuringFDR) {
+  {
+    fuchsia::ui::input::MediaButtonsReport media_buttons;
+    media_buttons.reset = true;
+    media_buttons.volume_down = true;
+
+    DispatchReport(std::move(media_buttons));
+  }
+
+  auto listener = CreateListener();
+
+  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(listener->GetLastEvent()->volume() == -1);
+}
+
 }  // namespace
 }  // namespace root_presenter

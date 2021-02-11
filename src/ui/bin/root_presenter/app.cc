@@ -175,11 +175,8 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   fuchsia::ui::input::InputReport cloned_report;
   report.Clone(&cloned_report);
 
-  if (report.media_buttons) {
-    if (fdr_manager_->OnMediaButtonReport(*(report.media_buttons.get()))) {
-      return;
-    }
-
+  if (cloned_report.media_buttons) {
+    fdr_manager_->OnMediaButtonReport(*(cloned_report.media_buttons.get()));
     media_buttons_handler_.OnReport(input_device->id(), std::move(cloned_report));
     return;
   }
