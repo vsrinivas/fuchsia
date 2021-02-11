@@ -578,6 +578,27 @@ type S = struct {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, StructWithDefault) {
+  std::string old_version = R"FIDL(
+library example;
+
+struct S {
+  int32 a = 5;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type S = struct {
+  a int32 = 5;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, StructWithOptional) {
   std::string old_version = R"FIDL(
 library example;

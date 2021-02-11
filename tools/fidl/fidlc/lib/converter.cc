@@ -194,7 +194,7 @@ void ConvertingTreeVisitor::OnStructDeclaration(const std::unique_ptr<raw::Struc
 
 void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMember> &element) {
   std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
-  Converting converting(this, std::move(conv), element->type_ctor->start_, element->end_);
+  Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
   TreeVisitor::OnStructMember(element);
 }
 
@@ -207,7 +207,7 @@ void ConvertingTreeVisitor::OnTableDeclaration(const std::unique_ptr<raw::TableD
 void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember> &element) {
   if (element->maybe_used != nullptr) {
     std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->maybe_used->identifier, element->maybe_used->type_ctor);
-    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->end_);
+    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->maybe_used->identifier->end_);
     TreeVisitor::OnTableMember(element);
   } else {
     TreeVisitor::OnTableMember(element);
@@ -237,7 +237,7 @@ void ConvertingTreeVisitor::OnUnionDeclaration(const std::unique_ptr<raw::UnionD
 void ConvertingTreeVisitor::OnUnionMember(const std::unique_ptr<raw::UnionMember> &element) {
   if (element->maybe_used != nullptr) {
     std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->maybe_used->identifier, element->maybe_used->type_ctor);
-    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->end_);
+    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->maybe_used->identifier->end_);
     TreeVisitor::OnUnionMember(element);
   } else {
     TreeVisitor::OnUnionMember(element);
