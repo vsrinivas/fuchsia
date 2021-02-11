@@ -320,9 +320,15 @@ pub fn encode_to_bytecode_v2(bind_program: BindProgram) -> Result<Vec<u8>, BindP
     Encoder::new(bind_program).encode_to_bytecode()
 }
 
-pub fn encode_to_string_v2(_bind_program: BindProgram) -> Result<String, BindProgramEncodeError> {
-    // Unimplemented, new bytecode is not implemented yet. See fxb/67440.
-    Ok("".to_string())
+pub fn encode_to_string_v2(
+    bind_program: BindProgram,
+) -> Result<(String, usize), BindProgramEncodeError> {
+    let result = Encoder::new(bind_program).encode_to_bytecode()?;
+    let byte_count = result.len();
+    Ok((
+        result.into_iter().map(|byte| format!("{:#x}", byte)).collect::<Vec<String>>().join(","),
+        byte_count,
+    ))
 }
 
 #[cfg(test)]

@@ -6,8 +6,8 @@ use crate::bind_library;
 use crate::bind_program::{self, Condition, ConditionOp, Statement};
 use crate::ddk_bind_constants::BIND_AUTOBIND;
 use crate::dependency_graph::{self, DependencyGraph};
-use crate::encode_bind_program_v1::{encode_to_bytecode_v1, encode_to_string_v1};
-use crate::encode_bind_program_v2::{encode_to_bytecode_v2, encode_to_string_v2};
+use crate::encode_bind_program_v1::encode_to_bytecode_v1;
+use crate::encode_bind_program_v2::encode_to_bytecode_v2;
 use crate::errors::UserError;
 use crate::instruction;
 use crate::linter;
@@ -77,17 +77,6 @@ pub fn encode_to_bytecode(
     }
 
     encode_to_bytecode_v1(bind_program)
-}
-
-pub fn encode_to_string(
-    bind_program: BindProgram,
-    use_new_bytecode: bool,
-) -> Result<String, BindProgramEncodeError> {
-    if use_new_bytecode {
-        return encode_to_string_v2(bind_program);
-    }
-
-    encode_to_string_v1(bind_program)
 }
 
 pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;

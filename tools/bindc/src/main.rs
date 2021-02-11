@@ -6,9 +6,10 @@
 
 use anyhow::{anyhow, Context, Error};
 use bind_debugger::compiler::{
-    self, encode_to_bytecode, encode_to_string, BindProgram, SymbolicInstruction,
-    SymbolicInstructionInfo,
+    self, encode_to_bytecode, BindProgram, SymbolicInstruction, SymbolicInstructionInfo,
 };
+use bind_debugger::encode_bind_program_v1::encode_to_string_v1;
+use bind_debugger::encode_bind_program_v2::encode_to_string_v2;
 use bind_debugger::{bind_library, linter, offline_debugger, test};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
@@ -142,16 +143,13 @@ fn write_bind_template<'a>(
     bind_program: BindProgram<'a>,
     use_new_bytecode: bool,
 ) -> Result<String, Error> {
-    let bind_count = bind_program.instructions.len();
-    let binding = encode_to_string(bind_program, use_new_bytecode)?;
     let mut output = String::new();
     if use_new_bytecode {
-        // TODO(fxb/69361): Encoding the new bytecode to string is
-        // currently unimplemented.
+        let (binding, byte_count) = encode_to_string_v2(bind_program)?;
         output
             .write_fmt(format_args!(
                 include_str!("templates/bind_v2.h.template"),
-                byte_count = 0,
+                byte_count = byte_count,
                 binding = binding,
             ))
             .context("Failed to format output")?;
@@ -159,8 +157,8 @@ fn write_bind_template<'a>(
         output
             .write_fmt(format_args!(
                 include_str!("templates/bind_v1.h.template"),
-                bind_count = bind_count,
-                binding = binding,
+                bind_count = bind_program.instructions.len(),
+                binding = encode_to_string_v1(bind_program)?,
             ))
             .context("Failed to format output")?;
     }
@@ -468,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn zero_instructions() {
+    fn zero_instructions_v1() {
         let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
 
         let bytecode = encode_to_bytecode(bind_program, false).unwrap();
@@ -482,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    fn one_instruction() {
+    fn one_instruction_v1() {
         let bind_program = BindProgram {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
@@ -506,6 +504,61 @@ mod tests {
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 1)")
         );
         assert!(template.contains("{0x1000000,0x0,0x0}"));
+    }
+
+    #[test]
+    fn zero_instructions_v2() {
+        let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
+        assert_eq!(
+            encode_to_bytecode(bind_program, true).unwrap(),
+            vec![
+                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0, 0
+            ]
+        );
+
+        let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
+        let template = write_bind_template(bind_program, true).unwrap();
+        assert!(
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 24)")
+        );
+        assert!(template.contains(
+            "0x42,0x49,0x4e,0x44,0x2,0x0,0x0,0x0,0x53,0x59,0x4e,0x42,0x0,\
+             0x0,0x0,0x0,0x49,0x4e,0x53,0x54,0x0,0x0,0x0,0x0"
+        ));
+    }
+
+    #[test]
+    fn one_instruction_v2() {
+        let bind_program = BindProgram {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::UnconditionalAbort,
+            }],
+            symbol_table: HashMap::new(),
+        };
+        assert_eq!(
+            encode_to_bytecode(bind_program, true).unwrap(),
+            vec![
+                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 1, 0, 0, 0,
+                48
+            ]
+        );
+
+        let bind_program = BindProgram {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::UnconditionalAbort,
+            }],
+            symbol_table: HashMap::new(),
+        };
+        let template = write_bind_template(bind_program, true).unwrap();
+        assert!(
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 25)")
+        );
+        assert!(template.contains(
+            "0x42,0x49,0x4e,0x44,0x2,0x0,0x0,0x0,0x53,0x59,0x4e,0x42,0x0,0x0,\
+             0x0,0x0,0x49,0x4e,0x53,0x54,0x1,0x0,0x0,0x0,0x30"
+        ));
     }
 
     #[test]
@@ -539,37 +592,6 @@ mod tests {
             template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, 2)")
         );
         assert!(template.contains("{0x20000002,0x0,0x0}"));
-    }
-
-    #[test]
-    fn test_new_bytecode_arg() {
-        let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::UnconditionalAbort,
-            }],
-            symbol_table: HashMap::new(),
-        };
-
-        assert_eq!(
-            encode_to_bytecode(bind_program, false).unwrap(),
-            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-
-        let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::UnconditionalAbort,
-            }],
-            symbol_table: HashMap::new(),
-        };
-        assert_eq!(
-            encode_to_bytecode(bind_program, true).unwrap(),
-            vec![
-                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 1, 0, 0, 0,
-                48
-            ]
-        );
     }
 
     #[test]
