@@ -10,7 +10,7 @@
 #include <fs/journal/journal.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
-#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/extent_reserver.h"
 
 namespace blobfs {
 

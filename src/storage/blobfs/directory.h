@@ -21,7 +21,7 @@
 #include <fs/vnode.h>
 
 #include "src/lib/digest/digest.h"
-#include "src/storage/blobfs/blob-cache.h"
+#include "src/storage/blobfs/blob_cache.h"
 
 namespace blobfs {
 

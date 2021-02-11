@@ -14,8 +14,8 @@
 #include <src/lib/chunked-compression/status.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
-#include "src/storage/blobfs/compression-settings.h"
-#include "src/storage/blobfs/compression/configs/chunked-compression-params.h"
+#include "src/storage/blobfs/compression/configs/chunked_compression_params.h"
+#include "src/storage/blobfs/compression_settings.h"
 
 namespace blobfs {
 
@@ -65,8 +65,7 @@ zx_status_t ChunkedCompressor::SetOutput(void* dst, size_t dst_len) {
 }
 
 size_t ChunkedCompressor::BufferMax(size_t input_length) {
-  chunked_compression::CompressionParams
-      params = GetDefaultChunkedCompressionParams(input_length);
+  chunked_compression::CompressionParams params = GetDefaultChunkedCompressionParams(input_length);
   return params.ComputeOutputSizeLimit(input_length);
 }
 

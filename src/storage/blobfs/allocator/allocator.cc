@@ -23,11 +23,11 @@
 #include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "src/storage/blobfs/allocator/extent-reserver.h"
-#include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/allocator/extent_reserver.h"
+#include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/iterator/extent-iterator.h"
+#include "src/storage/blobfs/iterator/extent_iterator.h"
 
 namespace blobfs {
 

@@ -12,7 +12,7 @@
 
 #include <fbl/macros.h>
 
-#include "src/storage/blobfs/compression-settings.h"
+#include "src/storage/blobfs/compression_settings.h"
 
 namespace blobfs {
 

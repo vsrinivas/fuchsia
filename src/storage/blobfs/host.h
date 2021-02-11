@@ -4,8 +4,8 @@
 
 // This file includes host-side functionality for accessing Blobfs.
 
-#ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_HOST_H_
-#define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_HOST_H_
+#ifndef SRC_STORAGE_BLOBFS_HOST_H_
+#define SRC_STORAGE_BLOBFS_HOST_H_
 
 #include <cstdint>
 #ifdef __Fuchsia__
@@ -28,10 +28,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include "src/lib/digest/digest.h"
-#include "src/storage/blobfs/common.h"
-#include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/node-finder.h"
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -40,6 +36,11 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+
+#include "src/lib/digest/digest.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/node_finder.h"
 
 class JsonRecorder;
 
@@ -307,4 +308,4 @@ fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs);
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_HOST_H_
+#endif  // SRC_STORAGE_BLOBFS_HOST_H_

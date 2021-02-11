@@ -55,7 +55,7 @@ fuchsia_component("blobfs-fsck-soft-target-component") {
   deps = [
     ":blobfs-fsck-soft-target-bin",
     "//src/storage/bin/blobfs",
-    "//src/storage/blobfs/test:blobfs-load-generator",
+    "//src/storage/blobfs/test:blobfs_load_generator",
   ]
   manifest = "meta/blobfs_fsck_soft_target.cmx"
 }
@@ -70,7 +70,7 @@ fuchsia_component("blobfs-fsck-soft-target-test-component") {
   deps = [
     ":blobfs-fsck-soft-target-bin_test",
     "//src/storage/bin/blobfs",
-    "//src/storage/blobfs/test:blobfs-load-generator",
+    "//src/storage/blobfs/test:blobfs_load_generator",
   ]
   manifest = "meta/blobfs_fsck_soft_target_bin_bin_test.cmx"
 }

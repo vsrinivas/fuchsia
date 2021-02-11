@@ -22,8 +22,8 @@
 #include <fs/vnode.h>
 
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/read-metrics.h"
-#include "src/storage/blobfs/verification-metrics.h"
+#include "src/storage/blobfs/read_metrics.h"
+#include "src/storage/blobfs/verification_metrics.h"
 
 namespace blobfs {
 

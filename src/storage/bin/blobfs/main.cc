@@ -30,9 +30,9 @@
 #include <fbl/vector.h>
 #include <fs/vfs.h>
 
-#include "src/storage/blobfs/blob-layout.h"
-#include "src/storage/blobfs/cache-policy.h"
-#include "src/storage/blobfs/compression-settings.h"
+#include "src/storage/blobfs/blob_layout.h"
+#include "src/storage/blobfs/cache_policy.h"
+#include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/mount.h"

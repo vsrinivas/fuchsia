@@ -15,7 +15,7 @@ declare_args() {
 
 static_library("blobfs") {
   friend = [
-    ":decompressor-impl",
+    ":decompressor_impl",
     "test:*",
   ]
   visibility = [
@@ -28,27 +28,26 @@ static_library("blobfs") {
     "//zircon/tools/blobfs",
   ]
   public = [
-    "blob-layout.h",
+    "blob_layout.h",
     "blobfs_inspector.h",
-    "cache-policy.h",
+    "cache_policy.h",
     "common.h",
     "format.h",
-    "fsck-host.h",
     "fsck.h",
+    "fsck_host.h",
     "host.h",
     "mkfs.h",
     "mount.h",
-    "node-finder.h",
+    "node_finder.h",
   ]
   sources = [
-    "allocator/extent-reserver.cc",
-    "allocator/extent-reserver.h",
-    "allocator/node-reserver.cc",
-    "allocator/node-reserver.h",
-    "blob-layout.cc",
-    "blobfs-checker.cc",
+    "allocator/extent_reserver.cc",
+    "allocator/extent_reserver.h",
+    "allocator/node_reserver.cc",
+    "allocator/node_reserver.h",
+    "blob_layout.cc",
+    "blobfs_checker.cc",
     "common.cc",
-    "compression-settings.cc",
     "compression/chunked.cc",
     "compression/chunked.h",
     "compression/compressor.h",
@@ -56,24 +55,25 @@ static_library("blobfs") {
     "compression/decompressor.h",
     "compression/lz4.cc",
     "compression/lz4.h",
-    "compression/seekable-decompressor.h",
-    "compression/zstd-plain.cc",
-    "compression/zstd-plain.h",
-    "compression/zstd-seekable.cc",
-    "compression/zstd-seekable.h",
+    "compression/seekable_decompressor.h",
+    "compression/zstd_plain.cc",
+    "compression/zstd_plain.h",
+    "compression/zstd_seekable.cc",
+    "compression/zstd_seekable.h",
+    "compression_settings.cc",
     "inspector/blobfs_inspector.cc",
     "inspector/parser.cc",
     "inspector/parser.h",
-    "iterator/allocated-extent-iterator.cc",
-    "iterator/allocated-extent-iterator.h",
-    "iterator/allocated-node-iterator.cc",
-    "iterator/allocated-node-iterator.h",
-    "iterator/block-iterator-provider.h",
-    "iterator/block-iterator.cc",
-    "iterator/block-iterator.h",
-    "iterator/extent-iterator.h",
-    "iterator/vector-extent-iterator.cc",
-    "iterator/vector-extent-iterator.h",
+    "iterator/allocated_extent_iterator.cc",
+    "iterator/allocated_extent_iterator.h",
+    "iterator/allocated_node_iterator.cc",
+    "iterator/allocated_node_iterator.h",
+    "iterator/block_iterator.cc",
+    "iterator/block_iterator.h",
+    "iterator/block_iterator_provider.h",
+    "iterator/extent_iterator.h",
+    "iterator/vector_extent_iterator.cc",
+    "iterator/vector_extent_iterator.h",
   ]
   public_deps = [
     # format.h includes digest.h.
@@ -114,30 +114,30 @@ static_library("blobfs") {
   if (is_fuchsia) {
     sources += [
       "allocator/allocator.cc",
-      "blob-cache.cc",
-      "blob-corruption-notifier.cc",
-      "blob-loader.cc",
-      "blob-verifier.cc",
       "blob.cc",
+      "blob_cache.cc",
+      "blob_corruption_notifier.cc",
+      "blob_loader.cc",
+      "blob_verifier.cc",
       "blobfs.cc",
-      "cache-node.cc",
-      "compression/blob-compressor.cc",
-      "compression/external-decompressor.cc",
+      "cache_node.cc",
+      "compression/blob_compressor.cc",
+      "compression/external_decompressor.cc",
       "directory.cc",
       "format.cc",
       "fsck.cc",
       "health_check_service.cc",
-      "iterator/node-populator.cc",
+      "iterator/node_populator.cc",
       "metrics.cc",
       "mount.cc",
-      "pager/page-watcher.cc",
-      "pager/transfer-buffer.cc",
-      "pager/user-pager.cc",
+      "pager/page_watcher.cc",
+      "pager/transfer_buffer.cc",
+      "pager/user_pager.cc",
       "query.cc",
-      "read-metrics.cc",
+      "read_metrics.cc",
       "runner.cc",
       "transaction.cc",
-      "verification-metrics.cc",
+      "verification_metrics.cc",
     ]
     public_deps += [
       ":fuchsia.blobfs.internal",
@@ -179,7 +179,7 @@ static_library("blobfs") {
     ]
   } else {
     sources += [
-      "fsck-host.cc",
+      "fsck_host.cc",
       "host.cc",
     ]
     deps += [ "//zircon/system/ulib/fs-host" ]
@@ -201,15 +201,15 @@ static_library("blobfs") {
 }
 
 fidl("fuchsia.blobfs.internal") {
-  sources = [ "compression/decompressor-sandbox/decompressor.fidl" ]
+  sources = [ "compression/decompressor_sandbox/decompressor.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-source_set("decompressor-impl") {
+source_set("decompressor_impl") {
   visibility = [ "./*" ]
   sources = [
-    "compression/decompressor-sandbox/decompressor-impl.cc",
-    "compression/decompressor-sandbox/decompressor-impl.h",
+    "compression/decompressor_sandbox/decompressor_impl.cc",
+    "compression/decompressor_sandbox/decompressor_impl.h",
   ]
   deps = [
     ":blobfs",
@@ -229,9 +229,9 @@ source_set("decompressor-impl") {
 }
 
 executable("decompressor") {
-  sources = [ "compression/decompressor-sandbox/main.cc" ]
+  sources = [ "compression/decompressor_sandbox/main.cc" ]
   deps = [
-    ":decompressor-impl",
+    ":decompressor_impl",
     ":fuchsia.blobfs.internal",
     "//sdk/lib/fidl/cpp:cpp",
     "//sdk/lib/sys/cpp:cpp",
@@ -248,7 +248,7 @@ executable("decompressor") {
 }
 
 fuchsia_component("decompressor-sandbox") {
-  manifest = "meta/decompressor-sandbox.cml"
+  manifest = "meta/decompressor_sandbox.cml"
   deps = [ ":decompressor" ]
 }
 

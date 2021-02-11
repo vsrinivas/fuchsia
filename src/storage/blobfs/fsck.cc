@@ -10,9 +10,9 @@
 
 #include <memory>
 
-#include "src/storage/blobfs/blobfs-checker.h"
 #include "src/storage/blobfs/blobfs.h"
-#include "src/storage/blobfs/iterator/extent-iterator.h"
+#include "src/storage/blobfs/blobfs_checker.h"
+#include "src/storage/blobfs/iterator/extent_iterator.h"
 
 namespace blobfs {
 

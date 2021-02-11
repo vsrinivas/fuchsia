@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("configs") {
-  sources = [ "chunked-compression-params.cc" ]
-  public = [ "chunked-compression-params.h" ]
+  sources = [ "chunked_compression_params.cc" ]
+  public = [ "chunked_compression_params.h" ]
   deps = [ "//src/lib/chunked-compression" ]
 }

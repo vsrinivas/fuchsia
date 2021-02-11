@@ -15,8 +15,8 @@
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/function.h>
 
-#include "src/storage/blobfs/cache-policy.h"
-#include "src/storage/blobfs/compression-settings.h"
+#include "src/storage/blobfs/cache_policy.h"
+#include "src/storage/blobfs/compression_settings.h"
 
 namespace blobfs {
 

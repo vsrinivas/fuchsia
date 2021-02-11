@@ -33,7 +33,7 @@
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/minfs_test.h"
 

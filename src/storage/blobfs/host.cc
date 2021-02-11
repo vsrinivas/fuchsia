@@ -38,14 +38,14 @@
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/common.h"
-#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/fsck-host.h"
+#include "src/storage/blobfs/fsck_host.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;

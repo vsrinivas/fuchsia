@@ -25,11 +25,11 @@
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid_registry.h>
 
-#include "src/storage/blobfs/allocator/extent-reserver.h"
-#include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/allocator/extent_reserver.h"
+#include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/node-finder.h"
+#include "src/storage/blobfs/node_finder.h"
 
 namespace blobfs {
 

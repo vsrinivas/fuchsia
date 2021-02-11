@@ -15,7 +15,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/digest/digest.h"
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 
 namespace blobfs {
 

@@ -13,7 +13,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/runner.h"

@@ -14,7 +14,7 @@
 
 #include <safemath/checked_math.h>
 
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/format.h"
 
 #ifdef __Fuchsia__

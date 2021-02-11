@@ -13,7 +13,7 @@
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
 #include "src/lib/chunked-compression/status.h"
-#include "src/storage/blobfs/compression/configs/chunked-compression-params.h"
+#include "src/storage/blobfs/compression/configs/chunked_compression_params.h"
 #include "src/storage/tools/blobfs-compression/blobfs-compression.h"
 
 namespace {
@@ -25,10 +25,7 @@ void usage(const char* fname) {
   fprintf(stderr, "Usage: %s <source_file> [destination_file]\n\n", fname);
   fprintf(stderr, "Params:\n");
   fprintf(stderr, "  %-20s%s\n", "source_file", "the file to be compressed.");
-  fprintf(stderr,
-          "  %-20s%s\n",
-          "destination_file",
-          "(optional) the compressed file.");
+  fprintf(stderr, "  %-20s%s\n", "destination_file", "(optional) the compressed file.");
 }
 
 // Opens |file|, truncates to |write_size|, and mmaps the file for writing.
@@ -113,22 +110,19 @@ int main(int argc, char* const* argv) {
     return 1;
   }
 
-  CompressionParams
-      params = blobfs::GetDefaultChunkedCompressionParams(src_size);
+  CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(src_size);
 
   uint8_t* dest_write_buf = nullptr;
   fbl::unique_fd dst_fd;
-  if (has_dst_file && OpenAndMapForWriting(argv[2] /*destination file*/,
-                                           params.ComputeOutputSizeLimit(
-                                               src_size),
-                                           &dest_write_buf,
-                                           &dst_fd)) {
+  if (has_dst_file &&
+      OpenAndMapForWriting(argv[2] /*destination file*/, params.ComputeOutputSizeLimit(src_size),
+                           &dest_write_buf, &dst_fd)) {
     return 1;
   }
 
   size_t compressed_size;
-  if (blobfs_compress::BlobfsCompress(src_data, src_size, dest_write_buf,
-                                      &compressed_size, params)) {
+  if (blobfs_compress::BlobfsCompress(src_data, src_size, dest_write_buf, &compressed_size,
+                                      params)) {
     return 1;
   }
 

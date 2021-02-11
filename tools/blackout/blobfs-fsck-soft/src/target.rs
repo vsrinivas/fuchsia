@@ -6,7 +6,7 @@
 //! after a soft reboot.
 //!
 //! This rust handles the blobfs administration for the test, which allows the
-//! blobfs-load-generator to be run as a component. It can't be run as a component otherwise
+//! blobfs_load_generator to be run as a component. It can't be run as a component otherwise
 //! because the fs-management library can only be run using /boot/bin/blobfs, but our component has
 //! the blobfs binary in /pkg/bin/blobfs.
 //!
@@ -101,7 +101,7 @@ fn launch_generator_process(
     let num_ops_cstring =
         CString::new(num_ops.to_string()).context("failed to make seed cstring")?;
     let argv = &[
-        cstr!("/pkg/bin/blobfs-load-generator"),
+        cstr!("/pkg/bin/blobfs_load_generator"),
         seed_cstring.as_c_str(),
         root_cstring.as_c_str(),
         num_ops_cstring.as_c_str(),
@@ -117,7 +117,7 @@ fn launch_generator_process(
         Ok(process) => Ok(process),
         Err((status, message)) => {
             return Err(format_err!(
-                "failed to spawn blobfs-load-generator process: status: {}, message: {}",
+                "failed to spawn blobfs_load_generator process: status: {}, message: {}",
                 status,
                 message
             ));

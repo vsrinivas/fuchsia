@@ -24,7 +24,7 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 
 namespace blobfs {
 namespace {

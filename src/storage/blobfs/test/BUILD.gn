@@ -11,9 +11,9 @@ group("test") {
   testonly = true
   deps = [
     ":blobfs-fuzzers",
-    ":blobfs-host($host_toolchain)",
     ":blobfs-integration-package",
     ":blobfs-unittest",
+    ":blobfs_host($host_toolchain)",
     "//src/lib/isolated_devmgr/v2_component",
   ]
 }
@@ -24,7 +24,7 @@ executable("test_binary") {
   visibility = [ ":*" ]
 }
 
-resource("test-binary") {
+resource("test_binary_resource") {
   testonly = true
   data_deps = [ ":test_binary" ]
   sources = [ "$root_out_dir/test_binary" ]
@@ -32,7 +32,7 @@ resource("test-binary") {
   visibility = [ ":*" ]
 }
 
-source_set("test-utils") {
+source_set("test_utils") {
   testonly = true
   sources = [
     "blob_utils.cc",
@@ -52,43 +52,43 @@ source_set("test-utils") {
 
 test("blobfs_unittest") {
   sources = [
-    "unit/allocated-extent-iterator-test.cc",
-    "unit/allocator-test.cc",
-    "unit/blob-cache-test.cc",
-    "unit/blob-layout-test.cc",
-    "unit/blob-loader-test.cc",
-    "unit/blob-test.cc",
-    "unit/blob-verifier-test.cc",
-    "unit/blobfs-checker-test.cc",
-    "unit/blobfs-pager-test.cc",
-    "unit/blobfs-revision-test.cc",
-    "unit/blobfs-test.cc",
+    "unit/allocated_extent_iterator_test.cc",
+    "unit/allocator_test.cc",
+    "unit/blob_cache_test.cc",
+    "unit/blob_layout_test.cc",
+    "unit/blob_loader_test.cc",
+    "unit/blob_test.cc",
+    "unit/blob_verifier_test.cc",
+    "unit/blobfs_checker_test.cc",
     "unit/blobfs_inspector_test.cc",
-    "unit/common-test.cc",
-    "unit/compression-settings-test.cc",
-    "unit/compressor-test.cc",
-    "unit/create-tests.cc",
-    "unit/decompressor-sandbox-test.cc",
-    "unit/extent-reserver-test.cc",
-    "unit/format-test.cc",
-    "unit/fsck-test.cc",
-    "unit/get-allocated-regions-test.cc",
-    "unit/metrics-test.cc",
-    "unit/node-populator-test.cc",
-    "unit/node-reserver-test.cc",
+    "unit/blobfs_pager_test.cc",
+    "unit/blobfs_revision_test.cc",
+    "unit/blobfs_test.cc",
+    "unit/common_test.cc",
+    "unit/compression_settings_test.cc",
+    "unit/compressor_test.cc",
+    "unit/create_tests.cc",
+    "unit/decompressor_sandbox_test.cc",
+    "unit/extent_reserver_test.cc",
+    "unit/format_test.cc",
+    "unit/fsck_test.cc",
+    "unit/get_allocated_regions_test.cc",
+    "unit/metrics_test.cc",
+    "unit/node_populator_test.cc",
+    "unit/node_reserver_test.cc",
     "unit/parser_test.cc",
-    "unit/seekable-compressor-test.cc",
+    "unit/seekable_compressor_test.cc",
     "unit/utils.cc",
-    "unit/vector-extent-iterator-test.cc",
+    "unit/vector_extent_iterator_test.cc",
   ]
   deps = [
-    ":test-utils",
+    ":test_utils",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
-    "//src/storage/blobfs:decompressor-impl",
+    "//src/storage/blobfs:decompressor_impl",
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gtest",
     "//third_party/zstd:zstdseek",
@@ -113,15 +113,15 @@ test("blobfs_unittest") {
 }
 
 fuchsia_unittest_package("blobfs-unittest") {
-  manifest = "meta/blobfs-unittest.cml"
+  manifest = "meta/blobfs_unittest.cml"
   deps = [
     ":blobfs_unittest",
-    ":test-binary",
+    ":test_binary_resource",
   ]
 }
 
-test("blobfs-host") {
-  sources = [ "host/host-test.cc" ]
+test("blobfs_host") {
+  sources = [ "host/host_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
@@ -131,17 +131,17 @@ test("blobfs-host") {
 
 test("external_decompressor_integration") {
   sources = [
-    "integration/external-decompressor_test.cc",
+    "integration/external_decompressor_test.cc",
     "integration/fdio_test.cc",
     "integration/fdio_test.h",
   ]
   deps = [
+    ":test_utils",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs:blobfs",
     "//src/storage/blobfs:fuchsia.blobfs.internal",
-    "//src/storage/blobfs/test:test-utils",
     "//third_party/googletest:gtest",
     "//third_party/zstd",
     "//zircon/public/lib/zx",
@@ -156,19 +156,19 @@ test("external_decompressor_integration") {
 }
 
 fuchsia_unittest_component("external-decompressor-integration") {
-  manifest = "meta/external-decompressor-integration.cml"
+  manifest = "meta/external_decompressor_integration.cml"
   deps = [
     ":external_decompressor_integration",
-    ":test-binary",
+    ":test_binary_resource",
   ]
 }
 
 fuchsia_unittest_component("external-decompressor-runner") {
-  manifest = "meta/external-decompressor-runner.cml"
+  manifest = "meta/external_decompressor_runner.cml"
 }
 
-test("blobfs-integration") {
-  output_name = "blobfs-integration-test"
+test("blobfs_integration") {
+  output_name = "blobfs_integration_test"
 
   # We need some extra system flags that the _ALL_SOURCE define exposes.
   configs += [ "//build/config:all_source" ]
@@ -181,11 +181,11 @@ test("blobfs-integration") {
     "integration/health_check_test.cc",
     "integration/mount_test.cc",
     "integration/query_service_test.cc",
-    "integration/superblock-test.cc",
+    "integration/superblock_test.cc",
     "integration/sync_test.cc",
   ]
   deps = [
-    ":test-utils",
+    ":test_utils",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -214,11 +214,11 @@ test("blobfs-integration") {
 }
 
 isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
-  executable_path = "test/blobfs-integration-test"
+  executable_path = "test/blobfs_integration_test"
   component_name = "blobfs-integration"
 
   deps = [
-    ":blobfs-integration",
+    ":blobfs_integration",
     "//src/devices/block/bin/blktest",
     "//src/devices/block/bin/iochk",
     "//src/devices/block/drivers/core",
@@ -242,7 +242,7 @@ test("executable_mount") {
     "integration/fdio_test.h",
   ]
   deps = [
-    ":test-utils",
+    ":test_utils",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
@@ -258,7 +258,7 @@ test("executable_mount") {
 
 fuchsia_component("executable-mount-test") {
   testonly = true
-  manifest = "meta/executable-mount-test.cmx"
+  manifest = "meta/executable_mount_test.cmx"
   deps = [ ":executable_mount" ]
 }
 
@@ -275,8 +275,8 @@ template("blobfs_large_integration_test") {
     }
 
     deps = [
-      ":load-generator",
-      ":test-utils",
+      ":load_generator",
+      ":test_utils",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
       "//sdk/lib/fdio",
@@ -308,15 +308,15 @@ blobfs_large_integration_test("blobfs-fragmentation") {
 }
 
 blobfs_large_integration_test("blobfs-max-reservation") {
-  sources = [ "integration/large/max-reservation.cc" ]
+  sources = [ "integration/large/max_reservation.cc" ]
 }
 
 blobfs_large_integration_test("blobfs-no-space") {
-  sources = [ "integration/large/no-space.cc" ]
+  sources = [ "integration/large/no_space.cc" ]
 }
 
 blobfs_large_integration_test("blobfs-use-second-bitmap") {
-  sources = [ "integration/large/use-second-bitmap.cc" ]
+  sources = [ "integration/large/use_second_bitmap.cc" ]
 }
 
 fuchsia_test_package("blobfs-integration-package") {
@@ -336,7 +336,7 @@ fuchsia_test_package("blobfs-integration-package") {
   ]
 }
 
-source_set("load-generator") {
+source_set("load_generator") {
   testonly = true
   sources = [ "integration/load_generator.cc" ]
   deps = [
@@ -345,11 +345,11 @@ source_set("load-generator") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
   ]
-  public_deps = [ ":test-utils" ]
+  public_deps = [ ":test_utils" ]
 }
 
 fuzzer("zstd-fuzzer") {
-  sources = [ "zstd-fuzzer.cc" ]
+  sources = [ "zstd_fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
     "//third_party/zstd",
@@ -357,7 +357,7 @@ fuzzer("zstd-fuzzer") {
 }
 
 fuzzer("lz4-fuzzer") {
-  sources = [ "lz4-fuzzer.cc" ]
+  sources = [ "lz4_fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
     "//zircon/public/lib/lz4",
@@ -365,7 +365,7 @@ fuzzer("lz4-fuzzer") {
 }
 
 fuzzer("zstd-seekable-symmetric-fuzzer") {
-  sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
+  sources = [ "zstd_seekable_symmetric_fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
     "//third_party/zstd:zstdseek",
@@ -373,7 +373,7 @@ fuzzer("zstd-seekable-symmetric-fuzzer") {
 }
 
 fuzzer("zstd-seekable-fuzzer") {
-  sources = [ "zstd-seekable-fuzzer.cc" ]
+  sources = [ "zstd_seekable_fuzzer.cc" ]
   deps = [
     "//src/storage/blobfs",
     "//third_party/zstd:zstdseek",
@@ -388,11 +388,11 @@ fuzzers_package("blobfs-fuzzers") {
   ]
 }
 
-executable("blobfs-load-generator") {
+executable("blobfs_load_generator") {
   testonly = true
   sources = [ "integration/load_generator_main.cc" ]
   deps = [
-    ":load-generator",
+    ":load_generator",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",

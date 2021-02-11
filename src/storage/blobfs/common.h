@@ -5,8 +5,8 @@
 // This file contains functions that are shared between host
 // and target implementations of Blobfs.
 
-#ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_COMMON_H_
-#define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_COMMON_H_
+#ifndef SRC_STORAGE_BLOBFS_COMMON_H_
+#define SRC_STORAGE_BLOBFS_COMMON_H_
 
 #include <assert.h>
 #include <limits.h>
@@ -16,12 +16,13 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include "src/storage/blobfs/blob-layout.h"
-#include "src/storage/blobfs/format.h"
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/string_buffer.h>
 #include <fs/transaction/transaction_handler.h>
+
+#include "src/storage/blobfs/blob_layout.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 
@@ -91,4 +92,4 @@ void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LE
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_COMMON_H_
+#endif  // SRC_STORAGE_BLOBFS_COMMON_H_

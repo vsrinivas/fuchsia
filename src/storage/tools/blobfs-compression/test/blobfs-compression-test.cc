@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/tools/blobfs-compression/blobfs-compression.h"
+
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
-#include "src/storage/blobfs/compression/configs/chunked-compression-params.h"
-#include "src/storage/tools/blobfs-compression/blobfs-compression.h"
+#include "src/storage/blobfs/compression/configs/chunked_compression_params.h"
 
 namespace blobfs_compress {
 namespace {
@@ -80,7 +81,7 @@ TEST(BlobfsCompressionTest, CompressNoDestBuffer) {
   fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
   ASSERT_EQ(BlobfsCompress(data.get(), len, compressed_data.get(), &compressed_len, params), ZX_OK);
   ASSERT_EQ(BlobfsCompress(data.get(), len, nullptr, &compressed_len_no_dest, params), ZX_OK);
-  ASSERT_GT(compressed_len_no_dest, (size_t) 0);
+  ASSERT_GT(compressed_len_no_dest, (size_t)0);
   ASSERT_EQ(compressed_len_no_dest, compressed_len);
 }
 

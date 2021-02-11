@@ -14,10 +14,10 @@
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
-#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
-#include "src/storage/blobfs/compression/seekable-decompressor.h"
+#include "src/storage/blobfs/compression/seekable_decompressor.h"
+#include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {

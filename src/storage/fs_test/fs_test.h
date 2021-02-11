@@ -27,7 +27,7 @@
 #include <ramdevice-client/ramnand.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
-#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/blob_layout.h"
 
 namespace fs_test {
 

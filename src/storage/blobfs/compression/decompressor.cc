@@ -10,8 +10,8 @@
 
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/lz4.h"
-#include "src/storage/blobfs/compression/zstd-plain.h"
-#include "src/storage/blobfs/compression/zstd-seekable.h"
+#include "src/storage/blobfs/compression/zstd_plain.h"
+#include "src/storage/blobfs/compression/zstd_seekable.h"
 
 namespace blobfs {
 

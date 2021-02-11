@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/allocator/allocator.h"
-#include "src/storage/blobfs/transaction-manager.h"
+#include "src/storage/blobfs/transaction_manager.h"
 
 namespace blobfs {
 
