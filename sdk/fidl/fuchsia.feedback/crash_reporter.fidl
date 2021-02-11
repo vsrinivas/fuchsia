@@ -70,6 +70,17 @@ resource table CrashReport {
     /// Must match [a-z][a-z\-]* i.e. only lowercase letters and hyphens or this will result in a
     /// ZX_ERR_INVALID_ARGS epitaph.
     7: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
+
+    /// Indicates whether the crash report corresponds to the atypical termination of a running
+    /// program or the system itself.
+    ///
+    /// An example of a non-fatal crash is an uncaught exception in a Dart program with many
+    /// exection contexts. The runtime may choose to file a crash report for that execution context,
+    /// but not terminate the whole program which the excution context was a part of.
+    ///
+    /// This field is primarily used for grouping crashes by fatal, not fatal, and unknown,
+    /// each corresponding to the field being set to true, set to false, or not set respectively.
+    8: bool is_fatal;
 };
 
 /// Represents a specific crash report.

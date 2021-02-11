@@ -387,6 +387,15 @@ class CrashReporterTest : public UnitTestFixture {
     return FileOneCrashReport(std::move(report));
   }
 
+  // Files one crash report with the provided is fatal value.
+  ::fit::result<void, zx_status_t> FileOneCrashReportWithIsFatal(const bool is_fatal) {
+    CrashReport report;
+    report.set_program_name("crashing_program_generic");
+    report.set_is_fatal(is_fatal);
+
+    return FileOneCrashReport(std::move(report));
+  }
+
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
     FX_CHECK(privacy_settings_server_);
 
@@ -683,7 +692,7 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
-TEST_F(CrashReporterTest, Succeed_OInputCrashReportWithSignature) {
+TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithSignature) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -702,6 +711,34 @@ TEST_F(CrashReporterTest, Fail_OnInvalidInputCrashReport) {
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
+}
+
+TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalTrue) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+
+  ASSERT_TRUE(FileOneCrashReportWithIsFatal(true).is_ok());
+  CheckAnnotationsOnServer({
+      {"isFatal", "true"},
+  });
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
+}
+
+TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalFalse) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+
+  ASSERT_TRUE(FileOneCrashReportWithIsFatal(false).is_ok());
+  CheckAnnotationsOnServer({
+      {"isFatal", "false"},
+  });
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {

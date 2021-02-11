@@ -87,6 +87,12 @@ const char kDartExceptionStackTraceKey[] = "DartError";
 // The crash server expects a specific key for client-provided report time.
 constexpr char kReportTimeMillis[] = "reportTimeMillis";
 
+// The crash server expects a specific key for client-provided information about whether a crash is
+// fatal.
+const char kIsFatalKey[] = "isFatal";
+const char kIsFatalTrue[] = "true";
+const char kIsFatalFalse[] = "false";
+
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                       std::map<std::string, std::string>* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
@@ -110,6 +116,10 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 
   if (report.has_crash_signature()) {
     (*annotations)[kCrashSignatureKey] = report.crash_signature();
+  }
+
+  if (report.has_is_fatal()) {
+    (*annotations)[kIsFatalKey] = (report.is_fatal()) ? kIsFatalTrue : kIsFatalFalse;
   }
 
   // Generic-specific annotations.
