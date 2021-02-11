@@ -17,7 +17,7 @@ zx_library("abi_type_validator") {
   ]
   sources = [ "abi_type_validator.cc" ]
   public_deps = [
-    "//zircon/system/ulib/zircon",
+    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/zircon-internal",
   ]
 }

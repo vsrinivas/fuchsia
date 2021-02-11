@@ -917,7 +917,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/zbi/*",
     "//zircon/system/ulib/zbitl/*",
     "//zircon/system/ulib/zircon-internal/*",
-    "//zircon/system/ulib/zircon/*",
     "//zircon/system/ulib/zx-panic-libc/*",
     "//zircon/system/ulib/zx/*",
     "//zircon/system/ulib/zxc/*",

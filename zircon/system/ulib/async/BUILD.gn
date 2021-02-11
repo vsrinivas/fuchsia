@@ -25,8 +25,8 @@ zx_library("async") {
   ]
   sources = [ "ops.c" ]
   deps = [
+    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fit",
-    "//zircon/system/ulib/zircon",
   ]
 }
 
@@ -64,7 +64,7 @@ zx_library("async-cpp") {
   ]
   deps = [
     ":async",
-    "//zircon/system/ulib/zircon",
+    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/zx",
   ]
 }

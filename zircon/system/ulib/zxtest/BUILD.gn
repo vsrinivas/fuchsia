@@ -36,12 +36,14 @@ zx_library("zxtest") {
     "zxtest-main.cc",
   ]
   public_deps = [
-    # Needed for cpp17::string_view.
-    # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>
-    "//sdk/lib/stdcompat",
-    "//zircon/system/ulib/fbl:headers",
+    "//src/zircon/lib/zircon:headers",
     "//zircon/system/ulib/fit:headers",
-    "//zircon/system/ulib/zircon:headers",
+
+    # Needed for cpp17::string_view.
+    "//sdk/lib/stdcompat",
+
+    # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>
+    "//zircon/system/ulib/fbl:headers",
   ]
   deps = [
     "//zircon/system/ulib/fbl",
@@ -52,7 +54,7 @@ zx_library("zxtest") {
 
     public_deps += [
       # Needed for <zircon/status.h>
-      "//zircon/system/ulib/zircon:headers",
+      "//src/zircon/lib/zircon:headers",
 
       # Needed for <lib/zx/*>, death-statements.h
       "//zircon/system/ulib/fit:headers",
@@ -60,7 +62,7 @@ zx_library("zxtest") {
     ]
 
     deps += [
-      "//zircon/system/ulib/zircon",
+      "//src/zircon/lib/zircon",
       "//zircon/system/ulib/zx",
     ]
   }

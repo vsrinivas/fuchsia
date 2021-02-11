@@ -13,7 +13,7 @@ source_set("exit") {
   ]
   deps = [
     ":abort",
-    "//zircon/system/ulib/zircon",
+    "//src/zircon/lib/zircon",
     "//zircon/third_party/ulib/musl:musl_internal",
   ]
 
@@ -22,7 +22,7 @@ source_set("exit") {
 
 source_set("abort") {
   sources = [ "abort.c" ]
-  deps = [ "//zircon/system/ulib/zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
 
   configs -= [ "//build/config/zircon:visibility_hidden" ]
 }

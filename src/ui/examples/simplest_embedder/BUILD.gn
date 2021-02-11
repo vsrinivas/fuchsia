@@ -20,9 +20,9 @@ executable("simplest_embedder") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
+    "//src/zircon/lib/zircon:zircon-headers",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zircon:zircon-headers",
   ]
 }

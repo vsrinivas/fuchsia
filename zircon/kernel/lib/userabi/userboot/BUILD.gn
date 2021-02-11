@@ -96,6 +96,7 @@ if (toolchain.environment == "userboot") {
     libs = [ vdso_syms_ld ]
     deps = [
       ":gen-vdso-syms-ld",
+      "//src/zircon/lib/zircon",
       "//zircon/kernel/lib/userabi:headers",
       "//zircon/system/ulib/elf-psabi",
       "//zircon/system/ulib/elfload",
@@ -103,7 +104,6 @@ if (toolchain.environment == "userboot") {
       "//zircon/system/ulib/ldmsg",
       "//zircon/system/ulib/processargs",
       "//zircon/system/ulib/zbitl",
-      "//zircon/system/ulib/zircon",
       "//zircon/system/ulib/zircon-internal",
       "//zircon/system/ulib/zx",
       "//zircon/third_party/ulib/musl/src/exit:abort",

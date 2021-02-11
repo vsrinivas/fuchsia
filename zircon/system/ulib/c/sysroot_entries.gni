@@ -53,8 +53,8 @@ sysroot_uninstrumented_libc_entries = [
   },
   {
     include_dirs = [
+      "//src/zircon/lib/zircon/include",
       "//zircon/system/public",
-      "//zircon/system/ulib/zircon/include",
       "//zircon/third_party/ulib/musl/include",
     ]
   },
