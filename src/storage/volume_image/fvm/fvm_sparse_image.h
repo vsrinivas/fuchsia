@@ -9,6 +9,7 @@
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/metadata.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/options.h"
@@ -86,6 +87,9 @@ inline fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
     const fvm::SparseImage& sparse_header, uint64_t slice_count) {
   return FvmSparseImageConvertToFvmHeader(sparse_header, slice_count, std::nullopt);
 }
+
+fit::result<fvm::Metadata, std::string> FvmSparseImageConvertToFvmMetadata(
+    const fvm::Header& header, fbl::Span<const FvmSparsePartitionEntry> partition_entries);
 
 }  // namespace storage::volume_image
 

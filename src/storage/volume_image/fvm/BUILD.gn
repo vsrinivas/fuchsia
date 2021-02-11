@@ -55,6 +55,7 @@ source_set("fvm-test") {
   deps = [
     ":fvm-descriptor",
     ":fvm-sparse-image",
+    "//sdk/lib/stdcompat",
     "//src/lib/json_parser",
     "//src/storage/fvm",
     "//src/storage/volume_image/serialization:schema",

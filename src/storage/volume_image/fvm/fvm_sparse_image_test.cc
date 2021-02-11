@@ -12,6 +12,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <string_view>
 
 #include <fbl/auto_call.h>
 #include <gmock/gmock.h>
@@ -1304,6 +1305,226 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithMaxVolumeSizeTooSma
   sparse_header.slice_size = 1 << 20;
   auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithNoPartitionsIsOk) {
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.partition_count = 0;
+  sparse_header.header_length = sizeof(fvm::SparseImage);
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  EXPECT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  auto metadata_or =
+      FvmSparseImageConvertToFvmMetadata(header, fbl::Span<FvmSparsePartitionEntry>());
+  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
+  auto metadata = metadata_or.take_value();
+
+  ASSERT_TRUE(metadata.CheckValidity());
+
+  // The expected header has a zeroed hash, so we set this to zero for verification.
+  auto actual_header = metadata.GetHeader();
+  memset(actual_header.hash, 0, sizeof(fvm::Header::hash));
+  EXPECT_THAT(actual_header, FvmHeaderEq(header));
+
+  for (auto i = 1u; i < header.GetPartitionTableEntryCount(); ++i) {
+    auto entry = metadata.GetPartitionEntry(i);
+    EXPECT_TRUE(entry.IsFree());
+  }
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsAndNoSlicesIsOk) {
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.partition_count = 1;
+  sparse_header.header_length = sizeof(fvm::SparseImage) + sizeof(fvm::PartitionDescriptor);
+
+  FvmSparsePartitionEntry entry = {};
+  entry.descriptor.flags = 0;
+  entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
+  entry.descriptor.type[0] = 1;
+  entry.descriptor.extent_count = 0;
+
+  std::string_view kPartitionName = "mypartition";
+  memcpy(entry.descriptor.name, kPartitionName.data(), kPartitionName.size());
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  EXPECT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  auto metadata_or =
+      FvmSparseImageConvertToFvmMetadata(header, fbl::Span<FvmSparsePartitionEntry>(&entry, 1));
+  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
+  auto metadata = metadata_or.take_value();
+
+  ASSERT_TRUE(metadata.CheckValidity());
+
+  // The expected header has a zeroed hash, so we set this to zero for verification.
+  auto actual_header = metadata.GetHeader();
+  memset(actual_header.hash, 0, sizeof(fvm::Header::hash));
+  EXPECT_THAT(actual_header, FvmHeaderEq(header));
+
+  int used_entries = 0;
+  for (auto i = 1u; i < header.GetPartitionTableEntryCount(); ++i) {
+    auto entry = metadata.GetPartitionEntry(i);
+    if (i != 1) {
+      EXPECT_TRUE(entry.IsFree());
+      continue;
+    }
+
+    EXPECT_EQ(entry.type[0], 1);
+    EXPECT_TRUE(kPartitionName.compare(entry.name()) == 0);
+    EXPECT_EQ(entry.flags, 0u);
+    for (auto& b : fbl::Span<uint8_t>(entry.type).subspan(1)) {
+      EXPECT_EQ(b, 0);
+    }
+    EXPECT_EQ(entry.slices, 0u);
+    used_entries++;
+  }
+  EXPECT_EQ(used_entries, 1);
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsAndSlicesIsOk) {
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.partition_count = 1;
+  sparse_header.header_length = sizeof(fvm::SparseImage) + sizeof(fvm::PartitionDescriptor);
+
+  FvmSparsePartitionEntry entry = {};
+  entry.descriptor.flags = 0;
+  entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
+  entry.descriptor.type[0] = 1;
+  entry.descriptor.extent_count = 2;
+
+  constexpr unsigned int kTotalSlices = 30;
+  entry.extents.push_back(fvm::ExtentDescriptor{.magic = fvm::kExtentDescriptorMagic,
+                                                .slice_start = 0,
+                                                .slice_count = 5,
+                                                .extent_length = 10});
+  entry.extents.push_back(fvm::ExtentDescriptor{.magic = fvm::kExtentDescriptorMagic,
+                                                .slice_start = 10,
+                                                .slice_count = 25,
+                                                .extent_length = 10});
+
+  std::string_view kPartitionName = "mypartition";
+  memcpy(entry.descriptor.name, kPartitionName.data(), kPartitionName.size());
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  EXPECT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  auto metadata_or =
+      FvmSparseImageConvertToFvmMetadata(header, fbl::Span<FvmSparsePartitionEntry>(&entry, 1));
+  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
+  auto metadata = metadata_or.take_value();
+
+  ASSERT_TRUE(metadata.CheckValidity());
+
+  // The expected header has a zeroed hash, so we set this to zero for verification.
+  auto actual_header = metadata.GetHeader();
+  memset(actual_header.hash, 0, sizeof(fvm::Header::hash));
+  EXPECT_THAT(actual_header, FvmHeaderEq(header));
+
+  int used_entries = 0;
+  for (auto i = 1u; i < header.GetPartitionTableEntryCount(); ++i) {
+    auto entry = metadata.GetPartitionEntry(i);
+    if (i != 1) {
+      EXPECT_TRUE(entry.IsFree());
+      continue;
+    }
+
+    EXPECT_TRUE(kPartitionName.compare(entry.name()) == 0);
+    EXPECT_EQ(entry.flags, 0u);
+    EXPECT_EQ(entry.type[0], 1);
+    for (auto& b : fbl::Span<uint8_t>(entry.type).subspan(1)) {
+      EXPECT_EQ(b, 0);
+    }
+    EXPECT_EQ(entry.slices, kTotalSlices);
+    used_entries++;
+  }
+  EXPECT_EQ(used_entries, 1);
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithsMultiplePartitionsAndSlicesIsOk) {
+  constexpr size_t kUsedPartitions = 4;
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.partition_count = kUsedPartitions;
+
+  std::vector<FvmSparsePartitionEntry> entries;
+
+  auto get_expected_partition_name = [](int index) {
+    return std::string("partition") + std::to_string(index);
+  };
+
+  for (auto i = 0u; i < kUsedPartitions; ++i) {
+    FvmSparsePartitionEntry entry = {};
+    entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
+    entry.descriptor.flags = 0;
+    // Shifted so partition 1 has the ith value for first bit.
+    entry.descriptor.type[0] = i + 1;
+
+    memcpy(entry.descriptor.name, get_expected_partition_name(i).data(),
+           get_expected_partition_name(i).size());
+
+    entry.descriptor.extent_count = i + 1;
+
+    size_t last_end = 0;
+    for (auto j = 0u; j < entry.descriptor.extent_count; ++j) {
+      entry.extents.push_back({
+          .magic = fvm::kExtentDescriptorMagic,
+          .slice_start = last_end,
+          .slice_count = j + 1,
+          .extent_length = 10,
+      });
+      last_end += j + 1;
+    }
+    entries.push_back(entry);
+  }
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  EXPECT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  auto metadata_or = FvmSparseImageConvertToFvmMetadata(header, entries);
+  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
+  auto metadata = metadata_or.take_value();
+
+  ASSERT_TRUE(metadata.CheckValidity());
+
+  // The expected header has a zeroed hash, so we set this to zero for verification.
+  auto actual_header = metadata.GetHeader();
+  memset(actual_header.hash, 0, sizeof(fvm::Header::hash));
+  EXPECT_THAT(actual_header, FvmHeaderEq(header));
+  size_t used_partitions = 0;
+  for (auto i = 1u; i < header.GetPartitionTableEntryCount(); ++i) {
+    auto entry = metadata.GetPartitionEntry(i);
+    if (i > kUsedPartitions) {
+      EXPECT_TRUE(entry.IsFree());
+      continue;
+    }
+
+    auto expected_entry = entries[i - 1];
+    auto actual_entry = metadata.GetPartitionEntry(i);
+
+    EXPECT_TRUE(memcmp(actual_entry.type, expected_entry.descriptor.type,
+                       sizeof(fvm::VPartitionEntry::type)) == 0);
+
+    EXPECT_TRUE(memcmp(actual_entry.unsafe_name, expected_entry.descriptor.name,
+                       sizeof(fvm::VPartitionEntry::unsafe_name)) == 0);
+    // i-th partition has i-1 extents, and extent j has j+1 slices.
+    // So expanding this we have 1(j==0) + 2(j==1) + 3 + ....+ (max(j) + 1)(max(j) = i)
+    // Which yields, Sum 0 to i + 1 or j.
+    size_t expected_slices = (i * (i + 1) / 2);
+    EXPECT_EQ(actual_entry.slices, expected_slices);
+    EXPECT_EQ(actual_entry.flags, 0u);
+    EXPECT_EQ(actual_entry.type[0], static_cast<uint8_t>(i));
+    for (auto& b : fbl::Span<uint8_t>(actual_entry.type).subspan(1)) {
+      EXPECT_EQ(b, 0);
+    }
+    EXPECT_TRUE(entry.IsActive());
+    used_partitions++;
+  }
+
+  EXPECT_EQ(used_partitions, kUsedPartitions);
 }
 
 }  // namespace

@@ -8,12 +8,14 @@
 
 #include <bitset>
 #include <cstdint>
+#include <iostream>
 #include <string>
 
 #include <fbl/algorithm.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/metadata.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/compressor.h"
@@ -450,4 +452,49 @@ fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
 
   return fit::ok(header);
 }
+
+fit::result<fvm::Metadata, std::string> FvmSparseImageConvertToFvmMetadata(
+    const fvm::Header& header, fbl::Span<const FvmSparsePartitionEntry> partition_entries) {
+  std::vector<fvm::VPartitionEntry> vpartition_entries;
+  std::vector<fvm::SliceEntry> slice_entries;
+
+  vpartition_entries.reserve(partition_entries.size());
+  uint64_t current_vpartition = 0;
+  for (const auto& partition_entry : partition_entries) {
+    uint64_t slice_count = 0;
+
+    for (const auto& extent_entry : partition_entry.extents) {
+      for (uint64_t i = 0; i < extent_entry.slice_count; ++i) {
+        fvm::SliceEntry entry = {};
+        entry.Set(current_vpartition + 1, extent_entry.slice_start + i);
+        slice_entries.push_back(entry);
+      }
+      slice_count += extent_entry.slice_count;
+    }
+
+    fvm::VPartitionEntry vpartition_entry = {};
+    memcpy(vpartition_entry.unsafe_name, partition_entry.descriptor.name,
+           sizeof(fvm::VPartitionEntry::unsafe_name));
+    memcpy(vpartition_entry.type, partition_entry.descriptor.type,
+           sizeof(fvm::VPartitionEntry::type));
+    memcpy(vpartition_entry.guid, fvm::kPlaceHolderInstanceGuid.data(),
+           sizeof(fvm::VPartitionEntry::type));
+    // Currently non of the sparse partition flags propagate anything to VPartition::flags.
+    // TODO(gevalentino): hide this behind an API, so we can have a single point of translation.
+    vpartition_entry.flags = 0;
+    vpartition_entry.slices = slice_count;
+    vpartition_entries.push_back(vpartition_entry);
+    current_vpartition++;
+  }
+
+  auto metadata_or =
+      fvm::Metadata::Synthesize(header, vpartition_entries.data(), vpartition_entries.size(),
+                                slice_entries.data(), slice_entries.size());
+  if (metadata_or.is_error()) {
+    return fit::error("Failed to synthesize metadata. Returned code : " +
+                      std::to_string(metadata_or.error_value()));
+  }
+  return fit::ok(std::move(metadata_or.value()));
+}
+
 }  // namespace storage::volume_image
