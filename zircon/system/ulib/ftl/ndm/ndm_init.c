@@ -814,7 +814,7 @@ static int read_ctrl_info(NDM ndm) {
 #endif
 
       // If next read spans control pages, adjust. Return -1 if error.
-      if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, partition_size))
+      if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, (uint32_t)partition_size))
         return -1;
 
       // Retrieve the next partition. Read partition first block.
@@ -845,7 +845,7 @@ static int read_ctrl_info(NDM ndm) {
         PfAssert(RD32_LE(&ndm->main_buf[curr_loc]) <= user_data_size);
         curr_loc += sizeof(ui32);
         NDMPartitionInfo* info = (NDMPartitionInfo*)(ndm->partitions);
-        info->user_data.data_size = user_data_size;
+        info->user_data.data_size = (uint32_t)user_data_size;
         if (user_data_size) {
           memcpy(info->user_data.data, &ndm->main_buf[curr_loc], user_data_size);
         }
@@ -1211,7 +1211,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   ndm->max_bad_blks = dvr->max_bad_blocks;
   ndm->block_size = dvr->block_size;
   ndm->page_size = dvr->page_size;
-  ndm->eb_size = dvr->eb_size;
+  ndm->eb_size = (uint8_t)dvr->eb_size;
   ndm->pgs_per_blk = ndm->block_size / ndm->page_size;
   ndm->flags = dvr->flags;
   ndm->logger = dvr->logger;

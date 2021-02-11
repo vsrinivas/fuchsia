@@ -79,7 +79,7 @@ static int proc_elist(FTLN ftl) {
 
       // Set block's state and wear count lag.
       ftl->bdata[b] = FREE_BLK_FLAG | ERASED_BLK_FLAG;
-      ftl->blk_wc_lag[b] = ftl->high_wc - wc;
+      ftl->blk_wc_lag[b] = (uint8_t)(ftl->high_wc - wc);
     }
   } while (lp < (ui32*)(ftl->main_buf + ftl->page_size));
 
@@ -545,7 +545,7 @@ static void set_wc_lag(FTLN ftl, ui32 b, ui32 wc, ui32* low_wc) {
     ftl->blk_wc_lag[b] = 0xFF;
     ++ftl->wear_data.max_wc_over;
   } else
-    ftl->blk_wc_lag[b] = ftl->high_wc - wc;
+    ftl->blk_wc_lag[b] = (uint8_t)(ftl->high_wc - wc);
 }
 
 // format_status: Check if FTL volume is formatted
@@ -818,7 +818,7 @@ static int format_status(FTLN ftl) {
   for (b = 0; b < ftl->num_blks; ++b) {
     if ((ftl->bdata[b] & RC_MASK) == 100) {
       ftl->bdata[b] &= ~RC_MASK;
-      ftl->blk_wc_lag[b] = avg_lag;
+      ftl->blk_wc_lag[b] = (uint8_t)avg_lag;
       ++set_to_avg;
     }
     ++wear_lag_histogram[ftl->blk_wc_lag[b]];
@@ -1341,7 +1341,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   // Initialize the FTL control block.
   ftl->num_blks = ftl_cfg->num_blocks;
   ftl->page_size = ftl_cfg->page_size;
-  ftl->eb_size = ftl_cfg->eb_size;
+  ftl->eb_size = (uint8_t)ftl_cfg->eb_size;
   ftl->block_size = ftl_cfg->block_size;
   ftl->pgs_per_blk = ftl->block_size / ftl->page_size;
   ftl->num_pages = ftl->pgs_per_blk * ftl->num_blks;
@@ -1549,7 +1549,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
 
     ftl->wc_lag_sum += wc_lag;
     if (ftl->wear_data.cur_max_lag < wc_lag)
-      ftl->wear_data.cur_max_lag = wc_lag;
+      ftl->wear_data.cur_max_lag = (uint8_t)wc_lag;
   }
   ftl->wear_data.lft_max_lag = ftl->wear_data.cur_max_lag;
   ftl->wear_data.avg_wc_lag = ftl->wc_lag_sum / ftl->num_blks;

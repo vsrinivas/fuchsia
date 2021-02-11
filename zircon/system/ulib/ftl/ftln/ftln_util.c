@@ -477,7 +477,8 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
   // Call driver to erase block. Return -1 if error.
   ++ftl->stats.erase_block;
   if (ndmEraseBlock(ftl->start_pn + b * ftl->pgs_per_blk, ftl->ndm)) {
-    ftl->logger.error(__FILE__, __LINE__, "FTL failed to erase block %u.", ftl->start_pn / ftl->pgs_per_blk + b);
+    ftl->logger.error(__FILE__, __LINE__, "FTL failed to erase block %u.",
+                      ftl->start_pn / ftl->pgs_per_blk + b);
     return FtlnFatErr(ftl);
   }
 
@@ -499,7 +500,7 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
       for (tb = 0; tb < ftl->num_blks; ++tb) {
         wc_lag = ftl->blk_wc_lag[tb];
         if (ftl->wear_data.cur_max_lag < wc_lag)
-          ftl->wear_data.cur_max_lag = wc_lag;
+          ftl->wear_data.cur_max_lag = (uint8_t)wc_lag;
         if (wc_lag > FtlnLim2Lag)
           ++ge_lim2_cnt;
       }
@@ -520,7 +521,7 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
       if (ftl->blk_wc_lag[tb] < 0xFF) {
         // Update block's wear lag, the lag sum, and over lim2 count.
         wc_lag = ftl->blk_wc_lag[tb];
-        ftl->blk_wc_lag[tb] = ++wc_lag;
+        ftl->blk_wc_lag[tb] = (uint8_t)++wc_lag;
         if (wc_lag > FtlnLim2Lag)
           ++ge_lim2_cnt;
         ++ftl->wc_lag_sum;
@@ -534,7 +535,7 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
       // If new values, update current and lifetime high wear lag.
       wc_lag = ftl->blk_wc_lag[tb];
       if (ftl->wear_data.cur_max_lag < wc_lag)
-        ftl->wear_data.cur_max_lag = wc_lag;
+        ftl->wear_data.cur_max_lag = (uint8_t)wc_lag;
     }
 
     // Increment the high wear count value.
