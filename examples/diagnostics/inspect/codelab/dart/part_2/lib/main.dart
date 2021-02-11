@@ -11,19 +11,19 @@ import 'package:fuchsia_services/services.dart';
 import 'package:inspect_dart_codelab_part_2_lib/reverser.dart';
 
 void main(List<String> args) {
+  final context = StartupContext.fromStartupInfo();
+
   setupLogger(name: 'inspect_dart_codelab', globalTags: ['part_2']);
 
   log.info('Starting up...');
 
   // [START part_1_init_inspect]
-  final inspector = inspect.Inspect();
+  final inspector = inspect.Inspect()..serve(context.outgoing);
   // [END part_1_init_inspect]
 
   // [START part_1_write_version]
   inspector.root.stringProperty('version').setValue('part2');
   // [END part_1_write_version]
-
-  final context = StartupContext.fromStartupInfo();
 
   // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
   // [START instrument_fizzbuzz]

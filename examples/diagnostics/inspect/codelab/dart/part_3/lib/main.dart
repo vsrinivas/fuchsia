@@ -9,17 +9,17 @@ import 'package:fuchsia_services/services.dart';
 import 'package:inspect_dart_codelab_part_3_lib/reverser.dart';
 
 void main(List<String> args) {
+  final context = StartupContext.fromStartupInfo();
+
   setupLogger(name: 'inspect_dart_codelab', globalTags: ['part_3']);
 
   log.info('Starting up...');
 
-  final inspector = inspect.Inspect();
+  final inspector = inspect.Inspect()..serve(context.outgoing);
 
   inspector.health.setStartingUp();
 
   inspector.root.stringProperty('version').setValue('part3');
-
-  final context = StartupContext.fromStartupInfo();
 
   final fizzBuzz = fidl_codelab.FizzBuzzProxy();
   context.incoming.connectToService(fizzBuzz);

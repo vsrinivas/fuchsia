@@ -4,10 +4,13 @@
 
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_inspect/testing.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:test/test.dart';
 import 'package:inspect_dart_codelab_part_4_lib/reverser.dart';
 
 void main() {
+  final context = StartupContext.fromStartupInfo();
+
   ReverserImpl openReverser(
     inspect.Node node,
     inspect.IntProperty globalRequestCount,
@@ -18,7 +21,7 @@ void main() {
   // [START reverser_test]
   test('reverser', () async {
     final vmo = FakeVmoHolder(256 * 1024);
-    final inspector = inspect.Inspect.forTesting(vmo, 'root.inspect');
+    final inspector = inspect.Inspect.forTesting(vmo)..serve(context.outgoing);
     // [START_EXCLUDE]
     final node = inspector.root.child('reverser_service');
     final globalRequestCount = node.intProperty('total_requests')..setValue(0);

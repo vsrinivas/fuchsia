@@ -60,15 +60,15 @@ class _FizzBuzzImpl extends fidl_codelab.FizzBuzz {
 }
 
 void main(List<String> args) {
+  final context = StartupContext.fromStartupInfo();
+
   setupLogger(name: 'inspect_dart_codelab', globalTags: ['fizzbuzz']);
 
   log.info('starting up...');
 
-  final inspectNode = inspect.Inspect().root;
+  final inspectNode = (inspect.Inspect()..serve(context.outgoing)).root;
   final fizzbuzz = _FizzBuzzImpl(inspectNode);
 
-  StartupContext.fromStartupInfo()
-      .outgoing
-      .addPublicService<fidl_codelab.FizzBuzz>(
-          fizzbuzz.bind, fidl_codelab.FizzBuzz.$serviceName);
+  context.outgoing.addPublicService<fidl_codelab.FizzBuzz>(
+      fizzbuzz.bind, fidl_codelab.FizzBuzz.$serviceName);
 }
