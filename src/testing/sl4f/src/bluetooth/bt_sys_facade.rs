@@ -7,9 +7,10 @@ use async_utils::hanging_get::client::HangingGetStream;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_sys::{
-    AccessMarker, AccessProxy, BondableMode, HostInfo, HostWatcherMarker, InputCapability,
-    OutputCapability, PairingDelegateMarker, PairingDelegateRequest, PairingDelegateRequestStream,
-    PairingMethod, PairingOptions, PairingSecurityLevel, Peer, ProcedureTokenProxy, TechnologyType,
+    AccessMarker, AccessProxy, BondableMode, ConfigurationMarker, ConfigurationProxy, HostInfo,
+    HostWatcherMarker, InputCapability, OutputCapability, PairingDelegateMarker,
+    PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod, PairingOptions,
+    PairingSecurityLevel, Peer, ProcedureTokenProxy, Settings, TechnologyType,
 };
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_bluetooth::types::Address;
@@ -35,6 +36,9 @@ static ERR_NO_ACCESS_PROXY_DETECTED: &'static str = "No Bluetooth Access Proxy d
 struct InnerBluetoothSysFacade {
     /// The current Bluetooth Access Interface Proxy
     access_proxy: Option<AccessProxy>,
+
+    /// The current fuchsia.bluetooth.sys.Configuration Proxy
+    config_proxy: Option<ConfigurationProxy>,
 
     /// The MPSC Sender object for sending the pin to the pairing delegate.
     client_pin_sender: Option<mpsc::Sender<String>>,
@@ -76,6 +80,7 @@ impl BluetoothSysFacade {
         BluetoothSysFacade {
             inner: RwLock::new(InnerBluetoothSysFacade {
                 access_proxy: None,
+                config_proxy: None,
                 client_pin_sender: None,
                 client_pin_receiver: None,
                 discovered_device_list: HashMap::new(),
@@ -91,30 +96,29 @@ impl BluetoothSysFacade {
     pub fn init_proxies(&self) -> Result<(), Error> {
         let tag = "BluetoothSysFacade::init_proxies";
         let mut inner = self.inner.write();
-        let proxy = match inner.access_proxy.clone() {
-            Some(access_proxy) => {
-                fx_log_info!(tag: &with_line!(tag), "Current access proxy: {:?}", access_proxy);
-                Ok(access_proxy)
+        let access_proxy = match inner.access_proxy.clone() {
+            Some(proxy) => {
+                fx_log_info!(tag: &with_line!(tag), "Current access proxy: {:?}", proxy);
+                Ok(proxy)
             }
             None => {
                 fx_log_info!(tag: &with_line!(tag), "Setting new access proxy");
-                let access_proxy = component::client::connect_to_service::<AccessMarker>();
-                if let Err(err) = access_proxy {
+                let proxy = component::client::connect_to_service::<AccessMarker>();
+                if let Err(err) = proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),
                         format_err!("Failed to create access proxy: {:?}", err)
                     );
                 }
-
-                access_proxy
+                proxy
             }
         };
 
-        let proxy = proxy.unwrap();
-        inner.access_proxy = Some(proxy.clone());
+        let access_proxy = access_proxy.unwrap();
+        inner.access_proxy = Some(access_proxy.clone());
 
         inner.peer_watcher_stream =
-            Some(HangingGetStream::new(Box::new(move || Some(proxy.watch_peers()))));
+            Some(HangingGetStream::new(Box::new(move || Some(access_proxy.watch_peers()))));
 
         let host_watcher_proxy = match component::client::connect_to_service::<HostWatcherMarker>()
         {
@@ -127,6 +131,16 @@ impl BluetoothSysFacade {
 
         inner.host_watcher_stream =
             Some(HangingGetStream::new(Box::new(move || Some(host_watcher_proxy.watch()))));
+
+        let configuration_proxy =
+            match component::client::connect_to_service::<ConfigurationMarker>() {
+                Ok(proxy) => proxy,
+                Err(err) => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("Failed to connect to configuration service: {}", err)
+                ),
+            };
+        inner.config_proxy = Some(configuration_proxy);
 
         Ok(())
     }
@@ -614,6 +628,24 @@ impl BluetoothSysFacade {
                 &with_line!(tag),
                 format!("{:?}", ERR_NO_ACCESS_PROXY_DETECTED.to_string())
             ),
+        }
+    }
+
+    /// Updates the configuration of the active host device
+    ///
+    /// # Arguments
+    /// * `settings` - The table of settings. Any settings that are not present will not be changed.
+    pub async fn update_settings(&self, settings: Settings) -> Result<(), Error> {
+        let tag = "BluetoothSysFacade::update_settings";
+        match &self.inner.read().config_proxy {
+            Some(proxy) => {
+                let new_settings = proxy.update(settings).await?;
+                fx_log_info!("new core stack settings: {:?}", new_settings);
+                Ok(())
+            }
+            None => {
+                fx_err_and_bail!(&with_line!(tag), "No Bluetooth Configuration Proxy detected.")
+            }
         }
     }
 

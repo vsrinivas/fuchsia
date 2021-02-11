@@ -7,6 +7,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_le::ScanFilter;
+use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 
@@ -193,6 +194,34 @@ impl Facade for BluetoothSysFacade {
 
                 let result =
                     self.pair(identifier, pairing_security_level, non_bondable, transport).await?;
+                Ok(to_value(result)?)
+            }
+            "BluetoothUpdateSystemSettings" => {
+                let le_privacy = parse_arg!(args, as_bool, "le_privacy").ok();
+                let le_background_scan = parse_arg!(args, as_bool, "le_background_scan").ok();
+                let bredr_connectable_mode =
+                    parse_arg!(args, as_bool, "bredr_connectable_mode").ok();
+                let le_security_mode = if let Ok(s) = parse_arg!(args, as_str, "le_security_mode") {
+                    match s.to_uppercase().as_ref() {
+                        "MODE_1" => Some(LeSecurityMode::Mode1),
+                        "SECURE_CONNECTIONS_ONLY" => Some(LeSecurityMode::SecureConnectionsOnly),
+                        _ => bail!(
+                            "Invalid le_security_mode {} passed to BluetoothUpdateSystemSettings",
+                            s
+                        ),
+                    }
+                } else {
+                    None
+                };
+                let result = self
+                    .update_settings(Settings {
+                        le_privacy,
+                        le_background_scan,
+                        bredr_connectable_mode,
+                        le_security_mode,
+                        ..Settings::EMPTY
+                    })
+                    .await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method),

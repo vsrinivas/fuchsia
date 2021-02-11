@@ -36,6 +36,7 @@
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.bluetooth.sys.Access",
+            "fuchsia.bluetooth.sys.Configuration",
             "fuchsia.bluetooth.sys.HostWatcher",
             "fuchsia.boot.Arguments",
             "fuchsia.developer.tiles.Controller",
