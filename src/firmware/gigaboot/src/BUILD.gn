@@ -50,6 +50,7 @@ test("gigaboot_test") {
   deps = [
     "../host",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/lib/efi/testing",
   ]
