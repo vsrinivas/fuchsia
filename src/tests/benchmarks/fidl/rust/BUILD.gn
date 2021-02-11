@@ -5,7 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/toolchain.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -105,15 +105,7 @@ rustc_binary("rust_fidl_microbenchmarks_bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("rust") {
+fuchsia_shell_package("rust") {
   testonly = true
-
   deps = [ ":rust_fidl_microbenchmarks_bin" ]
-
-  binaries = [
-    {
-      name = "rust_fidl_microbenchmarks"
-      shell = true
-    },
-  ]
 }

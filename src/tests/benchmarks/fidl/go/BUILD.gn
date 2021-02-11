@@ -6,7 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -51,14 +51,7 @@ go_library("go_fidl_microbenchmarks_lib") {
   sources = [ "main.go" ]
 }
 
-package("go") {
+fuchsia_shell_package("go") {
   testonly = true
   deps = [ ":go_fidl_microbenchmarks_bin" ]
-
-  binaries = [
-    {
-      name = "go_fidl_microbenchmarks"
-      shell = true
-    },
-  ]
 }

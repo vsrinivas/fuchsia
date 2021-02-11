@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -43,15 +43,7 @@ executable("bin") {
   ]
 }
 
-package("reference") {
+fuchsia_shell_package("reference") {
   testonly = true
-
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "reference_fidl_microbenchmarks"
-      shell = true
-    },
-  ]
 }

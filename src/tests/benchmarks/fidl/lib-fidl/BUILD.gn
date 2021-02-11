@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 
 executable("bin") {
@@ -23,15 +23,7 @@ executable("bin") {
   ]
 }
 
-package("lib-fidl") {
+fuchsia_shell_package("lib-fidl") {
   testonly = true
-
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "lib_fidl_microbenchmarks"
-      shell = true
-    },
-  ]
 }

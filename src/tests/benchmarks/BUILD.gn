@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 group("benchmarks") {
   testonly = true
@@ -24,13 +24,7 @@ executable("kernel-boot-timeline") {
   ]
 }
 
-package("kernel-boot-benchmarks") {
+fuchsia_shell_package("kernel-boot-benchmarks") {
   testonly = true
-  binaries = [
-    {
-      shell = true
-      name = "kernel-boot-timeline"
-    },
-  ]
   deps = [ ":kernel-boot-timeline" ]
 }
