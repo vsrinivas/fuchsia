@@ -26,7 +26,7 @@ runtime.
 Developers must define their software in terms of packages and components,
 whether for building production software or for writing their tests.
 
-**[Component instances][glossary-component-instance]** see at runtime the
+At runtime, **[Component instances][glossary-component-instance]** see the
 contents of their package as read-only files under the path `/pkg`. Defining two
 or more components in the same package doesn't grant each component access to
 the other's capabilities. However it can guarantee to one component that the
@@ -43,7 +43,7 @@ the **[`fuchsia-pkg://` scheme][glossary-fuchsia-pkg-url]**.
 
 [GN][glossary-gn] is the meta-build system used by Fuchsia. Fuchsia extends GN
 by defining templates. Templates provide a way to add to GN's built-in target
-types. Below we will review various GN templates that can be used to define
+types. This section reviews various GN templates that can be used to define
 packages, components, and their tests.
 
 ### Defining components, packages, and tests using GN templates {#defining}
@@ -90,9 +90,8 @@ Note the following details:
     sorts of programs.
 *   This example defines a `fuchsia_component()`, which depends on the
     `executable()`. The component definition attaches a manifest, which
-    references the executable to be launched under the given package path
-    `bin/my_program`.
-    See:
+    references the executable by its packaged path: `bin/my_program`.
+    For more details on the packaged path, see
     [finding paths for built executables](#finding-paths-for-built-executables).
 *   The manifest must be either a `.cmx` file in [cmx format][cmx-format] or a
     `.cml` file in [cml format][cml-format].
@@ -124,7 +123,7 @@ paths.
    }
 
    fuchsia_component("my-component") {
-     manifest = "meta/my-component.cmx"
+     manifest = "meta/my_component.cmx"
      deps = [ ":bin" ]
    }
 
@@ -133,7 +132,7 @@ paths.
    }
    ```
 
-   It's assumed that the file `meta/my-component.cmx`
+   It's assumed that the file `meta/my_component.cmx`
    contains at least the following:
 
    ```json
@@ -155,7 +154,7 @@ paths.
    }
 
    fuchsia_component("my-component") {
-     manifest = "meta/my-component.cmx"
+     manifest = "meta/my_component.cmx"
      deps = [ ":bin" ]
    }
 
@@ -164,7 +163,7 @@ paths.
    }
    ```
 
-   It's assumed that the file `meta/my-component.cmx`
+   It's assumed that the file `meta/my_component.cmx`
    contains at least the following:
 
    ```json
@@ -186,7 +185,7 @@ paths.
    }
 
    fuchsia_component("my-component") {
-     manifest = "meta/my-component.cmx"
+     manifest = "meta/my_component.cmx"
      deps = [ ":bin" ]
    }
 
@@ -195,7 +194,7 @@ paths.
    }
    ```
 
-   It's assumed that the file `meta/my-component.cmx`
+   It's assumed that the file `meta/my_component.cmx`
    contains at least the following:
 
    ```json
@@ -219,7 +218,7 @@ paths.
    }
 
    dart_component("my-component") {
-     manifest = "meta/my-component.cmx"
+     manifest = "meta/my_component.cmx"
      deps = [ ":lib" ]
    }
 
@@ -228,7 +227,7 @@ paths.
    }
    ```
 
-   It's assumed that the file `meta/my-component.cmx`
+   It's assumed that the file `meta/my_component.cmx`
    contains at least the following:
 
    ```json
@@ -252,7 +251,7 @@ paths.
    }
 
    flutter_component("my-component") {
-     manifest = "meta/my-component.cmx"
+     manifest = "meta/my_component.cmx"
      deps = [ ":lib" ]
    }
 
@@ -261,7 +260,7 @@ paths.
    }
    ```
 
-   It's assumed that the file `meta/my-component.cmx`
+   It's assumed that the file `meta/my_component.cmx`
    contains at least the following:
 
    ```json
@@ -274,7 +273,7 @@ paths.
 
 ### Test packages {#test-packages}
 
-Test packages are packages that contain at least one component that will be
+Test packages are packages that contain at least one component that is
 launched as a test. Test packages are defined using
 [`fuchsia_test_package.gni`](/src/sys/build/fuchsia_test_package.gni). This
 template can be used to define all sorts of tests, although it's most useful for
@@ -335,8 +334,8 @@ Note the following details:
     and the test launches it and connects to it as a client while asserting
     correct behavior from the client's perspective. \
     Packaging the component under test together with the test component
-    guarantees that the component under test will be available for launch while
-    the test is running, and will be built at the same version as the test. If
+    guarantees that the component under test is available for launch while
+    the test is running, and built at the same version as the test. If
     this weren't the case, and instead the test assumed that the component under
     test was present in another package that's already installed on the target
     device, then the test would be exposed to side effects and version skew.
@@ -344,13 +343,13 @@ Note the following details:
 *   Note the `environments` parameter. `fuchsia_test_package()` can optionally
     take [`test_spec.gni`](/build/testing/test_spec.gni) parameters to override
     the default testing behavior. In this example, this test is configured to
-    run on VIM2 devices.
+    run on VIM3 devices.
 *   Finally, this example defines a `group()` to contain all the tests (which we
     have exactly one of). This is a [recommended practice][source-code-layout]
     for organizing targets across the source tree.
 
 An important limitation of `fuchsia_test_package()` is that any
-`test_components` targets must be defined in the same `BUILD.gn` file as the
+`fuchsia_test_component()` targets must be defined in the same `BUILD.gn` file as the
 test package target. This is due to a [limitation in GN][gn-get-target-outputs].
 
 It's possible to work around this limitation with an indirection through
@@ -375,14 +374,14 @@ fuchsia_component("my-test-component") {
   deps = [ ":my_test" ]
 }
 
-fuchsia_test("my-test-component-test") {
+fuchsia_test("my_test_component_test") {
   package = "//bar:my-test-package"
   component = ":my-test-component"
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":my-test-component-test" ]
+  deps = [ ":my_test_component_test" ]
 }
 ```
 
@@ -395,7 +394,7 @@ import("//src/sys/build/components.gni")
 
 fuchsia_package("my-test-package") {
   testonly = true
-  deps = [ "//foo:my-test-component" ]
+  deps = [ "//foo:my_test_component" ]
 }
 ```
 
@@ -415,17 +414,17 @@ import("//src/sys/build/components.gni")
 
 flutter_test_component("my-flutter-test-component") {
   testonly = true
-  manifest = "meta/my-flutter-test-component.cmx"
+  manifest = "meta/my_flutter_test_component.cmx"
   sources = [ "foo_flutter_test.dart" ]
 }
 
 dart_test_component("my-dart-test-component") {
   testonly = true
-  manifest = "meta/my-dart-test-component.cmx"
+  manifest = "meta/my_dart_test_component.cmx"
   sources = [ "foo_dart_test.dart" ]
 }
 
-fuchsia_test("my-test-component-test") {
+fuchsia_test("my_test_component_test") {
   test_components = [
     ":my-dart-test-component",
     ":my-flutter-test-component"
@@ -442,7 +441,7 @@ Since unit tests are very common, two simplified templates are provided:
   manifest, that must then be included in a package.
 * [`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni) defines a
   package with a single component to be run as a test, shorthand for a single
-  `fuchsia_unittest_component` target paired with a `fuchsia_test_package`.
+  `fuchsia_unittest_component()` target paired with a `fuchsia_test_package()`.
 
 #### Unit tests with manifests {#unit-tests-with-manifests}
 
@@ -510,7 +509,7 @@ The manifest file `meta/my_test.cmx` may look like this:
 The above is a minimal valid manifest file for this test. In practice a test
 might require additional capabilities, to be specified in its manifest.
 
-The launch URL for the test will be
+The launch URL for the test is
 `fuchsia-pkg://fuchsia.com/my-test#meta/my-test.cmx`. It can be launched using
 `fx test` followed by the launch URL, or followed by the GN target name.
 
@@ -523,7 +522,7 @@ Below is an example for a test that performs ROT13 encryption and decryption.
 The algorithm under test is pure logic that can be tested in complete
 isolation. If we were to write a manifest for these tests, it would only
 contain the test binary to be executed. In such cases, we can simply specify
-the test executable path, and the template will generate the trivial manifest
+the test executable path, and the template generates the trivial manifest
 for us.
 
    * {C++}
@@ -655,32 +654,33 @@ fuchsia_test_package("rot13-tests") {
 
 #### Multiple unit tests in a single package
 
-`fuchsia_unittest_component` can be used instead of `fuchsia_unittest_package` to include multiple
-components in a single package. This can be useful to easily run all the test components an a
-single package, e.g. with `fx test <package_name>`, rather than needing to type many separate
-package names.
+The `fuchsia_unittest_component()` rule can be used instead of
+`fuchsia_unittest_package()` to include multiple components in a single
+`fuchsia_test_package()`. This can be useful to easily run all the test components
+in a single package, e.g. with `fx test <package_name>`, rather than needing to
+type many separate package names.
 
-The example below creates a single test package `rot13-tests` that contains two separate test
-components, `rot13-decoder-test` and `rot13-encoder-test`. Both tests can be run using `fx test
-rot13-tests`, or individual tests can be run using either `fx test rot13-decoder-test` or the
-full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.cmx`.
+The example below creates a single test package `rot13-tests` that contains two
+separate test components, `rot13-decoder-test` and `rot13-encoder-test`.
+Both tests can be run using `fx test rot13-tests`, or individual tests can be run
+using either `fx test rot13-decoder-test` or the full URL
+`fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.cmx`.
 
    * {C++}
 
    ```gn
-   import("//build/rust/rustc_test.gni")
    import("//src/sys/build/components.gni")
 
-   executable("rot13_decoder_test") {}
+   executable("rot13_decoder_bin_test") {}
 
-   executable("rot13_encoder_test") {}
+   executable("rot13_encoder_bin_test") {}
 
    fuchsia_unittest_component("rot13-decoder-test") {
-     deps = [ ":rot13_decoder_test" ]
+     deps = [ ":rot13_decoder_bin_test" ]
    }
 
    fuchsia_unittest_component("rot13-encoder-test") {
-     deps = [ ":rot13_encoder_test" ]
+     deps = [ ":rot13_encoder_bin_test" ]
    }
 
    fuchsia_test_package("rot13-tests") {
@@ -697,16 +697,16 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
    import("//build/rust/rustc_test.gni")
    import("//src/sys/build/components.gni")
 
-   rustc_test("rot13_decoder_test") {}
+   rustc_test("rot13_decoder_bin_test") {}
 
-   rustc_test("rot13_encoder_test") {}
+   rustc_test("rot13_encoder_bin_test") {}
 
    fuchsia_unittest_component("rot13-decoder-test") {
-     deps = [ ":rot13_decoder_test" ]
+     deps = [ ":rot13_decoder_bin_test" ]
    }
 
    fuchsia_unittest_component("rot13-encoder-test") {
-     deps = [ ":rot13_encoder_test" ]
+     deps = [ ":rot13_encoder_bin_test" ]
    }
 
    fuchsia_test_package("rot13-tests") {
@@ -728,11 +728,11 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
    go_test("rot13_encoder_test") {}
 
    fuchsia_unittest_component("rot13-decoder-test") {
-     deps = [ ":rot13_decoder_test" ]
+     deps = [ ":rot13_decoder_bin_test" ]
    }
 
    fuchsia_unittest_component("rot13-encoder-test") {
-     deps = [ ":rot13_encoder_test" ]
+     deps = [ ":rot13_encoder_bin_test" ]
    }
 
    fuchsia_test_package("rot13-tests") {
@@ -745,9 +745,20 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
 
 ### Packages with a single component {#packages-with-single-component}
 
-Developers often define a package that contains a single component.
-The template below fuses together `fuchsia_package()` and `fuchsia_component()`
-as a convenience.
+Packages are units of distribution. It is beneficial to define multiple
+components in the same package if you need to guarantee that several
+components are always co-present, or if you'd like to be able to update
+several components at once (by updating a single package).
+
+This pattern is also commonly used to create hermetic integration tests.
+For instance an integration test between two components where one is a client
+of a service implemented in another component would include both the client
+and server components.
+
+However, you may often define a package that only requires a single component.
+In those cases, you can use the `fuchsia_package_with_single_component()`
+template as a convenience. This template fuses together `fuchsia_package()` and
+`fuchsia_component()`.
 
    * {C++}
 
@@ -794,18 +805,6 @@ as a convenience.
    }
    ```
 
-Packages are units of distribution. It is beneficial to define multiple
-components in the same package if you need to guarantee that several
-components are always co-present, or if you'd like to be able to update
-several components at once (by updating a single package).
-
-This pattern is also commonly used to create hermetic integration tests.
-For instance an integration test between two components where one is a client
-of a service implemented in another component would include both the client
-and server components.
-
-However for the sake of simplicity, if you're developing a package with just
-a single component then this template will save you some boilerplate.
 
 ## Test-driven development
 
@@ -816,8 +815,8 @@ the build system as affected by changes in your checkout. Try the following:
 <code class="devsite-terminal">fx -i smoke-test --verbose</code>
 </pre>
 
-In the command above, `--verbose` will print which tests `fx smoke-test` thinks
-are affected by your change, and `-i` will automatically repeat this command
+In the command above, `--verbose` prints which tests `fx smoke-test` thinks
+are affected by your change, and `-i` automatically repeats this command
 every time you save your changes. For test-driven development, try launching
 this command in a separate shell and watching your code rebuild and retest as
 you're working on it.
@@ -976,7 +975,7 @@ expect_includes("font_provider_client_includes") {
 ```
 
 It is possible (and recommended) to provide both `.cmx` and `.cml` includes.
-Dependent manifests will be required to include the expected files with the
+Dependent manifests are required to include the expected files with the
 matching extension.
 
    * {.cmx}
@@ -1063,7 +1062,7 @@ Some rudimentary examples are given below:
    * {C++}
 
    ```gn
-   # This will be packaged as `bin/rot13_encode`
+   # Binary is packaged as `bin/rot13_encode`
    executable("rot13_encode") {
      sources = [ "main.cc" ]
    }
@@ -1072,25 +1071,24 @@ Some rudimentary examples are given below:
    * {Rust}
 
    ```gn
-   # This will be packaged as `bin/rot13_encode`
+   # Binary is packaged as `bin/rot13_encode`
    rustc_binary("rot13_encode") {}
    ```
 
    * {Go}
 
    ```gn
-   # This will be packaged as `bin/rot13_encode`
+   # Binary is packaged as `bin/rot13_encode`
    go_binary("rot13_encode") {}
    ```
 
-In order to reference an executable in a component manifest, the author will
-need to know its packaged path.
+In order to reference an executable in a component manifest, the author needs
+to know its packaged path.
 
 One way to find the packaged path for an executable is to make sure that the
-target that builds the executable is in a package's `deps`, then follow the
-above guide for [listing the contents of a
-package](#listing-the-contents-of-a-package). The executable will be among the
-listed contents of the package.
+target that builds the executable is in a package's `deps`, then follow
+[listing the contents of a package](#listing-the-contents-of-a-package).
+The executable is listed among the contents of the package.
 
 ### Finding a [component's launch URL][glossary-component-url]
 
@@ -1108,193 +1106,349 @@ fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.<extension>
     manifest][glossary-component-manifest] - `cmx` for cmx files, `cm` for cml
     files.
 
-## Migrating from legacy `package()`
+## Migrating from legacy build rules {#legacy-package-migration}
 
-The example below demonstrates a migration from the legacy
+The examples below demonstrate migration scenarios from the legacy
 [`package()`](/build/package.gni) template to the new
 [`fuchsia_package()`](/src/sys/build/fuchsia_package.gni) & friends.
-The example is adapted from
+
+### Simple `package()` example
+
+This example is adapted from
 [`//src/sys/time/timekeeper/BUILD.gn`](/src/sys/time/timekeeper/BUILD.gn).
-
-### Pre-migration {#pre-migration}
-
-```
-import("//build/config.gni")
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-
-rustc_binary("bin") {
-  output_name = "timekeeper"
-  edition = "2018"
-  with_unit_tests = true
-  deps = [ ... ]
-}
-
-config_data("timekeeper_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "timekeeper.config" ]
-  sources = [ "service.config" ]
-}
-
-package("timekeeper") {
-  meta = [
-    {
-      path = "meta/service.cmx"
-      dest = "timekeeper.cmx"
-    },
-  ]
-  deps = [
-    ":bin",
-    ":timekeeper_config",
-  ]
-  binaries = [
-    {
-      name = "timekeeper"
-    },
-  ]
-}
-
-test_package("timekeeper_bin_test") {
-  deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "timekeeper_bin_test"
-      environments = basic_envs
-    },
-  ]
-  resources = [
-    {
-      path = "test/y2k"
-      dest = "y2k"
-    },
-    {
-      path = "test/end-of-unix-time"
-      dest = "end-of-unix-time"
-    },
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":timekeeper_bin_test" ]
-}
-```
-
-### Post-migration {#post-migration}
 
 {# Disable variable substition to avoid {{ being interpreted by the template engine #}
 {% verbatim %}
 
-```
-import("//build/config.gni")
-import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
+* {Pre-migration}
 
-rustc_binary("bin") {
-  output_name = "timekeeper"
-  edition = "2018"
-  with_unit_tests = true
-  deps = [ ... ]
-}
+  ```gn
+  import("//build/config.gni")
+  import("//build/package.gni")                            # <1>
+  import("//build/rust/rustc_binary.gni")
+  import("//build/test/test_package.gni")                  # <1>
 
-config_data("timekeeper_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "timekeeper.config" ]
-  sources = [ "service.config" ]
-}
+  rustc_binary("bin") {                                    # <2>
+    output_name = "timekeeper"
+    edition = "2018"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    deps = [ ... ]
+  }
 
-fuchsia_component("service") {
-  component_name = "timekeeper"
-  manifest = "meta/service.cmx"
-  deps = [ ":bin" ]
-}
+  config_data("timekeeper_config") {
+    for_pkg = "sysmgr"
+    outputs = [ "timekeeper.config" ]
+    sources = [ "service.config" ]
+  }
 
-fuchsia_package("timekeeper") {
-  deps = [ ":service" ]
-}
+  package("timekeeper") {
+    meta = [
+      {
+        path = "meta/service.cmx"                          # <3>
+        dest = "timekeeper.cmx"                            # <3>
+      },
+    ]
+    deps = [
+      ":bin",
+      ":timekeeper_config",
+    ]
+    binaries = [
+      {
+        name = "timekeeper"
+      },
+    ]
+  }
 
-resource("testdata") {
-  sources = [
-    "test/y2k",
-    "test/end-of-unix-time",
-  ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
+  test_package("timekeeper_bin_test") {
+    deps = [ ":bin_test" ]
+    tests = [
+      {
+        name = "timekeeper_bin_test"
+        environments = basic_envs
+      },
+    ]
+    resources = [                                          # <4>
+      {
+        path = "test/y2k"
+        dest = "y2k"                                       # <4>
+      },
+      {
+        path = "test/end-of-unix-time"
+        dest = "end-of-unix-time"                          # <4>
+      },
+    ]
+  }
+  ```
 
-fuchsia_unittest_package("timekeeper-unittests") {
-  manifest = "meta/unittests.cmx"
-  deps = [
-    ":bin_test",
-    ":testdata",
-  ]
-}
-```
+* {Post-migration}
 
+  ```gn
+  import("//build/config.gni")
+  import("//build/rust/rustc_binary.gni")
+  import("//src/sys/build/components.gni")                 # <1>
+
+  rustc_binary("bin") {                                    # <2>
+    output_name = "timekeeper"
+    edition = "2018"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    deps = [ ... ]
+  }
+
+  config_data("timekeeper_config") {
+    for_pkg = "sysmgr"
+    outputs = [ "timekeeper.config" ]
+    sources = [ "service.config" ]
+  }
+
+  fuchsia_component("service") {
+    component_name = "timekeeper"                          # <3>
+    manifest = "meta/service.cmx"                          # <3>
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("timekeeper") {
+    deps = [ ":service" ]
+  }
+
+  resource("testdata") {                                   # <4>
+    sources = [
+      "test/y2k",
+      "test/end-of-unix-time",
+    ]
+    outputs = [ "data/{{source_file_part}}" ]              # <4>
+  }
+
+  fuchsia_unittest_package("timekeeper-unittests") {
+    manifest = "meta/unittests.cmx"
+    deps = [
+      ":bin_test",
+      ":testdata",                                         # <4>
+    ]
+  }
+  ```
 {# Re-enable variable substition #}
 {% endverbatim %}
 
-### Migration considerations
+The following key elements are called out in the code example above:
 
-*   Targets that generate executables or data files are not expected to change
-    in a migration.
-*   Previously, `meta/service.cmx` was given the destination `"timekeeper.cmx"`
-    which placed it in `meta/timekeeper.cmx`. With `fuchsia_component()`, the
-    given manifest is automatically renamed per the component name
-    (`"timekeeper"`) and `meta/` is prepended. As a result, the launch URL for
-    the timekeeper component remains the same:
-    `fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx`
-*   Additional resources (in this case, the data asset files used in the test
-    such as the `test/y2k` file) are included in the unit test. Their
-    destination path is a full packaged path, whereas before it would have had
-    `data/` automatically prepended to it. In both cases, the data file can
-    be read by the test at runtime from the paths `/pkg/data/y2k` and
-    `/pkg/data/end-of-unix-time`.
-*   If you're required to specify a packaged path such as the path to an
-    executable in a manifest or a test definition, and you're not sure what the
-    path is, then try your best guess and expect a helpful error message if
-    your guess was not correct.
+> 1.  Necessary imports are replaced by `//src/sys/build/components.gni`.
+> 2.  Targets that generate executables or data files are not expected to change
+>     in a migration.
+> 3.  Previously, `meta/service.cmx` was given the destination `"timekeeper.cmx"`
+>     which placed it in `meta/timekeeper.cmx`. With `fuchsia_component()`, the
+>     given manifest is automatically renamed per the `component_name` field
+>     (`"timekeeper"`) and `meta/` is prepended. As a result, the launch URL for
+>     the timekeeper component remains the same:
+>     `fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx`
+>
+>     Note: If you do not provide a `component_name`, the manifest is named
+>     according to the `fuchsia_component()` target name.
+>
+> 4.  Additional resources (in this case, the data asset files used in the test
+>     such as the `test/y2k` file) are included in the unit test. Their
+>     destination path is a full packaged path, whereas before it would have had
+>     `data/` automatically prepended to it. In both cases, the data file can
+>     be read by the test at runtime from the paths `/pkg/data/y2k` and
+>     `/pkg/data/end-of-unix-time`.
 
-### Test specifications
+### Complex `package()` example
 
-Both template families support test specifications, such as restricting to specific
-[test environments][test-environments] or
-[restricting log severity][restrict-log-severity].
+This example is adapted from
+[`//src/fonts/BUILD.gn`](/src/fonts/BUILD.gn).
 
-The syntax is slightly different. Where before you might specify:
+* {Pre-migration}
 
-```gn
-import("//build/package.gni")
+  ```gn
+  import("//build/package.gni")                            # <1>
+  import("//build/rust/rustc_binary.gni")
+  import("//build/test/test_package.gni")                  # <1>
+  import("//src/fonts/build/fonts.gni")
 
-test_package("foo-tests") {
-  ...
-  tests = [
-    {
-      name = "foo_test"
+  rustc_binary("font_provider") {                          # <2>
+    name = "font_provider"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    edition = "2018"
+
+    deps = [ ... ]
+    sources = [ ... ]
+  }
+
+  package("pkg") {
+    package_name = "fonts"
+
+    deps = [ ":font_provider" ]
+
+    binaries = [
+      {
+        name = "font_provider"
+      },
+    ]
+    meta = [                                               # <3>
+      {
+        path = rebase_path("meta/fonts.cmx")               # <3>
+        dest = "fonts.cmx"                                 # <4>
+      },
+      {
+        path = rebase_path("meta/fonts.cml")               # <3>
+        dest = "fonts.cm"                                  # <4>
+      },
+    ]
+  }
+
+  test_package("font_provider_unit_tests") {
+    deps = [ ":font_provider_test" ]
+
+    v2_tests = [
+      {
+        name = "font_provider_bin_test"                    # <4>
+      },
+    ]
+  }
+  ```
+
+* {Post-migration}
+
+  ```gn
+  import("//build/rust/rustc_binary.gni")
+  import("//src/fonts/build/fonts.gni")
+  import("//src/sys/build/components.gni")                 # <1>
+
+  rustc_binary("font_provider") {                          # <2>
+    name = "font_provider"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    edition = "2018"
+
+    deps = [ ... ]
+    sources = [ ... ]
+  }
+
+  fuchsia_component("font_provider_cm") {                  # <3>
+    manifest = "meta/fonts.cml"
+    component_name = "fonts"                               # <4>
+    deps = [ ":font_provider" ]
+  }
+
+  fuchsia_component("font_provider_cmx") {                 # <3>
+    manifest = "meta/fonts.cmx"
+    component_name = "fonts"                               # <4>
+    deps = [ ":font_provider" ]
+  }
+
+  fuchsia_package("pkg") {
+    package_name = "fonts"
+    deps = [
+      ":font_provider_cm",                                 # <3>
+      ":font_provider_cmx",                                # <3>
+    ]
+  }
+
+  fuchsia_component("font_provider_unit_tests_cmp") {
+    testonly = true
+    manifest = "meta/font_provider_bin_test.cml"
+    component_name = "font_provider_bin_test"              # <4>
+    deps = [ ":font_provider_test" ]
+  }
+
+  fuchsia_test_package("font_provider_unit_tests") {
+    test_components = [ ":font_provider_unit_tests_cmp" ]
+  }
+  ```
+
+The following key elements are called out in the code example above:
+
+> 1.  Necessary imports are replaced by `//src/sys/build/components.gni`.
+> 2.  Targets that generate executables or data files are not expected to change
+>     in a migration.
+> 3.  If a `package()` includes multiple distinct components using the `meta`
+>     field, each one must be broken out into a separate `fuchsia_component()`
+>     and collected together in the `fuchsia_package()` using `deps`.
+> 4.  Each `fuchsia_component()` uses the `component_name` field to map the
+>     manifest destination in the final package. Without this, they are placed
+>     according to the **target name**, which affects the launch URL of the
+>     component. This is true for both `fuchsia_package()` and `fuchsia_test_package()`.
+
+Note: The new build templates allow targets that produce files, such as
+`executable()`, to decide which files they produce and where the targets place
+these files. This may affect the packaged path to binaries in your manifest or
+test definition after migrating. If you encounter build-time errors you are
+unable to resolve, see [Troubleshooting](#troubleshooting).
+
+### Test package considerations
+
+The example below highlights some key differences between the legacy
+[`test_package()`](/build/test/test_package.gni) template and the new
+[`fuchsia_test_package()`](/src/sys/build/fuchsia_test_package.gni).
+
+* {Pre-migration}
+
+  ```gn
+  import("//build/package.gni")                            # <1>
+  import("//build/test/test_package.gni")                  # <1>
+
+  executable("foo_bin_test") { ... }
+
+  test_package("foo-tests") {                              # <1>
+    deps = [ ":foo_bin_test" ]                             # <2>
+
+    tests = [                                              # <3>
+      {
+        name = "foo_test"                                  # <2>
+        log_settings = {
+          max_severity = "ERROR"
+        }
+      }
+    ]
+  }
+  ```
+
+* {Post-migration}
+
+  ```gn
+  import("//src/sys/build/components.gni")                 # <1>
+
+  executable("foo_bin_test") { ... }
+
+  fuchsia_component("foo-test") {                          # <2>
+    testonly = true
+    manifest = "meta/foo_test.cmx"
+    deps = [ ":foo_bin_test" ]
+  }
+
+  fuchsia_test_package("foo-tests") {                      # <1>
+    test_components = [ ":foo-test" ]                      # <2>
+
+    test_specs = {                                         # <3>
       log_settings = {
         max_severity = "ERROR"
       }
     }
-  ]
-}
-```
-
-You would now specify:
-
-```gn
-import("//src/sys/build/components.gni")
-
-fuchsia_test_package("foo-tests") {
-  ...
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
   }
-}
-```
+  ```
 
-With the new templates, the `test_specs` apply to all tests in the package.
-See [test packages](#test-packages) for more examples.
+The following key elements are called out in the code example above:
+
+> 1.  Replace necessary imports with `//src/sys/build/components.gni` and rename
+>     `test_package()` to `fuchsia_test_package()`.
+> 2.  Create a `fuchsia_component()` to encapsulate the test components previously
+>     added with the `tests` field. Reference the components in the package with
+>     the new `test_components` field.
+>
+>     Note: A `test_package()` typically sets the packaged path for binaries to
+>     `test/`, while the new build rules let the executables define this and they
+>     typically use `bin/`. This may affect the packaged path to binaries in your
+>     test definition after migrating. If you encounter build-time errors you are
+>     unable to resolve, see [Troubleshooting](#troubleshooting).
+>
+> 3.  Both template families support test specifications, such as restricting to
+>     specific [test environments][test-environments] or
+>     [restricting log severity][restrict-log-severity].
+>
+>     Note: With the new templates, the `test_specs` apply to all tests in the package.
+>     See [test packages](#test-packages) for more examples.
 
 ### Legacy features
 
@@ -1312,7 +1466,7 @@ For instance the `libraries` attribute installs resources in a special `lib/` di
 The legacy syntax looks like this:
 
 ```
-package("my_driver_package") {
+package("my-driver-package") {
   deps = [ ":my_driver" ]
 
   drivers = [
@@ -1327,13 +1481,13 @@ This special treatment is not necessary with the new templates. Simply add the
 necessary target to `deps = [ ... ]` and the packaging is done automatically.
 
 ```
-fuchsia_component("my_driver_component") {
+fuchsia_component("my-driver-component") {
   deps = [ ":my_driver" ]
   ...
 }
 
-fuchsia_package("my_driver_package") {
-  deps = [ ":my_driver_component" ]
+fuchsia_package("my-driver-package") {
+  deps = [ ":my-driver-component" ]
   ...
 }
 ```
@@ -1364,12 +1518,12 @@ package("foo-pkg") {
   binaries = [
     {
       name = "bin"
-      dest = "foo-bin"
+      dest = "foo_bin"
     }
   ]
   meta = [
     {
-      path = "meta/foo-bin.cmx"
+      path = "meta/foo_bin.cmx"
       dest = "foo.cmx"
     }
   ]
@@ -1388,13 +1542,13 @@ that produce those files. For instance:
 import("//src/sys/build/components.gni")
 
 executable("bin") {
-  output_name = "foo-bin"
+  output_name = "foo_bin"
   ...
 }
 
 fuchsia_component("foo-cmp") {
   deps = [ ":bin" ]
-  manifest = "meta/foo-bin.cmx"
+  manifest = "meta/foo_bin.cmx"
 }
 
 fuchsia_package("foo-pkg") {
@@ -1410,7 +1564,7 @@ in the package available to `fx shell`.
 ```gn
 import("//build/package.gni")
 
-# `fx shell echo Hello World` will print "Hello World"
+# `fx shell echo Hello World` prints "Hello World"
 executable("bin") {
   output_name = "echo"
   ...
@@ -1433,7 +1587,7 @@ The new templates support this feature as follows:
 ```gn
 import("//src/sys/build/components.gni")
 
-# `fx shell echo Hello World` will print "Hello World"
+# `fx shell echo Hello World` prints "Hello World"
 executable("bin") {
   output_name = "echo"
   ...
