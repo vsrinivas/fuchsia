@@ -46,7 +46,53 @@ struct Indexer {
 }
 
 impl Indexer {
+    fn index_file(&mut self, path: std::path::PathBuf) -> std::io::Result<()> {
+        let file_name = match path.file_name() {
+            Some(file_name) => file_name,
+            None => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Path must have file name",
+                ));
+            }
+        };
+        let url = match file_name.to_os_string().into_string() {
+            Ok(url) => url,
+            Err(_) => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "File must be valid string",
+                ));
+            }
+        };
+
+        let bytes = std::fs::read(&path)?;
+        let instructions = match bind_v1::decode_from_bytecode_v1(&bytes) {
+            Ok(instructions) => instructions,
+            Err(e) => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Error decoding {}: {:?}", url, e),
+                ));
+            }
+        };
+        self.add_driver(Driver { bind_program: instructions, url: url });
+        Ok(())
+    }
+
     #[allow(dead_code)]
+    fn index_directory(&mut self, dir: &str) -> std::io::Result<()> {
+        let entries = std::fs::read_dir(dir)?;
+        for entry in entries {
+            let entry = entry?;
+            match self.index_file(entry.path()) {
+                Ok(_) => (),
+                Err(e) => eprintln!("Error indexing file: {:?}", e),
+            }
+        }
+        Ok(())
+    }
+
     fn add_driver(&mut self, driver: Driver) {
         self.drivers.push(driver);
     }
@@ -234,5 +280,37 @@ mod tests {
         })
         .await;
         a.unwrap();
+    }
+
+    // In this test, we read from /pkg/bind/ for bind rules that were placed there by other build
+    // targets.
+    #[fasync::run_singlethreaded(test)]
+    async fn read_from_bind_dir() {
+        let mut index = Indexer { drivers: vec![] };
+        index.index_directory("/pkg/bind").unwrap();
+        let index = Rc::new(index);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let (server_result, _) =
+            future::join(run_index_server(index.clone(), stream), async move {
+                // The values checked here need to match the values from the 'test-bind' build
+                // target.
+                let property = fdf::NodeProperty {
+                    key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                    value: Some(1),
+                    ..fdf::NodeProperty::EMPTY
+                };
+                let args = fdf::NodeAddArgs {
+                    properties: Some(vec![property]),
+                    ..fdf::NodeAddArgs::EMPTY
+                };
+                let result = proxy.match_driver(args).await.unwrap();
+                let (received_url, _) = result.unwrap();
+                assert_eq!("my-test-driver-url.cm".to_string(), received_url);
+            })
+            .await;
+        server_result.unwrap();
     }
 }

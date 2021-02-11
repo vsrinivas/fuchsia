@@ -276,6 +276,18 @@ template("bind_rules") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
+    if (defined(invoker.output_bytecode) && invoker.output_bytecode) {
+      # This metadata lets the packaging system know where to put the bytecode file.
+      metadata = {
+        distribution_entries = [
+          {
+            source = rebase_path("$target_gen_dir/$output_file", root_build_dir)
+            destination = "bind/$output_file"
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
+    }
   }
 
   if (defined(invoker.tests)) {
