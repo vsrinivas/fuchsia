@@ -24,6 +24,7 @@ template("fuzzer_corpus") {
   assert(defined(invoker.corpus),
          "missing 'corpus' for fuzzer_corpus($target_name)")
   group(target_name) {
+    testonly = true
     deps = [ invoker.corpus ]
     metadata = {
       fuzz_spec = [
