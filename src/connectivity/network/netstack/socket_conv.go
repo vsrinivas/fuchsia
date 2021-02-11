@@ -153,11 +153,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_SNDBUF:
-		size, err := ep.SocketOptions().GetSendBufferSize()
-		if err != nil {
-			return nil, err
-		}
-
+		size := ep.SocketOptions().GetSendBufferSize()
 		if size > math.MaxInt32 {
 			size = math.MaxInt32
 		}
