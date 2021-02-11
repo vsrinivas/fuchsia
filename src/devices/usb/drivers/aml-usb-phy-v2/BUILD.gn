@@ -54,7 +54,6 @@ test("aml-usb-phy-test-bin") {
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.registers",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.dci",
     "//sdk/banjo/fuchsia.hardware.usb.phy",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
