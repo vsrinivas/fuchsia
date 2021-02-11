@@ -81,14 +81,16 @@ class EnginePixelTest : public EngineTestBase {
   std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<display::DisplayManager> display_manager_;
 
-  std::shared_ptr<flatland::VkRenderer> NewVkRenderer() const {
+  static std::pair<std::unique_ptr<escher::Escher>, std::shared_ptr<flatland::VkRenderer>>
+  NewVkRenderer() {
     auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
     auto unique_escher = std::make_unique<escher::Escher>(
         env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-    return std::make_shared<flatland::VkRenderer>(std::move(unique_escher));
+    return {std::move(unique_escher),
+            std::make_shared<flatland::VkRenderer>(unique_escher->GetWeakPtr())};
   }
 
-  std::shared_ptr<flatland::NullRenderer> NewNullRenderer() const {
+  static std::shared_ptr<flatland::NullRenderer> NewNullRenderer() {
     return std::make_shared<flatland::NullRenderer>();
   }
 
@@ -474,7 +476,7 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   };
 
   // Use the VK renderer here so we can make use of software rendering.
-  auto renderer = NewVkRenderer();
+  auto [escher, renderer] = NewVkRenderer();
   auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
                                                    renderer, std::move(data_func));
 

@@ -358,7 +358,7 @@ VK_TEST_F(VulkanRendererTest, RegisterCollectionTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   RegisterCollectionTest(&renderer, sysmem_allocator_.get());
 }
 
@@ -366,7 +366,7 @@ VK_TEST_F(VulkanRendererTest, SameTokenTwiceTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   SameTokenTwiceTest(&renderer, sysmem_allocator_.get());
 }
 
@@ -374,7 +374,7 @@ VK_TEST_F(VulkanRendererTest, BadTokenTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   BadTokenTest(&renderer, sysmem_allocator_.get());
 }
 
@@ -382,7 +382,7 @@ VK_TEST_F(VulkanRendererTest, ImportImageTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   ImportImageTest(&renderer, sysmem_allocator_.get());
 }
 
@@ -390,7 +390,7 @@ VK_TEST_F(VulkanRendererTest, DeregistrationTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   DeregistrationTest(&renderer, sysmem_allocator_.get());
 }
 
@@ -398,7 +398,7 @@ VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   MultithreadingTest(&renderer);
 }
 
@@ -407,7 +407,7 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
   AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/ true);
 }
 
@@ -428,7 +428,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
   auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
@@ -584,7 +584,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
-  VkRenderer renderer(std::move(unique_escher));
+  VkRenderer renderer(unique_escher->GetWeakPtr());
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
   auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());

@@ -17,7 +17,7 @@ namespace flatland {
 // by extension the Vulkan API.
 class VkRenderer final : public Renderer {
  public:
-  explicit VkRenderer(std::unique_ptr<escher::Escher> escher);
+  explicit VkRenderer(escher::EscherWeakPtr escher);
   ~VkRenderer() override;
 
   // |BufferCollectionImporter|
@@ -73,7 +73,7 @@ class VkRenderer final : public Renderer {
                                        ImageMetadata metadata);
 
   // Escher is how we access Vulkan.
-  std::unique_ptr<escher::Escher> escher_;
+  escher::EscherWeakPtr escher_;
 
   // Vulkan rendering component.
   escher::RectangleCompositor compositor_;

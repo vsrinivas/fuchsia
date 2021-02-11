@@ -27,7 +27,7 @@ TexturePtr CreateDepthTexture(Escher* escher, const ImagePtr& output_image) {
 
 namespace flatland {
 
-VkRenderer::VkRenderer(std::unique_ptr<escher::Escher> escher)
+VkRenderer::VkRenderer(escher::EscherWeakPtr escher)
     : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_.get())) {}
 
 VkRenderer::~VkRenderer() {
