@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1419
+From //build/config/BUILDCONFIG.gn:1433
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -569,7 +569,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:497
+From //build/config/BUILDCONFIG.gn:509
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -694,7 +694,7 @@ Selects the Cobalt environment to send data to. Choices:
 
 **Current value (from the default):** `"PROD"`
 
-From //src/cobalt/bin/app/BUILD.gn:15
+From //src/cobalt/bin/app/BUILD.gn:14
 
 ### compress_blobs
 Whether to compress the blobfs image.
@@ -719,7 +719,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -957,7 +957,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:25
+From //build/config/BUILD.gn:24
 
 ### enable_gfx_subsystem
 
@@ -1046,7 +1046,7 @@ changed.  Set the version of the C++ standard to compile for, 17 or 20.
 
 **Current value (from the default):** `17`
 
-From //build/config/BUILD.gn:37
+From //build/config/BUILD.gn:36
 
 ### experimental_wlan_client_mlme
 Selects the SoftMAC client implementation to use. Choices:
@@ -1077,7 +1077,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1198
+From //build/config/BUILDCONFIG.gn:1212
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1498,38 +1498,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -1767,7 +1767,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1066
+From //build/config/BUILDCONFIG.gn:1080
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2756,7 +2756,7 @@ as the cache.
 
 **Current value (from the default):** `""`
 
-From //build/config/BUILD.gn:41
+From //build/config/BUILD.gn:40
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
@@ -2807,7 +2807,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:33
+From //build/config/BUILD.gn:32
 
 ### rustc_lib_dir
 Path to rustc lib directory.
@@ -2994,7 +2994,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1409
+From //build/config/BUILDCONFIG.gn:1423
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3003,7 +3003,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1414
+From //build/config/BUILDCONFIG.gn:1428
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3035,7 +3035,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1244
+From //build/config/BUILDCONFIG.gn:1258
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3315,7 +3315,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1228
+From //build/config/BUILDCONFIG.gn:1242
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3593,35 +3593,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/66ce6a70cf297e9953e3270c64deac5e41006a95/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/c75aa282bcb12929610959eea31be72af866c465/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
