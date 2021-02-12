@@ -133,8 +133,10 @@ class WebDriverConnector {
   /// WebDriver object.
   Future<List<WebDriverSession>> _webDriverSessionsForHost(String host) async {
     await _updateWebDriverSessions();
-    return List.from(_webDriverSessions.values.where(
-        (session) => Uri.parse(session.webDriver.currentUrl).host == host));
+    return List.from(_webDriverSessions.values.where((session) {
+      final url = session.webDriver.currentUrl;
+      return url != null && Uri.parse(url).host == host;
+    }));
   }
 
   /// Searches for Chrome contexts based on the host of the currently displayed
