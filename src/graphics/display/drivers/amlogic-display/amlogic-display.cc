@@ -247,9 +247,17 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
     ZX_DEBUG_ASSERT(display_count == 0);
     return CONFIG_DISPLAY_OK;
   }
-  ZX_DEBUG_ASSERT(display_configs[0]->display_id == display_id_);
 
   fbl::AutoLock lock(&display_lock_);
+
+  // no-op, just wait for the client to try a new config
+  if (!display_attached_ || display_configs[0]->display_id != display_id_) {
+    return CONFIG_DISPLAY_OK;
+  }
+
+  if (vout_->CheckMode(&display_configs[0]->mode) || (display_configs[0]->mode.v_addressable % 8)) {
+    return CONFIG_DISPLAY_UNSUPPORTED_MODES;
+  }
 
   bool success = true;
 
@@ -321,14 +329,27 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   fbl::AutoLock lock(&display_lock_);
 
+  zx_status_t status;
   if (display_count == 1 && display_configs[0]->layer_count) {
     if (!full_init_done_) {
-      zx_status_t status;
       if ((status = DisplayInit()) != ZX_OK) {
         DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
         ZX_ASSERT(0);
       }
       full_init_done_ = true;
+    }
+
+    status = vout_->ApplyConfiguration(&display_configs[0]->mode);
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not apply config to Vout! %d\n", status);
+      return;
+    }
+
+    // The only way a checked configuration could now be invalid is if display was
+    // unplugged. If that's the case, then the upper layers will give a new configuration
+    // once they finish handling the unplug event. So just return.
+    if (!display_attached_ || display_configs[0]->display_id != display_id_) {
+      return;
     }
 
     // Since Amlogic does not support plug'n play (fixed display), there is no way
@@ -404,6 +425,8 @@ void AmlogicDisplay::DdkRelease() {
   thrd_join(vsync_thread_, nullptr);
   vd1_wr_irq_.destroy();
   thrd_join(capture_thread_, nullptr);
+  hpd_irq_.destroy();
+  thrd_join(hpd_thread_, nullptr);
   delete this;
 }
 
@@ -423,6 +446,12 @@ zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol
     case ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL:
       proto->ops = &display_clamp_rgb_impl_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_I2C_IMPL:
+      if (!vout_->supports_hpd()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      proto->ops = &i2c_impl_protocol_ops_;
+      return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -431,15 +460,14 @@ zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol
 zx_status_t AmlogicDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
-  format_ = ZX_PIXEL_FORMAT_RGB_x888;
-
+  added_display_info_t info{.is_standard_srgb_out = 0};  // Random default
   if (dc_intf_.is_valid()) {
     added_display_args_t args;
     vout_->PopulateAddedDisplayArgs(&args, display_id_);
-    dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
+    dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, &info, 1, nullptr);
   }
 
-  return ZX_OK;
+  return vout_->OnDisplaysChanged(info);
 }
 
 zx_status_t AmlogicDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
@@ -709,11 +737,65 @@ int AmlogicDisplay::VSyncThread() {
       live = osd_->GetLastImageApplied();
     }
     bool current_image_valid = live != 0;
-    if (dc_intf_.is_valid()) {
+    if (dc_intf_.is_valid() && display_attached_) {
       dc_intf_.OnDisplayVsync(display_id_, timestamp.get(), &live, current_image_valid);
     }
   }
 
+  return status;
+}
+
+int AmlogicDisplay::HpdThread() {
+  zx_status_t status;
+  while (1) {
+    status = hpd_irq_.wait(NULL);
+    if (status != ZX_OK) {
+      DISP_ERROR("Waiting in Interrupt failed %d\n", status);
+      break;
+    }
+    usleep(500000);
+    uint8_t hpd;
+    status = hpd_gpio_.Read(&hpd);
+    if (status != ZX_OK) {
+      DISP_ERROR("gpio_read failed HDMI HPD\n");
+      continue;
+    }
+
+    fbl::AutoLock lock(&display_lock_);
+
+    bool display_added = false;
+    added_display_args_t args;
+    added_display_info_t info;
+    uint64_t display_removed = INVALID_DISPLAY_ID;
+    if (hpd && !display_attached_) {
+      DISP_ERROR("Display is connected\n");
+
+      display_attached_ = true;
+      vout_->DisplayConnected();
+      vout_->PopulateAddedDisplayArgs(&args, display_id_);
+      display_added = true;
+      hpd_gpio_.SetPolarity(GPIO_POLARITY_LOW);
+    } else if (!hpd && display_attached_) {
+      DISP_ERROR("Display Disconnected!\n");
+      vout_->DisplayDisconnected();
+
+      display_removed = display_id_;
+      display_id_++;
+      display_attached_ = false;
+
+      hpd_gpio_.SetPolarity(GPIO_POLARITY_HIGH);
+    }
+
+    if (dc_intf_.is_valid() && (display_removed != INVALID_DISPLAY_ID || display_added)) {
+      dc_intf_.OnDisplaysChanged(&args, display_added ? 1 : 0, &display_removed,
+                                 display_removed != INVALID_DISPLAY_ID, &info,
+                                 display_added ? 1 : 0, NULL);
+      if (display_added) {
+        // See if we need to change output color to RGB
+        status = vout_->OnDisplaysChanged(info);
+      }
+    }
+  }
   return status;
 }
 
@@ -729,14 +811,20 @@ zx_status_t AmlogicDisplay::Bind() {
   size_t actual;
   zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
                                            sizeof(display_info), &actual);
-  if (status != ZX_OK || actual != sizeof(display_panel_t)) {
+  if (status != ZX_OK) {
+    status = vout_->InitHdmi(parent_);
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not initialize HDMI Vout device! %d\n", status);
+      return status;
+    }
+  } else if (actual != sizeof(display_panel_t)) {
     DISP_ERROR("Could not get display panel metadata %d\n", status);
     return status;
-  }
+  } else {
+    DISP_INFO("Provided Display Info: %d x %d with panel type %d\n", display_info.width,
+              display_info.height, display_info.panel_type);
+    display_attached_ = true;
 
-  DISP_INFO("Provided Display Info: %d x %d with panel type %d\n", display_info.width,
-            display_info.height, display_info.panel_type);
-  {
     fbl::AutoLock lock(&display_lock_);
     status =
         vout_->InitDsi(parent_, display_info.panel_type, display_info.width, display_info.height);
@@ -810,6 +898,33 @@ zx_status_t AmlogicDisplay::Bind() {
     status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
     if (status != ZX_OK) {
       DISP_ERROR("Could not create capture_thread\n");
+      return status;
+    }
+  }
+
+  if (vout_->supports_hpd()) {
+    status = ddk::GpioProtocolClient::CreateFromDevice(parent_, "gpio", &hpd_gpio_);
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not obtain GPIO protocol\n");
+      return status;
+    }
+
+    status = hpd_gpio_.ConfigIn(GPIO_PULL_DOWN);
+    if (status != ZX_OK) {
+      DISP_ERROR("gpio_config_in failed for gpio\n");
+      return status;
+    }
+
+    status = hpd_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_LEVEL_HIGH, &hpd_irq_);
+    if (status != ZX_OK) {
+      DISP_ERROR("gpio_get_interrupt failed for gpio\n");
+      return status;
+    }
+
+    auto hpd_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->HpdThread(); };
+    status = thrd_create_with_name(&hpd_thread_, hpd_thread, this, "hpd_thread");
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not create hpd_thread\n");
       return status;
     }
   }

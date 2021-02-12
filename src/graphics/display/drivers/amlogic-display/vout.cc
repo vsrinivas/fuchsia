@@ -14,17 +14,27 @@ namespace {
 constexpr zx_pixel_format_t kDsiSupportedPixelFormats[4] = {
     ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_ABGR_8888,
     ZX_PIXEL_FORMAT_BGR_888x};
+// TODO(fxb/69236): Add more supported formats
+zx_pixel_format_t kHdmiSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
 
 // List of supported features
 struct supported_features_t {
-  bool supports_afbc;
-  bool supports_capture;
+  bool afbc;
+  bool capture;
+  bool hpd;
 };
 
 // TODO(fxb/69025): read feature support from metadata instead of hardcoding.
 constexpr supported_features_t kDsiSupportedFeatures = supported_features_t{
-    .supports_afbc = true,
-    .supports_capture = true,
+    .afbc = true,
+    .capture = true,
+    .hpd = false,
+};
+
+constexpr supported_features_t kHdmiSupportedFeatures = supported_features_t{
+    .afbc = false,
+    .capture = false,
+    .hpd = true,
 };
 
 }  // namespace
@@ -33,8 +43,9 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
                           uint32_t height) {
   type_ = VoutType::kDsi;
 
-  supports_afbc_ = kDsiSupportedFeatures.supports_afbc;
-  supports_capture_ = kDsiSupportedFeatures.supports_capture;
+  supports_afbc_ = kDsiSupportedFeatures.afbc;
+  supports_capture_ = kDsiSupportedFeatures.capture;
+  supports_hpd_ = kDsiSupportedFeatures.hpd;
 
   dsi_.width = width;
   dsi_.height = height;
@@ -85,6 +96,28 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
   return ZX_OK;
 }
 
+zx_status_t Vout::InitHdmi(zx_device_t* parent) {
+  type_ = VoutType::kHdmi;
+
+  supports_afbc_ = kHdmiSupportedFeatures.afbc;
+  supports_capture_ = kHdmiSupportedFeatures.capture;
+  supports_hpd_ = kHdmiSupportedFeatures.hpd;
+
+  fbl::AllocChecker ac;
+  hdmi_.hdmitx = fbl::make_unique_checked<amlogic_display::AmlHdmitx>(&ac, parent);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  zx_status_t status = hdmi_.hdmitx->Init();
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not initialize HDMITX\n");
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Vout::RestartDisplay(zx_device_t* parent) {
   ddk::PDev pdev;
   zx_status_t status = ddk::PDev::FromFragment(parent, &pdev);
@@ -127,6 +160,13 @@ zx_status_t Vout::RestartDisplay(zx_device_t* parent) {
         return status;
       }
       break;
+    case VoutType::kHdmi:
+      status = hdmi_.hdmitx->InitHw();
+      if (status != ZX_OK) {
+        DISP_ERROR("HDMI initialization failed! %d\n", status);
+        return status;
+      }
+      break;
     default:
       DISP_ERROR("Unrecognized Vout type %u\n", type_);
       return ZX_ERR_NOT_SUPPORTED;
@@ -147,6 +187,14 @@ void Vout::PopulateAddedDisplayArgs(added_display_args_t* args, uint64_t display
       args->pixel_format_count = countof(kDsiSupportedPixelFormats);
       args->cursor_info_count = 0;
       break;
+    case VoutType::kHdmi:
+      args->display_id = display_id;
+      args->edid_present = true;
+      args->panel.i2c_bus_id = 0;
+      args->pixel_format_list = kHdmiSupportedPixelFormats;
+      args->pixel_format_count = countof(kHdmiSupportedPixelFormats);
+      args->cursor_info_count = 0;
+      break;
     default:
       zxlogf(ERROR, "Unrecognized vout type %u\n", type_);
       return;
@@ -162,8 +210,97 @@ bool Vout::IsFormatSupported(zx_pixel_format_t format) {
         }
       }
       return false;
+    case VoutType::kHdmi:
+      for (auto f : kHdmiSupportedPixelFormats) {
+        if (f == format) {
+          return true;
+        }
+      }
+      return false;
     default:
       return false;
+  }
+}
+
+zx_status_t Vout::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
+  switch (type_) {
+    case kHdmi:
+      return hdmi_.hdmitx->I2cImplTransact(bus_id, op_list, op_count);
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+void Vout::DisplayConnected() {
+  switch (type_) {
+    case kHdmi:
+      display_mode_t tmp;
+      memset(&tmp, 0, sizeof(display_mode_t));
+      hdmi_.hdmitx->SaveCurDisplayMode(&tmp);
+      break;
+    default:
+      break;
+  }
+}
+
+void Vout::DisplayDisconnected() {
+  switch (type_) {
+    case kHdmi:
+      hdmi_.hdmitx->ShutDown();
+      break;
+    default:
+      break;
+  }
+}
+
+bool Vout::CheckMode(const display_mode_t* mode) {
+  switch (type_) {
+    case kDsi:
+      return false;
+    case kHdmi:
+      return memcmp(hdmi_.hdmitx->GetCurDisplayMode(), mode, sizeof(display_mode_t)) &&
+             (hdmi_.hdmitx->GetVic(mode) != ZX_OK);
+    default:
+      return false;
+  }
+}
+
+zx_status_t Vout::ApplyConfiguration(const display_mode_t* mode) {
+  zx_status_t status;
+  switch (type_) {
+    case kDsi:
+      return ZX_OK;
+    case kHdmi:
+      if (!memcmp(hdmi_.hdmitx->GetCurDisplayMode(), mode, sizeof(display_mode_t))) {
+        // No new configs
+        return ZX_OK;
+      }
+
+      status = hdmi_.hdmitx->GetVic(mode);
+      if (status != ZX_OK) {
+        DISP_ERROR("Apply with bad mode");
+        return status;
+      }
+
+      hdmi_.hdmitx->SaveCurDisplayMode(mode);
+      hdmi_.hdmitx->InitInterface();
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+zx_status_t Vout::OnDisplaysChanged(added_display_info_t& info) {
+  switch (type_) {
+    case kDsi:
+      // Not used anywhere: ZX_PIXEL_FORMAT_RGB_x888;
+      return ZX_OK;
+    case kHdmi:
+      hdmi_.hdmitx->UpdateOutputColorFormat(info.is_standard_srgb_out ? HDMI_COLOR_FORMAT_RGB
+                                                                      : HDMI_COLOR_FORMAT_444);
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
   }
 }
 
@@ -194,6 +331,29 @@ void Vout::Dump() {
                 dsi_.disp_setting.bit_rate_max);
       DISP_INFO("clock_factor = 0x%x (%u)\n", dsi_.disp_setting.clock_factor,
                 dsi_.disp_setting.clock_factor);
+      break;
+    case VoutType::kHdmi:
+      DISP_INFO("pixel_clock_10khz = 0x%x (%u)\n",
+                hdmi_.hdmitx->GetCurDisplayMode()->pixel_clock_10khz,
+                hdmi_.hdmitx->GetCurDisplayMode()->pixel_clock_10khz);
+      DISP_INFO("h_addressable = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->h_addressable,
+                hdmi_.hdmitx->GetCurDisplayMode()->h_addressable);
+      DISP_INFO("h_front_porch = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->h_front_porch,
+                hdmi_.hdmitx->GetCurDisplayMode()->h_front_porch);
+      DISP_INFO("h_sync_pulse = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->h_sync_pulse,
+                hdmi_.hdmitx->GetCurDisplayMode()->h_sync_pulse);
+      DISP_INFO("h_blanking = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->h_blanking,
+                hdmi_.hdmitx->GetCurDisplayMode()->h_blanking);
+      DISP_INFO("v_addressable = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->v_addressable,
+                hdmi_.hdmitx->GetCurDisplayMode()->v_addressable);
+      DISP_INFO("v_front_porch = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->v_front_porch,
+                hdmi_.hdmitx->GetCurDisplayMode()->v_front_porch);
+      DISP_INFO("v_sync_pulse = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->v_sync_pulse,
+                hdmi_.hdmitx->GetCurDisplayMode()->v_sync_pulse);
+      DISP_INFO("v_blanking = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->v_blanking,
+                hdmi_.hdmitx->GetCurDisplayMode()->v_blanking);
+      DISP_INFO("flags = 0x%x (%u)\n", hdmi_.hdmitx->GetCurDisplayMode()->flags,
+                hdmi_.hdmitx->GetCurDisplayMode()->flags);
       break;
     default:
       DISP_ERROR("Unrecognized Vout type %u\n", type_);

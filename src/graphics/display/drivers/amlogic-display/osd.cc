@@ -275,6 +275,15 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
 
   DISP_SPEW("Table index %d used", next_table_idx);
 
+  if ((config[0].mode.h_addressable != display_width_) ||
+      (config[0].mode.v_addressable != display_height_)) {
+    display_width_ = config[0].mode.h_addressable;
+    display_height_ = config[0].mode.v_addressable;
+    fb_width_ = config[0].mode.h_addressable;
+    fb_height_ = config[0].mode.v_addressable;
+    HwInit();
+  }
+
   if (config->gamma_table_present) {
     if (config->apply_gamma_table) {
       // Gamma Table needs to be programmed manually. Cannot use RDMA

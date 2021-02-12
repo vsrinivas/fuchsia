@@ -12,16 +12,18 @@
 #include <zircon/pixelformat.h>
 
 #include "aml-dsi-host.h"
+#include "aml-hdmitx.h"
 #include "amlogic-clock.h"
 
 namespace amlogic_display {
 
-enum VoutType { kDsi, kUnknown };
+enum VoutType { kDsi, kHdmi, kUnknown };
 
 class Vout {
  public:
   Vout() = default;
   zx_status_t InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t width, uint32_t height);
+  zx_status_t InitHdmi(zx_device_t* parent);
 
   zx_status_t RestartDisplay(zx_device_t* parent);
 
@@ -31,10 +33,13 @@ class Vout {
   VoutType type() { return type_; }
   bool supports_afbc() const { return supports_afbc_; }
   bool supports_capture() const { return supports_capture_; }
+  bool supports_hpd() const { return supports_hpd_; }
   uint32_t display_width() {
     switch (type_) {
       case kDsi:
         return dsi_.disp_setting.h_active;
+      case kHdmi:
+        return hdmi_.hdmitx->GetCurDisplayMode()->h_addressable;
       default:
         return 0;
     }
@@ -43,6 +48,8 @@ class Vout {
     switch (type_) {
       case kDsi:
         return dsi_.disp_setting.v_active;
+      case kHdmi:
+        return hdmi_.hdmitx->GetCurDisplayMode()->v_addressable;
       default:
         return 0;
     }
@@ -51,6 +58,8 @@ class Vout {
     switch (type_) {
       case kDsi:
         return dsi_.width;
+      case kHdmi:
+        return hdmi_.hdmitx->GetCurDisplayMode()->h_addressable;
       default:
         return 0;
     }
@@ -59,10 +68,19 @@ class Vout {
     switch (type_) {
       case kDsi:
         return dsi_.height;
+      case kHdmi:
+        return hdmi_.hdmitx->GetCurDisplayMode()->v_addressable;
       default:
         return 0;
     }
   }
+
+  zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
+  void DisplayConnected();
+  void DisplayDisconnected();
+  bool CheckMode(const display_mode_t* mode);
+  zx_status_t ApplyConfiguration(const display_mode_t* mode);
+  zx_status_t OnDisplaysChanged(added_display_info_t& info);
 
   void Dump();
 
@@ -72,6 +90,7 @@ class Vout {
   // Features
   bool supports_afbc_ = false;
   bool supports_capture_ = false;
+  bool supports_hpd_ = false;
 
   struct dsi_t {
     std::unique_ptr<amlogic_display::AmlDsiHost> dsi_host;
@@ -84,6 +103,10 @@ class Vout {
     // Display structure used by various layers of display controller
     display_setting_t disp_setting;
   } dsi_;
+
+  struct hdmi_t {
+    std::unique_ptr<amlogic_display::AmlHdmitx> hdmitx;
+  } hdmi_;
 };
 
 }  // namespace amlogic_display

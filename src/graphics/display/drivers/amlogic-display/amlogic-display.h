@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -67,7 +68,8 @@ class AmlogicDisplay
     : public DeviceType,
       public ddk::DisplayControllerImplProtocol<AmlogicDisplay, ddk::base_protocol>,
       public ddk::DisplayCaptureImplProtocol<AmlogicDisplay>,
-      public ddk::DisplayClampRgbImplProtocol<AmlogicDisplay> {
+      public ddk::DisplayClampRgbImplProtocol<AmlogicDisplay>,
+      public ddk::I2cImplProtocol<AmlogicDisplay> {
  public:
   AmlogicDisplay(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -108,6 +110,20 @@ class AmlogicDisplay
 
   zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
+  // Required functions for I2cImpl
+  uint32_t I2cImplGetBusCount() { return 1; }
+  zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size) {
+    *out_size = UINT32_MAX;
+    return ZX_OK;
+  }
+  zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate) {
+    // no-op
+    return ZX_OK;
+  }
+  zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
+    return vout_->I2cImplTransact(bus_id, op_list, op_count);
+  }
+
   // Required functions for DeviceType
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkResume(ddk::ResumeTxn txn);
@@ -125,6 +141,7 @@ class AmlogicDisplay
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
   int CaptureThread();
+  int HpdThread();
   void PopulatePanelType() TA_REQ(display_lock_);
 
   // This function enables the display hardware. This function is disruptive and causes
@@ -166,8 +183,6 @@ class AmlogicDisplay
   uint64_t current_image_ TA_GUARDED(display_lock_) = 0;
   bool current_image_valid_ TA_GUARDED(display_lock_) = false;
 
-  zx_pixel_format_t format_ = 0;  // Format for output buffers
-
   bool full_init_done_ = false;
 
   // Display controller related data
@@ -192,6 +207,12 @@ class AmlogicDisplay
   inspect::Inspector inspector_;
 
   uint64_t display_id_ = PANEL_DISPLAY_ID;
+  bool display_attached_ = false;
+
+  // Hot Plug Detection
+  ddk::GpioProtocolClient hpd_gpio_{};
+  zx::interrupt hpd_irq_;
+  thrd_t hpd_thread_;
 };
 
 }  // namespace amlogic_display
