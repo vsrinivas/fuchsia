@@ -34,6 +34,7 @@ rustc_binary("bin") {
     "src/context.rs",
     "src/energy_scan_command.rs",
     "src/form_command.rs",
+    "src/get_counters_command.rs",
     "src/get_credential.rs",
     "src/get_mac_filter_settings_command.rs",
     "src/get_neighbor_table_command.rs",

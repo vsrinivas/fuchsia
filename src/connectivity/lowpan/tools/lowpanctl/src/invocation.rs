@@ -8,6 +8,7 @@ use argh::FromArgs;
 use crate::context::LowpanCtlContext;
 pub use crate::energy_scan_command::*;
 pub use crate::form_command::*;
+pub use crate::get_counters_command::*;
 pub use crate::get_credential::*;
 pub use crate::get_mac_filter_settings_command::*;
 pub use crate::get_neighbor_table_command::*;
@@ -74,6 +75,7 @@ pub enum CommandEnumWithRepeat {
     ReplaceMacFilterSettings(ReplaceMacFilterSettingsCommand),
     GetMacFilterSettings(GetMacFilterSettingsCommand),
     GetNeighborTable(GetNeighborTableCommand),
+    GetCounters(GetCountersCommand),
 }
 
 impl CommandEnumWithRepeat {
@@ -97,6 +99,7 @@ impl CommandEnumWithRepeat {
             CommandEnumWithRepeat::ReplaceMacFilterSettings(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetMacFilterSettings(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetNeighborTable(x) => x.exec(context).await,
+            CommandEnumWithRepeat::GetCounters(x) => x.exec(context).await,
         }
     }
 }
@@ -124,6 +127,7 @@ pub enum CommandEnum {
     ReplaceMacFilterSettings(ReplaceMacFilterSettingsCommand),
     GetMacFilterSettings(GetMacFilterSettingsCommand),
     GetNeighborTable(GetNeighborTableCommand),
+    GetCounters(GetCountersCommand),
 }
 
 impl CommandEnum {
@@ -146,6 +150,7 @@ impl CommandEnum {
             CommandEnum::ReplaceMacFilterSettings(x) => x.exec(context).await,
             CommandEnum::GetMacFilterSettings(x) => x.exec(context).await,
             CommandEnum::GetNeighborTable(x) => x.exec(context).await,
+            CommandEnum::GetCounters(x) => x.exec(context).await,
         }
     }
 }

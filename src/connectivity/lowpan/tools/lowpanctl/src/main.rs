@@ -8,6 +8,7 @@ use fuchsia_async as fasync;
 pub mod context;
 pub mod energy_scan_command;
 pub mod form_command;
+pub mod get_counters_command;
 pub mod get_credential;
 pub mod get_mac_filter_settings_command;
 pub mod get_neighbor_table_command;

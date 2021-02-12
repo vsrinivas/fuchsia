@@ -9,7 +9,7 @@ use super::*;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    AllCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute,
+    AllCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute, MacCounters,
     NetworkScanParameters, OnMeshPrefix, ProvisionError, ProvisioningMonitorMarker,
     ProvisioningMonitorRequest, ProvisioningProgress,
 };
@@ -433,7 +433,67 @@ impl Driver for DummyDevice {
     }
 
     async fn get_counters(&self) -> ZxResult<AllCounters> {
-        return Ok(AllCounters::EMPTY);
+        return Ok(AllCounters {
+            mac_tx: Some(MacCounters {
+                total: Some(0),
+                unicast: Some(1),
+                broadcast: Some(2),
+                ack_requested: Some(3),
+                acked: Some(4),
+                no_ack_requested: Some(5),
+                data: Some(6),
+                data_poll: Some(7),
+                beacon: Some(8),
+                beacon_request: Some(9),
+                other: Some(10),
+                address_filtered: None,
+                retries: Some(11),
+                direct_max_retry_expiry: Some(15),
+                indirect_max_retry_expiry: Some(16),
+                dest_addr_filtered: None,
+                duplicated: None,
+                err_no_frame: None,
+                err_unknown_neighbor: None,
+                err_invalid_src_addr: None,
+                err_sec: None,
+                err_fcs: None,
+                err_cca: Some(12),
+                err_abort: Some(13),
+                err_busy_channel: Some(14),
+                err_other: None,
+                ..MacCounters::EMPTY
+            }),
+            mac_rx: Some(MacCounters {
+                total: Some(100),
+                unicast: Some(101),
+                broadcast: Some(102),
+                ack_requested: None,
+                acked: None,
+                no_ack_requested: None,
+                data: Some(103),
+                data_poll: Some(104),
+                beacon: Some(105),
+                beacon_request: Some(106),
+                other: Some(107),
+                address_filtered: Some(108),
+                retries: None,
+                direct_max_retry_expiry: None,
+                indirect_max_retry_expiry: None,
+                dest_addr_filtered: Some(109),
+                duplicated: Some(110),
+                err_no_frame: Some(111),
+                err_unknown_neighbor: Some(112),
+                err_invalid_src_addr: Some(113),
+                err_sec: Some(114),
+                err_fcs: Some(115),
+                err_cca: None,
+                err_abort: None,
+                err_busy_channel: None,
+                err_other: Some(116),
+                ..MacCounters::EMPTY
+            }),
+            ..AllCounters::EMPTY
+        });
     }
 
     async fn reset_counters(&self) -> ZxResult<AllCounters> {

@@ -7,8 +7,8 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_factory_lowpan::{FactoryDeviceMarker, FactoryDeviceProxy, FactoryLookupMarker};
 use fidl_fuchsia_lowpan_device::{
-    DeviceExtraMarker, DeviceExtraProxy, DeviceMarker, DeviceProxy, LookupMarker, LookupProxy,
-    Protocols,
+    CountersMarker, CountersProxy, DeviceExtraMarker, DeviceExtraProxy, DeviceMarker, DeviceProxy,
+    LookupMarker, LookupProxy, Protocols,
 };
 use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
 use fuchsia_component::client::connect_to_service;
@@ -111,5 +111,34 @@ impl LowpanCtlContext {
             client_extra.into_proxy().context("into_proxy() failed")?,
             client_test.into_proxy().context("into_proxy() failed")?,
         ))
+    }
+
+    pub async fn get_default_device_counters(&self) -> Result<CountersProxy, Error> {
+        let lookup = &self.lookup;
+
+        let (client, server) = create_endpoints::<CountersMarker>()?;
+
+        lookup
+            .lookup_device(
+                &self.device_name,
+                Protocols {
+                    device: None,
+                    device_extra: None,
+                    device_test: None,
+                    device_route: None,
+                    device_route_extra: None,
+                    counters: Some(server),
+                    ..Protocols::EMPTY
+                },
+            )
+            .map(|x| match x {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
+                Err(x) => Err(x.into()),
+            })
+            .await
+            .context(format!("Unable to find {:?}", &self.device_name))?;
+
+        client.into_proxy().context("into_proxy() failed")
     }
 }
