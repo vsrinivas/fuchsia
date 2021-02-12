@@ -248,7 +248,7 @@ func (sdk SDKProperties) getDefaultPackageRepoDir(deviceName string) string {
 // GetDefaultDeviceName returns the name of the target device to use by default.
 func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
 	dataKey := getDeviceDataKey([]string{defaultDeviceKey})
-	data, err := getDeviceConfiguationData(sdk, dataKey)
+	data, err := getDeviceConfigurationData(sdk, dataKey)
 	if err != nil {
 		return "", err
 	}
@@ -754,7 +754,7 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 	var configs []DeviceConfig
 
 	// Get all config data.
-	configData, err := getDeviceConfiguationData(sdk, deviceConfigurationKey)
+	configData, err := getDeviceConfigurationData(sdk, deviceConfigurationKey)
 	if err != nil {
 		return configs, fmt.Errorf("Could not read configuration data : %v", err)
 	}
@@ -787,7 +787,7 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 	var deviceConfig DeviceConfig
 
 	dataKey := getDeviceDataKey([]string{name})
-	configData, err := getDeviceConfiguationData(sdk, dataKey)
+	configData, err := getDeviceConfigurationData(sdk, dataKey)
 	if err != nil {
 		return deviceConfig, fmt.Errorf("Could not read configuration data : %v", err)
 	}
@@ -1000,30 +1000,29 @@ func writeConfigurationData(sdk SDKProperties, key string, value string) error {
 	return nil
 }
 
-// getDeviceConfiguationData calls `ffx` to read the data at the specified key.
-func getDeviceConfiguationData(sdk SDKProperties, key string) (map[string]interface{}, error) {
+// getDeviceConfigurationData calls `ffx` to read the data at the specified key.
+func getDeviceConfigurationData(sdk SDKProperties, key string) (map[string]interface{}, error) {
 	var (
 		data   map[string]interface{}
 		err    error
 		output []byte
 	)
 
-	args := []string{"config", "get", key, "-o", "h"}
+	args := []string{"config", "get", key}
 
 	if output, err = runFFX(sdk, args); err != nil {
+		// Exit code of 2 means no value was found.
+		if exiterr, ok := err.(*exec.ExitError); ok && exiterr.ExitCode() == 2 {
+			return data, nil
+		}
 		return data, fmt.Errorf("Error reading %v: %v %v", key, err, string(output))
 	}
+
 	if len(output) > 0 {
 		jsonString := string(output)
 
-		// Check for the key not being set.
-		if strings.HasSuffix(jsonString, ": none\n") {
-			return data, nil
-		}
-
 		// wrap the response in {} and double quote the key so it is suitable for json unmarshaling.
-		index := strings.IndexByte(jsonString, ':')
-		fullJSONString := "{\"" + jsonString[:index] + "\"" + jsonString[index:] + "}"
+		fullJSONString := "{\"" + key + "\": " + jsonString + "}"
 		err := json.Unmarshal([]byte(fullJSONString), &data)
 		if err != nil {
 			return data, fmt.Errorf("Error parsing configuration data %v: %s", err, fullJSONString)
@@ -1045,9 +1044,7 @@ func runFFX(sdk SDKProperties, args []string) ([]byte, error) {
 
 	output, err := ffx.Output()
 	if err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			return []byte{}, fmt.Errorf("Error %v running ffx: %v", exiterr.ExitCode(), string(exiterr.Stderr))
-		}
+		return []byte{}, err
 	}
 	return output, nil
 }

@@ -1038,7 +1038,10 @@ func TestFakeFfx(*testing.T) {
 		}
 		handleEnvFake(args[3:])
 	case "get":
-		handleGetFake(args[3:])
+		if !handleGetFake(args[3:]) {
+			fmt.Fprintf(os.Stderr, "Whatever error message")
+			os.Exit(2)
+		}
 	case "set":
 		if os.Getenv("ALLOW_SET") != "1" {
 			fmt.Fprintf(os.Stderr, "Verb `set` not allowed")
@@ -1075,7 +1078,7 @@ func handleEnvFake(args []string) {
 	}
 }
 
-func handleGetFake(args []string) {
+func handleGetFake(args []string) bool {
 	var (
 		dataName   string
 		deviceData map[string]interface{}
@@ -1102,14 +1105,14 @@ func handleGetFake(args []string) {
 	switch args[0] {
 	case "DeviceConfiguration._DEFAULT_DEVICE_":
 		if os.Getenv("NO_DEFAULT_DEVICE") != "1" {
-			fmt.Printf("DeviceConfiguration._DEFAULT_DEVICE_: \"%v\"\n", deviceName)
+			fmt.Printf("\"%v\"\n", deviceName)
 		} else {
-			fmt.Println("DeviceConfiguration._DEFAULT_DEVICE_: none")
+			return false
 		}
 	case fmt.Sprintf("DeviceConfiguration.%v.device-name", deviceName):
-		fmt.Printf("DeviceConfiguration.%v.device-name: \"%v\"\n", deviceName, deviceName)
+		fmt.Println(deviceName)
 	case "DeviceConfiguration":
-		fmt.Printf(`DeviceConfiguration: {
+		fmt.Println(`{
 			"_DEFAULT_DEVICE_":"atom-slaw-cozy-rigor",
 			"fake-target-device-name":{
 				"bucket":"fuchsia-bucket","device-ip":"","device-name":"fake-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
@@ -1119,22 +1122,22 @@ func handleGetFake(args []string) {
 			}
 			}`)
 	case "DeviceConfiguration.another-target-device-name":
-		fmt.Println(`DeviceConfiguration.another-target-device-name:{
+		fmt.Println(`{
 				"bucket":"fuchsia-bucket","device-ip":"","device-name":"another-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
 			}`)
 	case "DeviceConfiguration.fake-target-device-name":
-		fmt.Println(`DeviceConfiguration.fake-target-device-name:{
+		fmt.Println(`{
 				"bucket":"","device-ip":"","device-name":"fake-target-device-name","image":"","package-port":"","package-repo":"","ssh-port":""
 			}`)
 	default:
 		if args[0] == fmt.Sprintf("DeviceConfiguration.%s", dataName) {
-			fmt.Printf("DeviceConfiguration.%s:", dataName)
 			fmt.Println(currentDeviceData)
 
 		} else {
-			fmt.Printf("%v: none\n", args[0])
+			return false
 		}
 	}
+	return true
 }
 
 func handleSetFake(args []string) {
