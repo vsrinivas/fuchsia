@@ -7,7 +7,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.accessibility.tts.EngineRegistry"
+            "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.logger.Log"
         ]
     }
 }

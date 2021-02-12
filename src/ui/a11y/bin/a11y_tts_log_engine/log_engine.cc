@@ -36,6 +36,7 @@ LogEngine::LogEngine(std::unique_ptr<sys::ComponentContext> startup_context) {
           FX_LOGS(INFO) << "Successfully registered Tts Log Engine.";
         }
       });
+  startup_context_ = std::move(startup_context);
 };
 
 void LogEngine::Enqueue(fuchsia::accessibility::tts::Utterance utterance,

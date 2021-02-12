@@ -8,6 +8,8 @@
     "sandbox": {
         "services": [
             "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.logger.Log",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

@@ -4,28 +4,64 @@
 
 #include "src/ui/a11y/bin/a11y_tts_log_engine/log_engine.h"
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/wire_format.h>
 
+#include <list>
 #include <memory>
 #include <vector>
 
+#include <gtest/gtest.h>
+
+#include "macros.h"
+#include "src/lib/diagnostics/stream/cpp/log_message.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y {
 namespace {
+using gtest::RealLoopFixture;
 
-class LogEngineTest : public gtest::TestLoopFixture {
+class LogEngineTest : public RealLoopFixture {
  protected:
   LogEngineTest() = default;
   ~LogEngineTest() override = default;
 
   void SetUp() override {
     startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+    persistent_context_ = startup_context_.get();
     tts_manager_ = std::make_unique<TtsManager>(startup_context_.get());
-    ASSERT_EQ(ZX_OK, InitLogger());
+  }
+  void Iterate(const std::shared_ptr<fuchsia::diagnostics::BatchIteratorPtr>& iterator) {
+    (*iterator)->GetNext([=](::fuchsia::diagnostics::BatchIterator_GetNext_Result result) {
+      auto content = std::move(result.response().batch);
+      for (auto& bot : content) {
+        auto values =
+            diagnostics::stream::ConvertFormattedContentToLogMessages(std::move(bot)).value();
+        for (auto& msg : values) {
+          log_output_ << msg.value().msg;
+        }
+      }
+      std::vector<std::list<std::string>::iterator> to_delete;
+      for (auto it = expects_.begin(); it != expects_.end(); it++) {
+        if (log_output_.str().find(*it) != std::string::npos) {
+          to_delete.push_back(it);
+        }
+      }
+      for (auto i : to_delete) {
+        expects_.erase(i);
+      }
+      if (expects_.empty()) {
+        QuitLoop();
+        return;
+      }
+      Iterate(iterator);
+    });
   }
 
   // Initializes the global logger.
@@ -33,50 +69,35 @@ class LogEngineTest : public gtest::TestLoopFixture {
   // This redirects the output to the socket pair |log_socket_local_| and |log_socket_remote_|
   // so that we can capture it.
   zx_status_t InitLogger() {
-    EXPECT_EQ(ZX_OK,
-              zx::socket::create(ZX_SOCKET_DATAGRAM, &log_socket_local_, &log_socket_remote_));
-
-    fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                                 .console_fd = -1,
-                                 .log_service_channel = log_socket_remote_.release(),
-                                 .tags = nullptr,
-                                 .num_tags = 0};
-
-    return fx_log_reconfigure(&config);
+    std::shared_ptr<fuchsia::diagnostics::BatchIteratorPtr> iterator =
+        std::make_shared<fuchsia::diagnostics::BatchIteratorPtr>();
+    auto res = persistent_context_->svc()->Connect(accessor_.NewRequest(dispatcher()));
+    ::fuchsia::diagnostics::StreamParameters params;
+    params.set_data_type(fuchsia::diagnostics::DataType::LOGS);
+    params.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT_THEN_SUBSCRIBE);
+    params.set_format(fuchsia::diagnostics::Format::JSON);
+    accessor_->StreamDiagnostics(std::move(params), iterator->NewRequest(dispatcher()));
+    Iterate(iterator);
+    return ZX_OK;
   }
 
-  // Reads log packets from |log_socket_local_| and outputs each message to |log_output_|.
-  //
-  // Returns ZX_OK once there are no more packets left to read.
-  zx_status_t ConsumeLogMessages() {
-    fx_log_packet_t packet;
-    zx_status_t result;
+  void Expect(std::string&& log_message) { expects_.push_back(std::move(log_message)); }
 
-    while ((result = log_socket_local_.read(0, &packet, sizeof(packet), nullptr)) == ZX_OK) {
-      // Write the log message to log_output_. The packet.data buffer contains tags and the message
-      // separated with a null byte. InitLogger does not set any tags, so this just skips over
-      // the the separator.
-      log_output_ << (packet.data + 1) << std::endl;
-    }
+  bool GotExpected() { return expects_.empty(); }
 
-    // It's OK if there are no more log packets to read.
-    if (result == ZX_ERR_SHOULD_WAIT) {
-      return ZX_OK;
-    }
-
-    return result;
+  bool LogContains(std::string&& msg) {
+    expects_.push_back(std::move(msg));
+    InitLogger();
+    RunLoop();
+    return expects_.empty();
   }
-
-  // Returns true if |log_output_| contains |log_message|.
-  bool LogContains(const std::string& log_message) {
-    EXPECT_EQ(ZX_OK, ConsumeLogMessages());
-    return log_output_.str().find(log_message) != std::string::npos;
-  }
-
+  fidl::InterfacePtr<fuchsia::logger::Log> log_service_;
+  fidl::InterfacePtr<fuchsia::diagnostics::ArchiveAccessor> accessor_;
+  std::list<std::string> expects_;
+  sys::ComponentContext* persistent_context_ = nullptr;
   std::unique_ptr<sys::ComponentContext> startup_context_;
   std::unique_ptr<TtsManager> tts_manager_;
   std::stringstream log_output_;
-  zx::socket log_socket_local_, log_socket_remote_;
 };
 
 TEST_F(LogEngineTest, OutputsLogs) {

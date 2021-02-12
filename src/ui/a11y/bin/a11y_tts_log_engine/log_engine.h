@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_BIN_A11Y_TTS_LOG_ENGINE_H_
-#define SRC_UI_A11Y_BIN_A11Y_TTS_LOG_ENGINE_H_
+#ifndef SRC_UI_A11Y_BIN_A11Y_TTS_LOG_ENGINE_LOG_ENGINE_H_
+#define SRC_UI_A11Y_BIN_A11Y_TTS_LOG_ENGINE_LOG_ENGINE_H_
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -41,8 +41,10 @@ class LogEngine : public fuchsia::accessibility::tts::Engine {
 
   // Client-side of the Tts registry interface.
   fuchsia::accessibility::tts::EngineRegistryPtr registry_;
+
+  std::unique_ptr<sys::ComponentContext> startup_context_;
 };
 
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_BIN_A11Y_TTS_LOG_ENGINE_H_
+#endif  // SRC_UI_A11Y_BIN_A11Y_TTS_LOG_ENGINE_LOG_ENGINE_H_
