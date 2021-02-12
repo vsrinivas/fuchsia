@@ -70,6 +70,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             self.frame_handler.send_request(CmdPropValueGet(prop.into()).returning::<T>()).boxed(),
         )
     }
+
+    pub(super) fn is_net_type_supported(&self, net_type: &str) -> bool {
+        let driver_state = self.driver_state.lock();
+        driver_state.preferred_net_type.is_empty() || (driver_state.preferred_net_type == net_type)
+    }
 }
 
 /// State synchronization

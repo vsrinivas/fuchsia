@@ -117,8 +117,24 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
         if params.identity.raw_name.is_none() {
             // We must at least have the network name specified.
-            Err(ZxStatus::INVALID_ARGS)?;
+            return Err(ZxStatus::INVALID_ARGS);
         }
+
+        let net_type = if let Some(ref net_type) = params.identity.net_type {
+            if self.is_net_type_supported(net_type.as_str()) {
+                Some(net_type.clone())
+            } else {
+                fx_log_err!("Network type {:?} is not supported by this interface.", net_type);
+                return Err(ZxStatus::NOT_SUPPORTED);
+            }
+        } else {
+            let net_type = self.driver_state.lock().preferred_net_type.clone();
+            if net_type.is_empty() {
+                None
+            } else {
+                Some(net_type)
+            }
+        };
 
         let u8_channel: Option<u8> = if let Some(channel) = params.identity.channel {
             Some(channel.try_into().map_err(|err| {
@@ -150,6 +166,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             self.frame_handler.send_request(CmdNetClear).await?;
 
             // From here down we are provisioning the NCP with the new network identity.
+
+            // Update the network type field of the driver state identity.
+            {
+                let mut driver_state = self.driver_state.lock();
+                driver_state.identity.net_type = net_type;
+            }
 
             // Set the network name.
             if let Some(network_name) = params.identity.raw_name {
@@ -273,15 +295,15 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
-        self.get_property_simple::<InterfaceType, _>(Prop::InterfaceType)
-            .map_ok(|x| match x {
-                InterfaceType::ZigbeeIp => {
-                    vec![fidl_fuchsia_lowpan::NET_TYPE_ZIGBEE_IP_1_X.to_string()]
-                }
-                InterfaceType::Thread => vec![fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()],
-                _ => vec![],
-            })
-            .await
+        let mut ret = vec![];
+
+        let driver_state = self.driver_state.lock();
+
+        if !driver_state.preferred_net_type.is_empty() {
+            ret.push(driver_state.preferred_net_type.clone());
+        }
+
+        Ok(ret)
     }
 
     async fn get_supported_channels(&self) -> ZxResult<Vec<ChannelInfo>> {
@@ -642,6 +664,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                                 channel: Some(result.channel as u16),
                                 panid: Some(result.mac.panid),
                                 xpanid: Some(result.net.xpanid),
+                                net_type: InterfaceType::from(result.net.net_type).to_net_type(),
                                 ..Identity::EMPTY
                             },
                             rssi: result.rssi as i32,

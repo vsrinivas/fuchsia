@@ -852,6 +852,19 @@ pub enum InterfaceType {
 impl_spinel_pack_uint!(InterfaceType);
 impl_spinel_unpack_uint!(InterfaceType);
 
+impl InterfaceType {
+    pub fn to_net_type(self) -> Option<String> {
+        match self {
+            Self::Bootloader => None,
+            Self::ZigbeeIp => Some(fidl_fuchsia_lowpan::NET_TYPE_ZIGBEE_IP_1_X.to_string()),
+            Self::Thread => Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+            Self::Unknown(x) => {
+                Some(format!("{}.{}", fidl_fuchsia_lowpan::NET_TYPE_UNKNOWN_802_15_4_PID, x))
+            }
+        }
+    }
+}
+
 impl std::fmt::Display for InterfaceType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)

@@ -32,6 +32,11 @@ pub(super) struct DriverState {
     /// This is kept in sync by [`SpinelDriver::on_prop_value_is()`].
     pub(super) role: Role,
 
+    /// The preferred type of network that is being provided by this interface.
+    ///
+    /// This is updated once during init.
+    pub(super) preferred_net_type: String,
+
     /// The current network identity configured on the device.
     ///
     /// This is kept in sync by [`SpinelDriver::on_prop_value_is()`].
@@ -64,6 +69,7 @@ impl Clone for DriverState {
             connectivity_state: self.connectivity_state.clone(),
             caps: self.caps.clone(),
             role: self.role.clone(),
+            preferred_net_type: self.preferred_net_type.clone(),
             identity: self.identity.clone(),
             address_table: self.address_table.clone(),
             on_mesh_nets: self.on_mesh_nets.clone(),
@@ -81,6 +87,7 @@ impl PartialEq for DriverState {
             && self.connectivity_state.eq(&other.connectivity_state)
             && self.caps.eq(&other.caps)
             && self.role.eq(&other.role)
+            && self.preferred_net_type.eq(&other.preferred_net_type)
             && self.identity.net_type.eq(&other.identity.net_type)
             && self.identity.channel.eq(&other.identity.channel)
             && self.identity.panid.eq(&other.identity.panid)
@@ -104,6 +111,7 @@ impl Default for DriverState {
             connectivity_state: ConnectivityState::Inactive,
             caps: Default::default(),
             role: Role::Detached,
+            preferred_net_type: Default::default(),
             identity: Identity::EMPTY,
             address_table: Default::default(),
             on_mesh_nets: Default::default(),

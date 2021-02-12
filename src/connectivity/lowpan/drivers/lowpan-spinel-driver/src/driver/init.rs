@@ -127,6 +127,17 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
         fx_log_info!("init_task: Interface Type: {:?}", iface_type);
 
+        // We don't support Spinel's bootloader mode.
+        if iface_type == InterfaceType::Bootloader {
+            fx_log_err!("init_task: In bootloader mode, cannot initialize.");
+            return Err(format_err!("In bootloader mode, cannot initialize."));
+        }
+
+        if let Some(net_type) = iface_type.to_net_type() {
+            let mut driver_state = self.driver_state.lock();
+            driver_state.preferred_net_type = net_type;
+        }
+
         let caps = self.get_property_simple::<Vec<Cap>, _>(Prop::Caps).await?;
 
         fx_log_info!("init_task: Capabilities: {:?}", caps);
