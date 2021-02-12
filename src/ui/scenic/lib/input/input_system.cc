@@ -380,7 +380,7 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
 
           // Update focus if necessary.
           // TODO(fxbug.dev/59858): Figure out how to handle focus with real GD clients.
-          if (event.phase == Phase::ADD) {
+          if (event.phase == Phase::kAdd) {
             if (view_tree.IsConnectedToScene(view_ref_koid)) {
               if (view_tree.MayReceiveFocus(view_ref_koid)) {
                 RequestFocusChange(view_ref_koid);
@@ -507,20 +507,20 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
                                                      internal_event.pointer_id};
       // ((uint64_t)internal_event.device_id << 32) | (uint64_t)internal_event.pointer_id;
       if (!gfx_legacy_streams_.count(stream_key)) {
-        if (internal_event.phase != Phase::ADD) {
+        if (internal_event.phase != Phase::kAdd) {
           FX_LOGS(WARNING) << "Attempted to start a stream without an initial ADD.";
           return;
         }
 
         gfx_legacy_streams_.emplace(stream_key, NewStreamId());
-      } else if (internal_event.phase == Phase::ADD) {
+      } else if (internal_event.phase == Phase::kAdd) {
         FX_LOGS(WARNING) << "Attempted to ADD twice for the same stream.";
         return;
       }
       const auto stream_id = gfx_legacy_streams_[stream_key];
 
       // Remove from ongoing streams on stream end.
-      if (internal_event.phase == Phase::REMOVE || internal_event.phase == Phase::CANCEL) {
+      if (internal_event.phase == Phase::kRemove || internal_event.phase == Phase::kCancel) {
         gfx_legacy_streams_.erase(stream_key);
       }
 
@@ -533,7 +533,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
     }
     case PointerEventType::MOUSE: {
       TRACE_DURATION("input", "dispatch_command", "command", "MouseCmd");
-      if (internal_event.phase == Phase::ADD || internal_event.phase == Phase::REMOVE) {
+      if (internal_event.phase == Phase::kAdd || internal_event.phase == Phase::kRemove) {
         FX_LOGS(WARNING) << "Oops, mouse device (id=" << internal_event.device_id
                          << ") had an unexpected event: " << internal_event.phase;
         return;
@@ -566,7 +566,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, S
   FX_DCHECK(scene_graph_);
 
   // New stream. Collect contenders and set up a new arena.
-  if (event.phase == Phase::ADD) {
+  if (event.phase == Phase::kAdd) {
     std::vector<ContenderId> contenders = CollectContenders(stream_id, event);
     if (!contenders.empty()) {
       gesture_arenas_.emplace(stream_id, GestureArena{std::move(contenders)});
@@ -586,7 +586,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, S
 
 std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
                                                         const InternalPointerEvent& event) {
-  FX_DCHECK(event.phase == Phase::ADD);
+  FX_DCHECK(event.phase == Phase::kAdd);
   FX_DCHECK(scene_graph_);
 
   const gfx::ViewTree& view_tree = scene_graph_->view_tree();
@@ -620,7 +620,7 @@ void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, Stream
     return;  // Contest already ended, with no winner.
   auto& arena = arena_it->second;
 
-  const bool is_end_of_stream = event.phase == Phase::REMOVE || event.phase == Phase::CANCEL;
+  const bool is_end_of_stream = event.phase == Phase::kRemove || event.phase == Phase::kCancel;
   arena.UpdateStream(/*length*/ 1, is_end_of_stream);
 
   // Update remaining contenders.
@@ -712,7 +712,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   const uint32_t device_id = event.device_id;
   const Phase pointer_phase = event.phase;
 
-  if (pointer_phase == Phase::DOWN) {
+  if (pointer_phase == Phase::kDown) {
     // Find top-hit target and associated properties.
     gfx::TopHitAccumulator top_hit;
     HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ false);
@@ -748,12 +748,12 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
                                       fuchsia::ui::input::PointerEventType::MOUSE, view_tree);
   }
 
-  if (pointer_phase == Phase::UP || pointer_phase == Phase::CANCEL) {
+  if (pointer_phase == Phase::kUp || pointer_phase == Phase::kCancel) {
     mouse_targets_.erase(device_id);
   }
 
   // Deal with unlatched MOVE events.
-  if (pointer_phase == Phase::CHANGE && mouse_targets_.count(device_id) == 0) {
+  if (pointer_phase == Phase::kChange && mouse_targets_.count(device_id) == 0) {
     // Find top-hit target and send it this move event.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.

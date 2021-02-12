@@ -72,7 +72,7 @@ namespace {
 InternalPointerEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id, zx_koid_t context,
                                        zx_koid_t target) {
   InternalPointerEvent cancel_event;
-  cancel_event.phase = Phase::CANCEL;
+  cancel_event.phase = Phase::kCancel;
   cancel_event.device_id = device_id;
   cancel_event.pointer_id = pointer_id;
   cancel_event.context = context;

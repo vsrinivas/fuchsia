@@ -56,38 +56,38 @@ std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t trace_id) {
 Phase GfxPhaseToInternalPhase(PointerEventPhase phase) {
   switch (phase) {
     case PointerEventPhase::ADD:
-      return Phase::ADD;
+      return Phase::kAdd;
     case PointerEventPhase::UP:
-      return Phase::UP;
+      return Phase::kUp;
     case PointerEventPhase::MOVE:
-      return Phase::CHANGE;
+      return Phase::kChange;
     case PointerEventPhase::DOWN:
-      return Phase::DOWN;
+      return Phase::kDown;
     case PointerEventPhase::REMOVE:
-      return Phase::REMOVE;
+      return Phase::kRemove;
     case PointerEventPhase::CANCEL:
-      return Phase::CANCEL;
+      return Phase::kCancel;
     default:
       FX_CHECK(false) << "Should never be reached";
-      return Phase::INVALID;
+      return Phase::kInvalid;
   }
 }
 
 PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
   switch (phase) {
-    case Phase::ADD:
+    case Phase::kAdd:
       return PointerEventPhase::ADD;
-    case Phase::UP:
+    case Phase::kUp:
       return PointerEventPhase::UP;
-    case Phase::CHANGE:
+    case Phase::kChange:
       return PointerEventPhase::MOVE;
-    case Phase::DOWN:
+    case Phase::kDown:
       return PointerEventPhase::DOWN;
-    case Phase::REMOVE:
+    case Phase::kRemove:
       return PointerEventPhase::REMOVE;
-    case Phase::CANCEL:
+    case Phase::kCancel:
       return PointerEventPhase::CANCEL;
-    case Phase::INVALID:
+    case Phase::kInvalid:
       FX_CHECK(false) << "Should never be reached.";
       return static_cast<PointerEventPhase>(0);
   };
@@ -113,28 +113,28 @@ std::vector<InternalPointerEvent> PointerInjectorEventToInternalPointerEvent(
     case InjectorEventPhase::ADD: {
       // Insert extra event.
       InternalPointerEvent add_clone = internal_event;
-      add_clone.phase = Phase::ADD;
+      add_clone.phase = Phase::kAdd;
       events.emplace_back(std::move(add_clone));
-      internal_event.phase = Phase::DOWN;
+      internal_event.phase = Phase::kDown;
       events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::CHANGE: {
-      internal_event.phase = Phase::CHANGE;
+      internal_event.phase = Phase::kChange;
       events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::REMOVE: {
       // Insert extra event.
       InternalPointerEvent up_clone = internal_event;
-      up_clone.phase = Phase::UP;
+      up_clone.phase = Phase::kUp;
       events.emplace_back(std::move(up_clone));
-      internal_event.phase = Phase::REMOVE;
+      internal_event.phase = Phase::kRemove;
       events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::CANCEL: {
-      internal_event.phase = Phase::CANCEL;
+      internal_event.phase = Phase::kCancel;
       events.emplace_back(std::move(internal_event));
       break;
     }

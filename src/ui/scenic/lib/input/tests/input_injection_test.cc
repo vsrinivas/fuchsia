@@ -809,7 +809,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       [](auto...) { return true; },
       /*inject=*/
       [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
-        if (event.phase == scenic_impl::input::Phase::CANCEL)
+        if (event.phase == scenic_impl::input::Phase::kCancel)
           cancelled_streams.push_back(event.pointer_id);
       },
       /*on_channel_closed=*/[] {});
@@ -876,7 +876,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       [](auto...) { return true; },
       /*inject=*/
       [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
-        if (event.phase == scenic_impl::input::Phase::CANCEL)
+        if (event.phase == scenic_impl::input::Phase::kCancel)
           cancelled_streams.push_back(event.pointer_id);
       },
       /*on_channel_closed=*/[] {});
@@ -1046,7 +1046,7 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/
       [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
-        num_cancel_events += event.phase == scenic_impl::input::Phase::CANCEL ? 1 : 0;
+        num_cancel_events += event.phase == scenic_impl::input::Phase::kCancel ? 1 : 0;
       },
       /*on_channel_closed=*/[] {});
 

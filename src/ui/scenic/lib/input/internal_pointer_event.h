@@ -16,7 +16,7 @@ namespace input {
 
 // Possible states the pointer can be in.
 // TODO(fxbug.dev/53316): Remove UP and DOWN phases when old input injection API is removed.
-enum Phase { INVALID, ADD, DOWN, CHANGE, UP, REMOVE, CANCEL };
+enum Phase { kInvalid, kAdd, kDown, kChange, kUp, kRemove, kCancel };
 
 // Extents define an axis-aligned rectangle in 2D space.
 struct Extents {
@@ -50,7 +50,7 @@ struct InternalPointerEvent {
   // Id of the pointer this event belongs to (== a finger on a touchscreen).
   uint32_t pointer_id = 0u;
   // Current event state.
-  Phase phase = Phase::INVALID;
+  Phase phase = Phase::kInvalid;
   // Reference to the context the event was injected from (a View).
   zx_koid_t context = ZX_KOID_INVALID;
   // Reference to the target the event was injected into (a View).
