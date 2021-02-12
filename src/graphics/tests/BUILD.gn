@@ -30,6 +30,7 @@ group("hw_tests") {
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
     "icd_load",
+    "vkext",
     "vkloop",
     "vkreadback",
     "vkvalidation:test-vk-validation",
@@ -37,20 +38,10 @@ group("hw_tests") {
   ]
 }
 
-protected_libvulkan_envs = []
-
-# Filter out everything that's not astro or sherlock.
-foreach(env, magma_libvulkan_hardware_envs) {
-  if (env == sherlock_env || env == astro_env) {
-    protected_libvulkan_envs += [ env ]
-  }
-}
-
 test_package("vulkan-tests") {
   deps = [
     "common:vkcontext",
     "vk_timer_query",
-    "vkext",
     "vkpriority",
   ]
   loadable_modules = vulkan_validation_layers.loadable_modules
@@ -58,22 +49,6 @@ test_package("vulkan-tests") {
   public_deps = vulkan_validation_layers.public_deps
 
   tests = [
-    {
-      name = "vkext"
-      dest = "vkext_unprotected"
-      environments = magma_libvulkan_hardware_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-    {
-      name = "vkext"
-      dest = "vkext_protected"
-      environments = protected_libvulkan_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
     {
       name = "vkpriority"
 
@@ -86,7 +61,10 @@ test_package("vulkan-tests") {
     },
     {
       name = "vkcontext"
-      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+      environments = magma_libvulkan_hardware_envs
+
+      # TODO(fxbug.dev/70272): Re-enable when fixed.
+      # environments += [ aemu_env ]
     },
   ]
 }

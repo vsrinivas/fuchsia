@@ -5,9 +5,9 @@
     ],
     "program": {
         "args": [
-            "--gtest_filter=-*Protected*"
+            "--gtest_filter=*Protected*"
         ],
-        "binary": "test/vkext_unprotected"
+        "binary": "bin/vkext"
     },
     "sandbox": {
         "features": [

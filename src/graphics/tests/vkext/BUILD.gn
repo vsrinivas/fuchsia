@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("vkext") {
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
+
+executable("vkext_bin") {
   testonly = true
+  output_name = "vkext"
 
   sources = [
     "main.cc",
@@ -23,11 +27,10 @@ executable("vkext") {
     "//src/graphics/tests/common",
     "//src/lib/fsl",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/vulkan",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
   ]
-
-  deps += [ "//src/lib/vulkan" ]
 
   # TODO(fxbug.dev/58615): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
@@ -48,4 +51,65 @@ executable("vkext_linux") {
 group("vkext_linux_x64") {
   testonly = true
   public_deps = [ ":vkext_linux(//build/toolchain:linux_x64)" ]
+}
+
+fuchsia_component("vkext_unprotected_cmp") {
+  testonly = true
+  component_name = "vkext_unprotected"
+  deps = [
+    ":vkext_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+  manifest = "meta/vkext_unprotected.cmx"
+}
+
+fuchsia_test_package("vkext-unprotected-pkg") {
+  package_name = "vkext_unprotected"
+  test_components = [ ":vkext_unprotected_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+protected_libvulkan_envs = []
+
+# Filter out everything that's not astro or sherlock.
+foreach(env, magma_libvulkan_hardware_envs) {
+  if (env == sherlock_env || env == astro_env) {
+    protected_libvulkan_envs += [ env ]
+  }
+}
+
+fuchsia_component("vkext_protected_cmp") {
+  testonly = true
+  component_name = "vkext_protected"
+  deps = [
+    ":vkext_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+  manifest = "meta/vkext_protected.cmx"
+}
+
+fuchsia_test_package("vkext-protected-pkg") {
+  package_name = "vkext_protected"
+  test_components = [ ":vkext_protected_cmp" ]
+  test_specs = {
+    environments = protected_libvulkan_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("vkext") {
+  testonly = true
+  deps = [
+    ":vkext-protected-pkg",
+    ":vkext-unprotected-pkg",
+  ]
 }
