@@ -18,6 +18,7 @@ group("tests") {
     "fuchsia_backoff:fuchsia_backoff_tests",
     "library_loader:tests",
     "moniker:moniker-tests",
+    "payload_streamer:tests",
     "runner:tests",
     "topology_builder:tests",
   ]

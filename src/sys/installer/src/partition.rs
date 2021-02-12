@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::payload_streamer::PayloadStreamer,
     crate::BootloaderType,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::Proxy,
@@ -12,6 +11,7 @@ use {
     fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy, PayloadStreamMarker},
     fuchsia_async as fasync, fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
     futures::prelude::*,
+    payload_streamer::PayloadStreamer,
     regex,
     std::{fmt, fs, io::Read, path::Path},
 };
