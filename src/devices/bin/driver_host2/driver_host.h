@@ -7,6 +7,7 @@
 
 #include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/status.h>
 
 #include <fbl/intrusive_double_list.h>
@@ -17,11 +18,13 @@
 class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
                public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
  public:
-  static zx::status<std::unique_ptr<Driver>> Load(zx::vmo vmo);
+  static zx::status<std::unique_ptr<Driver>> Load(std::string url, std::string binary, zx::vmo vmo);
 
-  Driver(void* library, DriverRecordV1* record);
+  Driver(std::string url, std::string binary, void* library, DriverRecordV1* record);
   ~Driver();
 
+  const std::string& url() const { return url_; }
+  const std::string& binary() const { return binary_; }
   void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver> binding);
 
   // Starts the driver.
@@ -30,6 +33,8 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
   zx::status<> Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher);
 
  private:
+  std::string url_;
+  std::string binary_;
   void* library_;
   DriverRecordV1* record_;
   void* opaque_ = nullptr;
@@ -39,15 +44,17 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
 class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::RawChannelInterface {
  public:
   // DriverHost does not take ownership of |loop|.
-  explicit DriverHost(async::Loop* loop);
+  DriverHost(inspect::Inspector* inspector, async::Loop* loop);
 
   zx::status<> PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  fit::promise<inspect::Inspector> Inspect();
 
  private:
+  // |llcpp::fuchsia::driver::framework::DriverHost::Interface|
   void Start(llcpp::fuchsia::driver::framework::DriverStartArgs start_args, zx::channel request,
              StartCompleter::Sync& completer) override;
 
-  async::Loop* loop_;
+  async::Loop* const loop_;
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
 };
 

@@ -38,7 +38,7 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
   zx::status<zx::channel> Start(
       fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
       fidl::VectorView<fidl::StringView> offers,
-      fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
+      fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols, fidl::StringView url,
       llcpp::fuchsia::data::Dictionary program,
       fidl::VectorView<llcpp::fuchsia::component::runner::ComponentNamespaceEntry> ns,
       fidl::ServerEnd<llcpp::fuchsia::io::Directory> outgoing_dir,

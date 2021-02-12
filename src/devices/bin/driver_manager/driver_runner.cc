@@ -49,7 +49,7 @@ DriverHostComponent::DriverHostComponent(
 zx::status<zx::channel> DriverHostComponent::Start(
     fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
     fidl::VectorView<fidl::StringView> offers,
-    fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
+    fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols, fidl::StringView url,
     fdata::Dictionary program, fidl::VectorView<frunner::ComponentNamespaceEntry> ns,
     fidl::ServerEnd<llcpp::fuchsia::io::Directory> outgoing_dir,
     fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir) {
@@ -63,6 +63,7 @@ zx::status<zx::channel> DriverHostComponent::Start(
                   .set_node(fidl::unowned_ptr(&node))
                   .set_offers(fidl::unowned_ptr(&offers))
                   .set_symbols(fidl::unowned_ptr(&symbols))
+                  .set_url(fidl::unowned_ptr(&url))
                   .set_program(fidl::unowned_ptr(&program))
                   .set_ns(fidl::unowned_ptr(&ns))
                   .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir))
@@ -253,11 +254,11 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
 
 void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel controller,
                          StartCompleter::Sync& completer) {
-  auto& url = start_info.resolved_url();
-  auto it = driver_args_.find(std::string(url.data(), url.size()));
+  std::string url(start_info.resolved_url().data(), start_info.resolved_url().size());
+  auto it = driver_args_.find(url);
   if (it == driver_args_.end()) {
-    LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver",
-         start_info.resolved_url().size(), start_info.resolved_url().data());
+    LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver", url.size(),
+         url.data());
     completer.Close(ZX_ERR_UNAVAILABLE);
     return;
   }
@@ -269,8 +270,8 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
   DriverHostComponent* driver_host;
   if (start_args::program_value(start_info.program(), "colocate").value_or("") == "true") {
     if (driver_args.node == &root_node_) {
-      LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate",
-           start_info.resolved_url().size(), start_info.resolved_url().data());
+      LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate", url.size(),
+           url.data());
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -298,15 +299,14 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
   }
   zx::channel exposed_dir(fdio_service_clone(driver_args.exposed_dir.get()));
   if (!exposed_dir.is_valid()) {
-    LOGF(ERROR, "Failed to clone exposed directory for driver '%.*s'",
-         start_info.resolved_url().size(), start_info.resolved_url().data());
+    LOGF(ERROR, "Failed to clone exposed directory for driver '%.*s'", url.size(), url.data());
     completer.Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto start =
-      driver_host->Start(std::move(client_end), driver_args.node->offers(), std::move(symbols),
-                         std::move(start_info.program()), std::move(start_info.ns()),
-                         std::move(start_info.outgoing_dir()), std::move(exposed_dir));
+  auto start = driver_host->Start(std::move(client_end), driver_args.node->offers(),
+                                  std::move(symbols), std::move(start_info.resolved_url()),
+                                  std::move(start_info.program()), std::move(start_info.ns()),
+                                  std::move(start_info.outgoing_dir()), std::move(exposed_dir));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;
@@ -319,9 +319,8 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
       dispatcher_, std::move(controller), driver.get(),
       [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
   if (bind_driver.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to ComponentController for driver '%.*s': %s",
-         start_info.resolved_url().size(), start_info.resolved_url().data(),
-         zx_status_get_string(bind_driver.error()));
+    LOGF(ERROR, "Failed to bind channel to ComponentController for driver '%.*s': %s", url.size(),
+         url.data(), zx_status_get_string(bind_driver.error()));
     completer.Close(bind_driver.error());
     return;
   }
@@ -335,8 +334,7 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
         static_cast<Node*>(node)->Remove();
       });
   if (bind_node.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to Node for driver '%.*s': %s",
-         start_info.resolved_url().size(), start_info.resolved_url().data(),
+    LOGF(ERROR, "Failed to bind channel to Node for driver '%.*s': %s", url.size(), url.data(),
          zx_status_get_string(bind_node.error()));
     completer.Close(bind_node.error());
     return;

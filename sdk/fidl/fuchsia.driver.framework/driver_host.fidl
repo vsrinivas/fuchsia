@@ -8,6 +8,7 @@ using fuchsia.component;
 using fuchsia.component.runner;
 using fuchsia.data;
 using fuchsia.io;
+using fuchsia.url;
 
 /// Arguments for starting a driver.
 resource table DriverStartArgs {
@@ -23,6 +24,10 @@ resource table DriverStartArgs {
     /// program.
     3: vector<NodeSymbol>:MAX_SYMBOL_COUNT symbols;
 
+    /// URL of the package containing the driver. This is purely informational,
+    /// used only to provide data for inspect.
+    4: fuchsia.url.Url url;
+
     /// Information about the driver to start. Currently, we support the
     /// following entries:
     ///   1. "binary": a string containing the package-relative path to the
@@ -31,16 +36,16 @@ resource table DriverStartArgs {
     ///      specifying whether the driver should be colocated in the same
     ///      driver host as the driver that added |node|. If not specified, the
     ///      driver will be launched in a new driver host.
-    4: fuchsia.data.Dictionary program;
+    5: fuchsia.data.Dictionary program;
 
     /// Incoming namespace provided to the driver.
-    5: vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT ns;
+    6: vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT ns;
 
     /// Outgoing directory served by the driver.
-    6: request<fuchsia.io.Directory> outgoing_dir;
+    7: request<fuchsia.io.Directory> outgoing_dir;
 
     /// Exposed directory provided to the driver, for |node|.
-    7: fuchsia.io.Directory exposed_dir;
+    8: fuchsia.io.Directory exposed_dir;
 };
 
 /// Protocol through which a driver's lifecycle can be managed.

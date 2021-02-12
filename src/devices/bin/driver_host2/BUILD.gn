@@ -33,6 +33,7 @@ source_set("lib") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/inspect",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -72,6 +73,7 @@ executable("unittests") {
     ":fuchsia.driverhost.test_llcpp",
     ":lib",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/inspect/testing/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -101,6 +103,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/lib/inspect/service/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/svc",

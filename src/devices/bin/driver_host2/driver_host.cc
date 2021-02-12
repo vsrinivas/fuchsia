@@ -7,6 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/function.h>
 #include <zircon/dlfcn.h>
 
 #include <fs/service.h>
@@ -37,7 +38,7 @@ class FileEventHandler : public fio::File::AsyncEventHandler {
 
 }  // namespace
 
-zx::status<std::unique_ptr<Driver>> Driver::Load(zx::vmo vmo) {
+zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, std::string binary, zx::vmo vmo) {
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
     LOGF(ERROR, "Failed to start driver, could not load library: %s", dlerror());
@@ -52,10 +53,11 @@ zx::status<std::unique_ptr<Driver>> Driver::Load(zx::vmo vmo) {
     LOGF(ERROR, "Failed to start driver, unknown driver record version: %lu", record->version);
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
-  return zx::ok(std::make_unique<Driver>(library, record));
+  return zx::ok(std::make_unique<Driver>(std::move(url), std::move(binary), library, record));
 }
 
-Driver::Driver(void* library, DriverRecordV1* record) : library_(library), record_(record) {}
+Driver::Driver(std::string url, std::string binary, void* library, DriverRecordV1* record)
+    : url_(std::move(url)), binary_(std::move(binary)), library_(library), record_(record) {}
 
 Driver::~Driver() {
   zx_status_t status = record_->stop(opaque_);
@@ -84,7 +86,23 @@ zx::status<> Driver::Start(fidl::OutgoingMessage& message, async_dispatcher_t* d
   return zx::make_status(converted.status());
 }
 
-DriverHost::DriverHost(async::Loop* loop) : loop_(loop) {}
+DriverHost::DriverHost(inspect::Inspector* inspector, async::Loop* loop) : loop_(loop) {
+  inspector->GetRoot().CreateLazyNode(
+      "drivers", [this] { return Inspect(); }, inspector);
+}
+
+fit::promise<inspect::Inspector> DriverHost::Inspect() {
+  inspect::Inspector inspector;
+  auto& root = inspector.GetRoot();
+  size_t i = 0;
+  for (auto& driver : drivers_) {
+    auto child = root.CreateChild("driver-" + std::to_string(++i));
+    child.CreateString("url", driver.url(), &inspector);
+    child.CreateString("binary", driver.binary(), &inspector);
+    inspector.emplace(std::move(child));
+  }
+  return fit::make_ok_promise(std::move(inspector));
+}
 
 zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
@@ -107,6 +125,12 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
 
 void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
                        StartCompleter::Sync& completer) {
+  if (!start_args.has_url()) {
+    LOGF(ERROR, "Failed to start driver, missing 'url' argument");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  std::string url(start_args.url().data(), start_args.url().size());
   auto pkg = start_args.has_ns() ? start_args::ns_value(start_args.ns(), "/pkg")
                                  : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {
@@ -157,7 +181,8 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
                                std::make_shared<FileEventHandler>(binary.value()));
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
-                   binary = std::move(binary.value()), message = std::move(message),
+                   url = std::move(url), binary = std::move(binary.value()),
+                   message = std::move(message),
                    file = std::move(file)](fio::File::GetBufferResponse* response) mutable {
     if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
@@ -173,7 +198,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
       completer.Close(status);
       return;
     }
-    auto driver = Driver::Load(std::move(response->buffer->vmo));
+    auto driver = Driver::Load(std::move(url), std::move(binary), std::move(response->buffer->vmo));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
       return;

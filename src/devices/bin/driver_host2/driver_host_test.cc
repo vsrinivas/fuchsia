@@ -11,11 +11,14 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 
 #include <fbl/string_printf.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace fdata = llcpp::fuchsia::data;
@@ -26,6 +29,20 @@ namespace frunner = llcpp::fuchsia::component::runner;
 namespace ftest = llcpp::fuchsia::driverhost::test;
 
 using Completer = fdf::DriverHost::RawChannelInterface::StartCompleter::Sync;
+using namespace inspect::testing;
+
+class fake_context : public fit::context {
+ public:
+  fit::executor* executor() const override {
+    EXPECT_TRUE(false);
+    return nullptr;
+  }
+
+  fit::suspended_task suspend_task() override {
+    EXPECT_TRUE(false);
+    return fit::suspended_task();
+  }
+};
 
 class TestFile : public fio::testing::File_TestBase {
  public:
@@ -117,7 +134,8 @@ class DriverHostTest : public gtest::TestLoopFixture {
 
   StartDriverResult StartDriver(
       fidl::VectorView<fdf::NodeSymbol> symbols = {},
-      fidl::tracking_ptr<fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node>> node = nullptr) {
+      fidl::tracking_ptr<fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node>> node = nullptr,
+      zx_status_t expected_epitaph = ZX_OK) {
     zx_status_t epitaph = ZX_OK;
     TestTransaction transaction(&epitaph);
 
@@ -168,20 +186,22 @@ class DriverHostTest : public gtest::TestLoopFixture {
           fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
               .set_node(std::move(node))
               .set_symbols(std::make_unique<fidl::VectorView<fdf::NodeSymbol>>(std::move(symbols)))
-              .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
-                  fidl::unowned_vec(ns_entries)))
+              .set_url(std::make_unique<fidl::StringView>(
+                  "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))
               .set_program(std::make_unique<fdata::Dictionary>(
                   fdata::Dictionary::Builder(std::make_unique<fdata::Dictionary::Frame>())
                       .set_entries(std::make_unique<fidl::VectorView<fdata::DictionaryEntry>>(
                           fidl::unowned_vec(program_entries)))
                       .build()))
+              .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
+                  fidl::unowned_vec(ns_entries)))
               .set_outgoing_dir(std::make_unique<fidl::ServerEnd<llcpp::fuchsia::io::Directory>>(
                   std::move(outgoing_dir_server_end)))
               .build(),
           fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
     }
     loop().RunUntilIdle();
-    EXPECT_EQ(expected_start_epitaph_, epitaph);
+    EXPECT_EQ(expected_epitaph, epitaph);
 
     return {
         .driver = std::move(driver_client_end),
@@ -189,16 +209,18 @@ class DriverHostTest : public gtest::TestLoopFixture {
     };
   }
 
-  void SetExpectedStartEpitaph(zx_status_t expected_start_epitaph) {
-    expected_start_epitaph_ = expected_start_epitaph;
+  inspect::Hierarchy Inspect() {
+    fake_context context;
+    auto inspector = driver_host_.Inspect()(context).take_value();
+    return inspect::ReadFromInspector(inspector)(context).take_value();
   }
 
  private:
+  inspect::Inspector inspector_;
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  DriverHost driver_host_{&loop_};
+  DriverHost driver_host_{&inspector_, &loop_};
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-  zx_status_t expected_start_epitaph_ = ZX_OK;
 };
 
 // Start a single driver in the driver host.
@@ -298,12 +320,25 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   zx_status_t epitaph = ZX_OK;
   TestTransaction transaction(&epitaph);
 
-  // DriverStartArgs::ns not set.
+  // DriverStartArgs::ns is missing "/pkg" entry.
   zx::channel driver_client_end, driver_server_end;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
   {
     Completer completer(&transaction);
     driver_host()->Start(fdf::DriverStartArgs(), std::move(driver_server_end), completer);
+  }
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
+
+  // DriverStartArgs::ns not set.
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  {
+    Completer completer(&transaction);
+    driver_host()->Start(
+        fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_url(std::make_unique<fidl::StringView>(
+                "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))
+            .build(),
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -314,6 +349,8 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     Completer completer(&transaction);
     driver_host()->Start(
         fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_url(std::make_unique<fidl::StringView>(
+                "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))
             .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>())
             .build(),
         fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
@@ -333,6 +370,8 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     Completer completer(&transaction);
     driver_host()->Start(
         fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_url(std::make_unique<fidl::StringView>(
+                "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))
             .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
                 fidl::unowned_vec(entries1)))
             .build(),
@@ -353,9 +392,11 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     Completer completer(&transaction);
     driver_host()->Start(
         fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_url(std::make_unique<fidl::StringView>(
+                "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))
+            .set_program(std::make_unique<fdata::Dictionary>())
             .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
                 fidl::unowned_vec(entries2)))
-            .set_program(std::make_unique<fdata::Dictionary>())
             .build(),
         fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
   }
@@ -373,8 +414,7 @@ TEST_F(DriverHostTest, InvalidHandleRights) {
   ASSERT_EQ(ZX_OK, client.replace(ZX_RIGHT_TRANSFER, &client));
   fidl::ClientEnd<fdf::Node> client_end(std::move(client));
   // This should fail when node rights are not ZX_DEFAULT_CHANNEL_RIGHTS.
-  SetExpectedStartEpitaph(ZX_ERR_INVALID_ARGS);
-  StartDriver({}, fidl::unowned_ptr(&client_end));
+  StartDriver({}, fidl::unowned_ptr(&client_end), ZX_ERR_INVALID_ARGS);
   EXPECT_FALSE(connected);
 }
 
@@ -417,16 +457,42 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
     Completer completer(&transaction);
     driver_host()->Start(
         fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
-            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
-                fidl::unowned_vec(ns_entries)))
+            .set_url(std::make_unique<fidl::StringView>(
+                "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))
             .set_program(std::make_unique<fdata::Dictionary>(
                 fdata::Dictionary::Builder(std::make_unique<fdata::Dictionary::Frame>())
                     .set_entries(std::make_unique<fidl::VectorView<fdata::DictionaryEntry>>(
                         fidl::unowned_vec(program_entries)))
                     .build()))
+            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
+                fidl::unowned_vec(ns_entries)))
             .build(),
         std::move(driver_server_end), completer);
   }
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
+}
+
+TEST_F(DriverHostTest, StartAndInspect) {
+  auto [driver_1, outgoing_dir_1] = StartDriver();
+  auto [driver_2, outgoing_dir_2] = StartDriver();
+
+  EXPECT_THAT(Inspect(),
+              AllOf(NodeMatches(NameMatches("root")),
+                    ChildrenMatch(UnorderedElementsAre(
+                        AllOf(NodeMatches(AllOf(
+                            NameMatches("driver-1"),
+                            PropertyList(UnorderedElementsAre(
+                                StringIs("url", "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"),
+                                StringIs("binary", "driver/library.so")))))),
+                        AllOf(NodeMatches(AllOf(
+                            NameMatches("driver-2"),
+                            PropertyList(UnorderedElementsAre(
+                                StringIs("url", "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"),
+                                StringIs("binary", "driver/library.so"))))))))));
+
+  driver_1.reset();
+  driver_2.reset();
+  loop().RunUntilIdle();
+  EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
