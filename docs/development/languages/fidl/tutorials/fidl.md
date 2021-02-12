@@ -23,10 +23,14 @@ The example code for this tutorial is in
 
 We've chosen the directory name to match the library name, which is the
 convention taken by the libraries defined in the Fuchsia IDK in
-[`//sdk/fidl`][sdk].
+[`//sdk/fidl`][sdk] such as `//sdk/fidl/fuchsia.url` or `//sdk/fidl/fuchsia.ui.text`.
 
-We can define some examples of the various FIDL language features in
-`examples/fidl/fuchsia.examples/types.test.fidl`:
+FIDL file names use the `.fidl` extension. Analogous to C header files, FIDL files
+define data types and declare functional interfaces. These declarations are used in
+conjunction with FIDL-specific data types to communicate between FIDL endpoints.
+
+The following are some examples of various FIDL language features as defined in
+`//examples/fidl/fuchsia.examples/types.test.fidl`:
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="lib" %}
