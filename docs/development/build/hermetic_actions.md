@@ -132,9 +132,9 @@ your build's output cache first:
 fx clean
 ```
 
-You can also reproduce this in Gerrit with an optional tryjob. In the Gerrit UI,
-click "Choose Tryjobs" and select `fuchsia-x64-debug-traced` (search for
-"trace"). In the near future, this check will be performed on all changes in CQ.
+By default, CQ performs these hermeticity checks on all changes. It does so
+using the `build_should_trace_actions=true` argument mentioned above, so
+developers can reproduce the exact same traced builds locally.
 
 ## Suppressing hermetic action checks
 
