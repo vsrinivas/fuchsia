@@ -8,7 +8,11 @@ fuchsia_component("vulkaninfo_cmp") {
   manifest = "meta/vulkaninfo.cmx"
   component_name = "vulkaninfo"
 
-  deps = [ "//src/lib/vulkan:vulkaninfo" ]
+  deps = [
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+    "//src/lib/vulkan:vulkaninfo",
+  ]
 }
 
 fuchsia_package("vulkaninfo") {
