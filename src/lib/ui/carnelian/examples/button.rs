@@ -285,7 +285,7 @@ impl ViewAssistant for ButtonViewAssistant {
             let indicator_pos = point2(center_x - indicator_len, indicator_y - indicator_len / 2.0);
             let indicator_bounds = Rect::new(indicator_pos, indicator_size);
             let indicator = builder.rectangle(indicator_bounds, Color::green());
-            let button = Button::new(
+            let mut button = Button::new(
                 BUTTON_LABEL,
                 font_size,
                 padding,
@@ -293,7 +293,8 @@ impl ViewAssistant for ButtonViewAssistant {
                 &mut builder,
             )
             .expect("button");
-            let scene = builder.build();
+            let mut scene = builder.build();
+            button.set_focused(&mut scene, self.focused);
             SceneDetails { scene, indicator, button }
         });
 
