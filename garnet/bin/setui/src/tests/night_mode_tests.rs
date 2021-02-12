@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::base::SettingType, crate::handler::device_storage::testing::*,
     crate::night_mode::types::NightModeInfo, crate::EnvironmentBuilder, fidl_fuchsia_settings::*,
@@ -43,8 +42,7 @@ async fn test_night_mode() {
         .expect("set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(changed_value, retrieved_struct);
 
     // Ensure retrieved value matches set value

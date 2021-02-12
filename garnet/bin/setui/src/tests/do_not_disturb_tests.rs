@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::base::SettingType,
     crate::do_not_disturb::types::DoNotDisturbInfo,
@@ -23,10 +22,7 @@ async fn test_do_not_disturb() {
         .get_device_storage::<DoNotDisturbInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
     // Prepopulate initial value.
-    {
-        let mut store_lock = store.lock().await;
-        assert!(store_lock.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
-    }
+    assert!(store.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
 
     let env = EnvironmentBuilder::new(storage_factory)
         .settings(&[SettingType::DoNotDisturb])

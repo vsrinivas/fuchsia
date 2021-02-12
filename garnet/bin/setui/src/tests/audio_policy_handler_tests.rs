@@ -40,7 +40,7 @@ const CONTEXT_ID: u64 = 0;
 
 struct TestEnvironment {
     /// Device storage handle.
-    store: Arc<Mutex<DeviceStorage<State>>>,
+    store: Arc<DeviceStorage<State>>,
 
     /// Core messenger factory.
     core_messenger_factory: core::message::Factory,
@@ -109,7 +109,7 @@ async fn create_handler_test_environment() -> TestEnvironment {
         .await
         .expect("switchboard messenger created");
     let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
+    let store = Arc::new(storage_factory.lock().await.get_store::<State>(CONTEXT_ID));
     let client_proxy = ClientProxy::new(
         messenger,
         core_messenger,
@@ -358,7 +358,7 @@ async fn test_handler_no_persisted_state() {
     assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(expected_value)));
 
     // Verify that nothing was written to storage.
-    assert_eq!(env.store.lock().await.get().await, State::default_value());
+    assert_eq!(env.store.get().await, State::default_value());
 }
 
 /// Verifies that the audio policy handler reads the persisted state and restores it.
@@ -391,7 +391,7 @@ async fn test_handler_restore_persisted_state() {
         .await
         .expect("setting proxy messenger created");
     let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
+    let store = Arc::new(storage_factory.lock().await.get_store::<State>(CONTEXT_ID));
     let client_proxy = ClientProxy::new(
         messenger,
         core_messenger,
@@ -401,7 +401,7 @@ async fn test_handler_restore_persisted_state() {
     );
 
     // Write the "persisted" value to storage for the handler to read on start.
-    store.lock().await.write(&persisted_state, false).await.expect("write failed");
+    store.write(&persisted_state, false).await.expect("write failed");
 
     // Start task to provide audio info to the handler, which it requests at startup.
     serve_audio_info_switchboard(
@@ -454,7 +454,7 @@ async fn test_handler_add_policy() {
     assert_matches!(payload, Payload::Audio(Response::Policy(_)));
 
     // Verify that the expected transform was written to storage.
-    let stored_value = env.store.lock().await.get().await;
+    let stored_value = env.store.get().await;
     verify_state(&stored_value, modified_property, expected_transform);
 
     // Request the policy state from the handler and verify that it matches the stored value.
@@ -531,7 +531,7 @@ async fn test_handler_remove_policy() {
     assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(expected_value.clone())));
 
     // Verify that the expected value is persisted to storage.
-    assert_eq!(env.store.lock().await.get().await, expected_value);
+    assert_eq!(env.store.get().await, expected_value);
 }
 
 /// Verifies that adding a max volume policy adjusts the internal volume level if it's above the

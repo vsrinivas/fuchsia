@@ -99,7 +99,7 @@ async fn validate_restore(is_local_reset_allowed: bool) {
             .await
             .get_device_storage::<FactoryResetInfo>(StorageAccessContext::Test, CONTEXT_ID);
         let info = FactoryResetInfo { is_local_reset_allowed };
-        store.lock().await.write(&info, false).await.expect("write should have succeeded");
+        store.write(&info, false).await.expect("write should have succeeded");
     }
 
     // Bring up environment with restore agent and factory reset.

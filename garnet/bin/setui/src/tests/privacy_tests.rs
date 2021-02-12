@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::base::SettingType,
     crate::handler::device_storage::{testing::*, DeviceStorage},
@@ -32,7 +31,7 @@ async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
 /// Creates an environment for privacy.
 async fn create_test_privacy_env(
     storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
-) -> (PrivacyProxy, Arc<Mutex<DeviceStorage<PrivacyInfo>>>) {
+) -> (PrivacyProxy, DeviceStorage<PrivacyInfo>) {
     let store = storage_factory
         .lock()
         .await
@@ -68,8 +67,7 @@ async fn test_privacy() {
     privacy_service.set(privacy_settings).await.expect("set completed").expect("set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(changed_value, retrieved_struct);
 
     // Ensure retrieved value matches set value

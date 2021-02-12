@@ -417,15 +417,11 @@ async fn test_restore() {
         .set_input_device_config(default_mic_config_muted())
         .build()
         .await;
-    let input_proxy = env.input_service.clone();
-    let store = env.store.clone();
-    {
-        let mut stored_info = create_default_input_info().clone();
-        stored_info.input_device_state = default_mic_cam_config_cam_disabled().into();
-        assert!(store.lock().await.write(&stored_info, false).await.is_ok());
-    }
+    let mut stored_info = create_default_input_info().clone();
+    stored_info.input_device_state = default_mic_cam_config_cam_disabled().into();
+    assert!(env.store.write(&stored_info, false).await.is_ok());
 
-    get_and_check_state(&input_proxy, true, true).await;
+    get_and_check_state(&env.input_service, true, true).await;
 }
 
 // Test to ensure mic input change events are received.
@@ -455,9 +451,6 @@ async fn test_persisted_values_applied_at_start() {
         .set_input_device_config(default_mic_cam_config())
         .build()
         .await;
-    let input_proxy = env.input_service.clone();
-    let store = env.store.clone();
-
     let mut test_input_info = InputInfoSources {
         input_device_state: InputState {
             input_categories: HashMap::<InputDeviceType, InputCategory>::new(),
@@ -490,12 +483,9 @@ async fn test_persisted_values_applied_at_start() {
     );
 
     // Write values in the store.
-    {
-        let mut store_lock = store.lock().await;
-        store_lock.write(&test_input_info, false).await.expect("write input info in store");
-    }
+    env.store.write(&test_input_info, false).await.expect("write input info in store");
 
-    get_and_check_state(&input_proxy, true, true).await;
+    get_and_check_state(&env.input_service, true, true).await;
 }
 
 // Test that a failure results in the correct epitaph.

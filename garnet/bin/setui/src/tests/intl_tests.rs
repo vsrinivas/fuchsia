@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::base::SettingType,
     crate::handler::device_storage::testing::*,
@@ -125,8 +124,7 @@ async fn test_intl_e2e() {
     assert_eq!(settings, intl_settings.clone());
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(retrieved_struct, intl_settings.clone().into());
 }
 
@@ -167,8 +165,7 @@ async fn test_intl_e2e_set_twice() {
     intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
 }
 
@@ -207,8 +204,7 @@ async fn test_intl_e2e_idempotent_set() {
     intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
 }
 

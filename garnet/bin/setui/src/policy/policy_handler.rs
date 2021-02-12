@@ -18,7 +18,6 @@ use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use futures::lock::Mutex;
 use std::sync::Arc;
 
 pub trait Storage: DeviceStorageCompatible + Send + Sync {}
@@ -138,7 +137,7 @@ where
             context.service_messenger,
             context.messenger,
             context.setting_proxy_signature,
-            storage,
+            Arc::new(storage),
             context.policy_type,
         );
 
@@ -152,7 +151,7 @@ pub struct ClientProxy<S: Storage + 'static> {
     service_messenger: service::message::Messenger,
     messenger: Messenger,
     setting_proxy_signature: Signature,
-    storage: Arc<Mutex<DeviceStorage<S>>>,
+    storage: Arc<DeviceStorage<S>>,
     policy_type: PolicyType,
 }
 
@@ -187,7 +186,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
         service_messenger: service::message::Messenger,
         messenger: Messenger,
         setting_proxy_signature: Signature,
-        storage: Arc<Mutex<DeviceStorage<S>>>,
+        storage: Arc<DeviceStorage<S>>,
         policy_type: PolicyType,
     ) -> Self {
         Self { service_messenger, messenger, setting_proxy_signature, storage, policy_type }
@@ -198,7 +197,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
     }
 
     pub async fn read(&self) -> S {
-        self.storage.lock().await.get().await
+        self.storage.get().await
     }
 
     /// Returns Ok if the value was written, or an Error if the write failed. The argument
@@ -209,7 +208,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
             return Ok(());
         }
 
-        match self.storage.lock().await.write(&value, write_through).await {
+        match self.storage.write(&value, write_through).await {
             Ok(_) => Ok(()),
             Err(_) => Err(PolicyError::WriteFailure(self.policy_type)),
         }
@@ -231,6 +230,7 @@ mod tests {
     use crate::service;
     use crate::switchboard::base::{SettingAction, SettingActionData};
     use crate::tests::message_utils::verify_payload;
+    use std::sync::Arc;
 
     const CONTEXT_ID: u64 = 0;
 
@@ -260,7 +260,7 @@ mod tests {
                 .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
-            storage: store,
+            storage: Arc::new(store),
             policy_type,
         };
 
@@ -307,10 +307,9 @@ mod tests {
                 .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
-            storage: InMemoryStorageFactory::create()
-                .lock()
-                .await
-                .get_store::<PrivacyInfo>(CONTEXT_ID),
+            storage: Arc::new(
+                InMemoryStorageFactory::create().lock().await.get_store::<PrivacyInfo>(CONTEXT_ID),
+            ),
             policy_type,
         };
 

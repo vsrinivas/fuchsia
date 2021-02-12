@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use crate::handler::base::{Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
@@ -20,6 +19,7 @@ use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
+use std::sync::Arc;
 
 const CONTEXT_ID: u64 = 0;
 
@@ -83,7 +83,7 @@ async fn test_write() {
     let (_, setting_proxy_receptor) =
         core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
+    let store = Arc::new(storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID));
     let client_proxy = ClientProxy::new(
         messenger,
         core_messenger,
@@ -107,7 +107,7 @@ async fn test_write() {
     handler.handle_policy_request(PolicyRequest::Get).await.expect("handle failed");
 
     // Verify the value was written to the store through the client proxy.
-    assert_eq!(store.lock().await.get().await, expected_value);
+    assert_eq!(store.get().await, expected_value);
 
     // Verify that the written value can be read again through the client proxy.
     assert_eq!(client_proxy.read().await, expected_value);

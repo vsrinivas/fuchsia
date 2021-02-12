@@ -14,7 +14,6 @@ use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::ops::{Add, Sub};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const SETTINGS_PREFIX: &str = "settings";
@@ -42,10 +41,18 @@ pub struct DeviceStorage<T: DeviceStorageCompatible> {
     /// If true, writes to the underlying storage will only occur at most every
     /// MIN_WRITE_INTERVAL_MS.
     debounce_writes: bool,
-    current_data: Option<T>,
 
     /// Sender to communicate with task loop that handles commits.
     commit_sender: UnboundedSender<CommitParams>,
+
+    /// Storage managed through interior mutability.
+    cached_storage: Mutex<CachedStorage<T>>,
+}
+
+/// `CachedStorage` abstracts over a cached value that's read from and written
+/// to some backing store.
+pub struct CachedStorage<T: DeviceStorageCompatible> {
+    current_data: Option<T>,
     stash_proxy: StoreAccessorProxy,
 }
 
@@ -86,9 +93,11 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         let storage = DeviceStorage {
             caching_enabled: true,
             debounce_writes: true,
-            current_data,
             commit_sender,
-            stash_proxy: stash_proxy.clone(),
+            cached_storage: Mutex::new(CachedStorage {
+                current_data,
+                stash_proxy: stash_proxy.clone(),
+            }),
         };
 
         Task::spawn(async move {
@@ -166,37 +175,40 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         }
     }
 
-    pub async fn write(&mut self, new_value: &T, flush: bool) -> Result<(), Error> {
-        if self.current_data.as_ref() != Some(new_value) {
+    pub async fn write(&self, new_value: &T, flush: bool) -> Result<(), Error> {
+        let mut cached_storage = self.cached_storage.lock().await;
+        if cached_storage.current_data.as_ref() != Some(new_value) {
             let mut serialized = Value::Stringval(new_value.serialize_to());
-            self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
+            cached_storage.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just commit immediately.
-                DeviceStorage::<T>::stash_commit(&self.stash_proxy, flush).await;
+                DeviceStorage::<T>::stash_commit(&cached_storage.stash_proxy, flush).await;
             } else {
                 self.commit_sender.unbounded_send(CommitParams { flush }).ok();
             }
-            self.current_data = Some(new_value.clone());
+            cached_storage.current_data = Some(new_value.clone());
         }
         Ok(())
     }
 
     /// Gets the latest value cached locally, or loads the value from storage.
     /// Doesn't support multiple concurrent callers of the same struct.
-    pub async fn get(&mut self) -> T {
-        if None == self.current_data || !self.caching_enabled {
-            if let Some(stash_value) = self.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
+    pub async fn get(&self) -> T {
+        let mut cached_storage = self.cached_storage.lock().await;
+        if None == cached_storage.current_data || !self.caching_enabled {
+            if let Some(stash_value) =
+                cached_storage.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
             {
                 if let Value::Stringval(string_value) = &*stash_value {
-                    self.current_data = Some(T::deserialize_from(&string_value));
+                    cached_storage.current_data = Some(T::deserialize_from(&string_value));
                 } else {
                     panic!("Unexpected type for key found in stash");
                 }
             } else {
-                self.current_data = Some(T::default_value());
+                cached_storage.current_data = Some(T::default_value());
             }
         }
-        if let Some(curent_value) = &self.current_data {
+        if let Some(curent_value) = &cached_storage.current_data {
             curent_value.clone()
         } else {
             panic!("Should never have no value");
@@ -208,7 +220,7 @@ pub trait DeviceStorageFactory {
     fn get_store<T: DeviceStorageCompatible + 'static>(
         &mut self,
         context_id: u64,
-    ) -> Arc<Mutex<DeviceStorage<T>>>;
+    ) -> DeviceStorage<T>;
 }
 
 /// Factory that vends out storage for individual structs.
@@ -235,11 +247,11 @@ impl DeviceStorageFactory for StashDeviceStorageFactory {
     fn get_store<T: DeviceStorageCompatible + 'static>(
         &mut self,
         _context_id: u64,
-    ) -> Arc<Mutex<DeviceStorage<T>>> {
+    ) -> DeviceStorage<T> {
         let (accessor_proxy, server_end) = create_proxy().unwrap();
         self.store.create_accessor(false, server_end).unwrap();
 
-        Arc::new(Mutex::new(DeviceStorage::new(accessor_proxy, None)))
+        DeviceStorage::new(accessor_proxy, None)
     }
 }
 
@@ -256,6 +268,7 @@ pub mod testing {
     use futures::prelude::*;
     use std::any::TypeId;
     use std::collections::{HashMap, HashSet};
+    use std::sync::Arc;
 
     #[derive(PartialEq)]
     pub enum StashAction {
@@ -308,7 +321,7 @@ pub mod testing {
             &mut self,
             access_context: StorageAccessContext,
             context_id: u64,
-        ) -> Arc<Mutex<DeviceStorage<T>>> {
+        ) -> DeviceStorage<T> {
             let id = TypeId::of::<T>();
             if !self.proxies.contains_key(&id) {
                 self.proxies.insert(id, spawn_stash_proxy());
@@ -327,7 +340,7 @@ pub mod testing {
                 storage.set_caching_enabled(false);
                 storage.set_debounce_writes(false);
 
-                Arc::new(Mutex::new(storage))
+                storage
             } else {
                 panic!("proxy should be present");
             }
@@ -338,7 +351,7 @@ pub mod testing {
         fn get_store<T: DeviceStorageCompatible + 'static>(
             &mut self,
             context_id: u64,
-        ) -> Arc<Mutex<DeviceStorage<T>>> {
+        ) -> DeviceStorage<T> {
             self.get_device_storage(StorageAccessContext::Production, context_id)
         }
     }
@@ -396,11 +409,11 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use fuchsia_async::{Executor, Time};
-    use futures::lock::Mutex;
     use futures::prelude::*;
     use serde::{Deserialize, Serialize};
     use std::convert::TryInto;
     use std::marker::Unpin;
+    use std::sync::Arc;
     use std::task::Poll;
     use testing::*;
 
@@ -494,7 +507,7 @@ mod tests {
         })
         .detach();
 
-        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
         let result = storage.get().await;
 
@@ -519,7 +532,7 @@ mod tests {
         })
         .detach();
 
-        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
         let result = storage.get().await;
 
@@ -546,7 +559,7 @@ mod tests {
         })
         .detach();
 
-        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
         let result = storage.get().await;
 
@@ -563,7 +576,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
         // Write to device storage.
         let value_to_write = TestStruct { value: written_value };
@@ -601,7 +614,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
         let first_value = VALUE1;
         let second_value = VALUE2;
@@ -679,7 +692,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
         // Write to device storage with flush set to true.
         let value_to_write = TestStruct { value: written_value };
@@ -707,14 +720,18 @@ mod tests {
     async fn test_in_memory_storage() {
         let factory = InMemoryStorageFactory::create();
 
-        let store_1 = factory
-            .lock()
-            .await
-            .get_device_storage::<TestStruct>(StorageAccessContext::Test, CONTEXT_ID);
-        let store_2 = factory
-            .lock()
-            .await
-            .get_device_storage::<TestStruct>(StorageAccessContext::Test, CONTEXT_ID);
+        let store_1 = Arc::new(
+            factory
+                .lock()
+                .await
+                .get_device_storage::<TestStruct>(StorageAccessContext::Test, CONTEXT_ID),
+        );
+        let store_2 = Arc::new(
+            factory
+                .lock()
+                .await
+                .get_device_storage::<TestStruct>(StorageAccessContext::Test, CONTEXT_ID),
+        );
 
         // Write initial data through first store.
         let test_struct = TestStruct { value: VALUE0 };
@@ -728,22 +745,15 @@ mod tests {
     }
 
     async fn test_write_propagation(
-        store_1: Arc<Mutex<DeviceStorage<TestStruct>>>,
-        store_2: Arc<Mutex<DeviceStorage<TestStruct>>>,
+        store_1: Arc<DeviceStorage<TestStruct>>,
+        store_2: Arc<DeviceStorage<TestStruct>>,
         data: TestStruct,
     ) {
-        {
-            let mut store_1_lock = store_1.lock().await;
-            assert!(store_1_lock.write(&data, false).await.is_ok());
-        }
+        assert!(store_1.write(&data, false).await.is_ok());
 
         // Ensure it is read in from second store.
-        {
-            let mut store_2_lock = store_2.lock().await;
-            let retrieved_struct = store_2_lock.get().await;
-
-            assert_eq!(data, retrieved_struct);
-        }
+        let retrieved_struct = store_2.get().await;
+        assert_eq!(data, retrieved_struct);
     }
 
     // This mod includes structs to only be used by

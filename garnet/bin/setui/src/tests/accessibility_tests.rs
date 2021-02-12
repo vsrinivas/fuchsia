@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType},
     crate::base::SettingType,
@@ -102,8 +101,7 @@ async fn test_accessibility_set_all() {
         .expect("set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(expected_info, retrieved_struct);
 
     // Verify the value we set is returned when watching.
@@ -182,8 +180,7 @@ async fn test_accessibility_set_captions() {
         .expect("set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let mut store_lock = store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = store.get().await;
     assert_eq!(expected_info, retrieved_struct);
 
     // Verify the value we set is returned when watching.

@@ -1,7 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#[cfg(test)]
 use {
     crate::accessibility::types::AccessibilityInfo,
     crate::agent::restore_agent,
@@ -28,6 +27,7 @@ use {
     std::collections::HashMap,
     std::convert::TryFrom,
     std::marker::PhantomData,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_setting_handler_test_environment";
@@ -149,12 +149,14 @@ async fn test_write_notify() {
     let (client_tx, mut client_rx) =
         futures::channel::mpsc::unbounded::<persist::ClientProxy<AccessibilityInfo>>();
 
-    let storage = context
-        .environment
-        .storage_factory_handle
-        .lock()
-        .await
-        .get_store::<AccessibilityInfo>(context.id);
+    let storage = Arc::new(
+        context
+            .environment
+            .storage_factory_handle
+            .lock()
+            .await
+            .get_store::<AccessibilityInfo>(context.id),
+    );
     let setting_type = context.setting_type;
 
     ClientImpl::create(

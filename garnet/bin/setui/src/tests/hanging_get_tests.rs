@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
@@ -29,9 +28,8 @@ async fn test_multiple_watches() {
 
     // Prepopulate initial value
     {
-        let mut store_lock = store.lock().await;
         let initial_data = SetupInfo { configuration_interfaces: initial_interfaces };
-        assert!(store_lock.write(&initial_data, false).await.is_ok());
+        assert!(store.write(&initial_data, false).await.is_ok());
     }
 
     let service_registry = ServiceRegistry::create();

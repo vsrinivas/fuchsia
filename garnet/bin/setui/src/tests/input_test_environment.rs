@@ -33,7 +33,7 @@ pub struct TestInputEnvironment {
     pub input_button_service: Arc<Mutex<InputDeviceRegistryService>>,
 
     /// For storing the InputInfoSources.
-    pub store: Arc<Mutex<DeviceStorage<InputInfoSources>>>,
+    pub store: DeviceStorage<InputInfoSources>,
 }
 
 pub struct TestInputEnvironmentBuilder {
@@ -75,7 +75,7 @@ impl TestInputEnvironmentBuilder {
             .get_device_storage::<InputInfoSources>(StorageAccessContext::Test, CONTEXT_ID);
 
         if let Some(info) = self.starting_input_info_sources {
-            store.lock().await.write(&info, false).await.expect("write starting values");
+            store.write(&info, false).await.expect("write starting values");
         }
 
         let mut environment_builder = EnvironmentBuilder::new(storage_factory)
@@ -93,12 +93,14 @@ impl TestInputEnvironmentBuilder {
                 Box::new(move |context: Context<InMemoryStorageFactory>| {
                     let config_clone = config.clone();
                     Box::pin(async move {
-                        let storage = context
-                            .environment
-                            .storage_factory_handle
-                            .lock()
-                            .await
-                            .get_store::<InputInfoSources>(context.id);
+                        let storage = Arc::new(
+                            context
+                                .environment
+                                .storage_factory_handle
+                                .lock()
+                                .await
+                                .get_store::<InputInfoSources>(context.id),
+                        );
 
                         let setting_type = context.setting_type;
                         ClientImpl::create(

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use std::collections::HashMap;
 use std::option::Option::Some;
 use std::sync::Arc;
@@ -114,7 +113,7 @@ async fn populate_multiple_test_lights(
 struct TestLightEnvironment {
     light_service: LightProxy,
     input_service: Arc<Mutex<InputDeviceRegistryService>>,
-    store: Arc<Mutex<DeviceStorage<LightInfo>>>,
+    store: DeviceStorage<LightInfo>,
 }
 
 struct TestLightEnvironmentBuilder {
@@ -183,7 +182,7 @@ impl TestLightEnvironmentBuilder {
             .get_device_storage::<LightInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
         if let Some(info) = self.starting_light_info {
-            store.lock().await.write(&info, false).await.expect("write starting values");
+            store.write(&info, false).await.expect("write starting values");
             if self.hardware_light_service_handle.is_none() {
                 // If a fake hardware light service wasn't provided for us, populate the initial lights.
                 populate_single_test_lights(service_handle.clone(), info).await;
@@ -205,12 +204,14 @@ impl TestLightEnvironmentBuilder {
                 Box::new(move |context: Context<InMemoryStorageFactory>| {
                     let config_clone = config.clone();
                     Box::pin(async move {
-                        let storage = context
-                            .environment
-                            .storage_factory_handle
-                            .lock()
-                            .await
-                            .get_store::<LightInfo>(context.id);
+                        let storage = Arc::new(
+                            context
+                                .environment
+                                .storage_factory_handle
+                                .lock()
+                                .await
+                                .get_store::<LightInfo>(context.id),
+                        );
 
                         let setting_type = context.setting_type;
                         ClientImpl::create(
@@ -320,8 +321,7 @@ async fn test_light_restore() {
     let expected_light_group = get_test_light_info().light_groups.remove(LIGHT_NAME_1).unwrap();
 
     // Verify that the restored value is persisted.
-    let mut store_lock = env.store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = env.store.get().await;
     assert_switchboard_light_group_eq(
         &expected_light_group.clone(),
         retrieved_struct.light_groups.get(LIGHT_NAME_1).unwrap(),
@@ -384,8 +384,7 @@ async fn test_light_restore_from_configuration() {
     expected_light_group.name = LIGHT_NAME_3.to_string();
 
     // Verify that the restored value is persisted.
-    let mut store_lock = env.store.lock().await;
-    let retrieved_struct = store_lock.get().await;
+    let retrieved_struct = env.store.get().await;
     assert_switchboard_light_group_eq(
         &expected_light_group.clone(),
         retrieved_struct.light_groups.get(LIGHT_NAME_3).unwrap(),
@@ -442,7 +441,7 @@ async fn test_light_set_from_configuration() {
     set_light_value(&env.light_service, changed_light_group).await;
 
     // Verify the value we set is persisted in DeviceStorage.
-    assert_eq!(expected_light_info, env.store.lock().await.get().await);
+    assert_eq!(expected_light_info, env.store.get().await);
 
     // Ensure value from Watch matches set value.
     let settings: Vec<fidl_fuchsia_settings::LightGroup> =
@@ -512,7 +511,7 @@ async fn test_light_store_and_watch() {
     set_light_value(&env.light_service, changed_light_group).await;
 
     // Verify the value we set is persisted in DeviceStorage.
-    assert_eq!(expected_light_info, env.store.lock().await.get().await);
+    assert_eq!(expected_light_info, env.store.get().await);
 
     // Ensure value from Watch matches set value.
     let settings: Vec<fidl_fuchsia_settings::LightGroup> =
@@ -600,7 +599,7 @@ async fn test_light_set_single_light() {
     set_light_value(&env.light_service, changed_light_group).await;
 
     // Verify the value we set is persisted in DeviceStorage.
-    assert_eq!(expected_light_info, env.store.lock().await.get().await);
+    assert_eq!(expected_light_info, env.store.get().await);
 
     // Ensure value from Watch matches set value.
     let mut settings: Vec<fidl_fuchsia_settings::LightGroup> =

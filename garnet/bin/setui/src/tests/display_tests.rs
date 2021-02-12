@@ -440,7 +440,7 @@ async fn validate_restore_with_storage_controller(
             low_light_mode,
             theme,
         };
-        assert!(store.lock().await.write(&info, false).await.is_ok());
+        assert!(store.write(&info, false).await.is_ok());
     }
 
     let env = EnvironmentBuilder::new(storage_factory)
@@ -500,7 +500,7 @@ async fn validate_restore_with_brightness_controller(
             low_light_mode,
             theme,
         };
-        assert!(store.lock().await.write(&info, false).await.is_ok());
+        assert!(store.write(&info, false).await.is_ok());
     }
 
     assert!(EnvironmentBuilder::new(storage_factory)

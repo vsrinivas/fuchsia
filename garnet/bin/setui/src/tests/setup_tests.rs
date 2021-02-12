@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::base::SettingType,
     crate::handler::device_storage::testing::*,
@@ -55,10 +54,9 @@ async fn test_setup_with_reboot() {
             configuration_interfaces: ConfigurationInterfaceFlags::WIFI
                 | ConfigurationInterfaceFlags::ETHERNET,
         };
-        let mut store_lock = store.lock().await;
         // Ethernet and WiFi is written out as initial value since the default
         // is currently WiFi only.
-        assert!(store_lock.write(&initial_data, false).await.is_ok());
+        assert!(store.write(&initial_data, false).await.is_ok());
     }
 
     let service_registry = ServiceRegistry::create();
@@ -101,13 +99,7 @@ async fn test_setup_with_reboot() {
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
     // Check to make sure value wrote out to store correctly
-    {
-        let mut store_lock = store.lock().await;
-        assert_eq!(
-            store_lock.get().await.configuration_interfaces,
-            ConfigurationInterfaceFlags::ETHERNET
-        );
-    }
+    assert_eq!(store.get().await.configuration_interfaces, ConfigurationInterfaceFlags::ETHERNET);
 
     // Ensure reboot was requested by the controller
     assert!(hardware_power_statecontrol_service_handle

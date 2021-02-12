@@ -360,14 +360,14 @@ pub mod persist {
     #[derive(Clone)]
     pub struct ClientProxy<S: Storage + 'static> {
         base: BaseProxy,
-        storage: Arc<Mutex<DeviceStorage<S>>>,
+        storage: Arc<DeviceStorage<S>>,
         setting_type: SettingType,
     }
 
     impl<S: Storage + 'static> ClientProxy<S> {
         pub async fn new(
             base_proxy: BaseProxy,
-            storage: Arc<Mutex<DeviceStorage<S>>>,
+            storage: Arc<DeviceStorage<S>>,
             setting_type: SettingType,
         ) -> Self {
             Self { base: base_proxy, storage, setting_type }
@@ -382,7 +382,7 @@ pub mod persist {
         }
 
         pub async fn read(&self) -> S {
-            self.storage.lock().await.get().await
+            self.storage.get().await
         }
 
         /// Returns a boolean indicating whether the value was written or an
@@ -398,7 +398,7 @@ pub mod persist {
                 return Ok(UpdateState::Unchanged);
             }
 
-            match self.storage.lock().await.write(&value, write_through).await {
+            match self.storage.write(&value, write_through).await {
                 Ok(_) => {
                     self.notify(Event::Changed(value.into())).await;
                     Ok(UpdateState::Updated)
@@ -452,12 +452,14 @@ pub mod persist {
             context: Context<F>,
         ) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
-                let storage = context
-                    .environment
-                    .storage_factory_handle
-                    .lock()
-                    .await
-                    .get_store::<S>(context.id);
+                let storage = Arc::new(
+                    context
+                        .environment
+                        .storage_factory_handle
+                        .lock()
+                        .await
+                        .get_store::<S>(context.id),
+                );
                 let setting_type = context.setting_type;
 
                 ClientImpl::create(

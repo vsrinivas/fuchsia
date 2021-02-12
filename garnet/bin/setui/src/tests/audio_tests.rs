@@ -115,18 +115,13 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
 }
 
 // Gets the store from |factory| and populate it with default values.
-async fn create_storage(
-    factory: Arc<Mutex<InMemoryStorageFactory>>,
-) -> Arc<Mutex<DeviceStorage<AudioInfo>>> {
+async fn create_storage(factory: Arc<Mutex<InMemoryStorageFactory>>) -> DeviceStorage<AudioInfo> {
     let store = factory
         .lock()
         .await
         .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    {
-        let mut store_lock = store.lock().await;
-        let audio_info = default_audio_info();
-        store_lock.write(&audio_info, false).await.unwrap();
-    }
+    let audio_info = default_audio_info();
+    store.write(&audio_info, false).await.unwrap();
     store
 }
 
@@ -159,7 +154,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
-) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>) {
+) -> (NestedEnvironment, DeviceStorage<AudioInfo>) {
     let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
@@ -197,11 +192,7 @@ async fn test_audio() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
+    let stored_streams = store.get().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 
@@ -237,11 +228,7 @@ async fn test_consecutive_volume_changes() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
+    let stored_streams = store.get().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM_2);
 }
 
@@ -264,11 +251,7 @@ async fn test_multiple_changes_on_stream() {
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
+    let stored_streams = store.get().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM_2);
 }
 
@@ -295,11 +278,7 @@ async fn test_volume_overwritten() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
+    let stored_streams = store.get().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 
     const CHANGED_BACKGROUND_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -356,11 +335,7 @@ async fn test_volume_rounding() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
+    let stored_streams = store.get().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 
@@ -402,7 +377,7 @@ async fn test_volume_restore() {
                 stream.user_volume_muted = expected_info.1;
             }
         }
-        assert!(store.lock().await.write(&stored_info, false).await.is_ok());
+        assert!(store.write(&stored_info, false).await.is_ok());
     }
 
     assert!(EnvironmentBuilder::new(storage_factory)
@@ -502,10 +477,7 @@ async fn test_persisted_values_applied_at_start() {
     };
 
     // Write values in the store.
-    {
-        let mut store_lock = store.lock().await;
-        store_lock.write(&test_audio_info, false).await.expect("write audio info in store");
-    }
+    store.write(&test_audio_info, false).await.expect("write audio info in store");
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
