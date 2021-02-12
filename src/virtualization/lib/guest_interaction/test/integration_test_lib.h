@@ -117,6 +117,8 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
 
     // Allow hypervisor resource for virtualization.
     services_->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
+    // Allow vmex resource for virtualization.
+    services_->AllowParentService(fuchsia::kernel::VmexResource::Name_);
   }
 };
 

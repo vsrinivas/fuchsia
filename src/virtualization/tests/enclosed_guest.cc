@@ -125,6 +125,13 @@ zx_status_t EnclosedGuest::Start() {
     return status;
   }
 
+  status = services->AllowParentService(fuchsia::kernel::VmexResource::Name_);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failure adding vmex resource service: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
   enclosing_environment_ =
       sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
   bool environment_running = RunLoopUntil(

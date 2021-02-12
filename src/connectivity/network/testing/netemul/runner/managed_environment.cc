@@ -153,8 +153,9 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         svc);
   }
 
-  // Allow hypervisor resource for virtualization.
+  // Allow hypervisor and vmex resources for virtualization.
   services->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
+  services->AllowParentService(fuchsia::kernel::VmexResource::Name_);
 
   // prepare service configurations:
   service_config_.clear();

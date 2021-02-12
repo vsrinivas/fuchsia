@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.kernel.HypervisorResource",
+            "fuchsia.kernel.VmexResource",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

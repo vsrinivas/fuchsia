@@ -9,13 +9,11 @@
         "dev": [
             "class/ethernet"
         ],
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.kernel.HypervisorResource",
             "fuchsia.kernel.IrqResource",
             "fuchsia.kernel.MmioResource",
+            "fuchsia.kernel.VmexResource",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",

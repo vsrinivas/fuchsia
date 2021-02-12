@@ -63,6 +63,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
   }
 
   zx::resource mmio_resource;
+  zx::resource vmex_resource;
   for (const fuchsia::virtualization::MemorySpec& spec : memory) {
     zx::vmo vmo;
     switch (spec.policy) {
@@ -78,7 +79,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         if (!mmio_resource) {
           status = get_mmio_resource(&mmio_resource);
           if (status != ZX_OK) {
-            FX_LOGS(ERROR) << "Failed to get root resource " << status;
+            FX_LOGS(ERROR) << "Failed to get mmio resource " << status;
             return status;
           }
         }
@@ -98,7 +99,14 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         return ZX_ERR_INVALID_ARGS;
     }
 
-    status = vmo.replace_as_executable(zx::resource(), &vmo);
+    if (!vmex_resource) {
+      status = get_vmex_resource(&vmex_resource);
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to get VMEX resource " << status;
+        return status;
+      }
+    }
+    status = vmo.replace_as_executable(vmex_resource, &vmo);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to make VMO executable " << status;
       return status;

@@ -37,4 +37,11 @@ static inline zx_status_t get_mmio_resource(zx::resource* resource) {
   return svc->Get(resource);
 }
 
+static inline zx_status_t get_vmex_resource(zx::resource* resource) {
+  fuchsia::kernel::VmexResourceSyncPtr svc;
+  fdio_service_connect((std::string("/svc/") + fuchsia::kernel::VmexResource::Name_).c_str(),
+                       svc.NewRequest().TakeChannel().release());
+  return svc->Get(resource);
+}
+
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_SYSINFO_H_
