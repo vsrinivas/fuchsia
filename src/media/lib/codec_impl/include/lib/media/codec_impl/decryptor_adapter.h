@@ -10,6 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/media/codec_impl/codec_adapter.h>
+#include <zircon/threads.h>
 
 #include <array>
 #include <optional>
@@ -107,6 +108,16 @@ class DecryptorAdapter : public CodecAdapter {
   // If the specialized Decryptor supports working with secure memory, it should override this
   // method to provide the proper coherency and permitted heaps that it can support.
   virtual fuchsia::sysmem::BufferMemoryConstraints GetSecureOutputMemoryConstraints() const;
+
+  // SetProcessingSchedulerProfile
+  //
+  // If desired, the DecryptorAdapter implementation can set a scheduler profile on the input
+  // processing thread. DecryptorAdapter will call this function after the creation of the input
+  // processing thread to give the implementation an opportunity to set a scheduler profile on the
+  // thread.  Ownership of the thread remains with DecryptorAdapter and callers should duplicate the
+  // handle if necessary (such as for passing to fuchsia.media.ProfileProvider).
+  // TODO(http://fxbug.dev/70234): Generalize this mechanism for all codec_impl threads
+  virtual void SetProcessingSchedulerProfile(zx::unowned_thread input_processing_thread) {}
 
   bool is_secure() const { return secure_mode_; }
 

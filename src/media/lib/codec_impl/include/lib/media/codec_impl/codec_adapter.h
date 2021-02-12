@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/zx/thread.h>
 
 #include <list>
 #include <random>
@@ -425,6 +426,14 @@ class CodecAdapter {
 
   // Returns a name for the codec that's used for debugging.
   virtual std::string CoreCodecGetName() { return ""; }
+
+  // If desired, the CodecAdapter can set a scheduler profile on the stream control thread.
+  // CodecImpl will call this function after the creation of the StreamControl thread to give the
+  // CodecAdapter an opportunity to set a scheduler profile on the thread. Ownership of the thread
+  // remains with CodecImpl and callers should duplicate the handle if necessary (such as for
+  // passing to fuchsia.media.ProfileProvider).
+  // TODO(http://fxbug.dev/70234): Generalize this mechanism for all codec_impl threads
+  virtual void CoreCodecSetStreamControlProfile(zx::unowned_thread stream_control_thread) {}
 
  protected:
   // If SetCodecMetrics() was called, this will log an event.  If this method is ever called by a
