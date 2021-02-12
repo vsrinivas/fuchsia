@@ -30,6 +30,7 @@ group("hw_tests") {
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
     "icd_load",
+    "vk_timer_query",
     "vkext",
     "vkloop",
     "vkreadback",
@@ -42,19 +43,12 @@ group("hw_tests") {
 }
 
 test_package("vulkan-tests") {
-  deps = [
-    "common:vkcontext",
-    "vk_timer_query",
-  ]
+  deps = [ "common:vkcontext" ]
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
   public_deps = vulkan_validation_layers.public_deps
 
   tests = [
-    {
-      name = "vk_timer_query_tests"
-      environments = magma_libvulkan_arm_hardware_envs
-    },
     {
       name = "vkcontext"
       environments = magma_libvulkan_hardware_envs

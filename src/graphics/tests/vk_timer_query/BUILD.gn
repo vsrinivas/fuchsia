@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
-executable("vk_timer_query") {
+executable("vk_timer_query_bin") {
   testonly = true
-  output_name = "vk_timer_query_tests"
+  output_name = "vk_timer_query"
 
   sources = [ "main.cc" ]
 
@@ -24,4 +25,29 @@ executable("vk_timer_query") {
   ]
 
   deps += [ "//src/lib/vulkan" ]
+}
+
+fuchsia_component("vk_timer_query_cmp") {
+  testonly = true
+  component_name = "vk_timer_query"
+  deps = [
+    ":vk_timer_query_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+
+  manifest = "meta/vk_timer_query.cmx"
+}
+
+fuchsia_test_package("vk-timer-query-pkg") {
+  package_name = "vk_timer_query"
+  test_components = [ ":vk_timer_query_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_arm_hardware_envs
+  }
+}
+
+group("vk_timer_query") {
+  testonly = true
+  deps = [ ":vk-timer-query-pkg" ]
 }

@@ -4,7 +4,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/vk_timer_query_tests"
+        "binary": "bin/vk_timer_query"
     },
     "sandbox": {
         "features": [
