@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -59,24 +58,17 @@ rustc_binary("bin") {
   ]
 }
 
-package("shortcut") {
+fuchsia_component("shortcut_manager") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "shortcut"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/shortcut_manager.cmx")
-      dest = "shortcut_manager.cmx"
-    },
-  ]
+  manifest = "meta/shortcut_manager.cmx"
 }
 
-rustc_test("shortcut_integration_test") {
+fuchsia_package("shortcut") {
+  deps = [ ":shortcut_manager" ]
+}
+
+rustc_test("shortcut_integration_test_bin") {
+  output_name = "shortcut_integration_test"
   edition = "2018"
 
   deps = [
@@ -106,18 +98,22 @@ rustc_test("shortcut_integration_test") {
   ]
 }
 
-test_package("shortcut_test") {
-  deps = [
-    ":bin_test",
-    ":shortcut_integration_test",
-  ]
+fuchsia_unittest_component("shortcut_bin_test") {
+  deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "shortcut_integration_test"
-    },
-    {
-      name = "shortcut_bin_test"
-    },
+fuchsia_component("shortcut_integration_test") {
+  testonly = true
+  deps = [
+    ":shortcut_integration_test_bin",
+    ":shortcut_manager",
+  ]
+  manifest = "meta/shortcut_integration_test.cmx"
+}
+
+fuchsia_test_package("shortcut_test") {
+  test_components = [
+    ":shortcut_bin_test",
+    ":shortcut_integration_test",
   ]
 }

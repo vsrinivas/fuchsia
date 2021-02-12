@@ -14,7 +14,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/shortcut_integration_test"
+        "binary": "bin/shortcut_integration_test"
     },
     "sandbox": {
         "services": [
