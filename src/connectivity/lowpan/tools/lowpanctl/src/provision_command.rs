@@ -7,6 +7,7 @@ use anyhow::{format_err, Context, Error};
 use argh::FromArgs;
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams};
 use hex;
+use std::u16;
 
 const PROVISION_CMD_NAME_LEN: usize = 63;
 const PROVISION_CMD_XPANID_LEN: usize = 8;
@@ -34,7 +35,7 @@ pub struct ProvisionCommand {
 
     /// panid for 802.14.5-based networks (or the equivalent)
     #[argh(option)]
-    pub panid: Option<u16>,
+    pub panid: Option<String>,
 
     /// credential master key
     #[argh(option)]
@@ -47,6 +48,10 @@ impl ProvisionCommand {
             return Err(format_err!("name should be less or equal to 63 bytes"));
         }
         Ok(Some(self.name.as_bytes().to_vec()))
+    }
+
+    fn get_panid_u16(&self) -> Result<Option<u16>, Error> {
+        self.panid.as_ref().map(|value| Ok(u16::from_str_radix(value, 16)?)).transpose()
     }
 
     fn get_xpanid_vec(&self) -> Result<Option<Vec<u8>>, Error> {
@@ -83,7 +88,7 @@ impl ProvisionCommand {
             xpanid: self.get_xpanid_vec()?,
             net_type: self.net_type.clone(),
             channel: self.channel.clone(),
-            panid: self.panid.clone(),
+            panid: self.get_panid_u16()?,
             ..Identity::EMPTY
         })
     }
