@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("http_sse") {
   version = "0.1.0"
@@ -34,15 +34,9 @@ rustc_library("http_sse") {
   ]
 }
 
-test_package("rust-http-sse-tests") {
+fuchsia_unittest_package("rust-http-sse-tests") {
+  manifest = "meta/http-sse-lib-test.cmx"
   deps = [ ":http_sse_test" ]
-
-  tests = [
-    {
-      name = "http_sse_lib_test"
-      dest = "http-sse-lib-test"
-    },
-  ]
 }
 
 group("tests") {

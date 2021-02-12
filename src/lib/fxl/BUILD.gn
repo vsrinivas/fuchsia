@@ -163,16 +163,16 @@ executable("fxl_unittests") {
 }
 
 if (is_fuchsia) {
-  import("//build/test/test_package.gni")
+  import("//src/sys/build/components.gni")
 
-  test_package("fxl_tests") {
+  fuchsia_unittest_package("fxl_tests") {
+    manifest = "meta/fxl_unittests.cmx"
     deps = [ ":fxl_unittests" ]
-
-    tests = [
-      {
-        name = "fxl_unittests"
-      },
-    ]
+    test_specs = {
+      log_settings = {
+        max_severity = "FATAL"
+      }
+    }
   }
 
   group("tests") {

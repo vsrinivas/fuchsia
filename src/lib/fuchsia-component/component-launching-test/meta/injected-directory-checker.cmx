@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/injected-directory-checker"
+        "binary": "bin/injected_directory_checker"
     }
 }

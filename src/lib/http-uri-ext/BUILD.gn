@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("http-uri-ext") {
   name = "http_uri_ext"
@@ -20,14 +20,8 @@ rustc_library("http-uri-ext") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("http-uri-ext-tests") {
+fuchsia_unittest_package("http-uri-ext-tests") {
   deps = [ ":http-uri-ext_test" ]
-
-  tests = [
-    {
-      name = "http_uri_ext_lib_test"
-    },
-  ]
 }
 
 group("tests") {

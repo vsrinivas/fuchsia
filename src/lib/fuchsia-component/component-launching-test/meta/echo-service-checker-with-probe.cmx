@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/echo-service-checker-with-probe"
+        "binary": "bin/echo_service_checker_with_probe"
     },
     "sandbox": {
         "services": [

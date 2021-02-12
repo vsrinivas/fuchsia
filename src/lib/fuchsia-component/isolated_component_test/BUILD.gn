@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 fidl("echos") {
   name = "fuchsia.test.echos"
@@ -30,13 +30,12 @@ rustc_binary("fuchsia_component_test_outer_bin") {
   sources = [ "outer.rs" ]
 }
 
-test_package("fuchsia_component_test_outer") {
-  deps = [ ":fuchsia_component_test_outer_bin" ]
-
-  tests = [
-    {
-      name = "fuchsia_component_test_outer"
-    },
+fuchsia_unittest_package("fuchsia_component_test_outer") {
+  manifest = "meta/fuchsia_component_test_outer.cmx"
+  deps = [
+    ":fuchsia_component_test_middle",
+    ":fuchsia_component_test_middle_sibling",
+    ":fuchsia_component_test_outer_bin",
   ]
 }
 
@@ -60,20 +59,13 @@ rustc_binary("fuchsia_component_test_middle_bin") {
   sources = [ "middle.rs" ]
 }
 
-package("fuchsia_component_test_middle") {
-  deps = [ ":fuchsia_component_test_middle_bin" ]
-
-  binaries = [
-    {
-      name = "fuchsia_component_test_middle"
-    },
+fuchsia_package_with_single_component("fuchsia_component_test_middle") {
+  manifest = "meta/fuchsia_component_test_middle.cmx"
+  deps = [
+    ":fuchsia_component_test_inner",
+    ":fuchsia_component_test_middle_bin",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/fuchsia_component_test_middle.cmx")
-      dest = "fuchsia_component_test_middle.cmx"
-    },
-  ]
+  testonly = true
 }
 
 rustc_binary("fuchsia_component_test_middle_sibling_bin") {
@@ -95,20 +87,10 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
   sources = [ "middle_sibling.rs" ]
 }
 
-package("fuchsia_component_test_middle_sibling") {
+fuchsia_package_with_single_component("fuchsia_component_test_middle_sibling") {
+  manifest = "meta/fuchsia_component_test_middle_sibling.cmx"
   deps = [ ":fuchsia_component_test_middle_sibling_bin" ]
-
-  binaries = [
-    {
-      name = "fuchsia_component_test_middle_sibling"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/fuchsia_component_test_middle_sibling.cmx")
-      dest = "fuchsia_component_test_middle_sibling.cmx"
-    },
-  ]
+  testonly = true
 }
 
 rustc_binary("fuchsia_component_test_inner_bin") {
@@ -128,18 +110,8 @@ rustc_binary("fuchsia_component_test_inner_bin") {
   sources = [ "inner.rs" ]
 }
 
-package("fuchsia_component_test_inner") {
+fuchsia_package_with_single_component("fuchsia_component_test_inner") {
+  manifest = "meta/fuchsia_component_test_inner.cmx"
   deps = [ ":fuchsia_component_test_inner_bin" ]
-
-  binaries = [
-    {
-      name = "fuchsia_component_test_inner"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/fuchsia_component_test_inner.cmx")
-      dest = "fuchsia_component_test_inner.cmx"
-    },
-  ]
+  testonly = true
 }

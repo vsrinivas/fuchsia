@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "component_launching_test"
@@ -76,57 +75,41 @@ rustc_binary("stdio_writer_bin") {
   sources = [ "src/stdio_writer.rs" ]
 }
 
-test_package("component-launching-tests") {
+fuchsia_component("echo-service-checker") {
+  deps = [ ":echo_service_checker_bin" ]
+  manifest = "meta/echo-service-checker.cmx"
+  testonly = true
+}
+
+fuchsia_component("echo-service-checker-with-probe") {
+  deps = [ ":echo_service_checker_with_probe_bin" ]
+  manifest = "meta/echo-service-checker-with-probe.cmx"
+  testonly = true
+}
+
+fuchsia_component("injected-directory-checker") {
+  deps = [ ":injected_directory_checker_bin" ]
+  manifest = "meta/injected-directory-checker.cmx"
+  testonly = true
+}
+
+fuchsia_component("stdio-writer") {
+  deps = [ ":stdio_writer_bin" ]
+  manifest = "meta/stdio-writer.cmx"
+  testonly = true
+}
+
+fuchsia_unittest_component("component-launching-test") {
+  manifest = "meta/component-launching-test.cmx"
+  deps = [ ":driver" ]
+}
+
+fuchsia_test_package("component-launching-tests") {
+  test_components = [ ":component-launching-test" ]
   deps = [
-    ":driver",
-    ":echo_service_checker_bin",
-    ":echo_service_checker_with_probe_bin",
-    ":injected_directory_checker_bin",
-    ":stdio_writer_bin",
-  ]
-
-  binaries = [
-    {
-      name = "echo_service_checker"
-      dest = "echo-service-checker"
-    },
-    {
-      name = "echo_service_checker_with_probe"
-      dest = "echo-service-checker-with-probe"
-    },
-    {
-      name = "injected_directory_checker"
-      dest = "injected-directory-checker"
-    },
-    {
-      name = "stdio_writer"
-      dest = "stdio-writer"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/echo-service-checker.cmx")
-      dest = "echo-service-checker.cmx"
-    },
-    {
-      path = rebase_path("meta/echo-service-checker-with-probe.cmx")
-      dest = "echo-service-checker-with-probe.cmx"
-    },
-    {
-      path = rebase_path("meta/injected-directory-checker.cmx")
-      dest = "injected-directory-checker.cmx"
-    },
-    {
-      path = rebase_path("meta/stdio-writer.cmx")
-      dest = "stdio-writer.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "component_launching_test"
-      dest = "component-launching-test"
-    },
+    ":echo-service-checker",
+    ":echo-service-checker-with-probe",
+    ":injected-directory-checker",
+    ":stdio-writer",
   ]
 }

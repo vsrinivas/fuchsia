@@ -39,30 +39,20 @@ icu_tzdata_config_data("icu_tzdata_for_icu_data_rust_tests") {
   for_pkg = "icu_data_rust_tests"
 }
 
-test_package("icu_data_rust_tests") {
+resource("icu_data_test_files") {
+  sources = [
+    "//third_party/icu/common/icudtl.dat",
+    "test_bad_revision.txt",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("icu_data_rust_tests") {
+  manifest = "meta/icu_data_lib_test.cmx"
   deps = [
     ":icu_data_test",
+    ":icu_data_test_files",
     ":icu_tzdata_for_icu_data_rust_tests",
-  ]
-  tests = [
-    {
-      name = "icu_data_lib_test"
-      dest = "icu_data_lib_test"
-    },
-  ]
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-
-      # This file is available to the package at "/pkg/data/icudtl.dat"
-      dest = "icudtl.dat"
-    },
-    {
-      path = rebase_path("test_bad_revision.txt")
-
-      # This file is available to the package at "/pkg/data/test_bad_revision.txt"
-      dest = "test_bad_revision.txt"
-    },
   ]
 }
 

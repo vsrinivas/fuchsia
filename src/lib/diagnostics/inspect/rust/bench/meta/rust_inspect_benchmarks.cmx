@@ -1,5 +1,7 @@
 {
-    "include": [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ],
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/rust_inspect_benchmarks"
     },

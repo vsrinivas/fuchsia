@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-runtime") {
   edition = "2018"
@@ -19,14 +19,8 @@ rustc_library("fuchsia-runtime") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("fuchsia-runtime-tests") {
+fuchsia_unittest_package("fuchsia-runtime-tests") {
   deps = [ ":fuchsia-runtime_test" ]
-
-  tests = [
-    {
-      name = "fuchsia_runtime_lib_test"
-    },
-  ]
 }
 
 group("tests") {

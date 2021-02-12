@@ -11,7 +11,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/http-sse-lib-test"
+        "binary": "bin/http_sse_lib_test"
     },
     "sandbox": {
         "features": [
