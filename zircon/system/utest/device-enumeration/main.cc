@@ -381,8 +381,9 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/light/000",
 
       "spi/aml-spi-1/spi/spi-1-0",
-      "selina/selina",
-      "class/radar/000",
+      // TODO(fxbug.dev/69587): Re-enable this check when the selina driver is stable.
+      // "selina/selina",
+      // "class/radar/000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
