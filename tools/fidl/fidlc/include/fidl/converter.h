@@ -39,6 +39,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {}
   void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {}
   void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {}
+  void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const& element) override {}
+  void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override {}
   void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override {}
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {}
   void OnSourceElementStart(const raw::SourceElement& element) override {}

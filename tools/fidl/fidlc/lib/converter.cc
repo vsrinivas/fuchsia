@@ -37,7 +37,7 @@ std::optional<types::Strictness> optional_strictness(Token& decl_start_token) {
 
 // Returns the "builtin" definition underpinning a type.  If named declaration
 // is actually an alias, this method will recurse until all aliases are
-// dereferenced and actual, FIDL-native type can be deduced.
+// dereferenced and an actual, FIDL-native type can be deduced.
 std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& name, bool is_behind_alias) {
   const flat::Library* lib = name.library();
   const flat::Decl* decl_ptr = lib->LookupDeclByName(name);
@@ -47,7 +47,13 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& nam
 
   const flat::Decl::Kind& kind = decl_ptr->kind;
   if (kind != flat::Decl::Kind::kTypeAlias) {
-    return std::make_optional(UnderlyingType(decl_ptr->kind, is_behind_alias));
+    if (kind == flat::Decl::Kind::kResource) {
+      // Special case: the only "resource_definition" in existence at the
+      // moment is the one that defines "handle," so if we get to this point, we
+      // should just assume the underlying type is a handle.
+      return UnderlyingType(flat::Type::Kind::kHandle, is_behind_alias);
+    }
+    return UnderlyingType(decl_ptr->kind, is_behind_alias);
   }
 
   auto type_alias_ptr = static_cast<const flat::TypeAlias*>(decl_ptr);

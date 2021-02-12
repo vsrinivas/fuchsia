@@ -12,6 +12,31 @@ std::string Convert(const std::string& in, const std::vector<std::string>& deps,
   // Convert the test file, along with its deps, into a flat AST.
   SharedAmongstLibraries shared;
   TestLibrary flat_lib("example.fidl", in, &shared, flags);
+
+  // Include a fake "zx" library with every test.
+  std::string zx = R"FIDL(
+library zx;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    PROCESS = 1;
+    THREAD = 2;
+    VMO = 3;
+    CHANNEL = 4;
+    EVENT = 5;
+    PORT = 6;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+)FIDL";
+  TestLibrary zx_lib("zx.fidl", zx, &shared, flags);
+  zx_lib.Compile();
+  flat_lib.AddDependentLibrary(std::move(zx_lib));
+
   for (size_t i = 0; i < deps.size(); i++) {
     TestLibrary dependency("dep" + std::to_string(i + 1) + ".fidl", deps[i], &shared, flags);
     dependency.Compile();
@@ -106,13 +131,17 @@ TEST(ConverterTests, AliasOfHandleWithSubtype) {
   std::string old_version = R"FIDL(
 library example;
 
-alias foo = handle:VMO?;
+using zx;
+
+alias foo = zx.handle:VMO?;
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
-alias foo = handle:<optional,VMO>;
+using zx;
+
+alias foo = zx.handle:<optional,VMO>;
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -123,13 +152,17 @@ TEST(ConverterTests, AliasOfHandleWithSubtypeAndRights) {
   std::string old_version = R"FIDL(
 library example;
 
-alias foo = handle:<VMO,1>?;
+using zx;
+
+alias foo = zx.handle:<VMO,1>?;
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
-alias foo = handle:<optional,VMO,1>;
+using zx;
+
+alias foo = zx.handle:<optional,VMO,1>;
 )FIDL";
 
   fidl::ExperimentalFlags flags;
@@ -688,16 +721,20 @@ TEST(ConverterTests, StructWithHandle) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource struct S {
-  handle? h;
+  zx.handle? h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type S = resource struct {
-  h handle:optional;
+  h zx.handle:optional;
 };
 )FIDL";
 
@@ -709,16 +746,20 @@ TEST(ConverterTests, StructWithHandleWithSubtype) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource struct S {
-  handle:VMO h;
+  zx.handle:VMO h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type S = resource struct {
-  h handle:VMO;
+  h zx.handle:VMO;
 };
 )FIDL";
 
@@ -730,16 +771,20 @@ TEST(ConverterTests, StructWithHandleWithSubtypeAndRights) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource struct S {
-  handle:<CHANNEL,7> h;
+  zx.handle:<CHANNEL,7> h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type S = resource struct {
-  h handle:<CHANNEL,7>;
+  h zx.handle:<CHANNEL,7>;
 };
 )FIDL";
 
@@ -753,22 +798,26 @@ type S = resource struct {
 // This test case's purpose to verify that "nested conversions" work well.  This
 // particular case has four levels of nesting: the struct declaration at the top
 // level, which contains an identifier/type order swap conversion, which
-// contains an array type declaration, which itself contains a handle type
+// contains an array type declaration, which itself contains a zx.handle type
 // declaration that needs to be converted as well.
 TEST(ConverterTests, StructWithManyNestedConversions) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource struct S {
-  array<handle:<PORT,7>?>:5 a;
+  array<zx.handle:<PORT,7>?>:5 a;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type S = resource struct {
-  a array<handle:<optional,PORT,7>,5>;
+  a array<zx.handle:<optional,PORT,7>,5>;
 };
 )FIDL";
 
@@ -916,16 +965,20 @@ TEST(ConverterTests, TableWithHandleWithSubtype) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource table T {
-  1: handle:VMO h;
+  1: zx.handle:VMO h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type T = resource table {
-  1: h handle:VMO;
+  1: h zx.handle:VMO;
 };
 )FIDL";
 
@@ -937,16 +990,20 @@ TEST(ConverterTests, TableWithHandleWithSubtypeAndRights) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource table T {
-  1: handle:<CHANNEL,7> h;
+  1: zx.handle:<CHANNEL,7> h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type T = resource table {
-  1: h handle:<CHANNEL,7>;
+  1: h zx.handle:<CHANNEL,7>;
 };
 )FIDL";
 
@@ -1127,16 +1184,20 @@ TEST(ConverterTests, UnionWithHandleWithSubtypeUnmodified) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource union U {
-  1: handle:VMO h;
+  1: zx.handle:VMO h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type U = resource union {
-  1: h handle:VMO;
+  1: h zx.handle:VMO;
 };
 )FIDL";
 
@@ -1148,16 +1209,20 @@ TEST(ConverterTests, UnionWithHandleWithSubtypeFlexible) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource flexible union U {
-  1: handle:VMO h;
+  1: zx.handle:VMO h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type U = resource flexible union {
-  1: h handle:VMO;
+  1: h zx.handle:VMO;
 };
 )FIDL";
 
@@ -1169,16 +1234,20 @@ TEST(ConverterTests, UnionWithHandleWithSubtypeStrict) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource strict union U {
-  1: handle:VMO h;
+  1: zx.handle:VMO h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type U = resource strict union {
-  1: h handle:VMO;
+  1: h zx.handle:VMO;
 };
 )FIDL";
 
@@ -1190,16 +1259,20 @@ TEST(ConverterTests, UnionWithHandleWithSubtypeAndRights) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 resource union U {
-  1: handle:<CHANNEL,7> h;
+  1: zx.handle:<CHANNEL,7> h;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
 
+using zx;
+
 type U = resource union {
-  1: h handle:<CHANNEL,7>;
+  1: h zx.handle:<CHANNEL,7>;
 };
 )FIDL";
 
@@ -1283,6 +1356,8 @@ TEST(ConverterTests, TypesInline) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 bits B {
   BM = 1;
 };
@@ -1311,12 +1386,15 @@ resource struct Foo {
   P? p2;
   request<P> r1;
   request<P>? r2;
-  handle? h1;
+  zx.handle? h1;
+  handle h2;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
+
+using zx;
 
 type B = bits {
   BM = 1;
@@ -1346,7 +1424,8 @@ type Foo = resource struct {
   p2 client_end:<optional,P>;
   r1 server_end:P;
   r2 server_end:<optional,P>;
-  h1 handle:optional;
+  h1 zx.handle:optional;
+  h2 handle;
 };
 )FIDL";
 
@@ -1363,6 +1442,8 @@ TEST(ConverterTests, TypesConfusing) {
   std::string old_version = R"FIDL(
 library example;
 
+using zx;
+
 bits bool {
   BM = 1;
 };
@@ -1377,12 +1458,13 @@ strict union uint8 {
 };
 struct uint16 {};
 protocol uint32 {};
-alias int32 = handle;
+alias int32 = zx.handle;
+alias int64 = handle;
 alias uint64 = bytes;
 alias handle = string;
 
 resource struct Foo {
-  array<int64>:4 a1;
+  array<uint64>:4 a1;
   array<bool>:4 a2;
   array<uint16?>:4 a3;
   uint64? b1;
@@ -1395,11 +1477,14 @@ resource struct Foo {
   request<uint32> r1;
   request<uint32>? r2;
   int32? h1;
+  int64 h2;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
+
+using zx;
 
 type bool = bits {
   BM = 1;
@@ -1415,12 +1500,13 @@ type uint8 = strict union {
 };
 type uint16 = struct {};
 protocol uint32 {};
-alias int32 = handle;
+alias int32 = zx.handle;
+alias int64 = handle;
 alias uint64 = bytes;
 alias handle = string;
 
 type Foo = resource struct {
-  a1 array<int64,4>;
+  a1 array<uint64,4>;
   a2 array<bool,4>;
   a3 array<box<uint16>:optional,4>;
   b1 uint64:optional;
@@ -1433,6 +1519,7 @@ type Foo = resource struct {
   r1 server_end:uint32;
   r2 server_end:<optional,uint32>;
   h1 int32:optional;
+  h2 int64;
 };
 )FIDL";
 
@@ -1446,6 +1533,8 @@ type Foo = resource struct {
 TEST(ConverterTests, TypesBehindAlias) {
   std::string old_version = R"FIDL(
 library example;
+
+using zx;
 
 bits BB {
   BM = 1;
@@ -1465,7 +1554,8 @@ protocol PP {};
 alias A = array<uint8>:4;
 alias B = BB;
 alias E = EE;
-alias H = handle?;
+alias H = zx.handle?;
+alias I = handle;
 alias P = PP;
 alias S = SS;
 alias T = TT;
@@ -1488,11 +1578,14 @@ resource struct Foo {
   request<P> r1;
   request<P>? r2;
   H h1;
+  I h2;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
+
+using zx;
 
 type BB = bits {
   BM = 1;
@@ -1512,7 +1605,8 @@ protocol PP {};
 alias A = array<uint8,4>;
 alias B = BB;
 alias E = EE;
-alias H = handle:optional;
+alias H = zx.handle:optional;
+alias I = handle;
 alias P = client_end:PP;
 alias S = SS;
 alias T = TT;
@@ -1535,6 +1629,7 @@ type Foo = resource struct {
   r1 server_end:P;
   r2 server_end:<optional,P>;
   h1 H;
+  h2 I;
 };
 )FIDL";
 
@@ -1548,6 +1643,8 @@ type Foo = resource struct {
 TEST(ConverterTests, TypesBehindTwoAliases) {
   std::string old_version = R"FIDL(
 library example;
+
+using zx;
 
 bits BBB {
   BM = 1;
@@ -1567,7 +1664,8 @@ protocol PPP {};
 alias AA = array<uint8>:4;
 alias BB = BBB;
 alias EE = EEE;
-alias HH = handle?;
+alias HH = zx.handle?;
+alias II = handle;
 alias PP = PPP;
 alias SS = SSS;
 alias TT = TTT;
@@ -1580,6 +1678,7 @@ alias A = AA;
 alias B = BB;
 alias E = EE;
 alias H = HH;
+alias I = II;
 alias P = PP;
 alias S = SS;
 alias T = TT;
@@ -1602,11 +1701,14 @@ resource struct Foo {
   request<P> r1;
   request<P>? r2;
   H h1;
+  I h2;
 };
 )FIDL";
 
   std::string new_version = R"FIDL(
 library example;
+
+using zx;
 
 type BBB = bits {
   BM = 1;
@@ -1626,7 +1728,8 @@ protocol PPP {};
 alias AA = array<uint8,4>;
 alias BB = BBB;
 alias EE = EEE;
-alias HH = handle:optional;
+alias HH = zx.handle:optional;
+alias II = handle;
 alias PP = client_end:PPP;
 alias SS = SSS;
 alias TT = TTT;
@@ -1639,6 +1742,7 @@ alias A = AA;
 alias B = BB;
 alias E = EE;
 alias H = HH;
+alias I = II;
 alias P = PP;
 alias S = SS;
 alias T = TT;
@@ -1661,6 +1765,7 @@ type Foo = resource struct {
   r1 server_end:P;
   r2 server_end:<optional,P>;
   h1 H;
+  h2 I;
 };
 )FIDL";
 
@@ -1674,6 +1779,8 @@ type Foo = resource struct {
 TEST(ConverterTests, TypesBehindImport) {
   std::string dep1 = R"FIDL(
 library dep1;
+
+using zx;
 
 bits B {
   BM = 1;
@@ -1691,7 +1798,8 @@ struct S {};
 protocol P {};
 
 alias A = array<uint8>:4;
-alias H = handle?;
+alias H = zx.handle?;
+alias I = handle;
 alias V = vector<U>?;
 alias Y = bytes?;
 alias Z = string?;
@@ -1716,6 +1824,7 @@ resource struct Foo {
   request<dep1.P> r1;
   request<dep1.P>? r2;
   dep1.H h1;
+  dep1.I h2;
 };
 )FIDL";
 
@@ -1738,6 +1847,7 @@ type Foo = resource struct {
   r1 server_end:dep1.P;
   r2 server_end:<optional,dep1.P>;
   h1 dep1.H;
+  h2 dep1.I;
 };
 )FIDL";
   std::vector<std::string> deps;
@@ -1752,6 +1862,8 @@ type Foo = resource struct {
 TEST(ConverterTests, TypesBehindTwoImports) {
   std::string dep1 = R"FIDL(
 library dep1;
+
+using zx;
 
 bits B {
   BM = 1;
@@ -1769,7 +1881,8 @@ struct S {};
 protocol P {};
 
 alias A = array<uint8>:4;
-alias H = handle?;
+alias H = zx.handle?;
+alias I = handle;
 alias V = vector<U>?;
 alias Y = bytes?;
 alias Z = string?;
@@ -1784,6 +1897,7 @@ alias A = imported.A;
 alias B = imported.B;
 alias E = imported.E;
 alias H = imported.H;
+alias I = imported.I;
 alias P = imported.P;
 alias S = imported.S;
 alias T = imported.T;
@@ -1812,6 +1926,7 @@ resource struct Foo {
   request<dep2.P> r1;
   request<dep2.P>? r2;
   dep2.H h1;
+  dep2.I h2;
 };
 )FIDL";
 
@@ -1834,11 +1949,121 @@ type Foo = resource struct {
   r1 server_end:dep2.P;
   r2 server_end:<optional,dep2.P>;
   h1 dep2.H;
+  h2 dep2.I;
 };
 )FIDL";
   std::vector<std::string> deps;
   deps.emplace_back(dep1);
   deps.emplace_back(dep2);
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
+}
+
+TEST(ConverterTests, TypesBehindAliasThenImport) {
+  std::string dep1 = R"FIDL(
+library dep1;
+
+using zx;
+
+bits B {
+  BM = 1;
+};
+enum E : uint64 {
+  EM = 1;
+};
+table T {
+  1: string TM;
+};
+strict union U {
+  1: string UM;
+};
+struct S {};
+protocol P {};
+
+alias A = array<uint8>:4;
+alias H = zx.handle?;
+alias I = handle;
+alias V = vector<U>?;
+alias Y = bytes?;
+alias Z = string?;
+)FIDL";
+
+  std::string old_version = R"FIDL(
+library example;
+
+using dep1;
+
+alias AA = dep1.A;
+alias BB = dep1.B;
+alias EE = dep1.E;
+alias HH = dep1.H;
+alias II = dep1.I;
+alias PP = dep1.P;
+alias SS = dep1.S;
+alias TT = dep1.T;
+alias UU = dep1.U;
+alias VV = dep1.V;
+alias YY = dep1.Y;
+alias ZZ = dep1.Z;
+
+resource struct Foo {
+  AA a1;
+  array<BB>:4 a2;
+  array<SS?>:4 a3;
+  YY b1;
+  ZZ b2;
+  vector<EE>:16 v1;
+  vector<TT>:16 v2;
+  VV:16 v3;
+  PP p1;
+  PP? p2;
+  request<PP> r1;
+  request<PP>? r2;
+  HH h1;
+  II h2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+using dep1;
+
+alias AA = dep1.A;
+alias BB = dep1.B;
+alias EE = dep1.E;
+alias HH = dep1.H;
+alias II = dep1.I;
+alias PP = client_end:dep1.P;
+alias SS = dep1.S;
+alias TT = dep1.T;
+alias UU = dep1.U;
+alias VV = dep1.V;
+alias YY = dep1.Y;
+alias ZZ = dep1.Z;
+
+type Foo = resource struct {
+  a1 AA;
+  a2 array<BB,4>;
+  a3 array<box<SS>:optional,4>;
+  b1 YY;
+  b2 ZZ;
+  v1 vector<EE>:16;
+  v2 vector<TT>:16;
+  v3 VV:16;
+  p1 PP;
+  p2 PP:optional;
+  r1 server_end:PP;
+  r2 server_end:<optional,PP>;
+  h1 HH;
+  h2 II;
+};
+)FIDL";
+  std::vector<std::string> deps;
+  deps.emplace_back(dep1);
   fidl::ExperimentalFlags flags;
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
