@@ -13,7 +13,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/root_presenter_unittests"
+        "binary": "bin/root_presenter_unittests"
     },
     "sandbox": {
         "dev": [

@@ -4,22 +4,11 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("root_presenter") {
+fuchsia_package_with_single_component("root_presenter") {
+  manifest = "meta/root_presenter.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "root_presenter"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/root_presenter.cmx")
-      dest = "root_presenter.cmx"
-    },
-  ]
 }
 
 group("configs") {
