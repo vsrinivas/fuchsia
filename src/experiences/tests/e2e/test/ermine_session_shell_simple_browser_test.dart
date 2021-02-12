@@ -4,6 +4,7 @@
 
 import 'dart:math';
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:fuchsia_logger/logger.dart' as logger;
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart' show By;
@@ -29,6 +30,7 @@ void main() {
   final blueTabFinder = find.text('Blue Page');
 
   setUpAll(() async {
+    logger.setupLogger(name: 'simple_browser_e2e_test');
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 
@@ -209,8 +211,6 @@ void main() {
     const redUrl = 'http://127.0.0.1:8080/red.html';
     const greenUrl = 'http://127.0.0.1:8080/green.html';
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
-    const red = 0x00ff0000;
-    const green = 0x0000ff00;
     const blue = 0x000000ff;
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
@@ -246,44 +246,51 @@ void main() {
     await browser.waitFor(find.text(greenUrl));
     expect(await browser.getText(find.text(greenUrl)), isNotNull);
 
-    // Makes sure the web page is loaded before proceeding image diff tests.
-    expect(await _waitForColor(green), true,
-        reason: 'The green web page has not been loaded.');
-
     /// Tab Rearranging Test
 
-    const String goldenBefore = 'simple_browser_rearranging_tab_before.png';
-    const String goldenAfter = 'simple_browser_rearranging_tab_after.png';
+    // The current order of tabs before rearranging tabs.
+    var newTabX = (await browser.getCenter(newTabFinder)).dx;
+    var redTabX = (await browser.getCenter(redTabFinder)).dx;
+    var greenTabX = (await browser.getCenter(greenTabFinder)).dx;
+    var blueTabX = (await browser.getCenter(blueTabFinder)).dx;
 
-    // Gets the view rect.
+    expect(newTabX < redTabX, isTrue,
+        reason: 'The NEW TAB is not on the left side of the Red Page tab:'
+            'NEW TAB\'s x is $newTabX, Red Page tab\'s X is $redTabX ');
+    expect(redTabX < greenTabX, isTrue,
+        reason: 'The Red Page tab is not on the left side of the Green Page tab'
+            'Red Page tab\'s x is $redTabX, Green Page tab\'s X is $greenTabX ');
+    expect(greenTabX < blueTabX, isTrue,
+        reason:
+            'The Green Page tab is not on the left side of the Blue Page tab'
+            'Green Page tab\'s x is $greenTabX, Blue Page tab\'s X is $blueTabX ');
+
+    // TODO(fxb/70233): Log the resolution of the screen width to see if
+    // fxb/70233 is also observed on FYI builders. Remove it once it's confirmed.
     final viewRect = await ermine.getViewRect(simpleBrowserUrl);
-
-    // Takes a screenshot before rearranging a tab.
-    final screenshotBefore = await ermine.screenshot(viewRect);
-
-    // TODO(fxb/70233): This is a temporary line to see if fxb/70233 is also
-    // observed on the FYI builders. Remove it once it's confirmed.
-    ermine.saveImageAs(screenshotBefore, goldenBefore);
-    final goldenDiffBefore = ermine.goldenDiff(screenshotBefore, goldenBefore);
-
-    // TODO(fxb/70233): The value should be 0 once 1920x1080 golden is ready.
-    expect(goldenDiffBefore < 0.01, true,
-        reason: 'Failed at the scuba test with $goldenBefore at the diff rate'
-            ' of $goldenDiffBefore');
+    final screenshot = await ermine.screenshot(viewRect);
+    logger.log.info('The resolution of the screenshot is '
+        '${screenshot.width}x${screenshot.height}');
 
     // Drags the second tab to the right end of the tab list.
     await browser.scroll(redTabFinder, 600, 0, Duration(seconds: 1));
 
-    expect(await _waitForColor(red), true,
-        reason: 'The red web page has not been loaded.');
+    // The order of tabs after rearranging tabs.
+    newTabX = (await browser.getCenter(newTabFinder)).dx;
+    redTabX = (await browser.getCenter(redTabFinder)).dx;
+    greenTabX = (await browser.getCenter(greenTabFinder)).dx;
+    blueTabX = (await browser.getCenter(blueTabFinder)).dx;
 
-    // Takes a screenshot after rearranging the tab.
-    final screenshotAfter = await ermine.screenshot(viewRect);
-    final goldenDiffAfter = ermine.goldenDiff(screenshotAfter, goldenAfter);
-    // TODO(fxb/70233): The value should be 0 once 1920x1080 golden is ready.
-    expect(goldenDiffAfter < 0.01, true,
-        reason: 'Failed at the scuba test with $goldenAfter at the diff rate of'
-            ' $goldenDiffAfter');
+    expect(newTabX < greenTabX, isTrue,
+        reason: 'The NEW TAB is not on the left side of the Green Page tab.'
+            'NEW TAB\'s x is $newTabX, Green Page tab\'s X is $greenTabX ');
+    expect(greenTabX < blueTabX, isTrue,
+        reason:
+            'The Green Page tab is not on the left side of the Blue Page tab'
+            'Green Page\'s x is $greenTabX, Blue Page tab\'s X is $blueTabX ');
+    expect(blueTabX < redTabX, isTrue,
+        reason: 'The Blue Page tab is not on the left side of the Red Page tab'
+            'Blue Page tab\'s x is $blueTabX, Red Page tab\'s X is $redTabX ');
 
     /// Tab closing test
 
