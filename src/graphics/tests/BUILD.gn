@@ -36,25 +36,21 @@ group("hw_tests") {
     "vkvalidation:test-vk-validation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]
+
+  # disabled, but build
+  deps += [ "vkpriority:vkpriority_cmp" ]
 }
 
 test_package("vulkan-tests") {
   deps = [
     "common:vkcontext",
     "vk_timer_query",
-    "vkpriority",
   ]
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
   public_deps = vulkan_validation_layers.public_deps
 
   tests = [
-    {
-      name = "vkpriority"
-
-      # No available hardware to run it on; cannot run with an Intel GPU.
-      disabled = true
-    },
     {
       name = "vk_timer_query_tests"
       environments = magma_libvulkan_arm_hardware_envs

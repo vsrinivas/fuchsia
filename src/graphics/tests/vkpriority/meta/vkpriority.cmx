@@ -4,6 +4,6 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/disabled/vkpriority"
+        "binary": "bin/vkpriority"
     }
 }

@@ -2,20 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("vkpriority") {
+import("//src/sys/build/components.gni")
+
+executable("vkpriority_bin") {
   testonly = true
+  output_name = "vkpriority"
 
   sources = [
     "main.cc",
     "vkpriority.cc",
   ]
 
-  deps = []
-
   public_deps = [
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/vulkan",
     "//third_party/googletest:gtest",
   ]
+}
 
-  public_deps += [ "//src/lib/vulkan" ]
+fuchsia_component("vkpriority_cmp") {
+  testonly = true
+  component_name = "vkpriority"
+  deps = [
+    ":vkpriority_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+
+  manifest = "meta/vkpriority.cmx"
+}
+
+fuchsia_test_package("vkpriority-pkg") {
+  package_name = "vkpriority"
+  test_components = [ ":vkpriority_cmp" ]
+}
+
+group("vkpriority") {
+  testonly = true
+  deps = [ ":vkpriority-pkg" ]
 }
