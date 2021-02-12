@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fuchsia_syslog_lib_test"
+        "binary": "bin/fuchsia_syslog_lib_test"
     },
     "sandbox": {
         "features": [

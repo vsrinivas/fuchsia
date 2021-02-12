@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -107,25 +106,24 @@ executable("locale_util_unit_test_bin") {
   ]
 }
 
-test_package("intl_property_provider_impl_tests") {
-  deps = [
-    ":intl_property_provider_impl_test_bin",
-    ":locale_util_unit_test_bin",
-  ]
+fuchsia_unittest_component("intl_property_provider_impl_test") {
+  deps = [ ":intl_property_provider_impl_test_bin" ]
+}
 
-  tests = [
-    {
-      name = "intl_property_provider_impl_test"
-    },
-    {
-      name = "locale_util_unit_test"
-    },
-  ]
+fuchsia_unittest_component("locale_util_unit_test") {
+  deps = [ ":locale_util_unit_test_bin" ]
+}
 
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+resource("icudtl_dat") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
+  testonly = true
+}
+
+fuchsia_test_package("intl_property_provider_impl_tests") {
+  test_components = [
+    ":intl_property_provider_impl_test",
+    ":locale_util_unit_test",
   ]
+  deps = [ ":icudtl_dat" ]
 }

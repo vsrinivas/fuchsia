@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fuzzing/fuzzer.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("pkg_url") {
   sources = [
@@ -33,13 +32,8 @@ executable("tests") {
   ]
 }
 
-test_package("pkg_url_unittests") {
+fuchsia_unittest_package("pkg_url_unittests") {
   deps = [ ":tests" ]
-  tests = [
-    {
-      name = "pkg_url_unittests"
-    },
-  ]
 }
 
 fuzzers_package("pkg_url_fuzzers") {

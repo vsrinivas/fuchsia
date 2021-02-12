@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mapped-vmo") {
   name = "mapped_vmo"
@@ -20,14 +20,8 @@ rustc_library("mapped-vmo") {
   sources = [ "src/lib.rs" ]
 }
 
-unittest_package("mapped-vmo-tests") {
+fuchsia_unittest_package("mapped-vmo-tests") {
   deps = [ ":mapped-vmo_test" ]
-
-  tests = [
-    {
-      name = "mapped_vmo_lib_test"
-    },
-  ]
 }
 
 group("tests") {

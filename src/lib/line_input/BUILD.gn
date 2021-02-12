@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 static_library("line_input") {
   sources = [
@@ -65,14 +65,8 @@ if (is_host) {
     ]
   }
 
-  unittest_package("line_input_tests") {
+  fuchsia_unittest_package("line_input_tests") {
     deps = [ ":line_input_tests_bin" ]
-    tests = [
-      {
-        name = "line_input_tests_bin"
-        environments = basic_envs
-      },
-    ]
   }
 }
 

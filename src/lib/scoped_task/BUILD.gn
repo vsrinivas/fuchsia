@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("scoped_task") {
   edition = "2018"
@@ -59,23 +59,15 @@ rustc_binary("scoped_task_test_spawner") {
   sources = [ "test/spawner.rs" ]
 }
 
-test_package("scoped-task-tests") {
-  deps = [
-    ":scoped_task_test",
-    ":scoped_task_test_spawner",
-  ]
+fuchsia_unittest_component("scoped_task_test_cmp") {
+  component_name = "scoped_task_test"
+  deps = [ ":scoped_task_test" ]
+  manifest = "meta/scoped_task_test.cmx"
+}
 
-  tests = [
-    {
-      name = "scoped_task_test"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "scoped_task_test_spawner"
-    },
-  ]
+fuchsia_test_package("scoped-task-tests") {
+  test_components = [ ":scoped_task_test_cmp" ]
+  deps = [ ":scoped_task_test_spawner" ]
 }
 
 group("tests") {

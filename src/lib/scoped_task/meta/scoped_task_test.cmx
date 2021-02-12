@@ -9,7 +9,7 @@
             "-Zunstable-options",
             "--ensure-time"
         ],
-        "binary": "test/scoped_task_test"
+        "binary": "bin/scoped_task_test"
     },
     "sandbox": {
         "services": [

@@ -4,8 +4,8 @@
 
 import("//build/intl/intl_strings.gni")
 import("//build/rust/rustc_staticlib.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("rust") {
   testonly = true
@@ -48,36 +48,36 @@ rustc_staticlib("lib") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("intl-lookup-rust-tests") {
+resource("l10n_en_asset") {
+  deps = [ ":l10n" ]
+  sources = [ "$target_gen_dir/en/l10n.json" ]
+  outputs = [ "data/assets/locales/en/l10n.json" ]
+}
+
+resource("l10n_fr_asset") {
+  deps = [ ":l10n" ]
+  sources = [ "$target_gen_dir/fr/l10n.json" ]
+  outputs = [ "data/assets/locales/fr/l10n.json" ]
+}
+
+resource("l10n_es_asset") {
+  deps = [ ":l10n" ]
+  sources = [ "$target_gen_dir/es/l10n.json" ]
+  outputs = [ "data/assets/locales/es/l10n.json" ]
+}
+
+resource("icudtl_dat") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
+}
+
+fuchsia_unittest_package("intl-lookup-rust-tests") {
   deps = [
-    ":l10n",
+    ":icudtl_dat",
+    ":l10n_en_asset",
+    ":l10n_es_asset",
+    ":l10n_fr_asset",
     ":lib_test",
-  ]
-
-  tests = [
-    {
-      name = "intl_lookup_staticlib_test"
-      dest = "intl_lookup_rust_tests"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("$target_gen_dir/en/l10n.json")
-      dest = "assets/locales/en/l10n.json"
-    },
-    {
-      path = rebase_path("$target_gen_dir/fr/l10n.json")
-      dest = "assets/locales/fr/l10n.json"
-    },
-    {
-      path = rebase_path("$target_gen_dir/es/l10n.json")
-      dest = "assets/locales/es/l10n.json"
-    },
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
   ]
 }
 

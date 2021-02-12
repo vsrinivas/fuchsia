@@ -2,14 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("cpp") {
   testonly = true
   public_deps = [
     ":intl-lookup-cpp",
-    ":pkg",
     ":tests",
   ]
 }
@@ -32,7 +30,8 @@ source_set("lib") {
   ]
 }
 
-executable("intl-lookup-cpp") {
+executable("bin") {
+  output_name = "intl-lookup-cpp"
   testonly = true
   sources = [ "main.cc" ]
   deps = [ ":lib" ]
@@ -48,34 +47,12 @@ executable("intl_lookup_cpp_unittests") {
   ]
 }
 
-package("pkg") {
+fuchsia_package_with_single_component("intl-lookup-cpp") {
+  manifest = "meta/intl-lookup-cpp.cmx"
+  deps = [ ":bin" ]
   testonly = true
-  package_name = "intl-lookup-cpp"
-
-  binaries = [
-    {
-      name = "intl-lookup-cpp"
-      dest = "intl-lookup-cpp"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/intl-lookup-cpp.cmx")
-      dest = "intl-lookup-cpp.cmx"
-    },
-  ]
-
-  deps = [ ":intl-lookup-cpp" ]
 }
 
-test_package("intl-lookup-cpp-tests") {
+fuchsia_unittest_package("intl-lookup-cpp-tests") {
   deps = [ ":intl_lookup_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "intl_lookup_cpp_unittests"
-      environments = basic_envs
-    },
-  ]
 }

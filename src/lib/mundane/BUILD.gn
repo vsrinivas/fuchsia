@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mundane") {
   name = "mundane"
@@ -49,15 +49,8 @@ rustc_library("mundane") {
   ]
 }
 
-unittest_package("mundane-tests") {
+fuchsia_unittest_package("mundane-tests") {
   deps = [ ":mundane_test" ]
-
-  tests = [
-    {
-      name = "mundane_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
