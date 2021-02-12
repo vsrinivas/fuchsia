@@ -37,6 +37,7 @@ go_library("gopkg") {
     "codegen/fragment_sync_server.tmpl.go",
     "codegen/fragment_table.tmpl.go",
     "codegen/fragment_union.tmpl.go",
+    "codegen/test_base.tmpl.go",
     "main.go",
   ]
 }
@@ -73,6 +74,10 @@ golden_test("fidlgen_llcpp_golden_tests") {
         {
           golden = "${info.name}.cc.golden"
           generated = "$gen_dir/$include_path/fidl.cc"
+        },
+        {
+          golden = "${info.name}_test_base.h.golden"
+          generated = "$gen_dir/$include_path/fidl_test_base.h"
         },
       ]
     }

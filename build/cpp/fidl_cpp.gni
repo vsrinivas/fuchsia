@@ -125,17 +125,20 @@ template("_fidl_llcpp_codegen_impl") {
     inputs = [ json_representation ]
 
     outputs = [
-      "$file_stem.h",
-      "$file_stem.cc",
+      "${file_stem}.h",
+      "${file_stem}.cc",
+      "${file_stem}_test_base.h",
     ]
 
     args = [
       "--json",
       rebase_path(json_representation, root_build_dir),
       "--header",
-      rebase_path("$file_stem.h", root_build_dir),
+      rebase_path("${file_stem}.h", root_build_dir),
       "--source",
-      rebase_path("$file_stem.cc", root_build_dir),
+      rebase_path("${file_stem}.cc", root_build_dir),
+      "--test-base",
+      rebase_path("${file_stem}_test_base.h", root_build_dir),
       "--include-base",
       rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
       "--include-stem",

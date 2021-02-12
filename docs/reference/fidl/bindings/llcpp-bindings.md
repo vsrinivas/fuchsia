@@ -9,7 +9,8 @@ library fuchsia.examples;
 ```
 
 Bindings code for this library is generated in the `llcpp::fuchsia::examples`
-namespace.
+namespace, and [test scaffolding](#test-scaffolding) is generated in the
+`fuchsia::examples::testing` namespace.
 
 ## Constants {#constants}
 
@@ -1070,6 +1071,30 @@ Persistence is not officially supported by LLCPP. However, explicit encoding and
 decoding can be used to store FIDL values by encoding a value and then writing
 it and by reading a value and then decoding it. In that case, the values can't
 use any handle.
+
+### Test scaffolding {#test-scaffolding}
+
+The FIDL toolchain also generates a file suffixed with  `_test_base.h` that
+contains convenience code for testing FIDL server implementations. This file
+contains a class for each protocol that provides stub implementations for each
+of the class’s methods, making it possible to implement only the methods that
+are used during testing. These classes are generated into a `testing` namespace
+that is inside of the generated library’s namespace (e.g. for library
+`games.tictactoe`, these classes are generated into
+`games::tictactoe::testing`).
+
+For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
+`TicTacToe_TestBase` class that subclasses `TicTacToe` (see
+[Protocols](#protocols)), offering the following methods:
+
+* `virtual ~TicTacToe_TestBase() {}`: Destructor.
+* `virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0`:
+  Pure virtual method that is overridden to define behavior for unimplemented methods.
+
+`TicTacToe_TestBase` provides an implementation for the virtual protocol
+methods `StartGame` and `MakeMove`, which are implemented to just call
+`NotImplemented_("StartGame", completer)` and `NotImplemented_("MakeMove",
+completer)`, respectively.
 
 <!-- xrefs -->
 [llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md

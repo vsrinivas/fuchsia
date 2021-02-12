@@ -197,6 +197,7 @@ func NewGenerator() *Generator {
 		fragmentUnionTmpl,
 		fileHeaderTmpl,
 		fileSourceTmpl,
+		testBaseTmpl,
 	}
 	for _, t := range templates {
 		template.Must(tmpls.Parse(t))
@@ -236,6 +237,10 @@ func (gen *Generator) generateSource(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
 }
 
+func (gen *Generator) generateTestBase(wr io.Writer, tree cpp.Root) error {
+	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
+}
+
 // GenerateHeader generates the LLCPP bindings header, and writes it into
 // the target filename.
 func (gen *Generator) GenerateHeader(tree cpp.Root, filename, clangFormatPath string) error {
@@ -244,10 +249,18 @@ func (gen *Generator) GenerateHeader(tree cpp.Root, filename, clangFormatPath st
 	})
 }
 
-// GenerateSource generates the LLCPP bindings header, and writes it into
+// GenerateSource generates the LLCPP bindings source, and writes it into
 // the target filename.
 func (gen *Generator) GenerateSource(tree cpp.Root, filename, clangFormatPath string) error {
 	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
 		return gen.generateSource(wr, tree)
+	})
+}
+
+// GenerateTestBase generates the LLCPP bindings test base header, and
+// writes it into the target filename.
+func (gen *Generator) GenerateTestBase(tree cpp.Root, filename, clangFormatPath string) error {
+	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
+		return gen.generateTestBase(wr, tree)
 	})
 }

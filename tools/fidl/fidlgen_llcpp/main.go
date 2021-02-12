@@ -21,6 +21,7 @@ type flagsDef struct {
 	jsonPath        *string
 	header          *string
 	source          *string
+	testBase        *string
 	includeBase     *string
 	includeStem     *string
 	clangFormatPath *string
@@ -33,6 +34,8 @@ var flags = flagsDef{
 		"the output path for the generated header."),
 	source: flag.String("source", "",
 		"the output path for the generated C++ implementation."),
+	testBase: flag.String("test-base", "",
+		"the output path for the generated test base header."),
 	includeBase: flag.String("include-base", "",
 		"[optional] the directory relative to which includes will be computed. "+
 			"If omitted, assumes #include <fidl/library/name/llcpp/fidl.h>"),
@@ -45,7 +48,7 @@ var flags = flagsDef{
 
 // valid returns true if the parsed flags are valid.
 func (f flagsDef) valid() bool {
-	return *f.jsonPath != "" && *f.header != "" && *f.source != ""
+	return *f.jsonPath != "" && *f.header != "" && *f.source != "" && *f.testBase != ""
 }
 
 func calcPrimaryHeader(fidl fidl.Root, headerPath string, includeStem string) (string, error) {
@@ -96,6 +99,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	testBasePath, err := filepath.Abs(*flags.testBase)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	primaryHeader, err := calcPrimaryHeader(fidl, headerPath, *flags.includeStem)
 	if err != nil {
 		log.Fatal(err)
@@ -105,9 +113,12 @@ func main() {
 
 	generator := codegen.NewGenerator()
 	if err := generator.GenerateHeader(tree, headerPath, *flags.clangFormatPath); err != nil {
-		log.Fatalf("Error running header generator: %v", err)
+		log.Fatalf("Error running header generator: %s", err)
 	}
 	if err := generator.GenerateSource(tree, sourcePath, *flags.clangFormatPath); err != nil {
-		log.Fatalf("Error running source generator: %v", err)
+		log.Fatalf("Error running source generator: %s", err)
+	}
+	if err := generator.GenerateTestBase(tree, testBasePath, *flags.clangFormatPath); err != nil {
+		log.Fatalf("Error running test base generator: %s", err)
 	}
 }
