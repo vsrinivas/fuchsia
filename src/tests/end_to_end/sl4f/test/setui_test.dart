@@ -39,6 +39,8 @@ void main() {
     });
 
     test('set Locale', () async {
+      final originalInfo = await setUi.getLocale();
+
       await setUi.setLocale('he-FR');
       var intlInfo = await setUi.getLocale();
       expect(intlInfo.locales.contains('he-FR'), true);
@@ -46,6 +48,10 @@ void main() {
       await setUi.setLocale('zh-TW');
       intlInfo = await setUi.getLocale();
       expect(intlInfo.locales.contains('zh-TW'), true);
+
+      // Restore the original locale, to avoid confusion when this test gets run
+      // on a developer's device.
+      await setUi.setLocale(originalInfo.locales.first);
     });
   }, timeout: _timeout);
 }
