@@ -5,14 +5,14 @@
             "starting_src": "dart/step_00_before.dart",
             "steps": [
                 {
-                    "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
-                    ],
-                    "source": "dart/step_01_after.dart",
+                    "fidl": "step_01_after",
                     "step_num": 1
                 },
                 {
-                    "fidl": "step_02_after",
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "dart/step_02_after.dart",
                     "step_num": 2
                 }
             ]
@@ -22,14 +22,14 @@
             "starting_src": "go/step_00_before.go",
             "steps": [
                 {
-                    "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
-                    ],
-                    "source": "go/step_01_after.go",
+                    "fidl": "step_01_after",
                     "step_num": 1
                 },
                 {
-                    "fidl": "step_02_after",
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "go/step_02_after.go",
                     "step_num": 2
                 }
             ]
@@ -39,14 +39,14 @@
             "starting_src": "hlcpp/step_00_before.cc",
             "steps": [
                 {
-                    "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
-                    ],
-                    "source": "hlcpp/step_01_after.cc",
+                    "fidl": "step_01_after",
                     "step_num": 1
                 },
                 {
-                    "fidl": "step_02_after",
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "hlcpp/step_02_after.cc",
                     "step_num": 2
                 }
             ]
@@ -56,14 +56,14 @@
             "starting_src": "llcpp/step_00_before.cc",
             "steps": [
                 {
-                    "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
-                    ],
-                    "source": "llcpp/step_01_after.cc",
+                    "fidl": "step_01_after",
                     "step_num": 1
                 },
                 {
-                    "fidl": "step_02_after",
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "llcpp/step_02_after.cc",
                     "step_num": 2
                 }
             ]
@@ -73,22 +73,15 @@
             "starting_src": "rust/step_00_before.rs",
             "steps": [
                 {
-                    "instructions": [
-                        "Remove all references to the soon-to-be-removed member. For readers, the member should be temporarily handled as part of a catch-all case."
-                    ],
-                    "source": "rust/step_01_during.rs",
+                    "fidl": "step_01_after",
                     "step_num": 1
                 },
                 {
-                    "fidl": "step_02_after",
-                    "step_num": 2
-                },
-                {
                     "instructions": [
-                        "Readers no longer need to handle the removed enum member in any switch statements."
+                        "You can now use the new member"
                     ],
-                    "source": "rust/step_03_after.rs",
-                    "step_num": 3
+                    "source": "rust/step_02_after.rs",
+                    "step_num": 2
                 }
             ]
         }
@@ -98,12 +91,12 @@
             "instructions": [],
             "source": "fidl/step_00_before.test.fidl"
         },
-        "step_02_after": {
+        "step_01_after": {
             "instructions": [
-                "Remove the enum member"
+                "Add the new member"
             ],
-            "source": "fidl/step_02_after.test.fidl"
+            "source": "fidl/step_01_after.test.fidl"
         }
     },
-    "title": "Remove an enum member"
+    "title": "Add a bits member"
 }

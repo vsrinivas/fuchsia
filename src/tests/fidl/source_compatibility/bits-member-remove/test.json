@@ -6,7 +6,7 @@
             "steps": [
                 {
                     "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
+                        "Remove references to the soon-to-be-removed member"
                     ],
                     "source": "dart/step_01_after.dart",
                     "step_num": 1
@@ -23,7 +23,7 @@
             "steps": [
                 {
                     "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
+                        "Remove references to the soon-to-be-removed member"
                     ],
                     "source": "go/step_01_after.go",
                     "step_num": 1
@@ -40,7 +40,7 @@
             "steps": [
                 {
                     "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
+                        "Remove references to the soon-to-be-removed member"
                     ],
                     "source": "hlcpp/step_01_after.cc",
                     "step_num": 1
@@ -57,7 +57,7 @@
             "steps": [
                 {
                     "instructions": [
-                        "Remove all references to the soon-to-be-removed member."
+                        "Remove references to the soon-to-be-removed member"
                     ],
                     "source": "llcpp/step_01_after.cc",
                     "step_num": 1
@@ -74,21 +74,14 @@
             "steps": [
                 {
                     "instructions": [
-                        "Remove all references to the soon-to-be-removed member. For readers, the member should be temporarily handled as part of a catch-all case."
+                        "Remove references to the soon-to-be-removed member"
                     ],
-                    "source": "rust/step_01_during.rs",
+                    "source": "rust/step_01_after.rs",
                     "step_num": 1
                 },
                 {
                     "fidl": "step_02_after",
                     "step_num": 2
-                },
-                {
-                    "instructions": [
-                        "Readers no longer need to handle the removed enum member in any switch statements."
-                    ],
-                    "source": "rust/step_03_after.rs",
-                    "step_num": 3
                 }
             ]
         }
@@ -100,10 +93,10 @@
         },
         "step_02_after": {
             "instructions": [
-                "Remove the enum member"
+                "Remove the bits member"
             ],
             "source": "fidl/step_02_after.test.fidl"
         }
     },
-    "title": "Remove an enum member"
+    "title": "Remove a bits member"
 }

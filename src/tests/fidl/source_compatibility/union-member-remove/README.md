@@ -163,8 +163,8 @@ fn reader(value: fidl_lib::JsonValue) -> String {
 ```
 ## Update Source Code {#step-1}
 ### Dart {#dart-1}
-- Update writers to stop producing new instances of the soon to be removed variant.
-- Remove references to the soon to be removed variant from any switch statements on the union tag. These must be temporarily handled as part of a default case.
+- Update writers to stop producing new instances of the soon-to-be-removed variant.
+- Remove references to the soon-to-be-removed variant from any switch statements on the union tag. These must be temporarily handled as part of a default case.
 
 ```diff
   fidllib.JsonValue writer(String s) {
@@ -198,8 +198,8 @@ fn reader(value: fidl_lib::JsonValue) -> String {
 
 ```
 ### Go {#go-1}
-- Update writers to stop producing new instances of the soon to be removed variant.
-- Remove references to the soon to be removed variant from any switch statements on the union tag. These must be temporarily handled as part of a default case.
+- Update writers to stop producing new instances of the soon-to-be-removed variant.
+- Remove references to the soon-to-be-removed variant from any switch statements on the union tag. These must be temporarily handled as part of a default case.
 
 ```diff
   func writer(s string) lib.JsonValue {

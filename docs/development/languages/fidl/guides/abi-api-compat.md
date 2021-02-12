@@ -262,9 +262,9 @@ It is not source-compatible to rename an enum member.
 
 **ABI**
 
-It is binary-compatible to add a bits member. To ensure the added bits member is
-not rejected during runtime validation, it must have propagated to readers ahead
-of it being used by writers.
+It is binary-compatible to add a bits member. For strict bits, to ensure the
+added bits member is not rejected during runtime validation, it must have
+propagated to readers ahead of it being used by writers.
 
 **API**
 
@@ -274,9 +274,9 @@ It is source-compatible to add a bits member.
 
 **ABI**
 
-It is binary-compatible to remove a bits member. To ensure the removed bits
-member is not rejected during runtime validation, no writer may use the bits
-member when it is removed.
+It is binary-compatible to remove a bits member. For strict bits, to ensure the
+removed bits member is not rejected during runtime validation, no writer may use
+the bits member when it is removed.
 
 **API**
 
