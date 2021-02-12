@@ -182,6 +182,7 @@ void ConvertingTreeVisitor::OnEnumDeclaration(const std::unique_ptr<raw::EnumDec
 
 void ConvertingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& element) {
   last_conversion_end_ = element->start_.previous_end().data().data();
+  comments_ = std::move(element->comment_tokens_list);
   DeclarationOrderTreeVisitor::OnFile(element);
   converted_output_ += last_conversion_end_;
 }
@@ -264,6 +265,26 @@ Converting::Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> c
   if (copy_from < copy_until) {
     auto cr = std::make_unique<CopyRange>(copy_from, copy_until);
     conversion->AddPrefix(std::move(cr));
+  }
+
+  // Any stray comments contained inside the span being converted should be
+  // added to the prefix as well.
+  while (ctv->last_comment_ < ctv->comments_.size()) {
+    std::string_view comment = ctv->comments_[ctv->last_comment_]->span().data();
+
+    // Make sure not to consume comments past the end of the current conversion
+    // span.
+    if (comment.data() > ctv_->last_conversion_end_) {
+      break;
+    }
+
+    if (comment.data() > start.data().data()) {
+      const char* from = comment.data();
+      const char* until = from + comment.length() + 1;
+      auto cr = std::make_unique<CopyRange>(from, until);
+      conversion->AddPrefix(std::move(cr));
+    }
+    ctv->last_comment_++;
   }
 
   ctv_->open_conversions_.push(std::move(conversion));

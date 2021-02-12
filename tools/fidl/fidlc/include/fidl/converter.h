@@ -27,6 +27,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
                                  const flat::Library* library)
       : to_syntax_(syntax),
         last_conversion_end_(nullptr),
+        last_comment_(0),
         library_(library) {
   }
 
@@ -123,6 +124,18 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // times when doing nested conversions, and to ensure that the remaining text
   // after the final conversion gets copied.
   const char* last_conversion_end_;
+
+  // A list of all C-Style "//"-leading comments in the file (ie, all comments
+  // except doc comments).  We need to store this because some of the conversion
+  // spans may include weirdly-placed comments that we do not want to lose.
+  // Instead, such comments should be appended to the conversion's prefix.
+  std::vector<std::unique_ptr<Token>> comments_;
+
+  // Keeps track of the last comment in the comments_ list to have been "tested"
+  // for being inside a conversion span.  The char pointer at the vector index
+  // pointed to by this member should never exceed the char pointer held in
+  // last_conversion_end_.
+  std::size_t last_comment_;
 
   // A pointer to the flat::Library representation of the file being visited.
   // This will be used when resolving and converting type definitions that

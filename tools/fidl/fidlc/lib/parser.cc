@@ -1599,7 +1599,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(const_declaration_list), std::move(enum_declaration_list),
       std::move(protocol_declaration_list), std::move(resource_declaration_list),
       std::move(service_declaration_list), std::move(struct_declaration_list),
-      std::move(table_declaration_list), std::move(union_declaration_list));
+      std::move(table_declaration_list), std::move(union_declaration_list),
+      std::move(comment_tokens_));
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {

@@ -50,6 +50,7 @@ class Parser {
         case Token::Kind::kComment:
           if (state_ == State::kDocCommentLast)
             state_ = State::kDocCommentThenComment;
+          comment_tokens_.emplace_back(std::make_unique<Token>(token));
           break;
         case Token::Kind::kDocComment:
           if (state_ == State::kDocCommentThenComment)
@@ -396,6 +397,11 @@ class Parser {
 
   Token last_token_;
   State state_;
+
+  // TODO(azaslavsky): this member has been created solely for the benefit of
+  //   fidlconv.  Once the conversion using that tool is completed and the tool
+  //   has been removed, this member should be removed as well.
+  std::vector<std::unique_ptr<Token>> comment_tokens_;
 };
 
 }  // namespace fidl

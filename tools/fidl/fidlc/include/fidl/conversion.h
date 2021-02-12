@@ -35,7 +35,7 @@ class CopyRange {
 
 class Conversion {
  public:
-  Conversion() : copy_range_(nullptr) {}
+  Conversion() = default;
   virtual ~Conversion() = default;
 
   // An enumeration of supported syntaxes.  There are currently two available:
@@ -59,7 +59,7 @@ class Conversion {
   // the AddPrefix() method of the NameAndTypeConversion, while C would be
   // included in the prefix of whatever conversion comes next.
   void AddPrefix(std::unique_ptr<CopyRange> copy_range) {
-    copy_range_ = std::move(copy_range);
+    copy_ranges_.emplace_back(std::move(copy_range));
   }
 
   // A conversion that nests other conversions inside of itself enables this
@@ -85,14 +85,15 @@ class Conversion {
 
  protected:
   std::string prefix() {
-    if (copy_range_ != nullptr) {
-      return std::string(copy_range_->from_, copy_range_->until_);
+    std::string out;
+    for (auto& copy_range : copy_ranges_) {
+      out += std::string(copy_range->from_, copy_range->until_);
     }
-    return "";
+    return out;
   }
 
  private:
-  std::unique_ptr<CopyRange> copy_range_;
+  std::vector<std::unique_ptr<CopyRange>> copy_ranges_;
 };
 
 // TypeConversion encapsulates the complex logic for converting various type

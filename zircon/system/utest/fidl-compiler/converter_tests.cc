@@ -830,6 +830,7 @@ type S = resource struct {
 
 TEST(ConverterTests, StructWithComments) {
   std::string old_version = R"FIDL(
+// Library comment.
 library example;
 
 // Top-level comments should be retained.
@@ -849,6 +850,7 @@ struct S {
 )FIDL";
 
   std::string new_version = R"FIDL(
+// Library comment.
 library example;
 
 // Top-level comments should be retained.
@@ -869,6 +871,123 @@ type S = struct {
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+// Make sure that comments inserted in weird gaps where we would not usually
+// expect to see comments are not lost.  This test only applies to the new
+// syntax - keeping comments in place for the old syntax is too cumbersome.
+TEST(ConverterTests, StructWithCommentsSilly) {
+  std::string old_version = R"FIDL(
+// 0
+library
+// 1
+example
+// 2
+;
+
+// 3
+resource
+// 4
+// 5
+struct
+// 6
+S
+// 7
+{
+// 8
+int32
+// 9
+a
+// 10
+;
+// 11
+vector
+// 12
+<
+// 13
+handle
+// 14
+:
+// 15
+<
+// 16
+VMO
+// 17
+,
+// 18
+7
+// 19
+>
+// 20
+?
+// 21
+>
+// 22
+:
+// 23
+16
+// 24
+?
+// 25
+b
+// 26
+;
+// 27
+}
+// 28
+;
+// 29
+)FIDL";
+
+  std::string new_version = R"FIDL(
+// 0
+library
+// 1
+example
+// 2
+;
+
+// 3
+// 4
+// 5
+// 6
+type S = resource struct
+// 7
+{
+// 8
+// 9
+a int32
+// 10
+;
+// 11
+// 12
+// 13
+// 14
+// 15
+// 16
+// 17
+// 18
+// 19
+// 20
+// 21
+// 22
+// 23
+// 24
+// 25
+b vector<handle:<optional,VMO,7>>:<optional,16>
+// 26
+;
+// 27
+}
+// 28
+;
+// 29
+)FIDL";
+
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
 }
 
 TEST(ConverterTests, TableEmpty) {
@@ -1016,6 +1135,7 @@ type T = resource table {
 
 TEST(ConverterTests, TableWithComments) {
   std::string old_version = R"FIDL(
+// Library comment.
 library example;
 
 // Top-level comments should be retained.
@@ -1039,6 +1159,7 @@ table T {
 )FIDL";
 
   std::string new_version = R"FIDL(
+// Library comment.
 library example;
 
 // Top-level comments should be retained.
@@ -1285,6 +1406,7 @@ type U = resource union {
 
 TEST(ConverterTests, UnionWithComments) {
   std::string old_version = R"FIDL(
+// Library comment.
 library example;
 
 // Top-level comments should be retained.
@@ -1307,6 +1429,7 @@ union U {
 )FIDL";
 
   std::string new_version = R"FIDL(
+// Library comment.
 library example;
 
 // Top-level comments should be retained.

@@ -761,7 +761,8 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list,
        std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
-       std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
+       std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
+       std::vector<std::unique_ptr<Token>> comment_tokens_list)
       : SourceElement(element),
         attributes(std::move(attributes)),
         library_name(std::move(library_name)),
@@ -776,6 +777,7 @@ class File final : public SourceElement {
         struct_declaration_list(std::move(struct_declaration_list)),
         table_declaration_list(std::move(table_declaration_list)),
         union_declaration_list(std::move(union_declaration_list)),
+        comment_tokens_list(std::move(comment_tokens_list)),
         end_(end) {}
 
   void Accept(TreeVisitor* visitor) const;
@@ -793,6 +795,11 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
+
+  // TODO(azaslavsky): this member has been created solely for the benefit of
+  //   fidlconv.  Once the conversion using that tool is completed and the tool
+  //   has been removed, this member should be removed as well.
+  std::vector<std::unique_ptr<Token>> comment_tokens_list;
   Token end_;
 };
 
