@@ -1,0 +1,42 @@
+{
+  "project_id": 3509424520,
+  "poll_rate_sec": 300,
+  "metrics": [
+    {
+      "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:free_at_high_water_mark",
+      "metric_id": 4,
+      "metric_type": "Integer",
+      "event_codes": [1]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:used_size",
+      "metric_id": 5,
+      "metric_type": "Integer",
+      "event_codes": [1]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:free_at_high_water_mark",
+      "metric_id": 4,
+      "metric_type": "Integer",
+      "event_codes": [2]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:used_size",
+      "metric_id": 5,
+      "metric_type": "Integer",
+      "event_codes": [2]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:free_at_high_water_mark",
+      "metric_id": 4,
+      "metric_type": "Integer",
+      "event_codes": [3]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:used_size",
+      "metric_id": 5,
+      "metric_type": "Integer",
+      "event_codes": [3]
+    }
+  ]
+}
