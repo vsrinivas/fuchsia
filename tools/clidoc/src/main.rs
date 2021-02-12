@@ -215,16 +215,15 @@ fn path_for(file_stem: &OsStr, dir: &PathBuf) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::ffi::OsString;
-    use std::fs::File;
-    use std::io::Write;
-    use std::path::PathBuf;
+    use {
+        super::*,
+        std::{fs::File, io::Write, path::PathBuf},
+    };
 
     #[test]
     fn write_formatted_output_test() -> Result<()> {
         // Format and write a command line tool's help output to a file.
-        let cmd_name = OsString::from("host-tool-cmd");
+        let cmd_name = "host-tool-cmd";
         let lines = vec![
             "Usage: host-tool-cmd".to_string(),
             "Tool description".to_string(),
@@ -234,10 +233,7 @@ mod tests {
             "debug Start debug session:".to_string(),
         ];
         let cmd_output_path = PathBuf::from(r"/tmp/host-tool-cmd.md");
-        if let Err(e) = write_formatted_output(&cmd_name, lines, &cmd_output_path) {
-            error!("Error: {}", e);
-            process::exit(1);
-        }
+        write_formatted_output(&cmd_name, &lines, &cmd_output_path)?;
 
         // Write a hard-coded formatted file.
         let formatted_contents = vec![
@@ -275,5 +271,6 @@ mod tests {
 
         // Assert write_formatted_output formatted the documentation correctly.
         assert_eq!(cmd_buffer, formatted_buffer);
+        Ok(())
     }
 }
