@@ -185,10 +185,10 @@ void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, I
 
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
 
-  // TODO:(fxbug.dev/52632): Once we expose transparency in the flatland API, we can undisable
-  // the alpha mode for the display controller.
-  (*display_controller_.get())
-      ->SetLayerPrimaryAlpha(layer_id, fuchsia::hardware::display::AlphaMode::DISABLE, 1.f);
+  auto alpha_mode = image.has_transparency ? fuchsia::hardware::display::AlphaMode::PREMULTIPLIED
+                                           : fuchsia::hardware::display::AlphaMode::DISABLE;
+
+  (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, 1.f);
 
   // Set the imported image on the layer.
   // TODO(fxbug.dev/59646): Add wait and signal events.
@@ -383,7 +383,8 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
                             .identifier = sysmem_util::GenerateUniqueImageId(),
                             .vmo_idx = i,
                             .width = kWidth,
-                            .height = kHeight};
+                            .height = kHeight,
+                            .has_transparency = false};
 
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);

@@ -386,7 +386,8 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
                                       .identifier = 1,
                                       .vmo_idx = 0,
                                       .width = kTextureWidth,
-                                      .height = kTextureHeight};
+                                      .height = kTextureHeight,
+                                      .has_transparency = false};
   auto result = engine->ImportImage(image_metadata);
   EXPECT_TRUE(result);
 
@@ -456,7 +457,8 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
                           .identifier = sysmem_util::GenerateUniqueImageId(),
                           .vmo_idx = i,
                           .width = kTextureWidth,
-                          .height = kTextureHeight};
+                          .height = kTextureHeight,
+                          .has_transparency = false};
   }
 
   // Curate the data we want so we don't need to go through flatland.
@@ -547,6 +549,144 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
     uint32_t num_screen_pixels = display->width_in_px() * display->height_in_px();
     EXPECT_EQ(num_blue, num_screen_pixels / 2);
     EXPECT_EQ(num_red, num_screen_pixels / 2);
+  });
+}
+
+// Test to make sure that the engine can handle rendering a transparent object overlapping an
+// opaque one.
+VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
+  auto display = display_manager_->default_display();
+  auto display_controller = display_manager_->default_display_controller();
+
+  const uint64_t kTextureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  // Set up buffer collection and image for display_controller capture.
+  uint64_t capture_image_id;
+  fuchsia::sysmem::BufferCollectionInfo_2 capture_info;
+  auto capture_collection_result =
+      SetupCapture(kCaptureCollectionId, &capture_info, &capture_image_id);
+  if (capture_collection_result.is_error() &&
+      capture_collection_result.error() == ZX_ERR_NOT_SUPPORTED) {
+    GTEST_SKIP();
+  }
+  EXPECT_TRUE(capture_collection_result.is_ok());
+  auto capture_collection = std::move(capture_collection_result.value());
+
+  // Setup the collection for the textures. Since we're rendering in software, we don't have to
+  // deal with display limitations.
+  const uint32_t kRectWidth = 300, kTextureWidth = 1;
+  const uint32_t kRectHeight = 200, kTextureHeight = 1;
+  fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
+
+  // Create the image metadatas.
+  ImageMetadata image_metadatas[2];
+  for (uint32_t i = 0; i < 2; i++) {
+    image_metadatas[i] = {.collection_id = kTextureCollectionId,
+                          .identifier = sysmem_util::GenerateUniqueImageId(),
+                          .vmo_idx = i,
+                          .width = kTextureWidth,
+                          .height = kTextureHeight,
+                          .has_transparency = (i == 1)};
+  }
+
+  // Curate the data we want so we don't need to go through flatland.
+  const uint32_t kNumOverlappingRows = 25;
+  auto data_func =
+      [&](std::unordered_map<uint64_t, DisplayInfo> display_map) -> std::vector<RenderData> {
+    RenderData result;
+    uint32_t width = display->width_in_px() / 2;
+    uint32_t height = display->height_in_px();
+
+    // Have the two rectangles overlap eachother slightly with 25 rows in common across the
+    // display.s
+    result.display_id = display->display_id();
+    result.rectangles.push_back({glm::vec2(0, 0), glm::vec2(width + kNumOverlappingRows, height)});
+    result.rectangles.push_back({glm::vec2(width - kNumOverlappingRows, 0),
+                                 glm::vec2(width + kNumOverlappingRows, height)});
+
+    result.images.push_back(image_metadatas[0]);
+    result.images.push_back(image_metadatas[1]);
+    return {result};
+  };
+
+  // Use the VK renderer here so we can make use of software rendering.
+  auto [escher, renderer] = NewVkRenderer();
+  auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
+                                                   renderer, std::move(data_func));
+
+  auto texture_collection =
+      SetupTextures(engine.get(), renderer.get(), kTextureCollectionId, kTextureWidth,
+                    kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
+
+  // Write to the two textures. Make the first blue and opaque and the second red and
+  // half transparent. Format is ARGB.
+  uint32_t cols[] = {(255 << 24) | (255U << 0), (128 << 24) | (255U << 16)};
+  for (uint32_t i = 0; i < 2; i++) {
+    std::vector<uint32_t> write_values;
+    write_values.assign(kTextureWidth * kTextureHeight, cols[i]);
+    MapHostPointer(texture_collection_info, /*vmo_idx*/ i,
+                   [write_values](uint8_t* vmo_host, uint32_t num_bytes) {
+                     EXPECT_TRUE(num_bytes >= sizeof(uint32_t) * write_values.size());
+                     memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
+                   });
+  }
+
+  // We now have to import the textures to the engine and the renderer.
+  for (uint32_t i = 0; i < 2; i++) {
+    auto result = engine->ImportImage(image_metadatas[i]);
+    renderer->ImportImage(image_metadatas[i]);
+    EXPECT_TRUE(result);
+  }
+
+  fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
+  auto render_target_collection_id = engine->AddDisplay(
+      display->display_id(),
+      {TransformHandle(), glm::vec2(display->width_in_px(), display->height_in_px())},
+      sysmem_allocator_.get(),
+      /*num_vmos*/ 2, &render_target_info);
+  EXPECT_NE(render_target_collection_id, 0U);
+
+  // Now we can finally render.
+  engine->RenderFrame();
+  renderer->WaitIdle();
+
+  // Make sure the render target has the same data as what's being put on the display.
+  MapHostPointer(render_target_info, /*vmo_idx*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
+    // Grab the capture vmo data.
+    std::vector<uint8_t> read_values;
+    CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
+
+    // Compare the capture vmo data to the values we are expecting.
+    bool images_are_same = AmlogicCaptureCompare(read_values.data(), vmo_host, read_values.size(),
+                                                 display->height_in_px(), display->width_in_px());
+    EXPECT_TRUE(images_are_same);
+
+    // Make sure that the vmo_host has the right amount of blue and red colors, so
+    // that we know that even if the display matches the render target, that its not
+    // just because both are black or some other wrong colors.
+    uint32_t num_blue = 0, num_red = 0, num_overlap = 0;
+    uint32_t num_pixels = num_bytes / 4;
+    uint32_t* host_ptr = reinterpret_cast<uint32_t*>(vmo_host);
+    for (uint32_t i = 0; i < num_pixels; i++) {
+      uint32_t curr_col = host_ptr[i];
+      if (curr_col == cols[0]) {
+        num_blue++;
+      } else if (curr_col == cols[1]) {
+        num_red++;
+      } else if (curr_col != 0) {
+        num_overlap++;
+      }
+    }
+
+    // Due to image formating, the number of "pixels" in the image above might not be the same as
+    // the number of pixels that are actually on the screen.
+    uint32_t num_screen_pixels =
+        (display->width_in_px() / 2 - kNumOverlappingRows) * display->height_in_px();
+    EXPECT_EQ(num_blue, num_screen_pixels);
+    EXPECT_EQ(num_red, num_screen_pixels);
+    EXPECT_EQ(num_overlap,
+              (display->width_in_px() * display->height_in_px()) - 2 * num_screen_pixels);
   });
 }
 

@@ -658,8 +658,11 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       .collection_id = collection_id, .vmo_idx = 0, .width = 1, .height = 1};
 
   // Create the texture that will go on the transparent renderable.
-  ImageMetadata transparent_texture = {
-      .collection_id = collection_id, .vmo_idx = 1, .width = 1, .height = 1};
+  ImageMetadata transparent_texture = {.collection_id = collection_id,
+                                       .vmo_idx = 1,
+                                       .width = 1,
+                                       .height = 1,
+                                       .has_transparency = true};
 
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;

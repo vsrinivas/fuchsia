@@ -9,6 +9,7 @@
 namespace sysmem_util {
 
 const GlobalBufferCollectionId kInvalidId = 0;
+const GlobalImageId kInvalidImageId = 0;
 
 GlobalBufferCollectionId GenerateUniqueBufferCollectionId() {
   // This function will be called from multiple threads, and thus needs an atomic

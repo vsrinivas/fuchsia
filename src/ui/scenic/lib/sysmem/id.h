@@ -13,6 +13,7 @@ using GlobalImageId = uint64_t;
 
 // Used to indicate an invalid buffer collection.
 extern const GlobalBufferCollectionId kInvalidId;
+extern const GlobalImageId kInvalidImageId;
 
 // Atomically produces a new id that can be used to reference a buffer collection.
 GlobalBufferCollectionId GenerateUniqueBufferCollectionId();

@@ -278,7 +278,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 
     // TODO(fxbug.dev/52632): We are hardcoding the multiply color and transparency flag for now.
     // Eventually these will be exposed in the API.
-    color_data.emplace_back(escher::RectangleCompositor::ColorData(glm::vec4(1.f), true));
+    color_data.emplace_back(
+        escher::RectangleCompositor::ColorData(glm::vec4(1.f), image.has_transparency));
   }
 
   // Grab the output image and use it to generate a depth texture. The depth texture needs to

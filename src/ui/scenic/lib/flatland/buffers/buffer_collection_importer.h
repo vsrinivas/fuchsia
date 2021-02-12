@@ -18,10 +18,10 @@ namespace flatland {
 // as the image format type.
 struct ImageMetadata {
   // The unique id of the buffer collection this image is backed by.
-  sysmem_util::GlobalBufferCollectionId collection_id;
+  sysmem_util::GlobalBufferCollectionId collection_id = sysmem_util::kInvalidId;
 
   // The unique ID for this particular image.
-  sysmem_util::GlobalImageId identifier;
+  sysmem_util::GlobalImageId identifier = sysmem_util::kInvalidImageId;
 
   // A single buffer collection may have several vmos. This tells the importer
   // which vmo in the collection specified by |collection_id| to use as the memory
@@ -30,11 +30,17 @@ struct ImageMetadata {
   uint32_t vmo_idx;
 
   // The dimensions of the image in pixels.
-  uint32_t width, height;
+  uint32_t width = 0;
+  uint32_t height = 0;
+
+  // If false, the image will be rendered as opaque even if there are pixels that have
+  // transparent values. If true, each pixel's alpha value will be taken into
+  // account during rendering.
+  bool has_transparency = false;
 
   bool operator==(const ImageMetadata& meta) const {
     return collection_id == meta.collection_id && vmo_idx == meta.vmo_idx && width == meta.width &&
-           height == meta.height;
+           height == meta.height && has_transparency == meta.has_transparency;
   }
 };
 
