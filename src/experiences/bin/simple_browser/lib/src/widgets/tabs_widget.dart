@@ -672,6 +672,7 @@ class _TabWidgetState extends State<_TabWidget> {
                 child: Padding(
                   padding: EdgeInsets.all(4),
                   child: GestureDetector(
+                    key: ValueKey('tab_close'),
                     onTap: widget.onClose,
                     child: Container(
                       color: Colors.transparent,

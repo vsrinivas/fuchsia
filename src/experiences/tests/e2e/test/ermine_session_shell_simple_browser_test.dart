@@ -209,6 +209,9 @@ void main() {
     const redUrl = 'http://127.0.0.1:8080/red.html';
     const greenUrl = 'http://127.0.0.1:8080/green.html';
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
+    const red = 0x00ff0000;
+    const green = 0x0000ff00;
+    const blue = 0x000000ff;
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
     await browser.requestData(redUrl);
@@ -244,8 +247,8 @@ void main() {
     expect(await browser.getText(find.text(greenUrl)), isNotNull);
 
     // Makes sure the web page is loaded before proceeding image diff tests.
-    final isGreen = await _waitForColor(0x0000ff00);
-    expect(isGreen, true, reason: 'The green web page has not been loaded.');
+    expect(await _waitForColor(green), true,
+        reason: 'The green web page has not been loaded.');
 
     /// Tab Rearranging Test
 
@@ -271,8 +274,8 @@ void main() {
     // Drags the second tab to the right end of the tab list.
     await browser.scroll(redTabFinder, 600, 0, Duration(seconds: 1));
 
-    final isRed = await _waitForColor(0x00ff0000);
-    expect(isRed, true, reason: 'The red web page has not been loaded.');
+    expect(await _waitForColor(red), true,
+        reason: 'The red web page has not been loaded.');
 
     // Takes a screenshot after rearranging the tab.
     final screenshotAfter = await ermine.screenshot(viewRect);
@@ -282,7 +285,23 @@ void main() {
         reason: 'Failed at the scuba test with $goldenAfter at the diff rate of'
             ' $goldenDiffAfter');
 
-    // TODO(fxb/68719): Test tab closing.
+    /// Tab closing test
+
+    final tabCloseFinder = find.byValueKey('tab_close');
+    await browser.tap(tabCloseFinder);
+
+    await browser.waitForAbsent(redTabFinder);
+
+    expect(await _waitForColor(blue), true,
+        reason: 'The blue page has not been loaded.');
+
+    // The red page should ge gone and the last tab should be focused.
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(greenTabFinder), isNotNull);
+    expect(await browser.getText(blueTabFinder), isNotNull);
+    expect(await browser.getText(find.text(blueUrl)), isNotNull);
+
+    // TODO(fxb/70265): Test closing an unfocused tab once fxb/68689 is done.
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
