@@ -13,7 +13,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
   # how a target could be migrated to use typed channels.
   visibility = [
     "//examples/fidl/llcpp/request_pipelining/server:bin",
-    "//sdk/lib/fdio/tests:fdio",
     "//src/bringup/bin/bootsvc:bin",
     "//src/bringup/bin/bootsvc:bootfs_loader_service_test",
     "//src/bringup/bin/bootsvc:lib",

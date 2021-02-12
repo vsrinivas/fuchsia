@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fuchsia/posix/socket/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
@@ -15,19 +15,18 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::RawChannelInterface {
+class Server final : public llcpp::fuchsia::posix::socket::testing::StreamSocket_TestBase {
  public:
   Server(zx_handle_t channel, zx::socket peer) : channel_(channel), peer_(std::move(peer)) {}
 
-  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
+    ADD_FAILURE("%s should not be called", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  using Interface = llcpp::fuchsia::posix::socket::StreamSocket::Interface;
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void Describe(Interface::DescribeCompleter::Sync& completer) override {
     llcpp::fuchsia::io::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
@@ -39,59 +38,12 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::RawChan
     completer.Reply(std::move(info));
   }
 
-  void Sync(SyncCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Bind(::llcpp::fuchsia::net::SocketAddress addr, BindCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Connect(::llcpp::fuchsia::net::SocketAddress addr,
-               ConnectCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Listen(int16_t backlog, ListenCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Accept(bool want_addr, AcceptCompleter::Sync& completer) override {
+  void Accept(bool want_addr, Interface::AcceptCompleter::Sync& completer) override {
     zx_status_t status = zx_object_signal_peer(channel_, 0, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
       return completer.Close(status);
     }
     return completer.Close(sync_completion_wait(&accept_end_, ZX_TIME_INFINITE));
-  }
-
-  void GetSockName(GetSockNameCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetPeerName(GetPeerNameCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Disconnect(DisconnectCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_CONNECTED);
-  }
-
-  void SetSockOpt(int16_t level, int16_t optname, fidl::VectorView<uint8_t> optval,
-                  SetSockOptCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetSockOpt(int16_t level, int16_t optname, GetSockOptCompleter::Sync& completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   sync_completion_t accept_end_;
