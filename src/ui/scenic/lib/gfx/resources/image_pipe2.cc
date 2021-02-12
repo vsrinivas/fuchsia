@@ -462,7 +462,6 @@ void ImagePipe2::CloseConnectionAndCleanUp() {
   while (!buffer_collections_.empty()) {
     RemoveBufferCollection(buffer_collections_.begin()->first);
   }
-  buffer_collections_.clear();
 
   // Schedule a new frame.
   image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>(),
