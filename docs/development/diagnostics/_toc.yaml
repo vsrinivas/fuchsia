@@ -26,6 +26,8 @@ toc:
     path: /docs/development/diagnostics/logs/README.md
   - title: "Record"
     path: /docs/development/diagnostics/logs/recording.md
+  - title: "Choose severity"
+    path: /docs/development/diagnostics/logs/severity.md
   - title: "View"
     path: /docs/development/diagnostics/logs/viewing.md
 
