@@ -22,7 +22,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fs/vfs.h>
 
@@ -99,7 +98,7 @@ Vfs::~Vfs() = default;
 
 zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name, zx_handle_t vmo,
                                zx_off_t off, zx_off_t len) {
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
   return parent->CreateFromVmo(name, vmo, off, len);
 }
 

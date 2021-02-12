@@ -35,7 +35,7 @@ zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
 }
 
 zx_status_t PseudoDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = entries_by_name_.find(name);
   if (it != entries_by_name_.end()) {
@@ -65,7 +65,7 @@ zx_status_t PseudoDir::Readdir(VdirCookie* cookie, void* data, size_t len, size_
     cookie->n = kDotId;
   }
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   for (auto it = entries_by_id_.lower_bound(cookie->n); it != entries_by_id_.end(); ++it) {
     if (cookie->n >= it->id()) {
@@ -102,7 +102,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   if (entries_by_name_.find(name) != entries_by_name_.end()) {
     return ZX_ERR_ALREADY_EXISTS;
@@ -116,7 +116,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 }
 
 zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = entries_by_name_.find(name);
   if (it != entries_by_name_.end()) {
@@ -130,7 +130,7 @@ zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
 }
 
 zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name, fs::Vnode* vn) {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = entries_by_name_.find(name);
   if (it != entries_by_name_.end() && it->node().get() == vn) {
@@ -144,7 +144,7 @@ zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name, fs::Vnode* vn) {
 }
 
 void PseudoDir::RemoveAllEntries() {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   for (auto& entry : entries_by_name_) {
     Notify(entry.name().ToStringPiece(), fio::WATCH_EVENT_REMOVED);
@@ -154,7 +154,7 @@ void PseudoDir::RemoveAllEntries() {
 }
 
 bool PseudoDir::IsEmpty() const {
-  fbl::AutoLock lock(&mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return entries_by_name_.is_empty();
 }
 

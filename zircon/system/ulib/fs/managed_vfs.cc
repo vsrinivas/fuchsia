@@ -10,7 +10,6 @@
 #include <utility>
 
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fs/managed_vfs.h>
 
 namespace fs {
@@ -31,7 +30,7 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
   ZX_DEBUG_ASSERT(handler);
   zx_status_t status =
       async::PostTask(dispatcher(), [this, closure = std::move(handler)]() mutable {
-        fbl::AutoLock<fbl::Mutex> lock(&lock_);
+        std::lock_guard<std::mutex> lock(lock_);
         ZX_DEBUG_ASSERT(!shutdown_handler_);
         shutdown_handler_ = std::move(closure);
         is_shutting_down_.store(true);
@@ -61,7 +60,7 @@ void ManagedVfs::CloseAllConnectionsForVnode(const Vnode& node,
             callback();
           }
         });  // Must go before |lock|.
-    fbl::AutoLock<fbl::Mutex> lock(&lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     for (auto& connection : connections_) {
       if (connection.vnode().get() == &node) {
         connection.AsyncTeardown();
@@ -80,18 +79,24 @@ void ManagedVfs::CheckForShutdownComplete() {
 }
 
 void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status) {
-  fbl::AutoLock<fbl::Mutex> lock(&lock_);
-  ZX_ASSERT_MSG(IsTerminated(), "Failed to complete VFS shutdown: dispatcher status = %d\n",
-                status);
-  ZX_DEBUG_ASSERT(shutdown_handler_);
+  // Call the shutdown function outside of the lock since it can cause |this| to be deleted which
+  // will in turn delete the lock object itself.
+  ShutdownCallback handler;
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    ZX_ASSERT_MSG(IsTerminated(), "Failed to complete VFS shutdown: dispatcher status = %d\n",
+                  status);
+    ZX_DEBUG_ASSERT(shutdown_handler_);
+    handler = std::move(shutdown_handler_);
+  }
 
-  auto handler = std::move(shutdown_handler_);
   handler(status);
+  // |this| can be deleted at this point!
 }
 
 zx_status_t ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection,
                                            zx::channel channel) {
-  fbl::AutoLock<fbl::Mutex> lock(&lock_);
+  std::lock_guard<std::mutex> lock(lock_);
   ZX_DEBUG_ASSERT(!is_shutting_down_.load());
   connections_.push_back(std::move(connection));
   zx_status_t status = connections_.back().StartDispatching(std::move(channel));
@@ -104,7 +109,7 @@ zx_status_t ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection>
 
 void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
   std::shared_ptr<fbl::AutoCall<fit::callback<void()>>> closer;  // Must go before lock.
-  fbl::AutoLock<fbl::Mutex> lock(&lock_);
+  std::lock_guard<std::mutex> lock(lock_);
 
   auto iter = closing_connections_.find(connection);
   if (iter != closing_connections_.end()) {

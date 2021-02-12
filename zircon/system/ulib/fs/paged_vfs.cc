@@ -39,7 +39,7 @@ zx::status<zx::vmo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, u
   // Register this node with a unique ID to associated it with pager requests.
   uint64_t id;
   {
-    fbl::AutoLock lock(&vfs_lock_);
+    std::lock_guard<std::mutex> lock(vfs_lock_);
 
     id = next_node_id_;
     ++next_node_id_;
@@ -52,7 +52,7 @@ zx::status<zx::vmo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, u
     // On error we need to undo the owning reference from above. This would be simpler if we only
     // store the reference once the VMO was created, but that would require two separate lock
     // steps.
-    fbl::AutoLock lock(&vfs_lock_);
+    std::lock_guard<std::mutex> lock(vfs_lock_);
     paged_nodes_.erase(id);
     return zx::error(status);
   }
@@ -65,7 +65,7 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
   fbl::RefPtr<PagedVnode> node;
 
   {
-    fbl::AutoLock lock(&vfs_lock_);
+    std::lock_guard<std::mutex> lock(vfs_lock_);
 
     auto found = paged_nodes_.find(node_id);
     if (found == paged_nodes_.end())

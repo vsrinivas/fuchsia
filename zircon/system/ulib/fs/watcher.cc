@@ -137,7 +137,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
     wb.Send(watcher->h);
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard<std::mutex> lock(lock_);
   watch_list_.push_back(std::move(watcher));
   return ZX_OK;
 }
@@ -147,7 +147,7 @@ void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
     return;
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard<std::mutex> lock(lock_);
 
   if (watch_list_.is_empty()) {
     return;

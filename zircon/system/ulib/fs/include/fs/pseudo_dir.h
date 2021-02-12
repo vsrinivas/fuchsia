@@ -8,10 +8,10 @@
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <memory>
+#include <mutex>
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 
@@ -119,7 +119,7 @@ class PseudoDir : public Vnode {
       fbl::TaggedWAVLTree<uint64_t, std::unique_ptr<Entry>, IdTreeTag, KeyByIdTraits>;
   using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
 
-  mutable fbl::Mutex mutex_;
+  mutable std::mutex mutex_;
 
   uint64_t next_node_id_ __TA_GUARDED(mutex_) = kDotId + 1;
   EntryByIdMap entries_by_id_ __TA_GUARDED(mutex_);

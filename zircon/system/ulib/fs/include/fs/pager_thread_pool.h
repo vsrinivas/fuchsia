@@ -13,8 +13,6 @@
 #include <thread>
 #include <vector>
 
-#include <fbl/mutex.h>
-
 namespace fs {
 
 class PagedVfs;

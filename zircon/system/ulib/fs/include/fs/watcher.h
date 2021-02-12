@@ -13,10 +13,10 @@
 #include <zircon/device/vfs.h>
 
 #include <memory>
+#include <mutex>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/mutex.h>
 #include <fs/vfs.h>
 
 namespace fs {
@@ -46,7 +46,7 @@ class WatcherContainer {
     uint32_t mask;
   };
 
-  fbl::Mutex lock_;
+  std::mutex lock_;
   fbl::DoublyLinkedList<std::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
 };
 

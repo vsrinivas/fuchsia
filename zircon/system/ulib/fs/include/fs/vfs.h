@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <mutex>
 
 #include <fs/locking.h>
 #include <fs/vfs_types.h>
@@ -30,7 +31,6 @@
 #include <lib/zx/vmo.h>
 
 #include <fbl/intrusive_hash_table.h>
-#include <fbl/mutex.h>
 #include <fs/mount_channel.h>
 #endif  // __Fuchsia__
 
@@ -257,7 +257,7 @@ class Vfs {
 
  protected:
   // A lock which should be used to protect lookup and walk operations
-  mtx_t vfs_lock_{};
+  std::mutex vfs_lock_;
 
   // Starts FIDL message dispatching on |channel|, at the same time starts to manage the lifetime of
   // the connection.

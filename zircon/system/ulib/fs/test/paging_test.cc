@@ -8,7 +8,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/zx/vmar.h>
 
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
 #include <optional>
 
 #include <fbl/auto_lock.h>
@@ -31,18 +33,18 @@ class SharedFileState {
   // Called by the PagedVnode when the VMO is mapped or unmapped.
   void SignalVmoPresenceChanged(bool present) {
     {
-      fbl::AutoLock lock(&mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
 
       vmo_present_changed_ = true;
       vmo_present_ = present;
     }
 
-    cond_var_.Signal();
+    cond_var_.notify_one();
   }
 
   // Returns the current state of the mapped flag.
   bool GetVmoPresent() {
-    fbl::AutoLock lock(&mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return vmo_present_;
   }
 
@@ -50,18 +52,18 @@ class SharedFileState {
   //
   // Called by the test to get the [un]mapped event.
   bool WaitForChangedVmoPresence() {
-    fbl::AutoLock lock(&mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     while (!vmo_present_changed_)
-      cond_var_.Wait(&mutex_);
+      cond_var_.wait(lock);
 
     vmo_present_changed_ = false;
     return vmo_present_;
   }
 
  private:
-  fbl::Mutex mutex_;
-  fbl::ConditionVariable cond_var_;
+  std::mutex mutex_;
+  std::condition_variable cond_var_;
 
   bool vmo_present_changed_ = false;
   bool vmo_present_ = false;

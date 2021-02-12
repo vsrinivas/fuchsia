@@ -113,7 +113,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
 
 bool Runner::IsReadonly() {
 #ifdef __Fuchsia__
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
 #endif
   return ReadonlyLocked();
 }

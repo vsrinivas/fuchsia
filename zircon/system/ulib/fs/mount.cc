@@ -64,7 +64,7 @@ zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
   }
   // Save this node in the list of mounted vnodes
   mount_point->SetNode(std::move(vn));
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
   remote_list_.push_front(std::move(mount_point));
   return ZX_OK;
 }
@@ -93,7 +93,7 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
 
 zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
                             uint32_t flags) {
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
   return OpenLocked(
              vn, name,
              fs::VnodeConnectionOptions::ReadOnly().set_create().set_directory().set_no_remote(),
@@ -126,14 +126,14 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
 }
 
 zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fio::Directory>* h) {
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
   return UninstallRemoteLocked(std::move(vn), h);
 }
 
 zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::Node> channel,
                                    fbl::StringPiece path, VnodeConnectionOptions options,
                                    uint32_t mode) {
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
   auto h = vn->GetRemote();
   if (!h.is_valid()) {
     return ZX_ERR_NOT_FOUND;
@@ -170,7 +170,7 @@ zx_status_t Vfs::UninstallAll(zx::time deadline) {
   std::unique_ptr<MountNode> mount_point;
   for (;;) {
     {
-      fbl::AutoLock lock(&vfs_lock_);
+      std::lock_guard<std::mutex> lock(vfs_lock_);
       mount_point = remote_list_.pop_front();
     }
     if (mount_point) {

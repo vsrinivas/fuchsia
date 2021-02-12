@@ -998,7 +998,7 @@ void Minfs::BlockNew(PendingWork* transaction, blk_t* out_bno) const {
 
 bool Minfs::IsReadonly() {
 #ifdef __Fuchsia__
-  fbl::AutoLock lock(&vfs_lock_);
+  std::lock_guard<std::mutex> lock(vfs_lock_);
 #endif
   return ReadonlyLocked();
 }

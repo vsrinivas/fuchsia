@@ -13,11 +13,11 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <fs/internal/connection.h>
 #include <fs/vfs.h>
 
@@ -70,7 +70,7 @@ class ManagedVfs : public Vfs {
   void UnregisterConnection(internal::Connection* connection) final __TA_EXCLUDES(lock_);
   bool IsTerminating() const final;
 
-  fbl::Mutex lock_;
+  std::mutex lock_;
   fbl::DoublyLinkedList<std::unique_ptr<internal::Connection>> connections_ __TA_GUARDED(lock_);
 
   std::atomic_bool is_shutting_down_;

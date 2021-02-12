@@ -13,7 +13,6 @@
 #include <memory>
 
 #include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <fs/managed_vfs.h>
 #include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
