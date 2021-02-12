@@ -4,6 +4,6 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/vkcontext"
+        "binary": "bin/vkcontext"
     }
 }
