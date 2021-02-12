@@ -26,9 +26,8 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   state->DeclareStep("SendEvent/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  zx::channel sender_channel, receiver_channel;
-  zx_status_t status = zx::channel::create(0, &sender_channel, &receiver_channel);
-  ZX_ASSERT(status == ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<ProtocolType>();
+  ZX_ASSERT(endpoints.is_ok());
 
   class EventHandler : public ProtocolType::SyncEventHandler {
    public:
@@ -58,13 +57,14 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   std::mutex mu;
   std::condition_variable cond;
 
-  std::thread receiver_thread([channel = std::move(receiver_channel), state, &ready, &mu, &cond]() {
-    EventHandler event_handler(state, ready, mu, cond);
-    while (event_handler.HandleOneEvent(channel.borrow()).ok()) {
-    }
-  });
+  std::thread receiver_thread(
+      [channel = std::move(endpoints->client), state, &ready, &mu, &cond]() {
+        EventHandler event_handler(state, ready, mu, cond);
+        while (event_handler.HandleOneEvent(channel.borrow()).ok()) {
+        }
+      });
 
-  typename ProtocolType::EventSender sender(std::move(sender_channel));
+  typename ProtocolType::EventSender sender(std::move(endpoints->server));
   while (state->KeepRunning()) {
     fidl::aligned<FidlType> aligned_value = builder();
 
