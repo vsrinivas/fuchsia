@@ -34,8 +34,9 @@ class FakeBlockDevice : public BlockDevice {
  public:
   struct Config {
     uint64_t block_count = 0;
-    uint64_t block_size = 0;
+    uint32_t block_size = 0;
     bool supports_trim = false;
+    uint32_t max_transfer_size = fuchsia_hardware_block_MAX_TRANSFER_UNBOUNDED;
   };
   explicit FakeBlockDevice(const Config&);
   FakeBlockDevice(uint64_t block_count, uint32_t block_size)
@@ -136,8 +137,10 @@ class FakeBlockDevice : public BlockDevice {
   std::optional<uint64_t> write_block_limit_ __TA_GUARDED(lock_) = std::nullopt;
   uint64_t write_block_count_ __TA_GUARDED(lock_) = 0;
 
-  Config config_ __TA_GUARDED(lock_);
+  uint64_t block_count_ __TA_GUARDED(lock_) = 0;
+  uint32_t block_size_ __TA_GUARDED(lock_) = 0;
   uint32_t block_info_flags_ __TA_GUARDED(lock_) = 0;
+  uint32_t max_transfer_size_ __TA_GUARDED(lock_) = 0;
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(lock_);
   zx::vmo block_device_ __TA_GUARDED(lock_);
   mutable storage_metrics::BlockDeviceMetrics stats_ __TA_GUARDED(lock_) = {};

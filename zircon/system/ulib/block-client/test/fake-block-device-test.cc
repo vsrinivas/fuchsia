@@ -29,15 +29,22 @@ TEST(FakeBlockDeviceTest, EmptyDevice) {
   ASSERT_OK(device->BlockGetInfo(&info));
   EXPECT_EQ(kBlockCount, info.block_count);
   EXPECT_EQ(kBlockSize, info.block_size);
+  EXPECT_EQ(0, info.flags);
+  EXPECT_EQ(fuchsia_hardware_block_MAX_TRANSFER_UNBOUNDED, info.max_transfer_size);
 }
 
 TEST(FakeBlockDeviceTest, NonEmptyDevice) {
-  std::unique_ptr<BlockDevice> device =
-      std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  std::unique_ptr<BlockDevice> device = std::make_unique<FakeBlockDevice>(
+      FakeBlockDevice::Config{.block_count = kBlockCountDefault,
+                              .block_size = kBlockSizeDefault,
+                              .supports_trim = true,
+                              .max_transfer_size = kBlockCountDefault * 8});
   fuchsia_hardware_block_BlockInfo info = {};
   ASSERT_OK(device->BlockGetInfo(&info));
   EXPECT_EQ(kBlockCountDefault, info.block_count);
   EXPECT_EQ(kBlockSizeDefault, info.block_size);
+  EXPECT_TRUE(info.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT);
+  EXPECT_EQ(kBlockCountDefault * 8, info.max_transfer_size);
 }
 
 void CreateAndRegisterVmo(BlockDevice* device, size_t blocks, zx::vmo* vmo,
