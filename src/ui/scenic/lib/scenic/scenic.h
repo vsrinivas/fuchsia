@@ -23,6 +23,7 @@
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/post_initialization_runner.h"
 
 namespace scenic_impl {
 
@@ -114,8 +115,6 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   // it is ready.
   void OnSystemInitialized(System* system);
 
-  void RunAfterInitialized(fit::closure closure);
-
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
   inspect::Node inspect_node_;
@@ -123,9 +122,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   // Registered systems, mapped to their TypeId.
   std::unordered_map<System::TypeId, std::shared_ptr<System>> systems_;
 
-  bool initialized_ = false;
-  // Closures that will be run when all systems are initialized.
-  std::vector<fit::closure> run_after_initialized_;
+  utils::PostInitializationRunner post_initialization_runner_;
 
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 

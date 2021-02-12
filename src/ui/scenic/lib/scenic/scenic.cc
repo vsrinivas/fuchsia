@@ -28,12 +28,7 @@ Scenic::~Scenic() = default;
 
 void Scenic::SetInitialized(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry) {
   view_focuser_registry_ = view_focuser_registry;
-
-  initialized_ = true;
-  for (auto& closure : run_after_initialized_) {
-    closure();
-  }
-  run_after_initialized_.clear();
+  post_initialization_runner_.SetInitialized();
 }
 
 void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
@@ -50,14 +45,6 @@ void Scenic::CloseSession(scheduling::SessionId session_id) {
   }
   if (view_focuser_registry_) {
     view_focuser_registry_->UnregisterViewFocuser(session_id);
-  }
-}
-
-void Scenic::RunAfterInitialized(fit::closure closure) {
-  if (initialized_) {
-    closure();
-  } else {
-    run_after_initialized_.push_back(std::move(closure));
   }
 }
 
@@ -90,8 +77,9 @@ void Scenic::OnFramePresented(
 
 void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                            fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  RunAfterInitialized([this, session_request = std::move(session_request),
-                       listener = std::move(listener)]() mutable {
+  post_initialization_runner_.RunAfterInitialized([this,
+                                                   session_request = std::move(session_request),
+                                                   listener = std::move(listener)]() mutable {
     CreateSessionImmediately(std::move(session_request), std::move(listener),
                              fidl::InterfaceRequest<fuchsia::ui::views::Focuser>(/*invalid*/));
   });
@@ -100,12 +88,12 @@ void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> 
 void Scenic::CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                             fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
                             fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
-  RunAfterInitialized([this, session_request = std::move(session_request),
-                       listener = std::move(listener),
-                       view_focuser = std::move(view_focuser)]() mutable {
-    CreateSessionImmediately(std::move(session_request), std::move(listener),
-                             std::move(view_focuser));
-  });
+  post_initialization_runner_.RunAfterInitialized(
+      [this, session_request = std::move(session_request), listener = std::move(listener),
+       view_focuser = std::move(view_focuser)]() mutable {
+        CreateSessionImmediately(std::move(session_request), std::move(listener),
+                                 std::move(view_focuser));
+      });
 }
 
 void Scenic::CreateSessionImmediately(
@@ -145,7 +133,7 @@ void Scenic::CreateSessionImmediately(
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
-  RunAfterInitialized([this, callback = std::move(callback)]() mutable {
+  post_initialization_runner_.RunAfterInitialized([this, callback = std::move(callback)]() mutable {
     // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
     // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
@@ -157,7 +145,7 @@ void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback 
 }
 
 void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
-  RunAfterInitialized([this, callback = std::move(callback)]() mutable {
+  post_initialization_runner_.RunAfterInitialized([this, callback = std::move(callback)]() mutable {
     // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
     // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
@@ -170,7 +158,7 @@ void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback 
 
 void Scenic::GetDisplayOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
-  RunAfterInitialized([this, callback = std::move(callback)]() mutable {
+  post_initialization_runner_.RunAfterInitialized([this, callback = std::move(callback)]() mutable {
     // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
     // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
