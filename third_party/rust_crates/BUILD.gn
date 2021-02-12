@@ -567,7 +567,7 @@ group("rustls") {
 }
 
 group("scopeguard") {
-  deps = [ ":scopeguard-v0_3_3" ]
+  deps = [ ":scopeguard-v1_1_0" ]
 }
 
 group("semver") {
@@ -2168,7 +2168,7 @@ rust_library("crossbeam-epoch-v0_8_2") {
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":maybe-uninit-v2_0_0" ]
   deps += [ ":memoffset-v0_5_3" ]
-  deps += [ ":scopeguard-v1_0_0" ]
+  deps += [ ":scopeguard-v1_1_0" ]
 
   rustenv = []
 
@@ -4287,7 +4287,7 @@ rust_library("lock_api-v0_3_4") {
   ]
 
   deps = []
-  deps += [ ":scopeguard-v1_0_0" ]
+  deps += [ ":scopeguard-v1_1_0" ]
 
   rustenv = []
 
@@ -7725,33 +7725,10 @@ rust_library("scoped-tls-hkt-v0_1_2") {
   ]
 }
 
-rust_library("scopeguard-v0_3_3") {
-  crate_name = "scopeguard"
-  crate_root = "//third_party/rust_crates/vendor/scopeguard-0.3.3/src/lib.rs"
-  output_name = "scopeguard-e82be4b7277f65"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=e82be4b7277f65",
-    "-Cextra-filename=-e82be4b7277f65",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"use_std\"",
-  ]
-}
-
-rust_library("scopeguard-v1_0_0") {
+rust_library("scopeguard-v1_1_0") {
   crate_name = "scopeguard"
   crate_root = "//third_party/rust_crates/vendor/scopeguard/src/lib.rs"
-  output_name = "scopeguard-bfe66f8a0233b245"
+  output_name = "scopeguard-6ef302a7f864fbb3"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7764,8 +7741,10 @@ rust_library("scopeguard-v1_0_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=bfe66f8a0233b245",
-    "-Cextra-filename=-bfe66f8a0233b245",
+    "-Cmetadata=6ef302a7f864fbb3",
+    "-Cextra-filename=-6ef302a7f864fbb3",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"use_std\"",
   ]
 }
 
