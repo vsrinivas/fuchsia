@@ -5,8 +5,24 @@
 group("drivers") {
   testonly = true
   deps = [
-    "qmi-fake-transport",
-    "qmi-usb-transport",
+    ":prod-drivers",
+    ":test-drivers",
+  ]
+}
+
+group("prod-drivers") {
+  deps = [ "qmi-usb-transport" ]
+}
+
+group("test-drivers") {
+  testonly = true
+  deps = [ "qmi-fake-transport" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "qmi-fake-transport:tests",
     "qmi-usb-transport:tests",
   ]
 }

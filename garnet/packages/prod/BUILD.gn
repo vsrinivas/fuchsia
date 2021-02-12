@@ -227,7 +227,7 @@ group("drivers-system") {
     "//garnet/packages/prod:wlan_drivers",
     "//src/camera/drivers:all",
     "//src/connectivity/ppp/drivers",
-    "//src/connectivity/telephony/drivers",
+    "//src/connectivity/telephony/drivers:prod-drivers",
     "//src/media/drivers",
   ]
   if (target_cpu == "x64") {
