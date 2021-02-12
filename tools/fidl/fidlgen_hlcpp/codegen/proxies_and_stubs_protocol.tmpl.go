@@ -508,22 +508,4 @@ zx_status_t {{ $.SyncProxyName.Name }}::{{ template "SyncRequestMethodSignature"
 {{- PopNamespace }}
 #endif // __Fuchsia__
 {{ end }}
-
-{{- define "ProtocolTestBase" }}
-{{ EnsureNamespace .TestBase }}
-class {{ .TestBase.Name }} : public {{ . }} {
-  public:
-  virtual ~{{ .TestBase.Name }}() { }
-  virtual void NotImplemented_(const std::string& name) = 0;
-
-  {{- range .Methods }}
-    {{- if .HasRequest }}
-  void {{ template "RequestMethodSignature" . }} override {
-    NotImplemented_("{{ .Name }}");
-  }
-    {{- end }}
-  {{- end }}
-
-};
-{{ end }}
 `

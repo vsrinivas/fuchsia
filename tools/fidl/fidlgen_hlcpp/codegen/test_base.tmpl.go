@@ -19,7 +19,23 @@ const testBaseTemplate = `
 #include <{{ .PrimaryHeader }}>
 
 {{- range .Decls }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolTestBase" . }}{{- end }}
+  {{- if Eq .Kind Kinds.Protocol }}
+{{ EnsureNamespace .TestBase }}
+class {{ .TestBase.Name }} : public {{ . }} {
+  public:
+  virtual ~{{ .TestBase.Name }}() { }
+  virtual void NotImplemented_(const std::string& name) = 0;
+
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+  void {{ template "RequestMethodSignature" . }} override {
+    NotImplemented_("{{ .Name }}");
+  }
+    {{- end }}
+  {{- end }}
+
+};
+  {{- end }}
 {{- end -}}
 
 {{ EndOfFile }}
