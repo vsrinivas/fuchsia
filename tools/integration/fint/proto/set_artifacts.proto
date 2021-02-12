@@ -22,4 +22,18 @@ message SetArtifacts {
     // files included in the context spec. Will always be false unless the
     // static spec's `skip_if_unaffected` field is set.
     bool skip_build = 3;
+
+    // Metadata contains `fint set` parameters that are needed for
+    // post-processing steps by users of fint. We expose all of these values as
+    // strings, even `optimize` and `target_arch` (which are enums in
+    // static.proto), to make processing easier for consumers.
+    message Metadata {
+        string board = 1;
+        string optimize = 2;
+        string product = 3;
+        string target_arch = 4;
+        repeated string variants = 5;
+    }
+
+    Metadata metadata = 4;
 }

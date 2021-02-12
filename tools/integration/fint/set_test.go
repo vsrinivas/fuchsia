@@ -14,8 +14,10 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/google/go-cmp/cmp"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 type fakeSubprocessRunner struct {
@@ -44,9 +46,31 @@ func TestRunSteps(t *testing.T) {
 		ArtifactDir: "/tmp/fint-set-artifacts",
 	}
 	staticSpec := &fintpb.Static{
-		TargetArch: fintpb.Static_X64,
+		Board:      "boards/x64.gni",
 		Optimize:   fintpb.Static_DEBUG,
+		Product:    "products/bringup.gni",
+		TargetArch: fintpb.Static_X64,
+		Variants:   []string{"asan"},
 	}
+
+	t.Run("sets artifacts metadata fields", func(t *testing.T) {
+		runner := &fakeSubprocessRunner{}
+		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		if err != nil {
+			t.Fatalf("Unexpected error from runSteps: %s", err)
+		}
+		expectedMetadata := &fintpb.SetArtifacts_Metadata{
+			Board:      staticSpec.Board,
+			Optimize:   "debug",
+			Product:    staticSpec.Product,
+			TargetArch: "x64",
+			Variants:   staticSpec.Variants,
+		}
+
+		if diff := cmp.Diff(expectedMetadata, artifacts.Metadata, protocmp.Transform()); diff != "" {
+			t.Fatalf("Unexpected diff reading Static (-want +got):\n%s", diff)
+		}
+	})
 
 	t.Run("propagates GN stdout to failure summary in case of failure", func(t *testing.T) {
 		runner := &fakeSubprocessRunner{

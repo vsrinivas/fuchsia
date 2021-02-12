@@ -49,14 +49,24 @@ func runSteps(
 		return nil, fmt.Errorf("build_dir must be set")
 	}
 	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
-	artifacts := &fintpb.SetArtifacts{}
 	genArgs, err := genArgs(staticSpec, contextSpec, platform)
 	if err != nil {
 		return nil, err
 	}
+
+	artifacts := &fintpb.SetArtifacts{
+		Metadata: &fintpb.SetArtifacts_Metadata{
+			Board:      staticSpec.Board,
+			Optimize:   strings.ToLower(staticSpec.Optimize.String()),
+			Product:    staticSpec.Product,
+			TargetArch: strings.ToLower(staticSpec.TargetArch.String()),
+			Variants:   staticSpec.Variants,
+		},
+	}
 	if contextSpec.ArtifactDir != "" {
 		artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
 	}
+
 	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, gnPath, artifacts.GnTracePath, genArgs)
 	if err != nil {
 		artifacts.FailureSummary = genStdout
