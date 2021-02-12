@@ -273,7 +273,11 @@ class ErmineDriver {
   /// The range is from 0 to 1, and the closer to 0 the rate is, the more
   /// identical the two images.
   double screenshotsDiff(Image a, Image b) {
-    assert(a.data.length == b.data.length);
+    expect(
+      a.data.length,
+      b.data.length,
+      reason: 'The resolution of two images are different',
+    );
 
     var diff = 0;
     for (var i = 0; i < a.data.length; i++) {
@@ -295,8 +299,9 @@ class ErmineDriver {
   ///   ErmineDriver ermine = ErmineDriver(sl4f);
   ///   await ermine.launch(componentUrl);
   ///   final viewRect = await ermine.getViewRect(componentUrl);
+  ///   final screenshot = await ermine.screenshot(viewRect);
   ///
-  ///   ermine.saveScreenshotAs(viewRect, 'screenshot.png');
+  ///   ermine.saveImageAs(screenshot, 'screenshot.png');
   /// });
   /// ```
   /// You will be able to find the output files under //out/default/ on your host
@@ -305,12 +310,9 @@ class ErmineDriver {
   /// you can use them as your golden images. Once you have them there and in
   /// BUILD, you are good to write your image diff test using [screenshot] and
   /// [goldenDiff] and remove this method call.
-  Future<void> saveScreenshotAsGolden(Rectangle rect, String goldenName) async {
-    final fileName = _sanitizeGoldenFileName(goldenName);
-    final scubaImage = await screenshot(rect);
-
-    // Saves the image to disk as a PNG
-    File(fileName).writeAsBytesSync(encodePng(scubaImage));
+  void saveImageAs(Image image, String file) async {
+    final fileName = _sanitizeGoldenFileName(file);
+    File(fileName).writeAsBytesSync(encodePng(image));
   }
 
   /// Returns the difference rate between an image and the correspondant golden
@@ -318,21 +320,32 @@ class ErmineDriver {
   /// the rate is, the more identical the two images.
   double goldenDiff(Image image, String golden) {
     final goldenFileName = _sanitizeGoldenFileName(golden);
-    final goldenImage = decodePng(
-        File('dartlang/scuba_goldens/$goldenFileName').readAsBytesSync());
+    final goldenFilePath = 'dartlang/scuba_goldens/$goldenFileName';
+    final goldenFile = File(goldenFilePath);
+    expect(goldenFile.existsSync(), isTrue,
+        reason: 'No such file or directory: $goldenFilePath');
+
+    final goldenImage = decodePng(goldenFile.readAsBytesSync());
+    if (image.length != golden.length) {
+      final resizedImage = copyResize(
+        image,
+        width: goldenImage.width,
+        height: goldenImage.height,
+      );
+      return screenshotsDiff(resizedImage, goldenImage);
+    }
     return screenshotsDiff(image, goldenImage);
   }
 
   String _sanitizeGoldenFileName(String file) {
     if (file.contains('.')) {
       final splits = file.split('.');
-      assert(
-        splits.length == 2,
-        'The golden file name can contain only one dot(.) for its extension.',
-      );
+      expect(splits.length, 2,
+          reason: 'The golden file name can contain only one dot(.) '
+              'for its extension.');
       final fileType = splits.last;
-      assert(fileType == 'png' || fileType == 'PNG',
-          'The file type should be png');
+      expect(fileType.toLowerCase(), 'png',
+          reason: 'The file type should be png');
       return file;
     } else {
       return '$file.png';
