@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Get the memory page size for the system.
+Get the page size for the system.
 
 ## SYNOPSIS
 

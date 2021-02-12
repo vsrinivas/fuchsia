@@ -98,6 +98,7 @@ In a future build this error will no longer occur.
 
 [`zx_object_get_property()`]: object_get_property.md
 [`zx_object_set_property()`]: object_set_property.md
+[`zx_system_get_page_size()`]: system_get_page_size.md
 [`zx_vmar_map()`]: vmar_map.md
 [`zx_vmo_create_child()`]: vmo_create_child.md
 [`zx_vmo_get_size()`]: vmo_get_size.md
