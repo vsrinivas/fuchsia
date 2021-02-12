@@ -5,6 +5,7 @@
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan.test;
+using fuchsia.lowpan.thread;
 
 const uint32 MAX_LOWPAN_DEVICES = 8;
 
@@ -47,6 +48,7 @@ resource table Protocols {
     4: request<DeviceRoute> device_route;
     5: request<DeviceRouteExtra> device_route_extra;
     6: request<Counters> counters;
+    7: request<fuchsia.lowpan.thread.LegacyJoining> thread_legacy_joining;
 };
 
 /// Struct describing changes to the devices being managed

@@ -1,0 +1,38 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.thread;
+
+using zx;
+
+/// Protocol for supporting non-standard in-band commissioning protocols.
+/// Only one instance of this protocol may be valid at a time: after the
+/// first request all subsequent requests for this protocol will fail until
+/// the first instance is closed.
+protocol LegacyJoining {
+    /// Makes the interface joinable for Thread devices that need to use a
+    /// non-standard in-band commissioning protocol. It is not used for
+    /// standard Thread commissioning.
+    ///
+    /// When this call returns, the interface has been made joinable if
+    /// requested.
+    ///
+    /// Subsequent calls to this method will override previous calls.
+    /// To force the interface to no longer be joinable immediately, call
+    /// this method with a duration of zero seconds and a port of zero (port
+    /// is ignored in this case).
+    ///
+    /// This method must only be called when the interface is online
+    /// (Specifically, either attaching, attached, or isolated). If the
+    /// interface is in any other state, the channel will be closed with
+    /// `ZX_ERR_BAD_STATE`.
+    ///
+    /// `duration` specifies a minimum time the interface should be made
+    /// joinable, relative to the time the call is received. It may be rounded
+    /// up to the nearest second.
+    ///
+    /// `port` specifies the local port that TCP or UDP commissioning traffic
+    /// will be directed to.
+    MakeJoinable(zx.duration duration, uint16 port) -> ();
+};
