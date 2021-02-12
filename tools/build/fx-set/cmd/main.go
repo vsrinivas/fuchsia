@@ -6,8 +6,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -17,14 +21,24 @@ import (
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 )
 
 const (
+	// Optional env var set by the user, pointing to the directory in which
+	// ccache artifacts should be cached between builds.
+	ccacheDirEnvVar = "CCACHE_DIR"
+
 	// fx ensures that this env var is set.
 	checkoutDirEnvVar = "FUCHSIA_DIR"
 )
+
+type subprocessRunner interface {
+	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
+}
 
 func main() {
 	ctx := command.CancelOnSignals(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -44,12 +58,7 @@ func main() {
 }
 
 func mainImpl(ctx context.Context) error {
-	checkoutDir := os.Getenv(checkoutDirEnvVar)
-	if checkoutDir == "" {
-		return fmt.Errorf("%s env var must be set", checkoutDirEnvVar)
-	}
-
-	args, err := parseArgs(os.Args[1:])
+	args, err := parseArgsAndEnv(os.Args[1:], allEnvVars())
 	if err != nil {
 		return err
 	}
@@ -60,16 +69,18 @@ func mainImpl(ctx context.Context) error {
 		}
 	}
 
+	r := &runner.SubprocessRunner{}
+
 	var staticSpec *fintpb.Static
 	if args.fintParamsPath == "" {
-		staticSpec, err = constructStaticSpec(checkoutDir, args)
+		staticSpec, err = constructStaticSpec(ctx, r, args.checkoutDir, args)
 		if err != nil {
 			return err
 		}
 	} else {
 		path := args.fintParamsPath
 		if !filepath.IsAbs(path) {
-			path = filepath.Join(checkoutDir, path)
+			path = filepath.Join(args.checkoutDir, path)
 		}
 		staticSpec, err = fint.ReadStatic(path)
 		if err != nil {
@@ -78,10 +89,10 @@ func mainImpl(ctx context.Context) error {
 	}
 
 	contextSpec := &fintpb.Context{
-		CheckoutDir: checkoutDir,
+		CheckoutDir: args.checkoutDir,
 		// TODO(olivernewman): Implement support for --auto-dir and --build-dir
 		// flags to make this configurable.
-		BuildDir: filepath.Join(checkoutDir, "out", "default"),
+		BuildDir: filepath.Join(args.checkoutDir, "out", "default"),
 	}
 
 	_, err = fint.Set(ctx, staticSpec, contextSpec)
@@ -92,9 +103,18 @@ type setArgs struct {
 	verbose        bool
 	fintParamsPath string
 
+	checkoutDir  string
+	noEnsureGoma bool
+
 	// Flags passed to GN.
 	board            string
 	product          string
+	useGoma          bool
+	noGoma           bool
+	gomaDir          string
+	useCcache        bool
+	noCcache         bool
+	ccacheDir        string
 	isRelease        bool
 	universePackages []string
 	basePackages     []string
@@ -104,15 +124,36 @@ type setArgs struct {
 	gnArgs           []string
 }
 
-func parseArgs(args []string) (*setArgs, error) {
+func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	cmd := &setArgs{}
 
+	cmd.checkoutDir = env[checkoutDirEnvVar]
+	if cmd.checkoutDir == "" {
+		return nil, fmt.Errorf("%s env var must be set", checkoutDirEnvVar)
+	}
+	cmd.ccacheDir = env[ccacheDirEnvVar] // Not required.
+
 	flagSet := flag.NewFlagSet("fx set", flag.ExitOnError)
+	// TODO(olivernewman): Decide whether to have this tool print usage or
+	// to let //tools/devshell/set handle usage.
+	flagSet.Usage = func() {}
+	// We log a final error to stderr, so no need to have pflag print
+	// intermediate errors.
+	flagSet.SetOutput(ioutil.Discard)
 
 	// Help strings don't matter because `fx set -h` uses the help text from
 	// //tools/devshell/set, which should be kept up to date with these flags.
 	flagSet.BoolVar(&cmd.verbose, "verbose", false, "")
 	flagSet.StringVar(&cmd.fintParamsPath, "fint-params-path", "", "")
+	flagSet.BoolVar(&cmd.useCcache, "ccache", false, "")
+	flagSet.BoolVar(&cmd.noCcache, "no-ccache", false, "")
+	flagSet.BoolVar(&cmd.useGoma, "goma", false, "")
+	flagSet.BoolVar(&cmd.noGoma, "no-goma", false, "")
+	flagSet.BoolVar(&cmd.noEnsureGoma, "no-ensure-goma", false, "")
+	// TODO(haowei): Remove --goma-dir once no other scripts use it.
+	// We don't bother validating its value because the value isn't used
+	// anywhere.
+	flagSet.StringVar(&cmd.gomaDir, "goma-dir", "", "")
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
 	flagSet.StringSliceVar(&cmd.universePackages, "with", []string{}, "")
 	flagSet.StringSliceVar(&cmd.basePackages, "with-base", []string{}, "")
@@ -134,6 +175,16 @@ func parseArgs(args []string) (*setArgs, error) {
 		return cmd, nil
 	}
 
+	if cmd.useCcache && cmd.noCcache {
+		return nil, fmt.Errorf("--ccache and --no-ccache are mutually exclusive")
+	}
+
+	if cmd.useGoma && cmd.noGoma {
+		return nil, fmt.Errorf("--goma and --no-goma are mutually exclusive")
+	} else if cmd.noGoma && cmd.gomaDir != "" {
+		return nil, fmt.Errorf("--goma-dir and --no-goma are mutually exclusive")
+	}
+
 	if flagSet.NArg() == 0 {
 		return nil, fmt.Errorf("missing a PRODUCT.BOARD argument")
 	} else if flagSet.NArg() > 1 {
@@ -150,7 +201,7 @@ func parseArgs(args []string) (*setArgs, error) {
 	return cmd, nil
 }
 
-func constructStaticSpec(checkoutDir string, args *setArgs) (*fintpb.Static, error) {
+func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir string, args *setArgs) (*fintpb.Static, error) {
 	productPath, err := findGNIFile(checkoutDir, "products", args.product)
 	if err != nil {
 		return nil, fmt.Errorf("no such product %q", args.product)
@@ -165,6 +216,54 @@ func constructStaticSpec(checkoutDir string, args *setArgs) (*fintpb.Static, err
 		optimize = fintpb.Static_RELEASE
 	}
 
+	var (
+		// These variables eventually represent our final decisions of whether
+		// to use goma/ccache, since the logic is somewhat convoluted.
+		useGomaFinal   bool
+		useCcacheFinal bool
+	)
+
+	// Automatically detect goma and ccache if none of the goma and ccache flags
+	// are specified explicitly.
+	if !(args.useGoma || args.noGoma || args.useCcache || args.noCcache) && args.gomaDir == "" {
+		gomaAuth, err := isGomaAuthenticated(ctx, r, args.checkoutDir)
+		if err != nil {
+			return nil, err
+		}
+
+		if gomaAuth {
+			useGomaFinal = true
+		} else if args.ccacheDir != "" {
+			isDir, err := osmisc.IsDir(args.ccacheDir)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check existence of $%s: %w", ccacheDirEnvVar, err)
+			}
+			if !isDir {
+				return nil, fmt.Errorf("$%s=%s does not exist or is a regular file", ccacheDirEnvVar, args.ccacheDir)
+			}
+			useCcacheFinal = true
+		}
+	}
+
+	if args.useGoma || args.gomaDir != "" {
+		useGomaFinal = true
+	} else if args.noGoma {
+		useGomaFinal = false
+	}
+
+	if !useGomaFinal {
+		if args.useCcache {
+			useCcacheFinal = true
+		} else if args.noCcache {
+			useCcacheFinal = false
+		}
+	}
+
+	gnArgs := args.gnArgs
+	if useCcacheFinal {
+		gnArgs = append(gnArgs, "use_ccache=true")
+	}
+
 	return &fintpb.Static{
 		Board:            boardPath,
 		Product:          productPath,
@@ -174,7 +273,8 @@ func constructStaticSpec(checkoutDir string, args *setArgs) (*fintpb.Static, err
 		UniversePackages: args.universePackages,
 		HostLabels:       args.hostLabels,
 		Variants:         args.variants,
-		GnArgs:           args.gnArgs,
+		GnArgs:           gnArgs,
+		UseGoma:          useGomaFinal,
 	}, nil
 }
 
@@ -201,4 +301,34 @@ func findGNIFile(checkoutDir, dirname, basename string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no such file %s.gni", basename)
+}
+
+func allEnvVars() map[string]string {
+	env := make(map[string]string)
+	for _, keyAndValue := range os.Environ() {
+		parts := strings.SplitN(keyAndValue, "=", 2)
+		key, val := parts[0], parts[1]
+		env[key] = val
+	}
+	return env
+}
+
+func isGomaAuthenticated(ctx context.Context, r subprocessRunner, checkoutDir string) (bool, error) {
+	platform, err := hostplatform.Name()
+	if err != nil {
+		// Platform unrecognized, so Goma is not supported.
+		return false, nil
+	}
+
+	gomaAuthPath := filepath.Join(checkoutDir, "prebuilt", "third_party", "goma", platform, "goma_auth.py")
+	if err := r.Run(ctx, []string{gomaAuthPath, "info"}, nil, nil); err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			// The command failed, which probably means the user isn't logged
+			// into Goma.
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

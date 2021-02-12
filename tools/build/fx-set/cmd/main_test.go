@@ -5,17 +5,22 @@
 package main
 
 import (
+	"context"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
-func TestParseArgs(t *testing.T) {
+func TestParseArgsAndEnv(t *testing.T) {
 	testCases := []struct {
 		name      string
 		args      []string
@@ -126,11 +131,24 @@ func TestParseArgs(t *testing.T) {
 				fintParamsPath: "foo.fint.textproto",
 			},
 		},
+		{
+			name:      "rejects --goma and --no-goma",
+			args:      []string{"core.x64", "--goma", "--no-goma"},
+			expectErr: true,
+		},
+		{
+			name:      "rejects --ccache and --no-ccache",
+			args:      []string{"core.x64", "--ccache", "--no-ccache"},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd, err := parseArgs(tc.args)
+			checkoutDir := t.TempDir()
+			tc.expected.checkoutDir = checkoutDir
+
+			cmd, err := parseArgsAndEnv(tc.args, map[string]string{checkoutDirEnvVar: checkoutDir})
 			if err != nil {
 				if !tc.expectErr {
 					t.Fatalf("Parse args error: %s", err)
@@ -148,42 +166,117 @@ func TestParseArgs(t *testing.T) {
 	}
 }
 
+type fakeSubprocessRunner struct {
+	fail bool
+}
+
+func (r fakeSubprocessRunner) Run(context.Context, []string, io.Writer, io.Writer) error {
+	if r.fail {
+		return &exec.ExitError{}
+	}
+	return nil
+}
+
 func TestConstructStaticSpec(t *testing.T) {
-	checkoutDir := t.TempDir()
-	createFile(t, checkoutDir, "boards", "x64.gni")
-	createFile(t, checkoutDir, "products", "core.gni")
-
-	args := &setArgs{
-		board:            "x64",
-		product:          "core",
-		isRelease:        true,
-		basePackages:     []string{"base"},
-		cachePackages:    []string{"cache"},
-		universePackages: []string{"universe"},
-		hostLabels:       []string{"host"},
-		variants:         []string{"variant"},
-		gnArgs:           []string{"args"},
+	testCases := []struct {
+		name     string
+		args     *setArgs
+		runner   fakeSubprocessRunner
+		expected *fintpb.Static
+	}{
+		{
+			name: "basic",
+			args: &setArgs{
+				board:            "arm64",
+				product:          "bringup",
+				isRelease:        true,
+				basePackages:     []string{"base"},
+				cachePackages:    []string{"cache"},
+				universePackages: []string{"universe"},
+				hostLabels:       []string{"host"},
+				variants:         []string{"variant"},
+				gnArgs:           []string{"args"},
+				noGoma:           true,
+			},
+			expected: &fintpb.Static{
+				Board:            "boards/arm64.gni",
+				Product:          "products/bringup.gni",
+				Optimize:         fintpb.Static_RELEASE,
+				BasePackages:     []string{"base"},
+				CachePackages:    []string{"cache"},
+				UniversePackages: []string{"universe"},
+				HostLabels:       []string{"host"},
+				Variants:         []string{"variant"},
+				GnArgs:           []string{"args"},
+				UseGoma:          false,
+			},
+		},
+		{
+			name: "ccache enabled",
+			args: &setArgs{
+				useCcache: true,
+			},
+			expected: &fintpb.Static{
+				GnArgs:  []string{"use_ccache=true"},
+				UseGoma: false,
+			},
+		},
+		{
+			name: "goma enabled",
+			args: &setArgs{
+				useGoma: true,
+			},
+			expected: &fintpb.Static{
+				UseGoma: true,
+			},
+		},
+		{
+			name: "goma enabled by default",
+			args: &setArgs{},
+			expected: &fintpb.Static{
+				UseGoma: true,
+			},
+		},
+		{
+			name:   "goma disabled if goma auth fails",
+			args:   &setArgs{},
+			runner: fakeSubprocessRunner{fail: true},
+			expected: &fintpb.Static{
+				UseGoma: false,
+			},
+		},
 	}
 
-	got, err := constructStaticSpec(checkoutDir, args)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			if tc.args.board == "" {
+				tc.args.board = "x64"
+			}
+			if tc.args.product == "" {
+				tc.args.product = "core"
+			}
 
-	want := &fintpb.Static{
-		Board:            "boards/x64.gni",
-		Product:          "products/core.gni",
-		Optimize:         fintpb.Static_RELEASE,
-		BasePackages:     []string{"base"},
-		CachePackages:    []string{"cache"},
-		UniversePackages: []string{"universe"},
-		HostLabels:       []string{"host"},
-		Variants:         []string{"variant"},
-		GnArgs:           []string{"args"},
-	}
+			expected := &fintpb.Static{
+				Board:    "boards/x64.gni",
+				Product:  "products/core.gni",
+				Optimize: fintpb.Static_DEBUG,
+			}
+			proto.Merge(expected, tc.expected)
 
-	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(fintpb.Static{})); diff != "" {
-		t.Fatalf("Static spec from args is wrong (-want +got):\n%s", diff)
+			checkoutDir := t.TempDir()
+			createFile(t, checkoutDir, expected.Board)
+			createFile(t, checkoutDir, expected.Product)
+
+			got, err := constructStaticSpec(ctx, tc.runner, checkoutDir, tc.args)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff(expected, got, protocmp.Transform()); diff != "" {
+				t.Fatalf("Static spec from args is wrong (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 

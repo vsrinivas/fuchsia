@@ -17,12 +17,15 @@ go_library("main") {
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/spf13/pflag",
+    "//third_party/golibs:google.golang.org/protobuf",
     "//tools/integration/fint:fint_lib",
     "//tools/integration/fint:proto_lib",
     "//tools/lib/color",
     "//tools/lib/command",
+    "//tools/lib/hostplatform",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
+    "//tools/lib/runner",
   ]
 }
 
