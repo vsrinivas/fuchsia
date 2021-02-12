@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/tee_manager_bin_test"
+        "binary": "bin/tee_manager_bin_test"
     },
     "sandbox": {
         "features": [

@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -17,22 +16,9 @@ group("tests") {
   ]
 }
 
-package("tee_manager") {
-  meta = [
-    {
-      path = rebase_path("meta/tee_manager.cmx")
-      dest = "tee_manager.cmx"
-    },
-  ]
-
+fuchsia_package_with_single_component("tee_manager") {
+  manifest = "meta/tee_manager.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "tee_manager"
-      dest = "tee_manager"
-    },
-  ]
 }
 
 rustc_binary("bin") {
@@ -74,14 +60,9 @@ rustc_binary("bin") {
   ]
 }
 
-test_package("tee-manager-tests") {
+fuchsia_unittest_package("tee-manager-tests") {
+  manifest = "meta/tee_manager_bin_test.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "tee_manager_bin_test"
-    },
-  ]
 }
 
 source_set("test_common") {
@@ -97,21 +78,12 @@ source_set("test_common") {
   ]
 }
 
-test_package("optee_test") {
+fuchsia_unittest_package("optee_test") {
+  manifest = "meta/optee_test.cmx"
   deps = [ ":optee_test_bin" ]
-
-  binaries = [
-    {
-      name = "optee_test"
-    },
-  ]
-
-  tests = [
-    {
-      name = "optee_test"
-      environments = [ astro_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ astro_env ]
+  }
 }
 
 executable("optee_test_bin") {
@@ -123,21 +95,12 @@ executable("optee_test_bin") {
   deps = [ ":test_common" ]
 }
 
-test_package("optee_smoke_test") {
+fuchsia_unittest_package("optee_smoke_test") {
+  manifest = "meta/optee_smoke_test.cmx"
   deps = [ ":optee_smoke_test_bin" ]
-
-  binaries = [
-    {
-      name = "optee_smoke_test"
-    },
-  ]
-
-  tests = [
-    {
-      name = "optee_smoke_test"
-      environments = [ astro_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ astro_env ]
+  }
 }
 
 executable("optee_smoke_test_bin") {

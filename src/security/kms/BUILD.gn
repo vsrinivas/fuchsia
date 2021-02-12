@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -63,30 +62,14 @@ rustc_binary("bin") {
   ]
 }
 
-package("kms") {
+fuchsia_package_with_single_component("kms") {
+  manifest = "meta/key_manager.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "kms"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/key_manager.cmx")
-      dest = "key_manager.cmx"
-    },
-  ]
 }
 
-test_package("kms_tests") {
+fuchsia_unittest_package("kms_tests") {
+  manifest = "meta/kms_bin_test.cmx"
   deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "kms_bin_test"
-      dest = "kms_bin_test"
-    },
-  ]
 }
 
 config_data("optee_provider_config") {
