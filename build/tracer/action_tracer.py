@@ -170,6 +170,7 @@ class AccessConstraints(object):
     allowed_reads: FrozenSet[str] = dataclasses.field(default_factory=set)
     allowed_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
     required_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    # TODO(fangism): forbidden_deletes should probably include declared inputs
 
     @property
     def inputs(self):
@@ -268,11 +269,11 @@ def _sorted_join(elements: Iterable[str], joiner: str):
 class FSAccessSet(object):
     reads: FrozenSet[str] = dataclasses.field(default_factory=set)
     writes: FrozenSet[str] = dataclasses.field(default_factory=set)
-    # Deletes are not checked yet.
+    deletes: FrozenSet[str] = dataclasses.field(default_factory=set)
 
     @property
     def all_accesses(self):
-        return self.reads | self.writes
+        return self.reads | self.writes | self.deletes
 
     def __str__(self):
         if not self.all_accesses:
@@ -282,6 +283,8 @@ class FSAccessSet(object):
             text += "\nReads:\n  " + _sorted_join(self.reads, "\n  ")
         if self.writes:
             text += "\nWrites:\n  " + _sorted_join(self.writes, "\n  ")
+        if self.deletes:
+            text += "\nDeletes:\n  " + _sorted_join(self.deletes, "\n  ")
         # trim first newline if there is one
         return text.lstrip("\n")
 
@@ -291,31 +294,42 @@ def finalize_filesystem_accesses(accesses: Iterable[FSAccess]) -> FSAccessSet:
 
     This tracks deleted files, assuming that a file that is written and
     then deleted is only a temporary, and is not counted as a final write.
+    Reads of temporary files are allowed and not recorded.
+    Deletes of files not written by this sequence of accesses are recorded.
     Converting from a stream to set(s) loses access sequence information.
 
     Args:
       accesses: stream of file-system accesses.
 
     Returns:
-      Sets of read and (finally) written files.
+      Sets of read, written, and deleted files that should be verified
+      elsewhere (excluding inferred temporaries).
     """
     reads = set()
     writes = set()
-    # TODO(fangism): track and record deletes, infer temporary files,
-    # and treat accesses to temporary files differently.
+    deletes = set()
     for access in accesses:
         if access.op == FileAccessType.READ:
-            reads.add(access.path)
+            # Reading a file that we've written is not interesting.
+            # Omit those, but add all others.
+            if access.path not in writes:
+                reads.add(access.path)
         elif access.op == FileAccessType.WRITE:
             writes.add(access.path)
+            deletes.discard(access.path)
         elif access.op == FileAccessType.DELETE:
-            # This assumes that all deletes are ok.
-            # TODO(fangism): only allow certain patterns for names of
-            # temporary/deleted files.
-            writes.discard(access.path)
+            if access.path in writes:
+                # Infer that this is a temporary file.
+                writes.discard(access.path)
+                # Allow and ignore reads to written files.
+                reads.discard(access.path)
+                # Do not record this as a deleted file.
+            else:
+                # All other deletes require scrutiny.
+                deletes.add(access.path)
 
     # writes contains the set of files that were not deleted
-    return FSAccessSet(reads=reads, writes=writes)
+    return FSAccessSet(reads=reads, writes=writes, deletes=deletes)
 
 
 def check_access_permissions(

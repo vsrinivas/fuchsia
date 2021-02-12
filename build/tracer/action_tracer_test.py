@@ -287,6 +287,16 @@ class FormatAccessSetTest(unittest.TestCase):
                    e
                    f"""))
 
+    def test_deletes(self):
+        self.assertEqual(
+            str(action_tracer.FSAccessSet(deletes={"r", "q", "p"})),
+            textwrap.dedent(
+                """\
+                 Deletes:
+                   p
+                   q
+                   r"""))
+
     def test_reads_writes(self):
         files = {"c", "a", "b"}
         self.assertEqual(
@@ -298,6 +308,21 @@ class FormatAccessSetTest(unittest.TestCase):
                    b
                    c
                  Writes:
+                   a
+                   b
+                   c"""))
+
+    def test_writes_deletes(self):
+        files = {"c", "a", "b"}
+        self.assertEqual(
+            str(action_tracer.FSAccessSet(writes=files, deletes=files)),
+            textwrap.dedent(
+                """\
+                 Writes:
+                   a
+                   b
+                   c
+                 Deletes:
                    a
                    b
                    c"""))
@@ -338,13 +363,21 @@ class FinalizeFileSystemAccessesTest(unittest.TestCase):
             action_tracer.FSAccessSet(
                 reads={"r1.txt", "r2.txt"}, writes={"wa.txt", "wb.txt"}))
 
+    def test_read_after_write(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Write("temp.txt"),
+                    action_tracer.Read("temp.txt"),
+                ]), action_tracer.FSAccessSet(reads=set(), writes={"temp.txt"}))
+
     def test_delete(self):
         self.assertEqual(
             action_tracer.finalize_filesystem_accesses(
                 [
                     action_tracer.Delete("d1.txt"),
                     action_tracer.Delete("d2.txt"),
-                ]), action_tracer.FSAccessSet())
+                ]), action_tracer.FSAccessSet(deletes={"d1.txt", "d2.txt"}))
 
     def test_delete_after_write(self):
         self.assertEqual(
@@ -361,6 +394,15 @@ class FinalizeFileSystemAccessesTest(unittest.TestCase):
                     action_tracer.Delete("temp.txt"),
                     action_tracer.Write("temp.txt"),
                 ]), action_tracer.FSAccessSet(writes={"temp.txt"}))
+
+    def test_write_read_delete(self):
+        self.assertEqual(
+            action_tracer.finalize_filesystem_accesses(
+                [
+                    action_tracer.Write("temp.txt"),
+                    action_tracer.Read("temp.txt"),
+                    action_tracer.Delete("temp.txt"),
+                ]), action_tracer.FSAccessSet())
 
 
 class CheckAccessPermissionsTests(unittest.TestCase):
