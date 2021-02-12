@@ -1072,7 +1072,7 @@ class {{ .Name }} final {
   // |{{ .Name }}::Interface| instead.
   // TODO(fxbug.dev/65212): Remove this interface after all users have
   // migrated to the typed channels API.
-  class RawChannelInterface : public Interface {
+  class FIDL_DEPRECATED_USE_TYPED_CHANNELS RawChannelInterface : public Interface {
    public:
     RawChannelInterface() = default;
     virtual ~RawChannelInterface() = default;

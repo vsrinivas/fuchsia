@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_SERVER_END_H_
 
 #include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 

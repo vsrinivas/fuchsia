@@ -104,6 +104,11 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("blobfs-unittest") {
@@ -147,6 +152,11 @@ test("external_decompressor_integration") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/id_allocator",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_component("external-decompressor-integration") {
@@ -205,6 +215,11 @@ test("blobfs_integration") {
     "//zircon/system/ulib/ramdevice-client",
   ]
   public_deps = [ "//zircon/system/ulib/fidl-utils" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
@@ -248,6 +263,11 @@ test("executable_mount") {
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/id_allocator",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_component("executable-mount-test") {

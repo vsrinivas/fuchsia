@@ -207,6 +207,11 @@ template("_fidl_cpp_library_impl") {
     # for all of Fuchsia by default.
     cflags_cc = [ "-Wextra-semi" ]
 
+    # TODO(fxbug.dev/69585): We suppress deprecated raw channel usage
+    # in LLCPP generated code itself. Delete this line after everything
+    # migrates to typed channels.
+    configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels-reserved-for-llcpp-generated-code-only" ]
+
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
 

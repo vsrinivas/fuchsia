@@ -46,6 +46,11 @@ source_set("common") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  public_configs = [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 group("tests") {

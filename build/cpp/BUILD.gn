@@ -3,3 +3,111 @@
 # found in the LICENSE file.
 
 import("//build/fidl/toolchain.gni")
+
+# TODO(fxbug.dev/69585): Delete this config after all user code
+# migrates to typed channels.
+config("fidl-llcpp-deprecated-raw-channels") {
+  cflags_cc = [ "-DFIDL_LLCPP_ALLOW_DEPRECATED_RAW_CHANNELS" ]
+
+  # Please do not add to this list. Refer to fxbug.dev/69585 to see
+  # how a target could be migrated to use typed channels.
+  visibility = [
+    "//examples/fidl/llcpp/request_pipelining/server:bin",
+    "//sdk/lib/fdio/tests:fdio",
+    "//src/bringup/bin/bootsvc:bin",
+    "//src/bringup/bin/bootsvc:bootfs_loader_service_test",
+    "//src/bringup/bin/bootsvc:lib",
+    "//src/bringup/bin/netsvc:netsvc-stress-test",
+    "//src/bringup/bin/netsvc:netsvc-test",
+    "//src/bringup/bin/ptysvc:common",
+    "//src/bringup/bin/virtcon:vc-display-test",
+    "//src/bringup/bin/virtcon:vc-session-manager-test",
+    "//src/bringup/bin/virtcon:virtual-console",
+    "//src/connectivity/network/drivers/network-device:src",
+    "//src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver",
+    "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:fake_at_driver",
+    "//src/connectivity/telephony/tests/fake-drivers/fake-transport-base:fake-transport-base",
+    "//src/connectivity/wlan/drivers/testing:wlanphy-testdev",
+    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_convert_unittest",
+    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",
+    "//src/connectivity/wlan/testing/wlantap-driver:wlantap_driver",
+    "//src/devices/bin/driver_host:common",
+    "//src/devices/bin/driver_host:driver_host_test",
+    "//src/devices/bin/driver_host2:lib",
+    "//src/devices/bin/driver_host2:unittests",
+    "//src/devices/bin/driver_manager:driver_host_loader_service_test",
+    "//src/devices/bin/driver_manager:driver_manager",
+    "//src/devices/bin/driver_manager:driver_manager_test",
+    "//src/devices/bin/driver_manager:driver_runner",
+    "//src/devices/bin/driver_manager:driver_runner_test",
+    "//src/devices/bin/driver_manager:lib",
+    "//src/devices/serial/drivers/virtio-console:virtio_console",
+    "//src/devices/sysmem/drivers/sysmem:sysmem-unittest-bin",
+    "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+    "//src/devices/sysmem/testing/mock-sysmem:mock-sysmem",
+    "//src/devices/tee/drivers/optee:optee-client-test-bin",
+    "//src/devices/tee/drivers/optee:optee-controller-test-bin",
+    "//src/devices/tee/drivers/optee:optee_lib",
+    "//src/devices/tests/ddk-instance-lifecycle-test:driver",
+    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test",
+    "//src/devices/usb/drivers/usb-peripheral:usb-peripheral",
+    "//src/devices/usb/drivers/usb-peripheral:usb-peripheral-unittest-bin",
+    "//src/graphics/display/drivers/display:shared",
+    "//src/graphics/display/drivers/display/tests:base",
+    "//src/graphics/display/drivers/display/tests:display-core-unittests",
+    "//src/graphics/display/drivers/fake:fake-display-device-tree",
+    "//src/graphics/drivers/misc/goldfish:goldfish-pipe-device-test",
+    "//src/graphics/drivers/misc/goldfish:goldfish_driver",
+    "//src/graphics/drivers/misc/goldfish_address_space:address_space_driver",
+    "//src/graphics/drivers/misc/goldfish_address_space:goldfish-address-space-test",
+    "//src/graphics/drivers/misc/goldfish_sync:goldfish-sync-device-test",
+    "//src/graphics/drivers/misc/goldfish_sync:goldfish_sync_driver",
+    "//src/graphics/lib/magma/src/magma_util/platform/zircon:connection",
+    "//src/lib/framebuffer/test:framebuffer-test",
+    "//src/lib/loader_service:loader_service",
+    "//src/lib/loader_service:loader_service_test",
+    "//src/lib/loader_service:loader_service_test_fixture",
+    "//src/media/audio/lib/simple-audio-stream:headers",
+    "//src/storage/blobfs:blobfs",
+    "//src/storage/blobfs/test:blobfs-integration",
+    "//src/storage/blobfs/test:blobfs_integration",
+    "//src/storage/blobfs/test:blobfs_unittest",
+    "//src/storage/blobfs/test:executable_mount",
+    "//src/storage/blobfs/test:external_decompressor_integration",
+    "//src/storage/fshost:block-watcher",
+    "//src/storage/fshost:fshost",
+    "//src/storage/fshost:fshost-registry",
+    "//src/storage/fshost:fshost_integration_test",
+    "//src/storage/fshost:fshost_loader_service_test",
+    "//src/storage/fshost:fshost_test",
+    "//src/storage/lib/paver:paver",
+    "//src/storage/lib/paver:paver-core",
+    "//src/storage/lib/paver/test:test",
+    "//src/sys/appmgr:lib",
+    "//src/ui/bin/hardware_display_controller_provider/fake:bin",
+    "//src/ui/bin/hardware_display_controller_provider/fake:lib",
+    "//src/ui/bin/hardware_display_controller_provider/fake/tests:unittests",
+    "//src/ui/input/drivers/ft8201:ft8201-module",
+    "//src/ui/input/drivers/ft8201:ft8201-test-bin",
+    "//src/ui/input/drivers/gt6853:gt6853-module",
+    "//src/ui/input/drivers/gt6853:gt6853-test",
+    "//src/ui/input/drivers/hid:hid",
+    "//src/ui/input/drivers/hid:hid-test",
+    "//src/ui/input/drivers/hid-input-report:hid-input-report",
+    "//src/ui/input/drivers/hid-input-report:hid-input-report-test-bin",
+    "//src/ui/input/lib/input-report-reader:input-report-test",
+    "//zircon/system/ulib/cobalt-client/test:collector-test",
+    "//zircon/system/ulib/devmgr-integration-test:devmgr-integration-test",
+    "//zircon/system/ulib/zxio/tests:zxio",
+    "//zircon/system/utest/dlfcn:dlfcn",
+  ]
+}
+
+# TODO(fxbug.dev/69585): Delete this config after all user code
+# migrates to typed channels.
+# This is used by generated C++ library from fidlgen_llcpp, which unfortunately
+# cannot have a definite visibility restriction. Please do not use this config.
+config(
+    "fidl-llcpp-deprecated-raw-channels-reserved-for-llcpp-generated-code-only") {
+  cflags_cc = [ "-DFIDL_LLCPP_ALLOW_DEPRECATED_RAW_CHANNELS" ]
+}
