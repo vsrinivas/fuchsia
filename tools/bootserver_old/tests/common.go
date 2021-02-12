@@ -171,6 +171,9 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 
 // StartQemu starts a QEMU instance with the given kernel commandline args.
 func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulator.Instance {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	distro, err := emulator.UnpackFrom(*TestDataDir, emulator.DistributionParams{})
 	if err != nil {
 		t.Fatalf("Failed to unpack QEMU: %s", err)
