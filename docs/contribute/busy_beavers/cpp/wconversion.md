@@ -291,6 +291,27 @@ int64_t as the lambda argument instead.
 ...
 ```
 
+#### Lossless downcast
+
+If you want to downcast a variable but you do not want to tolerate loss during
+conversion, safemath library provides a set of utility functions, including
+checked_cast, that assert when there is loss of data during downcast.
+
+```cpp
+void fun(uint64_t block_number) {
+  // Downcast block_number because underlying layer expects uint32_t.
+  uint32_t block = safemath::checked_cast<uint32_t>(block_number);
+  ....
+}
+```
+
+Above `checked_cast` asserts if block_number is greater than
+`std::numberic_limits<uint32_t>::max()`.
+
+To use safemath, add the `//zircon/public/lib/safemath` as dependency in
+`BUILD.gn` file. BUILD.gn example can be seen [here](https://fuchsia.googlesource.com/fuchsia/+/be0a0c3f97b29231c9207a934063b3ce9e562dd1/src/storage/minfs/BUILD.gn#97)
+and example usage can be seen [here](https://fuchsia.googlesource.com/fuchsia/+/be0a0c3f97b29231c9207a934063b3ce9e562dd1/src/storage/minfs/minfs.cc#1428).
+
 ### Completing a task
 
 Tag the cover bug in your change description as follows:
