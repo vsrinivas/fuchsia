@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("vkloop") {
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
+
+executable("vkloop_bin") {
   testonly = true
+  output_name = "vkloop"
 
   sources = [
     "main.cc",
@@ -27,4 +31,38 @@ executable("vkloop") {
 
   # TODO(fxbug.dev/58615): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+resource("shaders") {
+  sources = [ "./vkloop.spv" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_component("vkloop_cmp") {
+  testonly = true
+  component_name = "vkloop"
+  deps = [
+    ":shaders",
+    ":vkloop_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+
+  manifest = "meta/vkloop.cmx"
+}
+
+fuchsia_test_package("vkloop-pkg") {
+  package_name = "vkloop"
+  test_components = [ ":vkloop_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("vkloop") {
+  testonly = true
+  deps = [ ":vkloop-pkg" ]
 }

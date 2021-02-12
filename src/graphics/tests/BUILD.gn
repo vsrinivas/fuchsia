@@ -30,6 +30,7 @@ group("hw_tests") {
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
     "icd_load",
+    "vkloop",
     "vkreadback",
     "vkvalidation:test-vk-validation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
@@ -50,7 +51,6 @@ test_package("vulkan-tests") {
     "common:vkcontext",
     "vk_timer_query",
     "vkext",
-    "vkloop",
     "vkpriority",
   ]
   loadable_modules = vulkan_validation_layers.loadable_modules
@@ -58,10 +58,6 @@ test_package("vulkan-tests") {
   public_deps = vulkan_validation_layers.public_deps
 
   tests = [
-    {
-      name = "vkloop"
-      environments = magma_libvulkan_hardware_envs
-    },
     {
       name = "vkext"
       dest = "vkext_unprotected"
@@ -91,13 +87,6 @@ test_package("vulkan-tests") {
     {
       name = "vkcontext"
       environments = [ aemu_env ] + magma_libvulkan_hardware_envs
-    },
-  ]
-
-  resources += [
-    {
-      path = "vkloop/comp.spv"
-      dest = "vkloop.spv"
     },
   ]
 }

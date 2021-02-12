@@ -5,5 +5,10 @@
     ],
     "program": {
         "binary": "bin/icd_load"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }
