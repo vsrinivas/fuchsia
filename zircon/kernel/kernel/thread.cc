@@ -417,11 +417,13 @@ zx_status_t Thread::Suspend() {
 // we can unwind the stack in order to get the state of userland's
 // callee-saved registers at the point where userland invoked the
 // syscall.
-void Thread::Current::SignalPolicyException(uint32_t policy_exception_code) {
+void Thread::Current::SignalPolicyException(uint32_t policy_exception_code,
+                                            uint32_t policy_exception_data) {
   Thread* t = Thread::Current::Get();
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   t->signals_.fetch_or(THREAD_SIGNAL_POLICY_EXCEPTION, ktl::memory_order_relaxed);
-  t->extra_policy_exception_data_ = policy_exception_code;
+  t->extra_policy_exception_code_ = policy_exception_code;
+  t->extra_policy_exception_data_ = policy_exception_data;
 }
 
 void Thread::EraseFromListsLocked() {
@@ -876,10 +878,12 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
   const unsigned int signals = current_thread->signals();
   if (has_user_thread && (signals & THREAD_SIGNAL_POLICY_EXCEPTION)) {
     current_thread->signals_.fetch_and(~THREAD_SIGNAL_POLICY_EXCEPTION, ktl::memory_order_relaxed);
-    uint32_t policy_exception_code = current_thread->extra_policy_exception_data_;
+    uint32_t policy_exception_code = current_thread->extra_policy_exception_code_;
+    uint32_t policy_exception_data = current_thread->extra_policy_exception_data_;
     guard.Release();
 
-    zx_status_t status = arch_dispatch_user_policy_exception(policy_exception_code);
+    zx_status_t status =
+        arch_dispatch_user_policy_exception(policy_exception_code, policy_exception_data);
     if (status != ZX_OK) {
       panic("arch_dispatch_user_policy_exception() failed: status=%d\n", status);
     }

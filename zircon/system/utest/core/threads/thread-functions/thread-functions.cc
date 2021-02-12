@@ -120,6 +120,20 @@ void threads_test_channel_call_fn(void* arg_) {
   zx_handle_close(arg->channel);
 }
 
+void threads_bad_syscall_fn(void* arg_) {
+  bad_syscall_arg* arg = static_cast<bad_syscall_arg*>(arg_);
+  zx_object_wait_one(arg->event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
+  uint64_t syscall_number = arg->syscall_number;
+#if defined(__aarch64__)
+  __asm__ volatile("mov x16, %0\nsvc #0" : : "r" (syscall_number));
+#elif defined(__x86_64__)
+  __asm__ volatile("mov %0, %%rax\nsyscall" : : "r" (syscall_number));
+#else
+#error Not supported on this platform.
+#endif
+  zx_thread_exit();
+}
+
 void atomic_store(volatile int* addr, int value) {
   __atomic_store_n(addr, value, __ATOMIC_SEQ_CST);
 }

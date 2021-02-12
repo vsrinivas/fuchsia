@@ -104,15 +104,15 @@ KCOUNTER(exceptions_user, "exceptions.user")
 KCOUNTER(exceptions_unknown, "exceptions.unknown")
 KCOUNTER(exceptions_access, "exceptions.access_fault")
 
-static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type,
-                                                          iframe_t* iframe, uint32_t esr,
-                                                          uint64_t far) {
+static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type, iframe_t* iframe,
+                                                          uint32_t esr, uint64_t far) {
   arch_exception_context_t context = {};
   DEBUG_ASSERT(iframe != nullptr);
   context.frame = iframe;
   context.esr = esr;
   context.far = far;
   context.user_synth_code = 0;
+  context.user_synth_data = 0;
 
   arch_enable_ints();
   zx_status_t status = dispatch_user_exception(type, &context);
@@ -227,8 +227,7 @@ static void arm64_fpu_handler(iframe_t* iframe, uint exception_flags, uint32_t e
   arm64_fpu_exception(iframe, exception_flags);
 }
 
-static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_flags,
-                                            uint32_t esr) {
+static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   /* read the FAR register */
   uint64_t far = __arm_rsr64("far_el1");
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
@@ -550,7 +549,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
   zx_exception_context_t* zx_context = &report->context;
 
   zx_context->synth_code = arch_context->user_synth_code;
-  zx_context->synth_data = 0;
+  zx_context->synth_data = arch_context->user_synth_data;
 
   zx_context->arch.u.arm_64.esr = arch_context->esr;
 
@@ -562,9 +561,11 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
   }
 }
 
-zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code) {
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code,
+                                                uint32_t policy_exception_data) {
   arch_exception_context_t context = {};
   context.user_synth_code = policy_exception_code;
+  context.user_synth_data = policy_exception_data;
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 

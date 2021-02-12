@@ -40,6 +40,15 @@ struct channel_call_suspend_test_arg {
   zx_status_t call_status;
 };
 
+// The arg is a pointer to bad_syscall_arg (below). The function will wait for ZX_USER_SIGNAL_0
+// on the given event and then issue the given (bad) syscall.
+void threads_bad_syscall_fn(void* arg);
+
+struct bad_syscall_arg {
+  zx_handle_t event;
+  uint64_t syscall_number;
+};
+
 // Implementation of atomic store and atomic load.
 //
 // Used by |threads_test_atomic_store|, because functions in

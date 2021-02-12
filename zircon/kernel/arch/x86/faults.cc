@@ -106,6 +106,7 @@ static bool try_dispatch_user_exception(iframe_t* frame, uint exception_type) {
         .frame = frame,
         .cr2 = 0,
         .user_synth_code = 0,
+        .user_synth_data = 0,
         .is_page_fault = false,
     };
     PreemptionState& preemption_state = Thread::Current::preemption_state();
@@ -338,6 +339,7 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
         .frame = frame,
         .cr2 = va,
         .user_synth_code = 0,
+        .user_synth_data = 0,
         .is_page_fault = true,
     };
     return dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT, &context);
@@ -547,7 +549,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
   zx_exception_context_t* zx_context = &report->context;
 
   zx_context->synth_code = arch_context->user_synth_code;
-  zx_context->synth_data = 0;
+  zx_context->synth_data = arch_context->user_synth_data;
 
   // TODO(fxbug.dev/30521): |frame| will be nullptr for synthetic exceptions that
   // don't provide general register values yet.
@@ -558,9 +560,11 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
   zx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
-zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code) {
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code,
+                                                uint32_t policy_exception_data) {
   arch_exception_context_t context = {};
   context.user_synth_code = policy_exception_code;
+  context.user_synth_data = policy_exception_data;
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 

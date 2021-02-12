@@ -25,7 +25,8 @@ zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_co
 // dispatch_user_exception() to be called with the current context. Implemented
 // by arch code. |policy_exception_code| is information about the policy error
 // which is stored into the zx_exception_report_t.
-zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code);
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code,
+                                                uint32_t policy_exception_data);
 
 // Dumps architecture-specific state to the console. |context| typically comes
 // from a call to dispatch_user_exception(). Implemented by arch code.

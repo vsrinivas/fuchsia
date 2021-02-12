@@ -56,6 +56,7 @@ struct arch_exception_context {
   uint64_t far;
   uint32_t esr;
   uint32_t user_synth_code;
+  uint32_t user_synth_data;
 };
 
 // Register state layout used by arm64_context_switch().

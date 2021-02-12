@@ -366,7 +366,7 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
     process->get_name(pname);
     printf("KERN: channel (%zu) has %zu messages (%s) (write). Raising exception\n", get_koid(),
            messages_.size(), pname);
-    Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE);
+    Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE, 0u);
   }
 
   UpdateStateLocked(0u, ZX_CHANNEL_READABLE);

@@ -776,7 +776,8 @@ struct Thread {
     static void DoSuspend();
 
     // |policy_exception_code| should be a ZX_EXCP_POLICY_CODE_* value.
-    static void SignalPolicyException(uint32_t policy_exception_code);
+    static void SignalPolicyException(uint32_t policy_exception_code,
+                                      uint32_t policy_exception_data);
 
     // Process pending signals, may never return because of kill signal.
     static void ProcessPendingSignals(GeneralRegsSource source, void* gregs);
@@ -1040,6 +1041,7 @@ struct Thread {
 
   // Saved by SignalPolicyException() to store the type of policy error, and
   // passed to exception disptach in ProcessPendingSignals().
+  uint32_t extra_policy_exception_code_ TA_GUARDED(thread_lock) = 0;
   uint32_t extra_policy_exception_data_ TA_GUARDED(thread_lock) = 0;
 
   // Strong reference to user thread if one exists for this thread.

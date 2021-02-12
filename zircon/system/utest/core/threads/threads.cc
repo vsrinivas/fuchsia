@@ -847,6 +847,59 @@ TEST(Threads, StartSuspendedAndResumedThread) {
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
+static void jump_to_thread_exit(zx_handle_t thread) {
+  zx_thread_state_general_regs regs;
+  ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)), ZX_OK);
+#if defined(__aarch64__)
+  regs.pc = reinterpret_cast<uint64_t>(&zx_thread_exit);
+#elif defined(__x86_64__)
+  regs.rip = reinterpret_cast<uint64_t>(&zx_thread_exit);
+#else
+#error Not supported on this platform.
+#endif
+  ASSERT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
+            ZX_OK);
+}
+
+TEST(Threads, BadSyscall) {
+  zxr_thread_t thread;
+  zx_handle_t thread_h;
+
+  bad_syscall_arg arg = {};
+  arg.syscall_number = 42;
+
+  ASSERT_OK(zx_event_create(0, &arg.event));
+  ASSERT_TRUE(start_thread(threads_bad_syscall_fn, &arg, &thread, &thread_h));
+
+  // The thread will now be blocked on the event. Wake it up and catch the bad syscall
+  // exception.
+  zx_handle_t exception_channel, exception;
+  ASSERT_OK(zx_task_create_exception_channel(zx_process_self(), 0, &exception_channel));
+  ASSERT_OK(zx_object_signal(arg.event, 0, ZX_USER_SIGNAL_0));
+  wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_POLICY_ERROR, ZX_EXCP_THREAD_STARTING,
+                        &exception);
+
+  zx_exception_report_t report = {};
+  ASSERT_OK(zx_object_get_info(thread_h, ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report),
+                               nullptr, nullptr));
+
+  ASSERT_EQ(report.header.type, ZX_EXCP_POLICY_ERROR);
+  ASSERT_EQ(report.context.synth_code, ZX_EXCP_POLICY_CODE_BAD_SYSCALL);
+  ASSERT_EQ(report.context.synth_data, arg.syscall_number);
+
+  jump_to_thread_exit(thread_h);
+
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  ASSERT_OK(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
+  ASSERT_OK(zx_handle_close(exception));
+
+  ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
+
+  // Clean up.
+  ASSERT_OK(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr));
+  ASSERT_OK(zx_handle_close(thread_h));
+}
+
 static void port_wait_for_signal(zx_handle_t port, zx_handle_t thread, zx_time_t deadline,
                                  zx_signals_t mask, zx_port_packet_t* packet) {
   ASSERT_EQ(zx_object_wait_async(thread, port, 0u, mask, 0), ZX_OK);
@@ -1143,7 +1196,7 @@ class RegisterWriteSetup {
     suspend_token_ = ZX_HANDLE_INVALID;
     // Wait for the thread termination to complete.
     ASSERT_EQ(zx_object_wait_one(thread_handle_, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL),
-                                 ZX_OK);
+              ZX_OK);
     zx_handle_close(thread_handle_);
     thread_handle_ = ZX_HANDLE_INVALID;
   }

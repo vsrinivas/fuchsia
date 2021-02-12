@@ -36,6 +36,7 @@ struct arch_exception_context {
   struct iframe_t* frame;
   uint64_t cr2;
   uint32_t user_synth_code;
+  uint32_t user_synth_data;
   bool is_page_fault;
 };
 

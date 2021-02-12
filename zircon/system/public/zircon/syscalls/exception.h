@@ -73,7 +73,7 @@ __BEGIN_CDECLS
 #define ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC 14u
 #define ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE    15u
 #define ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS 16u
-#define ZX_EXCP_POLICY_CODE_BAD_SYSCALL           17u
+#define ZX_EXCP_POLICY_CODE_BAD_SYSCALL           17u  // synth_data is the syscall number.
 
 // A process is starting.
 // This exception is sent to job debuggers only

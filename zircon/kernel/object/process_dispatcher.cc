@@ -688,11 +688,11 @@ zx_status_t ProcessDispatcher::EnforceBasicPolicy(uint32_t condition) {
       JobPolicy::IncrementCounter(action, condition);
       return ZX_ERR_ACCESS_DENIED;
     case ZX_POL_ACTION_ALLOW_EXCEPTION:
-      Thread::Current::SignalPolicyException(kPolicyIdToPolicyException[condition]);
+      Thread::Current::SignalPolicyException(kPolicyIdToPolicyException[condition], 0u);
       JobPolicy::IncrementCounter(action, condition);
       return ZX_OK;
     case ZX_POL_ACTION_DENY_EXCEPTION:
-      Thread::Current::SignalPolicyException(kPolicyIdToPolicyException[condition]);
+      Thread::Current::SignalPolicyException(kPolicyIdToPolicyException[condition], 0u);
       JobPolicy::IncrementCounter(action, condition);
       return ZX_ERR_ACCESS_DENIED;
     case ZX_POL_ACTION_KILL:
