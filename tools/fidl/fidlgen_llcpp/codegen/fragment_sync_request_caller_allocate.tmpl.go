@@ -8,7 +8,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- define "CallerBufferParams" -}}
 {{- if . -}}
 ::fidl::BufferSpan _request_buffer, {{ range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Wire }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type }} {{ $param.Name }}
   {{- end -}}
 {{- end -}}
 {{- end }}

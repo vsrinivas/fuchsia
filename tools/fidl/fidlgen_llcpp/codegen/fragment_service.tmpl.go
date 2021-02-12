@@ -6,18 +6,18 @@ package codegen
 
 const fragmentServiceTmpl = `
 {{- define "ServiceForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
-class {{ .Decl.Wire.Name }};
+{{ EnsureNamespace . }}
+class {{ .Name }};
 {{- end }}
 
 {{- define "ServiceDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 {{ "" }}
 {{- range .DocComments }}
 //{{ . }}
 {{- end }}
-class {{ .Decl.Wire.Name }} final {
-  {{ .Decl.Wire.Name }}() = default;
+class {{ .Name }} final {
+  {{ .Name }}() = default;
  public:
   static constexpr char Name[] = "{{ .ServiceName }}";
 
@@ -34,7 +34,7 @@ class {{ .Decl.Wire.Name }} final {
     {{- range .Members }}
   {{ "" }}
     // Connects to the member protocol "{{ .Name }}".
-    // Returns a |fidl::ClientEnd<{{ .ProtocolType.Wire }}>| on success,
+    // Returns a |fidl::ClientEnd<{{ .ProtocolType }}>| on success,
     // which can be used with |fidl::BindSyncClient| to create a synchronous
     // client, or |fidl::Client| to create a client that supports both
     // asynchronous and synchronous operations.
@@ -48,8 +48,8 @@ class {{ .Decl.Wire.Name }} final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<{{ .ProtocolType.Wire }}>> connect_{{ .Name }}() {
-      auto endpoints = ::fidl::CreateEndpoints<{{ .ProtocolType.Wire }}>();
+    ::zx::status<::fidl::ClientEnd<{{ .ProtocolType }}>> connect_{{ .Name }}() {
+      auto endpoints = ::fidl::CreateEndpoints<{{ .ProtocolType }}>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -91,7 +91,7 @@ class {{ .Decl.Wire.Name }} final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_{{ .Name }}(
-        ::fidl::ServiceHandlerInterface::MemberHandler<{{ .ProtocolType.Wire }}> handler) {
+        ::fidl::ServiceHandlerInterface::MemberHandler<{{ .ProtocolType }}> handler) {
       return service_handler_->AddMember("{{ .Name }}", std::move(handler));
     }
     {{- end }}

@@ -13,7 +13,7 @@ func (t *Type) WireNoTypedChannels() TypeVariant {
 	if t.Kind == TypeKinds.Protocol || t.Kind == TypeKinds.Request {
 		return TypeVariant("::zx::channel")
 	}
-	return t.Name.Wire
+	return t.Wire
 }
 
 // ShouldEmitTypedChannelCascadingInheritance determines if the code generator
@@ -40,7 +40,7 @@ func (m *Method) ShouldEmitTypedChannelCascadingInheritance() bool {
 func (p *Protocol) ShouldEmitTypedChannelCascadingInheritance() bool {
 	// Note: using the "natural" domain object name, so the migration
 	// to the wire namespace would not interfere with this check.
-	if !rawChannelInterfaceAllowed[p.Decl.Wire.String()] {
+	if !rawChannelInterfaceAllowed[p.DeclName.Wire.String()] {
 		return false
 	}
 	for _, m := range p.Methods {

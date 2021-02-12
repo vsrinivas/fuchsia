@@ -6,120 +6,120 @@ package codegen
 
 const fragmentBitsTmpl = `
 {{- define "BitsForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 {{- range .DocComments }}
 //{{ . }}
 {{- end }}
 {{- if .IsStrict }}
-// |{{ .Decl.Wire.Name }}| is strict, hence is guaranteed to only contain
+// |{{ .Name }}| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
 {{- else }}
-// |{{ .Decl.Wire.Name }}| is flexible, hence may contain unknown members not
+// |{{ .Name }}| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 {{- end }}
-class {{ .Decl.Wire.Name }} final {
+class {{ .Name }} final {
 public:
-  constexpr {{ .Decl.Wire.Name }}() = default;
-  constexpr {{ .Decl.Wire.Name }}(const {{ .Decl.Wire.Name }}& other) = default;
+  constexpr {{ .Name }}() = default;
+  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
 
-  // Constructs an instance of |{{ .Decl.Wire.Name }}| from an underlying primitive value,
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
-  explicit constexpr {{ .Decl.Wire.Name }}({{ .Type.Wire }} value) : value_(value) {}
+  explicit constexpr {{ .Name }}({{ .Type }} value) : value_(value) {}
 
   {{- range .Members }}
-  const static {{ $.Decl.Wire.Name }} {{ .Name }};
+  const static {{ $.Name }} {{ .Name }};
   {{- end }}
-  const static {{ .Decl.Wire.Name }} kMask;
+  const static {{ .Name }} kMask;
 
-  explicit constexpr inline operator {{ .Type.Wire }}() const { return value_; }
+  explicit constexpr inline operator {{ .Type }}() const { return value_; }
   explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
-  constexpr inline bool operator==(const {{ .Decl.Wire.Name }}& other) const { return value_ == other.value_; }
-  constexpr inline bool operator!=(const {{ .Decl.Wire.Name }}& other) const { return value_ != other.value_; }
-  constexpr inline {{ .Decl.Wire.Name }} operator~() const;
-  constexpr inline {{ .Decl.Wire.Name }} operator|(const {{ .Decl.Wire.Name }}& other) const;
-  constexpr inline {{ .Decl.Wire.Name }} operator&(const {{ .Decl.Wire.Name }}& other) const;
-  constexpr inline {{ .Decl.Wire.Name }} operator^(const {{ .Decl.Wire.Name }}& other) const;
-  constexpr inline void operator|=(const {{ .Decl.Wire.Name }}& other);
-  constexpr inline void operator&=(const {{ .Decl.Wire.Name }}& other);
-  constexpr inline void operator^=(const {{ .Decl.Wire.Name }}& other);
+  constexpr inline bool operator==(const {{ .Name }}& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const {{ .Name }}& other) const { return value_ != other.value_; }
+  constexpr inline {{ .Name }} operator~() const;
+  constexpr inline {{ .Name }} operator|(const {{ .Name }}& other) const;
+  constexpr inline {{ .Name }} operator&(const {{ .Name }}& other) const;
+  constexpr inline {{ .Name }} operator^(const {{ .Name }}& other) const;
+  constexpr inline void operator|=(const {{ .Name }}& other);
+  constexpr inline void operator&=(const {{ .Name }}& other);
+  constexpr inline void operator^=(const {{ .Name }}& other);
 
-  // Constructs an instance of |{{ .Decl.Wire.Name }}| from an underlying primitive value
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
-  constexpr inline static fit::optional<{{ .Decl.Wire.Name }}> TryFrom({{ .Type.Wire }} value) {
+  constexpr inline static fit::optional<{{ .Name }}> TryFrom({{ .Type }} value) {
     if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return {{ .Decl.Wire.Name }}(value & {{ .Decl.Wire.Name }}::kMask.value_);
+    return {{ .Name }}(value & {{ .Name }}::kMask.value_);
   }
 
-  // Constructs an instance of |{{ .Decl.Wire.Name }}| from an underlying primitive value,
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
   // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static {{ .Decl.Wire.Name }} TruncatingUnknown({{ .Type.Wire }} value) {
-    return {{ .Decl.Wire.Name }}(value & {{ .Decl.Wire.Name }}::kMask.value_);
+  constexpr inline static {{ .Name }} TruncatingUnknown({{ .Type }} value) {
+    return {{ .Name }}(value & {{ .Name }}::kMask.value_);
   }
 
   {{- if .IsFlexible }}
-  constexpr inline {{ .Decl.Wire.Name }} unknown_bits() const {
-    return *this & {{ .Decl.Wire.Name }}(~kMask.value_);
+  constexpr inline {{ .Name }} unknown_bits() const {
+    return *this & {{ .Name }}(~kMask.value_);
   }
   constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
   {{- end }}
 
 private:
-  {{ .Type.Wire }} value_ = 0;
+  {{ .Type }} value_ = 0;
 };
 
 {{- range $member := .Members }}
-constexpr const {{ $.Decl.Wire }} {{ $.Decl.Wire.Name }}::{{ $member.Name }} =
-    {{ $.Decl.Wire }}({{ $member.Value.Wire }});
+constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
+    {{ $ }}({{ $member.Value }});
 {{- end }}
-constexpr const {{ .Decl.Wire }} {{ .Decl.Wire.Name }}::kMask = {{ $.Decl.Wire }}({{ .Mask }}u);
+constexpr const {{ . }} {{ .Name }}::kMask = {{ $ }}({{ .Mask }}u);
 
-constexpr inline {{ .Decl.Wire }} {{ .Decl.Wire.Name }}::operator~() const {
-  return {{ $.Decl.Wire }}(static_cast<{{ .Type.Wire }}>(~this->value_ & kMask.value_));
+constexpr inline {{ . }} {{ .Name }}::operator~() const {
+  return {{ $ }}(static_cast<{{ .Type }}>(~this->value_ & kMask.value_));
 }
 
-constexpr inline {{ .Decl.Wire }} {{ .Decl.Wire.Name }}::operator|(
-    const {{ .Decl.Wire }}& other) const {
-  return {{ $.Decl.Wire }}(static_cast<{{ .Type.Wire }}>(this->value_ | other.value_));
+constexpr inline {{ . }} {{ .Name }}::operator|(
+    const {{ . }}& other) const {
+  return {{ $ }}(static_cast<{{ .Type }}>(this->value_ | other.value_));
 }
 
-constexpr inline {{ .Decl.Wire }} {{ .Decl.Wire.Name }}::operator&(
-    const {{ .Decl.Wire }}& other) const {
-  return {{ $.Decl.Wire }}(static_cast<{{ .Type.Wire }}>(this->value_ & other.value_));
+constexpr inline {{ . }} {{ .Name }}::operator&(
+    const {{ . }}& other) const {
+  return {{ $ }}(static_cast<{{ .Type }}>(this->value_ & other.value_));
 }
 
-constexpr inline {{ .Decl.Wire }} {{ .Decl.Wire.Name }}::operator^(
-    const {{ .Decl.Wire }}& other) const {
-  return {{ $.Decl.Wire }}(static_cast<{{ .Type.Wire }}>(this->value_ ^ other.value_));
+constexpr inline {{ . }} {{ .Name }}::operator^(
+    const {{ . }}& other) const {
+  return {{ $ }}(static_cast<{{ .Type }}>(this->value_ ^ other.value_));
 }
 
-constexpr inline void {{ .Decl.Wire.Name }}::operator|=(
-    const {{ .Decl.Wire }}& other) {
+constexpr inline void {{ .Name }}::operator|=(
+    const {{ . }}& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void {{ .Decl.Wire.Name }}::operator&=(
-    const {{ .Decl.Wire }}& other) {
+constexpr inline void {{ .Name }}::operator&=(
+    const {{ . }}& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void {{ .Decl.Wire.Name }}::operator^=(
-    const {{ .Decl.Wire }}& other) {
+constexpr inline void {{ .Name }}::operator^=(
+    const {{ . }}& other) {
   this->value_ ^= other.value_;
 }
 
 {{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
+using {{ .WireAlias.Name }} = {{ . }};
 {{ end }}
 
 {{- define "BitsTraits" }}
 
 template <>
-struct IsFidlType<{{ .Decl.Wire }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Decl.Wire }}>);
-static_assert(sizeof({{ .Decl.Wire }}) == sizeof({{ .Type.Wire }}));
+struct IsFidlType<{{ . }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ . }}>);
+static_assert(sizeof({{ . }}) == sizeof({{ .Type }}));
 {{- end }}
 `

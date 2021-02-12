@@ -6,7 +6,7 @@ package codegen
 
 const protocolTemplateProxiesAndStubs = `
 {{- define "ProtocolForwardDeclaration/ProxiesAndStubs" }}
-{{ EnsureNamespace .Decl.Natural }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 {{- range .DocComments }}
@@ -33,19 +33,19 @@ constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal | printf "%#x" }}lu;
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Natural }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type }} {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "OutParams" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Natural }}* out_{{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type }}* out_{{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "ParamTypes" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Natural }}
+    {{- if $index }}, {{ end -}}{{ $param.Type }}
   {{- end -}}
 {{ end }}
 
@@ -180,7 +180,7 @@ class {{ .ProxyName.Name }} final : public ::fidl::internal::Proxy, public {{ .N
 
 class {{ .StubName.Name }} final : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
  public:
-  typedef class {{ .Decl.Natural }} {{ .ClassName }};
+  typedef class {{ . }} {{ .ClassName }};
   explicit {{ .StubName.Name }}({{ .ClassName }}* impl);
   ~{{ .StubName.Name }}() override;
 
@@ -225,16 +225,16 @@ class {{ .SyncProxyName.Name }} : public {{ .SyncName }} {
 
 {{- range .Methods }}
 {{ if .HasRequest }}
-{{ EnsureNamespace .RequestCodingTable.Natural }}
-extern "C" const fidl_type_t {{ .RequestCodingTable.Natural.Name  }};
+{{ EnsureNamespace .RequestCodingTable }}
+extern "C" const fidl_type_t {{ .RequestCodingTable.Name }};
 {{- end }}
 {{- if .HasResponse }}
-{{ EnsureNamespace .ResponseCodingTable.Natural }}
-extern "C" const fidl_type_t {{ .ResponseCodingTable.Natural.Name }};
+{{ EnsureNamespace .ResponseCodingTable }}
+extern "C" const fidl_type_t {{ .ResponseCodingTable.Name }};
 {{- end }}
 {{- end }}
 
-{{ EnsureNamespace .Decl.Natural }}
+{{ EnsureNamespace . }}
 {{ .Name }}::~{{ .Name }}() = default;
 
 {{- if .ServiceName }}
@@ -251,7 +251,7 @@ const fidl_type_t* {{ .RequestDecoderName }}::GetType(uint64_t ordinal, bool* ou
         {{- else }}
       *out_needs_response = false;
         {{- end }}
-      return &{{ .RequestCodingTable.Natural }};
+      return &{{ .RequestCodingTable }};
       {{- end }}
     {{- end }}
     default:
@@ -265,7 +265,7 @@ const fidl_type_t* {{ .ResponseDecoderName.Name }}::GetType(uint64_t ordinal) {
     {{- range .Methods }}
       {{- if .HasResponse }}
     case internal::{{ .OrdinalName }}:
-      return &{{ .ResponseCodingTable.Natural }};
+      return &{{ .ResponseCodingTable }};
       {{- end }}
     {{- end }}
     default:
@@ -297,9 +297,9 @@ zx_status_t {{ .ProxyName.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage messag
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&{{ .ResponseCodingTable.Natural }}, &error_msg);
+      status = message.Decode(&{{ .ResponseCodingTable }}, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseCodingTable.Natural}}, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseCodingTable }}, error_msg);
         break;
       }
         {{- if .Response }}
@@ -307,7 +307,7 @@ zx_status_t {{ .ProxyName.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage messag
         {{- end }}
       {{ .Name }}(
         {{- range $index, $param := .Response -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Natural }}>(&decoder, {{ .Offset }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .Offset }})
         {{- end -}}
       );
       break;
@@ -341,18 +341,18 @@ namespace {
       {{- end }}
         callback_(
       {{- range $index, $param := .Response -}}
-        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Natural }}>(&decoder, {{ .Offset }})
+        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .Offset }})
       {{- end -}}
         );
         return ZX_OK;
-      }, &{{ .ResponseCodingTable.Natural }});
+      }, &{{ .ResponseCodingTable }});
 }
 
 }  // namespace
 {{- end }}
 void {{ $.ProxyName.Name }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
-  controller_->Send(&{{ .RequestCodingTable.Natural }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  controller_->Send(&{{ .RequestCodingTable }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -385,7 +385,7 @@ class {{ .ResponderType }} final {
 
   void operator()({{ template "Params" .Response }}) {
     ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
-    response_.Send(&{{ .ResponseCodingTable.Natural }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+    response_.Send(&{{ .ResponseCodingTable }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Response -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -434,7 +434,7 @@ zx_status_t {{ .StubName.Name }}::Dispatch_(
         {{- end }}
       impl_->{{ .Name }}(
         {{- range $index, $param := .Request -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Natural }}>(&decoder, {{ .Offset }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .Offset }})
         {{- end -}}
         {{- if .HasResponse -}}
           {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))
@@ -457,7 +457,7 @@ zx_status_t {{ .StubName.Name }}::Dispatch_(
     {{- if .HasResponse }}
 void {{ $.StubName.Name }}::{{ template "EventMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
-  sender_()->Send(&{{ .ResponseCodingTable.Natural }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+  sender_()->Send(&{{ .ResponseCodingTable }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Response -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -480,7 +480,7 @@ zx_status_t {{ $.SyncProxyName.Name }}::{{ template "SyncRequestMethodSignature"
     {{- if .HasResponse }}
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .RequestCodingTable.Natural }}, &{{ .ResponseCodingTable.Natural }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  zx_status_t status_ = proxy_.Call(&{{ .RequestCodingTable }}, &{{ .ResponseCodingTable }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -490,12 +490,12 @@ zx_status_t {{ $.SyncProxyName.Name }}::{{ template "SyncRequestMethodSignature"
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
         {{- range $index, $param := .Response }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Natural }}>(&decoder_, {{ .Offset }});
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type }}>(&decoder_, {{ .Offset }});
         {{- end }}
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .RequestCodingTable.Natural }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  return proxy_.Send(&{{ .RequestCodingTable }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -510,10 +510,10 @@ zx_status_t {{ $.SyncProxyName.Name }}::{{ template "SyncRequestMethodSignature"
 {{ end }}
 
 {{- define "ProtocolTestBase" }}
-{{ EnsureNamespace .TestBase.Natural }}
-class {{ .TestBase.Natural.Name }} : public {{ .Decl.Natural }} {
+{{ EnsureNamespace .TestBase }}
+class {{ .TestBase.Name }} : public {{ . }} {
   public:
-  virtual ~{{ .TestBase.Natural.Name }}() { }
+  virtual ~{{ .TestBase.Name }}() { }
   virtual void NotImplemented_(const std::string& name) = 0;
 
   {{- range .Methods }}

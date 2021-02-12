@@ -13,7 +13,7 @@ const fragmentSyncRequestManagedTmpl = `
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Wire }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type }} {{ $param.Name }}
   {{- end -}}
 {{- end }}
 

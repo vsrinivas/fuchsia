@@ -6,8 +6,8 @@ package codegen
 
 const fragmentTableTmpl = `
 {{- define "TableForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
-class {{ .Decl.Wire.Name }};
+{{ EnsureNamespace . }}
+class {{ .Name }};
 {{- end }}
 
 {{- define "TableMemberCloseHandles" }}
@@ -21,7 +21,7 @@ class {{ .Decl.Wire.Name }};
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "TableDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
@@ -30,8 +30,8 @@ class {{ .Decl.Wire.Name }};
 extern "C" const fidl_type_t {{ .TableType }};
 {{ range .DocComments }}
 //{{ . }}
-{{- end}}
-class {{ .Decl.Wire.Name }} final {
+{{- end }}
+class {{ .Name }} final {
 public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -43,11 +43,11 @@ public:
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
-  const {{ .Type.Wire }}& {{ .Name }}() const {
+  const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
-  {{ .Type.Wire }}& {{ .Name }}() {
+  {{ .Type }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
@@ -55,7 +55,7 @@ public:
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type.Wire }}> elem) {
+  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
@@ -68,32 +68,32 @@ public:
   void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data =
-        ::fidl::ObjectView<{{ .Type.Wire }}>(allocator, std::forward<Args>(args)...);
+        ::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
   }
   template <typename... Args>
   void set_{{ .Name }}(::fidl::Allocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data =
-        ::fidl::tracking_ptr<{{ .Type.Wire }}>(allocator, std::forward<Args>(args)...);
+        ::fidl::tracking_ptr<{{ .Type }}>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
   }
-  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.Wire }}> elem) {
+  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
     frame_ptr_->{{ .Name }}_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
   }
   {{- end }}
 
-  {{ .Decl.Wire.Name }}() = default;
-  explicit {{ .Decl.Wire.Name }}(::fidl::AnyAllocator& allocator)
+  {{ .Name }}() = default;
+  explicit {{ .Name }}(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
-  explicit {{ .Decl.Wire.Name }}(::fidl::Allocator& allocator)
+  explicit {{ .Name }}(::fidl::Allocator& allocator)
       : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
-  explicit {{ .Decl.Wire.Name }}(::fidl::tracking_ptr<Frame>&& frame_ptr)
+  explicit {{ .Name }}(::fidl::tracking_ptr<Frame>&& frame_ptr)
       : frame_ptr_(std::move(frame_ptr)) {}
-  ~{{ .Decl.Wire.Name }}() = default;
-  {{ .Decl.Wire.Name }}({{ .Decl.Wire.Name }}&& other) noexcept = default;
-  {{ .Decl.Wire.Name }}& operator=({{ .Decl.Wire.Name }}&& other) noexcept = default;
+  ~{{ .Name }}() = default;
+  {{ .Name }}({{ .Name }}&& other) noexcept = default;
+  {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
 
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
@@ -123,15 +123,15 @@ public:
   private:
   class UnownedEncodedByteMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size, {{ .Decl.Wire.Name }}* value)
-        : message_(bytes, byte_size, sizeof({{ .Decl.Wire.Name }}),
+    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
+        : message_(bytes, byte_size, sizeof({{ .Name }}),
     {{- if gt .MaxHandles 0 }}
       handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
     {{- else }}
       nullptr, 0, 0
     {{- end }}
       ) {
-      message_.Encode<{{ .Decl.Wire.Name }}>(value);
+      message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
     UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
@@ -159,7 +159,7 @@ public:
     UnownedEncodedIovecMessage(
       zx_channel_iovec_t* iovecs, uint32_t iovec_size,
       fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-      {{ .Decl.Wire.Name }}* value)
+      {{ .Name }}* value)
         : message_(::fidl::OutgoingIovecMessage::constructor_args{
           .iovecs = iovecs,
           .iovecs_actual = 0,
@@ -175,9 +175,9 @@ public:
           .handles = nullptr,
           .handle_actual = 0,
           .handle_capacity = 0,
-          {{- end}}
+          {{- end }}
         }) {
-      message_.Encode<{{ .Decl.Wire.Name }}>(value);
+      message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
     UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
@@ -202,10 +202,10 @@ public:
 
   class OwnedEncodedByteMessage final {
    public:
-    explicit OwnedEncodedByteMessage({{ .Decl.Wire.Name }}* value)
+    explicit OwnedEncodedByteMessage({{ .Name }}* value)
         {{- if gt .MaxSentSize 512 -}}
-      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>>()),
-        message_(bytes_->data(), {{- template "SentSize" .}}
+      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" . }}>>()),
+        message_(bytes_->data(), {{- template "SentSize" . }}
         {{- else }}
         : message_(bytes_, sizeof(bytes_)
         {{- end }}
@@ -226,7 +226,7 @@ public:
 
    private:
     {{- if gt .MaxSentSize 512 }}
-    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>> bytes_;
+    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "SentSize" . }}>> bytes_;
     {{- else }}
     FIDL_ALIGNDECL
     uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
@@ -236,7 +236,7 @@ public:
 
    class OwnedEncodedIovecMessage final {
    public:
-    explicit OwnedEncodedIovecMessage({{ .Decl.Wire.Name }}* value)
+    explicit OwnedEncodedIovecMessage({{ .Name }}* value)
         : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
         substitutions_, ::fidl::internal::kIovecBufferSize,
         value) {}
@@ -261,7 +261,7 @@ public:
   };
 
   public:
-    friend ::fidl::internal::EncodedMessageTypes<{{ .Decl.Wire.Name }}>;
+    friend ::fidl::internal::EncodedMessageTypes<{{ .Name }}>;
     using OwnedEncodedMessage = OwnedEncodedByteMessage;
     using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
@@ -270,10 +270,10 @@ public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                     uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      Decode<{{ .Decl.Wire.Name }}>();
+      Decode<{{ .Name }}>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-      Decode<{{ .Decl.Wire.Name }}>();
+      Decode<{{ .Name }}>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -287,9 +287,9 @@ public:
     }
     {{- end }}
 
-    {{ .Decl.Wire.Name }}* PrimaryObject() {
+    {{ .Name }}* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<{{ .Decl.Wire.Name }}*>(bytes());
+      return reinterpret_cast<{{ .Name }}*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles won't be closed
@@ -317,33 +317,33 @@ public:
 
     {{- range $index, $item := .FrameItems }}
       {{- if $item }}
-    ::fidl::Envelope<{{ $item.Type.Wire }}> {{ $item.Name }}_;
+    ::fidl::Envelope<{{ $item.Type }}> {{ $item.Name }}_;
       {{- else }}
     ::fidl::Envelope<void> reserved_{{ $index }}_;
       {{- end }}
     {{- end }}
 
-    friend class {{ .Decl.Wire.Name }};
-    friend class {{ .Decl.Wire.Name }}::Builder;
-    friend class {{ .Decl.Wire.Name }}::UnownedBuilder;
+    friend class {{ .Name }};
+    friend class {{ .Name }}::Builder;
+    friend class {{ .Name }}::UnownedBuilder;
   };
 
  private:
-  {{ .Decl.Wire.Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
-// {{ .Decl.Wire.Name }}::Builder builds {{ .Decl.Wire.Name }}.
+// {{ .Name }}::Builder builds {{ .Name }}.
 // Usage:
-// {{ .Decl.Wire.Name }} val = {{ .Decl.Wire.Name }}::Builder(std::make_unique<{{ .Decl.Wire.Name }}::Frame>())
-{{ if ne (len .Members) 0 }}// .set_{{(index .Members 0).Name}}(ptr){{end}}
+// {{ .Name }} val = {{ .Name }}::Builder(std::make_unique<{{ .Name }}::Frame>())
+{{ if ne (len .Members) 0 }}// .set_{{ (index .Members 0).Name }}(ptr){{ end }}
 // .build();
-class {{ .Decl.Wire.Name }}::Builder final {
+class {{ .Name }}::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<{{ .Decl.Wire.Name }}::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<{{ .Name }}::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -360,7 +360,7 @@ class {{ .Decl.Wire.Name }}::Builder final {
   //{{ . }}
     {{- end }}
     {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.Wire }}> elem) {
+  Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
     frame_ptr_->{{ .Name }}_.data = std::move(elem);
     if (max_ordinal_ < {{ .Ordinal }}) {
       // Note: the table size is not currently reduced if nullptr is set.
@@ -369,11 +369,11 @@ class {{ .Decl.Wire.Name }}::Builder final {
     }
     return std::move(*this);
   }
-  const {{ .Type.Wire }}& {{ .Name }}() const {
+  const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
-  {{ .Type.Wire }}& {{ .Name }}() {
+  {{ .Type }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
@@ -381,41 +381,41 @@ class {{ .Decl.Wire.Name }}::Builder final {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
   {{- if eq .Type.Kind TypeKinds.Table }}
-  {{ .Type.Wire }}::Builder& get_builder_{{ .Name }}() {
+  {{ .Type }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type.Wire }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
+    return *reinterpret_cast<{{ .Type }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Array }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::Array<{{ .Type.ElementType.Wire }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
+  ::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.Wire }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Vector }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::VectorView<{{ .Type.ElementType.Wire }}::Builder>& get_builders_{{ .Name }}() {
+  ::fidl::VectorView<{{ .Type.ElementType }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.Wire }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
   {{- end }}
 
-  {{ .Decl.Wire.Name }} build() {
-    return {{ .Decl.Wire.Name }}(max_ordinal_, std::move(frame_ptr_));
+  {{ .Name }} build() {
+    return {{ .Name }}(max_ordinal_, std::move(frame_ptr_));
   }
 
 private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<{{ .Decl.Wire.Name }}::Frame> frame_ptr_;
+  ::fidl::tracking_ptr<{{ .Name }}::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
 // data.
-class {{ .Decl.Wire.Name }}::UnownedBuilder final {
+class {{ .Name }}::UnownedBuilder final {
 public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
@@ -431,7 +431,7 @@ public:
   //{{ . }}
     {{- end }}
     {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.Wire }}> elem) {
+  UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
     ZX_ASSERT(elem);
     frame_.{{ .Name }}_.data = std::move(elem);
     if (max_ordinal_ < {{ .Ordinal }}) {
@@ -439,11 +439,11 @@ public:
     }
     return std::move(*this);
   }
-  const {{ .Type.Wire }}& {{ .Name }}() const {
+  const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_.{{ .Name }}_.data;
   }
-  {{ .Type.Wire }}& {{ .Name }}() {
+  {{ .Type }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_.{{ .Name }}_.data;
   }
@@ -451,46 +451,46 @@ public:
     return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
   }
   {{- if eq .Type.Kind TypeKinds.Table }}
-  {{ .Type.Wire }}::Builder& get_builder_{{ .Name }}() {
+  {{ .Type }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type.Wire }}::Builder*>(&*frame_.{{ .Name }}_.data);
+    return *reinterpret_cast<{{ .Type }}::Builder*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Array }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::Array<{{ .Type.ElementType.Wire }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
+  ::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.Wire }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Vector }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::VectorView<{{ .Type.ElementType.Wire }}::Builder>& get_builders_{{ .Name }}() {
+  ::fidl::VectorView<{{ .Type.ElementType }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.Wire }}::Builder>*>(&*frame_.{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType }}::Builder>*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
   {{- end }}
 
-  {{ .Decl.Wire.Name }} build() {
+  {{ .Name }} build() {
     {{ if eq (len .Members) 0 -}}
-    return {{ .Decl.Wire.Name }}(max_ordinal_, nullptr);
+    return {{ .Name }}(max_ordinal_, nullptr);
     {{- else -}}
-    return {{ .Decl.Wire.Name }}(max_ordinal_, ::fidl::unowned_ptr(&frame_));
+    return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr(&frame_));
     {{- end }}
   }
 
 private:
   uint64_t max_ordinal_ = 0;
   {{ if ne (len .Members) 0 -}}
-  {{ .Decl.Wire.Name }}::Frame frame_;
+  {{ .Name }}::Frame frame_;
   {{- end }}
 };
 
 {{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
+using {{ .WireAlias.Name }} = {{ . }};
 
 {{- if .IsResourceType }}
 {{- PopNamespace }}
@@ -505,7 +505,7 @@ using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
 {{ EnsureNamespace "::" }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
-void {{ .Decl.Wire }}::_CloseHandles() {
+void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "TableMemberCloseHandles" . }}
   {{- end }}
@@ -523,12 +523,12 @@ void {{ .Decl.Wire }}::_CloseHandles() {
 {{- PushNamespace }}
 {{- end }}
 template <>
-struct IsFidlType<{{ .Decl.Wire }}> : public std::true_type {};
+struct IsFidlType<{{ . }}> : public std::true_type {};
 template <>
-struct IsTable<{{ .Decl.Wire }}> : public std::true_type {};
+struct IsTable<{{ . }}> : public std::true_type {};
 template <>
-struct IsTableBuilder<{{ .Decl.Wire }}::Builder> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Decl.Wire }}>);
+struct IsTableBuilder<{{ . }}::Builder> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- if .IsResourceType }}
 {{- PopNamespace }}
 #endif  // __Fuchsia__

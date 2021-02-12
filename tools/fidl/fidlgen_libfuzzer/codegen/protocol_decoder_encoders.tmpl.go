@@ -7,7 +7,7 @@ package codegen
 const tmplProtocolDecoderEncoders = `
 {{- define "ProtocolDecoderEncoders" -}}
 
-{{- $ns := .Decl.Natural.Namespace -}}
+{{- $ns := .Natural.Namespace -}}
 
 {{- range .Methods -}}
 

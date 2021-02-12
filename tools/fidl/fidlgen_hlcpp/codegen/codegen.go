@@ -58,6 +58,8 @@ func NewFidlGenerator(mode CodeGenerationMode) *FidlGenerator {
 		"PushNamespace":          cpp.PushNamespace,
 		"PopNamespace":           cpp.PopNamespace,
 		"EndOfFile":              cpp.EndOfFile,
+		"UseNatural":             cpp.UseNatural,
+		"UseWire":                cpp.UseWire,
 	})
 
 	// Natural types templates

@@ -14,7 +14,7 @@ const fragmentEventSenderTmpl = `
 {{- end }}
 
 {{- define "EventSenderDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 // |EventSender| owns a server endpoint of a channel speaking
 // the {{ .Name }} protocol, and can send events in that protocol.
 class {{ .Name }}::EventSender {
@@ -22,7 +22,7 @@ class {{ .Name }}::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  explicit EventSender(::fidl::ServerEnd<{{ .Decl.Wire }}> server_end)
+  explicit EventSender(::fidl::ServerEnd<{{ . }}> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.

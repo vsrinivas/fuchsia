@@ -8,14 +8,14 @@ const tmplDecoderEncoder = `
 {{- define "DecoderEncoder" -}}
 [](uint8_t* bytes, uint32_t num_bytes, zx_handle_info_t* handles, uint32_t num_handles) ->
   :std::pair<zx_status_t, zx_status_t> {
-  {{ .Decl.Wire }}::DecodedMessage decoded(bytes, num_bytes);
+  {{ .Wire }}::DecodedMessage decoded(bytes, num_bytes);
 
   if (decoded.status() != ZX_OK) {
     return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), ZX_ERR_INTERNAL);
   }
 
-  {{ .Decl.Wire }}* value = decoded.PrimaryObject();
-  {{ .Decl.Wire }}::OwnedByteEncodedMessage encoded(value);
+  {{ .Wire }}* value = decoded.PrimaryObject();
+  {{ .Wire }}::OwnedByteEncodedMessage encoded(value);
 
   if (encoded.status() != ZX_OK) {
     return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());

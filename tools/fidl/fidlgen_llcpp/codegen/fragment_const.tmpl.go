@@ -6,21 +6,21 @@ package codegen
 
 const fragmentConstTmpl = `
 {{- define "ConstDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
-{{range .DocComments}}
+{{ EnsureNamespace . }}
+{{ range .DocComments }}
 //{{ . }}
-{{- end}}
+{{- end }}
 {{- if .Extern }}
-extern {{ .Decorator }} {{ .Type.Wire }} {{ .Decl.Wire.Name }};
+extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- else }}
-{{ .Decorator }} {{ .Type.Wire }} {{ .Decl.Wire.Name }} = {{ .Value.Wire }};
+{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
 {{ EnsureNamespace "::" }}
-{{ .Decorator }} {{ .Type.Wire }} {{ .Decl.Wire }} = {{ .Value.Wire }};
+{{ .Decorator }} {{ .Type }} {{ . }} = {{ .Value }};
 {{- end }}
 {{- end }}
 `

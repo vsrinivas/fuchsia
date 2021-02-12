@@ -64,10 +64,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     return 0;
 #else
 
-    ::fidl::InterfacePtr<{{ $protocol.Decl.Natural }}> protocol_;
+    ::fidl::InterfacePtr<{{ $protocol.Natural }}> protocol_;
 
     xprintf("Starting {{ $protocol.FuzzingName }} service\n");
-    ::fidl::fuzzing::Fuzzer<{{ $protocol.Decl.Natural }}> fuzzer_(loop_->dispatcher());
+    ::fidl::fuzzing::Fuzzer<{{ $protocol.Natural }}> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;

@@ -33,7 +33,7 @@ namespace fuzzing {
 
 {{ range .Decls }}
 {{- if and (NEq .Kind Kinds.Protocol) (NEq .Kind Kinds.Const) }}
-using {{ .Decl.Natural.Name }} = {{ .Decl.Natural }};
+using {{ .Natural.Name }} = {{ .Natural }};
 {{- end }}
 {{- end }}
 

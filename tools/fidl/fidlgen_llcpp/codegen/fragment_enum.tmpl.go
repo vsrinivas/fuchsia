@@ -6,35 +6,35 @@ package codegen
 
 const fragmentEnumTmpl = `
 {{- define "EnumForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 {{ if .IsStrict }}
-{{range .DocComments}}
+{{ range .DocComments }}
 //{{ . }}
-{{- end}}
-enum class {{ .Decl.Wire.Name }} : {{ .Type.Wire }} {
+{{- end }}
+enum class {{ .Name }} : {{ .Type }} {
   {{- range .Members }}
-  {{range .DocComments}}
+  {{ range .DocComments }}
   //{{ . }}
-  {{- end}}
-  {{ .Name }} = {{ .Value.Wire }},
+  {{- end }}
+  {{ .Name }} = {{ .Value }},
   {{- end }}
 };
 {{ else }}
-{{range .DocComments}}
+{{ range .DocComments }}
 //{{ . }}
-{{- end}}
-class {{ .Decl.Wire.Name }} final {
+{{- end }}
+class {{ .Name }} final {
 public:
-  constexpr {{ .Decl.Wire.Name }}() : value_(0) {}
-  constexpr explicit {{ .Decl.Wire.Name }}({{ .Type.Wire }} value) : value_(value) {}
-  constexpr {{ .Decl.Wire.Name }}(const {{ .Decl.Wire.Name }}& other) = default;
-  constexpr operator {{ .Type.Wire }}() const { return value_; }
+  constexpr {{ .Name }}() : value_(0) {}
+  constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
+  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
+  constexpr operator {{ .Type }}() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
       {{ range .Members }}
       {{ if not .IsUnknown }}
-    case {{ .Value.Wire }}:
+    case {{ .Value }}:
       {{ end }}
       {{ end }}
       return false;
@@ -43,36 +43,36 @@ public:
     }
   }
 
-  constexpr static {{ .Decl.Wire.Name }} Unknown() {
-    return {{ .Decl.Wire.Name }}({{ .UnknownValueForTmpl | printf "%#x" }});
+  constexpr static {{ .Name }} Unknown() {
+    return {{ .Name }}({{ .UnknownValueForTmpl | printf "%#x" }});
   }
 
   {{- range .Members }}
-  {{range .DocComments}}
+  {{ range .DocComments }}
   //{{ . }}
-  {{- end}}
-  static const {{ $.Decl.Wire.Name }} {{ .Name }};
+  {{- end }}
+  static const {{ $.Name }} {{ .Name }};
   {{- end }}
 
 private:
-  {{ .Type.Wire }} value_;
+  {{ .Type }} value_;
 };
 
 {{- range $member := .Members }}
-constexpr const {{ $.Decl.Wire }} {{ $.Decl.Wire.Name }}::{{ $member.Name }} =
-  {{ $.Decl.Wire }}({{ $member.Value.Wire }});
+constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
+  {{ $ }}({{ $member.Value }});
 {{- end }}
 {{ end }}
 
 {{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
+using {{ .WireAlias.Name }} = {{ . }};
 
 {{ end }}
 
 {{- define "EnumTraits" }}
 
 template <>
-struct IsFidlType<{{ .Decl.Wire }}> : public std::true_type {};
+struct IsFidlType<{{ . }}> : public std::true_type {};
 
 {{- end }}
 `

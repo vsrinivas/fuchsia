@@ -7,20 +7,20 @@ package codegen
 const tmplEnum = `
 {{- define "EnumSizeAndAlloc" }}
 template<>
-struct MinSize<{{ .Decl.Natural.Name }}> {
+struct MinSize<{{ .Natural.Name }}> {
   operator size_t() { return sizeof(uint64_t); }
 };
 template<>
-struct Allocate<{{ .Decl.Natural.Name }}> {
-  {{ .Decl.Natural.Name }} operator()(FuzzInput* src, size_t* size) {
-    {{ .Decl.Natural.Name }} out;
+struct Allocate<{{ .Natural.Name }}> {
+  {{ .Natural.Name }} operator()(FuzzInput* src, size_t* size) {
+    {{ .Natural.Name }} out;
     uint64_t selector;
     ZX_ASSERT(*size >= sizeof(uint64_t));
     ZX_ASSERT(src->CopyObject(&selector));
     *size = sizeof(uint64_t);
 
     switch (selector % {{ len .Members }}) {
-    {{- $enumName := .Decl.Natural.Name }}
+    {{- $enumName := .Natural.Name }}
     {{- range $memberIdx, $member := .Members }}
       case {{ $memberIdx }}:
         out = {{ $enumName }}::{{ $member.Name }};

@@ -6,13 +6,40 @@ package fidlgen_cpp
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"strings"
 
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+type variant string
+
+const (
+	noVariant      variant = ""
+	naturalVariant variant = "natural"
+	wireVariant    variant = "wire"
+)
+
+var currentVariant = noVariant
+
+func UseNatural() string {
+	currentVariant = naturalVariant
+	return ""
+}
+
+func UseWire() string {
+	currentVariant = wireVariant
+	return ""
+}
+
 // Namespace represents a C++ namespace.
 type Namespace []string
+
+// Namespace is implemented to satisfy the Namespaced interface.
+func (ns Namespace) Namespace() Namespace {
+	return ns
+}
 
 func (ns Namespace) String() string {
 	return "::" + strings.Join(ns, "::")
@@ -109,6 +136,48 @@ func CommonDeclName(decl DeclVariant) DeclName {
 	}
 }
 
+func (dn DeclName) String() string {
+	switch currentVariant {
+	case noVariant:
+		fmt.Printf("Called DeclName.String() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+		debug.PrintStack()
+		os.Exit(1)
+	case naturalVariant:
+		return dn.Natural.String()
+	case wireVariant:
+		return dn.Wire.String()
+	}
+	panic("not reached")
+}
+
+func (dn DeclName) Name() string {
+	switch currentVariant {
+	case noVariant:
+		fmt.Printf("Called DeclName.Name() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+		debug.PrintStack()
+		os.Exit(1)
+	case naturalVariant:
+		return dn.Natural.Name()
+	case wireVariant:
+		return dn.Wire.Name()
+	}
+	panic("not reached")
+}
+
+func (dn DeclName) Namespace() Namespace {
+	switch currentVariant {
+	case noVariant:
+		fmt.Printf("Called DeclName.Namespace() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+		debug.PrintStack()
+		os.Exit(1)
+	case naturalVariant:
+		return dn.Natural.Namespace()
+	case wireVariant:
+		return dn.Wire.Namespace()
+	}
+	panic("not reached")
+}
+
 // TypeName turns a DeclName into a TypeName.
 func (dn DeclName) TypeName() TypeName {
 	return TypeName{
@@ -190,12 +259,19 @@ type TypeName struct {
 	Wire    TypeVariant
 }
 
-// func (t *TypeName) String() string {
-// 	fmt.Printf("Tried to print TypeName %s %s\n", t.Natural, t.Wire)
-// 	debug.PrintStack()
-// 	os.Exit(1)
-// 	panic("")
-// }
+func (tn TypeName) String() string {
+	switch currentVariant {
+	case noVariant:
+		fmt.Printf("Called TypeName.String() on %s/%s when currentVariant isn't set.\n", tn.Natural, tn.Wire)
+		debug.PrintStack()
+		os.Exit(1)
+	case naturalVariant:
+		return string(tn.Natural)
+	case wireVariant:
+		return string(tn.Wire)
+	}
+	panic("not reached")
+}
 
 // TypeNameForHandle returns the C++ name for a handle type
 func TypeNameForHandle(t fidl.HandleSubtype) TypeName {

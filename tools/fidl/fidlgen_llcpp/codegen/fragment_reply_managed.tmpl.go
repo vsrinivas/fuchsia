@@ -28,24 +28,24 @@ ReplySuccess({{ template "Params" .Result.ValueMembers }})
 ::fidl::Result
 {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedResultSuccessMethodSignature" . }} {
-  ::fidl::aligned<{{ .Result.ValueStructDecl.Wire }}> _response;
+  ::fidl::aligned<{{ .Result.ValueStructDecl }}> _response;
   {{- range .Result.ValueMembers }}
   _response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  return Reply({{ .Result.ResultDecl.Wire }}::WithResponse(::fidl::unowned_ptr(&_response)));
+  return Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&_response)));
 }
 {{- end }}
 
 {{- define "ReplyManagedResultErrorMethodSignature" -}}
-ReplyError({{ .Result.ErrorDecl.Wire }} error)
+ReplyError({{ .Result.ErrorDecl }} error)
 {{- end }}
 
 {{- define "ReplyManagedResultErrorMethodDefinition" }}
 ::fidl::Result
 {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedResultErrorMethodSignature" . }} {
-  return Reply({{ .Result.ResultDecl.Wire }}::WithErr(::fidl::unowned_ptr(&error)));
+  return Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
 }
 {{- end }}
 `

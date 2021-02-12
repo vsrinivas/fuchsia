@@ -6,10 +6,10 @@ package codegen
 
 const fragmentStructTmpl = `
 {{- define "StructForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
-struct {{ .Decl.Wire.Name }};
+{{ EnsureNamespace . }}
+struct {{ .Name }};
 {{- EnsureNamespace .WireAlias }}
-using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
+using {{ .WireAlias.Name }} = {{ . }};
 {{- end }}
 
 {{- define "StructMemberCloseHandles" }}
@@ -18,7 +18,7 @@ using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
   {{- end }}
 {{- end }}
 
-{{- define "SentSize"}}
+{{- define "SentSize" }}
   {{- if gt .MaxSentSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
@@ -29,16 +29,16 @@ using {{ .WireAlias.Name }} = {{ .Decl.Wire }};
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 {{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
-{{range .DocComments}}
+{{ range .DocComments }}
 //{{ . }}
-{{- end}}
-struct {{ .Decl.Wire.Name }} {
+{{- end }}
+struct {{ .Name }} {
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSize }};
@@ -51,7 +51,7 @@ struct {{ .Decl.Wire.Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.Wire }} {{ .Name }} = {};
+  {{ .Type }} {{ .Name }} = {};
   {{- end }}
 
   {{- if .IsResourceType }}
@@ -62,15 +62,15 @@ struct {{ .Decl.Wire.Name }} {
   private:
   class UnownedEncodedByteMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size, {{ .Decl.Wire.Name }}* value)
-        : message_(bytes, byte_size, sizeof({{ .Decl.Wire.Name }}),
+    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
+        : message_(bytes, byte_size, sizeof({{ .Name }}),
     {{- if gt .MaxHandles 0 }}
       handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
     {{- else }}
       nullptr, 0, 0
     {{- end }}
       ) {
-      message_.Encode<{{ .Decl.Wire.Name }}>(value);
+      message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
     UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
@@ -98,7 +98,7 @@ struct {{ .Decl.Wire.Name }} {
     UnownedEncodedIovecMessage(
       zx_channel_iovec_t* iovecs, uint32_t iovec_size,
       fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-      {{ .Decl.Wire.Name }}* value)
+      {{ .Name }}* value)
         : message_(::fidl::OutgoingIovecMessage::constructor_args{
           .iovecs = iovecs,
           .iovecs_actual = 0,
@@ -114,9 +114,9 @@ struct {{ .Decl.Wire.Name }} {
           .handles = nullptr,
           .handle_actual = 0,
           .handle_capacity = 0,
-          {{- end}}
+          {{- end }}
         }) {
-      message_.Encode<{{ .Decl.Wire.Name }}>(value);
+      message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
     UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
@@ -141,10 +141,10 @@ struct {{ .Decl.Wire.Name }} {
 
   class OwnedEncodedByteMessage final {
    public:
-    explicit OwnedEncodedByteMessage({{ .Decl.Wire.Name }}* value)
+    explicit OwnedEncodedByteMessage({{ .Name }}* value)
         {{- if gt .MaxSentSize 512 -}}
-      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>>()),
-        message_(bytes_->data(), {{- template "SentSize" .}}
+      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" . }}>>()),
+        message_(bytes_->data(), {{- template "SentSize" . }}
         {{- else }}
         : message_(bytes_, sizeof(bytes_)
         {{- end }}
@@ -165,7 +165,7 @@ struct {{ .Decl.Wire.Name }} {
 
    private:
     {{- if gt .MaxSentSize 512 }}
-    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>> bytes_;
+    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "SentSize" . }}>> bytes_;
     {{- else }}
     FIDL_ALIGNDECL
     uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
@@ -175,7 +175,7 @@ struct {{ .Decl.Wire.Name }} {
 
   class OwnedEncodedIovecMessage final {
    public:
-    explicit OwnedEncodedIovecMessage({{ .Decl.Wire.Name }}* value)
+    explicit OwnedEncodedIovecMessage({{ .Name }}* value)
         : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
         substitutions_, ::fidl::internal::kIovecBufferSize,
         value) {}
@@ -200,7 +200,7 @@ struct {{ .Decl.Wire.Name }} {
   };
 
   public:
-    friend ::fidl::internal::EncodedMessageTypes<{{ .Decl.Wire.Name }}>;
+    friend ::fidl::internal::EncodedMessageTypes<{{ .Name }}>;
     using OwnedEncodedMessage = OwnedEncodedByteMessage;
     using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
@@ -209,10 +209,10 @@ struct {{ .Decl.Wire.Name }} {
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                     uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      Decode<struct {{ .Decl.Wire.Name }}>();
+      Decode<struct {{ .Name }}>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct {{ .Decl.Wire.Name }}>();
+      Decode<struct {{ .Name }}>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -226,9 +226,9 @@ struct {{ .Decl.Wire.Name }} {
     }
     {{- end }}
 
-    struct {{ .Decl.Wire.Name }}* PrimaryObject() {
+    struct {{ .Name }}* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct {{ .Decl.Wire.Name }}*>(bytes());
+      return reinterpret_cast<struct {{ .Name }}*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles won't be closed
@@ -246,11 +246,11 @@ struct {{ .Decl.Wire.Name }} {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDefinition" }}
-{{ EnsureNamespace "::"}}
+{{ EnsureNamespace "::" }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
-void {{ .Decl.Wire }}::_CloseHandles() {
+void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "StructMemberCloseHandles" . }}
   {{- end }}
@@ -268,15 +268,15 @@ void {{ .Decl.Wire }}::_CloseHandles() {
 {{- PushNamespace }}
 {{- end }}
 template <>
-struct IsFidlType<{{ .Decl.Wire }}> : public std::true_type {};
+struct IsFidlType<{{ . }}> : public std::true_type {};
 template <>
-struct IsStruct<{{ .Decl.Wire }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Decl.Wire }}>);
+struct IsStruct<{{ . }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- $struct := . }}
 {{- range .Members }}
-static_assert(offsetof({{ $struct.Decl.Wire }}, {{ .Name }}) == {{ .Offset }});
+static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .Offset }});
 {{- end }}
-static_assert(sizeof({{ .Decl.Wire }}) == {{ .Decl.Wire }}::PrimarySize);
+static_assert(sizeof({{ . }}) == {{ . }}::PrimarySize);
 {{- if .IsResourceType }}
 {{- PopNamespace }}
 #endif  // __Fuchsia__

@@ -6,7 +6,7 @@ package codegen
 
 const protocolTemplateNaturalTypes = `
 {{- define "ProtocolForwardDeclaration/NaturalTypes" }}
-{{ EnsureNamespace .Decl.Natural }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 {{- range .DocComments }}
@@ -20,19 +20,19 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 
 {{- define "PointerParams" -}}
   {{- range $index, $param := . -}}
-    , {{ $param.Type.Natural }}* {{ $param.Name }}
+    , {{ $param.Type }}* {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "ProtocolDeclaration/NaturalTypes" }}
-{{ EnsureNamespace .Decl.Natural }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-  {{ EnsureNamespace .RequestCodingTable.Natural }}
-  extern "C" const fidl_type_t {{ .RequestCodingTable.Natural.Name }};
+  {{ EnsureNamespace .RequestCodingTable }}
+  extern "C" const fidl_type_t {{ .RequestCodingTable.Name }};
   {{- end }}
 {{- end }}
 
@@ -57,7 +57,7 @@ class {{ .RequestEncoderName.Name }} {
     {{ end -}}
     {{- end }}
 
-    fidl_trace(DidHLCPPEncode, &{{ .RequestCodingTable.Natural }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &{{ .RequestCodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -68,8 +68,8 @@ class {{ .RequestEncoderName.Name }} {
 
 {{- range .Methods }}
   {{- if .HasResponse }}
-  {{ EnsureNamespace .ResponseCodingTable.Natural }}
-  extern "C" const fidl_type_t {{ .ResponseCodingTable.Natural.Name }};
+  {{ EnsureNamespace .ResponseCodingTable }}
+  extern "C" const fidl_type_t {{ .ResponseCodingTable.Name }};
   {{- end }}
 {{- end }}
 
@@ -94,7 +94,7 @@ class {{ .ResponseEncoderName.Name }} {
     {{ end -}}
     {{- end }}
 
-    fidl_trace(DidHLCPPEncode, &{{ .ResponseCodingTable.Natural }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &{{ .ResponseCodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   {{- end }}

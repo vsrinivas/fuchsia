@@ -28,12 +28,12 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
-  ::fidl::aligned<{{ .Result.ValueStructDecl.Wire }}> response;
+  ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
   {{- range .Result.ValueMembers }}
   response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  return Reply(std::move(_buffer), {{ .Result.ResultDecl.Wire }}::WithResponse(::fidl::unowned_ptr(&response)));
+  return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
 }
 {{- end }}
 `

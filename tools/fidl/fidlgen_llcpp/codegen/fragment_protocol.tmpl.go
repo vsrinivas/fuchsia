@@ -7,20 +7,20 @@ package codegen
 const fragmentProtocolTmpl = `
 {{- define "ArgumentDeclaration" -}}
   {{- if eq .Type.WireFamily FamilyKinds.TrivialCopy }}
-  {{ .Type.Wire }} {{ .Name }}
+  {{ .Type }} {{ .Name }}
   {{- else if eq .Type.WireFamily FamilyKinds.Reference }}
-  {{ .Type.Wire }}& {{ .Name }}
+  {{ .Type }}& {{ .Name }}
   {{- else if eq .Type.WireFamily FamilyKinds.String }}
-  const {{ .Type.Wire }}& {{ .Name }}
+  const {{ .Type }}& {{ .Name }}
   {{- else if eq .Type.WireFamily FamilyKinds.Vector }}
-  {{ .Type.Wire }}& {{ .Name }}
+  {{ .Type }}& {{ .Name }}
   {{- end }}
 {{- end }}
 
 {{- /* Defines the arguments for a response method/constructor. */}}
 {{- define "MessagePrototype" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end}}{{ template "ArgumentDeclaration" $param }}
+    {{- if $index }}, {{ end }}{{ template "ArgumentDeclaration" $param }}
   {{- end -}}
 {{- end }}
 
@@ -34,7 +34,7 @@ const fragmentProtocolTmpl = `
 {{- /* Defines the initialization of all the fields for a message constructor. */}}
 {{- define "InitMessage" -}}
   {{- range $index, $param := . }}
-  {{- if $index }}, {{- else }}: {{- end}}
+  {{- if $index }}, {{- else }}: {{- end }}
     {{- if eq $param.Type.WireFamily FamilyKinds.TrivialCopy }}
       {{ $param.Name }}({{ $param.Name }})
     {{- else if eq $param.Type.WireFamily FamilyKinds.Reference }}
@@ -42,14 +42,14 @@ const fragmentProtocolTmpl = `
     {{- else if eq $param.Type.WireFamily FamilyKinds.String }}
       {{ $param.Name }}(::fidl::unowned_ptr_t<const char>({{ $param.Name }}.data()), {{ $param.Name }}.size())
     {{- else if eq $param.Type.WireFamily FamilyKinds.Vector }}
-      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.Wire }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
+      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
     {{- end }}
   {{- end }}
 {{- end }}
 
 {{- define "ProtocolForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Wire }}
-class {{ .Decl.Wire.Name }};
+{{ EnsureNamespace . }}
+class {{ .Name }};
 {{- end }}
 
 {{- /* All the parameters for a method which value content. */}}
@@ -106,7 +106,7 @@ class {{ .Decl.Wire.Name }};
 {{- end }}
 {{- end }}
 
-{{- define "RequestSentSize"}}
+{{- define "RequestSentSize" }}
   {{- if gt .RequestSentMaxSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
@@ -114,7 +114,7 @@ class {{ .Decl.Wire.Name }};
   {{- end -}}
 {{- end }}
 
-{{- define "ResponseSentSize"}}
+{{- define "ResponseSentSize" }}
   {{- if gt .ResponseSentMaxSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
@@ -122,7 +122,7 @@ class {{ .Decl.Wire.Name }};
   {{- end -}}
 {{- end }}
 
-{{- define "ResponseReceivedSize"}}
+{{- define "ResponseReceivedSize" }}
   {{- if gt .ResponseReceivedMaxSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
@@ -142,13 +142,13 @@ class {{ .Decl.Wire.Name }};
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
-{{ EnsureNamespace .RequestCodingTable.Wire }}
-extern "C" const fidl_type_t {{ .RequestCodingTable.Wire.Name }};
-{{ EnsureNamespace .ResponseCodingTable.Wire }}
-extern "C" const fidl_type_t {{ .ResponseCodingTable.Wire.Name }};
+{{ EnsureNamespace .RequestCodingTable }}
+extern "C" const fidl_type_t {{ .RequestCodingTable.Name }};
+{{ EnsureNamespace .ResponseCodingTable }}
+extern "C" const fidl_type_t {{ .ResponseCodingTable.Name }};
   {{- end }}
 {{ "" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 
 {{- range .DocComments }}
 //{{ . }}
@@ -168,7 +168,7 @@ class {{ .Name }} final {
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
         {{- range $index, $param := .Response }}
-    {{ $param.Type.Wire }} {{ $param.Name }};
+    {{ $param.Type }} {{ $param.Name }};
         {{- end }}
 
     {{- if .Response }}
@@ -183,7 +183,7 @@ class {{ .Name }} final {
 
     static constexpr const fidl_type_t* Type =
     {{- if .Response }}
-      &{{ .ResponseCodingTable.Wire }};
+      &{{ .ResponseCodingTable }};
     {{- else }}
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
@@ -270,7 +270,7 @@ class {{ .Name }} final {
           .handles = nullptr,
           .handle_actual = 0,
           .handle_capacity = 0,
-          {{- end}}
+          {{- end }}
         }) {
         FIDL_ALIGNDECL {{ .Name }}Response _response{
             {{- template "PassthroughMessageParams" .Response -}}
@@ -295,7 +295,7 @@ class {{ .Name }} final {
           .handles = nullptr,
           .handle_actual = 0,
           .handle_capacity = 0,
-          {{- end}}
+          {{- end }}
         }) {
         message_.Encode<{{ .Name }}Response>(response);
       }
@@ -328,16 +328,16 @@ class {{ .Name }} final {
       explicit OwnedEncodedByteMessage(
         {{- template "MessagePrototype" .Response }})
           {{- if gt .ResponseSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>>()),
-          message_(bytes_->data(), {{- template "ResponseSentSize" .}}
+        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>>()),
+          message_(bytes_->data(), {{- template "ResponseSentSize" . }}
           {{- else }}
           : message_(bytes_, sizeof(bytes_)
           {{- end }}
           {{- template "CommaPassthroughMessageParams" .Response }}) {}
       explicit OwnedEncodedByteMessage({{ .Name }}Response* response)
           {{- if gt .ResponseSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>>()),
-          message_(bytes_->data(), {{- template "ResponseSentSize" .}}
+        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>>()),
+          message_(bytes_->data(), {{- template "ResponseSentSize" . }}
           {{- else }}
           : message_(bytes_, sizeof(bytes_)
           {{- end }}
@@ -361,7 +361,7 @@ class {{ .Name }} final {
 
      private:
       {{- if gt .ResponseSentMaxSize 512 }}
-      std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>> bytes_;
+      std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>> bytes_;
       {{- else }}
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
@@ -452,7 +452,7 @@ class {{ .Name }} final {
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
         {{- range $index, $param := .Request }}
-    {{ $param.Type.Wire }} {{ $param.Name }};
+    {{ $param.Type }} {{ $param.Name }};
         {{- end }}
 
     {{- if .Request }}
@@ -467,7 +467,7 @@ class {{ .Name }} final {
 
     static constexpr const fidl_type_t* Type =
     {{- if .Request }}
-      &{{ .RequestCodingTable.Wire }};
+      &{{ .RequestCodingTable }};
     {{- else }}
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
@@ -561,7 +561,7 @@ class {{ .Name }} final {
           .handles = nullptr,
           .handle_actual = 0,
           .handle_capacity = 0,
-          {{- end}}
+          {{- end }}
         }) {
         FIDL_ALIGNDECL {{ .Name }}Request _request(_txid
             {{- template "CommaPassthroughMessageParams" .Request -}}
@@ -586,7 +586,7 @@ class {{ .Name }} final {
           .handles = nullptr,
           .handle_actual = 0,
           .handle_capacity = 0,
-          {{- end}}
+          {{- end }}
         }) {
         message_.Encode<{{ .Name }}Request>(request);
       }
@@ -619,16 +619,16 @@ class {{ .Name }} final {
       explicit OwnedEncodedByteMessage(zx_txid_t _txid
         {{- template "CommaMessagePrototype" .Request }})
           {{- if gt .RequestSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>>()),
-          message_(bytes_->data(), {{- template "RequestSentSize" .}}, _txid
+        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>>()),
+          message_(bytes_->data(), {{- template "RequestSentSize" . }}, _txid
           {{- else }}
           : message_(bytes_, sizeof(bytes_), _txid
           {{- end }}
           {{- template "CommaPassthroughMessageParams" .Request }}) {}
       explicit OwnedEncodedByteMessage({{ .Name }}Request* request)
           {{- if gt .RequestSentMaxSize 512 -}}
-        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>>()),
-          message_(bytes_->data(), {{- template "RequestSentSize" .}}
+        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>>()),
+          message_(bytes_->data(), {{- template "RequestSentSize" . }}
           {{- else }}
           : message_(bytes_, sizeof(bytes_)
           {{- end }}
@@ -652,7 +652,7 @@ class {{ .Name }} final {
 
      private:
       {{- if gt .RequestSentMaxSize 512 }}
-      std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>> bytes_;
+      std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>> bytes_;
       {{- else }}
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
@@ -766,7 +766,7 @@ class {{ .Name }} final {
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
     // method.
     ::fidl::Result HandleOneEvent(
-        ::fidl::UnownedClientEnd<{{ .Decl.Wire }}> client_end);
+        ::fidl::UnownedClientEnd<{{ . }}> client_end);
   };
   {{- end }}
 
@@ -781,11 +781,11 @@ class {{ .Name }} final {
     class {{ .Name }} final : public ::fidl::Result {
      public:
       explicit {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ $protocol.Decl.Wire }}> _client
+          ::fidl::UnownedClientEnd<{{ $protocol }}> _client
           {{- template "CommaMessagePrototype" .Request }});
     {{- if .HasResponse }}
       {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ $protocol.Decl.Wire }}> _client
+          ::fidl::UnownedClientEnd<{{ $protocol }}> _client
           {{- template "CommaMessagePrototype" .Request }},
           zx_time_t _deadline);
     {{- end }}
@@ -847,7 +847,7 @@ class {{ .Name }} final {
     class {{ .Name }} final : public ::fidl::Result {
      public:
       explicit {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ $protocol.Decl.Wire }}> _client
+          ::fidl::UnownedClientEnd<{{ $protocol }}> _client
         {{- if .Request -}}
           , uint8_t* _request_bytes, uint32_t _request_byte_capacity
         {{- end -}}
@@ -1139,25 +1139,25 @@ class {{ .Name }} final {
 {{- if .HasRequest }}
 
 template <>
-struct IsFidlType<{{ $protocol.Decl.Wire }}::{{ .Name }}Request> : public std::true_type {};
+struct IsFidlType<{{ $protocol }}::{{ .Name }}Request> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $protocol.Decl.Wire }}::{{ .Name }}Request> : public std::true_type {};
-static_assert(sizeof({{ $protocol.Decl.Wire }}::{{ .Name }}Request)
-    == {{ $protocol.Decl.Wire }}::{{ .Name }}Request::PrimarySize);
+struct IsFidlMessage<{{ $protocol }}::{{ .Name }}Request> : public std::true_type {};
+static_assert(sizeof({{ $protocol }}::{{ .Name }}Request)
+    == {{ $protocol }}::{{ .Name }}Request::PrimarySize);
 {{- range $index, $param := .Request }}
-static_assert(offsetof({{ $protocol.Decl.Wire }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $protocol }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- if .HasResponse }}
 
 template <>
-struct IsFidlType<{{ $protocol.Decl.Wire }}::{{ .Name }}Response> : public std::true_type {};
+struct IsFidlType<{{ $protocol }}::{{ .Name }}Response> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $protocol.Decl.Wire }}::{{ .Name }}Response> : public std::true_type {};
-static_assert(sizeof({{ $protocol.Decl.Wire }}::{{ .Name }}Response)
-    == {{ $protocol.Decl.Wire }}::{{ .Name }}Response::PrimarySize);
+struct IsFidlMessage<{{ $protocol }}::{{ .Name }}Response> : public std::true_type {};
+static_assert(sizeof({{ $protocol }}::{{ .Name }}Response)
+    == {{ $protocol }}::{{ .Name }}Response::PrimarySize);
 {{- range $index, $param := .Response }}
-static_assert(offsetof({{ $protocol.Decl.Wire }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $protocol }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- end }}
@@ -1170,17 +1170,17 @@ static_assert(offsetof({{ $protocol.Decl.Wire }}::{{ $method.Name }}Response, {{
 {{- end }}
 
 {{- define "ProtocolDefinition" }}
-{{ EnsureNamespace .Decl.Wire }}
+{{ EnsureNamespace . }}
 namespace {
 {{ $protocol := . -}}
 
 {{- range .Methods }}
 [[maybe_unused]]
 constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu; {{/* TODO: Make a DeclName for OrdinalName */}}
-{{ EnsureNamespace .RequestCodingTable.Wire }}
-extern "C" const fidl_type_t {{ .RequestCodingTable.Wire.Name }};
-{{ EnsureNamespace .ResponseCodingTable.Wire }}
-extern "C" const fidl_type_t {{ .ResponseCodingTable.Wire.Name }};
+{{ EnsureNamespace .RequestCodingTable }}
+extern "C" const fidl_type_t {{ .RequestCodingTable.Name }};
+{{ EnsureNamespace .ResponseCodingTable }}
+extern "C" const fidl_type_t {{ .ResponseCodingTable.Name }};
 {{- end }}
 
 }  // namespace

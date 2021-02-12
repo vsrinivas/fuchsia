@@ -6,34 +6,34 @@ package codegen
 
 const serviceTemplate = `
 {{- define "ServiceForwardDeclaration" }}
-{{ EnsureNamespace .Decl.Natural }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
-class {{ .Decl.Natural.Name }};
+class {{ .Name }};
 #endif // __Fuchsia__
 {{- end }}
 
 {{- define "ServiceDeclaration" }}
-{{ EnsureNamespace .Decl.Natural }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
 {{- PushNamespace }}
-{{range .DocComments}}
+{{ range .DocComments }}
 ///{{ . }}
-{{- end}}
-class {{ .Decl.Natural.Name }} final {
+{{- end }}
+class {{ .Name }} final {
  public:
   class Handler;
 
   static constexpr char Name[] = "{{ .ServiceName }}";
 
-  explicit {{ .Decl.Natural.Name }}(std::unique_ptr<::fidl::ServiceConnector> service)
+  explicit {{ .Name }}(std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
 
   {{- range .Members }}
   /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "{{ .Name }}".
-  ::fidl::MemberConnector<{{ .ProtocolType.Natural }}> {{ .MethodName }}() const {
-    return ::fidl::MemberConnector<{{ .ProtocolType.Natural }}>(service_.get(), "{{ .Name }}");
+  ::fidl::MemberConnector<{{ .ProtocolType }}> {{ .MethodName }}() const {
+    return ::fidl::MemberConnector<{{ .ProtocolType }}>(service_.get(), "{{ .Name }}");
   }
   {{- end }}
 
@@ -42,7 +42,7 @@ class {{ .Decl.Natural.Name }} final {
 };
 
 /// Facilitates member protocol registration for servers.
-class {{ .Decl.Natural.Name }}::Handler final {
+class {{ .Name }}::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service)
@@ -59,7 +59,7 @@ class {{ .Decl.Natural.Name }}::Handler final {
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .ProtocolType.Natural }}> handler) {
+  zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .ProtocolType }}> handler) {
     return service_->AddMember("{{ .Name }}", std::move(handler));
   }
   {{- end }}

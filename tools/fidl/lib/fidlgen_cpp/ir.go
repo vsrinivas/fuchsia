@@ -6,6 +6,8 @@ package fidlgen_cpp
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"sort"
 	"strings"
 
@@ -86,7 +88,7 @@ type typeKinds struct {
 var TypeKinds = namespacedEnum(typeKinds{}).(typeKinds)
 
 type Type struct {
-	Name TypeName
+	TypeName
 
 	WirePointer bool
 
@@ -119,33 +121,35 @@ type HandleInformation struct {
 	Rights     string
 }
 
-func (t *Type) Natural() string {
-	return string(t.Name.Natural)
-}
-
-func (t *Type) Wire() string {
-	return string(t.Name.Wire)
-}
-
 type ConstantValue struct {
 	Natural string
 	Wire    string
 }
 
+func (cv *ConstantValue) IsSet() bool {
+	return cv.Natural != "" && cv.Wire != ""
+}
+
 func (cv *ConstantValue) String() string {
-	return "\"Don't use ConstantValue directly, use .Wire or .Natural\""
-	// fmt.Println("Don't use ConstantValue directly, use .Wire or .Natural")
-	// debug.PrintStack()
-	// os.Exit(1)
-	// panic("")
+	switch currentVariant {
+	case noVariant:
+		fmt.Printf("Called ConstantValue.String() on %s/%s when currentVariant isn't set.\n", cv.Natural, cv.Wire)
+		debug.PrintStack()
+		os.Exit(1)
+	case naturalVariant:
+		return string(cv.Natural)
+	case wireVariant:
+		return string(cv.Wire)
+	}
+	panic("not reached")
 }
 
 type Const struct {
 	fidl.Attributes
+	DeclName
 	Extern     bool
 	Decorator  string
 	Type       Type
-	Decl       DeclName
 	DeclSuffix string
 	Value      ConstantValue
 
@@ -153,14 +157,11 @@ type Const struct {
 	Kind constKind
 }
 
-func (d *Const) Name() string {
-	panic("Don't use Const.Name, use .Wire or .Natural")
-}
-
 type Bits struct {
-	fidl.Bits
+	fidl.Attributes
+	fidl.Strictness
+	DeclName
 	Type      TypeName
-	Decl      DeclName
 	Mask      string
 	MaskName  DeclName
 	Members   []BitsMember
@@ -170,10 +171,6 @@ type Bits struct {
 	Kind bitsKind
 }
 
-func (d *Bits) Name() string {
-	panic("Don't use Bits.Name, use .Wire or .Natural")
-}
-
 type BitsMember struct {
 	fidl.Attributes
 	Name  string
@@ -181,9 +178,11 @@ type BitsMember struct {
 }
 
 type Enum struct {
-	fidl.Enum
+	fidl.Attributes
+	fidl.Strictness
+	DeclName
+	Enum      fidl.Enum
 	Type      TypeName
-	Decl      DeclName
 	Members   []EnumMember
 	WireAlias DeclVariant
 
@@ -191,8 +190,8 @@ type Enum struct {
 	Kind enumKind
 }
 
-func (d *Enum) Name() string {
-	panic("Don't use Enum.Name, use .Wire or .Natural")
+func (e *Enum) UnknownValueForTmpl() interface{} {
+	return e.Enum.UnknownValueForTmpl()
 }
 
 type EnumMember struct {
@@ -202,8 +201,10 @@ type EnumMember struct {
 }
 
 type Union struct {
-	fidl.Union
-	Decl         DeclName
+	fidl.Attributes
+	fidl.Strictness
+	fidl.Resourceness
+	DeclName
 	TableType    string
 	Members      []UnionMember
 	InlineSize   int
@@ -215,10 +216,6 @@ type Union struct {
 
 	// Kind should be default initialized.
 	Kind unionKind
-}
-
-func (d *Union) Name() string {
-	panic("Don't use Union.Name, use .Wire or .Natural")
 }
 
 type UnionMember struct {
@@ -239,8 +236,9 @@ func (um UnionMember) UpperCamelCaseName() string {
 type TableFrameItem *TableMember
 
 type Table struct {
-	fidl.Table
-	Decl           DeclName
+	fidl.Attributes
+	fidl.Resourceness
+	DeclName
 	TableType      string
 	Members        []TableMember
 	InlineSize     int
@@ -256,10 +254,6 @@ type Table struct {
 
 	// Kind should be default initialized.
 	Kind tableKind
-}
-
-func (d *Table) Name() string {
-	panic("Don't use Table.Name, use .Wire or .Natural")
 }
 
 type TableMember struct {
@@ -279,8 +273,9 @@ type TableMember struct {
 }
 
 type Struct struct {
-	fidl.Struct
-	Decl          DeclName
+	fidl.Attributes
+	fidl.Resourceness
+	DeclName
 	TableType     string
 	Members       []StructMember
 	InlineSize    int
@@ -302,10 +297,6 @@ type Struct struct {
 	Kind structKind
 }
 
-func (d *Struct) Name() string {
-	panic("Don't use Struct.Name, use .Wire or .Natural")
-}
-
 type StructMember struct {
 	fidl.Attributes
 	Type              Type
@@ -319,7 +310,7 @@ type StructMember struct {
 // filled out by the compiler.
 type protocolInner struct {
 	fidl.Attributes
-	Decl                DeclName
+	DeclName
 	ClassName           string
 	ServiceName         string
 	ProxyName           DeclVariant
@@ -362,15 +353,15 @@ type Protocol struct {
 }
 
 func (p *Protocol) Name() string {
-	return p.Decl.Wire.Name() // TODO: not the wire name, maybe?
+	return p.Wire.Name() // TODO: not the wire name, maybe?
 }
 
 func (p *Protocol) NaturalType() string {
-	return string(p.Decl.Natural.Type())
+	return string(p.Natural.Type())
 }
 
 func (p *Protocol) WireType() string {
-	return string(p.Decl.Wire.Type())
+	return string(p.Wire.Type())
 }
 
 func (inner protocolInner) build() *Protocol {
@@ -400,16 +391,12 @@ func (inner protocolInner) build() *Protocol {
 
 type Service struct {
 	fidl.Attributes
-	Decl        DeclName
+	DeclName
 	ServiceName string
 	Members     []ServiceMember
 
 	// Kind should be default initialized.
 	Kind serviceKind
-}
-
-func (d *Service) Name() string {
-	panic("Don't use Service.Name, use .Wire or .Natural")
 }
 
 type ServiceMember struct {
@@ -1154,7 +1141,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	switch val.Kind {
 	case fidl.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r.Name = t.Name.WithArrayTemplates("::std::array", "::fidl::Array", *val.ElementCount)
+		r.TypeName = t.TypeName.WithArrayTemplates("::std::array", "::fidl::Array", *val.ElementCount)
 		r.WirePointer = t.WirePointer
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
@@ -1164,7 +1151,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.ElementCount = *val.ElementCount
 	case fidl.VectorType:
 		t := c.compileType(*val.ElementType)
-		r.Name = t.Name.WithTemplates(
+		r.TypeName = t.TypeName.WithTemplates(
 			map[bool]string{true: "::fidl::VectorPtr", false: "::std::vector"}[val.Nullable],
 			"::fidl::VectorView")
 		r.WireFamily = FamilyKinds.Vector
@@ -1174,30 +1161,30 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 	case fidl.StringType:
-		r.Name.Wire = TypeVariant("::fidl::StringView")
+		r.Wire = TypeVariant("::fidl::StringView")
 		r.WireFamily = FamilyKinds.String
 		if val.Nullable {
-			r.Name.Natural = TypeVariant("::fidl::StringPtr")
+			r.Natural = TypeVariant("::fidl::StringPtr")
 		} else {
-			r.Name.Natural = TypeVariant("::std::string")
+			r.Natural = TypeVariant("::std::string")
 		}
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
 	case fidl.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
-		r.Name = TypeNameForHandle(val.HandleSubtype)
+		r.TypeName = TypeNameForHandle(val.HandleSubtype)
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Handle
 		r.IsResource = true
 	case fidl.RequestType:
-		r.Name = c.compileDeclName(val.RequestSubtype).TypeName().WithTemplates("::fidl::InterfaceRequest", "::fidl::ServerEnd")
+		r.TypeName = c.compileDeclName(val.RequestSubtype).TypeName().WithTemplates("::fidl::InterfaceRequest", "::fidl::ServerEnd")
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
 		r.IsResource = true
 	case fidl.PrimitiveType:
-		r.Name = TypeNameForPrimitive(val.PrimitiveSubtype)
+		r.TypeName = TypeNameForPrimitive(val.PrimitiveSubtype)
 		r.WireFamily = FamilyKinds.TrivialCopy
 		r.Kind = TypeKinds.Primitive
 	case fidl.IdentifierType:
@@ -1208,7 +1195,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		}
 		declType := declInfo.Type
 		if declType == fidl.ProtocolDeclType {
-			r.Name = name.WithTemplates("::fidl::InterfaceHandle", "::fidl::ClientEnd")
+			r.TypeName = name.WithTemplates("::fidl::InterfaceHandle", "::fidl::ClientEnd")
 			r.WireFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
@@ -1246,7 +1233,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			}
 
 			if val.Nullable {
-				r.Name = name.MapNatural(func(n TypeVariant) TypeVariant {
+				r.TypeName = name.MapNatural(func(n TypeVariant) TypeVariant {
 					return n.WithTemplate("::std::unique_ptr")
 				}).MapWire(func(n TypeVariant) TypeVariant {
 					if declType == fidl.UnionDeclType {
@@ -1257,7 +1244,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 				})
 				r.NeedsDtor = true
 			} else {
-				r.Name = name
+				r.TypeName = name
 				r.NeedsDtor = true
 			}
 		}
@@ -1270,12 +1257,13 @@ func (c *compiler) compileType(val fidl.Type) Type {
 func (c *compiler) compileBits(val fidl.Bits) Bits {
 	name := c.compileDeclName(val.Name)
 	r := Bits{
-		Bits:      val,
-		Type:      c.compileType(val.Type).Name,
-		Decl:      c.compileDeclName(val.Name),
-		Mask:      val.Mask,
-		MaskName:  c.compileDeclName(val.Name).AppendName("Mask"),
-		WireAlias: name.Wire.DropLastNamespaceComponent(),
+		Attributes: val.Attributes,
+		Strictness: val.Strictness,
+		DeclName:   name,
+		Type:       c.compileType(val.Type).TypeName,
+		Mask:       val.Mask,
+		MaskName:   name.AppendName("Mask"),
+		WireAlias:  name.Wire.DropLastNamespaceComponent(),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
@@ -1291,22 +1279,22 @@ func (c *compiler) compileConst(val fidl.Const) Const {
 	if val.Type.Kind == fidl.StringType {
 		return Const{
 			Attributes: val.Attributes,
+			DeclName:   c.compileDeclName(val.Name),
 			Extern:     true,
 			Decorator:  "const",
 			Type: Type{
-				Name: PrimitiveTypeName("char*"),
+				TypeName: PrimitiveTypeName("char*"),
 			},
-			Decl:  c.compileDeclName(val.Name),
 			Value: c.compileConstant(val.Value, nil, val.Type),
 		}
 	} else {
 		t := c.compileType(val.Type)
 		return Const{
 			Attributes: val.Attributes,
+			DeclName:   c.compileDeclName(val.Name),
 			Extern:     false,
 			Decorator:  "constexpr",
 			Type:       t,
-			Decl:       c.compileDeclName(val.Name),
 			Value:      c.compileConstant(val.Value, &t, val.Type),
 		}
 	}
@@ -1315,10 +1303,12 @@ func (c *compiler) compileConst(val fidl.Const) Const {
 func (c *compiler) compileEnum(val fidl.Enum) Enum {
 	name := c.compileDeclName(val.Name)
 	r := Enum{
-		Enum:      val,
-		Type:      TypeNameForPrimitive(val.Type),
-		Decl:      c.compileDeclName(val.Name),
-		WireAlias: name.Wire.DropLastNamespaceComponent(),
+		Attributes: val.Attributes,
+		Strictness: val.Strictness,
+		DeclName:   name,
+		Enum:       val,
+		Type:       TypeNameForPrimitive(val.Type),
+		WireAlias:  name.Wire.DropLastNamespaceComponent(),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
@@ -1430,7 +1420,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 
 	r := protocolInner{
 		Attributes:          val.Attributes,
-		Decl:                protocolName,
+		DeclName:            protocolName,
 		ClassName:           protocolName.AppendName("_clazz").Natural.Name(),
 		ServiceName:         val.GetServiceName(),
 		ProxyName:           protocolName.AppendName("_Proxy").Natural,
@@ -1452,7 +1442,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 func (c *compiler) compileService(val fidl.Service) Service {
 	s := Service{
 		Attributes:  val.Attributes,
-		Decl:        c.compileDeclName(val.Name),
+		DeclName:    c.compileDeclName(val.Name),
 		ServiceName: val.GetServiceName(),
 	}
 
@@ -1493,8 +1483,9 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 	name := c.compileDeclName(val.Name)
 	tableType := c.compileTableType(val.Name)
 	r := Struct{
-		Struct:       val,
-		Decl:         name,
+		Attributes:   val.Attributes,
+		Resourceness: val.Resourceness,
+		DeclName:     name,
 		TableType:    tableType,
 		Members:      []StructMember{},
 		InlineSize:   val.TypeShapeV1.InlineSize,
@@ -1515,14 +1506,14 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 		result.ValueMembers = r.Members
 		memberTypeDecls := []string{}
 		for _, m := range r.Members {
-			memberTypeDecls = append(memberTypeDecls, string(m.Type.Name.Natural))
+			memberTypeDecls = append(memberTypeDecls, string(m.Type.Natural))
 		}
 		result.ValueTupleDecl = TypeVariant(fmt.Sprintf("::std::tuple<%s>", strings.Join(memberTypeDecls, ", ")))
 
 		if len(r.Members) == 0 {
 			result.ValueDecl = TypeVariant("void")
 		} else if len(r.Members) == 1 {
-			result.ValueDecl = r.Members[0].Type.Name.Natural
+			result.ValueDecl = r.Members[0].Type.Natural
 		} else {
 			result.ValueDecl = result.ValueTupleDecl
 		}
@@ -1544,11 +1535,11 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
 		// "expected unqualified-id" error because of "struct".
 		// There isn't an easily accessible dangerous identifiers list to replace identifiers.
-		if strings.Contains(string(member.Type.Name.Natural), "::fidl::test::dangerous::") {
+		if strings.Contains(string(member.Type.Natural), "::fidl::test::dangerous::") {
 			memcpyCompatibleDepMap = nil
 			break
 		}
-		memcpyCompatibleDepMap[string(member.Type.Name.Natural)] = struct{}{}
+		memcpyCompatibleDepMap[string(member.Type.Natural)] = struct{}{}
 	}
 	for decl := range memcpyCompatibleDepMap {
 		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)
@@ -1587,8 +1578,9 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 	name := c.compileDeclName(val.Name)
 	tableType := c.compileTableType(val.Name)
 	r := Table{
-		Table:          val,
-		Decl:           name,
+		Attributes:     val.Attributes,
+		Resourceness:   val.Resourceness,
+		DeclName:       name,
 		TableType:      tableType,
 		Members:        nil,
 		InlineSize:     val.TypeShapeV1.InlineSize,
@@ -1634,8 +1626,10 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 	name := c.compileDeclName(val.Name)
 	tableType := c.compileTableType(val.Name)
 	r := Union{
-		Union:        val,
-		Decl:         name,
+		Attributes:   val.Attributes,
+		Strictness:   val.Strictness,
+		Resourceness: val.Resourceness,
+		DeclName:     name,
 		TableType:    tableType,
 		InlineSize:   val.TypeShapeV1.InlineSize,
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
@@ -1666,9 +1660,9 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 			panic(fmt.Sprintf("first member of result union not a struct: %v", val.Name))
 		}
 		result := Result{
-			ResultDecl:      r.Decl,
-			ValueStructDecl: r.Members[0].Type.Name,
-			ErrorDecl:       r.Members[1].Type.Name,
+			ResultDecl:      r.DeclName,
+			ValueStructDecl: r.Members[0].Type.TypeName,
+			ErrorDecl:       r.Members[1].Type.TypeName,
 		}
 		c.resultForStruct[val.Members[0].Type.Identifier] = &result
 		c.resultForUnion[val.Name] = &result

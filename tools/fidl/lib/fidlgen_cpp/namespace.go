@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+// Namespaced is implemented by types that have a C++ namespace.
+type Namespaced interface {
+	Namespace() Namespace
+}
+
 // During template processing this holds the current namespace.
 var currentNamespace Namespace
 
@@ -19,12 +24,7 @@ func EnsureNamespace(arg interface{}) string {
 
 	newNamespace := []string{}
 	switch v := arg.(type) {
-	case nil:
-		// This means the global namespace
-		break
-	case Namespace:
-		newNamespace = []string(v)
-	case DeclVariant:
+	case Namespaced:
 		newNamespace = []string(v.Namespace())
 	case string:
 		newNamespace = strings.Split(v, "::")
@@ -32,7 +32,7 @@ func EnsureNamespace(arg interface{}) string {
 			newNamespace = newNamespace[1:]
 		}
 	default:
-		panic(fmt.Sprintf("Unexpected argument %v to EnsureNamespace", arg))
+		panic(fmt.Sprintf("Unexpected %T argument to EnsureNamespace", arg))
 	}
 
 	// Copy the namespaces
