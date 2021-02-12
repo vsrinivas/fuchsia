@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 test("scenic_cpp_unittests") {
   sources = [
@@ -21,12 +21,7 @@ test("scenic_cpp_unittests") {
   ]
 }
 
-test_package("scenic_cpp_tests") {
+fuchsia_unittest_package("scenic_cpp_tests") {
   deps = [ ":scenic_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "scenic_cpp_unittests"
-    },
-  ]
+  manifest = "meta/scenic_cpp_unittests.cmx"
 }

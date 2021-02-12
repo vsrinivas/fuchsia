@@ -203,7 +203,6 @@ group("deprecated_package") {
     "//sdk/lib/sys/service/cpp/*",
     "//sdk/lib/syslog/cpp/*",
     "//sdk/lib/syslog/streams/cpp/*",
-    "//sdk/lib/ui/scenic/cpp/tests/*",
     "//sdk/lib/virtualization/*",
     "//src/bringup/bin/pwrbtn-monitor/test/*",
     "//src/camera/drivers/bus/aml_mipicsi/*",
