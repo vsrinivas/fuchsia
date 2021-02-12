@@ -99,17 +99,17 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
-    #[error("rights error")]
+    #[error("rights error: {}", err)]
     RightsError {
         #[from]
         err: RightsError,
     },
-    #[error("events error")]
+    #[error("events error: {}", err)]
     EventsError {
         #[from]
         err: EventsError,
     },
-    #[error("policy error")]
+    #[error("policy error: {}", err)]
     PolicyError {
         #[from]
         err: PolicyError,
