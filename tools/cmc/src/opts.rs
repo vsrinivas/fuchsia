@@ -99,7 +99,9 @@ pub enum Commands {
 
         #[structopt(short = "r", long = "includeroot", parse(from_os_str))]
         /// base path for resolving include paths that start with "//"
-        includeroot: PathBuf,
+        /// Temporarily optional for a soft transition.
+        /// If not specified, will take the value of `includepath`.
+        includeroot: Option<PathBuf>,
     },
 
     #[structopt(name = "check-includes")]
@@ -131,7 +133,9 @@ pub enum Commands {
 
         #[structopt(short = "r", long = "includeroot", parse(from_os_str))]
         /// base path for resolving include paths that start with "//"
-        includeroot: PathBuf,
+        /// Temporarily optional for a soft transition.
+        /// If not specified, will take the value of `includepath`.
+        includeroot: Option<PathBuf>,
     },
 
     #[structopt(name = "format")]
@@ -182,7 +186,9 @@ pub enum Commands {
 
         #[structopt(short = "r", long = "includeroot", parse(from_os_str))]
         /// base path for resolving include paths that start with "//"
-        includeroot: PathBuf,
+        /// Temporarily optional for a soft transition.
+        /// If not specified, will take the value of `includepath`.
+        includeroot: Option<PathBuf>,
     },
 }
 

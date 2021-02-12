@@ -47,7 +47,7 @@ fn run_cmc() -> Result<(), Error> {
                 output.as_ref(),
                 depfile.as_ref(),
                 &includepath,
-                &includeroot,
+                &includeroot.unwrap_or(includepath.clone()),
             )?
         }
         opts::Commands::CheckIncludes {
@@ -64,7 +64,7 @@ fn run_cmc() -> Result<(), Error> {
             depfile.as_ref(),
             opt.stamp.as_ref(),
             &includepath,
-            &includeroot,
+            &includeroot.unwrap_or(includepath.clone()),
         )?,
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
             if inplace {
@@ -73,7 +73,13 @@ fn run_cmc() -> Result<(), Error> {
             format::format(&file, pretty, cml, output)?;
         }
         opts::Commands::Compile { file, output, depfile, includepath, includeroot } => {
-            compile::compile(&file, &output.unwrap(), depfile, &includepath, &includeroot)?
+            compile::compile(
+                &file,
+                &output.unwrap(),
+                depfile,
+                &includepath,
+                &includeroot.unwrap_or(includepath.clone()),
+            )?
         }
     }
     if let Some(stamp_path) = opt.stamp {
