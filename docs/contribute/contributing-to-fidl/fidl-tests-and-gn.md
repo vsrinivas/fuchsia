@@ -110,7 +110,6 @@ binary. To wrap this in a package, start with a `fuchsia_unittest_package`:
 import("//src/sys/build/components.gni")
 
 fuchsia_unittest_package("fidl_foo_tests") {
-  executable_path = "bin/fidl_foo_tests"
   deps = [ ":fidl_foo_tests_bin" ]
 }
 ```
@@ -126,12 +125,10 @@ For multiple device tests, collect them all in a **single package** with
 import("//src/sys/build/components.gni")
 
 fuchsia_unittest_component("fidl_foo_unit_tests") {
-  executable_path = "bin/fidl_foo_unit_tests"
   deps = [ "fidl_foo_unit_tests_bin" ]
 }
 
 fuchsia_unittest_component("fidl_foo_integration_tests") {
-  executable_path = "bin/fidl_foo_integration_tests"
   deps = [ "fidl_foo_integration_tests_bin" ]
 }
 
@@ -158,7 +155,7 @@ fuchsia_unittest_package("fidl_foo_tests") {
 # meta/fidl_foo_tests.cmx
 {
     "program": {
-        "binary": "test/fidl_foo_tests"
+        "binary": "bin/fidl_foo_tests"
     },
     "sandbox": {
         "services": [
@@ -223,7 +220,6 @@ rustc_test("fidl_rust_conformance_tests_bin") {
 }
 
 fuchsia_unittest_package("fidl_rust_conformance_tests") {  # device test name
-  executable_path = "bin/fidl_rust_conformance_tests"
   deps = [ ":fidl_rust_conformance_tests_bin" ]
 }
 
@@ -247,7 +243,6 @@ rustc_test("fidl_rust_conformance_tests_bin") {
 }
 
 fuchsia_unittest_component("fidl_rust_conformance_tests") {  # device test name
-  executable_path = "bin/fidl_rust_conformance_tests"
   deps = [ ":fidl_rust_conformance_tests_bin" ]
 }
 
@@ -305,7 +300,6 @@ if (is_host) {
 }
 
 fuchsia_unittest_package("fidl_hlcpp_conformance_tests") {  # device test name
-  executable_path = "bin/fidl_hlcpp_conformance_tests"
   deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
 

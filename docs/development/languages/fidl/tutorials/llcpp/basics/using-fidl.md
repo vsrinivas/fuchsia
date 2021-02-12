@@ -56,10 +56,6 @@ rm -r examples/fidl/llcpp/unittests/*
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/BUILD.gn" region_tag="package" %}
    ```
 
-   Note: The `executable_path` in the package needs to match the `output_name` of the `test`
-   binary. By default, the binary is placed in the `test/` directory. Packages are explained
-   further in the [next tutorial][server-tut]
-
 1. Build and run the empty test suite on a running instance of Fuchsia:
 
    ```
