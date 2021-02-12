@@ -2457,6 +2457,7 @@ TEXT runtime·vdsoCall_zx_bti_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW iommu+0(FP), R0
@@ -2475,6 +2476,7 @@ TEXT runtime·vdsoCall_zx_bti_pin(SB),NOSPLIT,$0-60
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2497,6 +2499,7 @@ TEXT runtime·vdsoCall_zx_bti_release_quarantine(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2512,6 +2515,7 @@ TEXT runtime·vdsoCall_zx_cache_flush(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD addr+0(FP), R0
@@ -2529,6 +2533,7 @@ TEXT runtime·vdsoCall_zx_channel_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -2546,6 +2551,7 @@ TEXT runtime·vdsoCall_zx_channel_read(SB),NOSPLIT,$0-52
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2568,6 +2574,7 @@ TEXT runtime·vdsoCall_zx_channel_read_etc(SB),NOSPLIT,$0-52
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2590,6 +2597,7 @@ TEXT runtime·vdsoCall_zx_channel_write(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2610,6 +2618,7 @@ TEXT runtime·vdsoCall_zx_channel_write_etc(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2630,6 +2639,7 @@ TEXT runtime·vdsoCall_zx_channel_call_noretry(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2650,6 +2660,7 @@ TEXT runtime·vdsoCall_zx_channel_call_finish(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD deadline+0(FP), R0
@@ -2668,6 +2679,7 @@ TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -2690,6 +2702,7 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2710,6 +2723,7 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD deadline+0(FP), R0
@@ -2728,6 +2742,7 @@ TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -2750,6 +2765,7 @@ TEXT runtime·vdsoCall_zx_clock_get(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW clock_id+0(FP), R0
@@ -2766,6 +2782,7 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_clock_get_monotonic(SB)
@@ -2780,6 +2797,7 @@ TEXT runtime·vdsoCall_zx_clock_adjust(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2797,6 +2815,7 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic_via_kernel(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_clock_get_monotonic_via_kernel(SB)
@@ -2811,6 +2830,7 @@ TEXT runtime·vdsoCall_zx_clock_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD options+0(FP), R0
@@ -2828,6 +2848,7 @@ TEXT runtime·vdsoCall_zx_clock_read(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2844,6 +2865,7 @@ TEXT runtime·vdsoCall_zx_clock_get_details(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2861,6 +2883,7 @@ TEXT runtime·vdsoCall_zx_clock_update(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2878,6 +2901,7 @@ TEXT runtime·vdsoCall_zx_cprng_draw_once(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
@@ -2894,6 +2918,7 @@ TEXT runtime·vdsoCall_zx_cprng_draw(SB),NOSPLIT,$0-16
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
@@ -2909,6 +2934,7 @@ TEXT runtime·vdsoCall_zx_cprng_add_entropy(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
@@ -2925,6 +2951,7 @@ TEXT runtime·vdsoCall_zx_debug_read(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -2943,6 +2970,7 @@ TEXT runtime·vdsoCall_zx_debug_write(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
@@ -2959,6 +2987,7 @@ TEXT runtime·vdsoCall_zx_debug_send_command(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -2976,6 +3005,7 @@ TEXT runtime·vdsoCall_zx_debuglog_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -2993,6 +3023,7 @@ TEXT runtime·vdsoCall_zx_debuglog_write(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3011,6 +3042,7 @@ TEXT runtime·vdsoCall_zx_debuglog_read(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3029,6 +3061,7 @@ TEXT runtime·vdsoCall_zx_event_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -3045,6 +3078,7 @@ TEXT runtime·vdsoCall_zx_eventpair_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -3062,6 +3096,7 @@ TEXT runtime·vdsoCall_zx_exception_get_thread(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3078,6 +3113,7 @@ TEXT runtime·vdsoCall_zx_exception_get_process(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3094,6 +3130,7 @@ TEXT runtime·vdsoCall_zx_fifo_create(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD elem_count+0(FP), R0
@@ -3113,6 +3150,7 @@ TEXT runtime·vdsoCall_zx_fifo_read(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3132,6 +3170,7 @@ TEXT runtime·vdsoCall_zx_fifo_write(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3151,6 +3190,7 @@ TEXT runtime·vdsoCall_zx_framebuffer_get_info(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -3170,6 +3210,7 @@ TEXT runtime·vdsoCall_zx_framebuffer_set_range(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -3191,6 +3232,7 @@ TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3209,6 +3251,7 @@ TEXT runtime·vdsoCall_zx_futex_wake(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3225,6 +3268,7 @@ TEXT runtime·vdsoCall_zx_futex_requeue(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3245,6 +3289,7 @@ TEXT runtime·vdsoCall_zx_futex_wake_single_owner(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3260,6 +3305,7 @@ TEXT runtime·vdsoCall_zx_futex_requeue_single_owner(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3279,6 +3325,7 @@ TEXT runtime·vdsoCall_zx_futex_get_owner(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3295,6 +3342,7 @@ TEXT runtime·vdsoCall_zx_guest_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -3313,6 +3361,7 @@ TEXT runtime·vdsoCall_zx_guest_set_trap(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3333,6 +3382,7 @@ TEXT runtime·vdsoCall_zx_handle_close(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3348,6 +3398,7 @@ TEXT runtime·vdsoCall_zx_handle_close_many(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD handles+0(FP), R0
@@ -3364,6 +3415,7 @@ TEXT runtime·vdsoCall_zx_handle_duplicate(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3381,6 +3433,7 @@ TEXT runtime·vdsoCall_zx_handle_replace(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3398,6 +3451,7 @@ TEXT runtime·vdsoCall_zx_interrupt_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW src_obj+0(FP), R0
@@ -3416,6 +3470,7 @@ TEXT runtime·vdsoCall_zx_interrupt_bind(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3434,6 +3489,7 @@ TEXT runtime·vdsoCall_zx_interrupt_wait(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -3452,6 +3508,7 @@ TEXT runtime·vdsoCall_zx_interrupt_destroy(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3467,6 +3524,7 @@ TEXT runtime·vdsoCall_zx_interrupt_ack(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3482,6 +3540,7 @@ TEXT runtime·vdsoCall_zx_interrupt_trigger(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3499,6 +3558,7 @@ TEXT runtime·vdsoCall_zx_interrupt_bind_vcpu(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3516,6 +3576,7 @@ TEXT runtime·vdsoCall_zx_iommu_create(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -3535,6 +3596,7 @@ TEXT runtime·vdsoCall_zx_ioports_request(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -3552,6 +3614,7 @@ TEXT runtime·vdsoCall_zx_ioports_release(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -3569,6 +3632,7 @@ TEXT runtime·vdsoCall_zx_job_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW parent_job+0(FP), R0
@@ -3586,6 +3650,7 @@ TEXT runtime·vdsoCall_zx_job_set_policy(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3605,6 +3670,7 @@ TEXT runtime·vdsoCall_zx_job_set_critical(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW job+0(FP), R0
@@ -3622,6 +3688,7 @@ TEXT runtime·vdsoCall_zx_ktrace_read(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3641,6 +3708,7 @@ TEXT runtime·vdsoCall_zx_ktrace_control(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3659,6 +3727,7 @@ TEXT runtime·vdsoCall_zx_ktrace_write(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3677,6 +3746,7 @@ TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD deadline+0(FP), R0
@@ -3692,6 +3762,7 @@ TEXT runtime·vdsoCall_zx_ticks_get(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_get(SB)
@@ -3706,6 +3777,7 @@ TEXT runtime·vdsoCall_zx_ticks_per_second(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_per_second(SB)
@@ -3720,6 +3792,7 @@ TEXT runtime·vdsoCall_zx_deadline_after(SB),NOSPLIT,$0-16
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD nanoseconds+0(FP), R0
@@ -3735,6 +3808,7 @@ TEXT runtime·vdsoCall_zx_vmar_unmap_handle_close_thread_exit(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW vmar_handle+0(FP), R0
@@ -3753,6 +3827,7 @@ TEXT runtime·vdsoCall_zx_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$0-24
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -3770,6 +3845,7 @@ TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_get_via_kernel(SB)
@@ -3784,6 +3860,7 @@ TEXT runtime·vdsoCall_zx_msi_allocate(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3801,6 +3878,7 @@ TEXT runtime·vdsoCall_zx_msi_create(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3821,6 +3899,7 @@ TEXT runtime·vdsoCall_zx_mtrace_control(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3841,6 +3920,7 @@ TEXT runtime·vdsoCall_zx_object_wait_one(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -3861,6 +3941,7 @@ TEXT runtime·vdsoCall_zx_object_wait_many(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -3880,6 +3961,7 @@ TEXT runtime·vdsoCall_zx_object_wait_async(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3899,6 +3981,7 @@ TEXT runtime·vdsoCall_zx_object_signal(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3916,6 +3999,7 @@ TEXT runtime·vdsoCall_zx_object_signal_peer(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3933,6 +4017,7 @@ TEXT runtime·vdsoCall_zx_object_get_property(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3951,6 +4036,7 @@ TEXT runtime·vdsoCall_zx_object_set_property(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3969,6 +4055,7 @@ TEXT runtime·vdsoCall_zx_object_get_info(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -3989,6 +4076,7 @@ TEXT runtime·vdsoCall_zx_object_get_child(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4007,6 +4095,7 @@ TEXT runtime·vdsoCall_zx_object_set_profile(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4024,6 +4113,7 @@ TEXT runtime·vdsoCall_zx_pager_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -4040,6 +4130,7 @@ TEXT runtime·vdsoCall_zx_pager_create_vmo(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
@@ -4060,6 +4151,7 @@ TEXT runtime·vdsoCall_zx_pager_detach_vmo(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
@@ -4076,6 +4168,7 @@ TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
@@ -4096,6 +4189,7 @@ TEXT runtime·vdsoCall_zx_pager_op_range(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
@@ -4116,6 +4210,7 @@ TEXT runtime·vdsoCall_zx_pc_firmware_tables(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4133,6 +4228,7 @@ TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4151,6 +4247,7 @@ TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4167,6 +4264,7 @@ TEXT runtime·vdsoCall_zx_pci_reset_device(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4182,6 +4280,7 @@ TEXT runtime·vdsoCall_zx_pci_config_read(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4200,6 +4299,7 @@ TEXT runtime·vdsoCall_zx_pci_config_write(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4218,6 +4318,7 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4240,6 +4341,7 @@ TEXT runtime·vdsoCall_zx_pci_get_bar(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4258,6 +4360,7 @@ TEXT runtime·vdsoCall_zx_pci_map_interrupt(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4275,6 +4378,7 @@ TEXT runtime·vdsoCall_zx_pci_query_irq_mode(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4292,6 +4396,7 @@ TEXT runtime·vdsoCall_zx_pci_set_irq_mode(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4309,6 +4414,7 @@ TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4326,6 +4432,7 @@ TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4345,6 +4452,7 @@ TEXT runtime·vdsoCall_zx_pmt_unpin(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4360,6 +4468,7 @@ TEXT runtime·vdsoCall_zx_port_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -4376,6 +4485,7 @@ TEXT runtime·vdsoCall_zx_port_queue(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4392,6 +4502,7 @@ TEXT runtime·vdsoCall_zx_port_wait(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -4411,6 +4522,7 @@ TEXT runtime·vdsoCall_zx_port_cancel(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4428,6 +4540,7 @@ TEXT runtime·vdsoCall_zx_process_exit(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD retcode+0(FP), R0
@@ -4442,6 +4555,7 @@ TEXT runtime·vdsoCall_zx_process_create(SB),NOSPLIT,$0-52
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW job+0(FP), R0
@@ -4462,6 +4576,7 @@ TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4482,6 +4597,7 @@ TEXT runtime·vdsoCall_zx_process_read_memory(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4501,6 +4617,7 @@ TEXT runtime·vdsoCall_zx_process_write_memory(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4520,6 +4637,7 @@ TEXT runtime·vdsoCall_zx_profile_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW root_job+0(FP), R0
@@ -4538,6 +4656,7 @@ TEXT runtime·vdsoCall_zx_resource_create(SB),NOSPLIT,$0-52
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW parent_rsrc+0(FP), R0
@@ -4559,6 +4678,7 @@ TEXT runtime·vdsoCall_zx_smc_call(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4576,6 +4696,7 @@ TEXT runtime·vdsoCall_zx_socket_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -4593,6 +4714,7 @@ TEXT runtime·vdsoCall_zx_socket_write(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4612,6 +4734,7 @@ TEXT runtime·vdsoCall_zx_socket_read(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4631,6 +4754,7 @@ TEXT runtime·vdsoCall_zx_socket_shutdown(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4647,6 +4771,7 @@ TEXT runtime·vdsoCall_zx_stream_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -4665,6 +4790,7 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4684,6 +4810,7 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4704,6 +4831,7 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4723,6 +4851,7 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4743,6 +4872,7 @@ TEXT runtime·vdsoCall_zx_stream_seek(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -4761,6 +4891,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_0(SB),NOSPLIT,$0-4
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_syscall_test_0(SB)
@@ -4775,6 +4906,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_1(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4790,6 +4922,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_2(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4806,6 +4939,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_3(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4823,6 +4957,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_4(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4841,6 +4976,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_5(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4860,6 +4996,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_6(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4880,6 +5017,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_7(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4901,6 +5039,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_8(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4923,6 +5062,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_wrapper(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
@@ -4940,6 +5080,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_handle_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW return_value+0(FP), R0
@@ -4956,6 +5097,7 @@ TEXT runtime·vdsoCall_zx_system_get_dcache_line_size(SB),NOSPLIT,$0-4
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_dcache_line_size(SB)
@@ -4970,6 +5112,7 @@ TEXT runtime·vdsoCall_zx_system_get_num_cpus(SB),NOSPLIT,$0-4
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_num_cpus(SB)
@@ -4984,6 +5127,7 @@ TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_version_string(SB)
@@ -4998,6 +5142,7 @@ TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$0-4
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_page_size(SB)
@@ -5012,6 +5157,7 @@ TEXT runtime·vdsoCall_zx_system_get_physmem(SB),NOSPLIT,$0-8
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_physmem(SB)
@@ -5026,6 +5172,7 @@ TEXT runtime·vdsoCall_zx_system_get_features(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW kind+0(FP), R0
@@ -5042,6 +5189,7 @@ TEXT runtime·vdsoCall_zx_system_get_event(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW root_job+0(FP), R0
@@ -5059,6 +5207,7 @@ TEXT runtime·vdsoCall_zx_system_mexec(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -5076,6 +5225,7 @@ TEXT runtime·vdsoCall_zx_system_mexec_payload_get(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -5093,6 +5243,7 @@ TEXT runtime·vdsoCall_zx_system_powerctl(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
@@ -5110,6 +5261,7 @@ TEXT runtime·vdsoCall_zx_task_suspend(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5126,6 +5278,7 @@ TEXT runtime·vdsoCall_zx_task_suspend_token(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5142,6 +5295,7 @@ TEXT runtime·vdsoCall_zx_task_create_exception_channel(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5159,6 +5313,7 @@ TEXT runtime·vdsoCall_zx_task_kill(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5174,6 +5329,7 @@ TEXT runtime·vdsoCall_zx_thread_exit(SB),NOSPLIT,$0-0
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_thread_exit(SB)
@@ -5187,6 +5343,7 @@ TEXT runtime·vdsoCall_zx_thread_create(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW process+0(FP), R0
@@ -5206,6 +5363,7 @@ TEXT runtime·vdsoCall_zx_thread_start(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5225,6 +5383,7 @@ TEXT runtime·vdsoCall_zx_thread_read_state(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5243,6 +5402,7 @@ TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5261,6 +5421,7 @@ TEXT runtime·vdsoCall_zx_timer_create(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
@@ -5278,6 +5439,7 @@ TEXT runtime·vdsoCall_zx_timer_set(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5295,6 +5457,7 @@ TEXT runtime·vdsoCall_zx_timer_cancel(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5310,6 +5473,7 @@ TEXT runtime·vdsoCall_zx_vcpu_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW guest+0(FP), R0
@@ -5328,6 +5492,7 @@ TEXT runtime·vdsoCall_zx_vcpu_resume(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -5346,6 +5511,7 @@ TEXT runtime·vdsoCall_zx_vcpu_interrupt(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5362,6 +5528,7 @@ TEXT runtime·vdsoCall_zx_vcpu_read_state(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5380,6 +5547,7 @@ TEXT runtime·vdsoCall_zx_vcpu_write_state(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5398,6 +5566,7 @@ TEXT runtime·vdsoCall_zx_vmar_allocate(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW parent_vmar+0(FP), R0
@@ -5418,6 +5587,7 @@ TEXT runtime·vdsoCall_zx_vmar_destroy(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5433,6 +5603,7 @@ TEXT runtime·vdsoCall_zx_vmar_map(SB),NOSPLIT,$0-52
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5454,6 +5625,7 @@ TEXT runtime·vdsoCall_zx_vmar_unmap(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5471,6 +5643,7 @@ TEXT runtime·vdsoCall_zx_vmar_protect(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5489,6 +5662,7 @@ TEXT runtime·vdsoCall_zx_vmar_op_range(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5509,6 +5683,7 @@ TEXT runtime·vdsoCall_zx_vmo_create(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD size+0(FP), R0
@@ -5526,6 +5701,7 @@ TEXT runtime·vdsoCall_zx_vmo_read(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -5546,6 +5722,7 @@ TEXT runtime·vdsoCall_zx_vmo_write(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -5566,6 +5743,7 @@ TEXT runtime·vdsoCall_zx_vmo_get_size(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5582,6 +5760,7 @@ TEXT runtime·vdsoCall_zx_vmo_set_size(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5598,6 +5777,7 @@ TEXT runtime·vdsoCall_zx_vmo_op_range(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
@@ -5620,6 +5800,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_child(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5639,6 +5820,7 @@ TEXT runtime·vdsoCall_zx_vmo_set_cache_policy(SB),NOSPLIT,$0-12
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5655,6 +5837,7 @@ TEXT runtime·vdsoCall_zx_vmo_replace_as_executable(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -5672,6 +5855,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_contiguous(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW bti+0(FP), R0
@@ -5690,6 +5874,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0

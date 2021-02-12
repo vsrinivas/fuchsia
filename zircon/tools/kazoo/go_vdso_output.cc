@@ -130,6 +130,11 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
     case Arch::kArm64:
       writer->Puts("\tMOVD g_m(g), R21\n");
       writer->Puts("\tMOVD LR, m_vdsoPC(R21)\n");
+
+      // If pprof sees the SP value, it will assume the PC value is written and valid. This may not
+      // be valid due to store/store reordering on ARM64. This store barrier exists to ensure that
+      // any observer of m->vdsoSP is also guaranteed to see m->vdsoPC.
+      writer->Puts("\tDMB $0xe\n");
       writer->Puts("\tMOVD RSP, R20\n");
       writer->Puts("\tMOVD R20, m_vdsoSP(R21)\n");
       break;

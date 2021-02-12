@@ -287,6 +287,7 @@ TEXT runtime·vdsoCall_zx_selection_futex_requeue(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
@@ -307,6 +308,7 @@ TEXT runtime·vdsoCall_zx_selection_object_wait_one(SB),NOSPLIT,$0-28
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -325,6 +327,7 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$0-44
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -344,6 +347,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -366,6 +370,7 @@ TEXT runtime·vdsoCall_zx_selection_job_set_policy(SB),NOSPLIT,$0-36
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
@@ -385,6 +390,7 @@ TEXT runtime·vdsoCall_zx_selection_clock_get(SB),NOSPLIT,$0-20
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW clock_id+0(FP), R0
