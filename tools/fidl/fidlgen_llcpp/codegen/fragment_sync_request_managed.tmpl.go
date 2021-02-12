@@ -5,44 +5,16 @@
 package codegen
 
 const fragmentSyncRequestManagedTmpl = `
-{{- define "ParamsNoTypedChannels" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.WireNoTypedChannels }} {{ $param.Name }}
-  {{- end -}}
-{{- end }}
-
-{{- define "Params" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type }} {{ $param.Name }}
-  {{- end -}}
-{{- end }}
-
-{{- define "SyncClientMoveParams" }}
-  {{- range $index, $param := . }}
-    {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
-  {{- end }}
-{{- end }}
-
-{{- define "SyncRequestManagedMethodArguments" -}}
-{{ template "Params" .Request }}
-{{- end }}
-
-{{- define "StaticCallSyncRequestManagedMethodArguments" -}}
-::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
-{{- if .Request }}, {{ end }}
-{{- template "Params" .Request }}
-{{- end }}
-
 {{- define "SyncRequestManagedMethodDefinition" }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
     ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
-    {{- template "CommaMessagePrototype" .Request }})
+    {{- .Request | CommaMessagePrototype }})
     {{- if gt .ResponseReceivedMaxSize 512 -}}
   : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
     {{- end }}
    {
   ::fidl::internal::EncodedMessageTypes<{{ .Name }}Request>::OwnedByte _request(zx_txid_t(0)
-    {{- template "CommaPassthroughMessageParams" .Request -}});
+    {{- .Request | CommaParamNames -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
       _client,
@@ -58,14 +30,14 @@ const fragmentSyncRequestManagedTmpl = `
 
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
     ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
-    {{- template "CommaMessagePrototype" .Request -}}
+    {{- .Request | CommaMessagePrototype -}}
     , zx_time_t _deadline)
     {{- if gt .ResponseReceivedMaxSize 512 -}}
   : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
     {{- end }}
    {
   ::fidl::internal::EncodedMessageTypes<{{ .Name }}Request>::OwnedByte _request(zx_txid_t(0)
-    {{- template "CommaPassthroughMessageParams" .Request -}});
+    {{- .Request | CommaParamNames -}});
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
       _client,
       {{- template "ResponseReceivedByteAccess" . }},

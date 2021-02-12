@@ -17,7 +17,7 @@ const fragmentClientAsyncMethodsTmpl = `
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodArguments" -}}
-{{ template "Params" .Request }}{{ if .Request }}, {{ end }} {{- template "ClientAsyncRequestManagedCallbackSignature" . }} _cb
+{{ .Request | Params }}{{ if .Request }}, {{ end }} {{- template "ClientAsyncRequestManagedCallbackSignature" . }} _cb
 {{- end }}
 
 {{- define "ClientAsyncRequestCallerAllocateMethodArguments" -}}
@@ -58,7 +58,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ .Name }}Request::OwnedEncodedMessage _request(_context->Txid()
-  {{- template "CommaPassthroughMessageParams" .Request -}}
+  {{- .Request | CommaParamNames -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -70,7 +70,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
   {{- else }}
   {{ .Name }}Request::OwnedEncodedMessage _request(_context->Txid()
   {{- end }}
-  {{- template "CommaPassthroughMessageParams" .Request -}}
+  {{- .Request | CommaParamNames -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }

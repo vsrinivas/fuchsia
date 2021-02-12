@@ -10,14 +10,6 @@ const fragmentTableTmpl = `
 class {{ .Name }};
 {{- end }}
 
-{{- define "TableMemberCloseHandles" }}
-  {{- if .Type.IsResource }}
-    if (has_{{ .Name }}()) {
-      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.WirePointer true false }}
-    }
-  {{- end }}
-{{- end }}
-
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "TableDeclaration" }}
@@ -507,7 +499,11 @@ using {{ .WireAlias.Name }} = {{ . }};
 {{- PushNamespace }}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}
-    {{- template "TableMemberCloseHandles" . }}
+    {{- if .Type.IsResource }}
+      if (has_{{ .Name }}()) {
+        {{- CloseHandles . true false }}
+      }
+    {{- end }}
   {{- end }}
 }
 {{- PopNamespace }}

@@ -12,12 +12,6 @@ struct {{ .Name }};
 using {{ .WireAlias.Name }} = {{ . }};
 {{- end }}
 
-{{- define "StructMemberCloseHandles" }}
-  {{- if .Type.IsResource }}
-    {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.WirePointer false false }}
-  {{- end }}
-{{- end }}
-
 {{- define "SentSize" }}
   {{- if gt .MaxSentSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
@@ -252,7 +246,7 @@ struct {{ .Name }} {
 {{- PushNamespace }}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}
-    {{- template "StructMemberCloseHandles" . }}
+    {{- CloseHandles . false false }}
   {{- end }}
 }
 {{- PopNamespace }}

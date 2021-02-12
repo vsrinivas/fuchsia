@@ -5,9 +5,12 @@
 package codegen
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
@@ -27,6 +30,79 @@ type TypedArgument struct {
 	MutableAccess bool
 }
 
+type formatParam func(cpp.Type, string) string
+
+func formatParams(params []cpp.Parameter, prefixIfNonempty string, format formatParam) string {
+	if len(params) == 0 {
+		return ""
+	}
+	args := []string{}
+
+	for _, p := range params {
+		args = append(args, format(p.Type, p.Name))
+	}
+	if len(args) > 0 {
+		return prefixIfNonempty + strings.Join(args, ", ")
+	}
+	return ""
+}
+
+func closeHandles(argumentName string, argumentValue string, argumentType cpp.Type, pointer bool, nullable bool, access bool, mutableAccess bool) string {
+	if !argumentType.IsResource {
+		return ""
+	}
+	name := argumentName
+	value := argumentValue
+	if access {
+		name = fmt.Sprintf("%s()", name)
+		value = name
+	} else if mutableAccess {
+		name = fmt.Sprintf("mutable_%s()", name)
+		value = name
+	}
+
+	switch argumentType.Kind {
+	case cpp.TypeKinds.Handle, cpp.TypeKinds.Request, cpp.TypeKinds.Protocol:
+		if pointer {
+			if nullable {
+				return fmt.Sprintf("if (%s != nullptr) { %s->reset(); }", name, name)
+			}
+			return fmt.Sprintf("%s->reset();", name)
+		} else {
+			return fmt.Sprintf("%s.reset();", name)
+		}
+	case cpp.TypeKinds.Array:
+		element_name := argumentName + "_element"
+		element_type := argumentType.ElementType
+		var buf bytes.Buffer
+		buf.WriteString("{\n")
+		buf.WriteString(fmt.Sprintf("%s* %s = %s.data();\n", element_type, element_name, value))
+		buf.WriteString(fmt.Sprintf("for (size_t i = 0; i < %s.size(); ++i, ++%s) {\n", value, element_name))
+		buf.WriteString(closeHandles(element_name, fmt.Sprintf("(*%s)", element_name), *element_type, true, false, false, false))
+		buf.WriteString("\n}\n}\n")
+		return buf.String()
+	case cpp.TypeKinds.Vector:
+		element_name := argumentName + "_element"
+		element_type := argumentType.ElementType
+		var buf bytes.Buffer
+		buf.WriteString("{\n")
+		buf.WriteString(fmt.Sprintf("%s* %s = %s.mutable_data();\n", element_type, element_name, value))
+		buf.WriteString(fmt.Sprintf("for (uint64_t i = 0; i < %s.count(); ++i, ++%s) {\n", value, element_name))
+		buf.WriteString(closeHandles(element_name, fmt.Sprintf("(*%s)", element_name), *element_type, true, false, false, false))
+		buf.WriteString("\n}\n}\n")
+		return buf.String()
+	default:
+		if pointer {
+			if nullable {
+				return fmt.Sprintf("if (%s != nullptr) { %s->_CloseHandles(); }", name, name)
+			}
+			return fmt.Sprintf("%s->_CloseHandles();", name)
+		} else {
+			return fmt.Sprintf("%s._CloseHandles();", name)
+		}
+	}
+}
+
 // These are the helper functions we inject for use by the templates.
 var (
 	utilityFuncs = template.FuncMap{
@@ -37,29 +113,11 @@ var (
 		"StackUse": func(props cpp.LLContextProps) int {
 			return props.StackUseRequest + props.StackUseResponse
 		},
-		"NewTypedArgument": func(argumentName string,
-			argumentType cpp.Type,
-			pointer bool,
+		"CloseHandles": func(member cpp.Member,
 			access bool,
-			mutableAccess bool) TypedArgument {
-			return TypedArgument{
-				ArgumentName:  argumentName,
-				ArgumentValue: argumentName,
-				ArgumentType:  argumentType,
-				Pointer:       pointer,
-				Nullable:      pointer,
-				Access:        access,
-				MutableAccess: mutableAccess}
-		},
-		"NewTypedArgumentElement": func(argumentName string, argumentType cpp.Type) TypedArgument {
-			return TypedArgument{
-				ArgumentName:  argumentName + "_element",
-				ArgumentValue: "(*" + argumentName + "_element)",
-				ArgumentType:  argumentType,
-				Pointer:       true,
-				Nullable:      false,
-				Access:        false,
-				MutableAccess: false}
+			mutableAccess bool) string {
+			n, t := member.NameAndType()
+			return closeHandles(n, n, t, t.WirePointer, t.WirePointer, access, mutableAccess)
 		},
 		"EnsureNamespace": cpp.EnsureNamespace,
 		"PushNamespace":   cpp.PushNamespace,
@@ -67,6 +125,51 @@ var (
 		"EndOfFile":       cpp.EndOfFile,
 		"UseNatural":      cpp.UseNatural,
 		"UseWire":         cpp.UseWire,
+		"Params": func(params []cpp.Parameter) string {
+			return formatParams(params, "", func(t cpp.Type, n string) string {
+				return fmt.Sprintf("%s %s", t.String(), n)
+			})
+		},
+		"CommaParams": func(params []cpp.Parameter) string {
+			return formatParams(params, ", ", func(t cpp.Type, n string) string {
+				return fmt.Sprintf("%s %s", t.String(), n)
+			})
+		},
+		"ParamNames": func(params []cpp.Parameter) string {
+			return formatParams(params, "", func(t cpp.Type, n string) string {
+				return n
+			})
+		},
+		"CommaParamNames": func(params []cpp.Parameter) string {
+			return formatParams(params, ", ", func(t cpp.Type, n string) string {
+				return n
+			})
+		},
+		"ParamsNoTypedChannels": func(params []cpp.Parameter) string {
+			return formatParams(params, "", func(t cpp.Type, n string) string {
+				return fmt.Sprintf("%s %s", t.WireNoTypedChannels(), n)
+			})
+		},
+		"ParamMoveNames": func(params []cpp.Parameter) string {
+			return formatParams(params, "", func(t cpp.Type, n string) string {
+				return fmt.Sprintf("std::move(%s)", n)
+			})
+		},
+		"MessagePrototype": func(params []cpp.Parameter) string {
+			return formatParams(params, "", func(t cpp.Type, n string) string {
+				return t.WireArgumentDeclaration(n)
+			})
+		},
+		"CommaMessagePrototype": func(params []cpp.Parameter) string {
+			return formatParams(params, ", ", func(t cpp.Type, n string) string {
+				return t.WireArgumentDeclaration(n)
+			})
+		},
+		"InitMessage": func(params []cpp.Parameter) string {
+			return formatParams(params, ": ", func(t cpp.Type, n string) string {
+				return t.WireInitMessage(n)
+			})
+		},
 	}
 )
 
@@ -91,7 +194,6 @@ func NewGenerator() *Generator {
 		fragmentSyncRequestCallerAllocateTmpl,
 		fragmentSyncServerTmpl,
 		fragmentTableTmpl,
-		fragmentTypeTmpl,
 		fragmentUnionTmpl,
 		fileHeaderTmpl,
 		fileSourceTmpl,

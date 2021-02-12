@@ -36,7 +36,6 @@ go_library("gopkg") {
     "codegen/fragment_sync_request_managed.tmpl.go",
     "codegen/fragment_sync_server.tmpl.go",
     "codegen/fragment_table.tmpl.go",
-    "codegen/fragment_type.tmpl.go",
     "codegen/fragment_union.tmpl.go",
     "main.go",
   ]

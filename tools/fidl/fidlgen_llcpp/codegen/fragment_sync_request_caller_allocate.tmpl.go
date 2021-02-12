@@ -31,7 +31,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   {{- if .Request -}}
   , uint8_t* _request_bytes, uint32_t _request_byte_capacity
   {{- end -}}
-  {{- template "CommaMessagePrototype" .Request }}
+  {{- .Request | CommaMessagePrototype }}
   {{- if .HasResponse }}
   , uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
@@ -44,7 +44,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   {{- else -}}
   ::fidl::internal::EncodedMessageTypes<{{ .Name }}Request>::OwnedByte _request(zx_txid_t(0)
   {{- end -}}
-    {{- template "CommaPassthroughMessageParams" .Request -}});
+    {{- .Request | CommaParamNames -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client, _response_bytes,
                                                           _response_byte_capacity);

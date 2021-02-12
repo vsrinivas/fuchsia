@@ -5,64 +5,9 @@
 package codegen
 
 const fragmentProtocolTmpl = `
-{{- define "ArgumentDeclaration" -}}
-  {{- if eq .Type.WireFamily FamilyKinds.TrivialCopy }}
-  {{ .Type }} {{ .Name }}
-  {{- else if eq .Type.WireFamily FamilyKinds.Reference }}
-  {{ .Type }}& {{ .Name }}
-  {{- else if eq .Type.WireFamily FamilyKinds.String }}
-  const {{ .Type }}& {{ .Name }}
-  {{- else if eq .Type.WireFamily FamilyKinds.Vector }}
-  {{ .Type }}& {{ .Name }}
-  {{- end }}
-{{- end }}
-
-{{- /* Defines the arguments for a response method/constructor. */}}
-{{- define "MessagePrototype" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end }}{{ template "ArgumentDeclaration" $param }}
-  {{- end -}}
-{{- end }}
-
-{{- /* Defines the arguments for a request method/constructor. */}}
-{{- define "CommaMessagePrototype" -}}
-  {{- range $param := . -}}
-    , {{ template "ArgumentDeclaration" $param }}
-  {{- end -}}
-{{- end }}
-
-{{- /* Defines the initialization of all the fields for a message constructor. */}}
-{{- define "InitMessage" -}}
-  {{- range $index, $param := . }}
-  {{- if $index }}, {{- else }}: {{- end }}
-    {{- if eq $param.Type.WireFamily FamilyKinds.TrivialCopy }}
-      {{ $param.Name }}({{ $param.Name }})
-    {{- else if eq $param.Type.WireFamily FamilyKinds.Reference }}
-      {{ $param.Name }}(std::move({{ $param.Name }}))
-    {{- else if eq $param.Type.WireFamily FamilyKinds.String }}
-      {{ $param.Name }}(::fidl::unowned_ptr_t<const char>({{ $param.Name }}.data()), {{ $param.Name }}.size())
-    {{- else if eq $param.Type.WireFamily FamilyKinds.Vector }}
-      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
-    {{- end }}
-  {{- end }}
-{{- end }}
-
 {{- define "ProtocolForwardDeclaration" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
-{{- end }}
-
-{{- /* All the parameters for a method which value content. */}}
-{{- define "ForwardParams" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
-  {{- end -}}
-{{- end }}
-
-{{- define "CommaForwardParams" -}}
-  {{- range $index, $param := . -}}
-    , std::move({{ $param.Name }})
-  {{- end -}}
 {{- end }}
 
 {{- define "ForwardMessageParamsUnwrapTypedChannels" -}}
@@ -77,21 +22,6 @@ class {{ .Name }};
   {{- end -}}
 {{- end }}
 
-{{- /* All the parameters for a response method/constructor which uses values with references */}}
-{{- /* or trivial copy. */}}
-{{- define "PassthroughMessageParams" -}}
-  {{- range $index, $param := . }}
-    {{- if $index }}, {{- end }} {{ $param.Name }}
-  {{- end }}
-{{- end }}
-
-{{- /* All the parameters for a request method/constructor which uses values with references */}}
-{{- /* or trivial copy. */}}
-{{- define "CommaPassthroughMessageParams" -}}
-  {{- range $index, $param := . }}
-    , {{ $param.Name }}
-  {{- end }}
-{{- end }}
 
 {{- define "ClientAllocationComment" -}}
 {{- $context := .LLProps.ClientContext }}
@@ -172,8 +102,8 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .Response }}
-    explicit {{ .Name }}Response({{ template "MessagePrototype" .Response }})
-    {{ template "InitMessage" .Response }} {
+    explicit {{ .Name }}Response({{ .Response | MessagePrototype }})
+    {{ .Response | InitMessage }} {
       _InitHeader();
     }
     {{- end }}
@@ -203,7 +133,7 @@ class {{ .Name }} final {
     class UnownedEncodedByteMessage final {
      public:
       UnownedEncodedByteMessage(uint8_t* _bytes, uint32_t _byte_size
-        {{- template "CommaMessagePrototype" .Response }})
+        {{- .Response | CommaMessagePrototype }})
           : message_(_bytes, _byte_size, sizeof({{ .Name }}Response),
       {{- if gt .ResponseMaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
@@ -212,7 +142,7 @@ class {{ .Name }} final {
       {{- end }}
         ) {
         FIDL_ALIGNDECL {{ .Name }}Response _response{
-            {{- template "PassthroughMessageParams" .Response -}}
+          {{- .Response | ParamNames -}}
         };
         message_.Encode<{{ .Name }}Response>(&_response);
       }
@@ -254,7 +184,7 @@ class {{ .Name }} final {
      public:
       UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
         fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size
-        {{- template "CommaMessagePrototype" .Response }})
+        {{- .Response | CommaMessagePrototype }})
         : message_(::fidl::OutgoingIovecMessage::constructor_args{
           .iovecs = iovecs,
           .iovecs_actual = 0,
@@ -273,7 +203,7 @@ class {{ .Name }} final {
           {{- end }}
         }) {
         FIDL_ALIGNDECL {{ .Name }}Response _response{
-            {{- template "PassthroughMessageParams" .Response -}}
+          {{- .Response | ParamNames -}}
         };
         message_.Encode<{{ .Name }}Response>(&_response);
       }
@@ -325,15 +255,14 @@ class {{ .Name }} final {
 
     class OwnedEncodedByteMessage final {
      public:
-      explicit OwnedEncodedByteMessage(
-        {{- template "MessagePrototype" .Response }})
+      explicit OwnedEncodedByteMessage({{ .Response | MessagePrototype }})
           {{- if gt .ResponseSentMaxSize 512 -}}
         : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>>()),
           message_(bytes_->data(), {{- template "ResponseSentSize" . }}
           {{- else }}
           : message_(bytes_, sizeof(bytes_)
           {{- end }}
-          {{- template "CommaPassthroughMessageParams" .Response }}) {}
+          {{- .Response | CommaParamNames }}) {}
       explicit OwnedEncodedByteMessage({{ .Name }}Response* response)
           {{- if gt .ResponseSentMaxSize 512 -}}
         : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" . }}>>()),
@@ -371,11 +300,10 @@ class {{ .Name }} final {
 
     class OwnedEncodedIovecMessage final {
      public:
-      explicit OwnedEncodedIovecMessage(
-        {{- template "MessagePrototype" .Response }})
+      explicit OwnedEncodedIovecMessage({{ .Response | MessagePrototype }})
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
             substitutions_, ::fidl::internal::kIovecBufferSize
-          {{- template "CommaPassthroughMessageParams" .Response }}) {}
+          {{- .Response | CommaParamNames }}) {}
       explicit OwnedEncodedIovecMessage({{ .Name }}Response* response)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
             substitutions_, ::fidl::internal::kIovecBufferSize,
@@ -456,8 +384,8 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .Request }}
-    explicit {{ .Name }}Request(zx_txid_t _txid {{- template "CommaMessagePrototype" .Request }})
-    {{ template "InitMessage" .Request }} {
+    explicit {{ .Name }}Request(zx_txid_t _txid {{- .Request | CommaMessagePrototype }})
+    {{ .Request | InitMessage }} {
       _InitHeader(_txid);
     }
     {{- end }}
@@ -493,7 +421,7 @@ class {{ .Name }} final {
     class UnownedEncodedByteMessage final {
      public:
       UnownedEncodedByteMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid
-        {{- template "CommaMessagePrototype" .Request }})
+        {{- .Request | CommaMessagePrototype }})
           : message_(_bytes, _byte_size, sizeof({{ .Name }}Request),
       {{- if gt .RequestMaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
@@ -502,7 +430,7 @@ class {{ .Name }} final {
       {{- end }}
         ) {
         FIDL_ALIGNDECL {{ .Name }}Request _request(_txid
-            {{- template "CommaPassthroughMessageParams" .Request -}}
+            {{- .Request | CommaParamNames -}}
         );
         message_.Encode<{{ .Name }}Request>(&_request);
       }
@@ -545,7 +473,7 @@ class {{ .Name }} final {
       UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
         fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
         zx_txid_t _txid
-        {{- template "CommaMessagePrototype" .Request }})
+        {{- .Request | CommaMessagePrototype }})
         : message_(::fidl::OutgoingIovecMessage::constructor_args{
           .iovecs = iovecs,
           .iovecs_actual = 0,
@@ -564,7 +492,7 @@ class {{ .Name }} final {
           {{- end }}
         }) {
         FIDL_ALIGNDECL {{ .Name }}Request _request(_txid
-            {{- template "CommaPassthroughMessageParams" .Request -}}
+            {{- .Request | CommaParamNames -}}
         );
         message_.Encode<{{ .Name }}Request>(&_request);
       }
@@ -617,14 +545,14 @@ class {{ .Name }} final {
     class OwnedEncodedByteMessage final {
      public:
       explicit OwnedEncodedByteMessage(zx_txid_t _txid
-        {{- template "CommaMessagePrototype" .Request }})
+        {{- .Request | CommaMessagePrototype }})
           {{- if gt .RequestSentMaxSize 512 -}}
         : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>>()),
           message_(bytes_->data(), {{- template "RequestSentSize" . }}, _txid
           {{- else }}
           : message_(bytes_, sizeof(bytes_), _txid
           {{- end }}
-          {{- template "CommaPassthroughMessageParams" .Request }}) {}
+          {{- .Request | CommaParamNames }}) {}
       explicit OwnedEncodedByteMessage({{ .Name }}Request* request)
           {{- if gt .RequestSentMaxSize 512 -}}
         : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" . }}>>()),
@@ -663,10 +591,10 @@ class {{ .Name }} final {
     class OwnedEncodedIovecMessage final {
      public:
       explicit OwnedEncodedIovecMessage(zx_txid_t _txid
-        {{- template "CommaMessagePrototype" .Request }})
+        {{- .Request | CommaMessagePrototype }})
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
             substitutions_, ::fidl::internal::kIovecBufferSize, _txid
-          {{- template "CommaPassthroughMessageParams" .Request }}) {}
+          {{- .Request | CommaParamNames }}) {}
       explicit OwnedEncodedIovecMessage({{ .Name }}Request* request)
           : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
             substitutions_, ::fidl::internal::kIovecBufferSize,
@@ -782,11 +710,11 @@ class {{ .Name }} final {
      public:
       explicit {{ .Name }}(
           ::fidl::UnownedClientEnd<{{ $protocol }}> _client
-          {{- template "CommaMessagePrototype" .Request }});
+          {{- .Request | CommaMessagePrototype }});
     {{- if .HasResponse }}
       {{ .Name }}(
           ::fidl::UnownedClientEnd<{{ $protocol }}> _client
-          {{- template "CommaMessagePrototype" .Request }},
+          {{- .Request | CommaMessagePrototype }},
           zx_time_t _deadline);
     {{- end }}
       explicit {{ .Name }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -851,7 +779,7 @@ class {{ .Name }} final {
         {{- if .Request -}}
           , uint8_t* _request_bytes, uint32_t _request_byte_capacity
         {{- end -}}
-        {{- template "CommaMessagePrototype" .Request }}
+        {{- .Request | CommaMessagePrototype }}
         {{- if .HasResponse -}}
           , uint8_t* _response_bytes, uint32_t _response_byte_capacity
         {{- end -}});
@@ -909,9 +837,11 @@ class {{ .Name }} final {
     //{{ . }}
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
-    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }}) {
+    static ResultOf::{{ .Name }} {{ .Name }}(
+          ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
+          {{- .Request | CommaParams }}) {
       return ResultOf::{{ .Name }}(_client_end
-        {{- template "CommaPassthroughMessageParams" .Request -}}
+        {{- .Request | CommaParamNames -}}
         );
     }
 {{ "" }}
@@ -925,7 +855,7 @@ class {{ .Name }} final {
         {{- if .Request -}}
           , _request_buffer.data, _request_buffer.capacity
         {{- end -}}
-          {{- template "CommaPassthroughMessageParams" .Request -}}
+          {{- .Request | CommaParamNames -}}
         {{- if .HasResponse -}}
           , _response_buffer.data, _response_buffer.capacity
         {{- end -}});
@@ -958,9 +888,9 @@ class {{ .Name }} final {
     //{{ . }}
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
-    ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestManagedMethodArguments" . }}) {
+    ResultOf::{{ .Name }} {{ .Name }}({{ .Request | Params }}) {
       return ResultOf::{{ .Name }}(this->client_end()
-        {{- template "CommaPassthroughMessageParams" .Request -}});
+        {{- .Request | CommaParamNames -}});
     }
 {{ "" }}
       {{- if or .Request .Response }}
@@ -973,7 +903,7 @@ class {{ .Name }} final {
         {{- if .Request -}}
           , _request_buffer.data, _request_buffer.capacity
         {{- end -}}
-          {{- template "CommaPassthroughMessageParams" .Request -}}
+          {{- .Request | CommaParamNames -}}
         {{- if .HasResponse -}}
           , _response_buffer.data, _response_buffer.capacity
         {{- end -}});
@@ -1048,7 +978,7 @@ class {{ .Name }} final {
     //{{ . }}
         {{- end }}
     virtual void {{ .Name }}(
-        {{- template "Params" .Request }}{{ if .Request }}, {{ end -}}
+        {{- .Request | Params }}{{ if .Request }}, {{ end -}}
         {{- if .Transitional -}}
           {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
         {{- else -}}
@@ -1086,7 +1016,7 @@ class {{ .Name }} final {
 {{ "" }}
       {{- if .ShouldEmitTypedChannelCascadingInheritance }}
     virtual void {{ .Name }}(
-        {{- template "Params" .Request }}{{ if .Request }}, {{ end -}}
+        {{- .Request | Params }}{{ if .Request }}, {{ end -}}
         {{ .Name }}Completer::Sync& _completer) final {
       {{ .Name }}({{ template "ForwardMessageParamsUnwrapTypedChannels" .Request }}
         {{- if .Request }}, {{ end -}} _completer);
@@ -1096,7 +1026,7 @@ class {{ .Name }} final {
     // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
     // Please move to overriding the typed channel overload above instead.
     virtual void {{ .Name }}(
-      {{- template "ParamsNoTypedChannels" .Request }}{{ if .Request }}, {{ end -}}
+      {{- .Request | ParamsNoTypedChannels }}{{ if .Request }}, {{ end -}}
         {{- if .Transitional -}}
           {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
         {{- else -}}
@@ -1160,12 +1090,6 @@ static_assert(sizeof({{ $protocol }}::{{ .Name }}Response)
 static_assert(offsetof({{ $protocol }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
-{{- end }}
-{{- end }}
-
-{{- define "ReturnResponseStructMembers" }}
-{{- range $param := . }}
-  *out_{{ $param.Name }} = std::move(_response.{{ $param.Name }});
 {{- end }}
 {{- end }}
 
@@ -1250,7 +1174,7 @@ extern "C" const fidl_type_t {{ .ResponseCodingTable.Name }};
 
     void {{ .LLProps.ProtocolName }}::{{ .Name }}Request::_CloseHandles() {
       {{- range .Request }}
-        {{- template "StructMemberCloseHandles" . }}
+        {{- CloseHandles . false false }}
       {{- end }}
     }
       {{- end }}
@@ -1264,7 +1188,7 @@ extern "C" const fidl_type_t {{ .ResponseCodingTable.Name }};
 
     void {{ .LLProps.ProtocolName }}::{{ .Name }}Response::_CloseHandles() {
       {{- range .Response }}
-        {{- template "StructMemberCloseHandles" . }}
+          {{- CloseHandles . false false }}
       {{- end }}
     }
       {{- end }}

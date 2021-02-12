@@ -112,8 +112,46 @@ type Type struct {
 	ElementCount int
 }
 
+// IsPrimitiveType returns true if this type is primitive.
 func (t *Type) IsPrimitiveType() bool {
 	return t.Kind == TypeKinds.Primitive || t.Kind == TypeKinds.Bits || t.Kind == TypeKinds.Enum
+}
+
+// WireArgumentDeclaration returns the argument declaration for this type for the wire variant.
+func (t *Type) WireArgumentDeclaration(n string) string {
+	switch t.WireFamily {
+	case FamilyKinds.TrivialCopy:
+		return t.String() + " " + n
+	case FamilyKinds.Reference, FamilyKinds.Vector:
+		return t.String() + "& " + n
+	case FamilyKinds.String:
+		return "const " + t.String() + "& " + n
+	default:
+		panic(fmt.Sprintf("Unknown wire family kind %v", t.WireFamily))
+	}
+}
+
+// WireInitMessage returns message field initialization for the wire variant.
+func (t *Type) WireInitMessage(n string) string {
+	switch t.WireFamily {
+	case FamilyKinds.TrivialCopy:
+		return fmt.Sprintf("%s(%s)", n, n)
+	case FamilyKinds.Reference:
+		return fmt.Sprintf("%s(std::move(%s))", n, n)
+	case FamilyKinds.String:
+		return fmt.Sprintf("%s(::fidl::unowned_ptr_t<const char>(%s.data()), %s.size())",
+			n, n, n)
+	case FamilyKinds.Vector:
+		return fmt.Sprintf("%s(::fidl::unowned_ptr_t<%s>(%s.mutable_data()), %s.count())",
+			n, t.ElementType, n, n)
+	default:
+		panic(fmt.Sprintf("Unknown wire family kind %v", t.WireFamily))
+
+	}
+}
+
+type Member interface {
+	NameAndType() (string, Type)
 }
 
 type HandleInformation struct {
@@ -147,11 +185,10 @@ func (cv *ConstantValue) String() string {
 type Const struct {
 	fidl.Attributes
 	DeclName
-	Extern     bool
-	Decorator  string
-	Type       Type
-	DeclSuffix string
-	Value      ConstantValue
+	Extern    bool
+	Decorator string
+	Type      Type
+	Value     ConstantValue
 
 	// Kind should be default initialized.
 	Kind constKind
@@ -233,6 +270,10 @@ func (um UnionMember) UpperCamelCaseName() string {
 	return fidl.ToUpperCamelCase(um.Name)
 }
 
+func (um UnionMember) NameAndType() (string, Type) {
+	return um.Name, um.Type
+}
+
 type TableFrameItem *TableMember
 
 type Table struct {
@@ -272,6 +313,10 @@ type TableMember struct {
 	HandleInformation  *HandleInformation
 }
 
+func (tm TableMember) NameAndType() (string, Type) {
+	return tm.Name, tm.Type
+}
+
 type Struct struct {
 	fidl.Attributes
 	fidl.Resourceness
@@ -304,6 +349,19 @@ type StructMember struct {
 	DefaultValue      ConstantValue
 	Offset            int
 	HandleInformation *HandleInformation
+}
+
+func (m *StructMember) AsParameter() Parameter {
+	return Parameter{
+		Type:              m.Type,
+		Name:              m.Name,
+		Offset:            m.Offset,
+		HandleInformation: m.HandleInformation,
+	}
+}
+
+func (sm StructMember) NameAndType() (string, Type) {
+	return sm.Name, sm.Type
 }
 
 // protocolInner contains information about a Protocol that should be
@@ -570,6 +628,10 @@ type Parameter struct {
 	HandleInformation *HandleInformation
 }
 
+func (p Parameter) NameAndType() (string, Type) {
+	return p.Name, p.Type
+}
+
 type Root struct {
 	PrimaryHeader   string
 	IncludeStem     string
@@ -583,7 +645,7 @@ type Root struct {
 
 // Holds information about error results on methods
 type Result struct {
-	ValueMembers    []StructMember
+	ValueMembers    []Parameter
 	ResultDecl      DeclName
 	ErrorDecl       TypeName
 	ValueDecl       TypeVariant
@@ -1503,10 +1565,10 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 
 	result := c.resultForStruct[val.Name]
 	if result != nil {
-		result.ValueMembers = r.Members
 		memberTypeDecls := []string{}
 		for _, m := range r.Members {
 			memberTypeDecls = append(memberTypeDecls, string(m.Type.Natural))
+			result.ValueMembers = append(result.ValueMembers, m.AsParameter())
 		}
 		result.ValueTupleDecl = TypeVariant(fmt.Sprintf("::std::tuple<%s>", strings.Join(memberTypeDecls, ", ")))
 

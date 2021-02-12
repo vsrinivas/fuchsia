@@ -7,14 +7,14 @@ package codegen
 const fragmentReplyCallerAllocateTmpl = `
 {{- define "ReplyCallerAllocateMethodSignature" -}}
 Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
-      {{ template "Params" .Response }})
+      {{ .Response | Params }})
 {{- end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateMethodSignature" . }} {
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
-  {{- template "CommaPassthroughMessageParams" .Response -}}
+  {{- .Response | CommaParamNames -}}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -22,7 +22,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
 ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }}
-             {{ template "Params" .Result.ValueMembers }})
+             {{ .Result.ValueMembers | Params }})
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}

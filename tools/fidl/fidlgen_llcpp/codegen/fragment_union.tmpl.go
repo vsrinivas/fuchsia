@@ -12,15 +12,6 @@ class {{ .Name }};
 using {{ .WireAlias.Name }} = {{ . }};
 {{- end }}
 
-{{- define "UnionMemberCloseHandles" }}
-  {{- if .Type.IsResource }}
-    case Ordinal::{{ .TagName }}: {
-      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.WirePointer false true }}
-      break;
-    }
-  {{- end }}
-{{- end }}
-
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "UnionDeclaration" }}
@@ -201,7 +192,12 @@ void {{ . }}::SizeAndOffsetAssertionHelper() {
 void {{ . }}::_CloseHandles() {
   switch (ordinal_) {
   {{- range .Members }}
-    {{- template "UnionMemberCloseHandles" . }}
+    {{- if .Type.IsResource }}
+      case Ordinal::{{ .TagName }}: {
+        {{- CloseHandles . false true }}
+        break;
+      }
+    {{- end }}
   {{- end }}
   default:
     break;

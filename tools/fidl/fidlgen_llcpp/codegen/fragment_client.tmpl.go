@@ -76,8 +76,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  ResultOf::{{ .Name }} {{ .Name }}_Sync(
-      {{- template "SyncRequestManagedMethodArguments" . }});
+  ResultOf::{{ .Name }} {{ .Name }}_Sync({{ .Request | Params }});
 
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .Request .Response }}
@@ -107,7 +106,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
   //
     {{- end }}
   // {{- template "ClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{- template "SyncRequestManagedMethodArguments" . }});
+  ::fidl::Result {{ .Name }}({{ .Request | Params }});
 
     {{- /* Caller-allocate flavor */}}
     {{- if .Request }}

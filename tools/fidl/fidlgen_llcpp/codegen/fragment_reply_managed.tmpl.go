@@ -6,7 +6,7 @@ package codegen
 
 const fragmentReplyManagedTmpl = `
 {{- define "ReplyManagedMethodSignature" -}}
-Reply({{ template "Params" .Response }})
+Reply({{ .Response | Params }})
 {{- end }}
 
 {{- define "ReplyManagedMethodDefinition" }}
@@ -14,14 +14,14 @@ Reply({{ template "Params" .Response }})
 {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedMethodSignature" . }} {
   ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::OwnedByte _response{
-      {{- template "PassthroughMessageParams" .Response -}}
+    {{- .Response | ParamNames -}}
   };
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 {{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodSignature" -}}
-ReplySuccess({{ template "Params" .Result.ValueMembers }})
+ReplySuccess({{ .Result.ValueMembers | Params }})
 {{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodDefinition" }}

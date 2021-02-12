@@ -16,7 +16,7 @@ const fragmentClientSyncMethodsTmpl = `
     {{- if .Request -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end -}}
-      {{- template "CommaPassthroughMessageParams" .Request -}},
+      {{- .Request | CommaParamNames -}},
       _response_buffer.data, _response_buffer.capacity);
   }
   return {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}(
@@ -31,7 +31,7 @@ const fragmentClientSyncMethodsTmpl = `
     {{- if .Request -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end }}
-      {{- template "CommaPassthroughMessageParams" .Request -}});
+      {{- .Request | CommaParamNames -}});
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -42,24 +42,22 @@ const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestManagedMethodDefinition" }}
   {{- if .HasResponse }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}
-{{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync(
-  {{- template "SyncRequestManagedMethodArguments" . }}) {
+{{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync({{ .Request | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::{{ .Name }}(
       ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
-      {{- template "CommaPassthroughMessageParams" .Request -}}
+      {{- .Request | CommaParamNames -}}
     );
   }
   return {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
   {{- else }}
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}(
-  {{- template "SyncRequestManagedMethodArguments" . }}) {
+::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}({{ .Request | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::{{ .Name }}(
       ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
-      {{- template "CommaPassthroughMessageParams" .Request -}}
+      {{- .Request | CommaParamNames -}}
     );
     return ::fidl::Result(_res.status(), _res.error());
   }

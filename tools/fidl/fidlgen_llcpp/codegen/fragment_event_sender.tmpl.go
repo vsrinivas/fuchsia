@@ -6,11 +6,11 @@ package codegen
 
 const fragmentEventSenderTmpl = `
 {{- define "SendEventManagedMethodSignature" -}}
-{{ .Name }}({{ template "Params" .Response }}) const
+{{ .Name }}({{ .Response | Params }}) const
 {{- end }}
 
 {{- define "SendEventCallerAllocateMethodSignature" -}}
-{{ .Name }}(::fidl::BufferSpan _buffer, {{ template "Params" .Response }}) const
+{{ .Name }}(::fidl::BufferSpan _buffer, {{ .Response | Params }}) const
 {{- end }}
 
 {{- define "EventSenderDeclaration" }}
@@ -65,8 +65,7 @@ class {{ .Name }}::WeakEventSender {
     {{- end }}
   zx_status_t {{ template "SendEventManagedMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}(
-          {{ template "SyncClientMoveParams" .Response }});
+      return _binding->event_sender().{{ .Name }}({{ .Response | ParamMoveNames }});
     }
     return ZX_ERR_CANCELED;
   }
@@ -79,8 +78,7 @@ class {{ .Name }}::WeakEventSender {
   // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}(
-          std::move(_buffer), {{ template "SyncClientMoveParams" .Response }});
+      return _binding->event_sender().{{ .Name }}(std::move(_buffer), {{ .Response | ParamMoveNames }});
     }
     return ZX_ERR_CANCELED;
   }
@@ -103,7 +101,7 @@ class {{ .Name }}::WeakEventSender {
 zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventManagedMethodSignature" . }} {
   ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::OwnedByte _response{
-      {{- template "PassthroughMessageParams" .Response -}}
+      {{- .Response | ParamNames -}}
   };
   _response.Write(server_end_);
   return _response.status();
@@ -115,7 +113,7 @@ zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
   ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::UnownedByte _response(
       _buffer.data, _buffer.capacity
-      {{- template "CommaPassthroughMessageParams" .Response -}}
+      {{- .Response | CommaParamNames -}}
   );
   _response.Write(server_end_);
   return _response.status();
