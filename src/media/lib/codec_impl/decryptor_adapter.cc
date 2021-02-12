@@ -112,6 +112,7 @@ void DecryptorAdapter::CoreCodecInit(
         "In DecryptorAdapter::CoreCodecInit(), StartThread() failed (input)");
     return;
   }
+  SetProcessingSchedulerProfile(zx::unowned_thread(thrd_get_zx_handle(input_processing_thread_)));
 }
 
 void DecryptorAdapter::CoreCodecSetSecureMemoryMode(

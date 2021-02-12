@@ -17,6 +17,7 @@
 #include <lib/stdcompat/variant.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
+#include <zircon/threads.h>
 
 #include <fbl/macros.h>
 
@@ -257,6 +258,8 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     PostToSharedFidl(std::move(error_handler));
     return;
   }
+  // Give CodecAdapter a chance to set a scheduler profile.
+  CoreCodecSetStreamControlProfile(zx::unowned_thread(thrd_get_zx_handle(stream_control_thread_)));
   stream_control_queue_.SetDispatcher(stream_control_loop_.dispatcher(), stream_control_thread_);
 
   // From here on, we'll only fail the CodecImpl via UnbindLocked(), or by
@@ -3951,4 +3954,8 @@ void CodecImpl::CoreCodecMidStreamOutputBufferReConfigFinish() {
 void CodecImpl::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   codec_adapter_->CoreCodecRecycleOutputPacket(packet);
+}
+
+void CodecImpl::CoreCodecSetStreamControlProfile(zx::unowned_thread stream_control_thread) {
+  codec_adapter_->CoreCodecSetStreamControlProfile(std::move(stream_control_thread));
 }

@@ -982,6 +982,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
 
+  void CoreCodecSetStreamControlProfile(zx::unowned_thread stream_control_thread) override;
+
   __WARN_UNUSED_RESULT
   std::unique_ptr<const fuchsia::media::StreamBufferConstraints> CoreCodecBuildNewInputConstraints()
       override;
