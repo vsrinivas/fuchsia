@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::call,
     crate::handler::base::Request,
-    crate::service_context::ServiceContextHandle,
+    crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
+    crate::{call, call_async},
     anyhow::{format_err, Error},
-    fidl::endpoints::create_request_stream,
+    fidl::endpoints::{create_proxy, create_request_stream},
+    fidl_fuchsia_camera3::{
+        DeviceMarker, DeviceProxy as Camera3DeviceProxy, DeviceWatcherMarker,
+        DeviceWatcherProxy as Camera3DeviceWatcherProxy, WatchDevicesEvent,
+    },
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fidl_fuchsia_ui_policy::{
         DeviceListenerRegistryMarker, MediaButtonsListenerMarker, MediaButtonsListenerRequest,
@@ -130,4 +134,48 @@ pub async fn monitor_media_buttons(
     .detach();
 
     Ok(())
+}
+
+/// Connects to the fuchsia.camera3.DeviceWatcher api.
+#[allow(dead_code)]
+async fn connect_to_camera_watcher(
+    service_context_handle: ServiceContextHandle,
+) -> Result<ExternalServiceProxy<Camera3DeviceWatcherProxy>, Error> {
+    service_context_handle.lock().await.connect::<DeviceWatcherMarker>().await
+}
+
+/// Retrieves the id of a camera device given the camera device watcher proxy.
+#[allow(dead_code)]
+async fn get_camera_id(
+    camera_watcher_proxy: &ExternalServiceProxy<Camera3DeviceWatcherProxy>,
+) -> Result<u64, Error> {
+    // Get a list of id structs containing existing, new, and removed ids.
+    let camera_ids = call_async!(camera_watcher_proxy => watch_devices()).await?;
+
+    // TODO(fxbug.dev/66881): support multiple camera devices.
+    let first_cam = camera_ids.first();
+    if let Some(WatchDevicesEvent::Existing(id)) | Some(WatchDevicesEvent::Added(id)) = first_cam {
+        Ok(*id)
+    } else {
+        Err(format_err!("Could not find a camera"))
+    }
+}
+
+/// Establishes a connection to the fuchsia.camera3.Device api by watching
+/// the camera id and using it to connect to the device.
+#[allow(dead_code)]
+pub async fn connect_to_camera(
+    service_context_handle: ServiceContextHandle,
+) -> Result<Camera3DeviceProxy, Error> {
+    // Connect to the camera device watcher to get camera ids. This will
+    // be used to connect to the camera.
+    let camera_watcher_proxy = connect_to_camera_watcher(service_context_handle.clone()).await?;
+    let camera_id = get_camera_id(&camera_watcher_proxy).await?;
+
+    // Connect to the camera device with the found id.
+    let (camera_proxy, device_server) = create_proxy::<DeviceMarker>().unwrap();
+    if call!(camera_watcher_proxy => connect_to_device(camera_id, device_server)).is_err() {
+        return Err(format_err!("Could not connect to fuchsia.camera3.DeviceWatcher device"));
+    }
+    Ok(camera_proxy)
 }

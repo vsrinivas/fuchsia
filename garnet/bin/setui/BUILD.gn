@@ -24,6 +24,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
@@ -228,6 +229,7 @@ rustc_library("lib") {
     "src/tests/fakes/audio_core_service.rs",
     "src/tests/fakes/base.rs",
     "src/tests/fakes/brightness_service.rs",
+    "src/tests/fakes/camera3_service.rs",
     "src/tests/fakes/discovery_service.rs",
     "src/tests/fakes/hardware_light_service.rs",
     "src/tests/fakes/hardware_power_statecontrol_service.rs",
