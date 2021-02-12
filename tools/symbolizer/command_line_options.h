@@ -9,11 +9,16 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/analytics/cpp/core_dev_tools/command_line_options.h"
 #include "tools/symbolizer/error.h"
 
 namespace symbolizer {
 
 struct CommandLineOptions {
+ private:
+  using AnalyticsOption = ::analytics::core_dev_tools::AnalyticsOption;
+
+ public:
   std::vector<std::string> symbol_index_files;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> build_id_dirs;
@@ -28,6 +33,10 @@ struct CommandLineOptions {
 
   // Whether to omit the "[[[ELF module..." lines in the output.
   bool omit_module_lines = false;
+
+  // Analytics options
+  AnalyticsOption analytics = AnalyticsOption::kUnspecified;
+  bool analytics_show = false;
 };
 
 // Parses the command line into options.

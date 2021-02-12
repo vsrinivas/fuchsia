@@ -59,6 +59,9 @@ const char kVersionHelp[] = R"(  --version
   -v
       Prints the version.)";
 
+using ::analytics::core_dev_tools::kAnalyticsHelp;
+using ::analytics::core_dev_tools::kAnalyticsShowHelp;
+
 }  // namespace
 
 Error CommandLineOptions::SetVerb(const std::string& str) {
@@ -109,11 +112,16 @@ Error CommandLineOptions::Validate() {
 }
 
 Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options) {
+  using analytics::core_dev_tools::AnalyticsOption;
+  using analytics::core_dev_tools::ParseAnalyticsOption;
+
   std::vector<std::string> params;
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("config", 'c', kConfigHelp, &CommandLineOptions::symbol_index_file);
   parser.AddSwitch("version", 'v', kVersionHelp, &CommandLineOptions::requested_version);
+  parser.AddSwitch("analytics", 0, kAnalyticsHelp, &CommandLineOptions::analytics);
+  parser.AddSwitch("analytics-show", 0, kAnalyticsShowHelp, &CommandLineOptions::analytics_show);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;
@@ -125,6 +133,11 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   }
 
   if (options->requested_version) {
+    return "";
+  }
+
+  if (options->analytics_show || options->analytics == AnalyticsOption::kEnable ||
+      options->analytics == AnalyticsOption::kDisable) {
     return "";
   }
 

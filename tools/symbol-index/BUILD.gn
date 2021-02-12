@@ -17,12 +17,14 @@ if (is_host) {
       "//src/lib/fxl",
       "//zircon/system/ulib/cmdline",
     ]
+    public_deps = [ "//src/lib/analytics/cpp/core_dev_tools" ]
   }
 
   executable("symbol-index") {
     sources = [ "main.cc" ]
     deps = [
       ":src",
+      "//src/developer/debug/shared",
       "//src/developer/debug/zxdb/common:version",
       "//src/lib/fxl",
     ]

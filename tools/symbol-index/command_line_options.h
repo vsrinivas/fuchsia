@@ -8,11 +8,16 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/analytics/cpp/core_dev_tools/command_line_options.h"
 #include "tools/symbol-index/error.h"
 
 namespace symbol_index {
 
 struct CommandLineOptions {
+ private:
+  using AnalyticsOption = ::analytics::core_dev_tools::AnalyticsOption;
+
+ public:
   enum class Verb {
     kList,
     kAdd,
@@ -24,6 +29,10 @@ struct CommandLineOptions {
   Verb verb;
   std::vector<std::string> params;
   bool requested_version = false;
+
+  // Analytics options
+  AnalyticsOption analytics = AnalyticsOption::kUnspecified;
+  bool analytics_show = false;
 
   // Sets verb from a string. Returns an error message if the string is invalid.
   Error SetVerb(const std::string& str);

@@ -2,16 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <iostream>
 
+#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "tools/symbol-index/analytics.h"
 #include "tools/symbol-index/command_line_options.h"
 #include "tools/symbol-index/symbol_index.h"
 
 namespace symbol_index {
 
 int Main(int argc, const char* argv[]) {
+  using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
+
+  debug_ipc::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
+
   CommandLineOptions options;
 
   if (const Error error = ParseCommandLine(argc, argv, &options); !error.empty()) {
@@ -24,6 +34,12 @@ int Main(int argc, const char* argv[]) {
     std::cout << "Version: " << zxdb::kBuildVersion << std::endl;
     return EXIT_SUCCESS;
   }
+
+  if (EarlyProcessAnalyticsOptions<Analytics>(options.analytics, options.analytics_show)) {
+    return 0;
+  }
+  Analytics::InitBotAware(options.analytics);
+  Analytics::IfEnabledSendInvokeEvent();
 
   SymbolIndex symbol_index(options.symbol_index_file);
 

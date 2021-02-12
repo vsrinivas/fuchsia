@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "tools/symbolizer/analytics.h"
 #include "tools/symbolizer/command_line_options.h"
 #include "tools/symbolizer/log_parser.h"
 #include "tools/symbolizer/printer.h"
@@ -71,8 +72,11 @@ int AuthMode() {
 }  // namespace
 
 int Main(int argc, const char* argv[]) {
+  using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
+
   debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
 
   if (const Error error = ParseCommandLine(argc, argv, &options); !error.empty()) {
@@ -85,6 +89,12 @@ int Main(int argc, const char* argv[]) {
     std::cout << "Version: " << zxdb::kBuildVersion << std::endl;
     return EXIT_SUCCESS;
   }
+
+  if (EarlyProcessAnalyticsOptions<Analytics>(options.analytics, options.analytics_show)) {
+    return 0;
+  }
+  Analytics::InitBotAware(options.analytics);
+  Analytics::IfEnabledSendInvokeEvent();
 
   if (options.auth_mode) {
     return AuthMode();

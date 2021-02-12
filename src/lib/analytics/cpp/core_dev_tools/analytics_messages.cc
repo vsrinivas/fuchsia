@@ -14,6 +14,8 @@ namespace {
 
 constexpr char kParticipatingTools[] = R"(  • ffx
   • fidlcat
+  • symbol-index
+  • symbolizer
   • zxdb)";
 
 // In the following message:

@@ -77,9 +77,15 @@ const char kOmitModuleLinesHelp[] = R"(  --omit-module-lines
 const char kDumpfileOutputHelp[] = R"(  --dumpfile-output=<path>
       Write the dumpfile output to the given file.)";
 
+using ::analytics::core_dev_tools::kAnalyticsHelp;
+using ::analytics::core_dev_tools::kAnalyticsShowHelp;
+
 }  // namespace
 
 Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options) {
+  using analytics::core_dev_tools::AnalyticsOption;
+  using analytics::core_dev_tools::ParseAnalyticsOption;
+
   std::vector<std::string> params;
   cmdline::ArgsParser<CommandLineOptions> parser;
 
@@ -94,6 +100,8 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   parser.AddSwitch("omit-module-lines", 0, kOmitModuleLinesHelp,
                    &CommandLineOptions::omit_module_lines);
   parser.AddSwitch("dumpfile-output", 0, kDumpfileOutputHelp, &CommandLineOptions::dumpfile_output);
+  parser.AddSwitch("analytics", 0, kAnalyticsHelp, &CommandLineOptions::analytics);
+  parser.AddSwitch("analytics-show", 0, kAnalyticsShowHelp, &CommandLineOptions::analytics_show);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;
