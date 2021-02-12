@@ -436,13 +436,7 @@ impl BluetoothSysFacade {
     pub async fn get_known_remote_devices(&self) -> Result<HashMap<u64, SerializablePeer>, Error> {
         let tag = "BluetoothSysFacade::get_known_remote_devices";
 
-        match &self.inner.read().discovery_token {
-            Some(_) => (),
-            None => return Ok(self.inner.read().discovered_device_list.clone()),
-        };
-
         let default_return = self.inner.read().discovered_device_list.clone();
-
         let (discovered_devices, removed_peers) = match &mut self.inner.write().peer_watcher_stream
         {
             Some(stream) => {
