@@ -8,7 +8,8 @@
 
 namespace fs {
 
-PagedVfs::PagedVfs(int num_pager_threads) {
+PagedVfs::PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads)
+    : ManagedVfs(dispatcher) {
   pager_pool_ = std::make_unique<PagerThreadPool>(*this, num_pager_threads);
 }
 

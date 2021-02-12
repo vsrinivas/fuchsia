@@ -66,11 +66,13 @@ struct VdirCookie {
 };
 
 // The Vfs object contains global per-filesystem state, which may be valid across a collection of
-// Vnodes.
+// Vnodes. It dispatches requests to per-file/directory Vnode objects.
 //
-// The Vfs object must outlive the Vnodes which it serves.
+// This class can be used on a Fuchsia system or on the host computer where the compilation is done
+// (the host builds of the filesystems are how system images are created). Normally Fuchsia builds
+// will use the ManagedVfs subclass which handles the FIDL-to-vnode connections.
 //
-// This class is thread-safe.
+// The Vfs object must outlive the Vnodes which it serves. This class is thread-safe.
 class Vfs {
  public:
   class OpenResult;

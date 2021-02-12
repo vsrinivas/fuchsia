@@ -121,31 +121,6 @@ class PagingTestFile : public PagedVnode {
   std::vector<uint8_t> data_;
 };
 
-class PagingTestVfs : public PagedVfs {
- public:
-  PagingTestVfs(int num_pager_threads) : PagedVfs(num_pager_threads) {}
-
- private:
-  zx_status_t RegisterConnection(std::unique_ptr<fs::internal::Connection> connection,
-                                 zx::channel server_end) final {
-    connections_.push_back(std::move(connection));
-    EXPECT_OK(connections_.back().StartDispatching(std::move(server_end)));
-    return ZX_OK;
-  }
-  void UnregisterConnection(fs::internal::Connection* connection) final {
-    connections_.erase(*connection);
-  }
-  void Shutdown(ShutdownCallback handler) override { FAIL("Should never be reached in this test"); }
-  bool IsTerminating() const final { return false; }
-  void CloseAllConnectionsForVnode(const fs::Vnode& node,
-                                   CloseAllConnectionsForVnodeCallback callback) final {
-    FAIL("Should never be reached in this test");
-  }
-
- private:
-  fbl::DoublyLinkedList<std::unique_ptr<fs::internal::Connection>> connections_;
-};
-
 // This file has many pages and end in a non-page-boundary.
 const char kFile1Name[] = "file1";
 constexpr size_t kFile1Size = 4096 * 17 + 87;
@@ -181,9 +156,8 @@ class PagingTest : public zxtest::Test {
     vfs_thread_ = std::make_unique<std::thread>([this]() { VfsThreadProc(); });
 
     // Start the VFS and pager objects.
-    vfs_ = std::make_unique<PagingTestVfs>(num_pager_threads);
+    vfs_ = std::make_unique<PagedVfs>(vfs_loop_.dispatcher(), num_pager_threads);
     EXPECT_TRUE(vfs_->Init().is_ok());
-    vfs_->SetDispatcher(vfs_loop_.dispatcher());
 
     // Set up the directory hierarchy.
     root_ = fbl::MakeRefCounted<PseudoDir>();
@@ -219,7 +193,7 @@ class PagingTest : public zxtest::Test {
   std::unique_ptr<std::thread> vfs_thread_;
   async::Loop vfs_loop_;
 
-  std::unique_ptr<PagingTestVfs> vfs_;
+  std::unique_ptr<PagedVfs> vfs_;
 
   fbl::RefPtr<PseudoDir> root_;
 

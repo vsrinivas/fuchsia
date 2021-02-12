@@ -10,7 +10,7 @@
 #include <lib/zx/vmo.h>
 
 #include <fs/pager_thread_pool.h>
-#include <fs/vfs.h>
+#include <fs/managed_vfs.h>
 
 namespace fs {
 
@@ -21,11 +21,12 @@ class PagedVnode;
 // UNDER DEVELOPMENT
 // =================
 // Paging in the fs library is currently under active development and not ready to use yet.
-// See bug 51111.
-class PagedVfs : public Vfs {
+// See http://fxbug.dev/51111. Long-term the paging functionality should be moved into ManagedVfs
+// and all C++ filesystems should use that on Fuchsia.
+class PagedVfs : public ManagedVfs {
  public:
   // The caller must call Init() which must succeed before using this class.
-  explicit PagedVfs(int num_pager_threads);
+  PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads);
   ~PagedVfs() override;
 
   // Creates the pager and worker threads. If any of these fail, this class should no be used.

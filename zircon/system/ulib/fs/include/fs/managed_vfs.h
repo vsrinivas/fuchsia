@@ -23,11 +23,11 @@
 
 namespace fs {
 
-// A specialization of |Vfs| which provides a mechanism to tear down
-// all active connections before it is destroyed.
+// A specialization of |Vfs| which tracks FIDL connections. and integrates them with Vnode requests.
+// This implementation is the normal one used on Fuchsia. It will not work in host builds.
 //
-// This class is thread-safe, but it is unsafe to shutdown the dispatch loop
-// before shutting down the ManagedVfs object.
+// This class is thread-safe, but it is unsafe to shutdown the dispatch loop before shutting down
+// the ManagedVfs object.
 class ManagedVfs : public Vfs {
  public:
   ManagedVfs();
