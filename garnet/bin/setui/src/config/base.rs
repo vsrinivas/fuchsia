@@ -17,6 +17,10 @@ pub enum ControllerFlag {
 /// Represents each agent that can be run.
 #[derive(Eq, PartialEq, Hash, Debug, Copy, Clone, Deserialize)]
 pub enum AgentType {
+    /// Responsible for watching the camera3 mute status. If other clients
+    /// of the camera3 api modify the camera state, the agent should watch and
+    /// should coordinate that change with the internal camera state.
+    CameraWatcher,
     /// Plays earcons in response to certain events. If MediaButtons is
     /// enabled, then it will also handle some media buttons events.
     Earcons,
@@ -36,6 +40,7 @@ pub fn get_default_agent_types() -> HashSet<AgentType> {
 impl From<AgentType> for BlueprintHandle {
     fn from(agent_type: AgentType) -> BlueprintHandle {
         match agent_type {
+            AgentType::CameraWatcher => crate::agent::camera_watcher::blueprint::create(),
             AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
             AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),

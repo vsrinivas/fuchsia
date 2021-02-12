@@ -18,6 +18,7 @@ pub enum Payload {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
     Custom(&'static str),
+    CameraUpdate(camera_watcher::Event),
     Earcon(earcon::Event),
     MediaButtons(media_buttons::Event),
     Restore(restore::Event),
@@ -29,6 +30,20 @@ pub enum Event {
 pub enum Address {
     Agent(agent::base::Descriptor),
     SettingProxy(SettingType),
+}
+
+pub mod camera_watcher {
+    #[derive(PartialEq, Clone, Debug, Eq, Hash)]
+    pub enum Event {
+        // Indicates that the camera's software mute state changed.
+        OnSWMuteState(bool),
+    }
+
+    impl From<bool> for Event {
+        fn from(muted: bool) -> Self {
+            Self::OnSWMuteState(muted)
+        }
+    }
 }
 
 pub mod earcon {

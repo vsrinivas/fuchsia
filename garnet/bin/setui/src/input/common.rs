@@ -137,7 +137,6 @@ pub async fn monitor_media_buttons(
 }
 
 /// Connects to the fuchsia.camera3.DeviceWatcher api.
-#[allow(dead_code)]
 async fn connect_to_camera_watcher(
     service_context_handle: ServiceContextHandle,
 ) -> Result<ExternalServiceProxy<Camera3DeviceWatcherProxy>, Error> {
@@ -163,7 +162,6 @@ async fn get_camera_id(
 
 /// Establishes a connection to the fuchsia.camera3.Device api by watching
 /// the camera id and using it to connect to the device.
-#[allow(dead_code)]
 pub async fn connect_to_camera(
     service_context_handle: ServiceContextHandle,
 ) -> Result<Camera3DeviceProxy, Error> {

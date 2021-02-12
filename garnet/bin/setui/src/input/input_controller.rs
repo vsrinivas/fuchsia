@@ -23,6 +23,7 @@ use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+pub const DEFAULT_CAMERA_NAME: &str = "camera";
 pub const DEFAULT_MIC_NAME: &str = "microphone";
 
 impl DeviceStorageCompatible for InputInfoSources {
@@ -196,6 +197,24 @@ impl InputControllerInner {
         self.set_hw_muted_state(InputDeviceType::CAMERA, disabled).await
     }
 
+    async fn set_sw_camera_mute(&mut self, disabled: bool, name: String) -> SettingHandlerResult {
+        let mut input_info = self.get_stored_info().await;
+        input_info.input_device_state.set_source_state(
+            InputDeviceType::CAMERA,
+            name.clone(),
+            DeviceStateSource::SOFTWARE,
+            if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
+        );
+
+        self.input_device_state.set_source_state(
+            InputDeviceType::CAMERA,
+            name.clone(),
+            DeviceStateSource::SOFTWARE,
+            if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
+        );
+        write(&self.client, input_info, false).await.into_handler_result()
+    }
+
     // A helper for setting the hw state for a |device_type| given the
     // muted |state|.
     async fn set_hw_muted_state(
@@ -329,6 +348,38 @@ impl controller::Handle for InputController {
             Request::Get => Some(
                 self.inner.lock().await.get_info().await.map(|info| Some(SettingInfo::Input(info))),
             ),
+            Request::OnCameraSWState(is_muted) => {
+                let old_state = match self
+                    .inner
+                    .lock()
+                    .await
+                    .get_stored_info()
+                    .await
+                    .input_device_state
+                    .get_source_state(
+                        InputDeviceType::CAMERA,
+                        DEFAULT_CAMERA_NAME.to_string(),
+                        DeviceStateSource::SOFTWARE,
+                    )
+                    .map_err(|_| {
+                        ControllerError::UnexpectedError(
+                            "Could not find camera software state".into(),
+                        )
+                    }) {
+                    Ok(state) => state,
+                    Err(e) => return Some(Err(e)),
+                };
+                if old_state.has_state(DeviceState::MUTED) != is_muted {
+                    return Some(
+                        self.inner
+                            .lock()
+                            .await
+                            .set_sw_camera_mute(is_muted, DEFAULT_CAMERA_NAME.to_string())
+                            .await,
+                    );
+                }
+                None
+            }
             Request::OnButton(ButtonType::MicrophoneMute(state)) => {
                 if !self.has_input_device(InputDeviceType::MICROPHONE).await {
                     return Some(Ok(None));

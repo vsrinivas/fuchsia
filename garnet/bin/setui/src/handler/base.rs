@@ -50,6 +50,9 @@ pub enum Request {
     /// Requests ongoing updates when the setting changes.
     Listen,
 
+    // Camera watcher events.
+    OnCameraSWState(bool),
+
     // Input events.
     OnButton(ButtonType),
     OnVolume(VolumeGain),
@@ -130,6 +133,7 @@ impl Request {
         match self {
             Request::Get => "Get",
             Request::Listen => "Listen",
+            Request::OnCameraSWState(_) => "OnCameraState",
             Request::OnButton(_) => "OnButton",
             Request::OnVolume(_) => "OnVolume",
             Request::SetAccessibilityInfo(_) => "SetAccessibilityInfo",

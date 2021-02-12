@@ -6,6 +6,9 @@
 /// to participate in different lifespans.
 pub mod base;
 
+/// Agent for watching the camera3 status.
+pub mod camera_watcher;
+
 /// Agent for handling media button input.
 pub mod media_buttons;
 

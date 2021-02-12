@@ -20,7 +20,6 @@ pub struct Camera3Service {
 }
 
 impl Camera3Service {
-    #[allow(dead_code)]
     pub fn new() -> Self {
         Self { camera_sw_muted: Arc::new(AtomicBool::new(false)) }
     }
@@ -30,7 +29,6 @@ impl Camera3Service {
         (*self.camera_sw_muted).load(Ordering::Relaxed)
     }
 
-    #[allow(dead_code)]
     pub fn set_camera_sw_muted(&self, muted: bool) {
         (*self.camera_sw_muted).swap(muted, Ordering::Relaxed);
     }

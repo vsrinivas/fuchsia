@@ -1,5 +1,6 @@
 {
     "agent_types": [
+        "CameraWatcher",
         "MediaButtons",
         "Earcons",
         "Restore",
