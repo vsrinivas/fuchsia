@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 
 namespace {
@@ -218,19 +219,16 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   EXPECT_TRUE(server_collection.BuffersAreAllocated());
 
   // Get a raw pointer from the client collection's vmo and write several values to it.
-  uint8_t* vmo_host;
   const uint8_t kNumWrites = 10;
   const uint8_t kWriteValues[] = {200U, 150U, 93U, 50U, 80U, 77U, 11U, 32U, 9U, 199U};
-  {
-    const zx::vmo& image_vmo = client_collection_info.buffers[0].vmo;
-    auto image_vmo_bytes = client_collection_info.settings.buffer_settings.size_bytes;
-    ASSERT_TRUE(image_vmo_bytes > 0);
-    auto status =
-        zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
-                                   image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_host));
-    EXPECT_EQ(status, ZX_OK);
-    memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
-  }
+  flatland::MapHostPointer(
+      client_collection_info, /*vmo_idx*/ 0, [kWriteValues](uint8_t* vmo_host, uint32_t num_bytes) {
+        memcpy(vmo_host, kWriteValues, sizeof(uint8_t) * kNumWrites);
+
+        // Flush the cache after writing to host VMO.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kNumWrites,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+      });
 
   // Create the GPU info from the server side collection.
   auto gpu_info = flatland::GpuImageInfo::New(
@@ -270,6 +268,39 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_done);
   EXPECT_TRUE(batch_download_done);
+
+  // Now we'll update the client side values one more time. We're going to check if the values in
+  // the VK image are also updated when we update the client values even though the image has
+  // already been created. Proving this works will mean that we can have the client continuously
+  // update the same image instead of having to create a new image for every new change.
+  const uint8_t kWriteValuesAgain[] = {231U, 188U, 19U, 75U, 13U, 45U, 47U, 98U, 05U, 214U};
+  flatland::MapHostPointer(
+      client_collection_info, /*vmo_idx*/ 0,
+      [kWriteValuesAgain](uint8_t* vmo_host, uint32_t num_bytes) {
+        memcpy(vmo_host, kWriteValuesAgain, sizeof(uint8_t) * kNumWrites);
+
+        // Flush the cache after writing to host VMO.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kNumWrites,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+      });
+
+  bool read_image_again_done = false;
+  downloader.ScheduleReadImage(
+      image, [&read_image_again_done, &kWriteValuesAgain](const void* host_ptr, size_t size) {
+        for (uint32_t i = 0; i < kNumWrites; i++) {
+          uint8_t val = static_cast<const uint8_t*>(host_ptr)[i];
+          EXPECT_EQ(val, kWriteValuesAgain[i]) << val << ", " << kWriteValuesAgain[i];
+        }
+        read_image_again_done = true;
+      });
+
+  bool batch_download_again_done = false;
+  downloader.Submit([&batch_download_again_done]() { batch_download_again_done = true; });
+  escher->vk_device().waitIdle();
+  EXPECT_TRUE(escher->Cleanup());
+  EXPECT_TRUE(read_image_again_done);
+  EXPECT_TRUE(batch_download_again_done);
+
   vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
 }
 
