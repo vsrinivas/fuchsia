@@ -29,8 +29,24 @@ use {
 // TODO: Check all occurrences of unwrap()
 
 pub const BLOCK_SIZE: u64 = 4096; // TODO
-const LOG_FILE_CHUNK_SIZE: u64 = 16 * BLOCK_SIZE; // TODO
+const BLOCKS_PER_FILE_CHUNK: u64 = 16; // TODO
 const RESET_XOR: u64 = 0xffffffffffffffff;
+
+// LogReader and LogWriter expect some properties of log that are same. For not, log might not function properly
+// if they change. This trait defines few such shared properties.
+trait LogProperties {
+    fn block_size(&self) -> u64 {
+        BLOCK_SIZE
+    }
+
+    fn blocks_per_file_chunk(&self) -> u64 {
+        BLOCKS_PER_FILE_CHUNK
+    }
+
+    fn file_chunk_size(&self) -> u64 {
+        self.blocks_per_file_chunk() * self.block_size()
+    }
+}
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct LogCheckpoint {
@@ -217,15 +233,17 @@ struct LogWriter {
     reset: bool,
 }
 
+impl LogProperties for LogWriter {}
+
 impl LogWriter {
     fn new(handle: Option<Box<dyn ObjectHandle>>, last_check_sum: u64) -> LogWriter {
         LogWriter { handle, offset: 0, last_check_sum, buf: Vec::new(), reset: false }
     }
 
     fn pad_to_block(&mut self) -> std::io::Result<()> {
-        let align = self.buf.len() % BLOCK_SIZE as usize;
+        let align = self.buf.len() % self.block_size() as usize;
         if align > 0 {
-            self.write(&vec![0; BLOCK_SIZE as usize - 8 - align])?;
+            self.write(&vec![0; self.block_size() as usize - 8 - align])?;
         }
         Ok(())
     }
@@ -254,7 +272,7 @@ impl LogWriter {
 
 impl std::io::Write for LogWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let bs = BLOCK_SIZE as usize;
+        let bs = self.block_size() as usize;
         let mut offset = 0;
         while offset < buf.len() {
             let space = bs - 8 - self.buf.len() % bs;
@@ -278,9 +296,10 @@ impl std::io::Write for LogWriter {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        assert!(self.offset % BLOCK_SIZE == 0);
+        assert!(self.offset % self.block_size() == 0);
+        let block_size = self.block_size();
         if let Some(ref mut handle) = self.handle {
-            let bs = BLOCK_SIZE as usize;
+            let bs = block_size as usize;
             // TODO: Zero copy/move.
             let len = self.buf.len() - self.buf.len() % bs;
             if len > 0 {
@@ -295,6 +314,8 @@ impl std::io::Write for LogWriter {
 }
 
 pub struct Log(Mutex<Option<InitializedLog>>);
+
+impl LogProperties for Log {}
 
 impl Log {
     pub fn new() -> Log {
@@ -481,7 +502,7 @@ impl Log {
         self.commit(transaction);
         println!("log object id {:?}", log_handle.object_id());
         let mut transaction = Transaction::new();
-        log_handle.preallocate_range(0..LOG_FILE_CHUNK_SIZE, &mut transaction).unwrap(); // TODO
+        log_handle.preallocate_range(0..self.file_chunk_size(), &mut transaction).unwrap(); // TODO
         self.commit(transaction);
 
         // Fill in the missing details.
@@ -558,25 +579,28 @@ pub struct InitializedLog {
     log_file_checkpoints: HashMap<u64, LogCheckpoint>,
 }
 
+impl LogProperties for InitializedLog {}
+
 impl InitializedLog {
     fn maybe_extend_log_file(&mut self, writer: Option<&mut LogWriter>) {
+        let file_chunk_size = self.file_chunk_size();
         let (writer, second_writer) = match writer {
             None => (&mut self.writer, None),
             Some(writer) => (writer, Some(&mut self.writer)),
         };
-        // TODO: what if it needs to grow by more than LOG_FILE_CHUNK_SIZE?
+        // TODO: what if it needs to grow by more than file_chunk_size()?
         let file_offset = writer.log_file_checkpoint().file_offset;
         let handle = match writer.handle {
             None => return,
             Some(ref mut handle) => handle,
         };
         let size = handle.get_size();
-        if file_offset + LOG_FILE_CHUNK_SIZE <= size {
+        if file_offset + file_chunk_size <= size {
             return;
         }
         let mut transaction = Transaction::new();
         let allocated =
-            handle.preallocate_range(size..size + LOG_FILE_CHUNK_SIZE, &mut transaction).unwrap(); // TODO
+            handle.preallocate_range(size..size + file_chunk_size, &mut transaction).unwrap(); // TODO
         let object_id = handle.object_id();
         let log_file_checkpoint = second_writer.unwrap_or(writer).write_transaction(&transaction);
 
@@ -586,7 +610,7 @@ impl InitializedLog {
         assert!(writer.log_file_checkpoint().file_offset <= size);
         let file_offset = writer.log_file_checkpoint().file_offset;
         let handle = writer.handle.as_ref().unwrap();
-        assert!(file_offset + LOG_FILE_CHUNK_SIZE <= handle.get_size());
+        assert!(file_offset + file_chunk_size <= handle.get_size());
         if object_id == SUPER_BLOCK_OBJECT_ID {
             for dev_range in allocated.iter() {
                 let extent = Extent {
@@ -798,6 +822,8 @@ impl LogReaderHandle for StoreObjectHandle {
     }
 }
 
+impl LogProperties for LogReader {}
+
 struct LogReader {
     handle: Box<dyn LogReaderHandle>,
     buf_offset: usize,
@@ -827,9 +853,9 @@ impl LogReader {
         if self.buf_offset + 8 >= self.buf.len() {
             LogCheckpoint::new(self.read_offset, self.last_check_sum)
         } else {
-            assert!(self.read_offset % BLOCK_SIZE == 0);
+            assert!(self.read_offset % self.block_size() == 0);
             LogCheckpoint::new(
-                self.read_offset - BLOCK_SIZE + self.buf_offset as u64,
+                self.read_offset - self.block_size() + self.buf_offset as u64,
                 self.last_check_sum,
             )
         }
@@ -851,16 +877,16 @@ impl LogReader {
 impl std::io::Read for LogReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         // println!("log reading {:?} @ {:?}", buf.len(), self.buf_offset);
-        assert!(buf.len() < BLOCK_SIZE as usize - 8); // TODO
+        assert!(buf.len() < self.block_size() as usize - 8); // TODO
         let mut offset = 0;
-        let bs = BLOCK_SIZE as usize;
+        let bs = self.block_size() as usize;
         // TODO: Fix this to read more than one block maybe?
         while offset < buf.len() {
             if self.buf_offset + 8 >= self.buf.len() {
                 if self.bad_check_sum {
                     return Ok(offset);
                 }
-                let align = self.read_offset % BLOCK_SIZE;
+                let align = self.read_offset % self.block_size();
                 self.buf.resize(bs, 0);
                 self.handle.read(self.read_offset - align, &mut self.buf)?;
                 let end = bs - 8;
@@ -875,12 +901,12 @@ impl std::io::Read for LogReader {
                         // block.
                         self.found_reset = true;
                         self.last_read_check_sum = stored_check_sum;
-                        self.read_offset += BLOCK_SIZE - align;
+                        self.read_offset += self.block_size() - align;
                     }
                     return Ok(offset);
                 } else {
                     self.last_read_check_sum = stored_check_sum;
-                    self.read_offset += BLOCK_SIZE - align;
+                    self.read_offset += self.block_size() - align;
                     self.buf_offset = align as usize;
                 }
             }
