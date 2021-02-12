@@ -483,7 +483,11 @@ mod tests {
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
-        futures::{channel::mpsc, lock::Mutex, task::Poll},
+        futures::{
+            channel::{mpsc, oneshot},
+            lock::Mutex,
+            task::Poll,
+        },
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         tempfile::TempDir,
@@ -503,6 +507,7 @@ mod tests {
         pub client_connections_enabled: bool,
         pub disconnected_ifaces: Vec<u16>,
         command_sender: mpsc::Sender<IfaceManagerRequest>,
+        pub wpa3_capable: bool,
     }
 
     impl FakeIfaceManager {
@@ -516,6 +521,21 @@ mod tests {
                 client_connections_enabled: false,
                 disconnected_ifaces: Vec::new(),
                 command_sender: command_sender,
+                wpa3_capable: true,
+            }
+        }
+
+        pub fn new_without_wpa3(
+            proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+            command_sender: mpsc::Sender<IfaceManagerRequest>,
+        ) -> Self {
+            FakeIfaceManager {
+                sme_proxy: proxy,
+                connect_succeeds: true,
+                client_connections_enabled: false,
+                disconnected_ifaces: Vec::new(),
+                command_sender: command_sender,
+                wpa3_capable: false,
             }
         }
     }
@@ -563,7 +583,6 @@ mod tests {
             self.sme_proxy.connect(&mut req, None)?;
 
             let (responder, receiver) = oneshot::channel();
-
             // Drop the responder in the failing case.
             if self.connect_succeeds {
                 let _ = responder.send(());
@@ -626,6 +645,10 @@ mod tests {
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
+            Ok(self.wpa3_capable)
         }
     }
 
@@ -998,7 +1021,10 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
     }
 
     #[test]
@@ -1035,7 +1061,10 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+        );
     }
 
     #[test]
@@ -1072,7 +1101,103 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+        );
+    }
+
+    #[test]
+    fn test_connect_wpa3_not_supported() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("test_connect_wpa3_not_supported", &mut exec, false);
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let iface_manager = FakeIfaceManager::new_without_wpa3(proxy.clone(), req_sender);
+        let iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>> =
+            Arc::new(Mutex::new(iface_manager));
+
+        let serve_fut = serve_provider_requests(
+            Arc::clone(&iface_manager),
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
+            requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Issue connect request to a WPA3 network.
+        let mut net_id = fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::Wpa3,
+        };
+        // Check that connect request fails because WPA3 is not supported.
+        let connect_fut = controller.connect(&mut net_id);
+        pin_mut!(connect_fut);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+        );
+    }
+
+    #[test]
+    fn test_connect_wpa3_is_supported() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup("test_connect_wpa3_is_supported", &mut exec, true);
+        let serve_fut = serve_provider_requests(
+            Arc::clone(&test_values.iface_manager),
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Save the network so it can be found to connect.
+        let mut net_id = fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::Wpa3,
+        };
+        let password = Credential::Password(b"password".to_vec());
+        let save_fut = test_values.saved_networks.store(net_id.clone().into(), password);
+        pin_mut!(save_fut);
+        exec.run_singlethreaded(&mut save_fut).expect("Failed to save network");
+
+        // Issue connect request to a WPA3 network.
+        let connect_fut = controller.connect(&mut net_id);
+        pin_mut!(connect_fut);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
     }
 
     #[test]
@@ -1987,6 +2112,10 @@ mod tests {
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
+            Ok(true)
         }
     }
 

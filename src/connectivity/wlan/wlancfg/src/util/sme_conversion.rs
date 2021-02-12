@@ -8,11 +8,15 @@ use {fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme}
 /// security type.
 pub fn security_from_sme_protection(
     protection: fidl_sme::Protection,
+    wpa3_supported: bool,
 ) -> Option<fidl_policy::SecurityType> {
     use fidl_policy::SecurityType;
     use fidl_sme::Protection::*;
     match protection {
-        Wpa3Enterprise | Wpa3Personal | Wpa2Wpa3Personal => Some(SecurityType::Wpa3),
+        Wpa3Enterprise | Wpa3Personal => Some(SecurityType::Wpa3),
+        Wpa2Wpa3Personal => {
+            Some(if wpa3_supported { SecurityType::Wpa3 } else { SecurityType::Wpa2 })
+        }
         Wpa2Enterprise
         | Wpa2Personal
         | Wpa1Wpa2Personal
@@ -32,22 +36,38 @@ mod tests {
         use super::{
             fidl_policy::SecurityType, fidl_sme::Protection, security_from_sme_protection,
         };
+        let wpa3_supported = true;
+        let wpa3_not_supported = false;
         let test_pairs = vec![
-            (Protection::Wpa3Enterprise, Some(SecurityType::Wpa3)),
-            (Protection::Wpa3Personal, Some(SecurityType::Wpa3)),
-            (Protection::Wpa2Wpa3Personal, Some(SecurityType::Wpa3)),
-            (Protection::Wpa2Enterprise, Some(SecurityType::Wpa2)),
-            (Protection::Wpa2Personal, Some(SecurityType::Wpa2)),
-            (Protection::Wpa1Wpa2Personal, Some(SecurityType::Wpa2)),
-            (Protection::Wpa2PersonalTkipOnly, Some(SecurityType::Wpa2)),
-            (Protection::Wpa1Wpa2PersonalTkipOnly, Some(SecurityType::Wpa2)),
-            (Protection::Wpa1, Some(SecurityType::Wpa)),
-            (Protection::Wep, Some(SecurityType::Wep)),
-            (Protection::Open, Some(SecurityType::None)),
-            (Protection::Unknown, None),
+            // Below are pairs when WPA3 is supported.
+            (Protection::Wpa3Enterprise, wpa3_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa3Personal, wpa3_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa2Wpa3Personal, wpa3_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa2Enterprise, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Personal, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2Personal, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2PersonalTkipOnly, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2PersonalTkipOnly, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1, wpa3_supported, Some(SecurityType::Wpa)),
+            (Protection::Wep, wpa3_supported, Some(SecurityType::Wep)),
+            (Protection::Open, wpa3_supported, Some(SecurityType::None)),
+            (Protection::Unknown, wpa3_supported, None),
+            // Below are pairs when WPA3 is not supported.
+            (Protection::Wpa3Enterprise, wpa3_not_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa2Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Enterprise, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2PersonalTkipOnly, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2PersonalTkipOnly, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1, wpa3_not_supported, Some(SecurityType::Wpa)),
+            (Protection::Wep, wpa3_not_supported, Some(SecurityType::Wep)),
+            (Protection::Open, wpa3_not_supported, Some(SecurityType::None)),
+            (Protection::Unknown, wpa3_not_supported, None),
         ];
-        for (input, output) in test_pairs {
-            assert_eq!(security_from_sme_protection(input), output);
+        for (input, wpa3_capable, output) in test_pairs {
+            assert_eq!(security_from_sme_protection(input, wpa3_capable), output);
         }
     }
 }

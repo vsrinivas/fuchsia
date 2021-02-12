@@ -89,6 +89,11 @@ pub(crate) struct StopAllApsRequest {
 }
 
 #[derive(Debug)]
+pub(crate) struct HasWpa3IfaceRequest {
+    pub responder: oneshot::Sender<bool>,
+}
+
+#[derive(Debug)]
 pub(crate) enum IfaceManagerRequest {
     Disconnect(DisconnectRequest),
     Connect(ConnectRequest),
@@ -103,4 +108,5 @@ pub(crate) enum IfaceManagerRequest {
     StartAp(StartApRequest),
     StopAp(StopApRequest),
     StopAllAps(StopAllApsRequest),
+    HasWpa3Iface(HasWpa3IfaceRequest),
 }

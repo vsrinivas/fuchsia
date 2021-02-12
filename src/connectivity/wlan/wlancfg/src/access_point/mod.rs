@@ -473,6 +473,10 @@ mod tests {
                 Err(format_err!("stop was instructed to fail"))
             }
         }
+
+        async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
+            Ok(true)
+        }
     }
 
     /// Requests a new AccessPointController from the given AccessPointProvider.

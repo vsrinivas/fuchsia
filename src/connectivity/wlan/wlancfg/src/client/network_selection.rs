@@ -197,10 +197,12 @@ impl NetworkSelector {
         &self,
         sme_proxy: fidl_sme::ClientSmeProxy,
         network: types::NetworkIdentifier,
+        wpa3_supported: bool,
     ) -> Option<types::ConnectionCandidate> {
         // TODO: check if we have recent enough scan results that we can pull from instead?
         let scan_results =
-            scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None).await;
+            scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None, wpa3_supported)
+                .await;
 
         match scan_results {
             Err(()) => None,
@@ -408,15 +410,26 @@ async fn augment_bss_with_active_scan(
         }
 
         // Get an SME proxy
-        let sme_proxy = iface_manager.lock().await.get_sme_proxy_for_scan().await.map_err(|e| {
+        let mut iface_manager_guard = iface_manager.lock().await;
+        let sme_proxy = iface_manager_guard.get_sme_proxy_for_scan().await.map_err(|e| {
             info!("Failed to get an SME proxy for scan: {:?}", e);
         })?;
+        // Determine whether WPA2/WPA3 is should be considered WPA2 or WPA3.
+        let wpa3_supported = iface_manager_guard.has_wpa3_capable_client().await.unwrap_or_else(|e| {
+            error!(
+                "Failed to determine whether the device supports WPA3. Assuming no WPA3 support. {}",
+                e
+            );
+            false
+        });
+        drop(iface_manager_guard);
 
         // Perform the scan
         let mut directed_scan_result = scan::perform_directed_active_scan(
             &sme_proxy,
             &selected_network.network.ssid,
             Some(vec![channel.primary]),
+            wpa3_supported,
         )
         .await
         .map_err(|()| {
@@ -651,6 +664,12 @@ mod tests {
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        // Many tests use wpa3 networks expecting them to be used normally, so by default this
+        // is true.
+        async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
+            Ok(true)
         }
     }
 
@@ -1926,8 +1945,11 @@ mod tests {
         drop(iface_manager_inner);
 
         // Kick off network selection
-        let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1.clone());
+        let network_selection_fut = network_selector.find_connection_candidate_for_network(
+            sme_proxy,
+            test_id_1.clone(),
+            true,
+        );
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
@@ -2010,7 +2032,7 @@ mod tests {
 
         // Kick off network selection
         let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1);
+            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1, true);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 

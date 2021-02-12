@@ -121,6 +121,7 @@ pub async fn serve(
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
+    wpa3_supported: bool,
 ) {
     let next_network = match connect_request {
         Some((req, sender)) => Some(ConnectingOptions {
@@ -143,6 +144,7 @@ pub async fn serve(
         saved_networks_manager: saved_networks_manager,
         network_selector,
         cobalt_api,
+        wpa3_supported,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -171,6 +173,7 @@ struct CommonStateOptions {
     saved_networks_manager: Arc<SavedNetworksManager>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
+    wpa3_supported: bool,
 }
 
 fn handle_none_request() -> Result<State, ExitReason> {
@@ -399,6 +402,7 @@ async fn connecting_state(
                 .find_connection_candidate_for_network(
                     common_options.proxy.clone(),
                     options.connect_request.target.network.clone(),
+                    common_options.wpa3_supported,
                 )
                 .map(|find_result| {
                     SmeOperation::ScanResult(
@@ -720,6 +724,7 @@ mod tests {
         futures::{task::Poll, Future},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
+        test_case::test_case,
         wlan_common::assert_variant,
         wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
     };
@@ -758,6 +763,7 @@ mod tests {
                 saved_networks_manager: saved_networks_manager,
                 network_selector,
                 cobalt_api,
+                wpa3_supported: true,
             },
             sme_req_stream,
             client_req_sender,
@@ -863,6 +869,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            wpa3_supported: true,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1027,6 +1034,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            wpa3_supported: true,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1139,6 +1147,126 @@ mod tests {
             cobalt_events,
             CONNECTION_ATTEMPT_METRIC_ID,
             types::ConnectReason::FidlConnectRequest
+        );
+    }
+
+    #[test_case(true, types::SecurityType::Wpa3)]
+    #[test_case(false, types::SecurityType::Wpa2)]
+    #[test_case(true, types::SecurityType::Wpa2)]
+    fn connecting_state_successfully_connects_wpa2wpa3(
+        wpa3_supported: bool,
+        type_: types::SecurityType,
+    ) {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        // Do test set up manually to get stash server
+        set_logger_for_test();
+        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (update_sender, _update_receiver) = mpsc::unbounded();
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let mut sme_req_stream =
+            sme_server.into_stream().expect("could not create SME request stream");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks_manager = Arc::new(saved_networks);
+        let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
+        let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
+        let connect_request = types::ConnectRequest {
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_,
+                },
+                credential: Credential::Password("Anything".as_bytes().to_vec()),
+                observed_in_passive_scan: None,
+                bss: None,
+                multiple_bss_candidates: None,
+            },
+            reason: types::ConnectReason::FidlConnectRequest,
+        };
+
+        // Store the network in the saved_networks_manager, so we can record connection success
+        let save_fut = saved_networks_manager.store(
+            connect_request.target.network.clone().into(),
+            connect_request.target.credential.clone(),
+        );
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
+
+        // Check that the saved networks manager has the expected initial data
+        let saved_networks = exec.run_singlethreaded(
+            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
+        );
+        assert_eq!(false, saved_networks[0].has_ever_connected);
+        assert!(saved_networks[0].hidden_probability > 0.0);
+
+        let (connect_sender, _connect_receiver) = oneshot::channel();
+        let connecting_options = ConnectingOptions {
+            connect_responder: Some(connect_sender),
+            connect_request: connect_request.clone(),
+            attempt_counter: 0,
+        };
+        let common_options = CommonStateOptions {
+            proxy: sme_proxy,
+            req_stream: client_req_stream.fuse(),
+            update_sender: update_sender,
+            saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
+            cobalt_api: cobalt_api,
+            wpa3_supported,
+        };
+        let initial_state = connecting_state(common_options, connecting_options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a scan request is sent to the SME and send back a result
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![next_network_ssid.as_bytes().to_vec()],
+            channels: vec![],
+        });
+        let scan_results = vec![fidl_sme::BssInfo {
+            ssid: next_network_ssid.as_bytes().to_vec(),
+            bss_desc: bss_desc.clone(),
+            compatible: true,
+            protection: fidl_sme::Protection::Wpa2Wpa3Personal,
+            ..generate_random_bss_info()
+        }];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut sme_req_stream,
+            &expected_scan_request,
+            scan_results,
+        );
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure the mixed network was selected for connection and a connect request is sent to
+        // the SME.
+        let sme_fut = sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, .. }) => {
+                assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
+                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+            }
         );
     }
 
@@ -1348,6 +1476,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            wpa3_supported: true,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1513,6 +1642,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            wpa3_supported: true,
         };
 
         let next_network_ssid = "bar";
@@ -1651,6 +1781,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            wpa3_supported: true,
         };
 
         let next_network_ssid = "bar";
@@ -2652,6 +2783,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            wpa3_supported: true,
         };
         let initial_state = connected_state(common_options, connect_request.clone());
         let fut = run_state_machine(initial_state);
@@ -3094,6 +3226,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            true,
         );
         pin_mut!(fut);
 
@@ -3161,6 +3294,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            true,
         );
         pin_mut!(fut);
 
@@ -3219,6 +3353,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            true,
         );
         pin_mut!(fut);
 
@@ -3345,6 +3480,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            true,
         );
         pin_mut!(fut);
 

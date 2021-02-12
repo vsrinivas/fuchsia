@@ -981,6 +981,10 @@ mod tests {
             unimplemented!();
         }
 
+        fn get_wpa3_capable_client(&mut self) -> Option<u16> {
+            unimplemented!();
+        }
+
         async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
             unimplemented!();
         }
@@ -1007,6 +1011,10 @@ mod tests {
 
         fn save_region_code(&mut self, region_code: Option<[u8; REGION_CODE_LEN]>) {
             self.saved_country_code = region_code;
+        }
+
+        fn has_wpa3_client_iface(&self) -> bool {
+            unimplemented!();
         }
     }
 
@@ -1131,6 +1139,10 @@ mod tests {
                 .next()
                 .await
                 .expect("internal error: failed to receive fake response from test case")
+        }
+
+        async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
+            unimplemented!();
         }
     }
 }
