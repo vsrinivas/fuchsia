@@ -128,13 +128,11 @@ bool Session::ApplyScheduledUpdates(CommandContext* command_context,
   // Updates have been applied - inspect latest session resource and tree stats.
   inspect_resource_count_.Set(resource_count_);
 
-  auto buffer_collections_it = deregistered_buffer_collections_.begin();
-  while (buffer_collections_it != deregistered_buffer_collections_.end()) {
-    if (buffer_collections_it->ImageResourceIds().empty()) {
-      deregistered_buffer_collections_.erase(buffer_collections_it);
-    }
-    ++buffer_collections_it;
-  }
+  deregistered_buffer_collections_.erase(
+      std::remove_if(deregistered_buffer_collections_.begin(),
+                     deregistered_buffer_collections_.end(),
+                     [](BufferCollectionInfo& info) { return info.ImageResourceIds().empty(); }),
+      deregistered_buffer_collections_.end());
 
   return true;
 }

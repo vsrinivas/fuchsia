@@ -323,6 +323,9 @@ bool GfxCommandApplier::ApplyReleaseResourceCmd(Session* session,
   for (auto& [_, info] : session->BufferCollections()) {
     info.ImageResourceIds().erase(command.id);
   }
+  for (auto& info : session->DeregisteredBufferCollections()) {
+    info.ImageResourceIds().erase(command.id);
+  }
   return session->resources()->RemoveResource(command.id);
 }
 

@@ -2045,6 +2045,9 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   histogram.erase(kBgraColor);
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 
+  // Test deregistering the buffer collection before releasing resources.
+  session->DeregisterBufferCollection(kBufferId);
+
   session->Enqueue(scenic::NewReleaseResourceCmd(kShapeId));
   session->Enqueue(scenic::NewReleaseResourceCmd(kShapeNodeId));
   session->Enqueue(scenic::NewReleaseResourceCmd(kMaterialId));
@@ -2052,8 +2055,6 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
 
   RunLoopUntilIdle();
   Present(session);
-
-  session->DeregisterBufferCollection(kBufferId);
 }
 
 TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
@@ -2212,6 +2213,7 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   RunLoopUntilIdle();
   Present(session);
 
+  // Test deregistering the buffer collection after releasing resources.
   session->DeregisterBufferCollection(kBufferId);
 }
 

@@ -112,6 +112,10 @@ class Session : public CommandDispatcher {
     return buffer_collections_;
   }
 
+  std::vector<BufferCollectionInfo>& DeregisteredBufferCollections() {
+    return deregistered_buffer_collections_;
+  }
+
   const fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() { return sysmem_allocator_; }
 
  private:
