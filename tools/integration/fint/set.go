@@ -48,7 +48,6 @@ func runSteps(
 	if contextSpec.BuildDir == "" {
 		return nil, fmt.Errorf("build_dir must be set")
 	}
-	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	genArgs, err := genArgs(staticSpec, contextSpec, platform)
 	if err != nil {
 		return nil, err
@@ -66,8 +65,7 @@ func runSteps(
 	if contextSpec.ArtifactDir != "" {
 		artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
 	}
-
-	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, gnPath, artifacts.GnTracePath, genArgs)
+	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
 	if err != nil {
 		artifacts.FailureSummary = genStdout
 		return artifacts, err
@@ -77,7 +75,7 @@ func runSteps(
 		for _, f := range contextSpec.ChangedFiles {
 			changedFiles = append(changedFiles, f.Path)
 		}
-		sb, err := shouldBuild(ctx, runner, contextSpec.BuildDir, contextSpec.CheckoutDir, gnPath, changedFiles)
+		sb, err := shouldBuild(ctx, runner, contextSpec.BuildDir, contextSpec.CheckoutDir, platform, changedFiles)
 		if err != nil {
 			return artifacts, err
 		}
@@ -91,15 +89,21 @@ func runGen(
 	runner subprocessRunner,
 	staticSpec *fintpb.Static,
 	contextSpec *fintpb.Context,
-	gnPath string,
+	platform string,
 	gnTracePath string,
 	args []string,
 ) (genStdout string, err error) {
 	genCmd := []string{
-		gnPath, "gen",
+		thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn"),
+		"gen",
 		contextSpec.BuildDir,
 		"--check=system",
 		"--fail-on-unused-args",
+		// If --ninja-executable is set, GN runs `ninja -t restat build.ninja`
+		// after generating the ninja files, updating the cached modified
+		// timestamps of files. This avoids extra regens when running ninja
+		// repeatedly under some circumstances.
+		fmt.Sprintf("--ninja-executable=%s", thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja")),
 	}
 
 	if isatty.IsTerminal() {
@@ -318,4 +322,10 @@ func contains(items []string, target string) bool {
 		}
 	}
 	return false
+}
+
+// thirdPartyPrebuilt returns the absolute path to a platform-specific prebuilt
+// in the //prebuilt/third_party subdirectory of the checkout.
+func thirdPartyPrebuilt(checkoutDir, platform, name string) string {
+	return filepath.Join(checkoutDir, "prebuilt", "third_party", name, platform, name)
 }

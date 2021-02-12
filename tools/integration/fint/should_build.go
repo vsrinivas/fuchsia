@@ -57,9 +57,10 @@ func shouldBuild(
 	runner subprocessRunner,
 	buildDir string,
 	checkoutDir string,
-	gnPath string,
+	platform string,
 	changedFiles []string,
 ) (bool, error) {
+	gnPath := thirdPartyPrebuilt(checkoutDir, platform, "gn")
 	if !canAnalyzeFiles(ctx, changedFiles) {
 		// To be safe, we should always build if we don't know how to analyze
 		// all the affected files yet.

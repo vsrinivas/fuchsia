@@ -162,8 +162,7 @@ func TestRunGen(t *testing.T) {
 				mockStdout: []byte("some stdout"),
 			}
 
-			gnPath := "/bin/gn"
-			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, gnPath, tc.gnTracePath, []string{"arg1", "arg2"})
+			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, "mac-x64", tc.gnTracePath, []string{"arg1", "arg2"})
 			if err != nil {
 				t.Fatalf("Unexpected error from runGen: %v", err)
 			}
@@ -182,8 +181,8 @@ func TestRunGen(t *testing.T) {
 
 			exe, subcommand, buildDir, argsOption := cmd[0], cmd[1], cmd[2], cmd[len(cmd)-1]
 			otherOptions := cmd[3 : len(cmd)-1]
-			if exe != gnPath {
-				t.Errorf("runGen ran wrong GN executable: want %q, got %q", gnPath, exe)
+			if filepath.Base(exe) != "gn" {
+				t.Errorf("runGen ran wrong GN executable: wanted basename %q, got %q", "gn", exe)
 			}
 			if subcommand != "gen" {
 				t.Errorf("Expected runGen to run `gn gen`, but got `gn %s`", subcommand)

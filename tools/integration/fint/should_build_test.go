@@ -112,11 +112,11 @@ func TestShouldBuild(t *testing.T) {
 			runner := &gnAnalyzeRunner{
 				output: tc.mockOutput,
 			}
+			platform := "linux-x64"
 			buildDir := filepath.Join(t.TempDir(), "build")
 			checkoutDir := filepath.Join(t.TempDir(), "checkout")
-			gnPath := "/bin/gn"
 
-			gotShouldBuild, err := shouldBuild(ctx, runner, buildDir, checkoutDir, gnPath, tc.files)
+			gotShouldBuild, err := shouldBuild(ctx, runner, buildDir, checkoutDir, platform, tc.files)
 			if tc.expectErr && err == nil {
 				t.Fatalf("Expected error but analysis succeeded")
 			} else if !tc.expectErr && err != nil {
@@ -136,7 +136,7 @@ func TestShouldBuild(t *testing.T) {
 				return
 			}
 
-			expectedCmd := []string{gnPath, "analyze", buildDir}
+			expectedCmd := []string{thirdPartyPrebuilt(checkoutDir, platform, "gn"), "analyze", buildDir}
 			if diff := cmp.Diff(runner.cmd[:len(expectedCmd)], expectedCmd); diff != "" {
 				t.Fatalf("Wrong gn command run (-want +got):\n%s", diff)
 			}
