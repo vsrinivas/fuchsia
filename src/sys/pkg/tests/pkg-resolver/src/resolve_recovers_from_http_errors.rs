@@ -15,7 +15,7 @@ use {
     fuchsia_zircon::Status,
     lib::{extra_blob_contents, make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
-    std::{sync::Arc, time::Duration},
+    std::{net::Ipv4Addr, sync::Arc, time::Duration},
 };
 
 async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
@@ -266,6 +266,7 @@ async fn blob_timeout_causes_new_tcp_connection() {
             handler::Once::new(handler::HangBody),
         ))
         .use_https(true)
+        .bind_to_addr(Ipv4Addr::LOCALHOST)
         .start()
         .expect("Starting server succeeds");
 
