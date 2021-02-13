@@ -9,6 +9,7 @@
 #include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <fuchsia/sys2/llcpp/fidl.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/status.h>
 
 #include <unordered_map>
@@ -63,10 +64,11 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   using Offers = std::vector<fidl::StringView>;
   using Symbols = std::vector<llcpp::fuchsia::driver::framework::NodeSymbol>;
 
-  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher, Offers offers,
-       Symbols symbols);
+  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+       std::string_view name, Offers offers, Symbols symbols);
   ~Node() override;
 
+  const std::string& name() const;
   fidl::VectorView<fidl::StringView> offers();
   fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols();
   DriverHostComponent* parent_driver_host() const;
@@ -74,6 +76,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   void set_controller_binding(
       fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::NodeController> controller_binding);
   void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node> binding);
+  fbl::DoublyLinkedList<std::unique_ptr<Node>>& children();
 
   void Remove();
 
@@ -84,9 +87,11 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   void AddChild(llcpp::fuchsia::driver::framework::NodeAddArgs args, zx::channel controller,
                 zx::channel node, AddChildCompleter::Sync& completer) override;
 
-  Node* parent_;
-  DriverBinder* driver_binder_;
-  async_dispatcher_t* dispatcher_;
+  Node* const parent_;
+  DriverBinder* const driver_binder_;
+  async_dispatcher_t* const dispatcher_;
+
+  const std::string name_;
   Offers offers_;
   Symbols symbols_;
 
@@ -123,8 +128,10 @@ struct DriverArgs {
 class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::RawChannelInterface,
                      public DriverBinder {
  public:
-  DriverRunner(zx::channel realm, DriverIndex* driver_index, async_dispatcher_t* dispatcher);
+  DriverRunner(zx::channel realm, DriverIndex* driver_index, inspect::Inspector* inspector,
+               async_dispatcher_t* dispatcher);
 
+  fit::promise<inspect::Inspector> Inspect();
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> StartRootDriver(std::string_view name);
 

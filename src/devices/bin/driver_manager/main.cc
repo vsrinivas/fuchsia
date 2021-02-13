@@ -287,13 +287,11 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   svc::Outgoing outgoing(loop.dispatcher());
   InspectManager inspect_manager(loop.dispatcher());
-  auto driver_runner_property = inspect_manager.root_node().CreateBool("driver_runner", false);
 
   std::optional<DriverRunner> driver_runner;
   // TODO(fxbug.dev/33183): Replace this with a driver_index component.
   std::optional<DriverIndex> driver_index;
   if (driver_manager_args.use_driver_runner) {
-    driver_runner_property.Set(true);
     const auto realm_path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::sys2::Realm::Name);
     zx::channel realm_client, realm_server;
     status = zx::channel::create(0, &realm_client, &realm_server);
@@ -322,7 +320,8 @@ int main(int argc, char** argv) {
         return zx::error(ZX_ERR_NOT_FOUND);
       }
     });
-    driver_runner.emplace(std::move(realm_client), &driver_index.value(), loop.dispatcher());
+    driver_runner.emplace(std::move(realm_client), &driver_index.value(),
+                          &inspect_manager.inspector(), loop.dispatcher());
     auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
     if (publish.is_error()) {
       return publish.error_value();

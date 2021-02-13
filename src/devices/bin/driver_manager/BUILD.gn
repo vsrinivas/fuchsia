@@ -226,6 +226,7 @@ source_set("driver_runner") {
     "//src/devices/lib/log",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/inspect",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -242,6 +243,7 @@ executable("driver_runner_test") {
     ":driver_runner",
     "//sdk/fidl/fuchsia.driver.framework",
     "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

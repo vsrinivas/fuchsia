@@ -8,6 +8,8 @@
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/status.h>
 
+#include <sstream>
+#include <stack>
 #include <unordered_set>
 
 #include <fs/service.h>
@@ -19,6 +21,48 @@ namespace fdata = llcpp::fuchsia::data;
 namespace fdf = llcpp::fuchsia::driver::framework;
 namespace frunner = llcpp::fuchsia::component::runner;
 namespace fsys = llcpp::fuchsia::sys2;
+
+using InspectStack = std::stack<std::pair<inspect::Node*, Node*>>;
+
+namespace {
+
+void InspectNode(inspect::Inspector* inspector, InspectStack* stack) {
+  std::vector<inspect::Node> roots;
+  while (!stack->empty()) {
+    // Pop the current root and node to operate on.
+    auto [root, node] = stack->top();
+    stack->pop();
+
+    // Populate root with data from node.
+    if (auto offers = node->offers(); !offers.empty()) {
+      std::ostringstream stream;
+      for (auto& offer : offers) {
+        stream << (stream.tellp() > 0 ? ", " : "") << offer.get();
+      }
+      root->CreateString("offers", stream.str(), inspector);
+    }
+    if (auto symbols = node->symbols(); !symbols.empty()) {
+      std::ostringstream stream;
+      for (auto& symbol : symbols) {
+        stream << (stream.tellp() > 0 ? ", " : "") << symbol.name().get();
+      }
+      root->CreateString("symbols", stream.str(), inspector);
+    }
+
+    // Push children of this node onto the stack.
+    for (auto& child : node->children()) {
+      auto& root_for_child = roots.emplace_back(root->CreateChild(child.name()));
+      stack->emplace(&root_for_child, &child);
+    }
+  }
+
+  // Store all of the roots in the inspector.
+  for (auto& root : roots) {
+    inspector->emplace(std::move(root));
+  }
+}
+
+}  // namespace
 
 class EventHandler : public llcpp::fuchsia::driver::framework::DriverHost::AsyncEventHandler {
  public:
@@ -77,11 +121,12 @@ zx::status<zx::channel> DriverHostComponent::Start(
   return zx::ok(std::move(client_end));
 }
 
-Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher, Offers offers,
-           Symbols symbols)
+Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+           std::string_view name, Offers offers, Symbols symbols)
     : parent_(parent),
       driver_binder_(driver_binder),
       dispatcher_(dispatcher),
+      name_(std::move(name)),
       offers_(std::move(offers)),
       symbols_(std::move(symbols)) {}
 
@@ -93,6 +138,8 @@ Node::~Node() {
     binding_->Unbind();
   }
 }
+
+const std::string& Node::name() const { return name_; }
 
 fidl::VectorView<fidl::StringView> Node::offers() { return fidl::unowned_vec(offers_); }
 
@@ -109,6 +156,8 @@ void Node::set_controller_binding(fidl::ServerBindingRef<fdf::NodeController> co
 void Node::set_binding(fidl::ServerBindingRef<fdf::Node> binding) {
   binding_ = std::make_optional(std::move(binding));
 }
+
+fbl::DoublyLinkedList<std::unique_ptr<Node>>& Node::children() { return children_; }
 
 void Node::Remove() {
   if (parent_ != nullptr) {
@@ -174,8 +223,8 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
               .build());
     }
   }
-  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, std::move(offers),
-                                      std::move(symbols));
+  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name.get(),
+                                      std::move(offers), std::move(symbols));
 
   auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
       dispatcher_, std::move(controller), child.get());
@@ -221,11 +270,23 @@ zx::status<MatchResult> DriverIndex::Match(fdf::NodeAddArgs args) {
 }
 
 DriverRunner::DriverRunner(zx::channel realm, DriverIndex* driver_index,
-                           async_dispatcher_t* dispatcher)
+                           inspect::Inspector* inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
       driver_index_(driver_index),
       dispatcher_(dispatcher),
-      root_node_(nullptr, this, dispatcher, {}, {}) {}
+      root_node_(nullptr, this, dispatcher, "root", {}, {}) {
+  inspector->GetRoot().CreateLazyNode(
+      "driver_runner", [this] { return Inspect(); }, inspector);
+}
+
+fit::promise<inspect::Inspector> DriverRunner::Inspect() {
+  inspect::Inspector inspector;
+  auto root = inspector.GetRoot().CreateChild(root_node_.name());
+  InspectStack stack{{std::make_pair(&root, &root_node_)}};
+  InspectNode(&inspector, &stack);
+  inspector.emplace(std::move(root));
+  return fit::make_ok_promise(inspector);
+}
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {

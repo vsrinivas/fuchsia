@@ -80,7 +80,6 @@ class InspectManager {
 
   inspect::UintProperty& device_count() { return device_count_; }
 
-  // Public method for test purpose
   inspect::Inspector& inspector() { return inspector_; }
 
   std::optional<InspectDevfs>& devfs() { return devfs_; }
