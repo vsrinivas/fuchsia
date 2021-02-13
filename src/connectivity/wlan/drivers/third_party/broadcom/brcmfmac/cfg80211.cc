@@ -1862,6 +1862,29 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   BRCMF_DBG(TRACE, "Exit");
 }
 
+static zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out,
+                                          uint8_t* ctl_chan_out) {
+  bcme_status_t fw_err;
+  zx_status_t err;
+
+  // Get chanspec of the given IF from firmware.
+  err = brcmf_fil_iovar_data_get(ifp, "chanspec", chanspec_out, sizeof(uint16_t), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  // Get the control channel given chanspec
+  err = chspec_ctlchan(*chanspec_out, ctl_chan_out);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", *chanspec_out,
+              zx_status_get_string(err));
+    return err;
+  }
+  return ZX_OK;
+}
+
 static zx_status_t brcmf_get_rssi_snr(net_device* ndev, int8_t* rssi_dbm, int8_t* snr_db) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   bcme_status_t fw_err = BCME_OK;
@@ -1907,6 +1930,22 @@ static void cfg80211_signal_ind(net_device* ndev) {
       ndev->last_known_rssi_dbm = rssi;
       ndev->last_known_snr_db = snr;
       wlanif_impl_ifc_signal_report(&ndev->if_proto, &signal_ind);
+    }
+    cfg->connect_log_cnt++;
+    if (cfg->connect_log_cnt >= BRCMF_CONNECT_LOG_COUNT) {
+      // Get channel information from firmware.
+      uint16_t chanspec;
+      uint8_t ctl_chan;
+      zx_status_t err = brcmf_get_ctrl_channel(ifp, &chanspec, &ctl_chan);
+      if (err == ZX_OK) {
+        BRCMF_INFO("Client IF connected channel: %d RSSI: %d SNR: %d", ctl_chan,
+                   ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
+        cfg->last_known_client_chn = ctl_chan;
+      } else {
+        BRCMF_INFO("Client IF get chan err last known: %d RSSI: %d SNR: %d",
+                   cfg->last_known_client_chn, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
+      }
+      cfg->connect_log_cnt = 0;
     }
   } else if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
     // If client is not connected, stop the timer
@@ -4624,28 +4663,6 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
   return err;
 }
 
-zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out, uint8_t* ctl_chan_out) {
-  bcme_status_t fw_err;
-  zx_status_t err;
-
-  // Get chanspec of the given IF from firmware.
-  err = brcmf_fil_iovar_data_get(ifp, "chanspec", chanspec_out, sizeof(uint16_t), &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    return err;
-  }
-
-  // Get the control channel given chanspec
-  err = chspec_ctlchan(*chanspec_out, ctl_chan_out);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", *chanspec_out,
-              zx_status_get_string(err));
-    return err;
-  }
-  return ZX_OK;
-}
-
 // Notify SME of channel switch
 zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                         void* data) {
@@ -4796,6 +4813,7 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
         if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
           // Start the signal report timer
+          cfg->connect_log_cnt = 0;
           cfg->signal_report_timer->Start(BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
           // Indicate the rssi soon after connection
           cfg80211_signal_ind(ndev);
