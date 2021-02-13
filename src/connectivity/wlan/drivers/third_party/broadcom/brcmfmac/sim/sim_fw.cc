@@ -493,7 +493,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             hw_.EnableRx();
           } else {
             // AP stop
-            ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == true);
+            // Note that SoftAP may have been only partially started (maybe one
+            // of the iovars in the sequence fails).
             StopSoftAP(ifidx);
             BRCMF_DBG(SIM, "AP Stop processed");
           }

@@ -2763,6 +2763,72 @@ bool brcmf_is_ap_start_pending(brcmf_cfg80211_info* cfg) {
   return brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &vif->sme_state);
 }
 
+// Returns an MLME result code (WLAN_STOP_RESULT_*)
+static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  zx_status_t status;
+  bcme_status_t fw_err = BCME_OK;
+  uint8_t result = WLAN_STOP_RESULT_SUCCESS;
+  struct brcmf_join_params join_params;
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+
+  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) &&
+      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+    BRCMF_INFO("attempt to stop already stopped AP\n");
+    return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
+  }
+
+  memset(&join_params, 0, sizeof(join_params));
+  status =
+      brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("SET SSID error: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+    result = WLAN_STOP_RESULT_INTERNAL_ERROR;
+  }
+
+  // Issue "bss" iovar to bring down the SoftAP IF.
+  brcmf_bss_ctrl bss_down;
+  bss_down.bsscfgidx = ifp->bsscfgidx;
+  bss_down.value = 0;
+  status = brcmf_fil_bsscfg_data_set(ifp, "bss", &bss_down, sizeof(bss_down));
+  if (status != ZX_OK) {
+    BRCMF_ERR("bss down failed %s. Issue C_DOWN (will take down client IF too)",
+              zx_status_get_string(status));
+    // If bss down does not work, use C_DOWN which has the side effect of
+    // taking down all active IFs
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
+
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
+  }
+
+  // Disable AP mode in MFG build since the IF is shared.
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("Unset AP mode failed %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
+  }
+  brcmf_vif_clear_mgmt_ies(ifp->vif);
+  brcmf_configure_arp_nd_offload(ifp, true);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+  brcmf_net_setcarrier(ifp, false);
+  cfg->ap_started = false;
+  brcmf_enable_mpc(ifp, 1);
+
+  return result;
+}
+
 // Returns an MLME result code (WLAN_START_RESULT_*) if an error is encountered.
 // If all iovars succeed, MLME is notified when E_LINK event is received.
 static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_start_req_t* req) {
@@ -2930,76 +2996,11 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
 fail:
   // Stop the timer when the function fails to issue any of the commands.
   cfg->ap_start_timer->Stop();
+  // Unconditionally stop the AP as some of the iovars might have succeeded and
+  // thus the SoftAP might have been partially started.
+  brcmf_cfg80211_stop_ap(ndev);
 
-  brcmf_enable_mpc(ifp, 1);
-  brcmf_configure_arp_nd_offload(ifp, true);
   return WLAN_START_RESULT_NOT_SUPPORTED;
-}
-
-// Returns an MLME result code (WLAN_STOP_RESULT_*)
-static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-  zx_status_t status;
-  bcme_status_t fw_err = BCME_OK;
-  uint8_t result = WLAN_STOP_RESULT_SUCCESS;
-  struct brcmf_join_params join_params;
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) &&
-      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
-    BRCMF_INFO("attempt to stop already stopped AP\n");
-    return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
-  }
-
-  memset(&join_params, 0, sizeof(join_params));
-  status =
-      brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("SET SSID error: %s, fw err %s", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-    result = WLAN_STOP_RESULT_INTERNAL_ERROR;
-  }
-
-  // Issue "bss" iovar to bring down the SoftAP IF.
-  brcmf_bss_ctrl bss_down;
-  bss_down.bsscfgidx = ifp->bsscfgidx;
-  bss_down.value = 0;
-  status = brcmf_fil_bsscfg_data_set(ifp, "bss", &bss_down, sizeof(bss_down));
-  if (status != ZX_OK) {
-    BRCMF_ERR("bss down failed %s. Issue C_DOWN (will take down client IF too)",
-              zx_status_get_string(status));
-    // If bss down does not work, use C_DOWN which has the side effect of
-    // taking down all active IFs
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
-    if (status != ZX_OK) {
-      BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
-                brcmf_fil_get_errstr(fw_err));
-    }
-
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-    if (status != ZX_OK) {
-      BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
-                brcmf_fil_get_errstr(fw_err));
-    }
-  }
-
-  // Disable AP mode in MFG build since the IF is shared.
-  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
-    if (status != ZX_OK) {
-      BRCMF_ERR("Unset AP mode failed %s, fw err %s", zx_status_get_string(status),
-                brcmf_fil_get_errstr(fw_err));
-    }
-  }
-  brcmf_vif_clear_mgmt_ies(ifp->vif);
-  brcmf_configure_arp_nd_offload(ifp, true);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
-  brcmf_net_setcarrier(ifp, false);
-  cfg->ap_started = false;
-  brcmf_enable_mpc(ifp, 1);
-
-  return result;
 }
 
 // Deauthenticate with specified STA. The reason provided should be from WLANIF_REASON_CODE_*

@@ -56,6 +56,7 @@ class CreateSoftAPTest : public SimTest {
   void VerifyNumOfClient(uint16_t expect_client_num);
   void ClearAssocInd();
   void InjectStartAPError();
+  void InjectChanspecError();
   void InjectStopAPError();
   void SetExpectMacForInds(common::MacAddr set_mac);
 
@@ -249,6 +250,11 @@ void CreateSoftAPTest::InjectStopAPError() {
   sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, BCME_OK, softap_ifc_.iface_id_);
 }
 
+void CreateSoftAPTest::InjectChanspecError() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("chanspec", ZX_ERR_IO, BCME_BADARG, softap_ifc_.iface_id_);
+}
+
 void CreateSoftAPTest::SetExpectMacForInds(common::MacAddr set_mac) { ind_expect_mac_ = set_mac; }
 
 zx_status_t CreateSoftAPTest::StopSoftAP() {
@@ -406,6 +412,16 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   InjectStartAPError();
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
+  env_->Run(kSimulatedClockDuration);
+  VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
+}
+
+TEST_F(CreateSoftAPTest, CreateSoftAPFail_ChanSetError) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  InjectChanspecError();
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
   env_->Run(kSimulatedClockDuration);
   VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
