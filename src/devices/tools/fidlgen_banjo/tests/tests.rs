@@ -80,3 +80,5 @@ mod c {
     codegen_test!(union, CBackend, "c/union.h");
     codegen_test!(view, CBackend, "c/view.h");
 }
+
+mod rust {}

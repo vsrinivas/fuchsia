@@ -12,6 +12,7 @@ use {
 #[derive(Debug)]
 enum BackendName {
     C,
+    Rust,
 }
 
 impl FromStr for BackendName {
@@ -20,9 +21,10 @@ impl FromStr for BackendName {
     fn from_str(s: &str) -> Result<BackendName, Self::Err> {
         match s.to_lowercase().as_str() {
             "c" => Ok(BackendName::C),
+            "rust" => Ok(BackendName::Rust),
             _ => Err(format!(
                 "Unrecognized backend for fidlgen_banjo. \
-                 Current valid ones are: c"
+                 Current valid ones are: c, rust"
             )),
         }
     }
@@ -46,6 +48,7 @@ fn main() -> Result<(), Error> {
     let mut output = File::create(flags.output)?;
     let mut backend: Box<dyn Backend<'_, _>> = match flags.backend {
         BackendName::C => Box::new(CBackend::new(&mut output)),
+        BackendName::Rust => Box::new(RustBackend::new(&mut output)),
     };
     let ir: FidlIr = serde_json::from_reader(File::open(flags.ir)?)?;
     backend.codegen(ir)

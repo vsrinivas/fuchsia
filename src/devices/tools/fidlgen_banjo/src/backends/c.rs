@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    super::{util::to_c_name, Backend},
-    crate::fidl::{self, *},
+    super::{util::to_c_name, *},
+    crate::fidl::*,
     anyhow::{anyhow, Error},
     std::io,
     std::iter,
@@ -20,15 +20,6 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     pub fn new(w: &'a mut W) -> Self {
         CBackend { w }
     }
-}
-
-enum Decl<'a> {
-    Const { data: &'a fidl::Const },
-    Enum { data: &'a fidl::Enum },
-    Interface { data: &'a fidl::Interface },
-    Struct { data: &'a fidl::Struct },
-    TypeAlias { data: &'a fidl::TypeAlias },
-    Union { data: &'a fidl::Union },
 }
 
 fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String {
@@ -739,10 +730,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(format!(include_str!("templates/c/protocol_ops.h"), c_name = to_c_name(name), fns = fns))
     }
 
-    fn codegen_protocol_helper(
-        &self,
-        data: &'a Interface, ir: &FidlIr
-    ) -> Result<String, Error> {
+    fn codegen_protocol_helper(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
         if ProtocolType::from(&data.maybe_attributes) == ProtocolType::Callback {
             return Ok("".to_string());
         }
@@ -927,34 +915,6 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .collect::<Vec<_>>()
             .join("\n"))
     }
-
-    fn get_declarations<'b>(&self, ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
-        Ok(ir
-            .declaration_order
-            .iter()
-            .filter_map(|ident| match ir.get_declaration(ident)? {
-                Declaration::Const => Some(Decl::Const {
-                    data: ir.const_declarations.iter().filter(|c| c.name == *ident).next()?,
-                }),
-                Declaration::Enum => Some(Decl::Enum {
-                    data: ir.enum_declarations.iter().filter(|e| e.name == *ident).next()?,
-                }),
-                Declaration::Interface => Some(Decl::Interface {
-                    data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
-                }),
-                Declaration::Struct => Some(Decl::Struct {
-                    data: ir.struct_declarations.iter().filter(|e| e.name == *ident).next()?,
-                }),
-                Declaration::TypeAlias => Some(Decl::TypeAlias {
-                    data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
-                }),
-                Declaration::Union => Some(Decl::Union {
-                    data: ir.union_declarations.iter().filter(|e| e.name == *ident).next()?,
-                }),
-                _ => None,
-            })
-            .collect())
-    }
 }
 
 impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
@@ -965,7 +925,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             primary_namespace = ir.name.0
         ))?;
 
-        let decl_order = self.get_declarations(&ir)?;
+        let decl_order = get_declarations(&ir)?;
 
         let declarations = decl_order
             .iter()
@@ -991,7 +951,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
 
-        let helpers = decl_order.iter()
+        let helpers = decl_order
+            .iter()
             .filter_map(|decl| match decl {
                 Decl::Interface { data } => Some(self.codegen_protocol_helper(data, &ir)),
                 _ => None,

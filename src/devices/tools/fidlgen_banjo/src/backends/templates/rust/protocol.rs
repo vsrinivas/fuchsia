@@ -1,0 +1,1 @@
+../../../../../banjo/src/backends/templates/rust/protocol.rs
