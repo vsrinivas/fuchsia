@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
@@ -355,7 +356,7 @@ TEST(Tas58xxTest, Bridged) {
 
   metadata::ti::TasConfig metadata = {};
   metadata.bridged = true;
-  tester.SetMetadata(&metadata, sizeof(metadata));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -397,7 +398,7 @@ TEST(Tas58xxTest, StopStart) {
 
   metadata::ti::TasConfig metadata = {};
   metadata.bridged = true;
-  tester.SetMetadata(&metadata, sizeof(metadata));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -440,7 +441,7 @@ TEST(Tas58xxTest, ExternalConfig) {
   metadata.init_sequence2[1].value = 0x44;
   metadata.init_sequence2[2].address = 0x55;
   metadata.init_sequence2[2].value = 0x66;
-  tester.SetMetadata(&metadata, sizeof(metadata));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);

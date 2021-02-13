@@ -9,6 +9,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
+#include <ddk/metadata.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <zxtest/zxtest.h>
 
@@ -41,7 +42,7 @@ struct Tcs3400Test : public zxtest::Test {
     metadata::LightSensorParams parameters = {};
     parameters.integration_time_ms = integration_time_ms;
     parameters.gain = gain;
-    tester.SetMetadata(&parameters, sizeof(metadata::LightSensorParams));
+    tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
     EXPECT_OK(device.InitMetadata());
     mock_i2c.VerifyAndClear();
   }
@@ -69,7 +70,7 @@ TEST(Tcs3400Test, InputReport) {
   parameters.gain = 64;
   parameters.integration_time_ms = 612;  // For atime = 0x01.
 
-  tester.SetMetadata(&parameters, sizeof(metadata::LightSensorParams));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
 
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);
@@ -141,7 +142,7 @@ TEST(Tcs3400Test, InputReportSaturated) {
   parameters.gain = 64;
   parameters.integration_time_ms = 612;  // For atime = 0x01.
 
-  tester.SetMetadata(&parameters, sizeof(metadata::LightSensorParams));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
 
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);

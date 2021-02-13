@@ -8,6 +8,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
+#include <ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_protocol> {
@@ -168,7 +169,7 @@ class RndisFunctionTest : public zxtest::Test {
       ddk_->SetProtocols(std::move(protocols));
     }
 
-    ddk_->SetMetadata(mac_addr_.data(), mac_addr_.size());
+    ddk_->SetMetadata(DEVICE_METADATA_MAC_ADDRESS, mac_addr_.data(), mac_addr_.size());
 
     device_ = std::make_unique<RndisFunction>(/*parent=*/fake_ddk::FakeParent());
     device_->Bind();

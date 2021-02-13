@@ -11,6 +11,7 @@
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
+#include <ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {
@@ -65,7 +66,7 @@ struct Tas5720Codec : public Tas5720 {
 TEST_F(Tas5720Test, CodecInitGood) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -84,7 +85,7 @@ TEST_F(Tas5720Test, CodecInitGood) {
 TEST(Tas5720Test, CodecInitBad) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   mock_i2c::MockI2c mock_i2c;
   // Bad replies (2 retries) to enter shutdown (part of reset).
@@ -104,7 +105,7 @@ TEST(Tas5720Test, CodecInitBad) {
 TEST_F(Tas5720Test, CodecGetInfo) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -128,7 +129,7 @@ TEST_F(Tas5720Test, CodecGetInfo) {
 TEST_F(Tas5720Test, CodecReset) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   // We complete all i2c mock setup before executing server methods in a different thread.
   // Reset by the call to Reset.
@@ -173,7 +174,7 @@ TEST_F(Tas5720Test, CodecReset) {
 TEST_F(Tas5720Test, CodecBridgedMode) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -198,7 +199,7 @@ TEST_F(Tas5720Test, CodecBridgedMode) {
 TEST_F(Tas5720Test, CodecDaiFormat) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -272,7 +273,7 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
 TEST_F(Tas5720Test, CodecGain) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -333,7 +334,7 @@ TEST_F(Tas5720Test, CodecGain) {
 TEST_F(Tas5720Test, CodecPlugState) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -352,7 +353,7 @@ TEST_F(Tas5720Test, CodecPlugState) {
 TEST(Tas5720Test, InstanceCount) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 2;
-  tester.SetMetadata(&instance_count, sizeof(instance_count));
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   mock_i2c::MockI2c mock_i2c;
 

@@ -8,6 +8,7 @@
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
+#include <ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -1321,7 +1322,7 @@ struct AmlG12TdmTest : public zxtest::Test {
                           uint32_t frames_expected) {
     auto metadata = GetDefaultMetadata();
     metadata.ring_buffer.number_of_channels = number_of_channels;
-    tester_.SetMetadata(&metadata, sizeof(metadata));
+    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     ddk::GpioProtocolClient unused_gpio;
     auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);

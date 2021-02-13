@@ -228,7 +228,7 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
   };
-  ddk_.SetMetadata(&guid_map, sizeof(guid_map));
+  ddk_.SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
 
   TableRef tab;
   ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
@@ -284,7 +284,7 @@ TEST_F(GptDeviceTest, BlockOpsPropagate) {
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
   };
-  ddk_.SetMetadata(&guid_map, sizeof(guid_map));
+  ddk_.SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
 
   TableRef tab;
   ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
@@ -368,7 +368,7 @@ TEST_F(GptDeviceTest, BlockOpsOutOfBounds) {
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
   };
-  ddk_.SetMetadata(&guid_map, sizeof(guid_map));
+  ddk_.SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
 
   TableRef tab;
   ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));

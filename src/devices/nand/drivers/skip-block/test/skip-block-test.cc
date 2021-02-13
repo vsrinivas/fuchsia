@@ -13,6 +13,7 @@
 
 #include <optional>
 
+#include <ddk/metadata.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
@@ -227,7 +228,7 @@ class SkipBlockTest : public zxtest::Test {
                     *reinterpret_cast<const fake_ddk::Protocol*>(bad_block_.proto())};
     ddk_.SetProtocols(std::move(protocols));
     ddk_.SetSize(kPageSize * kNumPages * kNumBlocks);
-    ddk_.SetMetadata(&count_, sizeof(count_));
+    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   }
 
   ~SkipBlockTest() { ddk_.DeviceRemove(parent()); }
@@ -472,7 +473,7 @@ TEST_F(SkipBlockTest, ReadFailure) {
 
 TEST_F(SkipBlockTest, ReadMultipleCopies) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(&count_, sizeof(count_));
+  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ddk().SetSize(kPageSize * kNumPages * 8);
   nand().set_block_count(8);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
@@ -498,7 +499,7 @@ TEST_F(SkipBlockTest, ReadMultipleCopies) {
 
 TEST_F(SkipBlockTest, ReadMultipleCopiesNoneSucceeds) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(&count_, sizeof(count_));
+  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ddk().SetSize(kPageSize * kNumPages * 4);
   nand().set_block_count(4);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
@@ -777,7 +778,7 @@ TEST_F(SkipBlockTest, GetPartitionInfo) {
 // blocks are marked bad, and blocks 2 and 7 become the new "physical" copies of logical block 1.
 TEST_F(SkipBlockTest, WriteMultipleCopies) {
   const uint32_t count_ = 2;
-  ddk().SetMetadata(&count_, sizeof(count_));
+  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
   // Erase Block 1
@@ -821,7 +822,7 @@ TEST_F(SkipBlockTest, WriteMultipleCopies) {
 // and 3 and 8 becomes the new "physical" copies of logical block 2.
 TEST_F(SkipBlockTest, WriteMultipleCopiesMultipleBlocks) {
   const uint32_t count_ = 2;
-  ddk().SetMetadata(&count_, sizeof(count_));
+  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
   // Erase Block 1.
@@ -874,7 +875,7 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesMultipleBlocks) {
 // successfully, the write request succeeds. We validate all failed blocks are bad blocks grown.
 TEST_F(SkipBlockTest, WriteMultipleCopiesOneSucceeds) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(&count_, sizeof(count_));
+  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ddk().SetSize(kPageSize * kNumPages * 4);
   nand().set_block_count(4);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
@@ -919,7 +920,7 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesOneSucceeds) {
 // overall write also fails and all failed blocks are grown bad blocks.
 TEST_F(SkipBlockTest, WriteMultipleCopiesNoneSucceeds) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(&count_, sizeof(count_));
+  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ddk().SetSize(kPageSize * kNumPages * 4);
   nand().set_block_count(4);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));

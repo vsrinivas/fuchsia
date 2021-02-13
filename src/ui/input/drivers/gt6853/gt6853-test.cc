@@ -14,6 +14,7 @@
 #include <array>
 #include <vector>
 
+#include <ddk/metadata.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
@@ -304,7 +305,7 @@ class Gt6853Test : public zxtest::Test {
 
     ddk_.SetFragments(std::move(fragments));
 
-    ddk_.SetMetadata(&use_9365_config_, sizeof(use_9365_config_));
+    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &use_9365_config_, sizeof(use_9365_config_));
 
     config_vmo = &config_vmo_;
     firmware_vmo = &firmware_vmo_;

@@ -12,6 +12,7 @@
 
 #include <thread>
 
+#include <ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -94,7 +95,7 @@ TEST_F(AmlG12TdmDaiTest, InitializeI2sOut) {
   metadata.dai.number_of_channels = 2;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  tester_.SetMetadata(&metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
@@ -201,7 +202,7 @@ TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 16;
   metadata.dai.sclk_on_raising = true;
-  tester_.SetMetadata(&metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
@@ -307,7 +308,7 @@ TEST_F(AmlG12TdmDaiTest, GetFormatsAndVmo) {
   metadata.dai.number_of_channels = 2;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  tester_.SetMetadata(&metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();

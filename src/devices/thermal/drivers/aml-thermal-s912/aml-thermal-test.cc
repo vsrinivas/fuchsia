@@ -10,6 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
+#include <ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -301,7 +302,7 @@ TEST_F(AmlThermalTest, FanLevel) {
 
 TEST_F(AmlThermalTest, TripPointThread) {
   fake_ddk::Bind ddk;
-  ddk.SetMetadata(&kDeviceInfo, sizeof(kDeviceInfo));
+  ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, &kDeviceInfo, sizeof(kDeviceInfo));
 
   ddk::MockGpio fan0, fan1;
   MockScpi scpi;
@@ -429,7 +430,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
 
 TEST_F(AmlThermalTest, DdkLifecycle) {
   fake_ddk::Bind ddk;
-  ddk.SetMetadata(&kDeviceInfo, sizeof(kDeviceInfo));
+  ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, &kDeviceInfo, sizeof(kDeviceInfo));
 
   ddk::MockGpio fan0, fan1;
   MockScpi scpi;

@@ -6,6 +6,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
+#include <ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -83,7 +84,7 @@ struct AudioStreamInTest : public zxtest::Test {
                  uint8_t channels_mask, uint8_t mute_mask) {
     auto metadata = GetDefaultMetadata();
     metadata.number_of_channels = number_of_channels;
-    tester_.SetMetadata(&metadata, sizeof(metadata));
+    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     int step = 0;  // Track of the expected sequence of reads and writes.
     mmio_.reg(0x000).SetReadCallback([]() -> uint32_t { return 0; });
@@ -127,7 +128,7 @@ struct AudioStreamInTest : public zxtest::Test {
                           uint32_t frames_expected) {
     auto metadata = GetDefaultMetadata();
     metadata.number_of_channels = number_of_channels;
-    tester_.SetMetadata(&metadata, sizeof(metadata));
+    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     auto stream = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
     audio_fidl::Device::SyncClient client_wrap(std::move(tester_.FidlClient()));

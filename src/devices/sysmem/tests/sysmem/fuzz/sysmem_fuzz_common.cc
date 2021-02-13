@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem/c/banjo.h>
 
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 
 #include "log_rtn.h"
@@ -36,7 +37,7 @@ bool FakeDdkSysmem::Init() {
       .protected_memory_size = 1024 * 1024,
       .contiguous_memory_size = 0,
   };
-  ddk_.SetMetadata(&metadata, sizeof(metadata));
+  ddk_.SetMetadata(SYSMEM_METADATA, &metadata, sizeof(metadata));
 
   pdev_.UseFakeBti();
 

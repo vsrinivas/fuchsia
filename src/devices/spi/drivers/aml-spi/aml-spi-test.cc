@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include <ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 #include "registers.h"
@@ -44,7 +45,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
         fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}});
     SetFragments(std::move(fragments));
 
-    SetMetadata(kGpioMap, sizeof(kGpioMap));
+    SetMetadata(DEVICE_METADATA_AMLSPI_CS_MAPPING, kGpioMap, sizeof(kGpioMap));
 
     ASSERT_OK(
         mmio_mapper_.CreateAndMap(0x100, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &mmio_));
