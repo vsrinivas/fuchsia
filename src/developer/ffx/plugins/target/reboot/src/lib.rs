@@ -3,26 +3,39 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
-    ffx_core::ffx_plugin,
+    anyhow::{bail, Result},
+    ffx_core::{ffx_bail, ffx_plugin},
     ffx_reboot_args::RebootCommand,
-    fidl_fuchsia_hardware_power_statecontrol as fpower,
+    fidl::Error as FidlError,
+    fidl_fuchsia_hardware_power_statecontrol::{AdminProxy, RebootReason},
 };
 
-#[ffx_plugin(fpower::AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
-pub async fn reboot(admin_proxy: fpower::AdminProxy, cmd: RebootCommand) -> Result<()> {
+#[ffx_plugin(AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
+pub async fn reboot(admin_proxy: AdminProxy, cmd: RebootCommand) -> Result<()> {
     if cmd.bootloader && cmd.recovery {
-        println!("Cannot specify booth bootloader and recovery switches at the same time.");
-        return Err(anyhow!("Invalid options"));
+        ffx_bail!("Cannot specify booth bootloader and recovery switches at the same time.");
     }
-    if cmd.bootloader {
-        admin_proxy.reboot_to_bootloader().await?.unwrap();
+    let res = if cmd.bootloader {
+        admin_proxy.reboot_to_bootloader().await
     } else if cmd.recovery {
-        admin_proxy.reboot_to_recovery().await?.unwrap();
+        admin_proxy.reboot_to_recovery().await
     } else {
-        admin_proxy.reboot(fpower::RebootReason::UserRequest).await?.unwrap();
+        admin_proxy.reboot(RebootReason::UserRequest).await
+    };
+    match res {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(e)) => bail!(e),
+        Err(e) => match e {
+            FidlError::ClientChannelClosed { .. } => {
+                log::warn!(
+                    "Reboot returned a client channel closed - assuming reboot succeeded: {:?}",
+                    e
+                );
+                Ok(())
+            }
+            _ => bail!(e),
+        },
     }
-    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -32,9 +45,9 @@ pub async fn reboot(admin_proxy: fpower::AdminProxy, cmd: RebootCommand) -> Resu
 mod test {
     use {super::*, fidl_fuchsia_hardware_power_statecontrol::AdminRequest};
 
-    fn setup_fake_admin_server(cmd: RebootCommand) -> fpower::AdminProxy {
+    fn setup_fake_admin_server(cmd: RebootCommand) -> AdminProxy {
         setup_fake_admin_proxy(move |req| match req {
-            AdminRequest::Reboot { reason: fpower::RebootReason::UserRequest, responder } => {
+            AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
                 assert!(!cmd.bootloader && !cmd.recovery);
                 responder.send(&mut Ok(())).unwrap();
             }
