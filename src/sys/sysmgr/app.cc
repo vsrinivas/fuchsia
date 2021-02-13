@@ -60,6 +60,9 @@ App::App(Config config, std::shared_ptr<sys::ServiceDirectory> incoming_services
   fuchsia::sys::ServiceProviderPtr env_services;
   env_->GetLauncher(env_launcher_.NewRequest());
   env_->GetServices(env_services.NewRequest());
+  zx::channel directory;
+  env_services_ = sys::ServiceDirectory::CreateWithRequest(&directory);
+  env_->GetDirectory(std::move(directory));
 
   if (auto_updates_enabled_) {
     const bool resolver_missing =
@@ -144,8 +147,12 @@ void App::ConnectToService(const std::string& service_name, zx::channel channel)
   auto status = svc_root_.Lookup(service_name, &child);
   if (status == ZX_OK) {
     status = child->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(channel));
-  }
-  if (status != ZX_OK) {
+  } else if (status == ZX_ERR_NOT_FOUND) {
+    FX_LOGS(WARNING) << "Service " << service_name
+                     << " not in service list, attempting to connect through environment";
+    env_services_->Connect(service_name, std::move(channel));
+    status = ZX_OK;
+  } else {
     FX_LOGS(ERROR) << "Could not serve " << service_name << ": " << status;
   }
 }

@@ -67,6 +67,7 @@ class App {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr env_launcher_;
+  std::shared_ptr<sys::ServiceDirectory> env_services_;
 
   vfs::PseudoDir svc_root_;
   std::vector<std::string> svc_names_;
