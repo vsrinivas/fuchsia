@@ -10,7 +10,11 @@ use {
     },
     fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{io, stream::Stream, Future, TryFutureExt},
+    futures::{
+        io,
+        stream::{FusedStream, Stream},
+        Future, TryFutureExt,
+    },
     std::convert::TryFrom,
     std::{
         fmt,
@@ -80,6 +84,7 @@ pub struct Channel {
     mode: ChannelMode,
     max_tx_size: usize,
     audio_direction_ext: Option<bredr::AudioDirectionExtProxy>,
+    terminated: bool,
 }
 
 impl Channel {
@@ -91,6 +96,7 @@ impl Channel {
             mode: ChannelMode::Basic,
             max_tx_size,
             audio_direction_ext: None,
+            terminated: false,
         })
     }
 
@@ -158,6 +164,7 @@ impl TryFrom<fidl_fuchsia_bluetooth_bredr::Channel> for Channel {
             mode: fidl.channel_mode.unwrap_or(bredr::ChannelMode::Basic).into(),
             max_tx_size: fidl.max_tx_sdu_size.ok_or(zx::Status::INVALID_ARGS)? as usize,
             audio_direction_ext: fidl.ext_direction.and_then(|e| e.into_proxy().ok()),
+            terminated: false,
         })
     }
 }
@@ -189,14 +196,27 @@ impl TryFrom<Channel> for bredr::Channel {
 impl Stream for Channel {
     type Item = Result<Vec<u8>, zx::Status>;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.terminated {
+            panic!("Channel polled after terminated");
+        }
+
         let mut res = Vec::<u8>::new();
         match self.socket.poll_datagram(cx, &mut res) {
             Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
-            Poll::Ready(Err(zx::Status::PEER_CLOSED)) => Poll::Ready(None),
+            Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+                self.terminated = true;
+                Poll::Ready(None)
+            }
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
             Poll::Pending => Poll::Pending,
         }
+    }
+}
+
+impl FusedStream for Channel {
+    fn is_terminated(&self) -> bool {
+        self.terminated
     }
 }
 
