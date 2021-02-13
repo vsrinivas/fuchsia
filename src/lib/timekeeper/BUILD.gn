@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("timekeeper") {
   sources = [ "clock.h" ]
@@ -62,15 +62,12 @@ executable("timekeeper_lib_unittests") {
   ]
 }
 
-unittest_package("timekeeper_lib_tests") {
+fuchsia_unittest_package("timekeeper_lib_tests") {
   deps = [ ":timekeeper_lib_unittests" ]
 
-  tests = [
-    {
-      name = "timekeeper_lib_unittests"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 group("tests") {
