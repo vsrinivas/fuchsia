@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+executable("usb-audio-test-bin") {
+  testonly = true
+  sources = [ "usb-audio-test.cc" ]
+  deps = [
+    "../:shared",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("usb-audio-test-package") {
+  package_name = "usb-audio-test"
+  deps = [ ":usb-audio-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}

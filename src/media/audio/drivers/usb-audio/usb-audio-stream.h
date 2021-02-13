@@ -35,7 +35,7 @@ class UsbAudioStreamInterface;
 
 struct AudioStreamProtocol : public ddk::internal::base_protocol {
   explicit AudioStreamProtocol(bool is_input) {
-    ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT;
+    ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT_2 : ZX_PROTOCOL_AUDIO_OUTPUT_2;
   }
 
   bool is_input() const { return (ddk_proto_id_ == ZX_PROTOCOL_AUDIO_INPUT); }
@@ -44,14 +44,16 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 class UsbAudioStream;
 using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::Unbindable>;
 
+// UsbAudioStream implements Device::Interface and RingBuffer::Interface.
+// All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
 class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public fbl::RefCounted<UsbAudioStream>,
                        public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>>,
-                       public ::llcpp::fuchsia::hardware::audio::Device::Interface {
+                       public ::llcpp::fuchsia::hardware::audio::Device::Interface,
+                       public ::llcpp::fuchsia::hardware::audio::RingBuffer::Interface {
  public:
-  class Channel : public fbl::DoublyLinkedListable<fbl::RefPtr<Channel>>,
-                  public fbl::RefCounted<Channel> {
+  class Channel : public fbl::RefCounted<Channel> {
    public:
     template <typename T = Channel, typename... ConstructorSignature>
     static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
@@ -65,32 +67,70 @@ class UsbAudioStream : public UsbAudioStreamBase,
       return ptr;
     }
 
-    void SetHandler(async::Wait::Handler handler) { wait_.set_handler(std::move(handler)); }
-    zx_status_t BeginWait(async_dispatcher_t* dispatcher) { return wait_.Begin(dispatcher); }
-    zx_status_t Write(const void* buffer, uint32_t length) {
-      return channel_.write(0, buffer, length, nullptr, 0);
-    }
-    zx_status_t Write(const void* buffer, uint32_t length, zx::handle&& handle) {
-      zx_handle_t h = handle.release();
-      return channel_.write(0, buffer, length, &h, 1);
-    }
-    zx_status_t Read(void* buffer, uint32_t length, uint32_t* out_length) {
-      return channel_.read(0, buffer, nullptr, length, 0, out_length, nullptr);
-    }
-
-   protected:
-    explicit Channel(zx::channel channel) : channel_(std::move(channel)) {
-      wait_.set_object(channel_.get());
-      wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    }
-    ~Channel() = default;  // Deactivates (automatically cancels the wait from its RAII semantics).
-
    private:
     friend class fbl::RefPtr<Channel>;
-
-    zx::channel channel_;
-    async::Wait wait_;
   };
+  // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
+  // StreamConfig channel is a StreamChannel instead of a UsbAudioStream (as is the case for
+  // Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
+  // changes notifications.
+  // In some methods, we pass "this" (StreamChannel*) to UsbAudioStream that
+  // gets managed in UsbAudioStream.
+  // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
+  // All the StreamConfig::Interface methods are forwarded to UsbAudioStream.
+  class StreamChannel : public Channel,
+                        public ::llcpp::fuchsia::hardware::audio::StreamConfig::Interface,
+                        public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
+   public:
+    // Does not take ownership of stream, which must refer to a valid UsbAudioStream that outlives
+    // this object.
+    explicit StreamChannel(UsbAudioStream* stream) : stream_(*stream) {
+      last_reported_gain_state_.cur_gain = kInvalidGain;
+    }
+    ~StreamChannel() = default;
+
+    // fuchsia hardware audio Stream Interface.
+    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
+      stream_.GetProperties(completer);
+    }
+    void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
+      stream_.GetSupportedFormats(completer);
+    }
+    void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
+      stream_.WatchGainState(this, completer);
+    }
+    void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
+      stream_.WatchPlugState(this, completer);
+    }
+    void SetGain(::llcpp::fuchsia::hardware::audio::GainState target_state,
+                 SetGainCompleter::Sync& completer) override {
+      stream_.SetGain(std::move(target_state), completer);
+    }
+    void CreateRingBuffer(
+        ::llcpp::fuchsia::hardware::audio::wire::Format format,
+        ::fidl::ServerEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> ring_buffer,
+        CreateRingBufferCompleter::Sync& completer) override {
+      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
+    }
+
+   private:
+    friend class UsbAudioStream;
+
+    enum class Plugged : uint32_t {
+      kNotReported = 1,
+      kPlugged = 2,
+      kUnplugged = 3,
+    };
+
+    static constexpr float kInvalidGain = std::numeric_limits<float>::max();
+
+    UsbAudioStream& stream_;
+    std::optional<StreamChannel::WatchPlugStateCompleter::Async> plug_completer_;
+    std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
+    Plugged last_reported_plugged_state_ = Plugged::kNotReported;
+    audio_proto::GetGainResp last_reported_gain_state_ = {};
+  };
+
   static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,
                                             std::unique_ptr<UsbAudioStreamInterface> ifc);
   zx_status_t Bind();
@@ -133,9 +173,32 @@ class UsbAudioStream : public UsbAudioStreamBase,
   // Device FIDL implementation
   void GetChannel(GetChannelCompleter::Sync& completer) override;
 
+  // fuchsia hardware audio RingBuffer Interface
+  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
+  void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+              GetVmoCompleter::Sync& completer) override;
+  void Start(StartCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
+  void WatchClockRecoveryPositionInfo(
+      WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
+
+  // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
+  void GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer);
+  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
+  void CreateRingBuffer(
+      StreamChannel* channel, ::llcpp::fuchsia::hardware::audio::wire::Format format,
+      ::fidl::ServerEnd<::llcpp::fuchsia::hardware::audio::RingBuffer> ring_buffer,
+      StreamChannel::CreateRingBufferCompleter::Sync& completer);
+  void WatchGainState(StreamChannel* channel,
+                      StreamChannel::WatchGainStateCompleter::Sync& completer);
+  void WatchPlugState(StreamChannel* channel,
+                      StreamChannel::WatchPlugStateCompleter::Sync& completer);
+  void SetGain(::llcpp::fuchsia::hardware::audio::wire::GainState target_state,
+               StreamChannel::SetGainCompleter::Sync& completer);
+
+  void DeactivateStreamChannelLocked(StreamChannel* channel) __TA_REQUIRES(lock_);
+
   // Thunks for dispatching stream channel events.
-  zx_status_t ProcessStreamChannel(Channel* channel, bool privileged);
-  void DeactivateStreamChannel(const Channel* channel);
 
   zx_status_t OnGetStreamFormatsLocked(Channel* channel, const audio_proto::StreamGetFmtsReq& req)
       __TA_REQUIRES(lock_);
@@ -156,7 +219,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
 
   // Thunks for dispatching ring buffer channel events.
   zx_status_t ProcessRingBufferChannel(Channel* channel);
-  void DeactivateRingBufferChannel(const Channel* channel);
+  void DeactivateRingBufferChannelLocked(const Channel* channel) __TA_REQUIRES(lock_);
 
   // Stream command handlers
   // Ring buffer command handlers
@@ -183,11 +246,11 @@ class UsbAudioStream : public UsbAudioStreamBase,
   fbl::Mutex lock_;
   fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
 
-  // Dispatcher framework state
-  fbl::RefPtr<Channel> stream_channel_ __TA_GUARDED(lock_);
+  fbl::RefPtr<StreamChannel> stream_channel_ __TA_GUARDED(lock_);
   fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(lock_);
+  fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>> stream_channels_ __TA_GUARDED(lock_);
 
-  int32_t clock_domain_;
+  int32_t clock_domain_ = 0;
 
   size_t selected_format_ndx_;
   uint32_t selected_frame_rate_;
@@ -209,10 +272,10 @@ class UsbAudioStream : public UsbAudioStreamBase,
   uint32_t ring_buffer_pos_ __TA_GUARDED(req_lock_);
   volatile RingBufferState ring_buffer_state_ __TA_GUARDED(req_lock_) = RingBufferState::STOPPED;
 
-  union {
-    audio_proto::RingBufStopResp stop;
-    audio_proto::RingBufStartResp start;
-  } pending_job_resp_ __TA_GUARDED(req_lock_);
+  std::optional<StartCompleter::Async> start_completer_ __TA_GUARDED(req_lock_);
+  std::optional<StopCompleter::Async> stop_completer_ __TA_GUARDED(req_lock_);
+  std::optional<WatchClockRecoveryPositionInfoCompleter::Async> position_completer_
+      __TA_GUARDED(req_lock_);
 
   list_node_t free_req_ __TA_GUARDED(req_lock_);
   uint32_t free_req_cnt_ __TA_GUARDED(req_lock_);
