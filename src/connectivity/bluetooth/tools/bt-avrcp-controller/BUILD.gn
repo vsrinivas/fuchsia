@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_avrcp_controller"
+  output_name = "bt-avrcp-controller"
   edition = "2018"
   with_unit_tests = true
 
@@ -33,18 +32,8 @@ rustc_binary("bin") {
   ]
 }
 
-package("bt-avrcp-controller") {
-  name = "bt_avrcp_controller"
-
+fuchsia_shell_package("bt-avrcp-controller") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bt_avrcp_controller"
-      dest = "bt-avrcp-controller"
-      shell = true
-    },
-  ]
 }
 
 fuchsia_unittest_package("bt-avrcp-controller-unittests") {

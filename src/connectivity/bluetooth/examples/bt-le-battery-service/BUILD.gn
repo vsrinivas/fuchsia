@@ -5,7 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bt-le-battery-service") {
-  name = "bt_le_battery_service"
+  output_name = "bt-le-battery-service"
   edition = "2018"
 
   deps = [

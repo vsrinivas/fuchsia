@@ -113,7 +113,7 @@ use std::io::{BufRead, BufReader};
 
 #[test]
 fn avrcp_controller_help_string() {
-    let child = TestProcess::spawn("/pkg/bin/bt_avrcp_controller", &["--help"])
+    let child = TestProcess::spawn("/pkg/bin/bt-avrcp-controller", &["--help"])
         .expect("unable to run AVRCP tool");
     let mut ret = String::new();
     let mut reader = BufReader::new(child.stdout_blocking());
@@ -127,7 +127,7 @@ fn avrcp_controller_help_string() {
 
 #[test]
 fn bt_snoop_cli_help_string() {
-    let child = TestProcess::spawn("/pkg/bin/bt_snoop_cli", &["--help"])
+    let child = TestProcess::spawn("/pkg/bin/bt-snoop-cli", &["--help"])
         .expect("unable to run bt-snoop-cli tool");
     let mut ret = String::new();
     let mut reader = BufReader::new(child.stdout_blocking());

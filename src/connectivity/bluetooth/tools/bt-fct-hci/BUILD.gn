@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_fct_hci"
+  output_name = "bt-fct-hci"
   edition = "2018"
   with_unit_tests = true
 
@@ -37,25 +36,9 @@ rustc_binary("bin") {
   ]
 }
 
-package("bt-fct-hci") {
-  name = "bt_fct_hci"
-
+fuchsia_shell_package("bt-fct-hci") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bt_fct_hci"
-      dest = "bt-fct-hci"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/bt-fct-hci.cmx")
-      dest = "bt-fct-hci.cmx"
-    },
-  ]
+  manifest = "meta/bt-fct-hci.cmx"
 }
 
 fuchsia_unittest_package("bt-fci-hci-unittests") {

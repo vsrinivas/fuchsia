@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_hci_emulator"
+  output_name = "bt-hci-emulator"
   with_unit_tests = true
   edition = "2018"
 
@@ -22,16 +22,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("bt-hci-emulator") {
-  name = "bt_hci_emulator"
-
+fuchsia_shell_package("bt-hci-emulator") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bt_hci_emulator"
-      dest = "bt-hci-emulator"
-      shell = true
-    },
-  ]
 }

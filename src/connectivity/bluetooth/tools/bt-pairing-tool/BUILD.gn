@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_pairing_tool"
+  output_name = "bt-pairing-tool"
   edition = "2018"
 
   deps = [
@@ -28,16 +28,6 @@ rustc_binary("bin") {
   ]
 }
 
-package("bt-pairing-tool") {
-  name = "bt_pairing_tool"
-
+fuchsia_shell_package("bt-pairing-tool") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bt_pairing_tool"
-      dest = "bt-pairing-tool"
-      shell = true
-    },
-  ]
 }

@@ -2,29 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("examples") {
+fuchsia_shell_package("examples") {
   deps = [
     "bt-le-battery-service",
     "bt-le-heart-rate-peripheral",
-
-    # "bt_beacon_reader",
-  ]
-
-  binaries = [
-    {
-      name = "bt_le_battery_service"
-      dest = "bt-le-battery-service"
-      shell = true
-    },
-    {
-      name = "bt-le-heart-rate-peripheral"
-      shell = true
-    },
-
-    # {
-    #   name = "bt_beacon_reader"
-    # },
   ]
 }

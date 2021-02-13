@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bt_beacon_reader") {
-  output_name = "bt_beacon_reader"
+executable("bt-beacon-reader") {
+  output_name = "bt-beacon-reader"
 
   sources = [
     "app.cc",
