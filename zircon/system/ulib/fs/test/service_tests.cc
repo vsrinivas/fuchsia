@@ -20,6 +20,15 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
+TEST(Service, ConstructWithRawChannelConnector) {
+  auto svc = fbl::MakeRefCounted<fs::Service>([](zx::channel channel) { return ZX_OK; });
+}
+
+TEST(Service, ConstructWithTypedChannelConnector) {
+  auto svc = fbl::MakeRefCounted<fs::Service>(
+      [](fidl::ServerEnd<fio::Directory> server_end) { return ZX_OK; });
+}
+
 TEST(Service, ApiTest) {
   // set up a service which can only be bound once (to make it easy to
   // simulate an error to test error reporting behavior from the connector)

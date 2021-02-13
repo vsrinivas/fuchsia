@@ -26,6 +26,8 @@ class UnownedClientEnd;
 template <typename Protocol>
 class ClientEnd final {
  public:
+  using ProtocolType = Protocol;
+
   // Creates a |ClientEnd| whose underlying channel is invalid.
   //
   // Both optional and non-optional client endpoints in FIDL declarations map
@@ -85,6 +87,8 @@ class ClientEnd final {
 template <typename Protocol>
 class UnownedClientEnd final {
  public:
+  using ProtocolType = Protocol;
+
   // An unowned client end can only be constructed from an existing channel.
   //
   // This constructor defines an implicit conversion to facilitate invoking

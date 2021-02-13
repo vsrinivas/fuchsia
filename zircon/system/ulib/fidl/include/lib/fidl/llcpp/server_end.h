@@ -24,6 +24,8 @@ namespace fidl {
 template <typename Protocol>
 class ServerEnd final {
  public:
+  using ProtocolType = Protocol;
+
   // Creates a |ServerEnd| whose underlying channel is invalid.
   //
   // Both optional and non-optional server endpoints in FIDL declarations map
