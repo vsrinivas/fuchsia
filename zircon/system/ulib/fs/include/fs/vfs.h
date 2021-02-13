@@ -195,6 +195,9 @@ class Vfs {
   // Whether this file system is read-only.
   bool ReadonlyLocked() const FS_TA_REQUIRES(vfs_lock_) { return readonly_; }
 
+  // A lock which should be used to protect lookup and walk operations
+  std::mutex vfs_lock_;
+
  private:
   // Starting at vnode |vn|, walk the tree described by the path string, until either there is only
   // one path segment remaining in the string or we encounter a vnode that represents a remote
@@ -256,9 +259,6 @@ class Vfs {
   async_dispatcher_t* dispatcher_{};
 
  protected:
-  // A lock which should be used to protect lookup and walk operations
-  std::mutex vfs_lock_;
-
   // Starts FIDL message dispatching on |channel|, at the same time starts to manage the lifetime of
   // the connection.
   //

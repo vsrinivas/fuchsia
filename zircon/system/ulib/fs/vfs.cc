@@ -109,9 +109,7 @@ void Vfs::SetDispatcher(async_dispatcher_t* dispatcher) {
 
 Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
                           VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
-#ifdef __Fuchsia__
   std::lock_guard<std::mutex> lock(vfs_lock_);
-#endif
   return OpenLocked(std::move(vndir), path, options, parent_rights, mode);
 }
 
@@ -253,9 +251,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
   }
 
   {
-#ifdef __Fuchsia__
     std::lock_guard<std::mutex> lock(vfs_lock_);
-#endif
     if (ReadonlyLocked()) {
       r = ZX_ERR_ACCESS_DENIED;
     } else {
@@ -577,9 +573,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
 #endif  // ifdef __Fuchsia__
 
 void Vfs::SetReadonly(bool value) {
-#ifdef __Fuchsia__
   std::lock_guard<std::mutex> lock(vfs_lock_);
-#endif
   readonly_ = value;
 }
 
