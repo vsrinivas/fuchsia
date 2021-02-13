@@ -961,12 +961,14 @@ zx_status_t Osd::ConfigAfbc() {
   AfbcBoundingBoxXStartS0Reg::Get().FromValue(0).set_buffer_x_start(0).WriteTo(&(*vpu_mmio_));
   AfbcBoundingBoxXEndS0Reg::Get()
       .FromValue(0)
-      .set_buffer_x_end(fb_width_ - 2)  // vendor code has width - 1 - 1
+      .set_buffer_x_end(fb_width_ - 1)  // vendor code has width - 1 - 1, which is technically
+                                        // incorrect and gives the same result as this.
       .WriteTo(&(*vpu_mmio_));
   AfbcBoundingBoxYStartS0Reg::Get().FromValue(0).set_buffer_y_start(0).WriteTo(&(*vpu_mmio_));
   AfbcBoundingBoxYEndS0Reg::Get()
       .FromValue(0)
-      .set_buffer_y_end(fb_height_ - 2)  // vendor code has height -1 -1
+      .set_buffer_y_end(fb_height_ -
+                        1)  // vendor code has height -1 -1, but that cuts off the bottom row.
       .WriteTo(&(*vpu_mmio_));
 
   // Set output buffer stride
