@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-executable("bin") {
+executable("goldfish_test_bin") {
   testonly = true
   output_name = "goldfish_test"
 
@@ -22,12 +22,19 @@ executable("bin") {
   ]
 }
 
-test_package("goldfish_test") {
-  deps = [ ":bin" ]
+fuchsia_component("goldfish_test_cmp") {
+  testonly = true
+  deps = [ ":goldfish_test_bin" ]
+  component_name = "goldfish_test"
+  manifest = "meta/goldfish_test.cmx"
+}
 
-  tests = [
-    {
-      name = "goldfish_test"
-    },
-  ]
+fuchsia_test_package("goldfish-test-pkg") {
+  test_components = [ ":goldfish_test_cmp" ]
+  package_name = "goldfish_test"
+}
+
+group("goldfish_test") {
+  testonly = true
+  deps = [ ":goldfish-test-pkg" ]
 }
