@@ -1,0 +1,74 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera;
+
+using fuchsia.sysmem;
+using zx;
+
+/// A stream that the camera manager can provide.  Video streams reference a
+/// a camera, but may have additional hardware and bandwidth restrictions
+/// from and ISP or other processing units.
+/// This is being deprecated - please use VideoStreamV2 (below).
+struct VideoStream {
+    /// The camera_id corresponds to the camera_id that is given in the DeviceInfo
+    /// received from GetDevices.
+    uint64 camera_id;
+    /// The requested video format.  Note that this is field is necessary to
+    /// set The frame rate, even when calling CreateStream.
+    /// When calling CreateStream, format.format should match buffer_info.format.
+    VideoFormat format;
+};
+
+/// Preferred version of stream.
+/// A version of stream that relies on definition of VideoFormat coming out of
+/// fuchsia.hardware.camera. Streams reference a camera, but may have additional
+/// hardware and bandwidth restrictions from an ISP or other processing units.
+/// New code should depend on this as the other version will be deprecated when
+/// dependencies are removed.
+struct VideoStreamV2 {
+    /// The camera_id corresponds to the camera_id that is given in DeviceInfo
+    /// received from GetDevices.
+    uint64 camera_id;
+    /// The requested video format. Note that this field is necessary to set the
+    /// frame rate, even when calling CreateStream. When calling CreateStream
+    /// format.format should match buffer_info.format.
+    VideoFormat format;
+};
+
+/// The Camera Manager grants access to individual or sets of cameras
+/// 1) You request the list of cameras, which gives you camera descriptions
+/// 2) You request the list of formats available for the camera to which you
+///    wish to connect.
+/// 3) You request a Stream interface using CreateStream.
+[Discoverable]
+protocol Manager {
+    /// Returns a list of all the video devices that are currently plugged in
+    /// and enumerated.  The camera_id field of the DeviceInfo is used to specify
+    /// a device in GetFormats, GetStream and GetStreamAndBufferCollection.
+    GetDevices() -> (vector<DeviceInfo> descriptions);
+
+    /// Get all the available formats for a camera.
+    /// `camera_id` is obtained from a DeviceInfo returned by GetDevices.
+    GetFormats(uint64 camera_id, uint32 index)
+        -> (vector<VideoFormat> formats, uint32 total_format_count);
+
+    /// Create a Stream with the specified access rights.  This may not succeed.
+    /// If it does succeed, the Stream will have the rights indicated.
+    /// `buffer_info` contains a set of buffers to be used with the Stream.
+    /// This is being deprecated - please use CreateStreamV2.
+    CreateStream(VideoStream request,
+                 fuchsia.sysmem.BufferCollectionInfo buffer_info,
+                 request<Stream> stream, zx.handle:EVENTPAIR client_token);
+
+    /// Create a Stream with the specified access rights.  This may not succeed.
+    /// If it does succeed, the Stream will have the rights indicated.
+    /// `buffer_info` contains a set of buffers to be used with the Stream.
+    [Transitional="This is meant to replace CreateStream"]
+    CreateStreamV2(VideoStreamV2 request,
+                   fuchsia.sysmem.BufferCollectionInfo buffer_info,
+                   request<Stream> stream,
+                   zx.handle:EVENTPAIR client_token);
+
+};
