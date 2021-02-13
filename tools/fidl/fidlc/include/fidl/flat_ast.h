@@ -583,9 +583,9 @@ class Typespace {
 
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
-  // TODO(azaslavsky): this method has been made public solely for the benefit
-  //   of fidlconv.  Once the conversion using that tool is completed and the
-  //   tool has been removed, this method should be re-privatized as well.
+  // TODO(fxbug.dev/70247): this method has been made public solely for the
+  //   benefit of fidlconv.  Once the conversion using that tool has been
+  //   completed and tool has been removed, this method should be re-privatized.
   const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
   // RootTypes creates a instance with all primitive types. It is meant to be
@@ -896,9 +896,9 @@ class Library {
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
 
-  // TODO(azaslavsky): this method has been created solely for the benefit of
-  //   fidlconv.  Once the conversion using that tool is completed and the tool
-  //   has been removed, this method should be removed as well.
+  // TODO(fxbug.dev/70247): this method has been created solely for the benefit
+  //   of fidlconv.  Once the conversion using that tool has been completed and
+  //   and the tool has been removed, this method should be removed as well.
   const Libraries* GetLibraries() const;
 
   template <typename NumericType>

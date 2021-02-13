@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_BUILTIN_H_
-#define ZIRCON_TOOLS_FIDL_INCLUDE_BUILTIN_H_
+#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UNDERLYING_TYPE_H_
+#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UNDERLYING_TYPE_H_
 
 // UnderlyingType stores the builtin type information for a given FIDL construct.
 // It basically maps to the FIDL keyword used to define the type (eg, "struct,"
@@ -27,9 +27,8 @@ class UnderlyingType {
   };
 
   constexpr explicit UnderlyingType(flat::Type::Kind type_kind, bool is_behind_alias)
-      : kind_(Kind::kOther),
-        is_behind_alias_(is_behind_alias) {
-    switch(type_kind) {
+      : kind_(Kind::kOther), is_behind_alias_(is_behind_alias) {
+    switch (type_kind) {
       case flat::Type::Kind::kArray:
         kind_ = Kind::kArray;
         break;
@@ -48,9 +47,8 @@ class UnderlyingType {
   }
 
   constexpr explicit UnderlyingType(flat::Decl::Kind decl_kind, bool is_behind_alias)
-      : kind_(Kind::kOther),
-        is_behind_alias_(is_behind_alias) {
-    switch(decl_kind) {
+      : kind_(Kind::kOther), is_behind_alias_(is_behind_alias) {
+    switch (decl_kind) {
       case flat::Decl::Kind::kProtocol:
         kind_ = Kind::kProtocol;
         break;
@@ -59,7 +57,8 @@ class UnderlyingType {
         break;
       default:
         kind_ = Kind::kOther;
-    }}
+    }
+  }
 
   [[nodiscard]] constexpr Kind kind() const { return kind_; }
   [[nodiscard]] constexpr bool is_behind_alias() const { return is_behind_alias_; }
@@ -71,4 +70,4 @@ class UnderlyingType {
 
 }  // namespace fidl::conv
 
-#endif //ZIRCON_TOOLS_FIDL_INCLUDE_BUILTIN_H_
+#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UNDERLYING_TYPE_H_

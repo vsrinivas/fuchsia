@@ -645,8 +645,8 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
   }
 
   return std::make_unique<raw::BitsDeclaration>(
-      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes), std::move(identifier),
-      std::move(maybe_type_ctor), std::move(members),
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
+      std::move(identifier), std::move(maybe_type_ctor), std::move(members),
       modifiers.strictness.value_or(types::Strictness::kStrict));
 }
 
@@ -760,8 +760,8 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
   }
 
   return std::make_unique<raw::EnumDeclaration>(
-      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes), std::move(identifier),
-      std::move(maybe_type_ctor), std::move(members),
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
+      std::move(identifier), std::move(maybe_type_ctor), std::move(members),
       modifiers.strictness.value_or(types::Strictness::kStrict));
 }
 
@@ -1218,9 +1218,9 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
     decl_start_token = modifiers.resourceness_token.value();
   }
 
-  return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
-                                                  std::move(identifier), std::move(members),
-                                                  resourceness);
+  return std::make_unique<raw::StructDeclaration>(
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
+      std::move(identifier), std::move(members), resourceness);
 }
 
 std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
@@ -1317,9 +1317,9 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
     decl_start_token = modifiers.resourceness_token.value();
   }
 
-  return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
-                                                 std::move(identifier), std::move(members),
-                                                 types::Strictness::kFlexible, resourceness);
+  return std::make_unique<raw::TableDeclaration>(
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
+      std::move(identifier), std::move(members), types::Strictness::kFlexible, resourceness);
 }
 
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
@@ -1426,8 +1426,10 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
   }
 
   return std::make_unique<raw::UnionDeclaration>(
-      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes), std::move(identifier), std::move(members),
-      modifiers.strictness.value_or(types::Strictness::kStrict), modifiers.strictness != std::nullopt, resourceness);
+      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
+      std::move(identifier), std::move(members),
+      modifiers.strictness.value_or(types::Strictness::kStrict),
+      modifiers.strictness != std::nullopt, resourceness);
 }
 
 std::unique_ptr<raw::File> Parser::ParseFile() {

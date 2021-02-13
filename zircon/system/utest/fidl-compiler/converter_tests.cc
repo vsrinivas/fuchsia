@@ -1,14 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <fidl/converter.h>
 #include <fidl/conversion.h>
+#include <fidl/converter.h>
 #include <zxtest/zxtest.h>
 
 #include "test_library.h"
 
 namespace {
-std::string Convert(const std::string& in, const std::vector<std::string>& deps, fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
+std::string Convert(const std::string& in, const std::vector<std::string>& deps,
+                    fidl::ExperimentalFlags flags, fidl::conv::Conversion::Syntax syntax) {
   // Convert the test file, along with its deps, into a flat AST.
   SharedAmongstLibraries shared;
   TestLibrary flat_lib("example.fidl", in, &shared, flags);
@@ -50,7 +51,8 @@ resource_definition handle : uint32 {
   raw_lib.Parse(&ast);
 
   // Run the ConvertingTreeVisitor using the two previously generated ASTs.
-  fidl::conv::ConvertingTreeVisitor visitor = fidl::conv::ConvertingTreeVisitor(syntax, flat_lib.library());
+  fidl::conv::ConvertingTreeVisitor visitor =
+      fidl::conv::ConvertingTreeVisitor(syntax, flat_lib.library());
   visitor.OnFile(ast);
   return *visitor.converted_output();
 }
@@ -66,7 +68,8 @@ std::string ToOldSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
 }
 
-std::string ToOldSyntax(const std::string& in, const std::vector<std::string>& deps, fidl::ExperimentalFlags flags) {
+std::string ToOldSyntax(const std::string& in, const std::vector<std::string>& deps,
+                        fidl::ExperimentalFlags flags) {
   return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kOld);
 }
 
@@ -81,7 +84,8 @@ std::string ToNewSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 
-std::string ToNewSyntax(const std::string& in, const std::vector<std::string>& deps, fidl::ExperimentalFlags flags) {
+std::string ToNewSyntax(const std::string& in, const std::vector<std::string>& deps,
+                        fidl::ExperimentalFlags flags) {
   return Convert(in, deps, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 

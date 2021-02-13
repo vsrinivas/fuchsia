@@ -15,7 +15,7 @@ namespace fidl::conv {
 // actual "strict" keyword was used in the declaration text.
 std::optional<types::Strictness> optional_strictness(types::Strictness strictness, bool specified) {
   if (!specified) {
-    return {};
+    return std::nullopt;
   }
   return strictness;
 }
@@ -31,18 +31,19 @@ std::optional<types::Strictness> optional_strictness(Token& decl_start_token) {
     case Token::Subkind::kFlexible:
       return types::Strictness::kFlexible;
     default:
-      return {};
+      return std::nullopt;
   }
 }
 
 // Returns the "builtin" definition underpinning a type.  If named declaration
 // is actually an alias, this method will recurse until all aliases are
 // dereferenced and an actual, FIDL-native type can be deduced.
-std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& name, bool is_behind_alias) {
+std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& name,
+                                                           bool is_behind_alias) {
   const flat::Library* lib = name.library();
   const flat::Decl* decl_ptr = lib->LookupDeclByName(name);
   if (decl_ptr == nullptr) {
-    return {};
+    return std::nullopt;
   }
 
   const flat::Decl::Kind& kind = decl_ptr->kind;
@@ -57,7 +58,8 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& nam
   }
 
   auto type_alias_ptr = static_cast<const flat::TypeAlias*>(decl_ptr);
-  auto underlying_type = resolve_as_user_defined_type(type_alias_ptr->partial_type_ctor->name, true);
+  auto underlying_type =
+      resolve_as_user_defined_type(type_alias_ptr->partial_type_ctor->name, true);
   if (underlying_type != std::nullopt) {
     return underlying_type;
   }
@@ -71,7 +73,7 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const std::string& ke
   const flat::Name instrinsic = flat::Name::CreateIntrinsic(keyword);
   const flat::TypeTemplate* t = root.LookupTemplate(instrinsic);
   if (t == nullptr) {
-    return {};
+    return std::nullopt;
   }
 
   if (keyword == "array") {
@@ -94,7 +96,8 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const std::string& ke
 // Given a non-compound identifier, and a reference to the library in which
 // that identifier is defined, we should be able to resolve the underlying
 // built-in type underpinning that identifier.
-std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Identifier>& identifier, const flat::Library* lib) {
+std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Identifier>& identifier,
+                                                 const flat::Library* lib) {
   std::string type_decl = identifier->copy_to_str();
 
   // Break up the type declaration - discard any "wrapped" types.
@@ -106,7 +109,8 @@ std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Iden
   // We'll need to make a flat::Name from the type_decl string, which can then
   // be used to search the library for the name's definition recursively until
   // its underlying type can be deduced.
-  auto underlying_type = resolve_as_user_defined_type(flat::Name::CreateSourced(lib, identifier->span()), false);
+  auto underlying_type =
+      resolve_as_user_defined_type(flat::Name::CreateSourced(lib, identifier->span()), false);
   if (underlying_type) {
     return underlying_type;
   }
@@ -116,7 +120,8 @@ std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Iden
 // Lookup the definition of a type's "key" identifier (ie, "vector" in the
 // identifier "vector<array<uint8>:>" or "Foo" in "some.lib.Foo") in a given
 // library.
-std::optional<UnderlyingType> resolve_type(const std::unique_ptr<raw::TypeConstructor>& type_ctor, const flat::Library* lib) {
+std::optional<UnderlyingType> resolve_type(const std::unique_ptr<raw::TypeConstructor>& type_ctor,
+                                           const flat::Library* lib) {
   std::unique_ptr<raw::CompoundIdentifier>& id = type_ctor->identifier;
   std::string type_decl = id->copy_to_str();
 
@@ -144,38 +149,52 @@ std::optional<UnderlyingType> resolve_type(const std::unique_ptr<raw::TypeConstr
   return resolve_identifier(id->components.back(), lib);
 }
 
-std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(const std::unique_ptr<raw::TypeConstructor>& type_ctor) {
+std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(
+    const std::unique_ptr<raw::TypeConstructor>& type_ctor) {
   return resolve_type(type_ctor, library_);
 }
 
-void ConvertingTreeVisitor::OnBitsDeclaration(const std::unique_ptr<raw::BitsDeclaration> &element) {
+void ConvertingTreeVisitor::OnBitsDeclaration(
+    const std::unique_ptr<raw::BitsDeclaration>& element) {
   Token& end = element->identifier->end_;
   if (element->maybe_type_ctor != nullptr) {
     end = element->maybe_type_ctor->end_;
   }
 
-  auto ref = element->maybe_type_ctor == nullptr ? std::nullopt :
-             std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(element->maybe_type_ctor);
-  std::unique_ptr<Conversion> conv = std::make_unique<BitsDeclarationConversion>(element->identifier, ref, optional_strictness(*element->decl_start_token));
+  auto ref =
+      element->maybe_type_ctor == nullptr
+          ? std::nullopt
+          : std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(
+                element->maybe_type_ctor);
+  std::unique_ptr<Conversion> conv = std::make_unique<BitsDeclarationConversion>(
+      element->identifier, ref, optional_strictness(*element->decl_start_token));
   Converting converting(this, std::move(conv), *element->decl_start_token, end);
   TreeVisitor::OnBitsDeclaration(element);
 }
 
-void ConvertingTreeVisitor::OnConstDeclaration(const std::unique_ptr<raw::ConstDeclaration> &element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
-  Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
+void ConvertingTreeVisitor::OnConstDeclaration(
+    const std::unique_ptr<raw::ConstDeclaration>& element) {
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
+  Converting converting(this, std::move(conv), element->type_ctor->start_,
+                        element->identifier->end_);
   TreeVisitor::OnConstDeclaration(element);
 }
 
-void ConvertingTreeVisitor::OnEnumDeclaration(const std::unique_ptr<raw::EnumDeclaration> &element) {
+void ConvertingTreeVisitor::OnEnumDeclaration(
+    const std::unique_ptr<raw::EnumDeclaration>& element) {
   Token& end = element->identifier->end_;
   if (element->maybe_type_ctor != nullptr) {
     end = element->maybe_type_ctor->end_;
   }
 
-  auto ref = element->maybe_type_ctor == nullptr ? std::nullopt :
-             std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(element->maybe_type_ctor);
-  std::unique_ptr<Conversion> conv = std::make_unique<EnumDeclarationConversion>(element->identifier, ref, optional_strictness(*element->decl_start_token));
+  auto ref =
+      element->maybe_type_ctor == nullptr
+          ? std::nullopt
+          : std::make_optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>(
+                element->maybe_type_ctor);
+  std::unique_ptr<Conversion> conv = std::make_unique<EnumDeclarationConversion>(
+      element->identifier, ref, optional_strictness(*element->decl_start_token));
   Converting converting(this, std::move(conv), *element->decl_start_token, end);
   TreeVisitor::OnEnumDeclaration(element);
 }
@@ -187,41 +206,54 @@ void ConvertingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
   converted_output_ += last_conversion_end_;
 }
 
-void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter> &element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
-  Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
+void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter>& element) {
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
+  Converting converting(this, std::move(conv), element->type_ctor->start_,
+                        element->identifier->end_);
   TreeVisitor::OnParameter(element);
 }
 
-void ConvertingTreeVisitor::OnStructDeclaration(const std::unique_ptr<raw::StructDeclaration> &element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<StructDeclarationConversion>(element->identifier, element->resourceness);
-  Converting converting(this, std::move(conv), *element->decl_start_token, element->identifier->end_);
+void ConvertingTreeVisitor::OnStructDeclaration(
+    const std::unique_ptr<raw::StructDeclaration>& element) {
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<StructDeclarationConversion>(element->identifier, element->resourceness);
+  Converting converting(this, std::move(conv), *element->decl_start_token,
+                        element->identifier->end_);
   TreeVisitor::OnStructDeclaration(element);
 }
 
-void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMember> &element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
-  Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
+void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMember>& element) {
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
+  Converting converting(this, std::move(conv), element->type_ctor->start_,
+                        element->identifier->end_);
   TreeVisitor::OnStructMember(element);
 }
 
-void ConvertingTreeVisitor::OnTableDeclaration(const std::unique_ptr<raw::TableDeclaration> &element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<TableDeclarationConversion>(element->identifier, std::nullopt, element->resourceness);
-  Converting converting(this, std::move(conv), *element->decl_start_token, element->identifier->end_);
+void ConvertingTreeVisitor::OnTableDeclaration(
+    const std::unique_ptr<raw::TableDeclaration>& element) {
+  std::unique_ptr<Conversion> conv = std::make_unique<TableDeclarationConversion>(
+      element->identifier, std::nullopt, element->resourceness);
+  Converting converting(this, std::move(conv), *element->decl_start_token,
+                        element->identifier->end_);
   TreeVisitor::OnTableDeclaration(element);
 }
 
-void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember> &element) {
+void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember>& element) {
   if (element->maybe_used != nullptr) {
-    std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->maybe_used->identifier, element->maybe_used->type_ctor);
-    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->maybe_used->identifier->end_);
+    std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(
+        element->maybe_used->identifier, element->maybe_used->type_ctor);
+    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_,
+                          element->maybe_used->identifier->end_);
     TreeVisitor::OnTableMember(element);
   } else {
     TreeVisitor::OnTableMember(element);
   }
 }
 
-void ConvertingTreeVisitor::OnTypeConstructor(const std::unique_ptr<raw::TypeConstructor>& element) {
+void ConvertingTreeVisitor::OnTypeConstructor(
+    const std::unique_ptr<raw::TypeConstructor>& element) {
   std::optional<UnderlyingType> underlying_type = resolve(element);
 
   // We should never get a null Builtin - if we do, there is a mistake in the
@@ -230,29 +262,36 @@ void ConvertingTreeVisitor::OnTypeConstructor(const std::unique_ptr<raw::TypeCon
   // intrinsic to the language.  If that's the case, where did it come from?
   assert(underlying_type.has_value() && "must resolve underlying builtin value for type");
 
-  std::unique_ptr<Conversion> conv = std::make_unique<TypeConversion>(element, underlying_type.value());
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<TypeConversion>(element, underlying_type.value());
   Converting converting(this, std::move(conv), element->start_, element->end_);
   TreeVisitor::OnTypeConstructor(element);
 }
 
-void ConvertingTreeVisitor::OnUnionDeclaration(const std::unique_ptr<raw::UnionDeclaration> &element) {
-  std::unique_ptr<Conversion> conv = std::make_unique<UnionDeclarationConversion>(element->identifier, optional_strictness(element->strictness, element->strictness_specified), element->resourceness);
-  Converting converting(this, std::move(conv), *element->decl_start_token, element->identifier->end_);
+void ConvertingTreeVisitor::OnUnionDeclaration(
+    const std::unique_ptr<raw::UnionDeclaration>& element) {
+  std::unique_ptr<Conversion> conv = std::make_unique<UnionDeclarationConversion>(
+      element->identifier, optional_strictness(element->strictness, element->strictness_specified),
+      element->resourceness);
+  Converting converting(this, std::move(conv), *element->decl_start_token,
+                        element->identifier->end_);
   TreeVisitor::OnUnionDeclaration(element);
 }
 
-void ConvertingTreeVisitor::OnUnionMember(const std::unique_ptr<raw::UnionMember> &element) {
+void ConvertingTreeVisitor::OnUnionMember(const std::unique_ptr<raw::UnionMember>& element) {
   if (element->maybe_used != nullptr) {
-    std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->maybe_used->identifier, element->maybe_used->type_ctor);
-    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_, element->maybe_used->identifier->end_);
+    std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(
+        element->maybe_used->identifier, element->maybe_used->type_ctor);
+    Converting converting(this, std::move(conv), element->maybe_used->type_ctor->start_,
+                          element->maybe_used->identifier->end_);
     TreeVisitor::OnUnionMember(element);
   } else {
     TreeVisitor::OnUnionMember(element);
   }
 }
 
-
-Converting::Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> conversion, const Token& start, const Token& end)
+Converting::Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> conversion,
+                       const Token& start, const Token& end)
     : ctv_(ctv) {
   const char* copy_from = ctv_->last_conversion_end_;
   const char* copy_until = start.data().data();

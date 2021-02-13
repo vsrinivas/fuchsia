@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_CONVERTER_H_
-#define ZIRCON_TOOLS_FIDL_INCLUDE_CONVERTER_H_
+#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERTER_H_
+#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERTER_H_
 
 // The ConvertingTreeVisitor takes a raw::File, and translates its textual
 // representation from one syntax to another.
 #include <stack>
 
 #include "conversion.h"
-#include "flat_ast.h"
 #include "flat/name.h"
+#include "flat_ast.h"
 #include "tree_visitor.h"
 #include "underlying_type.h"
 
@@ -23,13 +23,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   friend Converting;
 
  public:
-  explicit ConvertingTreeVisitor(Conversion::Syntax syntax,
-                                 const flat::Library* library)
-      : to_syntax_(syntax),
-        last_conversion_end_(nullptr),
-        last_comment_(0),
-        library_(library) {
-  }
+  explicit ConvertingTreeVisitor(Conversion::Syntax syntax, const flat::Library* library)
+      : to_syntax_(syntax), last_conversion_end_(nullptr), last_comment_(0), library_(library) {}
 
   // The following block of visitors are purposeful noops. Their nodes are
   // guaranteed to be identical in both the old and new syntax, so its best to
@@ -40,7 +35,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {}
   void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {}
   void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {}
-  void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const& element) override {}
+  void OnResourceDeclaration(
+      std::unique_ptr<fidl::raw::ResourceDeclaration> const& element) override {}
   void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override {}
   void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override {}
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {}
@@ -167,7 +163,8 @@ class Converting {
   // prevents double conversion.  Further, all text between the previous value
   // of last_conversion_end_ and the start token may be blindly copied, since we
   // are now sure that there are not conversions taking place in that span.
-  Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> conversion, const Token& start, const Token& end);
+  Converting(ConvertingTreeVisitor* ctv, std::unique_ptr<Conversion> conversion, const Token& start,
+             const Token& end);
 
   // If a conversion is not the last remaining entry in the open_conversions_
   // stack, its stringified output is simply passed to the top entry of that
@@ -181,4 +178,4 @@ class Converting {
 
 }  // namespace fidl::conv
 
-#endif //ZIRCON_TOOLS_FIDL_INCLUDE_CONVERTER_H_
+#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERTER_H_

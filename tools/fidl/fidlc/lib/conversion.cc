@@ -90,7 +90,7 @@ std::string TypeConversion::Write(Syntax syntax) {
       constraints_str += constraints[0];
     } else {
       bool first = true;
-      for(const std::string& constraint : constraints){
+      for (const std::string& constraint : constraints) {
         if (first) {
           constraints_str += "<";
         } else {

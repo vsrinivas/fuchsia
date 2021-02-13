@@ -296,13 +296,10 @@ class BitsMember final : public SourceElement {
 
 class BitsDeclaration final : public SourceElement {
  public:
-  BitsDeclaration(SourceElement const& element,
-                  std::unique_ptr<Token> decl_start_token,
-                  std::unique_ptr<AttributeList> attributes,
-                  std::unique_ptr<Identifier> identifier,
+  BitsDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
+                  std::unique_ptr<AttributeList> attributes, std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
-                  std::vector<std::unique_ptr<BitsMember>> members,
-                  types::Strictness strictness)
+                  std::vector<std::unique_ptr<BitsMember>> members, types::Strictness strictness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
@@ -395,13 +392,10 @@ class EnumMember final : public SourceElement {
 
 class EnumDeclaration final : public SourceElement {
  public:
-  EnumDeclaration(SourceElement const& element,
-                  std::unique_ptr<Token> decl_start_token,
-                  std::unique_ptr<AttributeList> attributes,
-                  std::unique_ptr<Identifier> identifier,
+  EnumDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
+                  std::unique_ptr<AttributeList> attributes, std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
-                  std::vector<std::unique_ptr<EnumMember>> members,
-                  types::Strictness strictness)
+                  std::vector<std::unique_ptr<EnumMember>> members, types::Strictness strictness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
@@ -577,8 +571,7 @@ class ServiceDeclaration final : public SourceElement {
 
 class StructMember final : public SourceElement {
  public:
-  StructMember(SourceElement const& element,
-               std::unique_ptr<TypeConstructor> type_ctor,
+  StructMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
                std::unique_ptr<Identifier> identifier,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
@@ -599,8 +592,7 @@ class StructMember final : public SourceElement {
 class StructDeclaration final : public SourceElement {
  public:
   // Note: A nullptr passed to attributes means an empty attribute list.
-  StructDeclaration(SourceElement const& element,
-                    std::unique_ptr<Token> decl_start_token,
+  StructDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
                     std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
                     std::vector<std::unique_ptr<StructMember>> members,
@@ -656,12 +648,10 @@ struct TableMember final : public SourceElement {
 };
 
 struct TableDeclaration final : public SourceElement {
-  TableDeclaration(SourceElement const& element,
-                   std::unique_ptr<Token> decl_start_token,
+  TableDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
                    std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<TableMember>> members,
-                   types::Strictness strictness,
+                   std::vector<std::unique_ptr<TableMember>> members, types::Strictness strictness,
                    types::Resourceness resourceness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
@@ -719,14 +709,11 @@ class UnionMember final : public SourceElement {
 
 class UnionDeclaration final : public SourceElement {
  public:
-  UnionDeclaration(SourceElement const& element,
-                   std::unique_ptr<Token> decl_start_token,
+  UnionDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
                    std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<UnionMember>> members,
-                   types::Strictness strictness,
-                   bool strictness_specified,
-                   types::Resourceness resourceness)
+                   std::vector<std::unique_ptr<UnionMember>> members, types::Strictness strictness,
+                   bool strictness_specified, types::Resourceness resourceness)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
@@ -796,9 +783,9 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
 
-  // TODO(azaslavsky): this member has been created solely for the benefit of
-  //   fidlconv.  Once the conversion using that tool is completed and the tool
-  //   has been removed, this member should be removed as well.
+  // TODO(fxbug.dev/70247): this member has been created solely for the benefit
+  //   of fidlconv.  Once the conversion using that tool has been completed and
+  //   tool has been removed, this member should be removed as well.
   std::vector<std::unique_ptr<Token>> comment_tokens_list;
   Token end_;
 };

@@ -398,9 +398,9 @@ class Parser {
   Token last_token_;
   State state_;
 
-  // TODO(azaslavsky): this member has been created solely for the benefit of
-  //   fidlconv.  Once the conversion using that tool is completed and the tool
-  //   has been removed, this member should be removed as well.
+  // TODO(fxbug.dev/70247): this member has been created solely for the benefit
+  //   of fidlconv.  Once the conversion using that tool has been completed and
+  //   the tool has been removed, this member should be removed as well.
   std::vector<std::unique_ptr<Token>> comment_tokens_;
 };
 

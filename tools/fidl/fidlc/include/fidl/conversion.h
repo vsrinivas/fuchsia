@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_CONVERSION_H_
-#define ZIRCON_TOOLS_FIDL_INCLUDE_CONVERSION_H_
+#ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERSION_H_
+#define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERSION_H_
 
 // A Conversion is an object that applies a specific translation from one syntax
 // to another.  Conversions may nest other conversions, such that they may use
 // the output of the conversion of their nested children when creating their own
 // output.
-#include <string>
 #include <optional>
+#include <string>
 
 #include "raw_ast.h"
 #include "underlying_type.h"
@@ -23,11 +23,7 @@ namespace fidl::conv {
 // file.
 class CopyRange {
  public:
-  CopyRange(
-      const char* from,
-      const char* until)
-      : from_(from),
-        until_(until) {}
+  CopyRange(const char* from, const char* until) : from_(from), until_(until) {}
 
   const char* from_;
   const char* until_;
@@ -101,20 +97,16 @@ class Conversion {
 // TypeConversions, as would be the case for something like "vector<handle?>."
 class TypeConversion : public Conversion {
  public:
-  explicit TypeConversion(
-      const std::unique_ptr<raw::TypeConstructor>& type_ctor,
-      const UnderlyingType underlying_type)
-      : type_ctor_(type_ctor),
-        underlying_type_(underlying_type) {}
+  explicit TypeConversion(const std::unique_ptr<raw::TypeConstructor>& type_ctor,
+                          const UnderlyingType underlying_type)
+      : type_ctor_(type_ctor), underlying_type_(underlying_type) {}
   ~TypeConversion() override = default;
 
   const std::unique_ptr<raw::TypeConstructor>& type_ctor_;
   const UnderlyingType underlying_type_;
   std::string wrapped_type_text_;
 
-  void AddChildText(std::string child) override {
-    wrapped_type_text_ = child;
-  }
+  void AddChildText(std::string child) override { wrapped_type_text_ = child; }
 
   std::string Write(Syntax syntax) override;
 };
@@ -124,20 +116,16 @@ class TypeConversion : public Conversion {
 // uint8."  The NameAndTypeConversion always nests a TypeConversion.
 class NameAndTypeConversion : public Conversion {
  public:
-  NameAndTypeConversion(
-      const std::unique_ptr<raw::Identifier>& identifier,
-      const std::unique_ptr<raw::TypeConstructor>& type_ctor)
-      : identifier_(identifier),
-        type_ctor_(type_ctor) {}
+  NameAndTypeConversion(const std::unique_ptr<raw::Identifier>& identifier,
+                        const std::unique_ptr<raw::TypeConstructor>& type_ctor)
+      : identifier_(identifier), type_ctor_(type_ctor) {}
   ~NameAndTypeConversion() override = default;
 
   const std::unique_ptr<raw::Identifier>& identifier_;
   const std::unique_ptr<raw::TypeConstructor>& type_ctor_;
   std::string type_text_;
 
-  void AddChildText(std::string child) override {
-    type_text_ = child;
-  }
+  void AddChildText(std::string child) override { type_text_ = child; }
 
   std::string Write(Syntax syntax) override;
 };
@@ -151,13 +139,10 @@ class NameAndTypeConversion : public Conversion {
 // one ore more member types declared in their "{...}" block.
 class MemberedDeclarationConversion : public Conversion {
  public:
-  MemberedDeclarationConversion(
-      const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<types::Strictness>& strictness,
-      const types::Resourceness& resourceness)
-      : identifier_(identifier),
-        strictness_(strictness),
-        resourceness_(resourceness) {}
+  MemberedDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
+                                const std::optional<types::Strictness>& strictness,
+                                const types::Resourceness& resourceness)
+      : identifier_(identifier), strictness_(strictness), resourceness_(resourceness) {}
   ~MemberedDeclarationConversion() override = default;
 
   const std::unique_ptr<raw::Identifier>& identifier_;
@@ -165,9 +150,7 @@ class MemberedDeclarationConversion : public Conversion {
   const types::Resourceness resourceness_;
   std::vector<std::string> members_;
 
-  void AddChildText(std::string child) override {
-    members_.push_back(child);
-  }
+  void AddChildText(std::string child) override { members_.push_back(child); }
 
   std::string Write(Syntax syntax) override;
 
@@ -198,15 +181,12 @@ class MemberedDeclarationConversion : public Conversion {
 // one as NameAndTypeConversions using the AddChildText() method.
 class StructDeclarationConversion : public MemberedDeclarationConversion {
  public:
-  StructDeclarationConversion(
-      const std::unique_ptr<raw::Identifier>& identifier,
-      const types::Resourceness& resourceness)
+  StructDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
+                              const types::Resourceness& resourceness)
       : MemberedDeclarationConversion(identifier, std::nullopt, resourceness) {}
 
  private:
-  std::string get_fidl_type() override {
-    return "struct";
-  }
+  std::string get_fidl_type() override { return "struct"; }
 };
 
 // Handles the conversion of a table declaration, written in the old syntax as:
@@ -217,16 +197,13 @@ class StructDeclarationConversion : public MemberedDeclarationConversion {
 // one as NameAndTypeConversions using the AddChildText() method.
 class TableDeclarationConversion : public MemberedDeclarationConversion {
  public:
-  TableDeclarationConversion(
-      const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<types::Strictness>& strictness,
-      const types::Resourceness& resourceness)
+  TableDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
+                             const std::optional<types::Strictness>& strictness,
+                             const types::Resourceness& resourceness)
       : MemberedDeclarationConversion(identifier, strictness, resourceness) {}
 
  private:
-  std::string get_fidl_type() override {
-    return "table";
-  }
+  std::string get_fidl_type() override { return "table"; }
 };
 
 // Handles the conversion of a union declaration, written in the old syntax as:
@@ -237,16 +214,13 @@ class TableDeclarationConversion : public MemberedDeclarationConversion {
 // one as NameAndTypeConversions using the AddChildText() method.
 class UnionDeclarationConversion : public MemberedDeclarationConversion {
  public:
-  UnionDeclarationConversion(
-      const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<types::Strictness>& strictness,
-      const types::Resourceness& resourceness)
+  UnionDeclarationConversion(const std::unique_ptr<raw::Identifier>& identifier,
+                             const std::optional<types::Strictness>& strictness,
+                             const types::Resourceness& resourceness)
       : MemberedDeclarationConversion(identifier, strictness, resourceness) {}
 
  private:
-  std::string get_fidl_type() override {
-    return "union";
-  }
+  std::string get_fidl_type() override { return "union"; }
 };
 
 // Handles the conversion of declarations specified using the bits keyword.
@@ -257,21 +231,21 @@ class BitsDeclarationConversion : public MemberedDeclarationConversion {
  public:
   BitsDeclarationConversion(
       const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>& maybe_wrapped_type,
+      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>&
+          maybe_wrapped_type,
       const std::optional<types::Strictness>& strictness)
       : MemberedDeclarationConversion(identifier, strictness, types::Resourceness::kValue),
         maybe_wrapped_type_(maybe_wrapped_type) {}
 
-  const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>> maybe_wrapped_type_;
+  const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>
+      maybe_wrapped_type_;
 
   void AddChildText(std::string child) override {}
 
   std::string Write(Syntax syntax) override;
 
  private:
-  std::string get_fidl_type() override {
-    return "bits";
-  }
+  std::string get_fidl_type() override { return "bits"; }
 
   std::string get_wrapped_type() {
     if (maybe_wrapped_type_.has_value()) {
@@ -287,16 +261,15 @@ class EnumDeclarationConversion : public BitsDeclarationConversion {
  public:
   EnumDeclarationConversion(
       const std::unique_ptr<raw::Identifier>& identifier,
-      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>& maybe_wrapped_type,
+      const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructor>>>&
+          maybe_wrapped_type,
       const std::optional<types::Strictness>& strictness)
       : BitsDeclarationConversion(identifier, maybe_wrapped_type, strictness) {}
 
  private:
-  std::string get_fidl_type() override {
-    return "enum";
-  }
+  std::string get_fidl_type() override { return "enum"; }
 };
 
 }  // namespace fidl::conv
 
-#endif //ZIRCON_TOOLS_FIDL_INCLUDE_CONVERSION_H_
+#endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CONVERSION_H_
