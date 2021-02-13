@@ -13,7 +13,7 @@
         // Use the built-in ELF runner to run native binaries.
         runner: "elf",
         // The binary to run for this component.
-        binary: "bin/{{snake_case PROJECT_NAME}}",
+        binary: "bin/{{PROJECT_NAME}}",
     },
 
     // Capabilities used by this component.

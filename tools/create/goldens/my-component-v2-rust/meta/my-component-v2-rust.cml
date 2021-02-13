@@ -17,7 +17,7 @@
         // Use the built-in ELF runner to run native binaries.
         runner: "elf",
         // The binary to run for this component.
-        binary: "bin/my_component_v2_rust",
+        binary: "bin/my-component-v2-rust",
     },
 
     // Capabilities used by this component.

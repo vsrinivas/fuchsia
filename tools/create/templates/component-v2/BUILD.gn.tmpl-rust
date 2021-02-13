@@ -19,7 +19,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
-  name = "{{PROJECT_NAME}}"
+  output_name = "{{PROJECT_NAME}}"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `{{snake_case PROJECT_NAME}}_bin_test`.

@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/my_component_v1_rust"
+        "binary": "bin/my-component-v1-rust"
     }
 }
