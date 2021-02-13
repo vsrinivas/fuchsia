@@ -1450,6 +1450,36 @@ The following key elements are called out in the code example above:
 >     Note: With the new templates, the `test_specs` apply to all tests in the package.
 >     See [test packages](#test-packages) for more examples.
 
+### Remove legacy allowlist
+
+The `deprecated_package` group in [`//build/BUILD.gn`](/build/BUILD.gn) contains
+an allowlist of build files still using the legacy `package()` template.
+Once you have successfully migrated your build files to the new templates,
+remove the affected lines from the group. Removing the allowlist entries prevents
+future changes from re-introducing uses of the legacy templates.
+
+For example, if you migrated the files under [`//src/fonts`](/src/fonts) to the
+new templates, you would find and remove all the related files paths in
+[`//build/BUILD.gn`](/build/BUILD.gn):
+
+```gn
+group("deprecated_package") {
+  ...
+  visibility += [
+    ...
+    "//src/fonts/*",
+    "//src/fonts/char_set/*",
+    "//src/fonts/font_info/*",
+    "//src/fonts/manifest/*",
+    "//src/fonts/offset_string/*",
+    "//src/fonts/tests/integration/*",
+    "//src/fonts/tests/smoke/*",
+    ...
+  ]
+}
+```
+
+
 ### Legacy features
 
 The following special attributes are supported by the legacy `package()` template:
