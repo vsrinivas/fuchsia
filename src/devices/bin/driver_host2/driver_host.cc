@@ -130,7 +130,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
-  std::string url(start_args.url().data(), start_args.url().size());
+  std::string url(start_args.url().get());
   auto pkg = start_args.has_ns() ? start_args::ns_value(start_args.ns(), "/pkg")
                                  : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {

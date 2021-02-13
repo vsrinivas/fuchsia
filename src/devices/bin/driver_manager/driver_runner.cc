@@ -315,7 +315,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
 
 void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel controller,
                          StartCompleter::Sync& completer) {
-  std::string url(start_info.resolved_url().data(), start_info.resolved_url().size());
+  std::string url(start_info.resolved_url().get());
   auto it = driver_args_.find(url);
   if (it == driver_args_.end()) {
     LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver", url.size(),
