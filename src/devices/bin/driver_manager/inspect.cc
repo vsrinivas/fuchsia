@@ -4,10 +4,12 @@
 
 #include "inspect.h"
 
+#include <lib/inspect/service/cpp/service.h>
+
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
+#include <fs/service.h>
 #include <fs/vfs_types.h>
-#include <fs/vmo_file.h>
 #include <fs/vnode.h>
 
 #include "device.h"
@@ -154,21 +156,19 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
   return zx::ok();
 }
 
-InspectManager::InspectManager(async_dispatcher_t* dispatcher)
-    : inspect_vmo_(inspector_.DuplicateVmo()) {
-  diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   auto driver_manager_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  diagnostics_dir_->AddEntry("driver_manager", driver_manager_dir);
-
-  driver_host_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   driver_manager_dir->AddEntry("driver_host", driver_host_dir_);
 
-  uint64_t vmo_size;
-  ZX_ASSERT(inspect_vmo_.get_size(&vmo_size) == ZX_OK);
+  auto tree_handler = inspect::MakeTreeHandler(&inspector_, dispatcher);
+  auto tree_service = fbl::MakeRefCounted<fs::Service>(
+      [tree_handler = std::move(tree_handler)](zx::channel request) {
+        tree_handler(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(request)));
+        return ZX_OK;
+      });
+  driver_manager_dir->AddEntry(fuchsia::inspect::Tree::Name_, std::move(tree_service));
 
-  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(inspect_vmo_, 0, vmo_size);
-  driver_manager_dir->AddEntry("dm.inspect", vmo_file);
-
+  diagnostics_dir_->AddEntry("driver_manager", driver_manager_dir);
   auto status = InspectDevfs::Create(diagnostics_dir_);
   ZX_ASSERT(status.is_ok());
   devfs_ = std::move(status.value());

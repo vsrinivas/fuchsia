@@ -87,11 +87,10 @@ class InspectManager {
 
  private:
   inspect::Inspector inspector_;
-  zx::vmo inspect_vmo_;
 
-  fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
-  fbl::RefPtr<fs::PseudoDir> driver_host_dir_;
+  fbl::RefPtr<fs::PseudoDir> diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  fbl::RefPtr<fs::PseudoDir> driver_host_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
   zx::channel diagnostics_client_;
 

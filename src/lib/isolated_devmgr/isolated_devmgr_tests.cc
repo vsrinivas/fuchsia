@@ -241,8 +241,9 @@ TEST_F(DevmgrTest, DiagnosticsFiles) {
                                                                          "diagnostics/class", &fd));
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
                        devmgr->devfs_root(), "diagnostics/driver_manager", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
-                       devmgr->devfs_root(), "diagnostics/driver_manager/dm.inspect", &fd));
+  ASSERT_EQ(ZX_OK,
+            devmgr_integration_test::RecursiveWaitForFileReadOnly(
+                devmgr->devfs_root(), "diagnostics/driver_manager/fuchsia.inspect.Tree", &fd));
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
                        devmgr->devfs_root(), "diagnostics/driver_manager/driver_host", &fd));
 

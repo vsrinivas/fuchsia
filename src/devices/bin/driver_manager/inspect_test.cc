@@ -51,7 +51,7 @@ TEST_F(InspectManagerTestCase, DirectoryEntries) {
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("driver_host", V_TYPE_DIR);
-    dc.ExpectEntry("dm.inspect", V_TYPE_FILE);
+    dc.ExpectEntry("fuchsia.inspect.Tree", V_TYPE_FILE);
     dc.ExpectEnd();
   }
 }
