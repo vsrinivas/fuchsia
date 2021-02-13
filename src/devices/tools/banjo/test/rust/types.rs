@@ -10,95 +10,9 @@
 use fuchsia_zircon as zircon;
 
 
-pub const ARRAYS_SIZE: u32 = 32;
 pub const VECTORS_SIZE: u32 = 32;
 pub const STRINGS_SIZE: u32 = 32;
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct this_is_a_struct {
-    pub s: *mut std::ffi::c_void /* String */,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct interfaces {
-    pub nonnullable_interface: this_is_an_interface,
-    pub nullable_interface: this_is_an_interface,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct primitive_types {
-    pub b: bool,
-    pub i8: i8,
-    pub i16: i16,
-    pub i32: i32,
-    pub i64: i64,
-    pub u8: u8,
-    pub u16: u16,
-    pub u32: u32,
-    pub u64: u64,
-    pub f32: f32,
-    pub f64: f64,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct default_values {
-    pub b1: bool,
-    pub b2: bool,
-    pub i8: i8,
-    pub i16: i16,
-    pub i32: i32,
-    pub i64: i64,
-    pub u8: u8,
-    pub u16: u16,
-    pub u32: u32,
-    pub u64: u64,
-    pub s: *mut std::ffi::c_void /* String */,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct arrays {
-    pub b_0: [bool; 1 as usize],
-    pub i8_0: [i8; 1 as usize],
-    pub i16_0: [i16; 1 as usize],
-    pub i32_0: [i32; 1 as usize],
-    pub i64_0: [i64; 1 as usize],
-    pub u8_0: [u8; 1 as usize],
-    pub u16_0: [u16; 1 as usize],
-    pub u32_0: [u32; 1 as usize],
-    pub u64_0: [u64; 1 as usize],
-    pub f32_0: [f32; 1 as usize],
-    pub f64_0: [f64; 1 as usize],
-    pub handle_0: [zircon::sys::zx_handle_t; 1 as usize],
-    pub b_1: [bool; ARRAYS_SIZE as usize],
-    pub i8_1: [i8; ARRAYS_SIZE as usize],
-    pub i16_1: [i16; ARRAYS_SIZE as usize],
-    pub i32_1: [i32; ARRAYS_SIZE as usize],
-    pub i64_1: [i64; ARRAYS_SIZE as usize],
-    pub u8_1: [u8; ARRAYS_SIZE as usize],
-    pub u16_1: [u16; ARRAYS_SIZE as usize],
-    pub u32_1: [u32; ARRAYS_SIZE as usize],
-    pub u64_1: [u64; ARRAYS_SIZE as usize],
-    pub f32_1: [f32; ARRAYS_SIZE as usize],
-    pub f64_1: [f64; ARRAYS_SIZE as usize],
-    pub handle_1: [zircon::sys::zx_handle_t; ARRAYS_SIZE as usize],
-    pub b_2: [[bool; 4 as usize]; ARRAYS_SIZE as usize],
-    pub i8_2: [[i8; 4 as usize]; ARRAYS_SIZE as usize],
-    pub i16_2: [[i16; 4 as usize]; ARRAYS_SIZE as usize],
-    pub i32_2: [[i32; 4 as usize]; ARRAYS_SIZE as usize],
-    pub i64_2: [[i64; 4 as usize]; ARRAYS_SIZE as usize],
-    pub u8_2: [[u8; 4 as usize]; ARRAYS_SIZE as usize],
-    pub u16_2: [[u16; 4 as usize]; ARRAYS_SIZE as usize],
-    pub u32_2: [[u32; 4 as usize]; ARRAYS_SIZE as usize],
-    pub u64_2: [[u64; 4 as usize]; ARRAYS_SIZE as usize],
-    pub f32_2: [[f32; 4 as usize]; ARRAYS_SIZE as usize],
-    pub f64_2: [[f64; 4 as usize]; ARRAYS_SIZE as usize],
-    pub handle_2: [[zircon::sys::zx_handle_t; 4 as usize]; ARRAYS_SIZE as usize],
-}
-
+pub const ARRAYS_SIZE: u32 = 32;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct vectors {
@@ -275,6 +189,67 @@ pub struct handles {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct arrays {
+    pub b_0: [bool; 1 as usize],
+    pub i8_0: [i8; 1 as usize],
+    pub i16_0: [i16; 1 as usize],
+    pub i32_0: [i32; 1 as usize],
+    pub i64_0: [i64; 1 as usize],
+    pub u8_0: [u8; 1 as usize],
+    pub u16_0: [u16; 1 as usize],
+    pub u32_0: [u32; 1 as usize],
+    pub u64_0: [u64; 1 as usize],
+    pub f32_0: [f32; 1 as usize],
+    pub f64_0: [f64; 1 as usize],
+    pub handle_0: [zircon::sys::zx_handle_t; 1 as usize],
+    pub b_1: [bool; ARRAYS_SIZE as usize],
+    pub i8_1: [i8; ARRAYS_SIZE as usize],
+    pub i16_1: [i16; ARRAYS_SIZE as usize],
+    pub i32_1: [i32; ARRAYS_SIZE as usize],
+    pub i64_1: [i64; ARRAYS_SIZE as usize],
+    pub u8_1: [u8; ARRAYS_SIZE as usize],
+    pub u16_1: [u16; ARRAYS_SIZE as usize],
+    pub u32_1: [u32; ARRAYS_SIZE as usize],
+    pub u64_1: [u64; ARRAYS_SIZE as usize],
+    pub f32_1: [f32; ARRAYS_SIZE as usize],
+    pub f64_1: [f64; ARRAYS_SIZE as usize],
+    pub handle_1: [zircon::sys::zx_handle_t; ARRAYS_SIZE as usize],
+    pub b_2: [[bool; 4 as usize]; ARRAYS_SIZE as usize],
+    pub i8_2: [[i8; 4 as usize]; ARRAYS_SIZE as usize],
+    pub i16_2: [[i16; 4 as usize]; ARRAYS_SIZE as usize],
+    pub i32_2: [[i32; 4 as usize]; ARRAYS_SIZE as usize],
+    pub i64_2: [[i64; 4 as usize]; ARRAYS_SIZE as usize],
+    pub u8_2: [[u8; 4 as usize]; ARRAYS_SIZE as usize],
+    pub u16_2: [[u16; 4 as usize]; ARRAYS_SIZE as usize],
+    pub u32_2: [[u32; 4 as usize]; ARRAYS_SIZE as usize],
+    pub u64_2: [[u64; 4 as usize]; ARRAYS_SIZE as usize],
+    pub f32_2: [[f32; 4 as usize]; ARRAYS_SIZE as usize],
+    pub f64_2: [[f64; 4 as usize]; ARRAYS_SIZE as usize],
+    pub handle_2: [[zircon::sys::zx_handle_t; 4 as usize]; ARRAYS_SIZE as usize],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct unions {
+    pub s: this_is_a_union,
+    pub nullable_u: *mut this_is_a_union,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct this_is_a_struct {
+    pub s: *mut std::ffi::c_void /* String */,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct structs {
+    pub s: this_is_a_struct,
+    pub nullable_s: *mut this_is_a_struct,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct strings {
     pub s: *mut std::ffi::c_void /* String */,
     pub nullable_s: *mut std::ffi::c_void /* String */,
@@ -286,248 +261,43 @@ pub struct strings {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct structs {
-    pub s: this_is_a_struct,
-    pub nullable_s: *mut this_is_a_struct,
+pub struct primitive_types {
+    pub b: bool,
+    pub i8: i8,
+    pub i16: i16,
+    pub i32: i32,
+    pub i64: i64,
+    pub u8: u8,
+    pub u16: u16,
+    pub u32: u32,
+    pub u64: u64,
+    pub f32: f32,
+    pub f64: f64,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct unions {
-    pub s: this_is_a_union,
-    pub nullable_u: *mut this_is_a_union,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct interfaces {
+    pub nonnullable_interface: this_is_an_interface,
+    pub nullable_interface: this_is_an_interface,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct default_enum(pub u32);
-
-impl default_enum {
-    pub const X: Self = Self(23);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct default_values {
+    pub b1: bool,
+    pub b2: bool,
+    pub i8: i8,
+    pub i16: i16,
+    pub i32: i32,
+    pub i64: i64,
+    pub u8: u8,
+    pub u16: u16,
+    pub u32: u32,
+    pub u64: u64,
+    pub s: *mut std::ffi::c_void /* String */,
 }
 
-impl std::ops::BitAnd for default_enum {
-    type Output = Self;
-    fn bitand(self, rhs: Self) -> Self {
-        Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitAndAssign for default_enum {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitOr for default_enum {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitOrAssign for default_enum {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitXor for default_enum {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self {
-        Self(self.0 ^ rhs.0)
-    }
-}
-
-impl std::ops::BitXorAssign for default_enum {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 ^ rhs.0)
-    }
-}
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i8_enum(pub i8);
-
-impl i8_enum {
-    pub const X: Self = Self(23);
-}
-
-impl std::ops::BitAnd for i8_enum {
-    type Output = Self;
-    fn bitand(self, rhs: Self) -> Self {
-        Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitAndAssign for i8_enum {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitOr for i8_enum {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitOrAssign for i8_enum {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitXor for i8_enum {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self {
-        Self(self.0 ^ rhs.0)
-    }
-}
-
-impl std::ops::BitXorAssign for i8_enum {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 ^ rhs.0)
-    }
-}
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i16_enum(pub i16);
-
-impl i16_enum {
-    pub const X: Self = Self(23);
-}
-
-impl std::ops::BitAnd for i16_enum {
-    type Output = Self;
-    fn bitand(self, rhs: Self) -> Self {
-        Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitAndAssign for i16_enum {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitOr for i16_enum {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitOrAssign for i16_enum {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitXor for i16_enum {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self {
-        Self(self.0 ^ rhs.0)
-    }
-}
-
-impl std::ops::BitXorAssign for i16_enum {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 ^ rhs.0)
-    }
-}
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i32_enum(pub i32);
-
-impl i32_enum {
-    pub const X: Self = Self(23);
-}
-
-impl std::ops::BitAnd for i32_enum {
-    type Output = Self;
-    fn bitand(self, rhs: Self) -> Self {
-        Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitAndAssign for i32_enum {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitOr for i32_enum {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitOrAssign for i32_enum {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitXor for i32_enum {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self {
-        Self(self.0 ^ rhs.0)
-    }
-}
-
-impl std::ops::BitXorAssign for i32_enum {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 ^ rhs.0)
-    }
-}
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i64_enum(pub i64);
-
-impl i64_enum {
-    pub const X: Self = Self(23);
-}
-
-impl std::ops::BitAnd for i64_enum {
-    type Output = Self;
-    fn bitand(self, rhs: Self) -> Self {
-        Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitAndAssign for i64_enum {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 & rhs.0)
-    }
-}
-
-impl std::ops::BitOr for i64_enum {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitOrAssign for i64_enum {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitXor for i64_enum {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self {
-        Self(self.0 ^ rhs.0)
-    }
-}
-
-impl std::ops::BitXorAssign for i64_enum {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 ^ rhs.0)
-    }
-}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct u8_enum(pub u8);
@@ -576,46 +346,46 @@ impl std::ops::BitXorAssign for u8_enum {
 }
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct u16_enum(pub u16);
+pub struct u64_enum(pub u64);
 
-impl u16_enum {
+impl u64_enum {
     pub const X: Self = Self(23);
 }
 
-impl std::ops::BitAnd for u16_enum {
+impl std::ops::BitAnd for u64_enum {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self {
         Self(self.0 & rhs.0)
     }
 }
 
-impl std::ops::BitAndAssign for u16_enum {
+impl std::ops::BitAndAssign for u64_enum {
     fn bitand_assign(&mut self, rhs: Self) {
         *self = Self(self.0 & rhs.0)
     }
 }
 
-impl std::ops::BitOr for u16_enum {
+impl std::ops::BitOr for u64_enum {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self {
         Self(self.0 | rhs.0)
     }
 }
 
-impl std::ops::BitOrAssign for u16_enum {
+impl std::ops::BitOrAssign for u64_enum {
     fn bitor_assign(&mut self, rhs: Self) {
         *self = Self(self.0 | rhs.0)
     }
 }
 
-impl std::ops::BitXor for u16_enum {
+impl std::ops::BitXor for u64_enum {
     type Output = Self;
     fn bitxor(self, rhs: Self) -> Self {
         Self(self.0 ^ rhs.0)
     }
 }
 
-impl std::ops::BitXorAssign for u16_enum {
+impl std::ops::BitXorAssign for u64_enum {
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = Self(self.0 ^ rhs.0)
     }
@@ -668,46 +438,276 @@ impl std::ops::BitXorAssign for u32_enum {
 }
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct u64_enum(pub u64);
+pub struct u16_enum(pub u16);
 
-impl u64_enum {
+impl u16_enum {
     pub const X: Self = Self(23);
 }
 
-impl std::ops::BitAnd for u64_enum {
+impl std::ops::BitAnd for u16_enum {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self {
         Self(self.0 & rhs.0)
     }
 }
 
-impl std::ops::BitAndAssign for u64_enum {
+impl std::ops::BitAndAssign for u16_enum {
     fn bitand_assign(&mut self, rhs: Self) {
         *self = Self(self.0 & rhs.0)
     }
 }
 
-impl std::ops::BitOr for u64_enum {
+impl std::ops::BitOr for u16_enum {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self {
         Self(self.0 | rhs.0)
     }
 }
 
-impl std::ops::BitOrAssign for u64_enum {
+impl std::ops::BitOrAssign for u16_enum {
     fn bitor_assign(&mut self, rhs: Self) {
         *self = Self(self.0 | rhs.0)
     }
 }
 
-impl std::ops::BitXor for u64_enum {
+impl std::ops::BitXor for u16_enum {
     type Output = Self;
     fn bitxor(self, rhs: Self) -> Self {
         Self(self.0 ^ rhs.0)
     }
 }
 
-impl std::ops::BitXorAssign for u64_enum {
+impl std::ops::BitXorAssign for u16_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct i8_enum(pub i8);
+
+impl i8_enum {
+    pub const X: Self = Self(23);
+}
+
+impl std::ops::BitAnd for i8_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i8_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i8_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i8_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i8_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i8_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct i64_enum(pub i64);
+
+impl i64_enum {
+    pub const X: Self = Self(23);
+}
+
+impl std::ops::BitAnd for i64_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i64_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i64_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i64_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i64_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i64_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct i32_enum(pub i32);
+
+impl i32_enum {
+    pub const X: Self = Self(23);
+}
+
+impl std::ops::BitAnd for i32_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i32_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i32_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i32_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i32_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i32_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct i16_enum(pub i16);
+
+impl i16_enum {
+    pub const X: Self = Self(23);
+}
+
+impl std::ops::BitAnd for i16_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i16_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i16_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i16_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i16_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i16_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct default_enum(pub u32);
+
+impl default_enum {
+    pub const X: Self = Self(23);
+}
+
+impl std::ops::BitAnd for default_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for default_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for default_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for default_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for default_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for default_enum {
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = Self(self.0 ^ rhs.0)
     }

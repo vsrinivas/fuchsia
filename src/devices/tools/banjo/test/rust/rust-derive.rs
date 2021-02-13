@@ -25,6 +25,15 @@ pub struct UnionGrandParentStruct {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Baz2 {
+    pub foo: *mut Foo2,
+    pub bar: *mut Bar2,
+    pub baz: *mut Baz2,
+    pub some_union: SomeUnion,
+}
+
+#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EnumParentStruct {
     pub some_enum: SomeEnum,
@@ -50,29 +59,10 @@ pub struct BigArrayStruct {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Foo {
-    pub bar: Bar,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Bar {
-    pub bar: *mut Foo,
-    pub baz: *mut Baz,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Baz {
     pub foo: *mut Foo,
     pub bar: *mut Bar,
     pub baz: *mut Baz,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct Foo2 {
-    pub bar: Bar2,
 }
 
 #[repr(C)]
@@ -84,11 +74,21 @@ pub struct Bar2 {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct Baz2 {
-    pub foo: *mut Foo2,
-    pub bar: *mut Bar2,
-    pub baz: *mut Baz2,
-    pub some_union: SomeUnion,
+pub struct Foo2 {
+    pub bar: Bar2,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Bar {
+    pub bar: *mut Foo,
+    pub baz: *mut Baz,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Foo {
+    pub bar: Bar,
 }
 
 #[repr(C)]

@@ -11,7 +11,7 @@ use {
     std::io,
 };
 
-type DeclIter<'a> = std::slice::Iter<'a, ast::Decl>;
+type DeclIter<'a> = std::slice::Iter<'a, &'a ast::Decl>;
 
 pub struct RustBackend<'a, W: io::Write> {
     w: &'a mut W,
@@ -253,9 +253,13 @@ fn to_rust_type(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
 impl<'a, W: io::Write> RustBackend<'a, W> {
     // These aren't enums, although conceptually similiar, they get generated as pub const
     // since banjo might have same value output
-    fn codegen_enum_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_enum_decl(
+        &self,
+        declarations: DeclIter<'_>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
         let mut accum = String::new();
-        for decl in namespace {
+        for decl in declarations {
             if let ast::Decl::Enum { ref name, ref ty, attributes: _, ref variants } = *decl {
                 let mut enum_defines = Vec::new();
                 let ty = to_rust_type(ast, ty)?;
@@ -287,9 +291,13 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         Ok(accum)
     }
 
-    fn codegen_const_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_const_decl(
+        &self,
+        declarations: DeclIter<'_>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
         let mut accum = Vec::new();
-        for decl in namespace {
+        for decl in declarations {
             if let ast::Decl::Constant { ref name, ref ty, ref value, attributes: _ } = *decl {
                 let Constant(ref size) = value;
                 accum.push(format!(
@@ -305,11 +313,11 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
 
     fn codegen_struct_decl(
         &self,
-        namespace: DeclIter<'_>,
+        declarations: DeclIter<'_>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         let mut accum = Vec::new();
-        for decl in namespace {
+        for decl in declarations {
             if ast::is_placeholder_struct(decl) {
                 continue;
             }
@@ -354,9 +362,13 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         Ok(accum.join("\n"))
     }
 
-    fn codegen_union_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_union_decl(
+        &self,
+        declarations: DeclIter<'_>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
         let mut accum = Vec::new();
-        for decl in namespace {
+        for decl in declarations {
             if let ast::Decl::Union { ref name, ref fields, ref attributes } = *decl {
                 let mut field_str = Vec::new();
                 let alignment =
@@ -407,13 +419,15 @@ impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
             includes = self.codegen_includes(&ast)?,
             primary_namespace = ast.primary_namespace
         ))?;
-        let namespace = &ast.namespaces[&ast.primary_namespace];
+
+        let decl_order = ast.validate_declaration_deps()?;
+
         self.w.write_fmt(format_args!(
             include_str!("templates/rust/body.rs"),
-            enum_decls = self.codegen_enum_decl(namespace.iter(), &ast)?,
-            constant_decls = self.codegen_const_decl(namespace.iter(), &ast)?,
-            struct_decls = self.codegen_struct_decl(namespace.iter(), &ast)?,
-            union_decls = self.codegen_union_decl(namespace.iter(), &ast)?,
+            enum_decls = self.codegen_enum_decl(decl_order.iter(), &ast)?,
+            constant_decls = self.codegen_const_decl(decl_order.iter(), &ast)?,
+            struct_decls = self.codegen_struct_decl(decl_order.iter(), &ast)?,
+            union_decls = self.codegen_union_decl(decl_order.iter(), &ast)?,
         ))?;
         Ok(())
     }

@@ -13,8 +13,14 @@ use fuchsia_zircon as zircon;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct A {
-    pub foo: *mut B,
+pub struct C {
+    pub baz: zircon::sys::zx_handle_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct D {
+    pub qux: C,
 }
 
 #[repr(C)]
@@ -25,14 +31,8 @@ pub struct B {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct C {
-    pub baz: zircon::sys::zx_handle_t,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct D {
-    pub qux: C,
+pub struct A {
+    pub foo: *mut B,
 }
 
 
