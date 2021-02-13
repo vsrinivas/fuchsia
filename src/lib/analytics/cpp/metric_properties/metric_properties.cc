@@ -8,6 +8,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <iostream>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -45,17 +46,19 @@ std::optional<std::string> Get(std::string_view name) {
 }
 
 void Set(std::string_view name, std::string_view value) {
-  auto path = GetMetricPropertiesDirectory();
-  bool success = files::CreateDirectory(path);
+  auto property_directory = GetMetricPropertiesDirectory();
+  bool success = files::CreateDirectory(property_directory);
   if (!success)
     return;
-  path /= name;
+  auto property_file = property_directory / name;
 
   std::string data(value);
   data += "\n";
 
-  // pass "" as temp_root to use the global tmp directory.
-  files::WriteFileInTwoPhases(path, data, "");
+  success = files::WriteFile(property_file, data);
+  if (!success) {
+    std::cerr << "Warning: unable to set analytics property " << name << std::endl;
+  }
 }
 
 std::optional<bool> GetBool(std::string_view name) {
