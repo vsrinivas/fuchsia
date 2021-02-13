@@ -451,6 +451,10 @@ enum EapolResultCode {
 
 struct EapolConfirm {
     EapolResultCode result_code;
+    /// This value corresponds to the dst_addr in the EapolRequest we're confirming.
+    /// IEEE 802.11-2016 does not include this field, but we need it to disambiguate
+    /// if multiple EAPoL handshakes are ongoing.
+    array<uint8>:6 dst_addr;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.98

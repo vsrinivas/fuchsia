@@ -103,6 +103,18 @@ TEST(ConvertTest, ToFidlAssocInd) {
   EXPECT_EQ(status, ZX_OK);
 }
 
+TEST(ConvertTest, ToFidlEapolConf) {
+  wlan_mlme::EapolConfirm fidl_resp = {};
+  wlanif_eapol_confirm_t eapol_resp = {
+      .result_code = WLAN_EAPOL_RESULT_SUCCESS,
+      .dst_addr = {1, 2, 3, 4, 5, 6},
+  };
+  ConvertEapolConf(&fidl_resp, eapol_resp);
+  auto expected_dst_addr = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6};
+  EXPECT_EQ(fidl_resp.dst_addr, expected_dst_addr);
+  EXPECT_EQ(fidl_resp.result_code, wlan_mlme::EapolResultCode::SUCCESS);
+}
+
 // Fancier parameterized tests use PER_ANTENNA scope, so let's do quick smoke tests with STATION
 // scope.
 TEST(ConvertTest, ToFidlNoiseFloorHistogramSmokeTest) {

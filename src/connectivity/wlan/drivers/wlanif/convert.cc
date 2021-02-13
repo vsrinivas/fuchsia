@@ -441,6 +441,14 @@ void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,
   }
 }
 
+void ConvertEapolConf(::fuchsia::wlan::mlme::EapolConfirm* fidl_resp,
+                      const wlanif_eapol_confirm_t& eapol_conf) {
+  // result_code
+  fidl_resp->result_code = ConvertEapolResultCode(eapol_conf.result_code);
+
+  std::memcpy(fidl_resp->dst_addr.data(), eapol_conf.dst_addr, ETH_ALEN);
+}
+
 uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type) {
   switch (auth_type) {
     case wlan_mlme::AuthenticationTypes::OPEN_SYSTEM:

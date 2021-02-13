@@ -32,6 +32,8 @@ void ConvertBssDescription(::fuchsia::wlan::internal::BssDescription* fidl_bss_d
                            const wlanif_bss_description_t& wlanif_bss_desc);
 void ConvertAssocInd(::fuchsia::wlan::mlme::AssociateIndication* fidl_ind,
                      const wlanif_assoc_ind_t& assoc_ind);
+void ConvertEapolConf(::fuchsia::wlan::mlme::EapolConfirm* fidl_resp,
+                      const wlanif_eapol_confirm_t& eapol_conf);
 uint8_t ConvertAuthType(::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
 uint16_t ConvertReasonCode(::fuchsia::wlan::ieee80211::ReasonCode reason);
 uint16_t ConvertStatusCode(::fuchsia::wlan::ieee80211::StatusCode status);

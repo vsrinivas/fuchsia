@@ -945,8 +945,7 @@ void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
 
   wlan_mlme::EapolConfirm fidl_resp;
 
-  // result_code
-  fidl_resp.result_code = ConvertEapolResultCode(resp->result_code);
+  ConvertEapolConf(&fidl_resp, *resp);
 
   binding_.events().EapolConf(std::move(fidl_resp));
 }

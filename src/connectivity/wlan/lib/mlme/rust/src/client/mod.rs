@@ -759,7 +759,7 @@ impl<'a> BoundClient<'a> {
 
         // Report transmission result to SME.
         let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code })
+            sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code, dst_addr: dst })
         });
         if let Err(e) = result {
             error!("error sending MLME-EAPOL.confirm message: {}", e);
@@ -2055,7 +2055,10 @@ mod tests {
             .expect("error reading EAPOL.confirm");
         assert_eq!(
             eapol_confirm,
-            fidl_mlme::EapolConfirm { result_code: fidl_mlme::EapolResultCode::Success }
+            fidl_mlme::EapolConfirm {
+                result_code: fidl_mlme::EapolResultCode::Success,
+                dst_addr: BSSID.0,
+            }
         );
 
         // Verify EAPoL frame was sent over the air.
@@ -2094,7 +2097,8 @@ mod tests {
         assert_eq!(
             eapol_confirm,
             fidl_mlme::EapolConfirm {
-                result_code: fidl_mlme::EapolResultCode::TransmissionFailure
+                result_code: fidl_mlme::EapolResultCode::TransmissionFailure,
+                dst_addr: [2; 6],
             }
         );
 
