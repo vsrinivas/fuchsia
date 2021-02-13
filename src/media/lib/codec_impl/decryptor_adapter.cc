@@ -228,8 +228,9 @@ void DecryptorAdapter::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = false;
+    input_queue_.clear();
   }  // ~lock
-  input_queue_.clear();
+
   constexpr bool kKeepData = true;
   free_output_packets_.Reset(kKeepData);
   free_output_buffers_.Reset(kKeepData);
@@ -576,6 +577,11 @@ void DecryptorAdapter::ProcessInput() {
 
     auto error = Decrypt(encryption_params_, input, output, output_packet);
     if (error) {
+      // Release IO buffers since they can be re-used later for a new stream.
+      free_output_packets_.Push(output_packet);
+      free_output_buffers_.Push(output_buffer);
+      events_->onCoreCodecInputPacketDone(item.packet());
+
       OnCoreCodecFailStream(*error);
       return;
     }
