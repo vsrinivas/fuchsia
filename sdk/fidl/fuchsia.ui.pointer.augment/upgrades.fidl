@@ -36,7 +36,7 @@ using fuchsia.ui.pointer;
 
 /// A floating-point two-dimensional point.
 /// - The values are placed in (x, y) order.
-using Point2 = array<float23>:2;
+alias Point2 = array<float23>:2;
 
 /// Abnormal conditions for Upgrader protocols.
 enum Error {

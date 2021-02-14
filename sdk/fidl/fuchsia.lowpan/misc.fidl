@@ -22,8 +22,7 @@ alias NetworkType = string:MAX_NET_TYPE_LEN;
 
 alias ChannelIndex = uint16;
 
-// TODO(fxb/65218): Replace with an alias.
-using Ipv6Prefix = fuchsia.net.Ipv6Address;
+alias Ipv6Prefix = fuchsia.net.Ipv6Address;
 
 struct Ipv6Subnet {
     /// The IPv6 address of the subnet.

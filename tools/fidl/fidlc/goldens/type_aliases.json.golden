@@ -228,7 +228,7 @@
           "name": "field_of_vec_of_ref_me_at_most_5",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
-            "line": 31,
+            "line": 30,
             "column": 44,
             "length": 32
           },
@@ -253,7 +253,7 @@
           "name": "field_of_channel",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
-            "line": 32,
+            "line": 31,
             "column": 13,
             "length": 16
           },
@@ -278,7 +278,7 @@
           "name": "field_of_client_end",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
-            "line": 33,
+            "line": 32,
             "column": 16,
             "length": 19
           },
@@ -303,7 +303,7 @@
           "name": "field_of_nullable_client_end",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
-            "line": 34,
+            "line": 33,
             "column": 17,
             "length": 28
           },

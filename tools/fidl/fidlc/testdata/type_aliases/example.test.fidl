@@ -27,7 +27,6 @@ resource struct ExampleOfUseOfAliases {
     vec_of_strings field_of_vec_of_strings;
     vec_of_strings:9 field_of_vec_of_strings_at_most_nine;
     vec_of_strings_at_most_5 field_of_vec_of_strings_at_most_5;
-    // TODO(fxb/65218): Replace with an alias.
     vector<someotherlibrary.ReferenceMe>:5 field_of_vec_of_ref_me_at_most_5;
     channel field_of_channel;
     client_end field_of_client_end;

@@ -12,6 +12,5 @@ const uint16 COMPONENT_NAME_MAX_LENGTH = 255;
 /// Maximum length for an environment label.
 const uint32 LABEL_MAX_LENGTH = 32;
 
-// TODO(fxb/65218): Replace with an alias.
-using component_url = fuchsia.sys.component_url;
+alias component_url = fuchsia.sys.component_url;
 alias realm_segments = vector<string:LABEL_MAX_LENGTH>:MAXIMUM_REALM_PATH_SEGMENTS;

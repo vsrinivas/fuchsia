@@ -4,8 +4,8 @@
 
 library test.ping;
 
-using PingString = string:100;
-using PongString = string:105;
+alias PingString = string:100;
+alias PongString = string:105;
 
 [Discoverable]
 protocol Ping {

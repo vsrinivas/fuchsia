@@ -98,6 +98,12 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnUsing(element);
   }
 
+  virtual void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) override {
+    OnBlankLineRespectingNode();
+    ScopedBool mem(is_member_decl_);
+    TreeVisitor::OnAliasDeclaration(element);
+  }
+
   virtual void OnConstDeclaration(std::unique_ptr<ConstDeclaration> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);

@@ -69,7 +69,7 @@ struct Status {
 const uint8 UUID_STRING_REPRESENTATION_LENGTH = 36;
 
 [Deprecated = "Use fuchsia.bluetooth/Uuid instead"]
-using UuidString = string:UUID_STRING_REPRESENTATION_LENGTH;
+alias UuidString = string:UUID_STRING_REPRESENTATION_LENGTH;
 
 [Deprecated = "Use fuchsia.bluetooth/PeerId instead"]
-using PeerIdString = string:16;
+alias PeerIdString = string:16;

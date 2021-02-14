@@ -12,9 +12,9 @@ using fuchsia.component;
 using fuchsia.sys;
 
 /// 256 bits encoded in lower-cased base64 (64 chars).
-using InstanceId = string:64;
+alias InstanceId = string:64;
 /// The path to the appmgr realm where the component runs.
-using AppmgrRealmPath = vector<fuchsia.component.name>:256;
+alias AppmgrRealmPath = vector<fuchsia.component.name>:256;
 
 /// Top-level type describing the component ID index.
 table ComponentIdIndex {

@@ -13,8 +13,7 @@ alias Duration = uint32;
 /// len(Ipv4Address), where MAX_OPTION_LEN is the maximum byte length of a value
 /// for a DHCP option as defined in https://tools.ietf.org/html/rfc2132#section-2:
 /// "All other options are variable-length with a length octet following the tag octet."
-// TODO(fxb/65218): Replace with an alias.
-using Addresses = vector<fuchsia.net.Ipv4Address>:63;
+alias Addresses = vector<fuchsia.net.Ipv4Address>:63;
 
 /// An ASCII string with a length limit of 255. All DHCP Option values must have
 /// a length that can fit in an octet, cf. "All other options are variable-length with a length octet following the tag octet."
