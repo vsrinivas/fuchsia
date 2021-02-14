@@ -15,6 +15,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -32,8 +33,8 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//src/lib/async-utils",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:proptest",
   ]
 
   sources = [
@@ -44,6 +45,7 @@ rustc_binary("bin") {
     "src/hfp.rs",
     "src/main.rs",
     "src/peer.rs",
+    "src/peer/task.rs",
     "src/profile.rs",
     "src/service_definitions.rs",
   ]

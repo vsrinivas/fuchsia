@@ -11,6 +11,8 @@ pub enum Error {
     ProfileResourceError { resource: ProfileResource, source: Box<dyn StdError> },
     #[error("System error encountered: {}", .message)]
     System { message: String, source: Box<dyn StdError> },
+    #[error("Peer removed")]
+    PeerRemoved,
 }
 
 #[derive(Debug)]
