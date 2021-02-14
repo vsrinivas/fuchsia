@@ -112,7 +112,7 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
                   .set_exposed_dir(fidl::unowned_ptr(&exposed_dir));
   auto start = driver_host_->Start(args.build(), std::move(endpoints->server));
   if (!start.ok()) {
-    auto binary = start_args::program_value(program, "binary").value_or("");
+    auto binary = start_args::ProgramValue(program, "binary").value_or("");
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(), start.error());
     return zx::error(start.status());
   }
@@ -327,7 +327,7 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info,
 
   // Launch a driver host, or use an existing driver host.
   DriverHostComponent* driver_host;
-  if (start_args::program_value(start_info.program(), "colocate").value_or("") == "true") {
+  if (start_args::ProgramValue(start_info.program(), "colocate").value_or("") == "true") {
     if (driver_args.node == &root_node_) {
       LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate", url.size(),
            url.data());

@@ -19,13 +19,13 @@ class TestDriver {
 
   zx::status<> Init(fdf::DriverStartArgs* start_args) {
     // Call the "func" driver symbol.
-    auto func = start_args::symbol_value<void (*)()>(start_args->symbols(), "func");
+    auto func = start_args::SymbolValue<void (*)()>(start_args->symbols(), "func");
     if (func.is_ok()) {
       func.value()();
     }
 
     // Connect to the incoming service.
-    auto svc_dir = start_args::ns_value(start_args->ns(), "/svc");
+    auto svc_dir = start_args::NsValue(start_args->ns(), "/svc");
     if (svc_dir.is_error()) {
       return svc_dir.take_error();
     }

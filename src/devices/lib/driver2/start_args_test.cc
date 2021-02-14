@@ -19,9 +19,9 @@ TEST(StartArgsTest, SymbolValue) {
   };
   auto symbols = fidl::unowned_vec(symbol_entries);
 
-  EXPECT_EQ(0xfeedu, start_args::symbol_value<zx_vaddr_t>(symbols, "sym").value());
+  EXPECT_EQ(0xfeedu, start_args::SymbolValue<zx_vaddr_t>(symbols, "sym").value());
   EXPECT_EQ(ZX_ERR_NOT_FOUND,
-            start_args::symbol_value<zx_vaddr_t>(symbols, "unknown").error_value());
+            start_args::SymbolValue<zx_vaddr_t>(symbols, "unknown").error_value());
 }
 
 TEST(StartArgsTest, ProgramValue) {
@@ -42,12 +42,12 @@ TEST(StartArgsTest, ProgramValue) {
                      .set_entries(fidl::unowned_ptr(&entries))
                      .build();
 
-  EXPECT_EQ("value-for-str", start_args::program_value(program, "key-for-str").value());
-  EXPECT_EQ(ZX_ERR_WRONG_TYPE, start_args::program_value(program, "key-for-strvec").error_value());
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, start_args::program_value(program, "key-unkown").error_value());
+  EXPECT_EQ("value-for-str", start_args::ProgramValue(program, "key-for-str").value());
+  EXPECT_EQ(ZX_ERR_WRONG_TYPE, start_args::ProgramValue(program, "key-for-strvec").error_value());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, start_args::ProgramValue(program, "key-unkown").error_value());
 
   fdata::Dictionary empty_program;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, start_args::program_value(empty_program, "").error_value());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, start_args::ProgramValue(empty_program, "").error_value());
 }
 
 TEST(StartArgsTest, NsValue) {
@@ -63,7 +63,7 @@ TEST(StartArgsTest, NsValue) {
   };
   auto entries = fidl::unowned_vec(ns_entries);
 
-  auto svc = start_args::ns_value(entries, "/svc");
+  auto svc = start_args::NsValue(entries, "/svc");
   zx_info_handle_basic_t client_info = {}, server_info = {};
   ASSERT_EQ(ZX_OK, zx_object_get_info(svc.value().channel(), ZX_INFO_HANDLE_BASIC, &client_info,
                                       sizeof(client_info), nullptr, nullptr));
@@ -71,6 +71,6 @@ TEST(StartArgsTest, NsValue) {
                                                         sizeof(server_info), nullptr, nullptr));
   EXPECT_EQ(client_info.koid, server_info.related_koid);
 
-  auto pkg = start_args::ns_value(entries, "/pkg");
+  auto pkg = start_args::NsValue(entries, "/pkg");
   EXPECT_EQ(ZX_ERR_NOT_FOUND, pkg.error_value());
 }
