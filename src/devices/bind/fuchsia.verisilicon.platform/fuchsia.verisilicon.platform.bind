@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.verisilicon.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  VERISILICON = 0x1D,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  MAGMA_VIP = 0x01,
+};

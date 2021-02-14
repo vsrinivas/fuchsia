@@ -11,6 +11,9 @@ group("tests") {
   deps = [
     "aml-gpu:tests",
     "misc:tests",
+    "msd-arm-mali:tests",
+    "msd-qcom-adreno:tests",
+    "msd-vsi-vip:tests",
     "virtio:tests",
   ]
 }

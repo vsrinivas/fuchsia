@@ -16,7 +16,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_USB_DWC3           0x01   // DWC3 USB Controller
 #define PDEV_DID_USB_XHCI           0x02   // XHCI USB Controller
 #define PDEV_DID_KPCI               0x03   // Syscall based PCI driver
-#define PDEV_DID_ARM_MALI           0x04   // ARM MALI GPU
+// 0x04 unused
 #define PDEV_DID_USB_DWC2           0x05   // DWC2 USB Controller
 #define PDEV_DID_RTC_PL031          0x06   // ARM Primecell PL031 RTC
 #define PDEV_DID_DSI                0x07   // DSI
@@ -293,32 +293,34 @@ __BEGIN_CDECLS
 #define PDEV_PID_GE2D               0x03
 #define PDEV_DID_ARM_MALI_IV009     0x01
 #define PDEV_DID_ARM_MALI_IV010     0x02
+#define PDEV_DID_ARM_MAGMA_MALI     0x03
 
 // Qualcomm
 #define PDEV_VID_QUALCOMM           0x13
-#define PDEV_PID_QUALCOMM_MSM8X53    0x01
-#define PDEV_PID_QUALCOMM_MSM8998    0x02
-#define PDEV_PID_QUALCOMM_MSM8150    0x03
+#define PDEV_PID_QUALCOMM_MSM8X53   0x01
+#define PDEV_PID_QUALCOMM_MSM8998   0x02
+#define PDEV_PID_QUALCOMM_MSM8150   0x03
 
-#define PDEV_DID_QUALCOMM_GPIO       0x01
-#define PDEV_DID_QUALCOMM_PIL        0x02
-#define PDEV_DID_QUALCOMM_SDC1       0x03
-#define PDEV_DID_QUALCOMM_CLOCK      0x04
-#define PDEV_DID_QUALCOMM_POWER      0x05
+#define PDEV_DID_QUALCOMM_GPIO          0x01
+#define PDEV_DID_QUALCOMM_PIL           0x02
+#define PDEV_DID_QUALCOMM_SDC1          0x03
+#define PDEV_DID_QUALCOMM_CLOCK         0x04
+#define PDEV_DID_QUALCOMM_POWER         0x05
+#define PDEV_DID_QUALCOMM_MAGMA_ADRENO  0x06
 
 // Synaptics
 #define PDEV_VID_SYNAPTICS          0x14
-#define PDEV_PID_SYNAPTICS_AS370     0x01
-#define PDEV_PID_SYNAPTICS_VS680     0x02
-#define PDEV_DID_SYNAPTICS_GPIO      0x01
-#define PDEV_DID_AS370_USB_PHY       0x02
-#define PDEV_DID_AS370_AUDIO_OUT     0x03
-#define PDEV_DID_AS370_AUDIO_IN      0x04
-#define PDEV_DID_AS370_CLOCK         0x05
-#define PDEV_DID_AS370_DHUB          0x06
-#define PDEV_DID_AS370_POWER         0x07
-#define PDEV_DID_AS370_THERMAL       0x08
-#define PDEV_DID_AS370_TOUCH         0x09
+#define PDEV_PID_SYNAPTICS_AS370    0x01
+#define PDEV_PID_SYNAPTICS_VS680    0x02
+#define PDEV_DID_SYNAPTICS_GPIO     0x01
+#define PDEV_DID_AS370_USB_PHY      0x02
+#define PDEV_DID_AS370_AUDIO_OUT    0x03
+#define PDEV_DID_AS370_AUDIO_IN     0x04
+#define PDEV_DID_AS370_CLOCK        0x05
+#define PDEV_DID_AS370_DHUB         0x06
+#define PDEV_DID_AS370_POWER        0x07
+#define PDEV_DID_AS370_THERMAL      0x08
+#define PDEV_DID_AS370_TOUCH        0x09
 #define PDEV_DID_AS370_SDHCI0       0x0A
 #define PDEV_DID_VS680_SDHCI0       0x0B
 #define PDEV_DID_VS680_SDHCI1       0x0C
@@ -329,21 +331,21 @@ __BEGIN_CDECLS
 
 // Maxim
 #define PDEV_VID_MAXIM              0x15
-#define PDEV_DID_MAXIM_MAX98373      0x01
-#define PDEV_DID_MAXIM_MAX98927      0x02
+#define PDEV_DID_MAXIM_MAX98373     0x01
+#define PDEV_DID_MAXIM_MAX98927     0x02
 
 // Nordic
 #define PDEV_VID_NORDIC             0x16
-#define PDEV_PID_NORDIC_NRF52840     0x01
-#define PDEV_DID_NORDIC_THREAD       0x01
+#define PDEV_PID_NORDIC_NRF52840    0x01
+#define PDEV_DID_NORDIC_THREAD      0x01
 
 // Marvell
 #define PDEV_VID_MARVELL            0x17
-#define PDEV_PID_MARVELL_88W8987     0x01
-#define PDEV_DID_MARVELL_WIFI        0x01
+#define PDEV_PID_MARVELL_88W8987    0x01
+#define PDEV_DID_MARVELL_WIFI       0x01
 
 // Infineon
-#define PDEV_VID_INFINEON            0x18
+#define PDEV_VID_INFINEON             0x18
 #define PDEV_PID_INFINEON_BGT60TR13C  0x01
 
 // Silergy
@@ -352,15 +354,20 @@ __BEGIN_CDECLS
 
 // FocalTech
 #define PDEV_VID_FOCALTECH           0x1A
-#define PDEV_DID_FOCALTECH_FT8201     0x01
+#define PDEV_DID_FOCALTECH_FT8201    0x01
 
 // Sensirion
 #define PDEV_VID_SENSIRION           0x1B
-#define PDEV_DID_SENSIRION_SHTV3      0x01
+#define PDEV_DID_SENSIRION_SHTV3     0x01
 
 // Goodix
 #define PDEV_VID_GOODIX              0x1C
-#define PDEV_DID_GOODIX_GT6853        0x01
+#define PDEV_DID_GOODIX_GT6853       0x01
+
+// Verisilicon
+#define PDEV_VID_VERISILICON            0x1D
+#define PDEV_DID_VERISILICON_MAGMA_VIP  0x01
+
 // clang-format on
 
 __END_CDECLS

@@ -20,6 +20,8 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <bind/fuchsia/arm/platform/cpp/fidl.h>
+#include <bind/fuchsia/platform/cpp/fidl.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -183,7 +185,7 @@ zx_status_t AmlGpu::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
     proto->ctx = this;
     proto->ops = &arm_mali_protocol_ops_;
     return ZX_OK;
-  } else if (proto_id == ZX_PROTOCOL_PDEV) {
+  } else if (proto_id == bind::fuchsia::platform::BIND_PROTOCOL_DEVICE) {
     pdev_protocol_t* gpu_proto = static_cast<pdev_protocol_t*>(out_proto);
     // Forward the underlying ops.
     pdev_.GetProto(gpu_proto);
@@ -322,10 +324,10 @@ zx_status_t AmlGpu::Bind() {
   InitClock();
 
   zx_device_prop_t props[] = {
-      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ARM_MALI},
+      {BIND_PROTOCOL, 0, bind::fuchsia::platform::BIND_PROTOCOL_DEVICE},
+      {BIND_PLATFORM_DEV_VID, 0, bind::fuchsia::arm::platform::BIND_PLATFORM_DEV_VID_ARM},
+      {BIND_PLATFORM_DEV_PID, 0, bind::fuchsia::platform::BIND_PLATFORM_DEV_PID_GENERIC},
+      {BIND_PLATFORM_DEV_DID, 0, bind::fuchsia::arm::platform::BIND_PLATFORM_DEV_DID_MAGMA_MALI},
   };
 
   status = DdkAdd(ddk::DeviceAddArgs("aml-gpu").set_props(props));

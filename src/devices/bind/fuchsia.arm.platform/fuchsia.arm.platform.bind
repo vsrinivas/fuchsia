@@ -17,4 +17,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   MALI_IV009 = 0x01,
   MALI_IV010 = 0x02,
+  MAGMA_MALI = 0x03,
 };

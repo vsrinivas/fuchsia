@@ -2,82 +2,49 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-template("magma_pci_entry") {
-  source_set(target_name) {
-    assert(defined(invoker.pci_vendor_id), "pci_vendor_id not defined")
-    if (!defined(invoker.test_entry)) {
-      test_entry = false
-    } else {
-      testonly = true
-    }
-
-    forward_variables_from(invoker, "*")
-
-    sources = [
-      "//src/graphics/lib/magma/src/magma_util/platform/zircon/pci_entry.cc",
-    ]
-    defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
-
-    if (!defined(invoker.deps)) {
-      deps = []
-    }
-
-    deps += [ "//src/lib/ddk" ]
-
-    if (test_entry) {
-      deps += [
-        "//src/graphics/lib/magma/src/magma_util/platform/zircon:entry_test",
-        "//src/graphics/lib/magma/src/magma_util/platform/zircon:pci_driver_gtest",
-      ]
-    } else {
-      deps +=
-          [ "//src/graphics/lib/magma/src/magma_util/platform/zircon:entry" ]
-    }
-  }
-}
-
 template("magma_pdev_entry") {
   source_set(target_name) {
-    assert(defined(invoker.pdev_device_id), "pdev_device_id not defined")
+    forward_variables_from(invoker, "*")
+
     if (!defined(invoker.test_entry)) {
       test_entry = false
     } else {
-      testonly = true
+      test_entry = true
     }
-
-    if (!defined(invoker.disable_autobind)) {
-      disable_autobind = false
-    }
-
-    forward_variables_from(invoker, "*")
-
-    sources = [
-      "//src/graphics/lib/magma/src/magma_util/platform/zircon/pdev_entry.cc",
-    ]
-    defines = [
-      "MAGMA_PDEV_DEVICE_ID=" + pdev_device_id,
-      "MAGMA_DISABLE_AUTOBIND=${disable_autobind}",
-    ]
-
     if (!defined(invoker.deps)) {
       deps = []
     }
+    if (!defined(invoker.sources)) {
+      sources = []
+    }
+    if (!defined(invoker.include_dirs)) {
+      include_dirs = []
+    }
+    if (!defined(invoker.defines)) {
+      defines = []
+    }
 
-    deps += [
-      "//src/lib/ddk",
+    sources +=
+        [ "//src/graphics/lib/magma/src/magma_util/platform/zircon/binding.cc" ]
 
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
-    ]
+    # Add the target gen directory as an include path so that `#include "bind.h"` will find the
+    # correct generated bind header. This allows us to use the same binding.cc file with multiple
+    # different bind rules.
+    include_dirs += [ "${target_gen_dir}" ]
 
     if (test_entry) {
+      testonly = true
+      defines += [ "TEST=1" ]
       deps += [
         "//src/graphics/lib/magma/src/magma_util/platform/zircon:entry_test",
         "//src/graphics/lib/magma/src/magma_util/platform/zircon:pdev_driver_gtest",
+        "//src/lib/ddk",
       ]
     } else {
-      deps +=
-          [ "//src/graphics/lib/magma/src/magma_util/platform/zircon:entry" ]
+      deps += [
+        "//src/graphics/lib/magma/src/magma_util/platform/zircon:entry",
+        "//src/lib/ddk",
+      ]
     }
   }
 }
