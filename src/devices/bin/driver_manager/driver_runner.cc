@@ -19,6 +19,7 @@
 
 namespace fdata = llcpp::fuchsia::data;
 namespace fdf = llcpp::fuchsia::driver::framework;
+namespace fio = llcpp::fuchsia::io;
 namespace frunner = llcpp::fuchsia::component::runner;
 namespace fsys = llcpp::fuchsia::sys2;
 
@@ -64,7 +65,7 @@ void InspectNode(inspect::Inspector* inspector, InspectStack* stack) {
 
 }  // namespace
 
-class EventHandler : public llcpp::fuchsia::driver::framework::DriverHost::AsyncEventHandler {
+class EventHandler : public fdf::DriverHost::AsyncEventHandler {
  public:
   EventHandler(DriverHostComponent* component,
                fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
@@ -77,7 +78,8 @@ class EventHandler : public llcpp::fuchsia::driver::framework::DriverHost::Async
   fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts_;
 };
 
-DriverComponent::DriverComponent(zx::channel exposed_dir, zx::channel driver)
+DriverComponent::DriverComponent(fidl::ClientEnd<fio::Directory> exposed_dir,
+                                 fidl::ClientEnd<fdf::Driver> driver)
     : exposed_dir_(std::move(exposed_dir)), driver_(std::move(driver)) {}
 
 void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) { driver_.reset(); }
@@ -85,24 +87,20 @@ void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) { dr
 void DriverComponent::Kill(DriverComponent::KillCompleter::Sync& completer) {}
 
 DriverHostComponent::DriverHostComponent(
-    zx::channel driver_host, async_dispatcher_t* dispatcher,
+    fidl::ClientEnd<fdf::DriverHost> driver_host, async_dispatcher_t* dispatcher,
     fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
     : driver_host_(std::move(driver_host), dispatcher,
                    std::make_shared<EventHandler>(this, driver_hosts)) {}
 
-zx::status<zx::channel> DriverHostComponent::Start(
-    fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
-    fidl::VectorView<fidl::StringView> offers,
-    fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols, fidl::StringView url,
-    fdata::Dictionary program, fidl::VectorView<frunner::ComponentNamespaceEntry> ns,
-    fidl::ServerEnd<llcpp::fuchsia::io::Directory> outgoing_dir,
-    fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir) {
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    return zx::error(status);
+zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
+    fidl::ClientEnd<fdf::Node> node, fidl::VectorView<fidl::StringView> offers,
+    fidl::VectorView<fdf::NodeSymbol> symbols, fidl::StringView url, fdata::Dictionary program,
+    fidl::VectorView<frunner::ComponentNamespaceEntry> ns,
+    fidl::ServerEnd<fio::Directory> outgoing_dir, fidl::ClientEnd<fio::Directory> exposed_dir) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
-
   auto args = fdf::DriverStartArgs::UnownedBuilder()
                   .set_node(fidl::unowned_ptr(&node))
                   .set_offers(fidl::unowned_ptr(&offers))
@@ -112,13 +110,13 @@ zx::status<zx::channel> DriverHostComponent::Start(
                   .set_ns(fidl::unowned_ptr(&ns))
                   .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir))
                   .set_exposed_dir(fidl::unowned_ptr(&exposed_dir));
-  auto start = driver_host_->Start(args.build(), std::move(server_end));
+  auto start = driver_host_->Start(args.build(), std::move(endpoints->server));
   if (!start.ok()) {
     auto binary = start_args::program_value(program, "binary").value_or("");
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(), start.error());
     return zx::error(start.status());
   }
-  return zx::ok(std::move(client_end));
+  return zx::ok(std::move(endpoints->client));
 }
 
 Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
@@ -178,8 +176,8 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
   }
 }
 
-void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel node,
-                    AddChildCompleter::Sync& completer) {
+void Node::AddChild(fdf::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
+                    fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
   auto name = args.has_name() ? std::move(args.name()) : fidl::StringView();
   Offers offers;
   if (args.has_offers()) {
@@ -237,11 +235,9 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
   child->set_controller_binding(bind_controller.take_value());
 
   if (node.is_valid()) {
-    auto bind_node = fidl::BindServer<fdf::Node::RawChannelInterface>(
+    auto bind_node = fidl::BindServer<fdf::Node::Interface>(
         dispatcher_, std::move(node), child.get(),
-        [](fdf::Node::RawChannelInterface* node, auto, auto) {
-          static_cast<Node*>(node)->Remove();
-        });
+        [](fdf::Node::Interface* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     if (bind_node.is_error()) {
       LOGF(ERROR, "Failed to bind channel to Node '%.*s': %s", name.size(), name.data(),
            zx_status_get_string(bind_node.error()));
@@ -269,8 +265,9 @@ zx::status<MatchResult> DriverIndex::Match(fdf::NodeAddArgs args) {
   return match_callback_(std::move(args));
 }
 
-DriverRunner::DriverRunner(zx::channel realm, DriverIndex* driver_index,
-                           inspect::Inspector* inspector, async_dispatcher_t* dispatcher)
+DriverRunner::DriverRunner(fidl::ClientEnd<llcpp::fuchsia::sys2::Realm> realm,
+                           DriverIndex* driver_index, inspect::Inspector* inspector,
+                           async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
       driver_index_(driver_index),
       dispatcher_(dispatcher),
@@ -313,7 +310,8 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
   return Bind(&root_node_, args.build());
 }
 
-void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel controller,
+void DriverRunner::Start(frunner::ComponentStartInfo start_info,
+                         fidl::ServerEnd<frunner::ComponentController> controller,
                          StartCompleter::Sync& completer) {
   std::string url(start_info.resolved_url().get());
   auto it = driver_args_.find(url);
@@ -352,19 +350,18 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
   driver_args.node->set_driver_host(driver_host);
 
   // Start the driver within the driver host.
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    completer.Close(status);
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+  if (endpoints.is_error()) {
+    completer.Close(endpoints.status_value());
     return;
   }
-  zx::channel exposed_dir(fdio_service_clone(driver_args.exposed_dir.get()));
+  zx::channel exposed_dir(fdio_service_clone(driver_args.exposed_dir.channel().get()));
   if (!exposed_dir.is_valid()) {
     LOGF(ERROR, "Failed to clone exposed directory for driver '%.*s'", url.size(), url.data());
     completer.Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto start = driver_host->Start(std::move(client_end), driver_args.node->offers(),
+  auto start = driver_host->Start(std::move(endpoints->client), driver_args.node->offers(),
                                   std::move(symbols), std::move(start_info.resolved_url()),
                                   std::move(start_info.program()), std::move(start_info.ns()),
                                   std::move(start_info.outgoing_dir()), std::move(exposed_dir));
@@ -387,10 +384,9 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
   }
 
   // Bind the Node associated with the driver.
-  auto bind_node = fidl::BindServer<fdf::Node::RawChannelInterface>(
-      dispatcher_, std::move(server_end), driver_args.node,
-      [driver_binding = bind_driver.take_value()](fdf::Node::RawChannelInterface* node, auto,
-                                                  auto) mutable {
+  auto bind_node = fidl::BindServer<fdf::Node::Interface>(
+      dispatcher_, std::move(endpoints->server), driver_args.node,
+      [driver_binding = bind_driver.take_value()](fdf::Node::Interface* node, auto, auto) mutable {
         driver_binding.Unbind();
         static_cast<Node*>(node)->Remove();
       });
@@ -423,41 +419,41 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
   auto name = "driver_host-" + std::to_string(NextId());
   auto create = CreateComponent(name, "fuchsia-boot:///#meta/driver_host2.cm", "driver_hosts");
   if (create.is_error()) {
-    return zx::error(create.error_value());
+    return create.take_error();
   }
 
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  auto endpoints = fidl::CreateEndpoints<fdf::DriverHost>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
-  status = fdio_service_connect_at(create->get(), fdf::DriverHost::Name, server_end.release());
+  zx_status_t status = fdio_service_connect_at(create->channel().get(), fdf::DriverHost::Name,
+                                               endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to connect to service '%s': %s", fdf::DriverHost::Name,
          zx_status_get_string(status));
     return zx::error(status);
   }
 
-  auto driver_host =
-      std::make_unique<DriverHostComponent>(std::move(client_end), dispatcher_, &driver_hosts_);
+  auto driver_host = std::make_unique<DriverHostComponent>(std::move(endpoints->client),
+                                                           dispatcher_, &driver_hosts_);
   return zx::ok(std::move(driver_host));
 }
 
-zx::status<zx::channel> DriverRunner::CreateComponent(std::string name, std::string url,
-                                                      std::string collection) {
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    return zx::error(status);
+zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::string name,
+                                                                          std::string url,
+                                                                          std::string collection) {
+  auto endpoints = fidl::CreateEndpoints<fio::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
-  auto bind_callback = [name](llcpp::fuchsia::sys2::Realm::BindChildResponse* response) {
+  auto bind_callback = [name](fsys::Realm::BindChildResponse* response) {
     if (response->result.is_err()) {
       LOGF(ERROR, "Failed to bind component '%s': %u", name.data(), response->result.err());
     }
   };
-  auto create_callback = [this, name, collection, server_end = std::move(server_end),
+  auto create_callback = [this, name, collection, server_end = std::move(endpoints->server),
                           bind_callback = std::move(bind_callback)](
-                             llcpp::fuchsia::sys2::Realm::CreateChildResponse* response) mutable {
+                             fsys::Realm::CreateChildResponse* response) mutable {
     if (response->result.is_err()) {
       LOGF(ERROR, "Failed to create component '%s': %u", name.data(), response->result.err());
       return;
@@ -482,7 +478,7 @@ zx::status<zx::channel> DriverRunner::CreateComponent(std::string name, std::str
     LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  return zx::ok(std::move(client_end));
+  return zx::ok(std::move(endpoints->client));
 }
 
 uint64_t DriverRunner::NextId() { return next_id_++; }

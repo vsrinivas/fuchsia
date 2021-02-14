@@ -28,7 +28,7 @@ namespace fmem = fuchsia::mem;
 namespace frunner = llcpp::fuchsia::component::runner;
 namespace ftest = llcpp::fuchsia::driverhost::test;
 
-using Completer = fdf::DriverHost::RawChannelInterface::StartCompleter::Sync;
+using Completer = fdf::DriverHost::Interface::StartCompleter::Sync;
 using namespace inspect::testing;
 
 class fake_context : public fit::context {
@@ -125,7 +125,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
 
  protected:
   async::Loop& loop() { return loop_; }
-  fdf::DriverHost::RawChannelInterface* driver_host() { return &driver_host_; }
+  fdf::DriverHost::Interface* driver_host() { return &driver_host_; }
 
   void AddEntry(fs::Service::Connector connector) {
     EXPECT_EQ(ZX_OK, svc_dir_->AddEntry(ftest::Incoming::Name,

@@ -20,23 +20,25 @@
 class DriverComponent : public llcpp::fuchsia::component::runner::ComponentController::Interface,
                         public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
  public:
-  DriverComponent(zx::channel exposed_dir, zx::channel driver);
+  DriverComponent(fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir,
+                  fidl::ClientEnd<llcpp::fuchsia::driver::framework::Driver> driver);
 
  private:
   // llcpp::fuchsia::component::runner::ComponentController::Interface
   void Stop(StopCompleter::Sync& completer) override;
   void Kill(KillCompleter::Sync& completer) override;
 
-  zx::channel exposed_dir_;
-  zx::channel driver_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir_;
+  fidl::ClientEnd<llcpp::fuchsia::driver::framework::Driver> driver_;
 };
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
  public:
-  DriverHostComponent(zx::channel driver_host, async_dispatcher_t* dispatcher,
+  DriverHostComponent(fidl::ClientEnd<llcpp::fuchsia::driver::framework::DriverHost> driver_host,
+                      async_dispatcher_t* dispatcher,
                       fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
 
-  zx::status<zx::channel> Start(
+  zx::status<fidl::ClientEnd<llcpp::fuchsia::driver::framework::Driver>> Start(
       fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
       fidl::VectorView<fidl::StringView> offers,
       fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols, fidl::StringView url,
@@ -58,7 +60,7 @@ class DriverBinder {
 };
 
 class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface,
-             public llcpp::fuchsia::driver::framework::Node::RawChannelInterface,
+             public llcpp::fuchsia::driver::framework::Node::Interface,
              public fbl::DoublyLinkedListable<std::unique_ptr<Node>> {
  public:
   using Offers = std::vector<fidl::StringView>;
@@ -83,9 +85,11 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
  private:
   // llcpp::fuchsia::driver::framework::NodeController::Interface
   void Remove(RemoveCompleter::Sync& completer) override;
-  // llcpp::fuchsia::driver::framework::Node::RawChannelInterface
-  void AddChild(llcpp::fuchsia::driver::framework::NodeAddArgs args, zx::channel controller,
-                zx::channel node, AddChildCompleter::Sync& completer) override;
+  // llcpp::fuchsia::driver::framework::Node::Interface
+  void AddChild(llcpp::fuchsia::driver::framework::NodeAddArgs args,
+                fidl::ServerEnd<llcpp::fuchsia::driver::framework::NodeController> controller,
+                fidl::ServerEnd<llcpp::fuchsia::driver::framework::Node> node,
+                AddChildCompleter::Sync& completer) override;
 
   Node* const parent_;
   DriverBinder* const driver_binder_;
@@ -121,30 +125,31 @@ class DriverIndex {
 };
 
 struct DriverArgs {
-  zx::channel exposed_dir;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir;
   Node* node;
 };
 
-class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::RawChannelInterface,
+class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::Interface,
                      public DriverBinder {
  public:
-  DriverRunner(zx::channel realm, DriverIndex* driver_index, inspect::Inspector* inspector,
-               async_dispatcher_t* dispatcher);
+  DriverRunner(fidl::ClientEnd<llcpp::fuchsia::sys2::Realm> realm, DriverIndex* driver_index,
+               inspect::Inspector* inspector, async_dispatcher_t* dispatcher);
 
   fit::promise<inspect::Inspector> Inspect();
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> StartRootDriver(std::string_view name);
 
  private:
-  // llcpp::fuchsia::component::runner::ComponentRunner::RawChannelInterface
+  // llcpp::fuchsia::component::runner::ComponentRunner::Interface
   void Start(llcpp::fuchsia::component::runner::ComponentStartInfo start_info,
-             zx::channel controller, StartCompleter::Sync& completer) override;
+             fidl::ServerEnd<llcpp::fuchsia::component::runner::ComponentController> controller,
+             StartCompleter::Sync& completer) override;
   // DriverBinder
   zx::status<> Bind(Node* node, llcpp::fuchsia::driver::framework::NodeAddArgs args) override;
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
-  zx::status<zx::channel> CreateComponent(std::string name, std::string url,
-                                          std::string collection);
+  zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> CreateComponent(
+      std::string name, std::string url, std::string collection);
   uint64_t NextId();
 
   uint64_t next_id_ = 0;

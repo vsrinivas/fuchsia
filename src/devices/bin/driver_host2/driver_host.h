@@ -41,7 +41,7 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver>> binding_;
 };
 
-class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::RawChannelInterface {
+class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::Interface {
  public:
   // DriverHost does not take ownership of |loop|.
   DriverHost(inspect::Inspector* inspector, async::Loop* loop);
@@ -50,8 +50,9 @@ class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::RawChan
   fit::promise<inspect::Inspector> Inspect();
 
  private:
-  // |llcpp::fuchsia::driver::framework::DriverHost::Interface|
-  void Start(llcpp::fuchsia::driver::framework::DriverStartArgs start_args, zx::channel request,
+  // llcpp::fuchsia::driver::framework::DriverHost::Interface
+  void Start(llcpp::fuchsia::driver::framework::DriverStartArgs start_args,
+             fidl::ServerEnd<llcpp::fuchsia::driver::framework::Driver> request,
              StartCompleter::Sync& completer) override;
 
   async::Loop* const loop_;

@@ -293,12 +293,11 @@ int main(int argc, char** argv) {
   std::optional<DriverIndex> driver_index;
   if (driver_manager_args.use_driver_runner) {
     const auto realm_path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::sys2::Realm::Name);
-    zx::channel realm_client, realm_server;
-    status = zx::channel::create(0, &realm_client, &realm_server);
-    if (status != ZX_OK) {
-      return status;
+    auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::sys2::Realm>();
+    if (endpoints.is_error()) {
+      return endpoints.status_value();
     }
-    status = fdio_service_connect(realm_path.data(), realm_server.release());
+    status = fdio_service_connect(realm_path.data(), endpoints->server.TakeChannel().release());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to connect to '%s': %s", realm_path.data(), zx_status_get_string(status));
       return status;
@@ -320,7 +319,7 @@ int main(int argc, char** argv) {
         return zx::error(ZX_ERR_NOT_FOUND);
       }
     });
-    driver_runner.emplace(std::move(realm_client), &driver_index.value(),
+    driver_runner.emplace(std::move(endpoints->client), &driver_index.value(),
                           &inspect_manager.inspector(), loop.dispatcher());
     auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
     if (publish.is_error()) {

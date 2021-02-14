@@ -123,7 +123,8 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
   return zx::make_status(status);
 }
 
-void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
+void DriverHost::Start(fdf::DriverStartArgs start_args,
+                       fidl::ServerEnd<llcpp::fuchsia::driver::framework::Driver> request,
                        StartCompleter::Sync& completer) {
   if (!start_args.has_url()) {
     LOGF(ERROR, "Failed to start driver, missing 'url' argument");
@@ -149,15 +150,14 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     return;
   }
   // Open the driver's binary within the driver's package.
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    completer.Close(status);
+  auto endpoints = fidl::CreateEndpoints<fio::File>();
+  if (endpoints.is_error()) {
+    completer.Close(endpoints.status_value());
     return;
   }
-  status =
-      fdio_open_at(pkg->channel(), binary->data(),
-                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, server_end.release());
+  zx_status_t status = fdio_open_at(pkg->channel(), binary->data(),
+                                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                                    endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary->data(),
          zx_status_get_string(status));
@@ -177,7 +177,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
-  fidl::Client<fio::File> file(std::move(client_end), loop_->dispatcher(),
+  fidl::Client<fio::File> file(std::move(endpoints->client), loop_->dispatcher(),
                                std::make_shared<FileEventHandler>(binary.value()));
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
