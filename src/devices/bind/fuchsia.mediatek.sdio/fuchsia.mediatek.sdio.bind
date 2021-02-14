@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediatek.sdio;
+
+extend uint fuchsia.BIND_SDIO_VID {
+  MEDIATEK = 0x037a,
+};
+
+extend uint fuchsia.BIND_SDIO_PID {
+  MT7668 = 0x7668,
+};

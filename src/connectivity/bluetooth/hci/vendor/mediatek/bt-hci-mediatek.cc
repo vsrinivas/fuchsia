@@ -13,13 +13,14 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hw/sdio.h>
+
+#include "src/connectivity/bluetooth/hci/vendor/mediatek/bt-hci-mediatek-bind.h"
 
 namespace {
 
@@ -1100,6 +1101,4 @@ static constexpr zx_driver_ops_t bt_hci_mediatek_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(bt_hci_mediatek, bt_hci_mediatek_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_SDIO_VID, 0x037a), BI_ABORT_IF(NE, BIND_SDIO_PID, 0x7668),
-    BI_MATCH_IF(EQ, BIND_SDIO_FUNCTION, SDIO_FN_2), ZIRCON_DRIVER_END(bt_hci_mediatek)
+ZIRCON_DRIVER(bt_hci_mediatek, bt_hci_mediatek_driver_ops, "zircon", "0.1");
