@@ -179,13 +179,6 @@ func (he *hardError) storeAndRetrieveLocked(err tcpip.Error) tcpip.Error {
 	return he.mu.err
 }
 
-func (he *hardError) get() tcpip.Error {
-	he.mu.Lock()
-	err := he.mu.err
-	he.mu.Unlock()
-	return err
-}
-
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Sync", "%p", ep)
 
@@ -349,7 +342,7 @@ func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.Bas
 		ep.mu.Unlock()
 	} else {
 		var err tcpip.Error
-		val, err = GetSockOpt(ep.ep, ep.ns, ep.netProto, ep.transProto, level, optName)
+		val, err = GetSockOpt(ep.ep, ep.ns, &ep.hardError, ep.netProto, ep.transProto, level, optName)
 		if err != nil {
 			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
@@ -603,14 +596,13 @@ func (eps *endpointWithSocket) close() {
 			}
 		}
 
+		// The gVisor endpoint could have got a hard error after the
+		// read/write loops have ended, check for that here.
+		eps.endpoint.hardError.mu.Lock()
+		err := eps.endpoint.hardError.storeAndRetrieveLocked(eps.ep.LastError())
+		eps.endpoint.hardError.mu.Unlock()
 		// Signal the client about hard errors that require special errno
 		// handling by the client for read/write calls.
-		err := eps.endpoint.hardError.get()
-		if err == nil {
-			// The gVisor endpoint could have got a hard error after the
-			// read/write loops have ended, check for that here.
-			err = eps.ep.LastError()
-		}
 		switch err.(type) {
 		case *tcpip.ErrConnectionRefused:
 			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalConnectionRefused); err != nil {

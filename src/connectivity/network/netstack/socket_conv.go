@@ -74,10 +74,10 @@ func boolToInt32(v bool) int32 {
 	return 0
 }
 
-func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, tcpip.Error) {
+func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, he *hardError, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, tcpip.Error) {
 	switch level {
 	case C.SOL_SOCKET:
-		return getSockOptSocket(ep, ns, netProto, transProto, name)
+		return getSockOptSocket(ep, ns, he, netProto, transProto, name)
 
 	case C.SOL_TCP:
 		return getSockOptTCP(ep, name)
@@ -101,7 +101,7 @@ func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkProtocolN
 	return nil, &tcpip.ErrUnknownProtocol{}
 }
 
-func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, tcpip.Error) {
+func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, he *hardError, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, tcpip.Error) {
 	switch name {
 	case C.SO_TYPE:
 		switch transProto {
@@ -138,8 +138,9 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		}
 
 	case C.SO_ERROR:
-		// Get the last error and convert it.
-		err := ep.LastError()
+		he.mu.Lock()
+		err := he.storeAndRetrieveLocked(ep.LastError())
+		he.mu.Unlock()
 		if err == nil {
 			return int32(0), nil
 		}
