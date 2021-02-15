@@ -30,4 +30,9 @@
 #define PIC1_BASE X86_INT_PLATFORM_BASE
 #define PIC2_BASE (PIC1_BASE + 8)
 
+// Manufacturer and product name information, fetched from SMBIOS during
+// system startup.
+extern const char* manufacturer;
+extern const char* product;
+
 #endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_H_
