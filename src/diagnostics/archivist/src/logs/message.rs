@@ -18,7 +18,6 @@ use lazy_static::lazy_static;
 use libc::{c_char, c_int};
 use serde::Serialize;
 use std::{
-    cmp::Ordering,
     convert::TryFrom,
     fmt::Write,
     mem,
@@ -57,20 +56,6 @@ pub struct Message {
 impl PartialEq for Message {
     fn eq(&self, rhs: &Self) -> bool {
         self.data.eq(&rhs.data)
-    }
-}
-
-impl Eq for Message {}
-
-impl PartialOrd for Message {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Message {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.data.metadata.timestamp.cmp(&other.data.metadata.timestamp)
     }
 }
 
@@ -122,20 +107,16 @@ impl Message {
     }
 
     /// Returns a new Message which encodes a count of dropped messages in its metadata.
-    pub fn for_dropped(count: u64, source: &ComponentIdentity, timestamp: i64) -> Self {
-        let message = format!("Dropped {} logs from {}", count, source);
+    // TODO(fxbug.dev/47661) require moniker and URL here
+    pub fn for_dropped(count: u64) -> Self {
         Self {
             id: MessageId::next(),
             stats: Default::default(),
             data: LogsData::for_logs(
-                source.to_string(),
-                Some(LogsHierarchy::new(
-                    "root",
-                    vec![LogsProperty::String(LogsField::Msg, message)],
-                    vec![],
-                )),
-                timestamp,
-                &source.url,
+                EMPTY_IDENTITY.to_string(),
+                Some(LogsHierarchy::new_root()), // payload
+                zx::Time::get_monotonic().into_nanos(),
+                &EMPTY_IDENTITY.url,
                 Severity::Warn,
                 0, // size_bytes
                 vec![LogError::DroppedLogs { count }],

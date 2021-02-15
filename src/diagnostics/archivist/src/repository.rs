@@ -10,19 +10,16 @@ use {
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
             budget::BudgetManager,
+            buffer::{ArcList, LazyItem},
             container::LogsArtifactsContainer,
             debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
             error::LogsError,
             listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
-            multiplex::{Multiplexer, MultiplexerHandle},
             Message,
         },
     },
     anyhow::{format_err, Error},
-    diagnostics_hierarchy::{
-        trie::{self, TrieIterableNode},
-        InspectHierarchyMatcher,
-    },
+    diagnostics_hierarchy::{trie, InspectHierarchyMatcher},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
@@ -55,14 +52,20 @@ impl std::ops::Deref for DataRepo {
 #[cfg(test)]
 impl Default for DataRepo {
     fn default() -> Self {
-        let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
-        DataRepo { inner: DataRepoState::new(budget, &Default::default()) }
+        let buffer = ArcList::default();
+        let budget =
+            BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES, &buffer);
+        DataRepo { inner: DataRepoState::new(buffer, &budget, &Default::default()) }
     }
 }
 
 impl DataRepo {
-    pub fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
-        DataRepo { inner: DataRepoState::new(logs_budget.clone(), parent) }
+    pub fn new(
+        logs_buffer: ArcList<Message>,
+        logs_budget: &BudgetManager,
+        parent: &fuchsia_inspect::Node,
+    ) -> Self {
+        DataRepo { inner: DataRepoState::new(logs_buffer, logs_budget, parent) }
     }
 
     /// Drain the kernel's debug log. The returned future completes once
@@ -152,7 +155,7 @@ impl DataRepo {
             let listener = Listener::new(listener, options)?;
             let mode =
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            let logs = self.logs_cursor(mode);
+            let logs = self.cursor(mode);
             if let Some(s) = selectors {
                 self.write().update_logs_interest(s);
             }
@@ -162,73 +165,45 @@ impl DataRepo {
         Ok(())
     }
 
-    pub fn logs_cursor(
-        &self,
-        mode: StreamMode,
-    ) -> impl Stream<Item = Arc<Message>> + Send + 'static {
-        let mut repo = self.write();
-        let (merged, mpx_handle) = Multiplexer::new();
-        repo.data_directories
-            .iter()
-            .filter_map(|(_, c)| c)
-            .filter_map(|c| c.logs_cursor(mode).map(|cursor| (c.identity.to_string(), cursor)))
-            .for_each(|(n, c)| {
-                mpx_handle.send(n, c);
-            });
-        repo.logs_multiplexers.add(mode, mpx_handle);
-
-        merged
-    }
-
-    /// Returns `true` if a container exists for the requested `identity` and that container either
-    /// corresponds to a running component or we've decided to still retain it.
-    pub fn is_live(&self, identity: &ComponentIdentity) -> bool {
-        let mut this = self.write();
-        if let Some(containers) = this.data_directories.get(&identity.unique_key) {
-            containers.get_values()[0].should_retain()
-        } else {
-            false
-        }
+    pub fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
+        self.read().logs_buffer.cursor(mode).map(|item| match item {
+            LazyItem::Next(m) => m,
+            LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
+        })
     }
 
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub fn terminate_logs(&self) {
-        let mut repo = self.write();
-        for container in repo.data_directories.iter().filter_map(|(_, v)| v) {
-            container.terminate_logs();
-        }
-        repo.logs_multiplexers.terminate();
+        self.read().logs_buffer.terminate();
     }
 }
 
 pub struct DataRepoState {
     pub data_directories: trie::Trie<String, ComponentDiagnostics>,
     inspect_node: inspect::Node,
-
-    /// A reference to the budget manager, kept to be passed to containers.
-    logs_budget: BudgetManager,
-    /// The current global interest in logs, as defined by the last client to send us selectors.
     logs_interest: Vec<LogInterestSelector>,
-    /// BatchIterators for logs need to be made aware of new components starting and their logs.
-    logs_multiplexers: MultiplexerBroker,
+    logs_budget: BudgetManager,
+    logs_buffer: ArcList<Message>,
 }
 
 impl DataRepoState {
-    fn new(logs_budget: BudgetManager, parent: &fuchsia_inspect::Node) -> Arc<RwLock<Self>> {
+    fn new(
+        logs_buffer: ArcList<Message>,
+        logs_budget: &BudgetManager,
+        parent: &fuchsia_inspect::Node,
+    ) -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(Self {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
-            logs_budget,
             logs_interest: vec![],
-            logs_multiplexers: Default::default(),
+            logs_budget: logs_budget.clone(),
+            logs_buffer,
         }))
     }
 
-    pub fn mark_stopped(&mut self, key: &UniqueKey) {
-        if let Some(containers) = self.data_directories.get_mut(key) {
-            containers.get_values_mut()[0].mark_stopped();
-        }
+    pub fn remove(&mut self, key: &UniqueKey) {
+        self.data_directories.remove(key);
     }
 
     pub fn add_new_component(
@@ -267,7 +242,6 @@ impl DataRepoState {
                         // Races may occur between seeing diagnostics ready and seeing
                         // creation lifecycle events. Handle this here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        existing_diagnostics_artifact_container.mark_started();
                         if existing_diagnostics_artifact_container.lifecycle.is_none() {
                             existing_diagnostics_artifact_container.lifecycle =
                                 Some(lifecycle_artifact_container);
@@ -311,11 +285,8 @@ impl DataRepoState {
             () => {{
                 let mut to_insert =
                     ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node);
-                let logs = to_insert.logs(
-                    &self.logs_budget,
-                    &self.logs_interest,
-                    &mut self.logs_multiplexers,
-                );
+                let logs =
+                    to_insert.logs(&self.logs_buffer, &self.logs_budget, &self.logs_interest);
                 self.data_directories.insert(trie_key, to_insert);
                 logs
             }};
@@ -324,11 +295,9 @@ impl DataRepoState {
         match self.data_directories.get_mut(&trie_key) {
             Some(component) => match &mut component.get_values_mut()[..] {
                 [] => insert_component!(),
-                [existing] => existing.logs(
-                    &self.logs_budget,
-                    &self.logs_interest,
-                    &mut self.logs_multiplexers,
-                ),
+                [existing] => {
+                    existing.logs(&self.logs_buffer, &self.logs_budget, &self.logs_interest)
+                }
                 _ => unreachable!("invariant: each trie node has 0-1 entries"),
             },
             None => insert_component!(),
@@ -399,7 +368,6 @@ impl DataRepoState {
                         // Races may occur between synthesized and real diagnostics_ready
                         // events, so we must handle de-duplication here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        existing_diagnostics_artifact_container.mark_started();
                         if existing_diagnostics_artifact_container.inspect.is_none() {
                             // This is expected to be the most common case. We've encountered the
                             // diagnostics_ready event for a component that has already been
@@ -532,41 +500,6 @@ impl DataRepoState {
                 })
             })
             .collect();
-    }
-}
-
-/// Ensures that BatchIterators get access to logs from newly started components.
-#[derive(Default)]
-pub struct MultiplexerBroker {
-    live_iterators: Vec<(StreamMode, MultiplexerHandle<Arc<Message>>)>,
-}
-
-impl MultiplexerBroker {
-    /// A new BatchIterator has been created and must be notified when future log containers are
-    /// created.
-    fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<Message>>) {
-        match mode {
-            // snapshot streams only want to know about what's currently available
-            StreamMode::Snapshot => recipient.close(),
-            StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe => {
-                self.live_iterators.push((mode, recipient))
-            }
-        }
-    }
-
-    /// Notify existing BatchIterators of a new logs container so they can include its messages
-    /// in their results.
-    pub fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
-        self.live_iterators.retain(|(mode, recipient)| {
-            recipient.send(container.identity.to_string(), container.cursor(*mode))
-        });
-    }
-
-    /// Notify all multiplexers to terminate their streams once sub streams have terminated.
-    fn terminate(&mut self) {
-        for (_, recipient) in self.live_iterators.drain(..) {
-            recipient.close();
-        }
     }
 }
 

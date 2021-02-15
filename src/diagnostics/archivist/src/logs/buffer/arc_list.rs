@@ -27,16 +27,8 @@ impl<T> Default for ArcList<T> {
 }
 
 impl<T> ArcList<T> {
-    pub fn is_empty(&self) -> bool {
-        self.inner.lock().head.is_none()
-    }
-
     pub fn push_back(&self, item: T) {
         self.inner.lock().push_back(item);
-    }
-
-    pub fn peek_front(&self) -> Option<Arc<T>> {
-        self.inner.lock().head.as_ref().map(|h| h.inner.clone())
     }
 
     pub fn pop_front(&self) -> Option<Arc<T>> {
@@ -143,7 +135,6 @@ impl<T> Root<T> {
     }
 
     fn terminate(&mut self) {
-        tracing::debug!("terminating buffer");
         self.final_entry = self.entries_seen;
         self.wake_pending();
     }
@@ -274,16 +265,6 @@ impl<T> Stream for Cursor<T> {
     }
 }
 
-impl<T> std::fmt::Debug for Cursor<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Cursor")
-            .field("id", &self.id)
-            .field("last_id_seen", &self.last_id_seen)
-            .field("until_id", &self.until_id)
-            .finish()
-    }
-}
-
 /// The next element in the stream or a marker of the number of items dropped since last polled.
 #[derive(Debug, PartialEq)]
 pub enum LazyItem<T> {
@@ -319,29 +300,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn list_is_empty() {
-        let list = ArcList::default();
-        assert!(list.is_empty());
-        list.push_back(1);
-        assert!(!list.is_empty());
-        list.pop_front();
-        assert!(list.is_empty());
-    }
-
-    #[test]
-    fn list_peek_front() {
-        let list = ArcList::default();
-        assert!(list.peek_front().is_none());
-        list.push_back(1);
-        list.push_back(2);
-        assert_eq!(*list.peek_front().unwrap(), 1);
-        list.pop_front();
-        assert_eq!(*list.peek_front().unwrap(), 2);
-        list.pop_front();
-        assert!(list.peek_front().is_none());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

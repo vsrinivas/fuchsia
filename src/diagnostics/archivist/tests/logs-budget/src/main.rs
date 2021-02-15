@@ -28,7 +28,7 @@ use futures::{
 };
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, ops::Deref, time::Duration};
-use tracing::{debug, info, trace};
+use tracing::{debug, info};
 
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/archivist-with-small-caches.cmx";
@@ -150,7 +150,14 @@ impl PuppetEnv {
         let url =
             format!("fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet{}.cmx", id);
         info!(%url, "launching puppet");
-        let app = launch(&self.launcher, url, None).unwrap();
+        let _app = launch(&self.launcher, url, None).unwrap();
+
+        let mut puppet_events = _app.controller().take_event_stream();
+        let _panic_on_exit = Task::spawn(async move {
+            if let OnTerminated { .. } = puppet_events.next().await.unwrap().unwrap() {
+                panic!("puppet terminated early");
+            }
+        });
 
         debug!("waiting for controller request");
         let mut controller = self.controllers.next().await.unwrap();
@@ -168,7 +175,7 @@ impl PuppetEnv {
         };
 
         let moniker = format!("socket-puppet{}.cmx", id);
-        let puppet = Puppet { app, moniker, proxy };
+        let puppet = Puppet { _app, moniker, proxy, _panic_on_exit };
 
         info!("having the puppet connect to LogSink");
         puppet.connect_to_log_sink().await.unwrap();
@@ -199,16 +206,7 @@ impl PuppetEnv {
             }
         }
 
-        // archivist should have dropped all containers that have stopped and are empty
         expected_sources
-            .into_iter()
-            .filter(|(moniker, count)| {
-                let has_messages = count.total > 0 && count.total != count.dropped;
-                let is_running =
-                    self.running_puppets.iter().find(|puppet| moniker == &puppet.moniker).is_some();
-                is_running || has_messages
-            })
-            .collect()
     }
 
     async fn current_observed_sources(&self) -> BTreeMap<String, Count> {
@@ -236,92 +234,54 @@ impl PuppetEnv {
         let observed_sources = self.current_observed_sources().await;
         assert_eq!(observed_sources, expected_sources);
 
-        let expected_drops = || expected_sources.iter().filter(|(_, c)| c.dropped > 0);
-        let mut expected_logs = self
+        let expected_logs = self
             .messages_sent
             .iter()
             .rev() // we want the newest messages
             .take(self.messages_allowed_in_cache)
             .rev(); // but in the order they were sent
-        trace!("reading log snapshot");
-        let observed_logs = self.log_reader.snapshot::<Logs>().await.unwrap().into_iter();
+        let mut observed_logs = self.log_reader.snapshot::<Logs>().await.unwrap().into_iter();
 
-        let mut dropped_message_warnings = BTreeMap::new();
-        for observed in observed_logs {
-            if observed.metadata.errors.is_some() {
-                let moniker = observed.moniker.split(":").next().unwrap().to_string();
-                dropped_message_warnings.insert(moniker, observed);
-            } else {
-                let expected = expected_logs.next().unwrap();
-                assert_eq!(expected, &observed);
-            }
-        }
-
-        for (moniker, Count { dropped, .. }) in expected_drops() {
-            let dropped_logs_warning = dropped_message_warnings.remove(moniker).unwrap();
+        let overall_number_dropped: u64 = expected_sources.values().map(|c| c.dropped as u64).sum();
+        if overall_number_dropped > 0 {
+            // the first message is always a warning that logs were dropped
+            let dropped_logs_warning = observed_logs.next().unwrap();
             assert_eq!(
                 dropped_logs_warning.metadata.errors,
-                Some(vec![LogError::DroppedLogs { count: *dropped as u64 }])
+                Some(vec![LogError::DroppedLogs { count: overall_number_dropped }])
             );
             assert_eq!(dropped_logs_warning.metadata.severity, Severity::Warn);
         }
 
-        assert!(dropped_message_warnings.is_empty(), "must have encountered all expected warnings");
+        for (expected, observed) in expected_logs.zip(observed_logs) {
+            assert_eq!(expected, &observed);
+        }
     }
 
     async fn validate(mut self) {
         // we want to spend most of this test's effort exercising the behavior of dropping messages
         let overall_messages_to_log = self.messages_allowed_in_cache * 15;
 
-        // we want to ensure that messages are retained after a component stops, up to our policy.
-        // this value should be chosen to ensure that we get to a point of rolling out all the
-        // messages for the stopped component and actually dropping it
-        let iteration_for_killing_a_puppet = self.messages_allowed_in_cache;
-
         info!("having the puppets log packets until overflow");
-        for i in 0..overall_messages_to_log {
-            trace!(i, "loop ticked");
-            if i == iteration_for_killing_a_puppet {
-                let mut to_stop = self.running_puppets.pop().unwrap();
-                let receipt = to_stop.emit_packet().await;
-                self.check_receipt(receipt).await;
-
-                to_stop.app.kill().unwrap();
-                to_stop.app.wait().await.unwrap();
-            }
-
+        for _ in 0..overall_messages_to_log {
             let puppet = self.running_puppets.choose(&mut self.rng).unwrap();
             let receipt = puppet.emit_packet().await;
-            self.check_receipt(receipt).await;
+
+            let next_message = self.log_subscription.next().await.unwrap();
+            assert_eq!(receipt, next_message);
+
+            self.messages_sent.push(receipt);
+            self.assert_archivist_state_matches_expected().await;
         }
-
-        assert_eq!(
-            self.current_expected_sources().len(),
-            self.running_puppets.len(),
-            "must have stopped a component and rolled out all of its logs"
-        );
         info!("test complete!");
-    }
-
-    async fn check_receipt(&mut self, receipt: MessageReceipt) {
-        let next_message = self.log_subscription.next().await.unwrap();
-        assert_eq!(receipt, next_message);
-
-        self.messages_sent.push(receipt);
-        self.assert_archivist_state_matches_expected().await;
     }
 }
 
 struct Puppet {
     proxy: SocketPuppetProxy,
     moniker: String,
-    app: App,
-}
-
-impl std::fmt::Debug for Puppet {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Puppet").field("moniker", &self.moniker).finish()
-    }
+    _app: App,
+    _panic_on_exit: Task<()>,
 }
 
 impl Puppet {

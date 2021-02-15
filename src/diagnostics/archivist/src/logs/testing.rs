@@ -7,6 +7,7 @@ use crate::{
     events::types::{ComponentEvent, LogSinkRequestedEvent},
     logs::{
         budget::BudgetManager,
+        buffer::ArcList,
         message::{fx_log_packet_t, EMPTY_IDENTITY, MAX_DATAGRAM_LEN},
     },
     repository::DataRepo,
@@ -85,8 +86,9 @@ impl TestHarness {
 
     fn make(hold_sinks: bool) -> Self {
         let inspector = Inspector::new();
-        let budget = BudgetManager::new(1_000_000);
-        let log_manager = DataRepo::new(&budget, inspector.root());
+        let buffer = ArcList::default();
+        let budget = BudgetManager::new(1_000_000, &buffer);
+        let log_manager = DataRepo::new(buffer, &budget, inspector.root());
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
@@ -402,8 +404,9 @@ pub async fn debuglog_test(
         .detach();
 
     let inspector = Inspector::new();
-    let budget = BudgetManager::new(1_000_000);
-    let lm = DataRepo::new(&budget, inspector.root());
+    let buffer = ArcList::default();
+    let budget = BudgetManager::new(1_000_000, &buffer);
+    let lm = DataRepo::new(buffer, &budget, inspector.root());
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     lm.clone().handle_log(log_stream, log_sender);
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();

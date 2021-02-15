@@ -17,7 +17,9 @@ use {
                 EventSource,
             },
         },
-        logs::{budget::BudgetManager, redact::Redactor, socket::LogMessageSocket},
+        logs::{
+            budget::BudgetManager, buffer::ArcList, redact::Redactor, socket::LogMessageSocket,
+        },
         pipeline::Pipeline,
         repository::DataRepo,
     },
@@ -45,7 +47,7 @@ use {
     parking_lot::{Mutex, RwLock},
     std::{
         path::{Path, PathBuf},
-        sync::{Arc, Weak},
+        sync::Arc,
     },
     tracing::{debug, error, info, warn},
 };
@@ -147,9 +149,12 @@ impl ArchivistBuilder {
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
 
-        let logs_budget =
-            BudgetManager::new(archivist_configuration.logs.max_cached_original_bytes);
-        let diagnostics_repo = DataRepo::new(&logs_budget, diagnostics::root());
+        let logs_buffer = ArcList::default();
+        let logs_budget = BudgetManager::new(
+            archivist_configuration.logs.max_cached_original_bytes,
+            &logs_buffer,
+        );
+        let diagnostics_repo = DataRepo::new(logs_buffer, &logs_budget, diagnostics::root());
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -209,7 +214,6 @@ impl ArchivistBuilder {
                 legacy_metrics_pipeline.clone(),
             ],
             diagnostics_repo,
-            logs_budget,
             writer,
         )?;
 
@@ -501,9 +505,6 @@ pub struct ArchivistState {
     configuration: configs::Config,
     diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
     pub diagnostics_repo: DataRepo,
-
-    /// The overall capacity we enforce for log messages across containers.
-    logs_budget: BudgetManager,
 }
 
 impl ArchivistState {
@@ -511,7 +512,6 @@ impl ArchivistState {
         configuration: configs::Config,
         diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
         diagnostics_repo: DataRepo,
-        logs_budget: BudgetManager,
         writer: Option<archive::ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(
@@ -527,7 +527,6 @@ impl ArchivistState {
             configuration,
             diagnostics_pipelines,
             diagnostics_repo,
-            logs_budget,
         })
     }
 
@@ -536,29 +535,13 @@ impl ArchivistState {
         mut events: ComponentEventStream,
         log_sender: mpsc::UnboundedSender<Task<()>>,
     ) {
-        let state = Arc::new(Mutex::new(self));
-        let remover = ComponentRemover { inner: Arc::downgrade(&state) };
-        state.lock().logs_budget.set_remover(remover);
-
-        let archivist = Archivist { state, log_sender };
+        let archivist = Archivist { state: Arc::new(Mutex::new(self)), log_sender };
         while let Some(event) = events.next().await {
             archivist.clone().process_event(event).await.unwrap_or_else(|e| {
             let mut state = archivist.lock();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
             error!(?e, "Failed to log event");
         });
-        }
-    }
-
-    fn maybe_remove_component(&mut self, identity: &ComponentIdentity) {
-        if !self.diagnostics_repo.is_live(identity) {
-            debug!(%identity, "Removing component from repository.");
-            self.diagnostics_repo.write().data_directories.remove(&identity.unique_key);
-
-            // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-            for pipeline in &self.diagnostics_pipelines {
-                pipeline.write().remove(&identity.relative_moniker);
-            }
         }
     }
 }
@@ -627,12 +610,14 @@ impl Archivist {
         }
     }
 
-    fn mark_component_stopped(&self, identity: &ComponentIdentity) {
-        let mut this = self.state.lock();
-        // TODO(fxbug.dev/53939): Get inspect data from repository before removing
-        // for post-mortem inspection.
-        this.diagnostics_repo.write().mark_stopped(&identity.unique_key);
-        this.maybe_remove_component(identity);
+    fn remove_from_inspect_repo(&self, identity: &ComponentIdentity) {
+        let locked_state = &self.lock();
+        locked_state.diagnostics_repo.write().remove(&identity.unique_key);
+
+        // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
+        for pipeline in &locked_state.diagnostics_pipelines {
+            pipeline.write().remove(&identity.relative_moniker);
+        }
     }
 
     async fn process_event(self, event: ComponentEvent) -> Result<(), Error> {
@@ -654,8 +639,10 @@ impl Archivist {
                 self.archive_event("RUNNING", archived_metadata.clone()).await
             }
             ComponentEvent::Stop(stop) => {
-                debug!(identity = %stop.metadata.identity, "Component stopped");
-                self.mark_component_stopped(&stop.metadata.identity);
+                // TODO(fxbug.dev/53939): Get inspect data from repository before removing
+                // for post-mortem inspection.
+                debug!(identity = %stop.metadata.identity, "Component stopped.");
+                self.remove_from_inspect_repo(&stop.metadata.identity);
                 self.archive_event("STOP", stop.metadata).await
             }
             ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
@@ -785,21 +772,6 @@ impl Archivist {
         }
 
         Ok(())
-    }
-}
-
-/// Provides weak access to ArchivistState for BudgetManager to use when it pops the last message
-/// from the buffer of a stopped component.
-#[derive(Clone, Default)]
-pub struct ComponentRemover {
-    inner: Weak<Mutex<ArchivistState>>,
-}
-
-impl ComponentRemover {
-    pub fn maybe_remove_component(&self, identity: &ComponentIdentity) {
-        if let Some(this) = self.inner.upgrade() {
-            this.lock().maybe_remove_component(identity);
-        }
     }
 }
 

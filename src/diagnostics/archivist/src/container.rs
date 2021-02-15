@@ -10,14 +10,12 @@ use {
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
         logs::{
-            budget::BudgetManager, container::LogsArtifactsContainer, message::Message,
-            multiplex::PinStream, stats::LogStreamStats,
+            budget::BudgetManager, buffer::ArcList, container::LogsArtifactsContainer,
+            stats::LogStreamStats, Message,
         },
-        repository::MultiplexerBroker,
     },
     diagnostics_data as schema,
     diagnostics_hierarchy::DiagnosticsHierarchy,
-    fidl_fuchsia_diagnostics::StreamMode,
     fidl_fuchsia_logger::LogInterestSelector,
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync,
@@ -25,7 +23,6 @@ use {
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
     std::{convert::TryFrom, sync::Arc},
-    tracing::debug,
 };
 
 pub enum ReadSnapshot {
@@ -99,22 +96,10 @@ impl std::fmt::Display for ComponentIdentity {
     }
 }
 
-/// Holds all diagnostics data artifacts for a given component in the topology.
+/// Holds all diagnostics data artifacts for a given component.
 ///
-/// While most members are public for convenience, other data types may be added in the future and
+/// While all members are public for convenience, other data types may be added in the future and
 /// so this is marked with `#[non_exhaustive]`.
-///
-/// # Lifecycle
-///
-/// Each instance is held by the DataRepo as long as the corresponding component is running or this
-/// struct has `logs` that are non-empty.
-///
-/// When we receive a stop event for the corresponding component, we set `inspect` and `lifecycle`
-/// to `None`, causing `ArchiveAccessor` to ignore this component until it restarts. If `logs` is
-/// empty at that point, this struct should be removed from the DataRepo.
-///
-/// See [`ComponentDiagnostics::mark_stopped`], [`ComponentDiagnostics::mark_started`], and
-/// [`ComponentDiagnostics::should_retain`] for the implementations of this behavior.
 #[non_exhaustive]
 pub struct ComponentDiagnostics {
     /// Container holding the artifacts needed to uniquely identify
@@ -130,16 +115,13 @@ pub struct ComponentDiagnostics {
     pub logs: Option<Arc<LogsArtifactsContainer>>,
     /// Holds the state for `root/sources/MONIKER/*` in Archivist's inspect.
     pub source_node: fuchsia_inspect::Node,
-    /// Whether the component this represents is still running or not. Components which have
-    /// stopped have their containers retained for as long as they still have log messages we want.
-    is_live: bool,
 }
 
 impl ComponentDiagnostics {
     pub fn empty(identity: Arc<ComponentIdentity>, parent: &fuchsia_inspect::Node) -> Self {
         let source_node = parent.create_child(identity.relative_moniker.join("/"));
         source_node.record_string("url", &identity.url);
-        Self { identity, inspect: None, lifecycle: None, logs: None, source_node, is_live: true }
+        Self { identity, inspect: None, lifecycle: None, logs: None, source_node }
     }
 
     pub fn new_with_lifecycle(
@@ -164,9 +146,10 @@ impl ComponentDiagnostics {
 
     pub fn logs(
         &mut self,
+        // TODO(fxbug.dev/47611) remove this and construct a local buffer in this function
+        buffer: &ArcList<Message>,
         budget: &BudgetManager,
         interest_selectors: &[LogInterestSelector],
-        multiplexers: &mut MultiplexerBroker,
     ) -> Arc<LogsArtifactsContainer> {
         if let Some(logs) = &self.logs {
             logs.clone()
@@ -178,59 +161,11 @@ impl ComponentDiagnostics {
                 self.identity.clone(),
                 interest_selectors,
                 stats,
+                buffer.clone(),
                 budget.handle(),
             ));
-            budget.add_container(container.clone());
             self.logs = Some(container.clone());
-            multiplexers.send(&container);
             container
-        }
-    }
-
-    /// Return a cursor over messages from this component with the given `mode`.
-    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<Message>>> {
-        self.logs.as_ref().map(|l| l.cursor(mode))
-    }
-
-    /// Ensure this container is marked as live even if the component it represents had previously
-    /// stopped.
-    pub fn mark_started(&mut self) {
-        debug!(%self.identity, "Component re-started before the container was reaped.");
-        self.is_live = true;
-        if let Some(logs) = &self.logs {
-            logs.mark_started();
-        }
-    }
-
-    /// Mark this container as stopped -- the component is no longer running and we should not
-    /// serve lifecycle or inspect results.
-    ///
-    /// Sets `inspect` and `lifecycle` to `None` so that this component will be excluded from
-    /// accessors for those data types.
-    pub fn mark_stopped(&mut self) {
-        debug!(%self.identity, "Marking stopped.");
-        self.inspect = None;
-        self.lifecycle = None;
-        self.is_live = false;
-        if let Some(logs) = &self.logs {
-            logs.mark_stopped();
-        }
-    }
-
-    /// Returns `true` if the DataRepo should continue holding this container. This container should
-    /// be retained as long as we believe the corresponding component is still running or as long as
-    /// we still have logs from its execution.
-    pub fn should_retain(&self) -> bool {
-        let should_retain_logs = self.logs.as_ref().map(|l| l.should_retain()).unwrap_or(false);
-        self.is_live || should_retain_logs
-    }
-
-    /// Ensure that no new log messages can be consumed from the corresponding component, causing
-    /// all pending subscriptions to terminate. Used during Archivist shutdown to ensure a full
-    /// flush of available logs.
-    pub fn terminate_logs(&self) {
-        if let Some(logs) = &self.logs {
-            logs.terminate();
         }
     }
 }
