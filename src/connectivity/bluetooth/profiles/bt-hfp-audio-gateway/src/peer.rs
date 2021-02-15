@@ -18,6 +18,7 @@ use {
     futures::{channel::mpsc, Future, FutureExt, SinkExt},
 };
 
+mod gain_control;
 mod task;
 
 /// A request made to the Peer that should be passed along to the PeerTask
@@ -46,9 +47,9 @@ impl Peer {
         id: PeerId,
         profile_proxy: ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
-    ) -> Self {
-        let (task, queue) = PeerTask::spawn(id, profile_proxy.clone(), local_config);
-        Self { id, local_config, profile_proxy, task, queue }
+    ) -> Result<Self, Error> {
+        let (task, queue) = PeerTask::spawn(id, profile_proxy.clone(), local_config)?;
+        Ok(Self { id, local_config, profile_proxy, task, queue })
     }
 
     pub fn id(&self) -> PeerId {
@@ -56,10 +57,12 @@ impl Peer {
     }
 
     /// Spawn a new peer task.
-    fn spawn_task(&mut self) {
-        let (task, queue) = PeerTask::spawn(self.id, self.profile_proxy.clone(), self.local_config);
+    fn spawn_task(&mut self) -> Result<(), Error> {
+        let (task, queue) =
+            PeerTask::spawn(self.id, self.profile_proxy.clone(), self.local_config)?;
         self.task = task;
         self.queue = queue;
+        Ok(())
     }
 
     /// Pass a new profile event into the Peer. The Peer can then react to the event as it sees
@@ -69,14 +72,15 @@ impl Peer {
     /// This method will panic if the peer cannot accept a profile event. This is not expected to
     /// happen under normal operation and likely indicates a bug or unrecoverable failure condition
     /// in the system
-    pub async fn profile_event(&mut self, event: ProfileEvent) {
+    pub async fn profile_event(&mut self, event: ProfileEvent) -> Result<(), Error> {
         // The fuchsia.bluetooth.bredr Profile APIs ultimately control the creation of Peers.
         // Therefore, they will recreate the peer task if it is not running.
         if let Err(request) = self.queue.try_send_fut(PeerRequest::Profile(event)).await {
             // Task ended, so let's spin it back up since somebody wants it.
-            self.spawn_task();
+            self.spawn_task()?;
             self.expect_send_request(request).await;
         }
+        Ok(())
     }
 
     /// Create a FIDL channel that can be used to manage this Peer and return the server end.
@@ -128,7 +132,7 @@ mod tests {
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let peer = Peer::new(id, proxy, AudioGatewayFeatureSupport::default());
+        let peer = Peer::new(id, proxy, AudioGatewayFeatureSupport::default()).unwrap();
         assert_eq!(peer.id(), id);
     }
 
@@ -138,7 +142,7 @@ mod tests {
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let mut peer = Peer::new(id, proxy, AudioGatewayFeatureSupport::default());
+        let mut peer = Peer::new(id, proxy, AudioGatewayFeatureSupport::default()).unwrap();
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.
@@ -154,7 +158,8 @@ mod tests {
             let profile_event_fut = peer.profile_event(event);
             pin_mut!(profile_event_fut);
             exec.run_until_stalled(&mut profile_event_fut)
-                .expect("Profile Event to complete successfully");
+                .expect("Profile Event to complete")
+                .expect("Profile Event to succeed");
         }
 
         // A new task has been spun up and is actively running.
@@ -169,7 +174,7 @@ mod tests {
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let mut peer = Peer::new(id, proxy, AudioGatewayFeatureSupport::default());
+        let mut peer = Peer::new(id, proxy, AudioGatewayFeatureSupport::default()).unwrap();
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.

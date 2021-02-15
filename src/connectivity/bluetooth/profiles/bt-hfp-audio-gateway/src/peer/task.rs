@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{config::AudioGatewayFeatureSupport, profile::ProfileEvent};
+use crate::{config::AudioGatewayFeatureSupport, error::Error, profile::ProfileEvent};
 use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
@@ -16,7 +16,7 @@ use {
     log::{debug, info, warn},
 };
 
-use super::PeerRequest;
+use super::{gain_control::GainControl, PeerRequest};
 
 pub(super) struct PeerTask {
     id: PeerId,
@@ -24,6 +24,7 @@ pub(super) struct PeerTask {
     _profile_proxy: bredr::ProfileProxy,
     _handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
+    gain_control: GainControl,
 }
 
 impl PeerTask {
@@ -31,25 +32,26 @@ impl PeerTask {
         id: PeerId,
         _profile_proxy: bredr::ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Error> {
+        Ok(Self {
             id,
             _local_config: local_config,
             _profile_proxy,
             _handler: None,
             network: NetworkInformation::EMPTY,
-        }
+            gain_control: GainControl::new()?,
+        })
     }
 
     pub fn spawn(
         id: PeerId,
         profile_proxy: bredr::ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
-    ) -> (Task<()>, mpsc::Sender<PeerRequest>) {
+    ) -> Result<(Task<()>, mpsc::Sender<PeerRequest>), Error> {
         let (sender, receiver) = mpsc::channel(0);
-        let peer = Self::new(id, profile_proxy, local_config);
+        let peer = Self::new(id, profile_proxy, local_config)?;
         let task = Task::local(peer.run(receiver));
-        (task, sender)
+        Ok((task, sender))
     }
 
     fn on_connection_request(
@@ -68,30 +70,39 @@ impl PeerTask {
         // TODO (fxbug.dev/64566): handle search result
     }
 
-    async fn on_peer_handler(&mut self, handler: PeerHandlerProxy) {
-        info!("Got request to handle peer headset using handler");
+    /// When a new handler is received, the state is not known. It might be stale because the
+    /// system is asynchronous and the PeerHandler connection has two sides. The handler will only
+    /// be stored if all the associated fidl calls are successful. Otherwise it is dropped without
+    /// being set.
+    async fn on_peer_handler(&mut self, handler: PeerHandlerProxy) -> Result<(), Error> {
+        info!("Got request to handle peer {} headset using handler", self.id);
         // Getting the network information the first time should always return a complete table.
         // If the call returns an error, do not set up the handler.
         let info = match handler.watch_network_information().await {
             Ok(info) => info,
             Err(fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. }) => {
-                return;
+                return Ok(());
             }
             Err(e) => {
-                warn!(
-                    "Peer Handler responded with error to WatchNetworkInformation request: {}",
-                    e
-                );
-                return;
+                warn!("Error handling peer request: {}", e);
+                return Ok(());
             }
         };
 
         update_network_information(&mut self.network, info);
 
+        let client_end = self.gain_control.get_client_end()?;
+        if let Err(e) = handler.gain_control(client_end) {
+            warn!("Error setting gain control for peer {}: {}", self.id, e);
+            return Ok(());
+        }
+
         self._handler = Some(handler);
+
+        Ok(())
     }
 
-    async fn peer_request(&mut self, request: PeerRequest) {
+    async fn peer_request(&mut self, request: PeerRequest) -> Result<(), Error> {
         match request {
             PeerRequest::Profile(ProfileEvent::ConnectionRequest { protocol, channel, id: _ }) => {
                 self.on_connection_request(protocol, channel)
@@ -99,8 +110,9 @@ impl PeerTask {
             PeerRequest::Profile(ProfileEvent::SearchResult { protocol, attributes, id: _ }) => {
                 self.on_search_result(protocol, attributes).await
             }
-            PeerRequest::Handle(handler) => self.on_peer_handler(handler).await,
+            PeerRequest::Handle(handler) => self.on_peer_handler(handler).await?,
         }
+        Ok(())
     }
 
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) {
@@ -109,11 +121,18 @@ impl PeerTask {
                 // New request coming from elsewhere in the component
                 request = task_channel.next() => {
                     if let Some(request) = request {
-                        self.peer_request(request).await
+                        if let Err(e) = self.peer_request(request).await {
+                            warn!("Error handling peer request: {}", e);
+                            break;
+                        }
                     } else {
                         debug!("Peer task channel closed");
                         break;
                     }
+                }
+                // New request on the gain control protocol
+                _request = self.gain_control.select_next_some() => {
+                    unimplemented!();
                 }
             }
         }
@@ -141,7 +160,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
-        fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, SignalStrength},
+        fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerRequest, SignalStrength},
         fuchsia_async as fasync,
         proptest::prelude::*,
     };
@@ -250,7 +269,8 @@ mod tests {
         let (sender, receiver) = mpsc::channel(0);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
         (
-            PeerTask::new(PeerId(1), proxy, AudioGatewayFeatureSupport::default()),
+            PeerTask::new(PeerId(1), proxy, AudioGatewayFeatureSupport::default())
+                .expect("Could not create PeerTask"),
             sender,
             receiver,
             stream,
@@ -264,20 +284,22 @@ mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
         fasync::Task::local(async move {
-            let responder = stream
-                .next()
-                .await
-                .expect("some request")
-                .expect("a successful request")
-                .into_watch_network_information()
-                .expect("watch network information request");
-            responder
-                .send(NetworkInformation::EMPTY)
-                .expect("Successfully send network information");
+            match stream.next().await {
+                Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
+                    responder
+                        .send(NetworkInformation::EMPTY)
+                        .expect("Successfully send network information");
+                }
+                x => panic!("Expected watch network information request: {:?}", x),
+            };
+
+            // Call manager will wait indefinitely for a request that will not come during this
+            // test.
+            while let Some(Ok(_)) = stream.next().await {}
         })
         .detach();
 
-        peer.peer_request(PeerRequest::Handle(proxy)).await;
+        peer.peer_request(PeerRequest::Handle(proxy)).await.expect("peer request to succeed");
         assert!(peer._handler.is_some());
     }
 
@@ -290,7 +312,7 @@ mod tests {
         // close the PeerHandler channel by dropping the server endpoint.
         drop(server_end);
 
-        peer.peer_request(PeerRequest::Handle(proxy)).await;
+        peer.peer_request(PeerRequest::Handle(proxy)).await.expect("request to succeed");
         assert!(peer._handler.is_none());
     }
 

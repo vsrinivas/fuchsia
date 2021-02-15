@@ -62,15 +62,14 @@ impl Hfp {
         let id = event.peer_id();
         let peer = match self.peers.inner().entry(id) {
             Entry::Vacant(entry) => {
-                let mut peer = Peer::new(id, self.profile.proxy(), self.config);
+                let mut peer = Peer::new(id, self.profile.proxy(), self.config)?;
                 let server_end = peer.build_handler().await?;
                 self.call_manager.peer_added(peer.id(), server_end).await;
                 entry.insert(Box::pin(peer))
             }
             Entry::Occupied(entry) => entry.into_mut(),
         };
-        peer.profile_event(event).await;
-        Ok(())
+        peer.profile_event(event).await
     }
 
     /// Handle a single `CallManagerEvent` from `call_manager`.

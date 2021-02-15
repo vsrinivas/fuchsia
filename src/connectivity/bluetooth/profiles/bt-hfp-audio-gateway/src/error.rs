@@ -13,6 +13,10 @@ pub enum Error {
     System { message: String, source: Box<dyn StdError> },
     #[error("Peer removed")]
     PeerRemoved,
+    #[error("Value out of range")]
+    OutOfRange,
+    #[error("Invalid request: {}", .0)]
+    ClientProtocol(Box<dyn StdError>),
 }
 
 #[derive(Debug)]
