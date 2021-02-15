@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -27,8 +27,7 @@ class Tag(object):
         self.column = column
 
     def __repr__(self):
-        return 'Tag(%s, %s, %d, %d)' % (
-            self.tag, self.file, self.line, self.column)
+        return f'Tag({self.tag}, {self.file}, {self.line}, {self.column})'
 
 
 def parse_args():

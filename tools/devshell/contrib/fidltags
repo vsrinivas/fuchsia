@@ -24,9 +24,9 @@ main () {
         exit
     fi
 
-    ${FUCHSIA_DIR}/scripts/generate-fidl-tags.py \
-        --build-dir=${FUCHSIA_BUILD_DIR} \
-        --output=${FUCHSIA_DIR}/fidl-tags
+    "${PREBUILT_PYTHON3_DIR}/bin/python3.8" "${FUCHSIA_DIR}/scripts/generate-fidl-tags.py" \
+        --build-dir="${FUCHSIA_BUILD_DIR}" \
+        --output="${FUCHSIA_DIR}/fidl-tags"
 }
 
 main "$@"
