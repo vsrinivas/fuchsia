@@ -92,43 +92,43 @@ typedef struct {
 typedef struct efi_simple_network_protocol {
   uint64_t Revision;
 
-  efi_status (*Start)(struct efi_simple_network_protocol* self);
+  efi_status (*Start)(struct efi_simple_network_protocol* self) EFIAPI;
 
-  efi_status (*Stop)(struct efi_simple_network_protocol* self);
+  efi_status (*Stop)(struct efi_simple_network_protocol* self) EFIAPI;
 
   efi_status (*Initialize)(struct efi_simple_network_protocol* self, size_t extra_rx_buf_size,
-                           size_t extra_tx_buf_size);
+                           size_t extra_tx_buf_size) EFIAPI;
 
-  efi_status (*Reset)(struct efi_simple_network_protocol* self, bool extended_verification);
+  efi_status (*Reset)(struct efi_simple_network_protocol* self, bool extended_verification) EFIAPI;
 
-  efi_status (*Shutdown)(struct efi_simple_network_protocol* self);
+  efi_status (*Shutdown)(struct efi_simple_network_protocol* self) EFIAPI;
 
   efi_status (*ReceiveFilters)(struct efi_simple_network_protocol* self, uint32_t enable,
                                uint32_t disable, bool reset_mcast_filter, size_t mcast_filter_count,
-                               efi_mac_addr* mcast_filter);
+                               efi_mac_addr* mcast_filter) EFIAPI;
 
   efi_status (*StationAddress)(struct efi_simple_network_protocol* self, bool reset,
-                               efi_mac_addr* new_addr);
+                               efi_mac_addr* new_addr) EFIAPI;
 
   efi_status (*Statistics)(struct efi_simple_network_protocol* self, bool reset, size_t* stats_size,
-                           efi_network_statistics* stats_table);
+                           efi_network_statistics* stats_table) EFIAPI;
 
   efi_status (*MCastIpToMac)(struct efi_simple_network_protocol* self, bool ipv6, efi_ip_addr* ip,
-                             efi_mac_addr* mac);
+                             efi_mac_addr* mac) EFIAPI;
 
   efi_status (*NvData)(struct efi_simple_network_protocol* self, bool read_write, size_t offset,
-                       size_t buf_size, void* buf);
+                       size_t buf_size, void* buf) EFIAPI;
 
   efi_status (*GetStatus)(struct efi_simple_network_protocol* self, uint32_t* interrupt_status,
-                          void** tx_buf);
+                          void** tx_buf) EFIAPI;
 
   efi_status (*Transmit)(struct efi_simple_network_protocol* self, size_t header_size,
                          size_t buf_size, void* buf, efi_mac_addr* src, efi_mac_addr* dest,
-                         uint16_t* protocol);
+                         uint16_t* protocol) EFIAPI;
 
   efi_status (*Receive)(struct efi_simple_network_protocol* self, size_t* header_size,
                         size_t* buf_size, void* buf, efi_mac_addr* src, efi_mac_addr* dest,
-                        uint16_t* protocol);
+                        uint16_t* protocol) EFIAPI;
 
   efi_event WaitForPacket;
   efi_simple_network_mode* Mode;

@@ -17,7 +17,7 @@ StubBootServices* active_stub = nullptr;
 // Wrapper to bounce the EFI C function pointer into our global StubBootServices
 // object.
 template <auto func, typename... Args>
-efi_status Wrap(Args... args) {
+EFIAPI efi_status Wrap(Args... args) {
   if (!active_stub) {
     // Someone held onto the underlying function table after deleting
     // the parent StubBootServices.

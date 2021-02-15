@@ -114,42 +114,44 @@ typedef struct {
 typedef struct {
   efi_table_header Hdr;
 
-  efi_status (*GetTime)(efi_time* time, efi_time_capabilities* capabilities);
+  efi_status (*GetTime)(efi_time* time, efi_time_capabilities* capabilities) EFIAPI;
 
-  efi_status (*SetTime)(efi_time* time);
+  efi_status (*SetTime)(efi_time* time) EFIAPI;
 
-  efi_status (*GetWakeupTime)(bool* enabled, bool* pending, efi_time* time);
+  efi_status (*GetWakeupTime)(bool* enabled, bool* pending, efi_time* time) EFIAPI;
 
-  efi_status (*SetWakeupTime)(bool enable, efi_time* time);
+  efi_status (*SetWakeupTime)(bool enable, efi_time* time) EFIAPI;
 
   efi_status (*SetVirtualAddressMap)(size_t memory_map_size, size_t desc_size,
-                                     uint32_t desc_version, efi_memory_descriptor* virtual_map);
+                                     uint32_t desc_version,
+                                     efi_memory_descriptor* virtual_map) EFIAPI;
 
-  efi_status (*ConvertPointer)(size_t debug_disposition, void** addr);
+  efi_status (*ConvertPointer)(size_t debug_disposition, void** addr) EFIAPI;
 
   efi_status (*GetVariable)(char16_t* var_name, efi_guid* vendor_guid, uint32_t* attributes,
-                            size_t* data_size, void* data);
+                            size_t* data_size, void* data) EFIAPI;
 
   efi_status (*GetNextVariableName)(size_t* var_name_size, char16_t* var_name,
-                                    efi_guid* vendor_guid);
+                                    efi_guid* vendor_guid) EFIAPI;
 
   efi_status (*SetVariable)(char16_t* var_name, efi_guid* vendor_guid, uint32_t attributes,
-                            size_t data_size, const void* data);
+                            size_t data_size, const void* data) EFIAPI;
 
-  efi_status (*GetNextHighMonotonicCount)(uint32_t* high_count);
+  efi_status (*GetNextHighMonotonicCount)(uint32_t* high_count) EFIAPI;
 
   efi_status (*ResetSystem)(efi_reset_type reset_type, efi_status reset_status, size_t data_size,
-                            void* reset_data);
+                            void* reset_data) EFIAPI;
 
   efi_status (*UpdateCapsule)(efi_capsule_header** capsule_header_array, size_t capsule_count,
-                              efi_physical_addr scatter_gather_list);
+                              efi_physical_addr scatter_gather_list) EFIAPI;
 
   efi_status (*QueryCapsuleCapabilities)(efi_capsule_header** capsule_header_array,
                                          size_t capsule_count, uint64_t* max_capsule_size,
-                                         efi_reset_type* reset_type);
+                                         efi_reset_type* reset_type) EFIAPI;
 
   efi_status (*QueryVariableInfo)(uint32_t attributes, uint64_t* max_var_storage_size,
-                                  uint64_t* remaining_var_storage_size, uint64_t* max_var_size);
+                                  uint64_t* remaining_var_storage_size,
+                                  uint64_t* max_var_size) EFIAPI;
 } efi_runtime_services;
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_RUNTIME_SERVICES_H_

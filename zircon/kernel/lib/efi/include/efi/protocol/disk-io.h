@@ -25,9 +25,9 @@ typedef struct efi_disk_io_protocol efi_disk_io_protocol;
 struct efi_disk_io_protocol {
   uint64_t Revision;
   efi_status (*ReadDisk)(efi_disk_io_protocol* self, uint32_t MediaId, uint64_t Offset,
-                         uint64_t BufferSize, void* Buffer);
+                         uint64_t BufferSize, void* Buffer) EFIAPI;
   efi_status (*WriteDisk)(efi_disk_io_protocol* self, uint32_t MediaId, uint64_t Offset,
-                          uint64_t BufferSize, const void* Buffer);
+                          uint64_t BufferSize, const void* Buffer) EFIAPI;
 };
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DISK_IO_H_

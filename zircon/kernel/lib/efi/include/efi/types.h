@@ -10,6 +10,24 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Attribute to emit an error if a function is called.
+#if __has_attribute(unavailable)
+#define EFI_FUNCTION_UNAVAILABLE(msg) __attribute__((unavailable(msg))) /* Clang */
+#else
+#define EFI_FUNCTION_UNAVAILABLE(msg)
+#endif
+
+// EFI functions and callbacks use the Microsoft Windows x86_64 ABI.
+//
+// This ABI is not supported on other targets. We allow such targets to
+// include this files to access types and headers, but prevent calls to the
+// functions.
+#if defined(__x86_64__)
+#define EFIAPI __attribute__((ms_abi))
+#else
+#define EFIAPI EFI_FUNCTION_UNAVAILABLE("EFI API functions only available on x86_64.")
+#endif
+
 #define EFI_ERROR_MASK 0x8000000000000000
 #define EFI_ERR(x) (EFI_ERROR_MASK | x)
 #define EFI_ERROR(x) (((int64_t)x) < 0)
@@ -154,7 +172,7 @@ typedef void* efi_event;
     0x7ce88fb3, 0x4bd7, 0x4679, { 0x87, 0xa8, 0xa8, 0xd8, 0xde, 0xe5, 0x0d, 0x2b } \
   }
 
-typedef void (*efi_event_notify)(efi_event event, void* ctx);
+typedef void (*efi_event_notify)(efi_event event, void* ctx) EFIAPI;
 
 typedef enum { TimerCancel, TimerPeriodic, TimerRelative } efi_timer_delay;
 

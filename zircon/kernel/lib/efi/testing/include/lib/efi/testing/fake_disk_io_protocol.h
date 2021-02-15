@@ -53,9 +53,9 @@ class FakeDiskIoProtocol {
  private:
   // Static wrappers to bounce the C function call into our C++ object.
   static efi_status ReadDiskWrapper(efi_disk_io_protocol* self, uint32_t MediaId, uint64_t Offset,
-                                    uint64_t BufferSize, void* Buffer);
+                                    uint64_t BufferSize, void* Buffer) EFIAPI;
   static efi_status WriteDiskWrapper(efi_disk_io_protocol* self, uint32_t MediaId, uint64_t Offset,
-                                     uint64_t BufferSize, const void* Buffer);
+                                     uint64_t BufferSize, const void* Buffer) EFIAPI;
 
   // EFI read/write function implementation.
   efi_status ReadDisk(uint32_t MediaId, uint64_t Offset, uint64_t BufferSize, void* Buffer);
