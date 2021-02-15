@@ -47,11 +47,12 @@ struct Context {
   size_t content_size;  // Must be <= ZX_PAGE_SIZE.
   uint32_t last_flags;
 };
-class TestServer final : public fuchsia_io::File::RawChannelInterface {
+class TestServer final : public fuchsia_io::File::Interface {
  public:
   TestServer(Context* context) : context(context) {}
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {}
+  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
+             CloneCompleter::Sync& completer) override {}
 
   void Close(CloseCompleter::Sync& completer) override { completer.Reply(ZX_OK); }
 
