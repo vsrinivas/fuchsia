@@ -52,6 +52,7 @@ test("fbl") {
     "string_printf_tests.cc",
     "string_tests.cc",
     "string_traits_tests.cc",
+    "strong_int_tests.cc",
     "type_info_tests.cc",
     "unique_fd_tests.cc",
     "vector_tests.cc",

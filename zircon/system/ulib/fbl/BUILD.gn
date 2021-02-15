@@ -28,6 +28,7 @@ zx_library("fbl") {
     "fbl/intrusive_hash_table.h",
     "fbl/intrusive_pointer_traits.h",
     "fbl/intrusive_single_list.h",
+    "fbl/strong_int.h",
     "fbl/intrusive_wavl_tree.h",
     "fbl/intrusive_wavl_tree_internal.h",
     "fbl/macros.h",
