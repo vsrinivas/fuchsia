@@ -34,7 +34,6 @@
 #include <lib/cksum.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
-#include <lib/instrumentation/asan.h>
 #include <lib/system-topology.h>
 #include <mexec.h>
 #include <platform.h>
@@ -59,17 +58,13 @@
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
+#include <platform/pc/efi.h>
 #include <platform/pc/smbios.h>
 #include <vm/bootalloc.h>
 #include <vm/bootreserve.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-
-extern "C" {
-#include <efi/runtime-services.h>
-#include <efi/system-table.h>
-}
 
 #define LOCAL_TRACE 0
 
@@ -375,33 +370,33 @@ LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM
 
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
 static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
-static fbl::RefPtr<VmAspace> efi_aspace;
 
 // Something big enough for the panic log but not too enormous
 // to avoid excessive pressure on efi variable storage
 #define MAX_EFI_CRASHLOG_LEN 4096
 
 // This function accesses the efi_aspace which isn't mapped in the ASAN shadow.
-NO_ASAN static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len) {
-  if (!efi_aspace || (log == NULL)) {
+__NO_ASAN static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len) {
+  if (log == nullptr) {
     return;
   }
 
+  // Switch into the EFI address space.
+  EfiServicesActivation services = TryActivateEfiServices();
+  if (!services.valid()) {
+    return;
+  }
+
+  // Store the log.
   if (len > MAX_EFI_CRASHLOG_LEN) {
     len = MAX_EFI_CRASHLOG_LEN;
   }
-
-  // We could be panicking whilst already holding the thread_lock. If so we must avoid calling
-  // functions that will grab it again.
-  if (thread_lock.IsHeld()) {
-    vmm_set_active_aspace_locked(efi_aspace.get());
-  } else {
-    vmm_set_active_aspace(efi_aspace.get());
+  efi_status result =
+      services->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log);
+  if (result != EFI_SUCCESS) {
+    printf("EFI error while attempting to store crashlog: %" PRIx64 "\n", result);
+    return;
   }
-
-  efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
-  efi_runtime_services* rs = sys->RuntimeServices;
-  rs->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log);
 }
 
 size_t efi_recover_crashlog(size_t len, void* cookie,
@@ -422,31 +417,17 @@ void platform_init_crashlog(void) {
     return;
   }
 
-  if (bootloader.efi_system_table != NULL) {
-    // Create a linear mapping to use to call UEFI Runtime Services
-    efi_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "uefi");
-    if (!efi_aspace) {
-      return;
-    }
-
-    // TODO: get more precise about this.  This gets the job done on
-    //      the platforms we're working on right now, but is probably
-    //      not entirely correct.
-    void* ptr = (void*)0;
-    zx_status_t r = efi_aspace->AllocPhysical(
-        "1:1", 16 * 1024 * 1024 * 1024UL, &ptr, PAGE_SIZE_SHIFT, 0,
-        VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
-        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
-
-    if (r != ZX_OK) {
-      efi_aspace.reset();
-    }
-
-    // Override the crashlog hooks with the EFI crashlog functions.
-    platform_stow_crashlog = efi_stow_crashlog;
-    platform_recover_crashlog = efi_recover_crashlog;
-    platform_enable_crashlog_uptime_updates = [](bool) {};
+  // Attempt to initialize EFI.
+  zx_status_t result = InitEfiServices();
+  if (result != ZX_OK) {
+    dprintf(INFO, "No EFI available on system.\n");
+    return;
   }
+
+  // Override the crashlog hooks with the EFI crashlog functions.
+  platform_stow_crashlog = efi_stow_crashlog;
+  platform_recover_crashlog = efi_recover_crashlog;
+  platform_enable_crashlog_uptime_updates = [](bool) {};
 }
 
 static fbl::Array<e820entry_t> ConvertMemoryRanges(ktl::span<zbi_mem_range_t> ranges) {

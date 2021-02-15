@@ -23,11 +23,8 @@
 
 #endif  // __x86_64__
 
-#ifdef __clang__
-#define NO_ASAN [[clang::no_sanitize("address")]]
-#else
-#define NO_ASAN __attribute__((no_sanitize_address))
-#endif
+// Alias __NO_ASAN to the more friendly "NO_ASAN".
+#define NO_ASAN __NO_ASAN
 
 #ifndef __ASSEMBLER__
 
