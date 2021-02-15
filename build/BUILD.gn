@@ -178,7 +178,6 @@ group("deprecated_package") {
     "//garnet/examples/intl/wisdom/rust/client/*",
     "//garnet/examples/intl/wisdom/rust/server/*",
     "//garnet/examples/intl/wisdom/tests/*",
-    "//garnet/examples/tcp/tcp_file_sender/*",
     "//garnet/lib/perfmon/*",
     "//garnet/lib/process/*",
     "//garnet/lib/profiler/tests/*",

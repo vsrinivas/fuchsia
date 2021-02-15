@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/fuchsia_package_with_single_component.gni")
 
 rustc_binary("bin") {
   name = "tcp_file_sender"
@@ -19,19 +19,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("tcp_file_sender") {
+fuchsia_package_with_single_component("tcp_file_sender") {
+  manifest = "meta/tcp_file_sender.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "tcp_file_sender"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/tcp_file_sender.cmx")
-      dest = "tcp_file_sender.cmx"
-    },
-  ]
 }
