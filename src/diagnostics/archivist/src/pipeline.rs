@@ -60,7 +60,7 @@ impl Pipeline {
     }
 
     pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = RedactedItem<Message>> {
-        self.log_redactor.clone().redact_stream(self.data_repo.cursor(mode))
+        self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode))
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
