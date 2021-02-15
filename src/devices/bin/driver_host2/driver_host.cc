@@ -179,11 +179,10 @@ void DriverHost::Start(fdf::DriverStartArgs start_args,
   // this callback to extend its lifetime.
   fidl::Client<fio::File> file(std::move(endpoints->client), loop_->dispatcher(),
                                std::make_shared<FileEventHandler>(binary.value()));
-  auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    url = std::move(url), binary = std::move(binary.value()),
                    message = std::move(message),
-                   file = std::move(file)](fio::File::GetBufferResponse* response) mutable {
+                   _ = file.Clone()](fio::File::GetBufferResponse* response) mutable {
     if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
            zx_status_get_string(response->s));
@@ -234,6 +233,6 @@ void DriverHost::Start(fdf::DriverStartArgs start_args,
     message->GetOutgoingMessage().ReleaseHandles();
     LOGF(INFO, "Started '%s'", binary.data());
   };
-  file_ptr->GetBuffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE,
-                      std::move(callback));
+  file->GetBuffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE,
+                  std::move(callback));
 }
