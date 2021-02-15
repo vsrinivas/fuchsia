@@ -64,3 +64,46 @@ is simply text tokens separated by whitespace tokens, as opposed to `a
 are headings, which are denoted by a series of pound runes (`#`) at the start of
 a line, or heading anchors `{#like-so}`, which may only appear on a heading
 line.
+
+### Recognition {#recognition}
+
+Once a Markdown document has been tokenized, the stream of token is then pattern
+matched and recognized into a stream of events. As an example, depending on
+placement, the text `[Example]` could be a link's text, a link's cross
+reference, both a link's test and its cross reference, or the start of a cross
+reference definition.
+
+Implementation wise, the recognition work is done in the `recognizer` which
+bridges the [`lintRuleOverTokens` rule](#rules) to a [`lintRuleOverEvents`
+rule](#rule).
+
+### Rules {#rules}
+
+There are two sets of rules supported, rules over tokens, and rules over events.
+Both of these have common behavior which we describe first.
+
+**Common behavior**
+
+All rules are invoked:
+
+* On start, i.e. when the linter starts.
+* On document start, i.e. when the linter starts to parse a new document.
+* On document end, i.e. when the linter completes the parsing of a new document.
+* On end, i.e. when the linter completes.
+
+**On tokens**
+
+Rules over tokens are additionally invoked after a document starts to parse, and
+before a document completes:
+
+* On each token, i.e. as the name suggests.
+
+**On events**
+
+Rules over events are additionally invoked after a document starts to parse, and
+before a document completes, for every event encountered. A non-exhaustive list
+includes:
+
+* When a link using a cross reference is used.
+* When a link using a URL is used.
+* On the definition of a cross reference.
