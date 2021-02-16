@@ -89,7 +89,7 @@ class Inspector final {
   // Boolean value of an Inspector is whether it is actually backed by a VMO.
   //
   // This method returns false if and only if Node operations on the Inspector are no-ops.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
   // Emplace a value to be owned by this Inspector.
   template <typename T>
