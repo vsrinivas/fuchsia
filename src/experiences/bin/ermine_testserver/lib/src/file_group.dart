@@ -21,14 +21,17 @@ final fileGroups = <TestCase, FileGroup>{
   TestCase.simpleBrowserTest: FileGroup(
     'simple_browser_test',
     <String>[
+      'audio.html',
       'blue.html',
       'green.html',
       'index.html',
+      'input.html',
       'next.html',
       'popup.html',
       'red.html',
       'video.html',
       'style.css',
+      'sample_audio.mp3',
       'sample_video.mp4',
     ],
   )
