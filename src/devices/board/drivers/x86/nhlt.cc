@@ -108,9 +108,9 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
 
   // Read the blob
   zx_handle_t vmo;
-  zx_paddr_t page_start = ZX_ROUNDDOWN(paddr, PAGE_SIZE);
-  size_t page_offset = (paddr & (PAGE_SIZE - 1));
-  size_t page_size = ZX_ROUNDUP(page_offset + size, PAGE_SIZE);
+  zx_paddr_t page_start = ZX_ROUNDDOWN(paddr, zx_system_get_page_size());
+  size_t page_offset = (paddr & (zx_system_get_page_size() - 1));
+  size_t page_size = ZX_ROUNDUP(page_offset + size, zx_system_get_page_size());
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_vmo_create_physical(get_root_resource(), page_start, page_size, &vmo);
   if (status != ZX_OK) {
@@ -139,7 +139,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
 
   zxlogf(DEBUG, "acpi: published NHLT metadata for device at %s", path);
 
-  zx_vmar_unmap(zx_vmar_root_self(), vaddr, ZX_ROUNDUP(size, PAGE_SIZE));
+  zx_vmar_unmap(zx_vmar_root_self(), vaddr, ZX_ROUNDUP(size, zx_system_get_page_size()));
 
   return status;
 }

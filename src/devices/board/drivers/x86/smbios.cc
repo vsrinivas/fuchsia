@@ -20,10 +20,12 @@ namespace {
 // to be page-aligned.
 zx_status_t MapStructure(const zx::resource& resource, zx_paddr_t paddr, size_t length,
                          fzl::OwnedVmoMapper* mapping, uintptr_t* offsetted_start) {
-  zx_paddr_t base_paddr = fbl::round_down<zx_paddr_t>(paddr, static_cast<zx_paddr_t>(PAGE_SIZE));
+  zx_paddr_t base_paddr =
+      fbl::round_down<zx_paddr_t>(paddr, static_cast<zx_paddr_t>(zx_system_get_page_size()));
   zx::vmo vmo;
   size_t page_offset = paddr - base_paddr;
-  size_t mapping_size = fbl::round_up<size_t>(length + page_offset, static_cast<size_t>(PAGE_SIZE));
+  size_t mapping_size =
+      fbl::round_up<size_t>(length + page_offset, static_cast<size_t>(zx_system_get_page_size()));
   zx_status_t status = zx::vmo::create_physical(resource, base_paddr, mapping_size, &vmo);
   if (status != ZX_OK) {
     return status;
@@ -79,7 +81,8 @@ zx_status_t SmbiosState::LoadFromFirmware() {
   // Map the entry point and see how much data we have
   fzl::OwnedVmoMapper ep_mapping;
   uintptr_t ep_start;
-  status = MapStructure(*root_resource, smbios_ep, PAGE_SIZE, &ep_mapping, &ep_start);
+  status =
+      MapStructure(*root_resource, smbios_ep, zx_system_get_page_size(), &ep_mapping, &ep_start);
   if (status != ZX_OK) {
     return status;
   }

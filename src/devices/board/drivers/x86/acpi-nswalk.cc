@@ -342,8 +342,9 @@ zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
   }
 
   const DeviceMmioResource& res = mmio_resources_[index];
-  if (((res.base_address & (PAGE_SIZE - 1)) != 0) ||
-      ((res.address_length & (PAGE_SIZE - 1)) != 0)) {
+  // TODO(fxbug.dev/67899): This check becomes overly pessimistic at larger page sizes.
+  if (((res.base_address & (zx_system_get_page_size() - 1)) != 0) ||
+      ((res.address_length & (zx_system_get_page_size() - 1)) != 0)) {
     zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned",
            device_get_name(zxdev_), index, res.base_address, res.address_length);
     return ZX_ERR_NOT_FOUND;
