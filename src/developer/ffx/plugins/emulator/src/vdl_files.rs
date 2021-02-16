@@ -45,7 +45,6 @@ impl VDLFiles {
                 staging_dir: staging_dir,
             };
 
-            vdl_files.image_files.stage_files(&staging_dir_path)?;
             vdl_files.ssh_files.stage_files(&staging_dir_path)?;
 
             Ok(vdl_files)
@@ -214,19 +213,6 @@ impl VDLFiles {
         }
     }
 
-    pub fn resolve_sdk_version(&self, start_command: &StartCommand) -> String {
-        match &start_command.sdk_version {
-            Some(version) => version.to_string(),
-            None => match self.host_tools.get_sdk_version_from_manifest() {
-                Ok(version) => version,
-                Err(e) => {
-                    println!("Reading sdk version errored: {:?}", e);
-                    String::from("")
-                }
-            },
-        }
-    }
-
     // Checks if user has specified a portmap. If portmap is specified, we'll check if ssh port is included.
     // If ssh port is not included, we'll pick a port and forward that together with the rest of portmap.
     pub fn resolve_portmap(&self, start_command: &StartCommand) -> (String, u16) {
@@ -263,10 +249,26 @@ impl VDLFiles {
     }
 
     /// Launches FEMU, opens an SSH session, and waits for the FEMU instance or SSH session to exit.
-    pub fn start_emulator(&self, start_command: &StartCommand) -> Result<()> {
+    pub fn start_emulator(&mut self, start_command: &StartCommand) -> Result<()> {
         self.check_start_command(&start_command)?;
 
         let vdl_args: VDLArgs = start_command.clone().into();
+
+        let mut gcs_image = vdl_args.gcs_image_archive;
+        let mut gcs_bucket = vdl_args.gcs_bucket;
+        let mut sdk_version = vdl_args.sdk_version;
+
+        // If cached images already exist, skip download by clearing out gcs related flags.
+        if vdl_args.cache_root.to_str().unwrap_or("") != "" {
+            self.image_files.update_paths_from_cache(&vdl_args.cache_root);
+            if self.image_files.images_exist() {
+                println!("[fvdl] using cached image files");
+                gcs_image = String::from("");
+                gcs_bucket = String::from("");
+                sdk_version = String::from("");
+            }
+        }
+
         let fvd = match &start_command.device_proto {
             Some(proto) => PathBuf::from(proto),
             None => self.generate_fvd(&start_command.window_width, &start_command.window_height)?,
@@ -281,8 +283,6 @@ impl VDLFiles {
         if !vdl.exists() || !vdl.is_file() {
             bail!("device_launcher binary cannot be found at {}", vdl.display())
         }
-
-        let sdk_version = self.resolve_sdk_version(start_command);
 
         let mut grpcwebproxy = self.host_tools.grpcwebproxy.clone();
         if vdl_args.enable_grpcwebproxy {
@@ -335,8 +335,6 @@ impl VDLFiles {
             .arg(&emu_log)
             .arg("--proto_file_path")
             .arg(&fvd)
-            .arg("--build_id")
-            .arg(&sdk_version)
             .arg("--audio=true")
             .arg(format!("--resize_fvm={}", vdl_args.image_size))
             .arg(format!("--gpu={}", vdl_args.gpu))
@@ -347,10 +345,12 @@ impl VDLFiles {
             .arg(format!("--pointing_device={}", vdl_args.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
-            .arg(format!("--gcs_bucket={}", vdl_args.gcs_bucket))
-            .arg(format!("--image_archive={}", vdl_args.gcs_image_archive))
+            .arg(format!("--gcs_bucket={}", gcs_bucket))
+            .arg(format!("--image_archive={}", gcs_image))
+            .arg(format!("--build_id={}", sdk_version))
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
+            .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
             .status()?;
         if !status.success() {
             let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
@@ -537,6 +537,7 @@ mod tests {
             port_map: None,
             vdl_output: None,
             nointeractive: false,
+            cache_image: false,
         }
     }
 

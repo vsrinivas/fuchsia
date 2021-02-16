@@ -59,6 +59,17 @@ pub fn get_sdk_data_dir() -> Result<PathBuf> {
     Ok(sdk_data_dir)
 }
 
+/// Reads sdk version from manifest.json.
+/// This method assumes that user is invoking the binary from GN SDK, not in fuchsia repo.
+/// TODO(fxb/69689) Use ffx::config to obtain host_tools location.
+pub fn get_sdk_version_from_manifest() -> Result<String> {
+    let sdk = Sdk::from_sdk_dir(get_fuchsia_sdk_dir()?)?;
+    match sdk.get_version() {
+        SdkVersion::Version(v) => Ok(v.to_string()),
+        SdkVersion::InTree => bail!("This should only be used in SDK"),
+        SdkVersion::Unknown => bail!("Cannot determine SDK version"),
+    }
+}
 pub struct HostTools {
     pub aemu: PathBuf,
     pub device_finder: PathBuf,
@@ -161,16 +172,6 @@ impl HostTools {
         return Err(format_err!("reading prebuild version file is only support with --sdk flag."));
     }
 
-    /// Reads sdk version from manifest.json.
-    pub fn get_sdk_version_from_manifest(&self) -> Result<String> {
-        let sdk = Sdk::from_sdk_dir(get_fuchsia_sdk_dir()?)?;
-        match sdk.get_version() {
-            SdkVersion::Version(v) => Ok(v.to_string()),
-            SdkVersion::InTree => bail!("This should only be used in SDK"),
-            SdkVersion::Unknown => bail!("Cannot determine SDK version"),
-        }
-    }
-
     /// Downloads & extract aemu.zip from CIPD, and returns the path containing the emulator executable.
     ///
     /// # Arguments
@@ -262,24 +263,42 @@ impl ImageFiles {
         })
     }
 
-    /// Initialize fuchsia image and package files for GN SDK usage.
-    ///
-    /// First check the existence of environment variable IMAGE_DIR, if not specified
-    /// make a best effort guess in other known paths by calling get_sdk_data_dir().
-    ///
-    /// If --sdk_version is specified, fuchsia image will be downloaded from GCS.
+    /// When running from SDK (running with --sdk), we will either fetch images from GCS or use cached-image files.
+    /// If fetching from GCS, these image files will be ignored by device_launcher.
+    /// If using cached images, call update_paths_from_cache() to populate the image file paths.
     pub fn from_sdk_env() -> Result<ImageFiles> {
-        let fuchsia_build_dir = match read_env_path("IMAGE_DIR") {
-            Ok(dir) => dir,
-            _ => get_sdk_data_dir()?,
-        };
         Ok(ImageFiles {
-            amber_files: fuchsia_build_dir.join("amber-files"),
-            build_args: fuchsia_build_dir.join("buildargs.gn"),
-            fvm: fuchsia_build_dir.join("storage-full.blk"),
-            kernel: fuchsia_build_dir.join("qemu-kernel.kernel"),
-            zbi: fuchsia_build_dir.join("zircon-a.zbi"),
+            amber_files: PathBuf::new(),
+            build_args: PathBuf::new(),
+            fvm: PathBuf::new(),
+            kernel: PathBuf::new(),
+            zbi: PathBuf::new(),
         })
+    }
+
+    pub fn images_exist(&self) -> bool {
+        return self.amber_files.exists()
+            && self.build_args.exists()
+            && self.fvm.exists()
+            && self.kernel.exists()
+            && self.zbi.exists();
+    }
+
+    #[allow(dead_code)]
+    pub fn print(&self) {
+        println!("package {:?}", self.amber_files);
+        println!("build_args {:?}", self.build_args);
+        println!("fvm {:?}", self.fvm);
+        println!("kernel {:?}", self.kernel);
+        println!("zbi {:?}", self.zbi);
+    }
+
+    pub fn update_paths_from_cache(&mut self, cache_root: &PathBuf) {
+        self.amber_files = cache_root.join("package_archive");
+        self.build_args = cache_root.join("images").join("buildargs");
+        self.fvm = cache_root.join("images").join("femu-fvm");
+        self.kernel = cache_root.join("images").join("femu-kernel");
+        self.zbi = cache_root.join("images").join("zircon-a.zbi");
     }
 
     pub fn stage_files(&mut self, dir: &PathBuf) -> Result<()> {
@@ -368,6 +387,8 @@ pub struct VDLArgs {
     pub pointing_device: String,
     pub gcs_bucket: String,
     pub gcs_image_archive: String,
+    pub sdk_version: String,
+    pub cache_root: PathBuf,
 }
 
 impl From<&StartCommand> for VDLArgs {
@@ -388,6 +409,21 @@ impl From<&StartCommand> for VDLArgs {
                 grpcwebproxy_port = format!("{}", port);
             }
             _ => (),
+        }
+        let gcs_image = cmd.image_name.as_ref().unwrap_or(&String::from("qemu-x64")).to_string();
+        let sdk_version = match &cmd.sdk_version {
+            Some(version) => version.to_string(),
+            None => match get_sdk_version_from_manifest() {
+                Ok(version) => version,
+                Err(e) => {
+                    println!("Reading sdk version errored: {:?}", e);
+                    String::from("")
+                }
+            },
+        };
+        let mut cache_path = PathBuf::new();
+        if cmd.cache_image {
+            cache_path = get_sdk_data_dir().unwrap_or_default().join(&gcs_image).join(&sdk_version);
         }
         VDLArgs {
             headless: cmd.headless,
@@ -410,11 +446,9 @@ impl From<&StartCommand> for VDLArgs {
             enable_grpcwebproxy: enable_grpcwebproxy,
             grpcwebproxy_port: grpcwebproxy_port,
             gcs_bucket: cmd.gcs_bucket.as_ref().unwrap_or(&String::from("fuchsia")).to_string(),
-            gcs_image_archive: cmd
-                .image_name
-                .as_ref()
-                .unwrap_or(&String::from("qemu-x64"))
-                .to_string(),
+            gcs_image_archive: gcs_image,
+            sdk_version: sdk_version,
+            cache_root: cache_path,
         }
     }
 }
@@ -456,6 +490,7 @@ mod tests {
             port_map: None,
             vdl_output: None,
             nointeractive: false,
+            cache_image: true,
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);
@@ -465,6 +500,10 @@ mod tests {
         assert_eq!(vdl_args.image_size, "2G");
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, "host");
+        assert_eq!(
+            vdl_args.cache_root.as_path(),
+            get_sdk_data_dir().unwrap_or_default().join("qemu-x64").join("0.20201130.3.1")
+        );
     }
 
     #[test]

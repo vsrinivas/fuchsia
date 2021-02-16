@@ -159,6 +159,11 @@ pub struct StartCommand {
     /// the `kill` subcommand to perform clean shutdown.
     #[argh(switch)]
     pub nointeractive: bool,
+
+    /// bool, download and re-use image files in the cached location ~/.fuchsia/<image_name>/<sdk_version>/.
+    /// If not set (default), image files will be stored in a temp location and removed with `kill` subcommand.
+    #[argh(switch, short = 'i')]
+    pub cache_image: bool,
 }
 
 fn default_window_height() -> usize {
