@@ -124,7 +124,7 @@ async fn test_intl_e2e() {
     assert_eq!(settings, intl_settings.clone());
 
     // Verify the value we set is persisted in DeviceStorage.
-    let retrieved_struct = store.get().await;
+    let retrieved_struct = store.get::<IntlInfo>().await;
     assert_eq!(retrieved_struct, intl_settings.clone().into());
 }
 
@@ -165,7 +165,7 @@ async fn test_intl_e2e_set_twice() {
     intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let retrieved_struct = store.get().await;
+    let retrieved_struct = store.get::<IntlInfo>().await;
     assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
 }
 
@@ -204,7 +204,7 @@ async fn test_intl_e2e_idempotent_set() {
     intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
 
     // Verify the value we set is persisted in DeviceStorage.
-    let retrieved_struct = store.get().await;
+    let retrieved_struct = store.get::<IntlInfo>().await;
     assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
 }
 

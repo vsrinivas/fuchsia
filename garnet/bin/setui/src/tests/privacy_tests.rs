@@ -31,7 +31,7 @@ async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
 /// Creates an environment for privacy.
 async fn create_test_privacy_env(
     storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
-) -> (PrivacyProxy, DeviceStorage<PrivacyInfo>) {
+) -> (PrivacyProxy, DeviceStorage) {
     let store = storage_factory
         .lock()
         .await

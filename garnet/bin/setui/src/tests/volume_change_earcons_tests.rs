@@ -173,7 +173,7 @@ struct FakeServices {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
     overridden_initial_streams: Vec<AudioStreamSettings>,
-) -> (NestedEnvironment, DeviceStorage<AudioInfo>, event::message::Receptor) {
+) -> (NestedEnvironment, DeviceStorage, event::message::Receptor) {
     let storage_factory = InMemoryStorageFactory::create();
     let mut initial_audio_info = default_audio_info();
 
@@ -222,7 +222,7 @@ async fn create_environment(
 async fn create_storage(
     factory: Arc<Mutex<InMemoryStorageFactory>>,
     audio_info: AudioInfo,
-) -> DeviceStorage<AudioInfo> {
+) -> DeviceStorage {
     let store = factory
         .lock()
         .await

@@ -33,7 +33,7 @@ pub struct TestInputEnvironment {
     pub input_button_service: Arc<Mutex<InputDeviceRegistryService>>,
 
     /// For storing the InputInfoSources.
-    pub store: DeviceStorage<InputInfoSources>,
+    pub store: DeviceStorage,
 }
 
 pub struct TestInputEnvironmentBuilder {

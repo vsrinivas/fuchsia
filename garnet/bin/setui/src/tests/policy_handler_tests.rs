@@ -107,7 +107,7 @@ async fn test_write() {
     handler.handle_policy_request(PolicyRequest::Get).await.expect("handle failed");
 
     // Verify the value was written to the store through the client proxy.
-    assert_eq!(store.get().await, expected_value);
+    assert_eq!(store.get::<PrivacyInfo>().await, expected_value);
 
     // Verify that the written value can be read again through the client proxy.
     assert_eq!(client_proxy.read().await, expected_value);

@@ -13,6 +13,7 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::any::Any;
 use std::ops::{Add, Sub};
 use std::time::{Duration, Instant};
 
@@ -34,7 +35,7 @@ struct CommitParams {
 
 /// Stores device level settings in persistent storage.
 /// User level settings should not use this.
-pub struct DeviceStorage<T: DeviceStorageCompatible> {
+pub struct DeviceStorage {
     /// If true, reads will be returned from the data in memory rather than reading from storage.
     caching_enabled: bool,
 
@@ -46,13 +47,13 @@ pub struct DeviceStorage<T: DeviceStorageCompatible> {
     commit_sender: UnboundedSender<CommitParams>,
 
     /// Storage managed through interior mutability.
-    cached_storage: Mutex<CachedStorage<T>>,
+    cached_storage: Mutex<CachedStorage>,
 }
 
 /// `CachedStorage` abstracts over a cached value that's read from and written
 /// to some backing store.
-pub struct CachedStorage<T: DeviceStorageCompatible> {
-    current_data: Option<T>,
+pub struct CachedStorage {
+    current_data: Option<Box<dyn Any + Send + Sync>>,
     stash_proxy: StoreAccessorProxy,
 }
 
@@ -65,7 +66,16 @@ pub struct CachedStorage<T: DeviceStorageCompatible> {
 /// Clients that want to make a breaking change should create a new structure with a new key and
 /// implement conversion/cleanup logic. Adding optional fields to a struct is not breaking, but
 /// removing fields, renaming fields, or adding non-optional fields are.
-pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + PartialEq {
+///
+/// The [`Storage`] trait has [`Send`] and [`Sync`] requirements, so they have to be carried here
+/// as well. This was not necessary before because rust could determine the additional trait
+/// requirements at compile-time just for when the [`Storage`] trait was used. We don't get that
+/// benefit anymore once we hide the type.
+///
+/// [`Storage`]: super::setting_handler::persist::Storage
+pub trait DeviceStorageCompatible:
+    Serialize + DeserializeOwned + Clone + PartialEq + Any + Send + Sync
+{
     fn default_value() -> Self;
 
     fn deserialize_from(value: &String) -> Self {
@@ -86,8 +96,22 @@ pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + Partia
     const KEY: &'static str;
 }
 
-impl<T: DeviceStorageCompatible> DeviceStorage<T> {
-    pub fn new(stash_proxy: StoreAccessorProxy, current_data: Option<T>) -> Self {
+impl DeviceStorage {
+    // TODO(fxbug.dev/67371) Temporary constructor until we remove the factories and related typing.
+    pub fn new<T>(stash_proxy: StoreAccessorProxy, current_data: Option<T>) -> Self
+    where
+        T: DeviceStorageCompatible,
+    {
+        Self::with_any(
+            stash_proxy,
+            current_data.map(|data| Box::new(data) as Box<dyn Any + Send + Sync>),
+        )
+    }
+
+    pub fn with_any(
+        stash_proxy: StoreAccessorProxy,
+        current_data: Option<Box<dyn Any + Send + Sync>>,
+    ) -> Self {
         let (commit_sender, commit_receiver) = futures::channel::mpsc::unbounded::<CommitParams>();
 
         let storage = DeviceStorage {
@@ -139,7 +163,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
                     _ = next_commit_timer_fuse => {
                         // Timer triggered, check for pending commits.
                         if let Some(params) = pending_commit {
-                            DeviceStorage::<T>::stash_commit(&stash_proxy, params.flush).await;
+                            DeviceStorage::stash_commit(&stash_proxy, params.flush).await;
                             last_commit = Instant::now();
                             pending_commit = None;
                         }
@@ -175,52 +199,76 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         }
     }
 
-    pub async fn write(&self, new_value: &T, flush: bool) -> Result<(), Error> {
+    pub async fn write<T>(&self, new_value: &T, flush: bool) -> Result<(), Error>
+    where
+        T: DeviceStorageCompatible,
+    {
         let mut cached_storage = self.cached_storage.lock().await;
-        if cached_storage.current_data.as_ref() != Some(new_value) {
+        let cached_value = cached_storage
+            .current_data
+            // Get the data as a shared reference so we don't move out of the option.
+            .as_ref()
+            .map(|any| {
+                // Attempt to downcast the `dyn Any` to its original type. If `T` was not its
+                // original type, then we want to convert this into an error and exit early.
+                any.downcast_ref::<T>()
+                    .ok_or_else(|| format_err!("Invalid data keyed by {}", T::KEY))
+            })
+            // Convert Option<Result<T, E>> to Result<Option<T>, E> so we can exit early in the
+            // error case and deal with the succesful retrieval of the option in the following
+            // code.
+            .transpose()?;
+        if cached_value != Some(new_value) {
             let mut serialized = Value::Stringval(new_value.serialize_to());
             cached_storage.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just commit immediately.
-                DeviceStorage::<T>::stash_commit(&cached_storage.stash_proxy, flush).await;
+                DeviceStorage::stash_commit(&cached_storage.stash_proxy, flush).await;
             } else {
                 self.commit_sender.unbounded_send(CommitParams { flush }).ok();
             }
-            cached_storage.current_data = Some(new_value.clone());
+            cached_storage.current_data =
+                Some(Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>);
         }
         Ok(())
     }
 
     /// Gets the latest value cached locally, or loads the value from storage.
     /// Doesn't support multiple concurrent callers of the same struct.
-    pub async fn get(&self) -> T {
+    pub async fn get<T>(&self) -> T
+    where
+        T: DeviceStorageCompatible,
+    {
         let mut cached_storage = self.cached_storage.lock().await;
-        if None == cached_storage.current_data || !self.caching_enabled {
+        if cached_storage.current_data.is_none() || !self.caching_enabled {
             if let Some(stash_value) =
                 cached_storage.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
             {
                 if let Value::Stringval(string_value) = &*stash_value {
-                    cached_storage.current_data = Some(T::deserialize_from(&string_value));
+                    cached_storage.current_data =
+                        Some(Box::new(T::deserialize_from(&string_value))
+                            as Box<dyn Any + Send + Sync>);
                 } else {
                     panic!("Unexpected type for key found in stash");
                 }
             } else {
-                cached_storage.current_data = Some(T::default_value());
+                cached_storage.current_data =
+                    Some(Box::new(T::default_value()) as Box<dyn Any + Send + Sync>);
             }
         }
-        if let Some(curent_value) = &cached_storage.current_data {
-            curent_value.clone()
-        } else {
-            panic!("Should never have no value");
-        }
+
+        cached_storage
+            .current_data
+            .as_ref()
+            .expect("should always have a value")
+            .downcast_ref::<T>()
+            .expect("bad type conversion requested")
+            .clone()
     }
 }
 
 pub trait DeviceStorageFactory {
-    fn get_store<T: DeviceStorageCompatible + 'static>(
-        &mut self,
-        context_id: u64,
-    ) -> DeviceStorage<T>;
+    fn get_store<T: DeviceStorageCompatible>(&mut self, context_id: u64) -> DeviceStorage;
 }
 
 /// Factory that vends out storage for individual structs.
@@ -244,14 +292,11 @@ impl StashDeviceStorageFactory {
 
 impl DeviceStorageFactory for StashDeviceStorageFactory {
     /// Currently, this doesn't support more than one instance of the same struct.
-    fn get_store<T: DeviceStorageCompatible + 'static>(
-        &mut self,
-        _context_id: u64,
-    ) -> DeviceStorage<T> {
+    fn get_store<T: DeviceStorageCompatible>(&mut self, _context_id: u64) -> DeviceStorage {
         let (accessor_proxy, server_end) = create_proxy().unwrap();
         self.store.create_accessor(false, server_end).unwrap();
 
-        DeviceStorage::new(accessor_proxy, None)
+        DeviceStorage::new::<T>(accessor_proxy, None)
     }
 }
 
@@ -317,11 +362,11 @@ pub mod testing {
             }))
         }
 
-        pub fn get_device_storage<T: DeviceStorageCompatible + 'static>(
+        pub fn get_device_storage<T: DeviceStorageCompatible>(
             &mut self,
             access_context: StorageAccessContext,
             context_id: u64,
-        ) -> DeviceStorage<T> {
+        ) -> DeviceStorage {
             let id = TypeId::of::<T>();
             if !self.proxies.contains_key(&id) {
                 self.proxies.insert(id, spawn_stash_proxy());
@@ -336,7 +381,7 @@ pub mod testing {
             }
 
             if let Some((proxy, _)) = self.proxies.get(&id) {
-                let mut storage = DeviceStorage::new(proxy.clone(), None);
+                let mut storage = DeviceStorage::new::<T>(proxy.clone(), None);
                 storage.set_caching_enabled(false);
                 storage.set_debounce_writes(false);
 
@@ -348,11 +393,8 @@ pub mod testing {
     }
 
     impl DeviceStorageFactory for InMemoryStorageFactory {
-        fn get_store<T: DeviceStorageCompatible + 'static>(
-            &mut self,
-            context_id: u64,
-        ) -> DeviceStorage<T> {
-            self.get_device_storage(StorageAccessContext::Production, context_id)
+        fn get_store<T: DeviceStorageCompatible>(&mut self, context_id: u64) -> DeviceStorage {
+            self.get_device_storage::<T>(StorageAccessContext::Production, context_id)
         }
     }
 
@@ -410,6 +452,7 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_async::{Executor, Time};
     use futures::prelude::*;
+    use matches::assert_matches;
     use serde::{Deserialize, Serialize};
     use std::convert::TryInto;
     use std::marker::Unpin;
@@ -507,9 +550,9 @@ mod tests {
         })
         .detach();
 
-        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
 
-        let result = storage.get().await;
+        let result = storage.get::<TestStruct>().await;
 
         assert_eq!(result.value, VALUE1);
     }
@@ -532,9 +575,9 @@ mod tests {
         })
         .detach();
 
-        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
 
-        let result = storage.get().await;
+        let result = storage.get::<TestStruct>().await;
 
         assert_eq!(result.value, VALUE0);
     }
@@ -559,9 +602,9 @@ mod tests {
         })
         .detach();
 
-        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
 
-        let result = storage.get().await;
+        let result = storage.get::<TestStruct>().await;
 
         assert_eq!(result.value, VALUE0);
     }
@@ -576,7 +619,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
 
         // Write to device storage.
         let value_to_write = TestStruct { value: written_value };
@@ -602,6 +645,35 @@ mod tests {
         advance_executor(&mut executor, &mut commit_future);
     }
 
+    #[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
+    struct WrongStruct;
+    impl DeviceStorageCompatible for WrongStruct {
+        const KEY: &'static str = "WRONG_STRUCT";
+
+        fn default_value() -> Self {
+            WrongStruct
+        }
+    }
+
+    // Test that an initial write to DeviceStorage causes a SetValue and Commit to Stash
+    // without any wait.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_write_with_mismatch_type_returns_error() {
+        let (stash_proxy, _stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
+
+        // Write successfully to storage once.
+        let result = storage.write(&TestStruct { value: VALUE2 }, false).await;
+        assert!(result.is_ok());
+
+        // Write to device storage again with a different type to validate that the type can't
+        // be changed.
+        let result = storage.write(&WrongStruct, false).await;
+        assert_matches!(result, Err(e) if e.to_string() == "Invalid data keyed by WRONG_STRUCT");
+    }
+
     // Test that multiple writes to DeviceStorage will cause a SetValue each time, but will only
     // Commit to Stash at an interval.
     #[test]
@@ -614,7 +686,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
 
         let first_value = VALUE1;
         let second_value = VALUE2;
@@ -692,7 +764,7 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+        let storage: DeviceStorage = DeviceStorage::new::<TestStruct>(stash_proxy, None);
 
         // Write to device storage with flush set to true.
         let value_to_write = TestStruct { value: written_value };
@@ -745,8 +817,8 @@ mod tests {
     }
 
     async fn test_write_propagation(
-        store_1: Arc<DeviceStorage<TestStruct>>,
-        store_2: Arc<DeviceStorage<TestStruct>>,
+        store_1: Arc<DeviceStorage>,
+        store_2: Arc<DeviceStorage>,
         data: TestStruct,
     ) {
         assert!(store_1.write(&data, false).await.is_ok());

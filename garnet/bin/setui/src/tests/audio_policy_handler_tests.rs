@@ -40,7 +40,7 @@ const CONTEXT_ID: u64 = 0;
 
 struct TestEnvironment {
     /// Device storage handle.
-    store: Arc<DeviceStorage<State>>,
+    store: Arc<DeviceStorage>,
 
     /// Core messenger factory.
     core_messenger_factory: core::message::Factory,
@@ -358,7 +358,7 @@ async fn test_handler_no_persisted_state() {
     assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(expected_value)));
 
     // Verify that nothing was written to storage.
-    assert_eq!(env.store.get().await, State::default_value());
+    assert_eq!(env.store.get::<State>().await, State::default_value());
 }
 
 /// Verifies that the audio policy handler reads the persisted state and restores it.
@@ -454,7 +454,7 @@ async fn test_handler_add_policy() {
     assert_matches!(payload, Payload::Audio(Response::Policy(_)));
 
     // Verify that the expected transform was written to storage.
-    let stored_value = env.store.get().await;
+    let stored_value = env.store.get::<State>().await;
     verify_state(&stored_value, modified_property, expected_transform);
 
     // Request the policy state from the handler and verify that it matches the stored value.
@@ -531,7 +531,7 @@ async fn test_handler_remove_policy() {
     assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(expected_value.clone())));
 
     // Verify that the expected value is persisted to storage.
-    assert_eq!(env.store.get().await, expected_value);
+    assert_eq!(env.store.get::<State>().await, expected_value);
 }
 
 /// Verifies that adding a max volume policy adjusts the internal volume level if it's above the

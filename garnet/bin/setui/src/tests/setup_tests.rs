@@ -99,7 +99,10 @@ async fn test_setup_with_reboot() {
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
     // Check to make sure value wrote out to store correctly
-    assert_eq!(store.get().await.configuration_interfaces, ConfigurationInterfaceFlags::ETHERNET);
+    assert_eq!(
+        store.get::<SetupInfo>().await.configuration_interfaces,
+        ConfigurationInterfaceFlags::ETHERNET
+    );
 
     // Ensure reboot was requested by the controller
     assert!(hardware_power_statecontrol_service_handle

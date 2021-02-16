@@ -115,7 +115,7 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
 }
 
 // Gets the store from |factory| and populate it with default values.
-async fn create_storage(factory: Arc<Mutex<InMemoryStorageFactory>>) -> DeviceStorage<AudioInfo> {
+async fn create_storage(factory: Arc<Mutex<InMemoryStorageFactory>>) -> DeviceStorage {
     let store = factory
         .lock()
         .await
@@ -154,7 +154,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
-) -> (NestedEnvironment, DeviceStorage<AudioInfo>) {
+) -> (NestedEnvironment, DeviceStorage) {
     let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
@@ -192,7 +192,7 @@ async fn test_audio() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams = store.get().await.streams;
+    let stored_streams = store.get::<AudioInfo>().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 
@@ -228,7 +228,7 @@ async fn test_consecutive_volume_changes() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams = store.get().await.streams;
+    let stored_streams = store.get::<AudioInfo>().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM_2);
 }
 
@@ -251,7 +251,7 @@ async fn test_multiple_changes_on_stream() {
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams = store.get().await.streams;
+    let stored_streams = store.get::<AudioInfo>().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM_2);
 }
 
@@ -278,7 +278,7 @@ async fn test_volume_overwritten() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams = store.get().await.streams;
+    let stored_streams = store.get::<AudioInfo>().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 
     const CHANGED_BACKGROUND_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -335,7 +335,7 @@ async fn test_volume_rounding() {
     );
 
     // Check to make sure value wrote out to store correctly.
-    let stored_streams = store.get().await.streams;
+    let stored_streams = store.get::<AudioInfo>().await.streams;
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 

@@ -360,17 +360,20 @@ pub mod persist {
     #[derive(Clone)]
     pub struct ClientProxy<S: Storage + 'static> {
         base: BaseProxy,
-        storage: Arc<DeviceStorage<S>>,
+        storage: Arc<DeviceStorage>,
         setting_type: SettingType,
+        // TODO(fxbug.dev/67371) Temporary to minimize the size of CL's. Will be removed in a future
+        // CL.
+        _phantom: PhantomData<S>,
     }
 
     impl<S: Storage + 'static> ClientProxy<S> {
         pub async fn new(
             base_proxy: BaseProxy,
-            storage: Arc<DeviceStorage<S>>,
+            storage: Arc<DeviceStorage>,
             setting_type: SettingType,
         ) -> Self {
-            Self { base: base_proxy, storage, setting_type }
+            Self { base: base_proxy, storage, setting_type, _phantom: PhantomData }
         }
 
         pub async fn get_service_context(&self) -> ServiceContextHandle {

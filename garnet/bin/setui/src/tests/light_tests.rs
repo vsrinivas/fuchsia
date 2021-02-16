@@ -113,7 +113,7 @@ async fn populate_multiple_test_lights(
 struct TestLightEnvironment {
     light_service: LightProxy,
     input_service: Arc<Mutex<InputDeviceRegistryService>>,
-    store: DeviceStorage<LightInfo>,
+    store: DeviceStorage,
 }
 
 struct TestLightEnvironmentBuilder {
@@ -321,7 +321,7 @@ async fn test_light_restore() {
     let expected_light_group = get_test_light_info().light_groups.remove(LIGHT_NAME_1).unwrap();
 
     // Verify that the restored value is persisted.
-    let retrieved_struct = env.store.get().await;
+    let retrieved_struct = env.store.get::<LightInfo>().await;
     assert_switchboard_light_group_eq(
         &expected_light_group.clone(),
         retrieved_struct.light_groups.get(LIGHT_NAME_1).unwrap(),
@@ -384,7 +384,7 @@ async fn test_light_restore_from_configuration() {
     expected_light_group.name = LIGHT_NAME_3.to_string();
 
     // Verify that the restored value is persisted.
-    let retrieved_struct = env.store.get().await;
+    let retrieved_struct = env.store.get::<LightInfo>().await;
     assert_switchboard_light_group_eq(
         &expected_light_group.clone(),
         retrieved_struct.light_groups.get(LIGHT_NAME_3).unwrap(),

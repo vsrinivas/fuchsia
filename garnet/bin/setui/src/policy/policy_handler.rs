@@ -18,6 +18,7 @@ use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 pub trait Storage: DeviceStorageCompatible + Send + Sync {}
@@ -151,8 +152,9 @@ pub struct ClientProxy<S: Storage + 'static> {
     service_messenger: service::message::Messenger,
     messenger: Messenger,
     setting_proxy_signature: Signature,
-    storage: Arc<DeviceStorage<S>>,
+    storage: Arc<DeviceStorage>,
     policy_type: PolicyType,
+    _phantom_data: PhantomData<S>,
 }
 
 impl<S: Storage + 'static> ClientProxy<S> {
@@ -186,10 +188,17 @@ impl<S: Storage + 'static> ClientProxy<S> {
         service_messenger: service::message::Messenger,
         messenger: Messenger,
         setting_proxy_signature: Signature,
-        storage: Arc<DeviceStorage<S>>,
+        storage: Arc<DeviceStorage>,
         policy_type: PolicyType,
     ) -> Self {
-        Self { service_messenger, messenger, setting_proxy_signature, storage, policy_type }
+        Self {
+            service_messenger,
+            messenger,
+            setting_proxy_signature,
+            storage,
+            policy_type,
+            _phantom_data: PhantomData,
+        }
     }
 
     pub fn policy_type(&self) -> PolicyType {
@@ -217,7 +226,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
 
 #[cfg(test)]
 mod tests {
-    use super::ClientProxy;
+    use super::*;
     use crate::base::SettingType;
     use crate::handler::base::{Payload as HandlerPayload, Request};
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
@@ -252,7 +261,7 @@ mod tests {
         let storage_factory = InMemoryStorageFactory::create();
         let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
 
-        let client_proxy = ClientProxy {
+        let client_proxy = ClientProxy::<PrivacyInfo> {
             service_messenger: service_messenger_factory
                 .create(MessengerType::Unbound)
                 .await
@@ -262,6 +271,7 @@ mod tests {
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage: Arc::new(store),
             policy_type,
+            _phantom_data: PhantomData,
         };
 
         client_proxy.send_setting_request(setting_request.clone());
@@ -299,7 +309,7 @@ mod tests {
             .await
             .expect("service receptor created");
 
-        let client_proxy = ClientProxy {
+        let client_proxy = ClientProxy::<PrivacyInfo> {
             service_messenger: service_messenger_factory
                 .create(MessengerType::Unbound)
                 .await
@@ -311,6 +321,7 @@ mod tests {
                 InMemoryStorageFactory::create().lock().await.get_store::<PrivacyInfo>(CONTEXT_ID),
             ),
             policy_type,
+            _phantom_data: PhantomData,
         };
 
         client_proxy.request_rebroadcast(setting_type);
