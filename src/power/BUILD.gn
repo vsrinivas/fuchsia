@@ -32,5 +32,6 @@ group("tests") {
     "shutdown-shim/tests",
     "temperature-logger:tests",
     "testing:all",
+    "thermd:tests",
   ]
 }

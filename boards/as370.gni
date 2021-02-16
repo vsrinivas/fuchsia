@@ -38,8 +38,8 @@ board_zedboot_bootfs_labels = _common_bootfs_deps
 board_recovery_bootfs_labels = _common_bootfs_deps
 
 board_package_labels = [
-  "//garnet/bin/thermd",
-  "//garnet/bin/thermd:config",
+  "//src/power/thermd",
+  "//src/power/thermd:config",
 ]
 
 custom_signing_script =

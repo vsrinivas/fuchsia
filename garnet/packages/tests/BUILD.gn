@@ -143,9 +143,6 @@ group("all") {
     "//third_party/libc-tests:nacl-libc-tests",
     "//tools/whereiscl:whereiscl_test($host_toolchain)",
   ]
-  if (target_cpu == "arm64") {
-    public_deps += [ "//src/power/thermd:thermd_tests_package" ]
-  }
 }
 
 # WARNING: Known to topaz.

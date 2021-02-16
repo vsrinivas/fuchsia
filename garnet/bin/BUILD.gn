@@ -31,7 +31,6 @@ group("bin") {
     "sysmgr",
     "terminal",
     "test_runner",
-    "thermd",
     "time",
     "timezone",
     "trace",

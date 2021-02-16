@@ -61,7 +61,7 @@ if (target_cpu == "arm64") {
     configs += [ "//build/config:Wno-conversion" ]
   }
 
-  test_package("thermd_tests_package") {
+  test_package("thermd-bin-tests") {
     deps = [ ":bin_test" ]
 
     tests = [
@@ -97,4 +97,12 @@ package("thermd") {
 config_data("config") {
   for_pkg = "sysmgr"
   sources = [ "thermd.config" ]
+}
+
+group("tests") {
+  testonly = true
+
+  if (target_cpu == "arm64") {
+    deps = [ ":thermd-bin-tests" ]
+  }
 }

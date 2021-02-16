@@ -5,14 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("thermd") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/config:services",
-    "//src/power/thermd:config",
-  ]
-}
-
 group("network") {
   public_deps = [
     "//garnet/bin/sysmgr:network_config",

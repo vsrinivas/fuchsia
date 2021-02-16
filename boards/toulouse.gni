@@ -26,7 +26,7 @@ board_system_image_deps = [
 
 board_package_labels = [
   "//boards:verify_zedboot_cmdline_params_for_toulouse",
-  "//garnet/bin/thermd",
-  "//garnet/bin/thermd:config",
+  "//src/power/thermd",
+  "//src/power/thermd:config",
   "//garnet/packages/prod:drivers-support",
 ]

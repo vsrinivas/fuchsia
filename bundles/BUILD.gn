@@ -100,7 +100,6 @@ group("kitchen_sink") {
     "//garnet/packages/config:amber",
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
-    "//garnet/packages/config:thermd",
     "//src/connectivity/telephony",
     "//src/graphics/examples",
     "//src/media/audio/bundles:virtual_audio_driver",
