@@ -7,52 +7,54 @@
 
 #include <type_traits>
 
-// HardInt is a a strongly-typed wrapper around integral types; HardInts
-// do not implicitly convert even where the underlying integral type would.
-// HardInt provides equality and comparison operators but does not provide
-// arithmetic operators.
+// HardInt is a strongly-typed wrapper around integral types. HardInts do not
+// implicitly convert even where the underlying integral type would. HardInt
+// provides simple equality and a less-than operator (so the type can be used
+// with containers such as std::map or sorted), but does not provide other
+// comparison or arithmetic operations.
+//
+// HardInt types are appropriate for opaque identifiers, such as database IDs,
+// resource IDs, etc. If arithmetic needs to be performed, consider instead
+// using the StrongInt type in <fbl/strong_int.h>.
 //
 // HardInt is the same size as the underlying integral type.
 
 // Example:
-//     DEFINE_HARD_INT(Celsius, uint64_t)
-//     DEFINE_HARD_INT(Fahrenheit, uint64_t)
+//     DEFINE_HARD_INT(DogId, uint64_t)
+//     DEFINE_HARD_INT(CatId, uint64_t)
 //     ...
-//     Celsius c1(40);
-//     Celsius c2(100);
-//     Fahrenheit f(451);
-//     c1 + 1;                          <-- Compile error
-//     static_assert(c1 == 1);          <-- Compile error
-//     assert(c1 == c2);                <-- Allowed
-//     static_assert(c1 != c2);         <-- Allowed
-//     assert(c1.value() == 40);        <-- Allowed
-//     c1 = c2;                         <-- Allowed
-//     f = c1;                          <-- Compile error
+//     DogId dog1(40);
+//     DogId dog2(100);
+//     CatId cat(451);
+//     dog1 + 1;                      <-- Compile error
+//     dog1 + dog2;                   <-- Compile error
+//     static_assert(dog1 == 1);      <-- Compile error
+//     assert(dog1 == dog2);          <-- Allowed
+//     static_assert(dog1 != dog2);   <-- Allowed
+//     assert(dog1.value() == 40);    <-- Allowed
+//     dog1 = dog2;                   <-- Allowed
+//     cat = dog1;                    <-- Compile error
 
 // Create a wrapper around |base_type| named |type_name|.
-#define DEFINE_HARD_INT(type_name, base_type) \
-  struct type_name##_type_tag_ {}; \
+#define DEFINE_HARD_INT(type_name, base_type)                       \
+  struct type_name##_type_tag_ {};                                  \
   using type_name = fbl::HardInt<type_name##_type_tag_, base_type>; \
-  \
+                                                                    \
   static_assert(sizeof(type_name) == sizeof(base_type));
 
 namespace fbl {
 
 template <typename UniqueTagType, typename T>
 class HardInt {
-public:
+ public:
   constexpr HardInt() = default;
   constexpr explicit HardInt(T value) : value_(value) {}
   constexpr T value() const { return value_; }
 
-  constexpr bool operator==(const HardInt& other) const {
-    return value_ == other.value_;
-  }
-  constexpr bool operator<(const HardInt& other) const {
-    return value_ < other.value_;
-  }
+  constexpr bool operator==(const HardInt& other) const { return value_ == other.value_; }
+  constexpr bool operator<(const HardInt& other) const { return value_ < other.value_; }
 
-private:
+ private:
   static_assert(std::is_integral<T>::value, "T must be an integral type.");
 
   T value_;
