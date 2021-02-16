@@ -13,6 +13,7 @@
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/uio.h>
 
 #include <array>
@@ -2168,6 +2169,88 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   }
 }
 
+enum class AnyAddr {
+  V4,
+  V6,
+  V4MAPPEDV6,
+};
+
+template <int type>
+class SocketAnyAddr : public ::testing::TestWithParam<AnyAddr> {
+ protected:
+  void SetUp() override {
+    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(AddressFamily(), type, 0))) << strerror(errno);
+  }
+
+  void TearDown() override { ASSERT_EQ(close(sock_.release()), 0) << strerror(errno); }
+
+  sa_family_t AddressFamily() const {
+    switch (GetParam()) {
+      case AnyAddr::V4:
+        return AF_INET;
+      case AnyAddr::V6:
+      case AnyAddr::V4MAPPEDV6:
+        return AF_INET6;
+    }
+  }
+
+  struct sockaddr_storage AnyAddress() const {
+    struct sockaddr_storage addr {
+      .ss_family = AddressFamily(),
+    };
+
+    switch (GetParam()) {
+      case AnyAddr::V4: {
+        auto sin = reinterpret_cast<struct sockaddr_in*>(&addr);
+        sin->sin_addr.s_addr = htonl(INADDR_ANY);
+        return addr;
+      }
+      case AnyAddr::V6: {
+        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
+        sin6->sin6_addr = IN6ADDR_ANY_INIT;
+        return addr;
+      }
+      case AnyAddr::V4MAPPEDV6: {
+        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
+        sin6->sin6_addr = IN6ADDR_ANY_INIT;
+        sin6->sin6_addr.s6_addr[10] = 0xff;
+        sin6->sin6_addr.s6_addr[11] = 0xff;
+        return addr;
+      }
+    }
+  }
+
+  socklen_t AddrLen() const {
+    if (AddressFamily() == AF_INET) {
+      return sizeof(sockaddr_in);
+    }
+    return sizeof(sockaddr_in6);
+  }
+  fbl::unique_fd sock_;
+};
+
+using StreamSocketAnyAddr = SocketAnyAddr<SOCK_STREAM>;
+using DatagramSocketAnyAddr = SocketAnyAddr<SOCK_DGRAM>;
+
+TEST_P(StreamSocketAnyAddr, Connect) {
+  struct sockaddr_storage any = AnyAddress();
+  socklen_t addrlen = AddrLen();
+  ASSERT_EQ(connect(sock_.get(), reinterpret_cast<const struct sockaddr*>(&any), addrlen), -1);
+  ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+}
+
+TEST_P(DatagramSocketAnyAddr, Connect) {
+  struct sockaddr_storage any = AnyAddress();
+  socklen_t addrlen = AddrLen();
+  EXPECT_EQ(connect(sock_.get(), reinterpret_cast<const struct sockaddr*>(&any), addrlen), 0)
+      << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, StreamSocketAnyAddr,
+                         ::testing::Values(AnyAddr::V4, AnyAddr::V6, AnyAddr::V4MAPPEDV6));
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketAnyAddr,
+                         ::testing::Values(AnyAddr::V4, AnyAddr::V6, AnyAddr::V4MAPPEDV6));
+
 class IOMethod {
  public:
   enum class Op {
@@ -3739,49 +3822,6 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   ASSERT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
-}
-
-TEST(NetDatagramTest, ConnectAnyV4) {
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
-
-  struct sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
-  };
-
-  EXPECT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-      << strerror(errno);
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
-}
-
-TEST(NetDatagramTest, ConnectAnyV6) {
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
-
-  struct sockaddr_in6 addr = {
-      .sin6_family = AF_INET6,
-      .sin6_addr = IN6ADDR_ANY_INIT,
-  };
-
-  EXPECT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-      << strerror(errno);
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
-}
-
-TEST(NetDatagramTest, ConnectAnyV6MappedV4) {
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
-
-  struct sockaddr_in6 addr = {
-      .sin6_family = AF_INET6,
-  };
-  addr.sin6_addr.s6_addr[10] = 0xff;
-  addr.sin6_addr.s6_addr[11] = 0xff;
-
-  EXPECT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-      << strerror(errno);
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, ConnectUnspecV4) {

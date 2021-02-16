@@ -12,7 +12,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"net"
 	"reflect"
 	"runtime"
 	"sort"
@@ -222,21 +221,14 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 	if err != nil {
 		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
 	}
-	// NB: We can't just compare the length to zero because that would
-	// mishandle the IPv6-mapped IPv4 unspecified address.
-	disconnect := addr.Port == 0 && (len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified())
-	if disconnect {
-		if err := ep.ep.Disconnect(); err != nil {
-			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+	if l := len(addr.Addr); l > 0 {
+		if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+			_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
 		}
-	} else {
-		if l := len(addr.Addr); l > 0 {
-			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
-				_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
-				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
-			}
-		}
+	}
 
+	{
 		// Acquire hard error lock across ep calls to avoid races and store the
 		// hard error deterministically.
 		ep.hardError.mu.Lock()
@@ -269,13 +261,13 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 			panic(err)
 		}
 
-		if disconnect {
-			_ = syslog.DebugTf("connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
-		} else {
-			remoteAddr, err := ep.ep.GetRemoteAddress()
-			if err != nil {
+		remoteAddr, err := ep.ep.GetRemoteAddress()
+		if err != nil {
+			if _, ok := err.(*tcpip.ErrNotConnected); !ok {
 				panic(err)
 			}
+			_ = syslog.DebugTf("connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
+		} else {
 			_ = syslog.DebugTf("connect", "%p: local=%+v, remote=%+v", ep, localAddr, remoteAddr)
 		}
 	}
