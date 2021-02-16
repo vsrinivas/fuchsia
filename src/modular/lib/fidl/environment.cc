@@ -48,7 +48,7 @@ zx::channel Environment::OpenAsDirectory() {
 void Environment::InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env,
                                   const std::string& label,
                                   const std::vector<std::string>& service_names, bool kill_on_oom) {
-  services_dir_ = fbl::AdoptRef(new fs::PseudoDir);
+  services_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   for (const auto& name : service_names) {
     service_list->names.push_back(name);

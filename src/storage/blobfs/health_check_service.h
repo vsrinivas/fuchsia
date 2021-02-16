@@ -21,11 +21,17 @@ namespace blobfs {
 class HealthCheckService : public llcpp::fuchsia::update::verify::BlobfsVerifier::Interface,
                            public fs::Service {
  public:
-  explicit HealthCheckService(async_dispatcher_t* dispatcher);
-
   // fuchsia.update.verify.BlobfsVerifier interface
   void Verify(llcpp::fuchsia::update::verify::VerifyOptions options,
               VerifyCompleter::Sync& completer) final;
+
+ protected:
+  friend fbl::internal::MakeRefCountedHelper<HealthCheckService>;
+  friend fbl::RefPtr<HealthCheckService>;
+
+  explicit HealthCheckService(async_dispatcher_t* dispatcher);
+
+  ~HealthCheckService() override = default;
 };
 
 }  // namespace blobfs

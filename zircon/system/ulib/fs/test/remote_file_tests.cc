@@ -14,7 +14,7 @@ TEST(RemoteFile, ApiTest) {
   ASSERT_EQ(ZX_OK, endpoints.status_value());
 
   auto unowned_client = endpoints->client.borrow();
-  auto file = fbl::AdoptRef<fs::RemoteFile>(new fs::RemoteFile(std::move(endpoints->client)));
+  auto file = fbl::MakeRefCounted<fs::RemoteFile>(std::move(endpoints->client));
 
   // get attributes
   fs::VnodeAttributes attr;

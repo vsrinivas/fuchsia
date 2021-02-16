@@ -117,7 +117,7 @@ ComponentControllerBase::ComponentControllerBase(
       label_(std::move(label)),
       hub_instance_id_(std::move(hub_instance_id)),
       url_(std::move(url)),
-      hub_(fbl::AdoptRef(new fs::PseudoDir())),
+      hub_(fbl::MakeRefCounted<fs::PseudoDir>()),
       ns_(std::move(ns)),
       weak_ptr_factory_(this),
       diagnostics_max_retries_(diagnostics_max_retries),
@@ -150,7 +150,8 @@ ComponentControllerBase::ComponentControllerBase(
       return;
     }
     out_ready_ = true;
-    auto output_dir = fbl::AdoptRef(new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
+    auto output_dir =
+        fbl::MakeRefCounted<fs::RemoteDir>(cloned_exported_dir_.Unbind().TakeChannel());
     hub_.PublishOut(std::move(output_dir));
     NotifyDiagnosticsDirReady(diagnostics_max_retries_);
     TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
@@ -300,11 +301,11 @@ ComponentControllerImpl::ComponentControllerImpl(
   auto system_diagnostics = fbl::MakeRefCounted<fs::PseudoDir>();
   system_diagnostics->AddEntry(
       fuchsia::inspect::Tree::Name_,
-      fbl::AdoptRef(new fs::Service(
+      fbl::MakeRefCounted<fs::Service>(
           [handler = inspect::MakeTreeHandler(&system_diagnostics_.inspector())](zx::channel chan) {
             handler(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
             return ZX_OK;
-          })));
+          }));
 
   hub()->AddEntry("system_diagnostics", system_diagnostics);
 

@@ -25,8 +25,6 @@ class PagedVfs;
 //  - Implement VmoRead() to fill the VMO data when requested.
 class PagedVnode : public Vnode {
  public:
-  ~PagedVnode() override;
-
   // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
   // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
   // with this object, all operations are expected to fail.
@@ -51,7 +49,11 @@ class PagedVnode : public Vnode {
   void DetachVfs();
 
  protected:
+  friend fbl::RefPtr<PagedVnode>;
+
   explicit PagedVnode(PagedVfs* vfs);
+
+  ~PagedVnode() override;
 
   // Populates the vmo() if necessary. Does nothing if it already exists. Access the created vmo
   // with this class' vmo() getter.

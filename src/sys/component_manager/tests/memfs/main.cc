@@ -26,11 +26,11 @@ int main(int argc, char** argv) {
   }
 
   fs::ManagedVfs outgoing_vfs = fs::ManagedVfs(global_loop.dispatcher());
-  auto outgoing_dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  auto svc_dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   svc_dir->AddEntry("fuchsia.io.Directory",
-                    fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(zx::channel(memfs_root))));
+                    fbl::MakeRefCounted<fs::RemoteDir>(zx::channel(memfs_root)));
 
   outgoing_dir->AddEntry("svc", std::move(svc_dir));
 

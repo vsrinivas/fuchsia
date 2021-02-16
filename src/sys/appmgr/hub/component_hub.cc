@@ -45,7 +45,7 @@ zx_status_t ComponentHub::EnsureInDir() {
   if (in_dir_) {
     return ZX_OK;
   }
-  in_dir_ = fbl::AdoptRef(new fs::PseudoDir());
+  in_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   return AddEntry("in", in_dir_);
 }
 

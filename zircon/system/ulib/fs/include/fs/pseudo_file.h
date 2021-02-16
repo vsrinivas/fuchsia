@@ -88,22 +88,15 @@ class PseudoFile : public Vnode {
 // This class is thread-safe.
 class BufferedPseudoFile : public PseudoFile {
  public:
-  // Creates a buffered pseudo-file.
-  //
-  // If the |read_handler| is null, then the pseudo-file is considered not readable.
-  // If the |write_handler| is null, then the pseudo-file is considered not writable.
-  // The |input_buffer_capacity| determines the maximum number of bytes which can be
-  // written to the pseudo-file's input buffer when it it opened for writing.
-  BufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
-                     WriteHandler write_handler = WriteHandler(),
-                     size_t input_buffer_capacity = 1024);
-
-  ~BufferedPseudoFile() override;
+  // Construct with fbl::MakeRefCounted.
 
   // |Vnode| implementation:
   zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
  private:
+  friend fbl::internal::MakeRefCountedHelper<BufferedPseudoFile>;
+  friend fbl::RefPtr<BufferedPseudoFile>;
+
   class Content final : public Vnode {
    public:
     Content(fbl::RefPtr<BufferedPseudoFile> file, VnodeConnectionOptions options,
@@ -131,6 +124,18 @@ class BufferedPseudoFile : public PseudoFile {
     char* input_data_ = nullptr;
     size_t input_length_ = 0u;
   };
+
+  // Creates a buffered pseudo-file.
+  //
+  // If the |read_handler| is null, then the pseudo-file is considered not readable. If the
+  // |write_handler| is null, then the pseudo-file is considered not writable. The
+  // |input_buffer_capacity| determines the maximum number of bytes which can be written to the
+  // pseudo-file's input buffer when it it opened for writing.
+  explicit BufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
+                              WriteHandler write_handler = WriteHandler(),
+                              size_t input_buffer_capacity = 1024);
+
+  ~BufferedPseudoFile() override;
 
   size_t const input_buffer_capacity_;
 
@@ -177,19 +182,15 @@ class BufferedPseudoFile : public PseudoFile {
 // This class is thread-safe.
 class UnbufferedPseudoFile : public PseudoFile {
  public:
-  // Creates an unbuffered pseudo-file.
-  //
-  // If the |read_handler| is null, then the pseudo-file is considered not readable.
-  // If the |write_handler| is null, then the pseudo-file is considered not writable.
-  UnbufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
-                       WriteHandler write_handler = WriteHandler());
-
-  ~UnbufferedPseudoFile() override;
+  // Construct with fbl::MakeRefCounted.
 
   // |Vnode| implementation:
   zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
  private:
+  friend fbl::internal::MakeRefCountedHelper<UnbufferedPseudoFile>;
+  friend fbl::RefPtr<UnbufferedPseudoFile>;
+
   class Content final : public Vnode {
    public:
     Content(fbl::RefPtr<UnbufferedPseudoFile> file, VnodeConnectionOptions options);
@@ -213,6 +214,15 @@ class UnbufferedPseudoFile : public PseudoFile {
 
     bool truncated_since_last_successful_write_;
   };
+
+  // Creates an unbuffered pseudo-file.
+  //
+  // If the |read_handler| is null, then the pseudo-file is considered not readable.
+  // If the |write_handler| is null, then the pseudo-file is considered not writable.
+  explicit UnbufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
+                                WriteHandler write_handler = WriteHandler());
+
+  ~UnbufferedPseudoFile() override;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(UnbufferedPseudoFile);
 };

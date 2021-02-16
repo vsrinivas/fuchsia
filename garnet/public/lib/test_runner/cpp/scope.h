@@ -33,10 +33,10 @@ class ScopeServices {
     svc_names_.push_back(service_name);
     return svc_->AddEntry(
         service_name.c_str(),
-        fbl::AdoptRef(new fs::Service([handler = std::move(handler)](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([handler = std::move(handler)](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
           return ZX_OK;
-        })));
+        }));
   }
 
  private:

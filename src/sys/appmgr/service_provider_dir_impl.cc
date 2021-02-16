@@ -49,7 +49,7 @@ std::string ErrorServingService(const std::string& component_moniker,
 ServiceProviderDirImpl::ServiceProviderDirImpl(fbl::RefPtr<LogConnectorImpl> log_connector,
                                                const std::vector<std::string>* services)
     : vfs_(async_get_default_dispatcher()),
-      root_(fbl::AdoptRef(new fs::PseudoDir())),
+      root_(fbl::MakeRefCounted<fs::PseudoDir>()),
       log_connector_(log_connector),
       weak_factory_(this) {
   if (services != nullptr) {
@@ -152,11 +152,11 @@ void ServiceProviderDirImpl::InitLogging() {
   if (IsServiceAllowlisted(fuchsia::sys::internal::LogConnector::Name_)) {
     AddService(
         fuchsia::sys::internal::LogConnector::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           fidl::InterfaceRequest<fuchsia::sys::internal::LogConnector> request(std::move(channel));
           log_connector_->AddConnectorClient(std::move(request));
           return ZX_OK;
-        })));
+        }));
   }
 
   // If LogSink was allowlisted and wasn't explicitly provided to us, give it an attributed log
@@ -165,12 +165,13 @@ void ServiceProviderDirImpl::InitLogging() {
       IsServiceAllowlisted(fuchsia::logger::LogSink::Name_)) {
     has_builtin_logsink_ = true;
     // Forward the LogSink request to the backing LogConnector, attributing it with
-    AddService(
-        fuchsia::logger::LogSink::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-          fidl::InterfaceRequest<fuchsia::logger::LogSink> request(std::move(channel));
-          log_connector_->AddLogConnection(component_url(), component_id_, std::move(request));
-          return ZX_OK;
-        })));
+    AddService(fuchsia::logger::LogSink::Name_,
+               fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
+                 fidl::InterfaceRequest<fuchsia::logger::LogSink> request(std::move(channel));
+                 log_connector_->AddLogConnection(component_url(), component_id_,
+                                                  std::move(request));
+                 return ZX_OK;
+               }));
   }
 }
 

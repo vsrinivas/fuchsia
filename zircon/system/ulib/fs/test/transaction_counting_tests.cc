@@ -73,8 +73,8 @@ class TransactionCountingTest : public zxtest::Test {
   // directories and files have no flags and rights.
   TransactionCountingTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     vfs_.SetDispatcher(loop_.dispatcher());
-    root_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-    file_ = fbl::AdoptRef<TestVnode>(new TestVnode());
+    root_ = fbl::MakeRefCounted<fs::PseudoDir>();
+    file_ = fbl::MakeRefCounted<TestVnode>();
     root_->AddEntry("file", file_);
   }
 

@@ -18,7 +18,7 @@
 
 namespace component {
 
-ServiceNamespace::ServiceNamespace() : directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
+ServiceNamespace::ServiceNamespace() : directory_(fbl::MakeRefCounted<fs::PseudoDir>()) {}
 
 ServiceNamespace::ServiceNamespace(fidl::InterfaceRequest<ServiceProvider> request)
     : ServiceNamespace() {
@@ -41,10 +41,10 @@ void ServiceNamespace::AddServiceForName(ServiceConnector connector,
                                          const std::string& service_name) {
   name_to_service_connector_[service_name] = std::move(connector);
   directory_->AddEntry(service_name,
-                       fbl::AdoptRef(new fs::Service([this, service_name](zx::channel channel) {
+                       fbl::MakeRefCounted<fs::Service>([this, service_name](zx::channel channel) {
                          ConnectCommon(service_name, std::move(channel));
                          return ZX_OK;
-                       })));
+                       }));
 }
 
 void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {

@@ -26,12 +26,7 @@ namespace fs {
 // This class is thread-safe.
 class RemoteDir : public Vnode {
  public:
-  // Binds to a remotely hosted directory using the specified FIDL client
-  // channel endpoint.  The channel must be valid.
-  explicit RemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_dir_client);
-
-  // Releases the remotely hosted directory.
-  ~RemoteDir() override;
+  // Construct with fbl::MakeRefCounted.
 
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
@@ -40,6 +35,17 @@ class RemoteDir : public Vnode {
   fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> GetRemote() const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
+
+ protected:
+  friend fbl::internal::MakeRefCountedHelper<RemoteDir>;
+  friend fbl::RefPtr<RemoteDir>;
+
+  // Binds to a remotely hosted directory using the specified FIDL client
+  // channel endpoint.  The channel must be valid.
+  explicit RemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_dir_client);
+
+  // Releases the remotely hosted directory.
+  ~RemoteDir() override;
 
  private:
   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> const remote_dir_client_;

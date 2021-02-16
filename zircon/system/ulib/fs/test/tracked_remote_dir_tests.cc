@@ -31,7 +31,7 @@ TEST(TrackedRemoteDir, AddingTrackedDirectory) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
   fbl::String name = "remote-directory";
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // Get attributes.
   fs::VnodeAttributes attr;
@@ -44,7 +44,7 @@ TEST(TrackedRemoteDir, AddingTrackedDirectory) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(name, &node));
 
   // Add a remote directory, observe that it can be looked up.
-  auto remote = fbl::AdoptRef<TestRemoteDir>(new TestRemoteDir(std::move(client), &loop));
+  auto remote = fbl::MakeRefCounted<TestRemoteDir>(std::move(client), &loop);
   EXPECT_EQ(ZX_OK, remote->AddAsTrackedEntry(loop.dispatcher(), dir.get(), name));
   remote.reset();
   EXPECT_EQ(ZX_OK, dir->Lookup(name, &node));
@@ -62,9 +62,9 @@ TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
   fbl::String name = "remote-directory";
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  auto remote = fbl::AdoptRef<TestRemoteDir>(new TestRemoteDir(std::move(client), &loop));
+  auto remote = fbl::MakeRefCounted<TestRemoteDir>(std::move(client), &loop);
   EXPECT_EQ(ZX_OK, remote->AddAsTrackedEntry(loop.dispatcher(), dir.get(), name));
 
   // Observe that we cannot track the remote object multiple times.
@@ -72,7 +72,7 @@ TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
 
   // Observe that we cannot track the remote directory in a different
   // container.
-  auto dir2 = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto dir2 = fbl::MakeRefCounted<fs::PseudoDir>();
   EXPECT_EQ(ZX_ERR_BAD_STATE, remote->AddAsTrackedEntry(loop.dispatcher(), dir2.get(), name));
 
   remote.reset();
@@ -89,10 +89,10 @@ TEST(TrackedRemoteDir, TrackAddingDifferentVnode) {
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  auto remote = fbl::AdoptRef<TestRemoteDir>(new TestRemoteDir(std::move(client), &loop));
-  auto not_remote = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto remote = fbl::MakeRefCounted<TestRemoteDir>(std::move(client), &loop);
+  auto not_remote = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // Test a subtle behavior:
   // - Add |remote| to |dir|, begin tracking the remote handle.

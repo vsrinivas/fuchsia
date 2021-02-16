@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include "lib/test_runner/cpp/scope.h"
+
 #include <lib/async/default.h>
 
 namespace test_runner {
 
 ScopeServices::ScopeServices()
     : vfs_(std::make_unique<fs::SynchronousVfs>(async_get_default_dispatcher())),
-      svc_(fbl::AdoptRef(new fs::PseudoDir)) {}
+      svc_(fbl::MakeRefCounted<fs::PseudoDir>()) {}
 
 zx::channel ScopeServices::OpenAsDirectory() {
   zx::channel h1, h2;

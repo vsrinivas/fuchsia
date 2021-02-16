@@ -20,7 +20,7 @@ namespace component {
 
 ServiceProviderBridge::ServiceProviderBridge()
     : vfs_(async_get_default_dispatcher()), weak_factory_(this) {
-  directory_ = fbl::AdoptRef(new ServiceProviderDir(weak_factory_.GetWeakPtr()));
+  directory_ = fbl::MakeRefCounted<ServiceProviderDir>(weak_factory_.GetWeakPtr());
 }
 
 ServiceProviderBridge::~ServiceProviderBridge() = default;
@@ -86,14 +86,14 @@ fs::VnodeProtocolSet ServiceProviderBridge::ServiceProviderDir::GetProtocols() c
 
 zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::StringPiece name,
                                                               fbl::RefPtr<fs::Vnode>* out) {
-  *out = fbl::AdoptRef(new fs::Service(
+  *out = fbl::MakeRefCounted<fs::Service>(
       [bridge = bridge_, name = std::string(name.data(), name.length())](zx::channel channel) {
         if (bridge) {
           bridge->ConnectToService(name, std::move(channel));
           return ZX_OK;
         }
         return ZX_ERR_NOT_FOUND;
-      }));
+      });
   return ZX_OK;
 }
 

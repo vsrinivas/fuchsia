@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_REF_COUNTED_H_
+#define FS_REF_COUNTED_H_
 
-#include <fbl/ref_counted_upgradeable.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <atomic>
+
+#include <fbl/ref_counted_upgradeable.h>
 
 namespace fs {
 
@@ -21,9 +23,6 @@ template <typename T, bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED
 class VnodeRefCounted
     : private ::fbl::internal::RefCountedUpgradeableBase<EnableAdoptionValidator> {
  public:
-  constexpr VnodeRefCounted() = default;
-  ~VnodeRefCounted() = default;
-
   using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
   using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::Release;
   using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
@@ -58,6 +57,12 @@ class VnodeRefCounted
     }
     this->ref_count_.store(1, std::memory_order_relaxed);
   }
+
+ protected:
+  constexpr VnodeRefCounted() = default;
+  ~VnodeRefCounted() = default;
 };
 
 }  // namespace fs
+
+#endif  // FS_REF_COUNTED_H_

@@ -24,9 +24,6 @@ namespace fs {
 // This class is thread-compatible.
 class TrackedRemoteDir : public RemoteDir {
  public:
-  // Create a directory which is accessed remotely through |remote|.
-  explicit TrackedRemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote);
-
   // Adds |this| as an entry to |container| with the label |name|.
   //
   // Begins monitoring |remote| (provided at construction-time) for |PEER_CLOSED|.
@@ -37,6 +34,15 @@ class TrackedRemoteDir : public RemoteDir {
   // Returns an error if the underlying handle cannot be monitored for peer closed.
   zx_status_t AddAsTrackedEntry(async_dispatcher_t* dispatcher, PseudoDir* container,
                                 fbl::String name);
+
+ protected:
+  friend fbl::internal::MakeRefCountedHelper<TrackedRemoteDir>;
+  friend fbl::RefPtr<TrackedRemoteDir>;
+
+  // Create a directory which is accessed remotely through |remote|.
+  explicit TrackedRemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote);
+
+  ~TrackedRemoteDir() override = default;
 
  private:
   void HandleClose(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

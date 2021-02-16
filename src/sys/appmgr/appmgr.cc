@@ -44,7 +44,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       cpu_watcher_(
           std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild("cpu_stats"), zx::job())),
       publish_vfs_(dispatcher),
-      publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      publish_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
       storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
@@ -163,40 +163,40 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   }
 
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
-    auto svc = fbl::AdoptRef(new fs::RemoteDir(std::move(svc_client_chan)));
-    auto diagnostics = fbl::AdoptRef(new fs::PseudoDir());
+    auto svc = fbl::MakeRefCounted<fs::RemoteDir>(std::move(svc_client_chan));
+    auto diagnostics = fbl::MakeRefCounted<fs::PseudoDir>();
     diagnostics->AddEntry(
         fuchsia::inspect::Tree::Name_,
-        fbl::AdoptRef(new fs::Service(
+        fbl::MakeRefCounted<fs::Service>(
             [connector = inspect::MakeTreeHandler(&inspector_)](zx::channel chan) mutable {
               connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
               return ZX_OK;
-            })));
+            }));
 
     // The following are services that appmgr exposes to the v2 world, but doesn't
     // expose to the sys realm.
-    auto appmgr_svc = fbl::AdoptRef(new fs::PseudoDir());
+    auto appmgr_svc = fbl::MakeRefCounted<fs::PseudoDir>();
     appmgr_svc->AddEntry(
         fuchsia::sys::internal::LogConnector::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           fidl::InterfaceRequest<fuchsia::sys::internal::LogConnector> request(std::move(channel));
           root_realm_->log_connector()->AddConnectorClient(std::move(request));
           return ZX_OK;
-        })));
+        }));
     appmgr_svc->AddEntry(
         fuchsia::sys::internal::ComponentEventProvider::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           return root_realm_->BindComponentEventProvider(
               fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
                   std::move(channel)));
-        })));
+        }));
 
     appmgr_svc->AddEntry(
         fuchsia::appmgr::Startup::Name_,
-        fbl::AdoptRef(new fs::Service([this, dispatcher](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this, dispatcher](zx::channel channel) {
           return startup_service_.Bind(
               dispatcher, fidl::InterfaceRequest<fuchsia::appmgr::Startup>(std::move(channel)));
-        })));
+        }));
 
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);

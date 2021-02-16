@@ -33,12 +33,12 @@ TEST(Service, ApiTest) {
   // set up a service which can only be bound once (to make it easy to
   // simulate an error to test error reporting behavior from the connector)
   zx::channel bound_channel;
-  auto svc = fbl::AdoptRef<fs::Service>(new fs::Service([&bound_channel](zx::channel channel) {
+  auto svc = fbl::MakeRefCounted<fs::Service>([&bound_channel](zx::channel channel) {
     if (bound_channel)
       return ZX_ERR_IO;
     bound_channel = std::move(channel);
     return ZX_OK;
-  }));
+  });
 
   fs::VnodeConnectionOptions options_readable;
   options_readable.rights.read = true;
@@ -90,11 +90,11 @@ TEST(Service, ServeDirectory) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fs::SynchronousVfs vfs(loop.dispatcher());
 
-  auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service([&loop](zx::channel channel) {
+  auto directory = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto vnode = fbl::MakeRefCounted<fs::Service>([&loop](zx::channel channel) {
     loop.Shutdown();
     return ZX_OK;
-  }));
+  });
   directory->AddEntry("abc", vnode);
 
   EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server)));
@@ -109,13 +109,13 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fs::SynchronousVfs vfs(loop.dispatcher());
 
-  auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service([](zx::channel channel) {
+  auto directory = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto vnode = fbl::MakeRefCounted<fs::Service>([](zx::channel channel) {
     // Should never reach here, because the directory flag is not allowed.
     EXPECT_TRUE(false, "Should not be able to open the service");
     channel.reset();
     return ZX_OK;
-  }));
+  });
   directory->AddEntry("abc", vnode);
   ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
 
@@ -164,11 +164,11 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fs::SynchronousVfs vfs(loop.dispatcher());
 
-  auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service([](zx::channel channel) {
+  auto directory = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto vnode = fbl::MakeRefCounted<fs::Service>([](zx::channel channel) {
     channel.reset();
     return ZX_OK;
-  }));
+  });
   directory->AddEntry("abc", vnode);
   ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
 

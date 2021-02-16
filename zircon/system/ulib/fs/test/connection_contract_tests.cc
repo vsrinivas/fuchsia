@@ -70,7 +70,7 @@ class NoOpVfsBad : public NoOpVfs {
 
 template <typename Vfs>
 void RunTest(async::Loop* loop, Vfs&& vfs) {
-  auto root = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto root = fbl::MakeRefCounted<fs::PseudoDir>();
   auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Node>();
   ASSERT_OK(endpoints.status_value());
 

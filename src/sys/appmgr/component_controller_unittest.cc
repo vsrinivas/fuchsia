@@ -451,11 +451,10 @@ TEST_F(ComponentControllerTest, GetDiagnosticsDirExists) {
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
   RunLoopUntil([&ready] { return ready; });
 
-  auto diagnostics_dir = new fs::PseudoDir();
-  auto test_file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto test_file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
   ASSERT_EQ(ZX_OK, diagnostics_dir->AddEntry("test_file", test_file));
-  ASSERT_EQ(ZX_OK,
-            out_dir->AddEntry("diagnostics", fbl::AdoptRef<fs::Vnode>(std::move(diagnostics_dir))));
+  ASSERT_EQ(ZX_OK, out_dir->AddEntry("diagnostics", std::move(diagnostics_dir)));
 
   bool done = false;
   async::Executor executor(async_get_default_dispatcher());
@@ -740,10 +739,10 @@ TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
 }
 
 TEST(ComponentControllerUnitTest, GetDirectoryEntries) {
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto subdir = fbl::AdoptRef<fs::Vnode>(new fs::PseudoDir());
-  auto file1 = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
-  auto file2 = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto subdir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto file1 = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
+  auto file2 = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
 
   // add entries
   EXPECT_EQ(ZX_OK, dir->AddEntry("subdir", subdir));

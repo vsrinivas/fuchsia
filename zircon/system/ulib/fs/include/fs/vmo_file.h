@@ -21,6 +21,8 @@ namespace fs {
 // This class is thread-safe.
 class VmoFile : public Vnode {
  public:
+  // Construct with fbl::MakeRefCounted.
+
   // Specifies the desired behavior when a client asks for the file's
   // underlying VMO.
   enum class VmoSharing {
@@ -47,13 +49,6 @@ class VmoFile : public Vnode {
     CLONE_COW,
   };
 
-  // Creates a file node backed an VMO owned by the creator.
-  // The creator retains ownership of |unowned_vmo| which must outlive this object.
-  VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool writable = false,
-          VmoSharing vmo_sharing = VmoSharing::DUPLICATE);
-
-  ~VmoFile() override;
-
   // The underlying VMO handle.
   zx_handle_t vmo_handle() const { return vmo_handle_; }
 
@@ -78,6 +73,17 @@ class VmoFile : public Vnode {
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
+
+ protected:
+  friend fbl::internal::MakeRefCountedHelper<VmoFile>;
+  friend fbl::RefPtr<VmoFile>;
+
+  // Creates a file node backed an VMO owned by the creator.
+  // The creator retains ownership of |unowned_vmo| which must outlive this object.
+  VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool writable = false,
+          VmoSharing vmo_sharing = VmoSharing::DUPLICATE);
+
+  ~VmoFile() override;
 
  private:
   zx_status_t AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);

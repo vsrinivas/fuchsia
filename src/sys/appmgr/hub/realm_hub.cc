@@ -15,7 +15,7 @@
 namespace component {
 
 RealmHub::RealmHub(fbl::RefPtr<fs::PseudoDir> root)
-    : Hub(root), realm_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
+    : Hub(root), realm_dir_(fbl::MakeRefCounted<fs::PseudoDir>()) {
   AddEntry("r", realm_dir_);
   EnsureComponentDir();
 }
@@ -25,7 +25,7 @@ zx_status_t RealmHub::AddRealm(const HubInfo& hub_info) {
   fbl::RefPtr<fs::PseudoDir> realm_instance_dir;
   zx_status_t status = realm_dir_->Lookup(hub_info.label(), &realm_instance_vnode);
   if (status == ZX_ERR_NOT_FOUND) {
-    realm_instance_dir = fbl::AdoptRef(new fs::PseudoDir());
+    realm_instance_dir = fbl::MakeRefCounted<fs::PseudoDir>();
     realm_dir_->AddEntry(hub_info.label(), realm_instance_dir);
   } else {
     realm_instance_dir =

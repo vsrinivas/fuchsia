@@ -14,14 +14,14 @@ namespace component {
 namespace {
 
 TEST(RealmHub, Simple) {
-  RealmHub hub(fbl::AdoptRef(new fs::PseudoDir()));
+  RealmHub hub(fbl::MakeRefCounted<fs::PseudoDir>());
 
   fbl::RefPtr<fs::Vnode> realm_dir;
   fbl::RefPtr<fs::Vnode> component_dir;
   ASSERT_EQ(hub.dir()->Lookup("r", &realm_dir), ZX_OK);
   ASSERT_EQ(hub.dir()->Lookup("c", &component_dir), ZX_OK);
 
-  auto test_realm_dir = fbl::AdoptRef(new fs::PseudoDir());
+  auto test_realm_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   fbl::String test_realm_name = "test-realm";
   fbl::String test_realm_koid = "1028";
   auto hub_info = HubInfo(test_realm_name, test_realm_koid, test_realm_dir);
@@ -34,14 +34,14 @@ TEST(RealmHub, Simple) {
   ASSERT_EQ(name_dir->Lookup(test_realm_koid, &koid_dir), ZX_OK);
 
   // test that currect vnode was added for hub
-  test_realm_dir->AddEntry("test-dir", fbl::AdoptRef(new fs::PseudoDir()));
+  test_realm_dir->AddEntry("test-dir", fbl::MakeRefCounted<fs::PseudoDir>());
 
   fbl::RefPtr<fs::Vnode> test_dir;
   ASSERT_EQ(koid_dir->Lookup("test-dir", &test_dir), ZX_OK);
 
   // test adding services
-  auto svc = fbl::AdoptRef(new fs::PseudoDir());
-  svc->AddEntry("testentry", fbl::AdoptRef(new fs::PseudoDir()));
+  auto svc = fbl::MakeRefCounted<fs::PseudoDir>();
+  svc->AddEntry("testentry", fbl::MakeRefCounted<fs::PseudoDir>());
   hub.AddServices(svc);
   fbl::RefPtr<fs::Vnode> tmp_dir;
   ASSERT_EQ(hub.dir()->Lookup("svc", &tmp_dir), ZX_OK);

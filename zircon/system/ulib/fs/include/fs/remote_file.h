@@ -27,18 +27,7 @@ namespace fs {
 // This class is thread-safe.
 class RemoteFile : public Vnode {
  public:
-  // Binds to a remotely hosted file using the specified FIDL client
-  // channel endpoint.  The channel must be valid.
-  //
-  // Note: the endpoint is of type |fuchsia.io/Directory|, because the "file"
-  // is still opened using the |fuchsia.io/Directory.Open| method. In a sense,
-  // the remote file speaks the combination of file/directory protocols. If we
-  // change to using |fuchsia.io/Node.Clone| to open this file, it might make
-  // sense to change this endpoint type to |Node| instead.
-  explicit RemoteFile(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_client);
-
-  // Releases the remotely hosted file.
-  ~RemoteFile() override;
+  // Construct with fbl::MakeRefCounted.
 
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
@@ -49,6 +38,21 @@ class RemoteFile : public Vnode {
                                      VnodeRepresentation* info) final;
 
  private:
+  friend fbl::internal::MakeRefCountedHelper<RemoteFile>;
+  friend fbl::RefPtr<RemoteFile>;
+
+  // Binds to a remotely hosted file using the specified FIDL client channel endpoint.  The channel
+  // must be valid.
+  //
+  // Note: the endpoint is of type |fuchsia.io/Directory|, because the "file" is still opened using
+  // the |fuchsia.io/Directory.Open| method. In a sense, the remote file speaks the combination of
+  // file/directory protocols. If we change to using |fuchsia.io/Node.Clone| to open this file, it
+  // might make sense to change this endpoint type to |Node| instead.
+  explicit RemoteFile(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_client);
+
+  // Releases the remotely hosted file.
+  ~RemoteFile() override;
+
   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> const remote_client_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RemoteFile);

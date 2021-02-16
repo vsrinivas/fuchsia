@@ -20,6 +20,8 @@ namespace fs {
 // to ensure their implementations are thread safe as well.
 class LazyDir : public Vnode {
  public:
+  // Construct with fbl::MakeRefCounted.
+
   // Structure storing a single entry in the directory.
   struct LazyEntry {
     // Non-zero ID for this entry, must remain stable across calls.
@@ -30,9 +32,6 @@ class LazyDir : public Vnode {
     uint32_t type;
   };
   using LazyEntryVector = fbl::Vector<LazyEntry>;
-
-  LazyDir();
-  virtual ~LazyDir();
 
   // |Vnode| implementation.
   VnodeProtocolSet GetProtocols() const final;
@@ -46,6 +45,12 @@ class LazyDir : public Vnode {
                                      VnodeRepresentation* info) final;
 
  protected:
+  friend fbl::internal::MakeRefCountedHelper<LazyDir>;
+  friend fbl::RefPtr<LazyDir>;
+
+  LazyDir();
+  ~LazyDir() override;
+
   // Get the contents of the directory in an output vector.
   virtual void GetContents(LazyEntryVector* out_vector) = 0;
   // Get the reference to a single file. The id and name of the entry as

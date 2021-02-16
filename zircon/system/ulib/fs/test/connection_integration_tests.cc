@@ -58,10 +58,10 @@ class VfsTestSetup : public zxtest::Test {
   // directories and files have no flags and rights.
   VfsTestSetup() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     vfs_.SetDispatcher(loop_.dispatcher());
-    root_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-    dir_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-    file_ = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
-    file_or_dir_ = fbl::AdoptRef<FileOrDirectory>(new FileOrDirectory());
+    root_ = fbl::MakeRefCounted<fs::PseudoDir>();
+    dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+    file_ = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader, &DummyWriter);
+    file_or_dir_ = fbl::MakeRefCounted<FileOrDirectory>();
     root_->AddEntry("dir", dir_);
     root_->AddEntry("file", file_);
     root_->AddEntry("file_or_dir", file_or_dir_);
@@ -296,8 +296,8 @@ class ConnectionClosingTest : public zxtest::Test {
   // directories and files have no flags and rights.
   ConnectionClosingTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     vfs_.SetDispatcher(loop_.dispatcher());
-    root_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-    count_outstanding_open_vnode_ = fbl::AdoptRef(new CountOutstandingOpenVnode());
+    root_ = fbl::MakeRefCounted<fs::PseudoDir>();
+    count_outstanding_open_vnode_ = fbl::MakeRefCounted<CountOutstandingOpenVnode>();
     root_->AddEntry("count_outstanding_open_vnode", count_outstanding_open_vnode_);
   }
 

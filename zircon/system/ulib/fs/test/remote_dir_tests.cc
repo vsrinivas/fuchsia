@@ -15,7 +15,7 @@ TEST(RemoteDir, ApiTest) {
 
   fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> unowned_client =
       dir_endpoints->client.channel().borrow();
-  auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(dir_endpoints->client)));
+  auto dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(dir_endpoints->client));
 
   // get attributes
   fs::VnodeAttributes attr;

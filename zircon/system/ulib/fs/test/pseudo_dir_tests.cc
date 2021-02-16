@@ -11,10 +11,10 @@
 namespace {
 
 TEST(PseudoDir, ApiTest) {
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto subdir = fbl::AdoptRef<fs::Vnode>(new fs::PseudoDir());
-  auto file1 = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
-  auto file2 = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto subdir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto file1 = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
+  auto file2 = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
 
   // add entries
   EXPECT_EQ(ZX_OK, dir->AddEntry("subdir", subdir));
@@ -121,7 +121,7 @@ TEST(PseudoDir, ApiTest) {
 }
 
 TEST(PseudoDir, RejectOpenFlagNotDirectory) {
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   auto result = dir->ValidateOptions(fs::VnodeConnectionOptions::ReadOnly().set_not_directory());
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(ZX_ERR_NOT_FILE, result.error());

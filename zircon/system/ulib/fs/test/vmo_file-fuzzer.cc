@@ -27,7 +27,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       {fs::VmoFile::VmoSharing::NONE, fs::VmoFile::VmoSharing::DUPLICATE,
        fs::VmoFile::VmoSharing::CLONE_COW});
 
-  fs::VmoFile vmo_file(vmo, offset, length, true /*writable*/, vmo_sharing);
+  auto vmo_file =
+      fbl::MakeRefCounted<fs::VmoFile>(vmo, offset, length, true /*writable*/, vmo_sharing);
 
   size_t offset_write = fuzzed_data.ConsumeIntegralInRange<size_t>(0, vmo_size);
   size_t bytes_written = 0;
@@ -41,15 +42,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::vector<uint8_t> to_write =
       fuzzed_data.ConsumeBytes<uint8_t>(fuzzed_data.ConsumeIntegralInRange<size_t>(0, kMaxWriteSz));
 
-  res = vmo_file.Write(to_write.data(), to_write.size(), offset_write, &bytes_written);
+  res = vmo_file->Write(to_write.data(), to_write.size(), offset_write, &bytes_written);
   if (res == ZX_OK) {
-    res = vmo_file.Read(read_buffer, bytes_written, offset_write, &bytes_read);
+    res = vmo_file->Read(read_buffer, bytes_written, offset_write, &bytes_read);
     assert(res == ZX_OK);
     assert(bytes_read == bytes_written);
     assert(memcmp(read_buffer, to_write.data(), bytes_read) == 0);
   }
 
   fs::VnodeRepresentation info;
-  vmo_file.GetNodeInfo(rights, &info);
+  vmo_file->GetNodeInfo(rights, &info);
   return 0;
 }

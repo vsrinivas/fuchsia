@@ -1,6 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// found in the LICENSE file->
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
@@ -77,22 +77,23 @@ TEST(VmoFile, Constructor) {
 
   // default parameters
   {
-    fs::VmoFile file(abc, 0u, PAGE_SIZE);
-    EXPECT_EQ(abc.get(), file.vmo_handle());
-    EXPECT_EQ(0u, file.offset());
-    EXPECT_EQ(PAGE_SIZE, file.length());
-    EXPECT_FALSE(file.is_writable());
-    EXPECT_EQ(fs::VmoFile::VmoSharing::DUPLICATE, file.vmo_sharing());
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE);
+    EXPECT_EQ(abc.get(), file->vmo_handle());
+    EXPECT_EQ(0u, file->offset());
+    EXPECT_EQ(PAGE_SIZE, file->length());
+    EXPECT_FALSE(file->is_writable());
+    EXPECT_EQ(fs::VmoFile::VmoSharing::DUPLICATE, file->vmo_sharing());
   }
 
   // everything explicit
   {
-    fs::VmoFile file(abc, 3u, PAGE_2 + 1u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(abc.get(), file.vmo_handle());
-    EXPECT_EQ(3u, file.offset());
-    EXPECT_EQ(PAGE_2 + 1u, file.length());
-    EXPECT_TRUE(file.is_writable());
-    EXPECT_EQ(fs::VmoFile::VmoSharing::CLONE_COW, file.vmo_sharing());
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 3u, PAGE_2 + 1u, true,
+                                                 fs::VmoFile::VmoSharing::CLONE_COW);
+    EXPECT_EQ(abc.get(), file->vmo_handle());
+    EXPECT_EQ(3u, file->offset());
+    EXPECT_EQ(PAGE_2 + 1u, file->length());
+    EXPECT_TRUE(file->is_writable());
+    EXPECT_EQ(fs::VmoFile::VmoSharing::CLONE_COW, file->vmo_sharing());
   }
 }
 
@@ -107,37 +108,37 @@ TEST(VmoFile, Open) {
 
   // read-only
   {
-    fs::VmoFile file(abc, 0u, 0u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 0u);
     fbl::RefPtr<fs::Vnode> redirect;
-    auto result = file.ValidateOptions(VnodeOptions::ReadOnly());
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
     EXPECT_RESULT_OK(result);
-    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_NULL(redirect);
-    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
     EXPECT_NULL(redirect);
-    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
 
   // writable
   {
-    fs::VmoFile file(abc, 0u, 0u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 0u, true);
     fbl::RefPtr<fs::Vnode> redirect;
-    auto result = file.ValidateOptions(VnodeOptions::ReadOnly());
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
     EXPECT_RESULT_OK(result);
-    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    result = file.ValidateOptions(VnodeOptions::ReadWrite());
+    result = file->ValidateOptions(VnodeOptions::ReadWrite());
     EXPECT_RESULT_OK(result);
-    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    result = file.ValidateOptions(VnodeOptions::WriteOnly());
+    result = file->ValidateOptions(VnodeOptions::WriteOnly());
     EXPECT_RESULT_OK(result);
-    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
 }
@@ -151,57 +152,57 @@ TEST(VmoFile, Read) {
 
   // empty read of non-empty file
   {
-    fs::VmoFile file(abc, 0u, PAGE_SIZE);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 0u, 0u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 0u, 0u, &actual));
     EXPECT_EQ(0u, actual);
   }
 
   // non-empty read of empty file
   {
-    fs::VmoFile file(abc, 0u, 0u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 0u);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 1u, 0u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 1u, 0u, &actual));
     EXPECT_EQ(0u, actual);
   }
 
   // empty read at end of file
   {
-    fs::VmoFile file(abc, 0u, 10u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 0u, 10u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 0u, 10u, &actual));
     EXPECT_EQ(0u, actual);
   }
 
   // non-empty read at end of file
   {
-    fs::VmoFile file(abc, 0u, 10u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 1u, 10u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 1u, 10u, &actual));
     EXPECT_EQ(0u, actual);
   }
 
   // empty read beyond end of file
   {
-    fs::VmoFile file(abc, 0u, 10u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 0u, 11u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 0u, 11u, &actual));
     EXPECT_EQ(0u, actual);
   }
 
   // non-empty read beyond end of file
   {
-    fs::VmoFile file(abc, 0u, 10u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 1u, 11u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 1u, 11u, &actual));
     EXPECT_EQ(0u, actual);
   }
 
   // short read of non-empty file
   {
-    fs::VmoFile file(abc, PAGE_1 - 3u, 10u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_1 - 3u, 10u);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, 11u, 1u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, 11u, 1u, &actual));
     EXPECT_EQ(9u, actual);
     CheckData(data, 0u, 2u, 'A');
     CheckData(data, 2u, 7u, 'B');
@@ -209,9 +210,9 @@ TEST(VmoFile, Read) {
 
   // full read
   {
-    fs::VmoFile file(abc, 0u, VMO_SIZE);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, VMO_SIZE);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Read(data, VMO_SIZE, 0u, &actual));
+    EXPECT_EQ(ZX_OK, file->Read(data, VMO_SIZE, 0u, &actual));
     EXPECT_EQ(VMO_SIZE, actual);
     CheckData(data, PAGE_0, PAGE_SIZE, 'A');
     CheckData(data, PAGE_1, PAGE_SIZE, 'B');
@@ -228,9 +229,9 @@ TEST(VmoFile, Write) {
 
   // empty write of non-empty file
   {
-    fs::VmoFile file(abc, 0u, PAGE_SIZE, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Write(data, 0u, 0u, &actual));
+    EXPECT_EQ(ZX_OK, file->Write(data, 0u, 0u, &actual));
     EXPECT_EQ(0u, actual);
     CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
     CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
@@ -239,16 +240,16 @@ TEST(VmoFile, Write) {
 
   // non-empty write of empty file
   {
-    fs::VmoFile file(abc, 0u, 0u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 0u, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_ERR_NO_SPACE, file.Write(data, 1u, 0u, &actual));
+    EXPECT_EQ(ZX_ERR_NO_SPACE, file->Write(data, 1u, 0u, &actual));
   }
 
   // empty write at end of file
   {
-    fs::VmoFile file(abc, 0u, 10u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Write(data, 0u, 10u, &actual));
+    EXPECT_EQ(ZX_OK, file->Write(data, 0u, 10u, &actual));
     EXPECT_EQ(0u, actual);
     CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
     CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
@@ -257,16 +258,16 @@ TEST(VmoFile, Write) {
 
   // non-empty write at end of file
   {
-    fs::VmoFile file(abc, 0u, 10u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_ERR_NO_SPACE, file.Write(data, 1u, 10u, &actual));
+    EXPECT_EQ(ZX_ERR_NO_SPACE, file->Write(data, 1u, 10u, &actual));
   }
 
   // empty write beyond end of file
   {
-    fs::VmoFile file(abc, 0u, 10u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Write(data, 0u, 11u, &actual));
+    EXPECT_EQ(ZX_OK, file->Write(data, 0u, 11u, &actual));
     EXPECT_EQ(0u, actual);
     CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
     CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
@@ -275,16 +276,16 @@ TEST(VmoFile, Write) {
 
   // non-empty write beyond end of file
   {
-    fs::VmoFile file(abc, 0u, 10u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, 10u, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_ERR_NO_SPACE, file.Write(data, 1u, 11u, &actual));
+    EXPECT_EQ(ZX_ERR_NO_SPACE, file->Write(data, 1u, 11u, &actual));
   }
 
   // short write of non-empty file
   {
-    fs::VmoFile file(abc, PAGE_1 - 3u, 10u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_1 - 3u, 10u, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Write(data, 11u, 1u, &actual));
+    EXPECT_EQ(ZX_OK, file->Write(data, 11u, 1u, &actual));
     EXPECT_EQ(9u, actual);
     CheckVmo(abc, PAGE_0, PAGE_SIZE - 2u, 'A');
     CheckVmo(abc, PAGE_1 - 2u, 9u, '!');
@@ -294,9 +295,9 @@ TEST(VmoFile, Write) {
 
   // full write
   {
-    fs::VmoFile file(abc, 0u, VMO_SIZE, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, VMO_SIZE, true);
     size_t actual = UINT64_MAX;
-    EXPECT_EQ(ZX_OK, file.Write(data, VMO_SIZE, 0u, &actual));
+    EXPECT_EQ(ZX_OK, file->Write(data, VMO_SIZE, 0u, &actual));
     EXPECT_EQ(VMO_SIZE, actual);
     CheckVmo(abc, 0u, VMO_SIZE, '!');
   }
@@ -308,9 +309,9 @@ TEST(VmoFile, Getattr) {
 
   // read-only
   {
-    fs::VmoFile file(abc, 0u, PAGE_SIZE * 3u + 117u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE * 3u + 117u);
     fs::VnodeAttributes attr;
-    EXPECT_EQ(ZX_OK, file.GetAttributes(&attr));
+    EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR, attr.mode);
     EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.content_size);
     EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
@@ -319,9 +320,9 @@ TEST(VmoFile, Getattr) {
 
   // writable
   {
-    fs::VmoFile file(abc, 0u, PAGE_SIZE * 3u + 117u, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE * 3u + 117u, true);
     fs::VnodeAttributes attr;
-    EXPECT_EQ(ZX_OK, file.GetAttributes(&attr));
+    EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR | V_IWUSR, attr.mode);
     EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.content_size);
     EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
@@ -336,8 +337,9 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_1 - 5u, 23u, false,
+                                                 fs::VmoFile::VmoSharing::NONE);
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
   }
 
   // sharing = VmoSharing::DUPLICATE, read only
@@ -346,8 +348,9 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_1 - 5u, 23u, false,
+                                                 fs::VmoFile::VmoSharing::DUPLICATE);
+    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
     ASSERT_TRUE(info.is_memory());
     VnodeInfo::Memory& memory = info.memory();
     zx::vmo vmo = std::move(memory.vmo);
@@ -367,8 +370,9 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadWrite(), &info));
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_1 - 5u, 23u, true,
+                                                 fs::VmoFile::VmoSharing::DUPLICATE);
+    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadWrite(), &info));
     ASSERT_TRUE(info.is_memory());
     VnodeInfo::Memory& memory = info.memory();
     zx::vmo vmo = std::move(memory.vmo);
@@ -396,8 +400,9 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::WriteOnly(), &info));
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_1 - 5u, 23u, true,
+                                                 fs::VmoFile::VmoSharing::DUPLICATE);
+    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::WriteOnly(), &info));
     ASSERT_TRUE(info.is_memory());
     VnodeInfo::Memory& memory = info.memory();
     zx::vmo vmo = std::move(memory.vmo);
@@ -421,11 +426,12 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_2 - 5u, 23u, false,
+                                                 fs::VmoFile::VmoSharing::CLONE_COW);
     // There is non-trivial lazy initialization happening here - repeat it
     // to make sure it's nice and deterministic.
     for (int i = 0; i < 2; i++) {
-      EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
+      EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
     }
     ASSERT_TRUE(info.is_memory());
     VnodeInfo::Memory& memory = info.memory();
@@ -446,8 +452,9 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadWrite(), &info));
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_2 - 5u, 23u, true,
+                                                 fs::VmoFile::VmoSharing::CLONE_COW);
+    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadWrite(), &info));
     ASSERT_TRUE(info.is_memory());
     VnodeInfo::Memory& memory = info.memory();
     zx::vmo vmo = std::move(memory.vmo);
@@ -474,8 +481,9 @@ TEST(VmoFile, GetNodeInfo) {
     CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
-    fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::WriteOnly(), &info));
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, PAGE_2 - 5u, 23u, true,
+                                                 fs::VmoFile::VmoSharing::CLONE_COW);
+    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::WriteOnly(), &info));
     ASSERT_TRUE(info.is_memory());
     VnodeInfo::Memory& memory = info.memory();
     zx::vmo vmo = std::move(memory.vmo);

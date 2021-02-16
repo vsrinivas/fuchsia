@@ -28,7 +28,7 @@ class TestLazyDirHelper : public fs::LazyDir {
   }
 
   zx_status_t GetFile(fbl::RefPtr<fs::Vnode>* out, uint64_t id, fbl::String name) override {
-    last_output_file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
+    last_output_file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
     *out = last_output_file;
     last_id = id;
     last_name = name;

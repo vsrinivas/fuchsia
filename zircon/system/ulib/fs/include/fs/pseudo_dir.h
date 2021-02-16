@@ -32,11 +32,7 @@ namespace fs {
 // This class is thread-safe.
 class PseudoDir : public Vnode {
  public:
-  // Creates a directory which is initially empty.
-  PseudoDir();
-
-  // Destroys the directory and releases the nodes it contains.
-  ~PseudoDir() override;
+  // Construct with fbl::MakeRefCounted.
 
   // Adds a directory entry associating the given |name| with |vn|.
   // It is ok to add the same Vnode multiple times with different names.
@@ -79,6 +75,9 @@ class PseudoDir : public Vnode {
                                      VnodeRepresentation* info) final;
 
  private:
+  friend fbl::internal::MakeRefCountedHelper<PseudoDir>;
+  friend fbl::RefPtr<PseudoDir>;
+
   static constexpr uint64_t kDotId = 1u;
 
   struct IdTreeTag {};
@@ -118,6 +117,12 @@ class PseudoDir : public Vnode {
   using EntryByIdMap =
       fbl::TaggedWAVLTree<uint64_t, std::unique_ptr<Entry>, IdTreeTag, KeyByIdTraits>;
   using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
+
+  // Creates a directory which is initially empty.
+  PseudoDir();
+
+  // Destroys the directory and releases the nodes it contains.
+  ~PseudoDir() override;
 
   mutable std::mutex mutex_;
 

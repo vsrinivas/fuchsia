@@ -20,17 +20,17 @@ zx_status_t Hub::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 
 zx_status_t Hub::AddEntry(fbl::String name, fbl::String value) {
   return dir_->AddEntry(std::move(name),
-                        fbl::AdoptRef(new fs::BufferedPseudoFile([value](fbl::String* output) {
+                        fbl::MakeRefCounted<fs::BufferedPseudoFile>([value](fbl::String* output) {
                           *output = value;
                           return ZX_OK;
-                        })));
+                        }));
 }
 
 zx_status_t Hub::EnsureComponentDir() {
   if (component_dir_) {
     return ZX_OK;
   }
-  component_dir_ = fbl::AdoptRef(new fs::PseudoDir());
+  component_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   return AddEntry("c", component_dir_);
 }
 
@@ -42,7 +42,7 @@ zx_status_t Hub::AddComponent(const HubInfo& hub_info) {
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
   zx_status_t status = component_dir_->Lookup(hub_info.label(), &component_instance_vnode);
   if (status == ZX_ERR_NOT_FOUND) {
-    component_instance_dir = fbl::AdoptRef(new fs::PseudoDir());
+    component_instance_dir = fbl::MakeRefCounted<fs::PseudoDir>();
     component_dir_->AddEntry(hub_info.label(), component_instance_dir);
   } else {
     component_instance_dir =

@@ -98,9 +98,9 @@ TEST(SynchronousVfs, CloseAllConnections) {
 TEST(ManagedVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
   async::TestLoop loop;
   fs::ManagedVfs vfs(loop.dispatcher());
-  fs::PseudoDir dir;
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   bool closed = false;
-  vfs.CloseAllConnectionsForVnode(dir, [&closed]() { closed = true; });
+  vfs.CloseAllConnectionsForVnode(*dir, [&closed]() { closed = true; });
   loop.RunUntilIdle();
   ASSERT_TRUE(closed);
 }
@@ -108,9 +108,9 @@ TEST(ManagedVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
 TEST(SynchronousVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
   async::TestLoop loop;
   fs::SynchronousVfs vfs(loop.dispatcher());
-  fs::PseudoDir dir;
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   bool closed = false;
-  vfs.CloseAllConnectionsForVnode(dir, [&closed]() { closed = true; });
+  vfs.CloseAllConnectionsForVnode(*dir, [&closed]() { closed = true; });
   loop.RunUntilIdle();
   ASSERT_TRUE(closed);
 }

@@ -39,42 +39,45 @@ Namespace::Namespace(PrivateConstructor p, fxl::RefPtr<Namespace> parent, fxl::W
   if (realm) {
     connector = realm->log_connector();
   }
-  services_ = fbl::AdoptRef(new ServiceProviderDirImpl(connector, service_allowlist));
-  job_provider_ = fbl::AdoptRef(new JobProviderImpl(realm.get()));
+  services_ = fbl::MakeRefCounted<ServiceProviderDirImpl>(connector, service_allowlist);
+  job_provider_ = fbl::MakeRefCounted<JobProviderImpl>(realm.get());
   realm_ = std::move(realm);
   // WARNING! Do not add new services here! This makes services available in all
   // component namespaces ambiently without requiring proper routing between
   // realms, and this list should not be expanded.
   services_->AddService(
-      fuchsia::sys::Environment::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      fuchsia::sys::Environment::Name_,
+      fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
         if (status_ == Status::RUNNING) {
           environment_bindings_.AddBinding(
               this, fidl::InterfaceRequest<fuchsia::sys::Environment>(std::move(channel)));
         }
         return ZX_OK;
-      })));
-  services_->AddService(Launcher::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-                          if (status_ == Status::RUNNING) {
-                            launcher_bindings_.AddBinding(
-                                this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
-                          }
-                          return ZX_OK;
-                        })));
+      }));
   services_->AddService(
-      fuchsia::process::Launcher::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      Launcher::Name_, fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
+        if (status_ == Status::RUNNING) {
+          launcher_bindings_.AddBinding(this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
+        }
+        return ZX_OK;
+      }));
+  services_->AddService(
+      fuchsia::process::Launcher::Name_,
+      fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
         if (realm_) {
           realm_->environment_services()->Connect(
               fidl::InterfaceRequest<fuchsia::process::Launcher>(std::move(channel)));
           return ZX_OK;
         }
         return ZX_ERR_BAD_STATE;
-      })));
+      }));
   services_->AddService(
-      fuchsia::process::Resolver::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      fuchsia::process::Resolver::Name_,
+      fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
         resolver_bindings_.AddBinding(
             this, fidl::InterfaceRequest<fuchsia::process::Resolver>(std::move(channel)));
         return ZX_OK;
-      })));
+      }));
 
   // WARNING! Do not add new services here! This makes services available in all
   // component namespaces ambiently without requiring proper routing between
@@ -87,17 +90,17 @@ Namespace::Namespace(PrivateConstructor p, fxl::RefPtr<Namespace> parent, fxl::W
     for (auto& name : names) {
       if (service_host_directory_) {
         services_->AddService(name,
-                              fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+                              fbl::MakeRefCounted<fs::Service>([this, name](zx::channel channel) {
                                 fdio_service_connect_at(service_host_directory_.get(), name.c_str(),
                                                         channel.release());
                                 return ZX_OK;
-                              })));
+                              }));
       } else {
         services_->AddService(name,
-                              fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+                              fbl::MakeRefCounted<fs::Service>([this, name](zx::channel channel) {
                                 service_provider_->ConnectToService(name, std::move(channel));
                                 return ZX_OK;
-                              })));
+                              }));
       }
     }
   }
@@ -222,14 +225,14 @@ void Namespace::MaybeAddComponentEventProvider() {
   if (services_->IsServiceAllowlisted(fuchsia::sys::internal::ComponentEventProvider::Name_)) {
     services_->AddService(
         fuchsia::sys::internal::ComponentEventProvider::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           if (realm_) {
             return realm_->BindComponentEventProvider(
                 fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
                     std::move(channel)));
           }
           return ZX_ERR_BAD_STATE;
-        })));
+        }));
   }
 }
 

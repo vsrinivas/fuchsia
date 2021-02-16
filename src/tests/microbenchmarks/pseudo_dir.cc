@@ -21,7 +21,7 @@ namespace {
 // Benchmark baseline creation time.
 bool PseudoDirCreateTest(perftest::RepeatState* state) {
   while (state->KeepRunning()) {
-    perftest::DoNotOptimize(fs::PseudoDir());
+    perftest::DoNotOptimize(fbl::MakeRefCounted<fs::PseudoDir>());
   }
   return true;
 }
@@ -31,8 +31,8 @@ bool PseudoDirCreateTest(perftest::RepeatState* state) {
 bool PseudoDirRemoveAddTest(perftest::RepeatState* state, int file_count) {
   auto file_names = util::MakeDeterministicNamesList(file_count);
 
-  auto dir = fbl::AdoptRef(new fs::PseudoDir());
-  auto file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
 
   for (const auto& name : file_names) {
     dir->AddEntry(name, file);
@@ -53,8 +53,8 @@ bool PseudoDirRemoveAddTest(perftest::RepeatState* state, int file_count) {
 bool PseudoDirLookupTest(perftest::RepeatState* state, int file_count) {
   auto file_names = util::MakeDeterministicNamesList(file_count);
 
-  auto dir = fbl::AdoptRef(new fs::PseudoDir());
-  auto file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
 
   for (const auto& name : file_names) {
     dir->AddEntry(name, file);
@@ -76,8 +76,8 @@ bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count, int buff
   auto file_names = util::MakeDeterministicNamesList(file_count);
   std::vector<char> buffer(buffer_size);
 
-  auto dir = fbl::AdoptRef(new fs::PseudoDir());
-  auto file = fbl::AdoptRef(new fs::UnbufferedPseudoFile());
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
 
   for (const auto& name : file_names) {
     dir->AddEntry(name, file);

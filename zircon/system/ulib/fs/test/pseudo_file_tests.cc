@@ -100,7 +100,7 @@ void CheckAppend(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, fbl::St
 TEST(PseudoFile, OpenValidationBuffered) {
   // no read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile());
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>();
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
@@ -109,7 +109,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
 
   // read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader));
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
@@ -123,7 +123,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
 
   // no read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(nullptr, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(nullptr, &DummyWriter);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
@@ -137,7 +137,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
 
   // read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader, &DummyWriter);
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
     {
@@ -167,7 +167,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
 TEST(PseudoFile, OpenValidationUnbuffered) {
   // no read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
@@ -176,7 +176,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
 
   // read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader));
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(&DummyReader);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
@@ -189,7 +189,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
 
   // no read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(nullptr, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(nullptr, &DummyWriter);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
@@ -202,7 +202,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
 
   // read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(&DummyReader, &DummyWriter);
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     {
       fbl::RefPtr<fs::Vnode> redirect;
@@ -231,7 +231,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
 TEST(PseudoFile, GetattrBuffered) {
   // no read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile());
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>();
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE, attr.mode);
@@ -244,7 +244,7 @@ TEST(PseudoFile, GetattrBuffered) {
 
   // read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader));
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR, attr.mode);
@@ -261,7 +261,7 @@ TEST(PseudoFile, GetattrBuffered) {
 
   // no read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(nullptr, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(nullptr, &DummyWriter);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IWUSR, attr.mode);
@@ -278,7 +278,7 @@ TEST(PseudoFile, GetattrBuffered) {
 
   // read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader, &DummyWriter);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR | V_IWUSR, attr.mode);
@@ -297,7 +297,7 @@ TEST(PseudoFile, GetattrBuffered) {
 TEST(PseudoFile, GetattrUnbuffered) {
   // no read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>();
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE, attr.mode);
@@ -311,7 +311,7 @@ TEST(PseudoFile, GetattrUnbuffered) {
 
   // read handler, no write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader));
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(&DummyReader);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR, attr.mode);
@@ -328,7 +328,7 @@ TEST(PseudoFile, GetattrUnbuffered) {
 
   // no read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(nullptr, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(nullptr, &DummyWriter);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IWUSR, attr.mode);
@@ -345,7 +345,7 @@ TEST(PseudoFile, GetattrUnbuffered) {
 
   // read handler, write handler
   {
-    auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader, &DummyWriter));
+    auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(&DummyReader, &DummyWriter);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR | V_IWUSR, attr.mode);
@@ -363,7 +363,7 @@ TEST(PseudoFile, GetattrUnbuffered) {
 
 TEST(PseudoFile, ReadBuffered) {
   VectorReader reader{"first", "second", "", fbl::String(fbl::StringPiece("null\0null", 9u))};
-  auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(reader.GetHandler()));
+  auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(reader.GetHandler());
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
@@ -428,7 +428,7 @@ TEST(PseudoFile, ReadUnbuffered) {
                       "fifth",
                       "",
                       fbl::String(fbl::StringPiece("null\0null", 9u))};
-  auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(reader.GetHandler()));
+  auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(reader.GetHandler());
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
@@ -458,8 +458,7 @@ TEST(PseudoFile, ReadUnbuffered) {
 
 TEST(PseudoFile, WriteBuffered) {
   VectorWriter writer(6u);
-  auto file =
-      fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(nullptr, writer.GetHandler(), 10u));
+  auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(nullptr, writer.GetHandler(), 10u);
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
@@ -543,7 +542,7 @@ TEST(PseudoFile, WriteBuffered) {
 
 TEST(PseudoFile, WriteUnbuffered) {
   VectorWriter writer(12u);
-  auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(nullptr, writer.GetHandler()));
+  auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(nullptr, writer.GetHandler());
 
   {
     fbl::RefPtr<fs::Vnode> redirect;

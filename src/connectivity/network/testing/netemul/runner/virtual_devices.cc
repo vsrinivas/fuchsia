@@ -15,7 +15,7 @@
 namespace netemul {
 
 VirtualDevices::VirtualDevices()
-    : vdev_vfs_(async_get_default_dispatcher()), dir_(fbl::AdoptRef(new fs::PseudoDir())) {}
+    : vdev_vfs_(async_get_default_dispatcher()), dir_(fbl::MakeRefCounted<fs::PseudoDir>()) {}
 
 void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev) {
   auto components = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
@@ -42,13 +42,13 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
   });
 
   auto status = dir->AddEntry(
-      filename, fbl::AdoptRef(new fs::Service([dev = std::move(dev), path](zx::channel chann) {
+      filename, fbl::MakeRefCounted<fs::Service>([dev = std::move(dev), path](zx::channel chann) {
         if (!dev.is_bound()) {
           return ZX_ERR_PEER_CLOSED;
         }
         dev->ServeDevice(std::move(chann));
         return ZX_OK;
-      })));
+      }));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Can't add device entry " << path << ": " << zx_status_get_string(status);
   }
@@ -85,7 +85,7 @@ fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(std::vector<std::string_
     if (dir->Lookup(*i, &node) == ZX_OK) {
       dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
     } else {
-      auto ndir = fbl::AdoptRef(new fs::PseudoDir());
+      auto ndir = fbl::MakeRefCounted<fs::PseudoDir>();
       auto status = dir->AddEntry(*i, ndir);
       FX_CHECK(status == ZX_OK) << "Error creating mount path: " << *i << ": "
                                 << zx_status_get_string(status);

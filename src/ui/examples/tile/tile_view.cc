@@ -24,7 +24,7 @@ namespace examples {
 TileView::TileView(scenic::ViewContext context, TileParams params)
     : BaseView(std::move(context), "Tile"),
       vfs_(async_get_default_dispatcher()),
-      services_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      services_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       params_(std::move(params)),
       container_node_(session()) {
   root_node().AddChild(container_node_);
@@ -94,11 +94,11 @@ zx::channel TileView::OpenAsDirectory() {
 
 void TileView::CreateNestedEnvironment() {
   // Add a binding for the presenter service
-  auto service = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+  auto service = fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
     presenter_bindings_.AddBinding(
         this, fidl::InterfaceRequest<fuchsia::ui::policy::Presenter>(std::move(channel)));
     return ZX_OK;
-  }));
+  });
   services_dir_->AddEntry(fuchsia::ui::policy::Presenter::Name_, service);
 
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);

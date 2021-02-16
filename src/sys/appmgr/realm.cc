@@ -327,7 +327,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       temp_path_(args.temp_path),
       run_virtual_console_(args.run_virtual_console),
       job_(std::move(job)),
-      hub_(fbl::AdoptRef(new fs::PseudoDir())),
+      hub_(fbl::MakeRefCounted<fs::PseudoDir>()),
       info_vfs_(async_get_default_dispatcher()),
       environment_services_(args.environment_services),
       appmgr_config_dir_(std::move(args.appmgr_config_dir)),
@@ -350,7 +350,7 @@ Realm::Realm(RealmArgs args, zx::job job)
   if (parent_) {
     log_connector_ = parent_->log_connector_->NewChild(label_);
   } else {
-    log_connector_ = AdoptRef(new LogConnectorImpl(label_));
+    log_connector_ = fbl::MakeRefCounted<LogConnectorImpl>(label_);
   }
 
   if (args.options.kill_on_oom) {
@@ -370,41 +370,41 @@ Realm::Realm(RealmArgs args, zx::job job)
   hub_.SetName(label_);
   hub_.SetJobId(koid_);
   hub_.AddServices(default_namespace_->services());
-  hub_.AddJobProvider(fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+  hub_.AddJobProvider(fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
     default_namespace_->job_provider()->AddBinding(
         fidl::InterfaceRequest<fuchsia::sys::JobProvider>(std::move(channel)));
     return ZX_OK;
-  })));
+  }));
 
   // Add default services hosted by appmgr for the root realm only.
   if (!parent_) {
     // Set up Loader service for root realm.
     package_loader_.reset(new component::PackageLoader);
     default_namespace_->services()->AddService(
-        fuchsia::sys::Loader::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fuchsia::sys::Loader::Name_, fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           package_loader_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
           return ZX_OK;
-        })));
+        }));
 
     // Set up CacheControl service for root realm.
     cache_control_.reset(new component::CacheControl);
     default_namespace_->services()->AddService(
         fuchsia::sys::test::CacheControl::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           cache_control_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::test::CacheControl>(std::move(channel)));
           return ZX_OK;
-        })));
+        }));
 
     crash_introspector_ = std::make_unique<CrashIntrospector>();
     default_namespace_->services()->AddService(
         fuchsia::sys::internal::CrashIntrospect::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           crash_introspector_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::internal::CrashIntrospect>(std::move(channel)));
           return ZX_OK;
-        })));
+        }));
   }
 
   if (args.loader) {

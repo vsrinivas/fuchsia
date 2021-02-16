@@ -135,8 +135,8 @@ class RunnerImpl : public fuchsia::sys::Runner {
     // directory_request.
     fidl::InterfaceHandle<fuchsia::io::Directory> outgoing_dir;
     launch_info.directory_request = outgoing_dir.NewRequest().TakeChannel();
-    fbl::RefPtr<fs::PseudoDir> dir = fbl::AdoptRef(new fs::PseudoDir());
-    dir->AddEntry("svc", fbl::AdoptRef(new fs::RemoteDir(outgoing_dir.TakeChannel())));
+    auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+    dir->AddEntry("svc", fbl::MakeRefCounted<fs::RemoteDir>(outgoing_dir.TakeChannel()));
     vfs_.ServeDirectory(std::move(dir), std::move(startup_info.launch_info.directory_request));
 
     // Pass-through some arguments directly to the VMM package.
