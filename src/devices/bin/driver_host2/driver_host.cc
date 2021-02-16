@@ -73,7 +73,7 @@ Driver::~Driver() {
 
 void Driver::set_binding(
     fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver> binding) {
-  binding_ = std::make_optional(std::move(binding));
+  binding_.emplace(std::move(binding));
 }
 
 zx::status<> Driver::Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
