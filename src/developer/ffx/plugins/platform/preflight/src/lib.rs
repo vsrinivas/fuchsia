@@ -53,10 +53,10 @@ fn get_operating_system_macos(
             .expect("Could not get MacOS version string");
     assert!(status.success());
 
-    let re = Regex::new(r"(\d+)\.(\d+)\.\d+")?;
+    let re = Regex::new(r"(\d+)\.(\d+)(?:\.\d+)?")?;
     let caps = re.captures(&stdout).ok_or(anyhow!("unexpected output from `defaults read`"))?;
     let major: u32 = caps.get(1).unwrap().as_str().parse()?;
-    let minor: u32 = caps.get(2).unwrap().as_str().to_string().parse()?;
+    let minor: u32 = caps.get(2).unwrap().as_str().parse()?;
     Ok(OperatingSystem::MacOS(major, minor))
 }
 
@@ -184,7 +184,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_parse_macos_version() -> Result<()> {
-        let run_command: command_runner::CommandRunner = |args| {
+        let mut run_command: command_runner::CommandRunner = |args| {
             assert_eq!(
                 args.to_vec(),
                 vec!["defaults", "read", "loginwindow", "SystemVersionStampAsString"]
@@ -193,6 +193,16 @@ mod test {
         };
 
         assert_eq!(OperatingSystem::MacOS(10, 15), get_operating_system_macos(&run_command)?);
+
+        run_command = |args| {
+            assert_eq!(
+                args.to_vec(),
+                vec!["defaults", "read", "loginwindow", "SystemVersionStampAsString"]
+            );
+            Ok((ExitStatus(0), "11.1\n\n".to_string(), "".to_string()))
+        };
+
+        assert_eq!(OperatingSystem::MacOS(11, 1), get_operating_system_macos(&run_command)?);
         Ok(())
     }
 
