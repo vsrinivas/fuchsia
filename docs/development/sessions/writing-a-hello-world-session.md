@@ -45,7 +45,7 @@ The following lines of code are from `hello-world-session.cml`:
 
 1. The file starts by including other cml files if needed.
 
-   ```json
+   ```json5
    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
    ```
 
@@ -54,27 +54,28 @@ The following lines of code are from `hello-world-session.cml`:
 
 1. Next is the `program` block.
 
-   ```json
+   ```json5
    program: {
+       // Use the built-in ELF runner to run native binaries.
+       runner: "elf",
+       // The binary to run for this component.
        binary: "bin/hello_world_session",
    },
    ```
 
    The `program` block tells the `component_manager` where the binary for the
-   session component can be found. Finally there is a list of the other
-   capabilities that our component needs.
+   session component can be found. The `runner` key tells the `component_manager`
+   that is should run the component binary using the ELF runner.
 
 1. Finally the component manifest describes capabilities that the component
-   `use`s, `offer`s, or `expose`s.
+   can `use`, `offer`, or `expose`.
 
-   ```json
+   ```json5
    use: [
-       { runner: "elf" },
+       // List your component's dependencies here, ex:
+       // { protocol: "fuchsia.net.NameLookup" }
    ],
    ```
-
-   The `runner` key in the `use` block tells the `component_manager` that is
-   should run the component binary using the ELF runner.
 
 ## Create a session config
 

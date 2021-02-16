@@ -51,10 +51,10 @@ file of a component that accesses its own hub.
 ```
 {
     "program": {
+        "runner": "elf",
         "binary": "bin/program"
     },
     "use": [
-        { "runner": "elf" },
         {
             "directory": "hub",
             "from": "framework",
@@ -307,10 +307,10 @@ In `hub_client.cml`:
 ```
 {
     "program": {
+        "runner": "elf",
         "binary": "bin/hub_client",
     },
     "use": [
-        { "runner": "elf" },
         {
           "directory": "/hub",
           "from": "parent",
@@ -331,11 +331,9 @@ In `hub_client_sibling.cml`:
 ```
 {
     "program": {
+        "runner": "elf",
         "binary": "bin/hub_client_sibling",
     },
-    "use": [
-        { "runner": "elf" },
-    ],
     "expose": [
         {
             "directory": "/hub",
@@ -378,10 +376,10 @@ In hub_client.cml:
 ```
 {
     "program": {
+        "runner": "elf",
         "binary": "bin/hub_client",
     },
     "use": [
-        { "runner": "elf" },
         {
             "directory": "/sibling_hub", "from": "parent",
         }

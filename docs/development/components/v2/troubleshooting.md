@@ -319,9 +319,7 @@ following declaration:
 
 ```json5
 // test_driver.cml
-use: [
-    { runner: "rust_test_runner" },
-],
+include: [ "src/sys/test_runners/rust/default.shard.cml" ]
 ```
 
 
