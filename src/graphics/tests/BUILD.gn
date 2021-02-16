@@ -27,7 +27,7 @@ group("hw_tests") {
     "../examples/vkproto/test",
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
-    "vkvalidation:test-vk-validation",
+    "vkvalidation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]
 

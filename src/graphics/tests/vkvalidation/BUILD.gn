@@ -2,31 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
 
-test_package("test-vk-validation") {
-  deps = [ ":test_vk_validation" ]
-
-  tests = [
-    {
-      name = "test_vk_validation"
-      environments = magma_libvulkan_hardware_envs
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-}
-
-executable("test_vk_validation") {
+executable("vkvalidation_bin") {
   testonly = true
-  sources = [ "test_validation_layers.cc" ]
+  output_name = "vkvalidation"
+  sources = [ "vkvalidation.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
   ]
+}
+
+fuchsia_component("vkvalidation_cmp") {
+  testonly = true
+  component_name = "vkvalidation"
+  deps = [
+    ":vkvalidation_bin",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+  ]
+  manifest = "meta/vkvalidation.cmx"
+}
+
+fuchsia_test_package("vkvalidation-pkg") {
+  package_name = "vkvalidation"
+  test_components = [ ":vkvalidation_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+  }
+}
+
+group("vkvalidation") {
+  testonly = true
+  deps = [ ":vkvalidation-pkg" ]
 }
