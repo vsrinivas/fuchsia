@@ -677,6 +677,7 @@ Platforms GetPlatform() {
   if (board_name_cmp.find("astro") != std::string_view::npos ||
       board_name_cmp.find("sherlock") != std::string_view::npos ||
       board_name_cmp.find("vim2") != std::string_view::npos ||
+      board_name_cmp.find("vim3") != std::string_view::npos ||
       board_name_cmp.find("nelson") != std::string_view::npos ||
       board_name_cmp.find("luis") != std::string_view::npos) {
     return AMLOGIC_PLATFORM;

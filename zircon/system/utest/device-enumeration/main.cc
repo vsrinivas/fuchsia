@@ -205,6 +205,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
       "mali/aml-gpu",
       "sys/platform/05:00:10/aml-canvas",
+      "display/amlogic-display/display-controller",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

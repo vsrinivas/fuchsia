@@ -69,10 +69,7 @@ static const pbus_irq_t gpio_irqs[] = {
 
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
-    {VIM3_J4_PIN_39},
-    {VIM3_ETH_MAC_INTR},
-    {A311D_GPIOBOOT(12)},
-    {A311D_GPIOX(6)},
+    {VIM3_J4_PIN_39}, {VIM3_ETH_MAC_INTR}, {A311D_GPIOBOOT(12)}, {A311D_GPIOX(6)}, {VIM3_HPD_IN},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
