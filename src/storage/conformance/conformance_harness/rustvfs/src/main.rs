@@ -26,6 +26,7 @@ use {
         file::pcb,
         file::vmo::asynchronous as vmo,
         path::Path,
+        registry::token_registry,
     },
 };
 
@@ -96,13 +97,16 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 let config = Io1Config {
                     immutable_file: Some(false),
                     immutable_dir: Some(false),
-                    no_exec: Some(true),
                     no_vmofile: Some(false),
+                    no_get_buffer: Some(false),
+                    no_rename: Some(false),
+                    no_link: Some(false),
                     // TODO(fxbug.dev/33880): Remote directories are supported by the vfs, just
                     // haven't been implemented in this harness yet.
                     no_remote_dir: Some(true),
+                    // Admin and exec bits aren't supported:
+                    no_exec: Some(true),
                     no_admin: Some(true),
-                    no_get_buffer: Some(false),
                     ..Io1Config::EMPTY
                 };
                 responder.send(config)?;
@@ -135,7 +139,10 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 return Err(anyhow!("Unsupported request type: {:?}.", request));
             }
         };
-        let scope = ExecutionScope::new();
+
+        let token_registry = token_registry::Simple::new();
+        let scope = ExecutionScope::build().token_registry(token_registry).new();
+
         dir.open(scope, flags, 0, Path::empty(), directory_request.into_channel().into());
     }
 

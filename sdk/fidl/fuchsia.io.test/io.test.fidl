@@ -57,6 +57,12 @@ table Io1Config {
 
     /// The GetBuffer method is not supported.
     7: bool no_get_buffer;
+
+    /// The Rename method is not supported.
+    8: bool no_rename;
+
+    /// The Link and Unlink methods are not supported.
+    9: bool no_link;
 };
 
 resource table Directory {

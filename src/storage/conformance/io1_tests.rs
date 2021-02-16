@@ -75,6 +75,45 @@ async fn open_node<T: ServiceMarker>(
     T::Proxy::from_channel(node_proxy.into_channel().expect("Cannot convert node proxy to channel"))
 }
 
+/// Helper function to open a sub-directory with the given flags. Only use this if testing
+/// something other than the open call directly.
+async fn open_dir_with_flags(
+    parent_dir: &io::DirectoryProxy,
+    flags: u32,
+    path: &str,
+) -> io::DirectoryProxy {
+    open_node::<io::DirectoryMarker>(&parent_dir, flags, io::MODE_TYPE_DIRECTORY, path).await
+}
+
+/// Helper function to open a sub-directory as readable and writable. Only use this if testing
+/// something other than the open call directly.
+async fn open_rw_dir(parent_dir: &io::DirectoryProxy, path: &str) -> io::DirectoryProxy {
+    open_dir_with_flags(parent_dir, io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, path).await
+}
+
+/// Helper function to read a file and return its contents. Only use this if testing something other
+/// than the read call directly.
+async fn read_file(dir: &io::DirectoryProxy, path: &str) -> Vec<u8> {
+    let file =
+        open_node::<io::FileMarker>(dir, io::OPEN_RIGHT_READABLE, io::MODE_TYPE_FILE, path).await;
+    let (status, data) = file.read(100).await.expect("read failed");
+    assert_eq!(Status::from_raw(status), Status::OK);
+    data
+}
+
+/// Attempts to open the given file, and checks the status is `NOT_FOUND`.
+async fn assert_file_not_found(dir: &io::DirectoryProxy, path: &str) {
+    let (file_proxy, file_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
+    dir.open(
+        io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_DESCRIBE,
+        io::MODE_TYPE_FILE,
+        path,
+        file_server,
+    )
+    .expect("Cannot open file");
+    assert_eq!(get_open_status(&file_proxy).await, Status::NOT_FOUND);
+}
+
 /// Creates and returns a directory with the given structure from the test harness.
 fn get_directory_from_harness(
     harness: &io_test::Io1HarnessProxy,
@@ -722,6 +761,109 @@ async fn vmo_file_describe() {
         "Expected Vmofile, instead got {:?}",
         node_info
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn get_token_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    for dir_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
+        let root = root_directory(dir_flags, vec![]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let (status, _handle) = test_dir.get_token().await.expect("get_token failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        // Handle is tested in other test cases.
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn get_token_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+    let not_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
+
+    for dir_flags in build_flag_combinations(0, not_writable_flags) {
+        let root = root_directory(dir_flags, vec![]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let (status, _handle) = test_dir.get_token().await.expect("get_token failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn rename_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+    if config.no_rename.unwrap_or_default() {
+        return;
+    }
+    let all_rights = all_rights_for_harness(&harness).await;
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
+        let root = root_directory(
+            all_rights,
+            vec![
+                directory("src", dir_flags, vec![file("old.txt", dir_flags, contents.to_vec())]),
+                directory("dest", dir_flags, vec![]),
+            ],
+        );
+        let test_dir = get_directory_from_harness(&harness, root);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+        let dest_dir = open_rw_dir(&test_dir, "dest").await;
+
+        // Get token for destination directory.
+        let (status, token) = dest_dir.get_token().await.expect("get_token failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let dest_token = token.expect("handle missing");
+
+        // Rename src/old.txt -> dest/new.txt.
+        let status = src_dir.rename("old.txt", dest_token, "new.txt").await.expect("rename failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Check dest/new.txt was created and has correct contents.
+        assert_eq!(read_file(&test_dir, "dest/new.txt").await, contents);
+
+        // Check src/old.txt no longer exists.
+        assert_file_not_found(&test_dir, "src/old.txt").await;
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn rename_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+    if config.no_rename.unwrap_or_default() {
+        return;
+    }
+    let all_rights = all_rights_for_harness(&harness).await;
+    let not_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in build_flag_combinations(0, not_writable_flags) {
+        let root = root_directory(
+            all_rights,
+            vec![
+                directory("src", dir_flags, vec![file("old.txt", dir_flags, contents.to_vec())]),
+                directory("dest", dir_flags, vec![]),
+            ],
+        );
+        let test_dir = get_directory_from_harness(&harness, root);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+        let dest_dir = open_rw_dir(&test_dir, "dest").await;
+
+        // Get token for destination directory.
+        let (status, token) = dest_dir.get_token().await.expect("get_token failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let dest_token = token.expect("handle missing");
+
+        // Try renaming src/old.txt -> dest/new.txt.
+        let status = src_dir.rename("old.txt", dest_token, "new.txt").await.expect("rename failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+    }
 }
 
 #[cfg(test)]

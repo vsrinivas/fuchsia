@@ -57,8 +57,12 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_vmofile(false);
     config.set_no_remote_dir(false);
     config.set_no_admin(false);
-    // TODO(fxbug.dev/33880): Figure out why the GetBuffer method isn't working.
+
+    // PseudoFile/PseudoDir do not support a variety of methods:
     config.set_no_get_buffer(true);
+    config.set_no_rename(true);
+    config.set_no_link(true);
+
     callback(std::move(config));
   }
 
