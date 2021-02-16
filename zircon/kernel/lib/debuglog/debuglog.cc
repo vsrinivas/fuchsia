@@ -80,6 +80,11 @@ void dlog_bypass_init() {
   }
 }
 
+#define DLOG_HDR_SET(fifosize, readsize) ((((readsize)&0xFFF) << 12) | ((fifosize)&0xFFF))
+
+#define DLOG_HDR_GET_FIFOLEN(n) ((n)&0xFFF)
+#define DLOG_HDR_GET_READLEN(n) (((n) >> 12) & 0xFFF)
+
 // The debug log maintains a circular buffer of debug log records,
 // consisting of a common header (dlog_header_t) followed by up
 // to 224 bytes of textual log message.  Records are aligned on
@@ -121,14 +126,14 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
     return ZX_ERR_BAD_STATE;
   }
 
-  // Our size "on the wire" must be a multiple of 4, so we know
-  // that worst case there will be room for a header skipping
-  // the last n bytes when the fifo wraps
+  // Our size "on the wire" must be a multiple of 4, so we know that worst case
+  // there will be room for a header preamble skipping the last n bytes when the
+  // fifo wraps
   size_t wiresize = sizeof(dlog_header) + ALIGN4(len);
 
   // Prepare the record header before taking the lock
   dlog_header_t hdr;
-  hdr.header = static_cast<uint32_t>(DLOG_HDR_SET(wiresize, sizeof(dlog_header) + len));
+  hdr.preamble = static_cast<uint32_t>(DLOG_HDR_SET(wiresize, sizeof(dlog_header) + len));
   hdr.datalen = static_cast<uint16_t>(len);
   hdr.severity = static_cast<uint8_t>(severity);
   hdr.flags = static_cast<uint8_t>(flags);
@@ -153,8 +158,8 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
     // Discard records at tail until there is enough
     // space for the new record.
     while ((this->head - this->tail) > (DLOG_SIZE - wiresize)) {
-      uint32_t header = *reinterpret_cast<uint32_t*>(this->data + (this->tail & DLOG_MASK));
-      this->tail += DLOG_HDR_GET_FIFOLEN(header);
+      uint32_t preamble = *reinterpret_cast<uint32_t*>(this->data + (this->tail & DLOG_MASK));
+      this->tail += DLOG_HDR_GET_FIFOLEN(preamble);
     }
 
     size_t offset = (this->head & DLOG_MASK);
@@ -232,13 +237,7 @@ void DLog::shutdown() {
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-zx_status_t DlogReader::Read(uint32_t flags, void* data_ptr, size_t len, size_t* _actual) {
-  uint8_t* ptr = static_cast<uint8_t*>(data_ptr);
-  // must be room for worst-case read
-  if (len < DLOG_MAX_RECORD) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
+zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* _actual) {
   DLog* log = log_;
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
@@ -259,21 +258,24 @@ zx_status_t DlogReader::Read(uint32_t flags, void* data_ptr, size_t len, size_t*
 
     if (rtail != log->head) {
       size_t offset = (rtail & DLOG_MASK);
-      uint32_t header = *reinterpret_cast<uint32_t*>(log->data + offset);
+      void* record_start = log->data + offset;
+      uint32_t header = *reinterpret_cast<uint32_t*>(record_start);
 
       size_t actual = DLOG_HDR_GET_READLEN(header);
       size_t fifospace = DLOG_SIZE - offset;
 
       if (fifospace >= actual) {
-        memcpy(ptr, log->data + offset, actual);
+        // The record is contiguous.
+        memcpy(record, record_start, actual);
       } else {
-        memcpy(ptr, log->data + offset, fifospace);
-        memcpy(ptr + fifospace, log->data, actual - fifospace);
+        // The record wraps.
+        memcpy(record, record_start, fifospace);
+        memcpy(reinterpret_cast<char*>(record) + fifospace, log->data, actual - fifospace);
       }
 
       // The underlying structure at ptr is zx_log_record_t as defined in zircon/syscalls/log.h .
       // We're setting the "rollout" field here.
-      *reinterpret_cast<uint32_t*>(ptr) = rolled_out;
+      record->hdr.preamble = rolled_out;
 
       *_actual = actual;
       status = ZX_OK;
@@ -406,11 +408,7 @@ static int debuglog_dumper(void* arg) {
   // assembly buffer with room for log text plus header text
   char tmp[DLOG_MAX_DATA + 128];
 
-  struct {
-    dlog_header_t hdr;
-    char data[DLOG_MAX_DATA + 1];
-  } rec;
-
+  dlog_record_t rec;
   DlogReader reader;
   reader.Initialize(&debuglog_dumper_notify, &dumper_event);
   fbl::AutoCall disconnect{[&reader]() { reader.Disconnect(); }};
@@ -427,16 +425,16 @@ static int debuglog_dumper(void* arg) {
 
     // Read out all the records and dump them to the kernel console.
     size_t actual;
-    while (reader.Read(0, &rec, DLOG_MAX_RECORD, &actual) == ZX_OK) {
-      if (rec.hdr.datalen && (rec.data[rec.hdr.datalen - 1] == '\n')) {
-        rec.data[rec.hdr.datalen - 1] = 0;
-      } else {
-        rec.data[rec.hdr.datalen] = 0;
+    while (reader.Read(0, &rec, &actual) == ZX_OK) {
+      // "Remove" any tailing newline character before formatting because the
+      // format string already contains a newline.
+      if (rec.hdr.datalen > 0 && (rec.data[rec.hdr.datalen - 1] == '\n')) {
+        rec.hdr.datalen--;
       }
-      int n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ":%05" PRIu64 "> %s\n",
+      int n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ":%05" PRIu64 "> %.*s\n",
                        (int)(rec.hdr.timestamp / ZX_SEC(1)),
                        (int)((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL), rec.hdr.pid, rec.hdr.tid,
-                       rec.data);
+                       rec.hdr.datalen, rec.data);
       if (n > (int)sizeof(tmp)) {
         n = sizeof(tmp);
       }

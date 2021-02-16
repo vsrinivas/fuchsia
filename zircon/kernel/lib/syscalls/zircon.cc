@@ -239,14 +239,20 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
   if (status != ZX_OK)
     return status;
 
-  char buf[DLOG_MAX_RECORD];
+  dlog_record_t record{};
   size_t actual;
-  if ((status = log->Read(options, buf, DLOG_MAX_RECORD, &actual)) < 0)
+  if ((status = log->Read(options, &record, &actual)) < 0) {
     return status;
+  }
 
   const size_t to_copy = ktl::min(actual, len);
-  if (ptr.reinterpret<char>().copy_array_to_user(buf, to_copy) != ZX_OK)
+  DEBUG_ASSERT(to_copy <= sizeof(record));
+  static_assert(internal::is_copy_allowed<decltype(record.hdr)>::value);
+  auto src = reinterpret_cast<const char*>(&record.hdr);
+  status = ptr.reinterpret<char>().copy_array_to_user(src, to_copy);
+  if (status != ZX_OK) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   return static_cast<zx_status_t>(to_copy);
 }

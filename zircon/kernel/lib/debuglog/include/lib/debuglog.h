@@ -11,11 +11,13 @@
 #include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
+#include <zircon/syscalls/log.h>
 #include <zircon/types.h>
 
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <ktl/string_view.h>
+#include <ktl/type_traits.h>
 
 struct DLog;
 typedef struct dlog_header dlog_header_t;
@@ -37,7 +39,10 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
 
   void InitializeForTest(DLog* log);
 
-  zx_status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
+  // Read one record out of the log and store it in |record|.
+  //
+  // Upon success, returns ZX_OK and sets *|actual| to the record's size.
+  zx_status_t Read(uint32_t flags, dlog_record_t* record, size_t* actual);
 
   void Notify();
 
@@ -55,25 +60,44 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
   void* cookie_ = nullptr;
 };
 
-#define DLOG_HDR_SET(fifosize, readsize) ((((readsize)&0xFFF) << 12) | ((fifosize)&0xFFF))
-
-#define DLOG_HDR_GET_FIFOLEN(n) ((n)&0xFFF)
-#define DLOG_HDR_GET_READLEN(n) (((n) >> 12) & 0xFFF)
-
 #define DLOG_MAX_RECORD (size_t{256})
 #define DLOG_MAX_DATA (DLOG_MAX_RECORD - sizeof(dlog_header))
 
-// This structure is designed to be copied into a zx_log_record_t from zircon/syscalls/log.h . Only
-// the header field is repurposed, and the rest is then transferred to userspace as-is.
+// This structure is designed to be copied into a zx_log_record_t from
+// zircon/syscalls/log.h.
+//
+// The size, type, and offset of these fields must match those of
+// zx_log_record_t.
 struct dlog_header {
-  uint32_t header;
+  // When inside a debuglog, the |preamble| contains both the record's true size
+  // (|DLOG_HDR_READLEN|) and the record's size when padded out to live in the
+  // FIFO (|DLOG_HDR_FIFOLEN|).
+  //
+  // After being read out of a debuglog, the |preamble| field contains an
+  // estimate of the number of bytes that were dropped from the log since the
+  // last message was read.
+  uint32_t preamble;
   uint16_t datalen;
   uint8_t severity;
   uint8_t flags;
-  uint64_t timestamp;
+  zx_time_t timestamp;
   uint64_t pid;
   uint64_t tid;
 };
+static_assert(sizeof(dlog_header_t) == sizeof(zx_log_record_t));
+static_assert(alignof(dlog_header_t) == alignof(zx_log_record_t));
+#define ASSERT_FIELDS_MATCH(type1, field1, type2, field2)                          \
+  static_assert(sizeof(type1::field1) == sizeof(type2::field2));                   \
+  static_assert(ktl::is_same_v<decltype(type1::field1), decltype(type2::field2)>); \
+  static_assert(offsetof(type1, field1) == offsetof(type2, field2))
+ASSERT_FIELDS_MATCH(dlog_header_t, preamble, zx_log_record_t, rollout);
+ASSERT_FIELDS_MATCH(dlog_header_t, datalen, zx_log_record_t, datalen);
+ASSERT_FIELDS_MATCH(dlog_header_t, severity, zx_log_record_t, severity);
+ASSERT_FIELDS_MATCH(dlog_header_t, flags, zx_log_record_t, flags);
+ASSERT_FIELDS_MATCH(dlog_header_t, timestamp, zx_log_record_t, timestamp);
+ASSERT_FIELDS_MATCH(dlog_header_t, pid, zx_log_record_t, pid);
+ASSERT_FIELDS_MATCH(dlog_header_t, tid, zx_log_record_t, tid);
+#undef ASSERT_FIELDS_MATCH
 
 // Severity Levels
 #define DEBUGLOG_TRACE (0x10)

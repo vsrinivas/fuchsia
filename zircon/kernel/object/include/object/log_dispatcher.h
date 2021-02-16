@@ -24,7 +24,7 @@ class LogDispatcher final : public SoloDispatcher<LogDispatcher, ZX_DEFAULT_LOG_
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_LOG; }
 
   zx_status_t Write(uint32_t severity, uint32_t flags, ktl::string_view str);
-  zx_status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
+  zx_status_t Read(uint32_t flags, dlog_record_t* record, size_t* actual);
 
  private:
   explicit LogDispatcher(uint32_t flags);

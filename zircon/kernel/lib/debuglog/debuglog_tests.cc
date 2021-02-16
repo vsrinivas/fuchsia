@@ -85,6 +85,38 @@ bool log_wrap() {
   END_TEST;
 }
 
+// Read a record from the debuglog and verify its fields.
+bool log_reader_read() {
+  BEGIN_TEST;
+
+  fbl::AllocChecker ac;
+  ktl::unique_ptr<DLog> log = ktl::make_unique<DLog>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  const zx_time_t now = current_time();
+
+  char msg[] = "Message!";
+  ASSERT_EQ(ZX_OK, log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
+
+  DlogReader reader;
+  reader.InitializeForTest(log.get());
+  size_t got;
+  dlog_record_t rec{};
+  ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
+  ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
+  EXPECT_EQ(0u, rec.hdr.preamble);
+  EXPECT_EQ(sizeof(msg), rec.hdr.datalen);
+  EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
+  EXPECT_EQ(0, rec.hdr.flags);
+  EXPECT_GE(rec.hdr.timestamp, now);
+  EXPECT_EQ(0ull, rec.hdr.pid);
+  EXPECT_EQ(Thread::Current::Get()->tid(), rec.hdr.tid);
+
+  reader.Disconnect();
+
+  END_TEST;
+}
+
 bool log_reader_rollout() {
   BEGIN_TEST;
 
@@ -99,50 +131,41 @@ bool log_reader_rollout() {
 
   log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
 
-  uint8_t read_buf[DLOG_MAX_RECORD];
+  dlog_record_t rec{};
   size_t got;
 
-  ASSERT_EQ(ZX_OK, reader.Read(0, read_buf, sizeof(read_buf), &got));
+  ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
   ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
 
-  dlog_header* header = reinterpret_cast<dlog_header*>(read_buf);
+  EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
+  EXPECT_EQ(0u, rec.hdr.preamble);
+  EXPECT_EQ(0, rec.hdr.flags);
+  EXPECT_EQ(ZX_KOID_INVALID, rec.hdr.pid);
+  EXPECT_NE(ZX_KOID_INVALID, rec.hdr.tid);
+  ASSERT_EQ(sizeof(msg), rec.hdr.datalen);
 
-  EXPECT_EQ(DEBUGLOG_WARNING, header->severity);
-
-  // Header should be zeroed out.
-  EXPECT_EQ(0u, header->header);
-
-  EXPECT_EQ(0, header->flags);
-  EXPECT_EQ(ZX_KOID_INVALID, header->pid);
-  EXPECT_NE(ZX_KOID_INVALID, header->tid);
-  ASSERT_EQ(sizeof(msg), header->datalen);
-
-  uint8_t* msg_bytes = &read_buf[sizeof(dlog_header)];
-
-  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&msg[0]), msg_bytes, sizeof(msg));
+  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(msg), reinterpret_cast<uint8_t*>(rec.data),
+                  sizeof(msg));
 
   for (size_t i = 0; i < DLOG_SIZE; i += sizeof(dlog_header) + sizeof(msg)) {
     log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
   }
 
-  ASSERT_EQ(ZX_OK, reader.Read(0, read_buf, sizeof(read_buf), &got));
+  ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
   ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
 
-  header = reinterpret_cast<dlog_header*>(read_buf);
-
-  EXPECT_EQ(DEBUGLOG_WARNING, header->severity);
+  EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
 
   // The amount of data rolled out should be snuck in here.
-  EXPECT_EQ(sizeof(dlog_header) + sizeof(msg), header->header);
+  EXPECT_EQ(sizeof(dlog_header) + sizeof(msg), rec.hdr.preamble);
 
-  EXPECT_EQ(0, header->flags);
-  EXPECT_EQ(ZX_KOID_INVALID, header->pid);
-  EXPECT_NE(ZX_KOID_INVALID, header->tid);
-  ASSERT_EQ(sizeof(msg), header->datalen);
+  EXPECT_EQ(0, rec.hdr.flags);
+  EXPECT_EQ(ZX_KOID_INVALID, rec.hdr.pid);
+  EXPECT_NE(ZX_KOID_INVALID, rec.hdr.tid);
+  ASSERT_EQ(sizeof(msg), rec.hdr.datalen);
 
-  msg_bytes = &read_buf[sizeof(dlog_header)];
-
-  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&msg[0]), msg_bytes, sizeof(msg));
+  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(msg), reinterpret_cast<uint8_t*>(rec.data),
+                  sizeof(msg));
 
   reader.Disconnect();
   END_TEST;
@@ -168,10 +191,10 @@ bool shutdown() {
   DlogReader reader;
   reader.InitializeForTest(log.get());
   size_t got;
-  uint8_t read_buf[DLOG_MAX_RECORD];
-  ASSERT_EQ(ZX_OK, reader.Read(0, read_buf, sizeof(read_buf), &got));
+  dlog_record_t rec{};
+  ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
   ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
-  ASSERT_EQ(ZX_ERR_SHOULD_WAIT, reader.Read(0, read_buf, sizeof(read_buf), &got));
+  ASSERT_EQ(ZX_ERR_SHOULD_WAIT, reader.Read(0, &rec, &got));
   reader.Disconnect();
 
   END_TEST;
@@ -184,6 +207,7 @@ bool shutdown() {
 UNITTEST_START_TESTCASE(debuglog_tests)
 DEBUGLOG_UNITTEST(log_format)
 DEBUGLOG_UNITTEST(log_wrap)
+DEBUGLOG_UNITTEST(log_reader_read)
 DEBUGLOG_UNITTEST(log_reader_rollout)
 DEBUGLOG_UNITTEST(shutdown)
 UNITTEST_END_TESTCASE(debuglog_tests, "debuglog_tests", "Debuglog test")

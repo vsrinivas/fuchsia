@@ -71,7 +71,7 @@ zx_status_t LogDispatcher::Write(uint32_t severity, uint32_t flags, ktl::string_
   return dlog_write(severity, flags_ | flags, str);
 }
 
-zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actual) {
+zx_status_t LogDispatcher::Read(uint32_t flags, dlog_record_t* record, size_t* actual) {
   canary_.Assert();
 
   if (!(flags_ & ZX_LOG_FLAG_READABLE))
@@ -79,7 +79,7 @@ zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* a
 
   Guard<Mutex> guard{get_lock()};
 
-  zx_status_t status = reader_.Read(0, ptr, len, actual);
+  zx_status_t status = reader_.Read(0, record, actual);
   if (status == ZX_ERR_SHOULD_WAIT) {
     UpdateStateLocked(ZX_CHANNEL_READABLE, 0);
   }
