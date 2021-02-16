@@ -110,6 +110,7 @@ go_library("netstack_lib") {
   deps = [
     ":gen/netstack",
     ":networking_metrics_golib",
+    "dns",
     "fidlext/fuchsia/hardware/ethernet",
     "//sdk/fidl/fuchsia.cobalt($go_toolchain)",
     "//sdk/fidl/fuchsia.device($go_toolchain)",
@@ -147,8 +148,6 @@ go_library("netstack_lib") {
     "dhcp/dhcp_string.go",
     "dhcp/dhcp_test.go",
     "dhcp/server.go",
-    "dns/servers_config.go",
-    "dns/servers_config_test.go",
     "errors.go",
     "fidlconv/fidlconv.go",
     "fidlconv/fidlconv_test.go",
