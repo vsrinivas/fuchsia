@@ -136,7 +136,7 @@ fn write_formatted_output(cmd_name: &str, lines: &Vec<String>, path: &Path) -> R
     let mut output_writer = BufWriter::new(file);
 
     // Write out the header.
-    writeln!(&mut output_writer, "# {} Reference\n", cmd_name)?;
+    writeln!(&mut output_writer, "# {}\n", cmd_name)?;
     writeln!(&mut output_writer, "```")?;
 
     for line in lines {
@@ -237,7 +237,7 @@ mod tests {
 
         // Write a hard-coded formatted file.
         let formatted_contents = vec![
-            "# host-tool-cmd Reference\n".to_string(),
+            "# host-tool-cmd\n".to_string(),
             "```".to_string(),
             "Usage: host-tool-cmd".to_string(),
             "Tool description".to_string(),
