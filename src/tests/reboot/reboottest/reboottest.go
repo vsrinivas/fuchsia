@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package support
+// Package reboottest tests reboot cleanliness based on how the OS is being
+// rebooted.
+package reboottest
 
 import (
 	"os"
@@ -12,6 +14,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/emulator"
 )
 
+// ExpectedRebootType declares what is the expectation for the reboot
+// cleanliness.
 type ExpectedRebootType int
 
 const (
@@ -19,20 +23,21 @@ const (
 	UncleanReboot
 )
 
-// RebootWithCommand is a test helper that boots a qemu instance then reboots it by issuing cmd.
-func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
-	RebootWithCommandAndZbi(t, cmd, kind, "fuchsia.zbi")
-}
-
-func RebootWithCommandAndZbi(t *testing.T, cmd string, kind ExpectedRebootType, zbi_name string) {
-	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+// RebootWithCommand is a test helper that boots a qemu instance then reboots
+// it by issuing cmd.
+func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType, zbi_name string) {
+	e := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(e, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	t.Cleanup(func() {
+		if err := distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	})
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)

@@ -7,13 +7,14 @@ package main
 import (
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/tests/reboot/support"
+	"go.fuchsia.dev/fuchsia/src/tests/reboot/reboottest"
 )
 
 // Test that "dm reboot" will reboot the system.
-// It's important to also test that bringup reboots cleanly because bringup doesn't have
-// storage. Bringup must shutdown cleanly without some components that normally live in storage
-// (like PowerManager).
+//
+// It's important to also test that bringup reboots cleanly because bringup
+// doesn't have storage. Bringup must shutdown cleanly without some components
+// that normally live in storage (like PowerManager).
 func TestDmReboot(t *testing.T) {
-	support.RebootWithCommandAndZbi(t, "dm reboot", support.CleanReboot, "bringup.zbi")
+	reboottest.RebootWithCommand(t, "dm reboot", reboottest.CleanReboot, "bringup.zbi")
 }

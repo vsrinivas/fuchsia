@@ -7,10 +7,10 @@ package main
 import (
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/tests/reboot/support"
+	"go.fuchsia.dev/fuchsia/src/tests/reboot/reboottest"
 )
 
 // Test that "dm reboot" will reboot the system.
 func TestDmReboot(t *testing.T) {
-	support.RebootWithCommand(t, "dm reboot", support.CleanReboot)
+	reboottest.RebootWithCommand(t, "dm reboot", reboottest.CleanReboot, "fuchsia.zbi")
 }

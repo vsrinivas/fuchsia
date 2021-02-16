@@ -22,14 +22,14 @@ group("tests") {
 }
 
 if (is_linux) {
-  go_library("support") {
+  go_library("reboottest") {
     testonly = true
 
-    source_dir = "//src/tests/reboot/support"
+    source_dir = "//src/tests/reboot/reboottest"
 
     deps = [ "//tools/emulator" ]
 
-    sources = [ "reboot.go" ]
+    sources = [ "reboottest.go" ]
   }
 
   host_test_data("main_zbi") {
@@ -45,7 +45,7 @@ if (is_linux) {
     go_library(target_name) {
       testonly = true
       source_dir = "//src/tests/reboot/$split_name"
-      deps = [ ":support" ]
+      deps = [ ":reboottest" ]
       forward_variables_from(invoker, [ "sources" ])
     }
 

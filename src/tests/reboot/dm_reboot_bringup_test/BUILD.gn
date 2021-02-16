@@ -12,7 +12,7 @@ group("tests") {
 if (is_linux) {
   go_library("lib") {
     testonly = true
-    deps = [ "//src/tests/reboot:support" ]
+    deps = [ "//src/tests/reboot:reboottest" ]
     sources = [ "dm_reboot_bringup_test.go" ]
   }
 
