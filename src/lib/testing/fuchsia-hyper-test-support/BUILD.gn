@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-hyper-test-support") {
   testonly = true
@@ -31,14 +31,9 @@ rustc_library("fuchsia-hyper-test-support") {
   ]
 }
 
-test_package("fuchsia-hyper-test-support-tests") {
+fuchsia_unittest_package("fuchsia-hyper-test-support-tests") {
   deps = [ ":fuchsia-hyper-test-support_test" ]
-
-  tests = [
-    {
-      name = "fuchsia_hyper_test_support_lib_test"
-    },
-  ]
+  manifest = "meta/fuchsia_hyper_test_support_lib_test.cmx"
 }
 
 group("tests") {

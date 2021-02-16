@@ -13,7 +13,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/fuchsia_hyper_test_support_lib_test"
+        "binary": "bin/fuchsia_hyper_test_support_lib_test"
     },
     "sandbox": {
         "services": [

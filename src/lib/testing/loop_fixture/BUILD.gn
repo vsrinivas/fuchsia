@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("loop_fixture") {
   testonly = true
@@ -59,15 +59,8 @@ executable("loop_fixture_unittests") {
   ]
 }
 
-unittest_package("loop_fixture_tests") {
+fuchsia_unittest_package("loop_fixture_tests") {
   deps = [ ":loop_fixture_unittests" ]
-
-  tests = [
-    {
-      name = "loop_fixture_unittests"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
