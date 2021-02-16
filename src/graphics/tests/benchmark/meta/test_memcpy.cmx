@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/test_memcpy"
+        "binary": "bin/test_memcpy"
     }
 }

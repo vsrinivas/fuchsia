@@ -2,53 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
 if (magma_openvx_package != "") {
   import("$magma_openvx_package/fuchsia/openvx-data.gni")
 }
 
-group("benchmark") {
-  testonly = true
-
-  public_deps = [
-    ":memcpy",
-    ":vkcopy",
-    ":vulkan-benchmark",
-  ]
-  if (magma_openvx_package != "") {
-    public_deps += [ ":vxcopy" ]
-  }
-}
-
-test_package("vulkan-benchmark") {
-  deps = [
-    ":memcpy",
-    ":vkcopy",
-  ]
-
-  tests = [
-    {
-      name = "vkcopy"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "test_memcpy"
-    },
-  ]
-}
-
-executable("memcpy") {
+executable("test_memcpy_bin") {
   output_name = "test_memcpy"
 
   sources = [ "test_memcpy.cc" ]
 }
 
-executable("vkcopy") {
+fuchsia_component("test_memcpy_cmp") {
   testonly = true
+  component_name = "test_memcpy"
+  deps = [ ":test_memcpy_bin" ]
+  manifest = "meta/test_memcpy.cmx"
+}
 
-  sources = [ "test_vkcopy.cc" ]
+fuchsia_test_package("test-memcpy-pkg") {
+  package_name = "test-memcpy"
+  test_components = [ ":test_memcpy_cmp" ]
+}
+
+executable("vkcopy_bin") {
+  output_name = "vkcopy"
+  testonly = true
+  sources = [ "vkcopy.cc" ]
 
   deps = [
     "//src/graphics/tests/common",
@@ -69,7 +51,7 @@ if (magma_openvx_package != "") {
     output_name = "vxcopy"
     testonly = true
 
-    sources = [ "test_vxcopy.cc" ]
+    sources = [ "vxcopy.cc" ]
 
     assert(magma_openvx_include != "")
     include_dirs = [ "$magma_openvx_include" ]
@@ -83,26 +65,60 @@ if (magma_openvx_package != "") {
     ldflags = [ "-Wl,-z,stack-size=0x1000000" ]
   }
 
-  test_package("vxcopy") {
-    deps = [ ":vxcopy_bin" ]
-
-    tests = [
-      {
-        name = "vxcopy"
-        environments = []
-      },
-    ]
-
-    resources = []
-    resource_data = openvx_data
-
-    foreach(file, resource_data) {
-      resources += [
-        {
-          path = rebase_path(file[0])
-          dest = file[1]
-        },
-      ]
+  vxcopy_resource_deps = []
+  i = 0
+  foreach(src_dst_pair, openvx_data) {
+    resource_target = "vxcopy_resource_$i"
+    resource(resource_target) {
+      sources = [ rebase_path(src_dst_pair[0]) ]
+      outputs = [ src_dst_pair[1] ]
     }
+    vxcopy_resource_deps += [ ":$resource_target" ]
+    i += 1
+  }
+
+  fuchsia_component("vxcopy_cmp") {
+    testonly = true
+    component_name = "vxcopy"
+    deps = [ ":vxcopy_bin" ] + vxcopy_resource_deps
+
+    manifest = "meta/vxcopy.cmx"
+  }
+
+  fuchsia_test_package("vxcopy-pkg") {
+    package_name = "vxcopy"
+    test_components = [ ":vxcopy_cmp" ]
+  }
+}
+
+fuchsia_component("vkcopy_cmp") {
+  testonly = true
+  component_name = "vkcopy"
+  deps = [ ":vkcopy_bin" ]
+  manifest = "meta/vkcopy.cmx"
+}
+
+fuchsia_test_package("vkcopy-pkg") {
+  package_name = "vkcopy"
+  test_components = [ ":vkcopy_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+  }
+}
+
+group("vulkan-benchmark") {
+  testonly = true
+  deps = [
+    ":test-memcpy-pkg",
+    ":vkcopy-pkg",
+  ]
+}
+
+group("benchmark") {
+  testonly = true
+
+  deps = [ ":vulkan-benchmark" ]
+  if (magma_openvx_package != "") {
+    deps += [ ":vxcopy-pkg" ]
   }
 }
