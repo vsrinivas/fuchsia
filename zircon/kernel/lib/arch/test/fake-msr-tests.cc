@@ -8,15 +8,15 @@
 
 #include <optional>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
 TEST(FakeMsrIoTests, PopulateAndPeek) {
   arch::testing::FakeMsrIo io;
   io.Populate(arch::X86Msr::IA32_FS_BASE, 0xaaaa'bbbb'cccc'dddd);
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Peek(arch::X86Msr::IA32_FS_BASE));
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Peek(arch::X86Msr::IA32_FS_BASE));
 }
 
 TEST(FakeMsrIoTests, Read) {
@@ -24,18 +24,18 @@ TEST(FakeMsrIoTests, Read) {
 
   arch::testing::FakeMsrIo io;
   io.Populate(arch::X86Msr::IA32_FS_BASE, 0xaaaa'bbbb'cccc'dddd);
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Read<uint64_t>(fs_base));
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Read<uint64_t>(fs_base));
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Read<uint64_t>(fs_base));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Read<uint64_t>(fs_base));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Peek(arch::X86Msr::IA32_FS_BASE));
 }
 
 TEST(FakeMsrIoTests, PopulateOverwrites) {
   arch::testing::FakeMsrIo io;
   io.Populate(arch::X86Msr::IA32_FS_BASE, 0xaaaa'bbbb'cccc'dddd);
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Peek(arch::X86Msr::IA32_FS_BASE));
 
   io.Populate(arch::X86Msr::IA32_FS_BASE, 0xdddd'cccc'bbbb'aaaa);
-  EXPECT_EQ(0xdddd'cccc'bbbb'aaaa, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xdddd'cccc'bbbb'aaaau, io.Peek(arch::X86Msr::IA32_FS_BASE));
 }
 
 TEST(FakeMsrIoTests, Write) {
@@ -45,12 +45,12 @@ TEST(FakeMsrIoTests, Write) {
   io.Populate(arch::X86Msr::IA32_FS_BASE, 0xaaaa'bbbb'cccc'dddd);
 
   io.Write(uint64_t{0xdddd'cccc'bbbb'aaaa}, fs_base);
-  EXPECT_EQ(0xdddd'cccc'bbbb'aaaa, io.Peek(arch::X86Msr::IA32_FS_BASE));
-  EXPECT_EQ(0xdddd'cccc'bbbb'aaaa, io.Read<uint64_t>(fs_base));
+  EXPECT_EQ(0xdddd'cccc'bbbb'aaaau, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xdddd'cccc'bbbb'aaaau, io.Read<uint64_t>(fs_base));
 
   io.Write(uint64_t{0xaaaa'bbbb'cccc'dddd}, fs_base);
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Peek(arch::X86Msr::IA32_FS_BASE));
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Read<uint64_t>(fs_base));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Read<uint64_t>(fs_base));
 }
 
 TEST(FakeMsrIoTests, IoWithSideEffects) {
@@ -91,17 +91,17 @@ TEST(FakeMsrIoTests, IoWithSideEffects) {
 
   // Read should only update the last_read_* variables to not alter the stored
   // register value.
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Read<uint64_t>(fs_base));
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, io.Read<uint64_t>(fs_base));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Read<uint64_t>(fs_base));
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, io.Read<uint64_t>(fs_base));
   EXPECT_EQ(arch::X86Msr::IA32_FS_BASE, *last_read_msr);
-  EXPECT_EQ(0xaaaa'bbbb'cccc'dddd, *last_read_value);
+  EXPECT_EQ(0xaaaa'bbbb'cccc'ddddu, *last_read_value);
   EXPECT_FALSE(last_written_msr.has_value());
   EXPECT_FALSE(last_written_value.has_value());
 
-  EXPECT_EQ(0xabcd'abcd'abcd'abcd, io.Read<uint64_t>(gs_base));
-  EXPECT_EQ(0xabcd'abcd'abcd'abcd, io.Read<uint64_t>(gs_base));
+  EXPECT_EQ(0xabcd'abcd'abcd'abcdu, io.Read<uint64_t>(gs_base));
+  EXPECT_EQ(0xabcd'abcd'abcd'abcdu, io.Read<uint64_t>(gs_base));
   EXPECT_EQ(arch::X86Msr::IA32_GS_BASE, *last_read_msr);
-  EXPECT_EQ(0xabcd'abcd'abcd'abcd, *last_read_value);
+  EXPECT_EQ(0xabcd'abcd'abcd'abcdu, *last_read_value);
   EXPECT_FALSE(last_written_msr.has_value());
   EXPECT_FALSE(last_written_value.has_value());
 
@@ -113,8 +113,8 @@ TEST(FakeMsrIoTests, IoWithSideEffects) {
   EXPECT_FALSE(last_read_msr.has_value());
   EXPECT_FALSE(last_read_value.has_value());
   EXPECT_EQ(arch::X86Msr::IA32_FS_BASE, *last_written_msr);
-  EXPECT_EQ(0xdddd'cccc'bbbb'aaaa, *last_written_value);
-  EXPECT_EQ(0x1234'1234'1234'1234, io.Peek(arch::X86Msr::IA32_FS_BASE));
+  EXPECT_EQ(0xdddd'cccc'bbbb'aaaau, *last_written_value);
+  EXPECT_EQ(0x1234'1234'1234'1234u, io.Peek(arch::X86Msr::IA32_FS_BASE));
 
   last_read_msr = std::nullopt;
   last_read_value = std::nullopt;
@@ -122,8 +122,8 @@ TEST(FakeMsrIoTests, IoWithSideEffects) {
   EXPECT_FALSE(last_read_msr.has_value());
   EXPECT_FALSE(last_read_value.has_value());
   EXPECT_EQ(arch::X86Msr::IA32_GS_BASE, *last_written_msr);
-  EXPECT_EQ(0xdcba'dcba'dcba'dcba, *last_written_value);
-  EXPECT_EQ(0x1234'1234'1234'1234, io.Peek(arch::X86Msr::IA32_GS_BASE));
+  EXPECT_EQ(0xdcba'dcba'dcba'dcbau, *last_written_value);
+  EXPECT_EQ(0x1234'1234'1234'1234u, io.Peek(arch::X86Msr::IA32_GS_BASE));
 }
 
 }  // namespace

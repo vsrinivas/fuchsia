@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -66,10 +66,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: just the IP
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k32Bit;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, from.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, from.ip(fmt));  // 64 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     EXPECT_FALSE(from.mispredicted(fmt).has_value());
@@ -80,10 +80,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: just the IP
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitLip;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, from.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, from.ip(fmt));  // 64 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     EXPECT_FALSE(from.mispredicted(fmt).has_value());
@@ -94,10 +94,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: just the IP
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitEip;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, from.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, from.ip(fmt));  // 64 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     EXPECT_FALSE(from.mispredicted(fmt).has_value());
@@ -108,10 +108,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: IP and misprediction bit.
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitEipWithFlags;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0x7fff'ffff'ffff'ffff, from.ip(fmt));  // 63 bits.
+    EXPECT_EQ(0x7fff'ffff'ffff'ffffu, from.ip(fmt));  // 63 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     ASSERT_TRUE(from.mispredicted(fmt).has_value());
@@ -123,10 +123,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: IP, misprediction bit, and TSX info.
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitEipWithFlagsTsx;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0x1fff'ffff'ffff'ffff, from.ip(fmt));  // 61 bits.
+    EXPECT_EQ(0x1fff'ffff'ffff'ffffu, from.ip(fmt));  // 61 bits.
     ASSERT_TRUE(from.tsx_abort(fmt).has_value());
     EXPECT_EQ(1, *from.tsx_abort(fmt));  // 1 bit.
     ASSERT_TRUE(from.in_tsx(fmt).has_value());
@@ -140,10 +140,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: just the IP
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitEipWithInfo;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, from.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, from.ip(fmt));  // 64 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     EXPECT_FALSE(from.mispredicted(fmt).has_value());
@@ -154,11 +154,11 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: IP and misprediction bit.
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitLipWithFlagsCycles;
-    EXPECT_EQ(0xffff'ffff'ffff, to.ip(fmt));  // 48 bits.
+    EXPECT_EQ(0xffff'ffff'ffffu, to.ip(fmt));  // 48 bits.
     ASSERT_TRUE(to.cycle_count(fmt).has_value());
-    EXPECT_EQ(0xffff, *to.cycle_count(fmt));
+    EXPECT_EQ(0xffffu, *to.cycle_count(fmt));
 
-    EXPECT_EQ(0x7fff'ffff'ffff'ffff, from.ip(fmt));  // 63 bits.
+    EXPECT_EQ(0x7fff'ffff'ffff'ffffu, from.ip(fmt));  // 63 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     ASSERT_TRUE(from.mispredicted(fmt).has_value());
@@ -170,10 +170,10 @@ TEST(LbrTests, ToAndFromFields) {
   // FROM: just the IP
   {
     arch::X86LbrFormat fmt = arch::X86LbrFormat::k64BitLipWithInfo;
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, to.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, to.ip(fmt));  // 64 bits.
     EXPECT_FALSE(to.cycle_count(fmt).has_value());
 
-    EXPECT_EQ(0xffff'ffff'ffff'ffff, from.ip(fmt));  // 64 bits.
+    EXPECT_EQ(0xffff'ffff'ffff'ffffu, from.ip(fmt));  // 64 bits.
     EXPECT_FALSE(from.tsx_abort(fmt).has_value());
     EXPECT_FALSE(from.in_tsx(fmt).has_value());
     EXPECT_FALSE(from.mispredicted(fmt).has_value());
@@ -188,7 +188,7 @@ TEST(LbrTests, Unsupported) {
   arch::LbrStack stack(cpuid);
   EXPECT_FALSE(stack.is_supported());
   EXPECT_FALSE(stack.is_enabled(msr));
-  EXPECT_EQ(0, stack.size());
+  EXPECT_EQ(0u, stack.size());
 }
 
 TEST(LbrTests, Supported) {
@@ -198,7 +198,7 @@ TEST(LbrTests, Supported) {
 
     arch::LbrStack stack(cpuid);
     EXPECT_TRUE(stack.is_supported());
-    EXPECT_EQ(4, stack.size());
+    EXPECT_EQ(4u, stack.size());
   }
 
   // Intel Airmont; stack size of 8.
@@ -207,7 +207,7 @@ TEST(LbrTests, Supported) {
 
     arch::LbrStack stack(cpuid);
     EXPECT_TRUE(stack.is_supported());
-    EXPECT_EQ(8, stack.size());
+    EXPECT_EQ(8u, stack.size());
   }
 
   // Intel Nehalem; stack size of 16.
@@ -216,7 +216,7 @@ TEST(LbrTests, Supported) {
 
     arch::LbrStack stack(cpuid);
     EXPECT_TRUE(stack.is_supported());
-    EXPECT_EQ(16, stack.size());
+    EXPECT_EQ(16u, stack.size());
   }
 
   // Intel Skylake; stack size of 32.
@@ -225,7 +225,7 @@ TEST(LbrTests, Supported) {
 
     arch::LbrStack stack(cpuid);
     EXPECT_TRUE(stack.is_supported());
-    EXPECT_EQ(32, stack.size());
+    EXPECT_EQ(32u, stack.size());
   }
 }
 
@@ -378,24 +378,24 @@ TEST(LbrTests, Iteration) {
         .Populate(arch::X86Msr::IA32_PERF_CAPABILITIES, 0b000011);  // k64BitEipWithFlags.
 
     arch::LbrStack stack(cpuid);
-    ASSERT_NO_FATAL_FAILURES(PopulateLbrs(msr, kStackSize,
-                                          {
-                                              {
-                                                  .from = kLbrFrom1,
-                                                  .to = kLbrTo1,
-                                                  .idx = kLbrIdx1,
-                                              },
-                                              {
-                                                  .from = kLbrFrom2,
-                                                  .to = kLbrTo2,
-                                                  .idx = kLbrIdx2,
-                                              },
-                                              {
-                                                  .from = kLbrFrom3,
-                                                  .to = kLbrTo3,
-                                                  .idx = kLbrIdx3,
-                                              },
-                                          }));
+    ASSERT_NO_FATAL_FAILURE(PopulateLbrs(msr, kStackSize,
+                                         {
+                                             {
+                                                 .from = kLbrFrom1,
+                                                 .to = kLbrTo1,
+                                                 .idx = kLbrIdx1,
+                                             },
+                                             {
+                                                 .from = kLbrFrom2,
+                                                 .to = kLbrTo2,
+                                                 .idx = kLbrIdx2,
+                                             },
+                                             {
+                                                 .from = kLbrFrom3,
+                                                 .to = kLbrTo3,
+                                                 .idx = kLbrIdx3,
+                                             },
+                                         }));
 
     std::vector<arch::LastBranchRecord> lbrs;
     stack.ForEachRecord(msr, [&lbrs](const arch::LastBranchRecord& lbr) { lbrs.push_back(lbr); });
@@ -424,12 +424,12 @@ TEST(LbrTests, Iteration) {
           break;
       }
 
-      EXPECT_EQ(expected.from, actual.from, "%u", i);
-      EXPECT_EQ(expected.to, actual.to, "%u", i);
-      EXPECT_EQ(expected.mispredicted, actual.mispredicted, "%u", i);
-      EXPECT_EQ(expected.cycle_count, actual.cycle_count, "%u", i);
-      EXPECT_EQ(expected.in_tsx, actual.in_tsx, "%u", i);
-      EXPECT_EQ(expected.tsx_abort, actual.tsx_abort, "%u", i);
+      EXPECT_EQ(expected.from, actual.from) << i;
+      EXPECT_EQ(expected.to, actual.to) << i;
+      EXPECT_EQ(expected.mispredicted, actual.mispredicted) << i;
+      EXPECT_EQ(expected.cycle_count, actual.cycle_count) << i;
+      EXPECT_EQ(expected.in_tsx, actual.in_tsx) << i;
+      EXPECT_EQ(expected.tsx_abort, actual.tsx_abort) << i;
     }
   }
 
@@ -494,27 +494,27 @@ TEST(LbrTests, Iteration) {
         .Populate(arch::X86Msr::IA32_PERF_CAPABILITIES, 0b000101);  // k64BitEipWithInfo.
 
     arch::LbrStack stack(cpuid);
-    ASSERT_NO_FATAL_FAILURES(PopulateLbrs(msr, kStackSize,
-                                          {
-                                              {
-                                                  .from = kLbrFrom1,
-                                                  .to = kLbrTo1,
-                                                  .info = kLbrInfo1,
-                                                  .idx = kLbrIdx1,
-                                              },
-                                              {
-                                                  .from = kLbrFrom2,
-                                                  .to = kLbrTo2,
-                                                  .info = kLbrInfo2,
-                                                  .idx = kLbrIdx2,
-                                              },
-                                              {
-                                                  .from = kLbrFrom3,
-                                                  .to = kLbrTo3,
-                                                  .info = kLbrInfo3,
-                                                  .idx = kLbrIdx3,
-                                              },
-                                          }));
+    ASSERT_NO_FATAL_FAILURE(PopulateLbrs(msr, kStackSize,
+                                         {
+                                             {
+                                                 .from = kLbrFrom1,
+                                                 .to = kLbrTo1,
+                                                 .info = kLbrInfo1,
+                                                 .idx = kLbrIdx1,
+                                             },
+                                             {
+                                                 .from = kLbrFrom2,
+                                                 .to = kLbrTo2,
+                                                 .info = kLbrInfo2,
+                                                 .idx = kLbrIdx2,
+                                             },
+                                             {
+                                                 .from = kLbrFrom3,
+                                                 .to = kLbrTo3,
+                                                 .info = kLbrInfo3,
+                                                 .idx = kLbrIdx3,
+                                             },
+                                         }));
 
     std::vector<arch::LastBranchRecord> lbrs;
     stack.ForEachRecord(msr, [&lbrs](const arch::LastBranchRecord& lbr) { lbrs.push_back(lbr); });
@@ -543,12 +543,12 @@ TEST(LbrTests, Iteration) {
           break;
       }
 
-      EXPECT_EQ(expected.from, actual.from, "%u", i);
-      EXPECT_EQ(expected.to, actual.to, "%u", i);
-      EXPECT_EQ(expected.mispredicted, actual.mispredicted, "%u", i);
-      EXPECT_EQ(expected.cycle_count, actual.cycle_count, "%u", i);
-      EXPECT_EQ(expected.in_tsx, actual.in_tsx, "%u", i);
-      EXPECT_EQ(expected.tsx_abort, actual.tsx_abort, "%u", i);
+      EXPECT_EQ(expected.from, actual.from) << i;
+      EXPECT_EQ(expected.to, actual.to) << i;
+      EXPECT_EQ(expected.mispredicted, actual.mispredicted) << i;
+      EXPECT_EQ(expected.cycle_count, actual.cycle_count) << i;
+      EXPECT_EQ(expected.in_tsx, actual.in_tsx) << i;
+      EXPECT_EQ(expected.tsx_abort, actual.tsx_abort) << i;
     }
   }
 }

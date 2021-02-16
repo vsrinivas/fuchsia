@@ -6,9 +6,15 @@
 
 #include <lib/arch/nop.h>
 
-#include <zxtest/zxtest.h>
+#include <string_view>
+
+#include <gtest/gtest.h>
 
 namespace {
+
+#define EXPECT_BYTES_EQ(expected, actual, size)              \
+  EXPECT_EQ(std::basic_string_view<uint8_t>(expected, size), \
+            std::basic_string_view<uint8_t>(actual, size))
 
 fbl::Span<std::byte> AsBytes(uint8_t* ptr, size_t size) {
   return {reinterpret_cast<std::byte*>(ptr), size};

@@ -22,10 +22,11 @@ if (is_host) {
       "nop-tests.cc",
     ]
     deps = [
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/arch/testing",
       "//zircon/public/lib/zxc",
-      "//zircon/public/lib/zxtest",
     ]
   }
 }

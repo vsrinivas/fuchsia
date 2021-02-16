@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 // This file is meant for testing lib/arch logic that deals in CpuidIo access,
 // along with expressing expectations of the accessed values for the suite of
@@ -82,15 +82,13 @@ TEST(CpuidTests, IntelCore2_6300) {
   EXPECT_EQ(arch::Microarchitecture::kIntelCore2, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x0f, info.model());
-  EXPECT_EQ(0x02, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x0fu, info.model());
+  EXPECT_EQ(0x02u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM)2 CPU          6300  @ 1.86GHz"sv);
+  EXPECT_EQ("Intel(R) Core(TM)2 CPU          6300  @ 1.86GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -120,10 +118,10 @@ TEST(CpuidTests, IntelCore2_6300) {
   }
 
   // 1 die -> 2 cores -> 1 thread each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 1));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -153,15 +151,13 @@ TEST(CpuidTests, IntelXeonE5520) {
   EXPECT_EQ(arch::Microarchitecture::kIntelNehalem, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x1a, info.model());
-  EXPECT_EQ(0x05, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x1au, info.model());
+  EXPECT_EQ(0x05u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU           E5520  @ 2.27GHz"sv);
+  EXPECT_EQ("Intel(R) Xeon(R) CPU           E5520  @ 2.27GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -191,10 +187,10 @@ TEST(CpuidTests, IntelXeonE5520) {
   }
 
   // 1 die -> 4 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -230,15 +226,13 @@ TEST(CpuidTests, IntelCoreI7_2600k) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSandyBridge, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x2a, info.model());
-  EXPECT_EQ(0x07, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x2au, info.model());
+  EXPECT_EQ(0x07u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "       Intel(R) Core(TM) i7-2600K CPU @ 3.40GHz"sv);
+  EXPECT_EQ("       Intel(R) Core(TM) i7-2600K CPU @ 3.40GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -268,10 +262,10 @@ TEST(CpuidTests, IntelCoreI7_2600k) {
   }
 
   // 1 die -> 4 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -307,15 +301,13 @@ TEST(CpuidTests, IntelCoreI3_3240) {
   EXPECT_EQ(arch::Microarchitecture::kIntelIvyBridge, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x3a, info.model());
-  EXPECT_EQ(0x09, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x3au, info.model());
+  EXPECT_EQ(0x09u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "        Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz"sv);
+  EXPECT_EQ("        Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -347,10 +339,10 @@ TEST(CpuidTests, IntelCoreI3_3240) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -386,15 +378,13 @@ TEST(CpuidTests, IntelXeonE5_2690_V3) {
   EXPECT_EQ(arch::Microarchitecture::kIntelHaswell, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x3f, info.model());
-  EXPECT_EQ(0x02, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x3fu, info.model());
+  EXPECT_EQ(0x02u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz"sv);
+  EXPECT_EQ("Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -426,10 +416,10 @@ TEST(CpuidTests, IntelXeonE5_2690_V3) {
   }
 
   // 1 die -> 12 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 12, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 12, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -465,15 +455,13 @@ TEST(CpuidTests, IntelXeonE5_2690_V4) {
   EXPECT_EQ(arch::Microarchitecture::kIntelBroadwell, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x4f, info.model());
-  EXPECT_EQ(0x01, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x4fu, info.model());
+  EXPECT_EQ(0x01u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60GHz"sv);
+  EXPECT_EQ("Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -503,10 +491,10 @@ TEST(CpuidTests, IntelXeonE5_2690_V4) {
   }
 
   // 1 die -> 14 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 14, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 14, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -542,15 +530,13 @@ TEST(CpuidTests, IntelCoreI3_6100) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x4e, info.model());
-  EXPECT_EQ(0x03, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x4eu, info.model());
+  EXPECT_EQ(0x03u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i3-6100U CPU @ 2.30GHz"sv);
+  EXPECT_EQ("Intel(R) Core(TM) i3-6100U CPU @ 2.30GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -580,10 +566,10 @@ TEST(CpuidTests, IntelCoreI3_6100) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -619,15 +605,13 @@ TEST(CpuidTests, IntelCoreI5_7300u) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x8e, info.model());
-  EXPECT_EQ(0x09, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x8eu, info.model());
+  EXPECT_EQ(0x09u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz"sv);
+  EXPECT_EQ("Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -657,10 +641,10 @@ TEST(CpuidTests, IntelCoreI5_7300u) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -696,15 +680,13 @@ TEST(CpuidTests, IntelCoreI7_6500u) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x4e, info.model());
-  EXPECT_EQ(0x03, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x4eu, info.model());
+  EXPECT_EQ(0x03u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz"sv);
+  EXPECT_EQ("Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -734,10 +716,10 @@ TEST(CpuidTests, IntelCoreI7_6500u) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -773,15 +755,13 @@ TEST(CpuidTests, IntelCoreI7_6700k) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x5e, info.model());
-  EXPECT_EQ(0x03, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x5eu, info.model());
+  EXPECT_EQ(0x03u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz"sv);
+  EXPECT_EQ("Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -811,10 +791,10 @@ TEST(CpuidTests, IntelCoreI7_6700k) {
   }
 
   // 1 die -> 4 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -850,15 +830,13 @@ TEST(CpuidTests, IntelCoreM3_7y30) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x8e, info.model());
-  EXPECT_EQ(0x09, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x8eu, info.model());
+  EXPECT_EQ(0x09u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) m3-7Y30 CPU @ 1.00GHz"sv);
+  EXPECT_EQ("Intel(R) Core(TM) m3-7Y30 CPU @ 1.00GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -888,10 +866,10 @@ TEST(CpuidTests, IntelCoreM3_7y30) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -927,15 +905,13 @@ TEST(CpuidTests, IntelAtom330) {
   EXPECT_EQ(arch::Microarchitecture::kIntelBonnell, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x1c, info.model());
-  EXPECT_EQ(0x2, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x1cu, info.model());
+  EXPECT_EQ(0x2u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "         Intel(R) Atom(TM) CPU  330   @ 1.60GHz"sv);
+  EXPECT_EQ("         Intel(R) Atom(TM) CPU  330   @ 1.60GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -965,10 +941,10 @@ TEST(CpuidTests, IntelAtom330) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -998,15 +974,13 @@ TEST(CpuidTests, IntelAtomD510) {
   EXPECT_EQ(arch::Microarchitecture::kIntelBonnell, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x1c, info.model());
-  EXPECT_EQ(0x0a, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x1cu, info.model());
+  EXPECT_EQ(0x0au, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "         Intel(R) Atom(TM) CPU D510   @ 1.66GHz"sv);
+  EXPECT_EQ("         Intel(R) Atom(TM) CPU D510   @ 1.66GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1036,10 +1010,10 @@ TEST(CpuidTests, IntelAtomD510) {
   }
 
   // 1 die -> 2 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1069,15 +1043,13 @@ TEST(CpuidTests, IntelAtomX5_Z8350) {
   EXPECT_EQ(arch::Microarchitecture::kIntelAirmont, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x4c, info.model());
-  EXPECT_EQ(0x4, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x4cu, info.model());
+  EXPECT_EQ(0x4u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "      Intel(R) Atom(TM) x5-Z8350  CPU @ 1.44GHz"sv);
+  EXPECT_EQ("      Intel(R) Atom(TM) x5-Z8350  CPU @ 1.44GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1107,10 +1079,10 @@ TEST(CpuidTests, IntelAtomX5_Z8350) {
   }
 
   // 1 die -> 4 cores -> 1 thread each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 1));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1140,15 +1112,13 @@ TEST(CpuidTests, IntelCeleron3855u) {
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x6, info.family());
-  EXPECT_EQ(0x4e, info.model());
-  EXPECT_EQ(0x3, info.stepping());
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x4eu, info.model());
+  EXPECT_EQ(0x3u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "Intel(R) Celeron(R) CPU 3855U @ 1.60GHz"sv);
+  EXPECT_EQ("Intel(R) Celeron(R) CPU 3855U @ 1.60GHz"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1178,10 +1148,10 @@ TEST(CpuidTests, IntelCeleron3855u) {
   }
 
   // 1 die -> 2 cores -> 1 thread each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 1));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1217,15 +1187,13 @@ TEST(CpuidTests, AmdA10_7870k) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x15, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x15, info.family());
-  EXPECT_EQ(0x38, info.model());
-  EXPECT_EQ(0x01, info.stepping());
+  EXPECT_EQ(0x15u, info.family());
+  EXPECT_EQ(0x38u, info.model());
+  EXPECT_EQ(0x01u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD A10-7870K Radeon R7, 12 Compute Cores 4C+8G"sv);
+  EXPECT_EQ("AMD A10-7870K Radeon R7, 12 Compute Cores 4C+8G"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1257,10 +1225,10 @@ TEST(CpuidTests, AmdA10_7870k) {
   }
 
   // 1 die -> 4 cores -> 1 thread each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 1));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1290,15 +1258,13 @@ TEST(CpuidTests, AmdRyzen5_1500x) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x01, info.model());
-  EXPECT_EQ(0x01, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x01u, info.model());
+  EXPECT_EQ(0x01u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 5 1500X Quad-Core Processor          "sv);
+  EXPECT_EQ("AMD Ryzen 5 1500X Quad-Core Processor          "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1330,10 +1296,10 @@ TEST(CpuidTests, AmdRyzen5_1500x) {
   }
 
   // 1 die -> 4 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1369,15 +1335,13 @@ TEST(CpuidTests, AmdRyzen7_1700) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x01, info.model());
-  EXPECT_EQ(0x01, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x01u, info.model());
+  EXPECT_EQ(0x01u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 7 1700 Eight-Core Processor          "sv);
+  EXPECT_EQ("AMD Ryzen 7 1700 Eight-Core Processor          "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1409,10 +1373,10 @@ TEST(CpuidTests, AmdRyzen7_1700) {
   }
 
   // 1 die -> 8 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 8, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 8, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1448,15 +1412,13 @@ TEST(CpuidTests, AmdRyzen7_2700x) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x08, info.model());
-  EXPECT_EQ(0x02, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x08u, info.model());
+  EXPECT_EQ(0x02u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 7 2700X Eight-Core Processor         "sv);
+  EXPECT_EQ("AMD Ryzen 7 2700X Eight-Core Processor         "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1488,10 +1450,10 @@ TEST(CpuidTests, AmdRyzen7_2700x) {
   }
 
   // 1 die -> 8 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 8, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 8, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1527,15 +1489,13 @@ TEST(CpuidTests, AmdRyzen9_3950x) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x71, info.model());
-  EXPECT_EQ(0x00, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x71u, info.model());
+  EXPECT_EQ(0x00u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+  EXPECT_EQ("AMD Ryzen 9 3950X 16-Core Processor            "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1567,10 +1527,10 @@ TEST(CpuidTests, AmdRyzen9_3950x) {
   }
 
   // 1 die -> 16 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 16, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 16, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1606,17 +1566,15 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x71, info.model());
-  EXPECT_EQ(0x00, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x71u, info.model());
+  EXPECT_EQ(0x00u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+  EXPECT_EQ("AMD Ryzen 9 3950X 16-Core Processor            "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name() == "VBoxVBoxVBox"sv);
+  EXPECT_EQ("VBoxVBoxVBox"sv, arch::HypervisorName(cpuid).name());
 
-  EXPECT_EQ(0x4000'0006, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
+  EXPECT_EQ(0x4000'0006u, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1649,12 +1607,12 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
 
   // Seems to emulate
   // 1 die -> 1 core -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 1, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 1, 2));
 
   // Topology leaves are reserved, so we expect to only be able to be surface
   // the total L3 size across the package.
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1689,17 +1647,15 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x71, info.model());
-  EXPECT_EQ(0x00, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x71u, info.model());
+  EXPECT_EQ(0x00u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+  EXPECT_EQ("AMD Ryzen 9 3950X 16-Core Processor            "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name() == "KVMKVMKVM"sv);
+  EXPECT_EQ("KVMKVMKVM"sv, arch::HypervisorName(cpuid).name());
 
-  EXPECT_EQ(0x4000'0001, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
+  EXPECT_EQ(0x4000'0001u, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1732,12 +1688,12 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
 
   // Seems to emulate
   // 1 die -> 1 core -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 1, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 1, 2));
 
   // Topology leaves are reserved, so we expect to only be able to be surface
   // the total L3 size across the package.
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1772,17 +1728,15 @@ TEST(CpuidTests, AmdRyzen9_3950xVmware) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x71, info.model());
-  EXPECT_EQ(0x00, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x71u, info.model());
+  EXPECT_EQ(0x00u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+  EXPECT_EQ("AMD Ryzen 9 3950X 16-Core Processor            "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name() == "VMwareVMware"sv);
+  EXPECT_EQ("VMwareVMware"sv, arch::HypervisorName(cpuid).name());
 
-  EXPECT_EQ(0x4000'0010, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
+  EXPECT_EQ(0x4000'0010u, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1813,12 +1767,12 @@ TEST(CpuidTests, AmdRyzen9_3950xVmware) {
 
   // Seems to emulate
   // 1 die -> 4 cores -> 1 thread each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 1));
 
   // Topology leaves are reserved, so we expect to only be able to be surface
   // the total L3 size across the package.
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1853,17 +1807,15 @@ TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x71, info.model());
-  EXPECT_EQ(0x00, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x71u, info.model());
+  EXPECT_EQ(0x00u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+  EXPECT_EQ("AMD Ryzen 9 3950X 16-Core Processor            "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name() == "Microsoft Hv"sv);
+  EXPECT_EQ("Microsoft Hv"sv, arch::HypervisorName(cpuid).name());
 
-  EXPECT_EQ(0x4000'000b, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
+  EXPECT_EQ(0x4000'000bu, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1896,10 +1848,10 @@ TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
 
   // Like the underlying hardware, seems to emulate
   // 1 die -> 16 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 16, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 16, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -1934,15 +1886,13 @@ TEST(CpuidTests, AmdRyzenThreadripper1950x) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x01, info.model());
-  EXPECT_EQ(0x01, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x01u, info.model());
+  EXPECT_EQ(0x01u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen Threadripper 1950X 16-Core Processor "sv);
+  EXPECT_EQ("AMD Ryzen Threadripper 1950X 16-Core Processor "sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -1974,10 +1924,10 @@ TEST(CpuidTests, AmdRyzenThreadripper1950x) {
   }
 
   // 2 dies -> 8 cores each -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 2, 8, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 2, 8, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,
@@ -2012,15 +1962,13 @@ TEST(CpuidTests, AmdRyzenThreadripper2970wx) {
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
-  EXPECT_EQ(0x17, info.family());
-  EXPECT_EQ(0x08, info.model());
-  EXPECT_EQ(0x02, info.stepping());
+  EXPECT_EQ(0x17u, info.family());
+  EXPECT_EQ(0x08u, info.model());
+  EXPECT_EQ(0x02u, info.stepping());
 
-  auto processor = arch::ProcessorName(cpuid);
-  EXPECT_TRUE(processor.name() == "AMD Ryzen Threadripper 2970WX 24-Core Processor"sv);
+  EXPECT_EQ("AMD Ryzen Threadripper 2970WX 24-Core Processor"sv, arch::ProcessorName(cpuid).name());
 
-  auto hypervisor = arch::HypervisorName(cpuid);
-  EXPECT_TRUE(hypervisor.name().empty());
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -2052,10 +2000,10 @@ TEST(CpuidTests, AmdRyzenThreadripper2970wx) {
   }
 
   // 4 die -> 6 cores -> 2 threads each.
-  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
-  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
-      cpuid,                             //
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
       {
           {
               .level = 1,

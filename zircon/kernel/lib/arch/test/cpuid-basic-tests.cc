@@ -7,7 +7,9 @@
 #include <lib/arch/testing/x86/fake-cpuid.h>
 #include <lib/arch/x86/cpuid.h>
 
-#include <zxtest/zxtest.h>
+#include <iomanip>
+
+#include <gtest/gtest.h>
 
 // This file is meant for tests that exercise basic CPUID lib/arch logic that
 // does not rely upon CpuidIo access (but rather the business logic around it),
@@ -104,14 +106,12 @@ TEST(CpuidTests, GetMicroarchitectureFromVersion) {
     std::string_view expected_sv = arch::ToString(test_case.expected);
     std::string_view vendor_sv = arch::ToString(test_case.vendor);
 
-    EXPECT_EQ(test_case.expected, actual,
-              "\nexpected a microarchictecture of \"%.*s\" for "
-              "(vendor, extended family, base family, extended model, base model) = "
-              "(%.*s, %#x, %#x, %#x, %#x); got \"%.*s\"",
-              static_cast<int>(expected_sv.size()), expected_sv.data(),
-              static_cast<int>(vendor_sv.size()), vendor_sv.data(), test_case.extended_family,
-              test_case.base_family, test_case.extended_model, test_case.base_model,
-              static_cast<int>(actual_sv.size()), actual_sv.data());
+    EXPECT_EQ(test_case.expected, actual)
+        << "expected a microarchictecture of " << std::quoted(expected_sv)
+        << " for (vendor, extended family, base family, extended model, base model) = "
+        << "(" << vendor_sv << ", " << std::hex << test_case.extended_family << ", " << std::hex
+        << test_case.base_family << ", " << std::hex << test_case.extended_model << ", " << std::hex
+        << test_case.base_model << "); got " << std::quoted(actual_sv);
   }
 }
 
