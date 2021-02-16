@@ -275,8 +275,6 @@ group("deprecated_package") {
     "//src/devices/board/drivers/nelson/*",
     "//src/devices/sysmem/bin/sysmem_connector/*",
     "//src/devices/usb/tests/usb-hci-test/*",
-    "//src/diagnostics/archivist/bench/*",
-    "//src/diagnostics/archivist/tests/v2/*",
     "//src/diagnostics/lib/triage/wasm/*",
     "//src/diagnostics/sampler/*",
     "//src/diagnostics/wasm/example/*",

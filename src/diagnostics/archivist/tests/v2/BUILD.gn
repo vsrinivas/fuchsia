@@ -4,10 +4,10 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("stub_inspect_component") {
-  name = "stub_inspect_component"
+rustc_binary("stub_inspect_component_bin") {
+  output_name = "stub_inspect_component"
   edition = "2018"
   source_root = "components/stub_inspect_component.rs"
   deps = [
@@ -21,8 +21,13 @@ rustc_binary("stub_inspect_component") {
   sources = [ "components/stub_inspect_component.rs" ]
 }
 
+fuchsia_component("stub_inspect_component") {
+  deps = [ ":stub_inspect_component_bin" ]
+  manifest = "meta/stub_inspect_component.cml"
+}
+
 rustc_test("integration_tests_bin") {
-  name = "archivist_integration_tests"
+  output_name = "archivist_integration_tests"
   edition = "2018"
   deps = [
     "//src/lib/diagnostics/data/rust",
@@ -40,48 +45,37 @@ rustc_test("integration_tests_bin") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("archivist-integration-tests-v2") {
+fuchsia_component("driver") {
+  testonly = true
+  deps = [ ":integration_tests_bin" ]
+  manifest = "meta/driver.cml"
+}
+
+fuchsia_component("archivist_for_integration") {
+  component_name = "archivist"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+  manifest = "meta/archivist_for_integration.cml"
+}
+
+fuchsia_component("archivist_integration_tests") {
+  testonly = true
+  deps = [ ":integration_tests_bin" ]
+  manifest = "meta/archivist_integration_tests.cml"
+}
+
+resource("testdata") {
+  sources = [ "configs/archivist_config.json" ]
+  outputs = [ "data/config/archivist_config.json" ]
+}
+
+fuchsia_test_package("archivist-integration-tests-v2") {
+  test_components = [ ":archivist_integration_tests" ]
   deps = [
-    ":integration_tests_bin",
+    ":archivist_for_integration",
+    ":driver",
     ":stub_inspect_component",
-    "//src/diagnostics/archivist:bin",
-  ]
-
-  binaries = [
-    {
-      name = "archivist"
-    },
-    {
-      name = "stub_inspect_component"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/archivist_for_integration.cml")
-      dest = "archivist.cm"
-    },
-    {
-      path = rebase_path("meta/stub_inspect_component.cml")
-      dest = "stub_inspect_component.cm"
-    },
-    {
-      path = rebase_path("meta/driver.cml")
-      dest = "driver.cm"
-    },
-  ]
-
-  v2_tests = [
-    {
-      name = "archivist_integration_tests"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("configs/archivist_config.json")
-      dest = "config/archivist_config.json"
-    },
+    ":testdata",
   ]
 }
 
