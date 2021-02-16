@@ -10,6 +10,7 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult, State};
+use crate::input::common::connect_to_camera;
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::types::{
     DeviceState, DeviceStateSource, InputDevice, InputDeviceType, InputInfo, InputInfoSources,
@@ -19,6 +20,7 @@ use crate::input::ButtonType;
 use crate::switchboard::base::ControllerStateResult;
 
 use async_trait::async_trait;
+use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -273,6 +275,11 @@ impl InputControllerInner {
     ) -> SettingHandlerResult {
         let mut input_info = self.get_stored_info().await;
         let device_types = input_info.input_device_state.device_types();
+
+        let cam_state = self.get_cam_sw_state().ok();
+        // TODO(fxbug.dev/69639): Design a more generalized approach to detecting changes in
+        // specific areas of input state and pushing necessary changes to other components.
+
         for input_device in input_devices.iter() {
             if !device_types.contains(&input_device.device_type) {
                 return Err(ControllerError::UnsupportedError(SettingType::Input));
@@ -280,8 +287,60 @@ impl InputControllerInner {
             input_info.input_device_state.insert_device(input_device.clone(), source);
             self.input_device_state.insert_device(input_device.clone(), source);
         }
+
+        // If the device has a camera, it should successfully get the sw state, and
+        // push the state if it has changed. If the device does not have a camera,
+        // it should be None both here and above, and thus not detect a change.
+        let modified_cam_state = self.get_cam_sw_state().ok();
+        if cam_state != modified_cam_state {
+            if let Some(state) = modified_cam_state {
+                self.push_cam_sw_state(state).await?;
+            }
+        }
+
         // Store the newly set value.
         write(&self.client, input_info, false).await.into_handler_result()
+    }
+
+    /// Pulls the current software state of the camera from the device state.
+    fn get_cam_sw_state(&self) -> Result<DeviceState, ControllerError> {
+        self.input_device_state
+            .get_source_state(
+                InputDeviceType::CAMERA,
+                DEFAULT_CAMERA_NAME.to_string(),
+                DeviceStateSource::SOFTWARE,
+            )
+            .map_err(|_| {
+                ControllerError::UnexpectedError("Could not find camera software state".into())
+            })
+    }
+
+    /// Forwards the given software state to the camera3 api. Will first establish
+    /// a connection to the camera3.DeviceWatcher api. This function should only be called
+    /// when there is a camera included in the config. The config is used to populate the
+    /// stored input_info, so the input_info's input_device_state can be checked whether its
+    /// device_types contains Camera prior to calling this function.
+    async fn push_cam_sw_state(&mut self, cam_state: DeviceState) -> Result<(), ControllerError> {
+        let is_muted = cam_state.has_state(DeviceState::MUTED);
+
+        // Start up a connection to the camera device watcher and connect to the
+        // camera proxy using the id that is returned. The connection will drop out
+        // of scope after the mute state is sent.
+        let camera_proxy =
+            connect_to_camera(self.client.get_service_context().await).await.map_err(|e| {
+                ControllerError::UnexpectedError(
+                    format!("Could not connect to camera device: {:?}", e).into(),
+                )
+            })?;
+
+        camera_proxy.set_software_mute_state(is_muted).await.map_err(|e| {
+            fx_log_err!("Failed to push cam state: {:#?}", e);
+            ControllerError::ExternalFailure(
+                SettingType::Input,
+                "fuchsia.camera3.Device".into(),
+                "SetSoftwareMuteState".into(),
+            )
+        })
     }
 }
 
@@ -292,8 +351,7 @@ pub struct InputController {
 
 impl InputController {
     /// Alternate constructor that allows specifying a configuration.
-    #[allow(dead_code)]
-    pub(crate) async fn create_with_config(
+    pub async fn create_with_config(
         client: ClientProxy,
         input_device_config: InputConfiguration,
     ) -> Result<Self, ControllerError> {

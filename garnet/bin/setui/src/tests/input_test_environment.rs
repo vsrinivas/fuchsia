@@ -13,6 +13,7 @@ use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::input::input_controller::InputController;
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::types::InputInfoSources;
+use crate::tests::fakes::camera3_service::Camera3Service;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 
@@ -31,6 +32,9 @@ pub struct TestInputEnvironment {
 
     /// For sending media buttons changes.
     pub input_button_service: Arc<Mutex<InputDeviceRegistryService>>,
+
+    /// For watching, connecting to, and making requests on the camera device.
+    pub camera3_service: Arc<Mutex<Camera3Service>>,
 
     /// For storing the InputInfoSources.
     pub store: DeviceStorage,
@@ -68,6 +72,10 @@ impl TestInputEnvironmentBuilder {
         // Register fake input device registry service.
         let input_button_service_handle = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
         service_registry.lock().await.register_service(input_button_service_handle.clone());
+
+        // Register fake camera3 service.
+        let camera3_service_handle = Arc::new(Mutex::new(Camera3Service::new()));
+        service_registry.lock().await.register_service(camera3_service_handle.clone());
 
         let store = storage_factory
             .lock()
@@ -135,6 +143,7 @@ impl TestInputEnvironmentBuilder {
         TestInputEnvironment {
             input_service,
             input_button_service: input_button_service_handle,
+            camera3_service: camera3_service_handle,
             store,
         }
     }

@@ -24,7 +24,6 @@ impl Camera3Service {
         Self { camera_sw_muted: Arc::new(AtomicBool::new(false)) }
     }
 
-    #[allow(dead_code)]
     pub fn camera_sw_muted(&self) -> bool {
         (*self.camera_sw_muted).load(Ordering::Relaxed)
     }

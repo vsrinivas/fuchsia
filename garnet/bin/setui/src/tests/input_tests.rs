@@ -352,6 +352,33 @@ async fn test_camera_input() {
     get_and_check_camera_disable(&input_proxy, true).await;
 }
 
+// Test to ensure camera sw state is not changed on camera3 api
+// when the hw state is changed.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_camera3_hw_change() {
+    let env = TestInputEnvironmentBuilder::new()
+        .set_input_device_config(default_mic_cam_config())
+        .build()
+        .await;
+
+    switch_hardware_camera_disable(&env, true).await;
+    assert_eq!(env.camera3_service.lock().await.camera_sw_muted(), false);
+}
+
+// Test to ensure camera sw state is changed on camera3 api
+// when the sw state is changed.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_camera3_sw_change() {
+    let env = TestInputEnvironmentBuilder::new()
+        .set_input_device_config(default_mic_cam_config())
+        .build()
+        .await;
+    let input_proxy = env.input_service.clone();
+
+    set_camera_disable(&input_proxy, true).await;
+    assert_eq!(env.camera3_service.lock().await.camera_sw_muted(), true);
+}
+
 // Test that when either hardware or software is muted, the service
 // reports the microphone as muted.
 #[fuchsia_async::run_until_stalled(test)]
