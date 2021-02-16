@@ -451,12 +451,15 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		})
 	}
 
+	// Add the endpoint before registering callback for hangup event.
+	// The callback could be called soon after registration, where the
+	// endpoint is attempted to be removed from the map.
+	ns.onAddEndpoint(&eps.endpoint)
+
 	eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 		onHUp()
 	})
 	eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
-
-	ns.onAddEndpoint(&eps.endpoint)
 
 	// Accepted endpoints which are already reset would not notify hangup event.
 	// Check for the hard error state and handle any cleanup.
