@@ -9,8 +9,8 @@
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
-#include <fs/pager_thread_pool.h>
 #include <fs/managed_vfs.h>
+#include <fs/pager_thread_pool.h>
 
 namespace fs {
 
@@ -35,13 +35,12 @@ class PagedVfs : public ManagedVfs {
   // Called in response to a successful PagedVnode::VmoRead() request, this supplies paged data from
   // aux_vmo to the PagedVnode's VMO to the kernel. See zx_pager_supply_pages() documentation for
   // more.
-  zx::status<> SupplyPages(PagedVnode& node, uint64_t offset, uint64_t length, zx::vmo& aux_vmo,
+  zx::status<> SupplyPages(zx::vmo& node_vmo, uint64_t offset, uint64_t length, zx::vmo& aux_vmo,
                            uint64_t aux_offset);
 
   // Called in response to a failed PagedVnode::VmoRead() request, this reports that there was an
   // error populating page data. See zx_pager_op_range() documentation for more.
-  zx::status<> ReportPagerError(PagedVnode& node, uint32_t op, uint64_t offset, uint64_t length,
-                                uint64_t data);
+  zx::status<> ReportPagerError(zx::vmo& node_vmo, uint64_t offset, uint64_t length, uint64_t data);
 
   // Allocates a VMO of the given size associated with the given PagedVnode. VMOs for use with
   // the pager must be allocated by this method so the page requests are routed to the correct

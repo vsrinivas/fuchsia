@@ -78,14 +78,16 @@ class PagingTestFile : public PagedVnode {
 
   // PagedVnode implementation:
   void VmoRead(uint64_t offset, uint64_t length) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     zx::vmo transfer;
     if (zx::vmo::create(length, 0, &transfer) != ZX_OK) {
-      ASSERT_TRUE(vfs()->ReportPagerError(*this, ZX_PAGER_OP_FAIL, offset, length, 0).is_ok());
+      ASSERT_TRUE(vfs()->ReportPagerError(vmo(), offset, length, 0).is_ok());
       return;
     }
 
     transfer.write(&data_[offset], 0, std::min(data_.size() - offset, length));
-    ASSERT_TRUE(vfs()->SupplyPages(*this, offset, length, transfer, 0).is_ok());
+    ASSERT_TRUE(vfs()->SupplyPages(vmo(), offset, length, transfer, 0).is_ok());
   }
 
   // Vnode implementation:
@@ -99,6 +101,8 @@ class PagingTestFile : public PagedVnode {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // We need to signal after the VMO was mapped that it changed.
     bool becoming_mapped = !vmo();
 

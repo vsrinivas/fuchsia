@@ -7,6 +7,7 @@
 
 #include <lib/async/cpp/wait.h>
 
+#include <fs/locking.h>
 #include <fs/vnode.h>
 
 namespace fs {
@@ -25,13 +26,8 @@ class PagedVfs;
 //  - Implement VmoRead() to fill the VMO data when requested.
 class PagedVnode : public Vnode {
  public:
-  // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
-  // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
-  // with this object, all operations are expected to fail.
-  PagedVfs* vfs() { return vfs_; }
-
-  // This will be a null handle if there is no VMO associated with this vnode.
-  zx::vmo& vmo() { return vmo_; }
+  // fs::Vnode overrides:
+  void WillShutdown() override;
 
   // Called by the paging system in response to a kernel request to fill data into this node's VMO.
   //
@@ -45,9 +41,6 @@ class PagedVnode : public Vnode {
   // Note that offset + length will be page-aligned so can extend beyond the end of the file.
   virtual void VmoRead(uint64_t offset, uint64_t length) = 0;
 
-  // Clears the vfs_ back pointer. Called when the associated PagedVfs is being destroyed.
-  void DetachVfs();
-
  protected:
   friend fbl::RefPtr<PagedVnode>;
 
@@ -55,38 +48,50 @@ class PagedVnode : public Vnode {
 
   ~PagedVnode() override;
 
+  // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
+  // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
+  // with this object, all operations are expected to fail.
+  PagedVfs* vfs() FS_TA_REQUIRES(mutex_) { return vfs_; }
+
+  // This will be a null handle if there is no VMO associated with this vnode.
+  zx::vmo& vmo() FS_TA_REQUIRES(mutex_) { return vmo_; }
+
   // Populates the vmo() if necessary. Does nothing if it already exists. Access the created vmo
   // with this class' vmo() getter.
   //
   // When a mapping is requested, the derived class should call this function and then create a
   // clone of this VMO with the desired flags. This class registers an observer for when the clone
   // count drops to 0 to clean up the VMO. This means that if the caller doesn't create a clone the
-  // VMO could possibly leak.
-  zx::status<> EnsureCreateVmo(uint64_t size);
+  // VMO will leak if it's registered as handling paging requests on the Vfs (which will keep this
+  // object alive).
+  zx::status<> EnsureCreateVmo(uint64_t size) FS_TA_REQUIRES(mutex_);
 
   // Implementors of this class can override this function to response to the event that there
   // are no more clones of the vmo_. The default implementation frees the vmo_.
-  virtual void OnNoClones();
+  virtual void OnNoClones() FS_TA_REQUIRES(mutex_);
+
+  std::mutex mutex_;
 
  private:
   // Callback handler for the "no clones" message. Due to kernel message delivery race conditions
   // there might actually be clones. This checks and calls OnNoClones() when needed.
   void OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                         const zx_packet_signal_t* signal);
+                         const zx_packet_signal_t* signal) FS_TA_EXCLUDES(mutex_);
 
   // Starts the clone_watcher_ to observe the case of no vmo_ clones. The WaitMethod is called only
   // once per "watch" call so this needs to be re-called after triggering. The vmo_ must exist.
-  void WatchForZeroVmoClones();
+  void WatchForZeroVmoClones() FS_TA_REQUIRES(mutex_);
 
-  PagedVfs* vfs_;  // Non-owning, possibly null. See vfs() and DetachVfs() above.
+  PagedVfs* vfs_ FS_TA_GUARDED(mutex_);  // Non-owning, null after WillShutdown().
 
   // The root VMO that paging happens out of for this vnode. VMOs that map the data into user
   // processes will be children of this VMO.
-  zx::vmo vmo_;
+  zx::vmo vmo_ FS_TA_GUARDED(mutex_);
 
   // Watches any clones of "vmo_" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
   // See WatchForZeroChildren().
-  async::WaitMethod<PagedVnode, &PagedVnode::OnNoClonesMessage> clone_watcher_;
+  async::WaitMethod<PagedVnode, &PagedVnode::OnNoClonesMessage> clone_watcher_
+      FS_TA_GUARDED(mutex_);
 };
 
 }  // namespace fs

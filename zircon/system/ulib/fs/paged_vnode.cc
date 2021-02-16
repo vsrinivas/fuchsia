@@ -11,7 +11,12 @@ PagedVnode::PagedVnode(PagedVfs* vfs) : vfs_(vfs), clone_watcher_(this) {}
 
 PagedVnode::~PagedVnode() {}
 
-void PagedVnode::DetachVfs() { vfs_ = nullptr; }
+void PagedVnode::WillShutdown() {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  ZX_DEBUG_ASSERT(vfs_);  // Shouldn't be shutting down more than once.
+  vfs_ = nullptr;
+}
 
 zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
   if (vmo_)
@@ -39,7 +44,7 @@ void PagedVnode::OnNoClones() {
 
 void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
-  // TODO(fxbug.dev/51111) Needs a lock to prevent getting requests from another thread.
+  std::lock_guard<std::mutex> lock(mutex_);
 
   if (!vfs_)
     return;  // Called during tear-down.

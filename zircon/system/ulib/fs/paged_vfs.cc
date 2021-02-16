@@ -8,8 +8,7 @@
 
 namespace fs {
 
-PagedVfs::PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads)
-    : ManagedVfs(dispatcher) {
+PagedVfs::PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads) : ManagedVfs(dispatcher) {
   pager_pool_ = std::make_unique<PagerThreadPool>(*this, num_pager_threads);
 }
 
@@ -25,14 +24,14 @@ zx::status<> PagedVfs::Init() {
   return pager_pool_->Init();
 }
 
-zx::status<> PagedVfs::SupplyPages(PagedVnode& node, uint64_t offset, uint64_t length,
+zx::status<> PagedVfs::SupplyPages(zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                    zx::vmo& aux_vmo, uint64_t aux_offset) {
-  return zx::make_status(pager_.supply_pages(node.vmo(), offset, length, aux_vmo, aux_offset));
+  return zx::make_status(pager_.supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));
 }
 
-zx::status<> PagedVfs::ReportPagerError(PagedVnode& node, uint32_t op, uint64_t offset,
-                                        uint64_t length, uint64_t data) {
-  return zx::make_status(pager_.op_range(op, node.vmo(), offset, length, data));
+zx::status<> PagedVfs::ReportPagerError(zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+                                        uint64_t data) {
+  return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, data));
 }
 
 zx::status<zx::vmo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, uint64_t size) {

@@ -312,6 +312,13 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Invoked by the VFS layer whenever files are added or removed.
   virtual void Notify(fbl::StringPiece name, unsigned event);
 
+  // Called when the Vfs associated with this node is shutting down. The associated VFS will still
+  // be valid at the time of the call.
+  //
+  // Derived classes can implement this to do cleanup that requires the Vfs. Because Vnodes are
+  // reference-counted, they can outlive their associated Vfs.
+  virtual void WillShutdown() {}
+
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
   virtual zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out);
