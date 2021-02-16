@@ -39,11 +39,18 @@ resource_definition handle : uint32 {
   flat_lib.AddDependentLibrary(std::move(zx_lib));
 
   for (size_t i = 0; i < deps.size(); i++) {
-    TestLibrary dependency("dep" + std::to_string(i + 1) + ".fidl", deps[i], &shared, flags);
-    dependency.Compile();
+    std::string dep_name = "dep" + std::to_string(i + 1) + ".fidl";
+    TestLibrary dependency(dep_name, deps[i], &shared, flags);
+    if (!dependency.Compile()) {
+      shared.reporter.PrintReports();
+      return "DEPENDENCY_COMPILATION_FAILED: " + dep_name;
+    }
     flat_lib.AddDependentLibrary(std::move(dependency));
   }
-  flat_lib.Compile();
+  if (!flat_lib.Compile()) {
+    shared.reporter.PrintReports();
+    return "LIBRARY_COMPILED_FAILED";
+  }
 
   // Read the file again, and convert it into a raw AST.
   TestLibrary raw_lib("example.fidl", in, flags);
@@ -200,7 +207,7 @@ library example;
 /// Doc comment.
 bits Foo {
   SMALLEST = 1;
-  BIGGEST = 0x8000000000000000;
+  BIGGEST = 0x80000000;
 };
 )FIDL";
 
@@ -210,7 +217,7 @@ library example;
 /// Doc comment.
 type Foo = bits {
   SMALLEST = 1;
-  BIGGEST = 0x8000000000000000;
+  BIGGEST = 0x80000000;
 };
 )FIDL";
 
@@ -225,7 +232,7 @@ library example;
 /// Doc comment.
 flexible bits Foo {
   SMALLEST = 1;
-  BIGGEST = 0x8000000000000000;
+  BIGGEST = 0x80000000;
 };
 )FIDL";
 
@@ -235,7 +242,7 @@ library example;
 /// Doc comment.
 type Foo = flexible bits {
   SMALLEST = 1;
-  BIGGEST = 0x8000000000000000;
+  BIGGEST = 0x80000000;
 };
 )FIDL";
 
@@ -250,7 +257,7 @@ library example;
 /// Doc comment.
 strict bits Foo {
   SMALLEST = 1;
-  BIGGEST = 0x8000000000000000;
+  BIGGEST = 0x80000000;
 };
 )FIDL";
 
@@ -260,7 +267,7 @@ library example;
 /// Doc comment.
 type Foo = strict bits {
   SMALLEST = 1;
-  BIGGEST = 0x8000000000000000;
+  BIGGEST = 0x80000000;
 };
 )FIDL";
 
@@ -520,7 +527,7 @@ library example;
 
 protocol Foo {
   DoFoo(string a, int32 b);
-}
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -528,7 +535,7 @@ library example;
 
 protocol Foo {
   DoFoo(a string, b int32);
-}
+};
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -541,7 +548,7 @@ library example;
 
 protocol Foo {
   DoFoo(string a, int32 b) -> (bool c);
-}
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -549,7 +556,7 @@ library example;
 
 protocol Foo {
   DoFoo(a string, b int32) -> (c bool);
-}
+};
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -562,7 +569,7 @@ library example;
 
 protocol Foo {
   DoFoo(string a, int32 b) -> (bool c) error int32;
-}
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -570,7 +577,7 @@ library example;
 
 protocol Foo {
   DoFoo(a string, b int32) -> (c bool) error int32;
-}
+};
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -667,7 +674,7 @@ library example;
 
 protocol P {};
 
-struct S {
+resource struct S {
   P p;
   P? po;
   request<P> r;
@@ -680,7 +687,7 @@ library example;
 
 protocol P {};
 
-type S = struct {
+type S = resource struct {
   p client_end:P;
   po client_end:<optional,P>;
   r server_end:P;
@@ -890,57 +897,64 @@ example
 ;
 
 // 3
-resource
+using
 // 4
+zx
 // 5
-struct
-// 6
-S
-// 7
-{
-// 8
-int32
-// 9
-a
-// 10
 ;
+
+// 6
+resource
+// 7
+// 8
+struct
+// 9
+S
+// 10
+{
 // 11
-vector
+int32
 // 12
-<
+a
 // 13
-handle
+;
 // 14
-:
+vector
 // 15
 <
 // 16
-VMO
+zx.handle
 // 17
-,
-// 18
-7
-// 19
->
-// 20
-?
-// 21
->
-// 22
 :
+// 18
+<
+// 19
+VMO
+// 20
+,
+// 21
+7
+// 22
+>
 // 23
-16
-// 24
 ?
+// 24
+>
 // 25
-b
+:
 // 26
-;
+16
 // 27
-}
+?
 // 28
-;
+b
 // 29
+;
+// 30
+}
+// 31
+;
+// 32
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -952,20 +966,24 @@ example
 ;
 
 // 3
+using
 // 4
+zx
 // 5
+;
+
 // 6
-type S = resource struct
 // 7
-{
 // 8
 // 9
-a int32
+type S = resource struct
 // 10
-;
+{
 // 11
 // 12
+a int32
 // 13
+;
 // 14
 // 15
 // 16
@@ -978,14 +996,17 @@ a int32
 // 23
 // 24
 // 25
-b vector<handle:<optional,VMO,7>>:<optional,16>
 // 26
-;
 // 27
-}
 // 28
-;
+b vector<zx.handle:<optional,VMO,7>>:<optional,16>
 // 29
+;
+// 30
+}
+// 31
+;
+// 32
 )FIDL";
 
   fidl::ExperimentalFlags flags;
@@ -1016,7 +1037,7 @@ TEST(ConverterTests, TableWithMember) {
 library example;
 
 table T {
-  4: int32 a;
+  1: int32 a;
 };
 )FIDL";
 
@@ -1024,7 +1045,30 @@ table T {
 library example;
 
 type T = table {
-  4: a int32;
+  1: a int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, TableWithReserved) {
+  std::string old_version = R"FIDL(
+library example;
+
+table T {
+  1: reserved;
+  2: int32 a;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type T = table {
+  1: reserved;
+  2: a int32;
 };
 )FIDL";
 
@@ -1038,7 +1082,7 @@ library example;
 
 protocol P {};
 
-table T {
+resource table T {
   1: P p;
   2: request<P> r;
 };
@@ -1049,7 +1093,7 @@ library example;
 
 protocol P {};
 
-type T = table {
+type T = resource table {
   1: p client_end:P;
   2: r server_end:P;
 };
@@ -1150,7 +1194,6 @@ table T {
   /// So should inner doc comments.
   1: string a;
 
-  /// Doc comment reserved.
   // Comment reserved.
   2: reserved;
 
@@ -1174,7 +1217,6 @@ type T = table {
   /// So should inner doc comments.
   1: a string;
 
-  /// Doc comment reserved.
   // Comment reserved.
   2: reserved;
 
@@ -1253,13 +1295,36 @@ type U = strict union {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, UnionWithMemberReserved) {
+  std::string old_version = R"FIDL(
+library example;
+
+flexible union U {
+  1: reserved;
+  2: int32 a;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type U = flexible union {
+  1: reserved;
+  2: a int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, UnionWithProtocols) {
   std::string old_version = R"FIDL(
 library example;
 
 protocol P {};
 
-union U {
+resource union U {
   1: P p;
   2: request<P> r;
 };
@@ -1270,7 +1335,7 @@ library example;
 
 protocol P {};
 
-type U = union {
+type U = resource union {
   1: p client_end:P;
   2: r server_end:P;
 };
@@ -1464,9 +1529,12 @@ TEST(ConverterTests, Unchanged) {
 library example;
 
 // Comment.
-/// Doc Comment.
 // Another Comment.
-using foo;
+using zx;
+
+// Comment.
+/// Doc Comment.
+alias foo = zx.handle;
 
 /// Doc Comment.
 [Transport = "Syscall"]
@@ -1572,10 +1640,10 @@ library example;
 using zx;
 
 bits bool {
-  BM = 1;
+  int8 = 1;
 };
 enum int8 : uint64 {
-  EM = 1;
+  bool = 1;
 };
 table int16 {
   1: string TM;
@@ -1593,18 +1661,14 @@ alias handle = string;
 resource struct Foo {
   array<uint64>:4 a1;
   array<bool>:4 a2;
-  array<uint16?>:4 a3;
-  uint64? b1;
+  array<uint16>:4 a3;
+  uint64 b1;
   handle? b2;
   vector<int8>:16 v1;
   vector<int16>:16 v2;
   vector<uint8>:16? v3;
   uint32 p1;
-  uint32? p2;
-  request<uint32> r1;
-  request<uint32>? r2;
-  int32? h1;
-  int64 h2;
+  int64 h1;
 };
 )FIDL";
 
@@ -1614,10 +1678,10 @@ library example;
 using zx;
 
 type bool = bits {
-  BM = 1;
+  int8 = 1;
 };
 type int8 = enum : uint64 {
-  EM = 1;
+  bool = 1;
 };
 type int16 = table {
   1: TM string;
@@ -1635,18 +1699,14 @@ alias handle = string;
 type Foo = resource struct {
   a1 array<uint64,4>;
   a2 array<bool,4>;
-  a3 array<box<uint16>:optional,4>;
-  b1 uint64:optional;
+  a3 array<uint16,4>;
+  b1 uint64;
   b2 handle:optional;
   v1 vector<int8>:16;
   v2 vector<int16>:16;
   v3 vector<uint8>:<optional,16>;
   p1 client_end:uint32;
-  p2 client_end:<optional,uint32>;
-  r1 server_end:uint32;
-  r2 server_end:<optional,uint32>;
-  h1 int32:optional;
-  h2 int64;
+  h1 int64;
 };
 )FIDL";
 
