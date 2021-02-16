@@ -116,8 +116,7 @@ enum Error {
 /// authentication mechanism.
 // TODO(dnordstrom): Allow multiple authentication mechanisms in the same
 // component.
-// TODO(fxb/65218): Replace with an alias.
-using AuthMechanismId = fuchsia.sys.component_url;
+alias AuthMechanismId = fuchsia.sys.component_url;
 
 /// Properties describing the authentication mechanism.
 struct AuthMechanismProperties {

@@ -32,6 +32,7 @@ constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
 constexpr ErrorDef ErrCompoundAliasIdentifier("alias identifiers cannot contain '.'");
+constexpr ErrorDef ErrOldUsingSyntaxDeprecated("old `using Name = Type;` syntax is disallowed; use `alias Name = Type;` instead");
 constexpr ErrorDef ErrMustHaveOneMember("must have at least one member");
 constexpr ErrorDef ErrCannotAttachAttributesToCompose("Cannot attach attributes to compose stanza");
 constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member");

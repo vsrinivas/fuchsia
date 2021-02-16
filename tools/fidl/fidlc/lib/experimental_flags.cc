@@ -23,6 +23,7 @@ bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
 
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
     {"enable_handle_rights", Flag::kEnableHandleRights},
+    {"disallow_old_using_syntax", Flag::kDisallowOldUsingSyntax},
     {"disallow_old_handle_syntax", Flag::kDisallowOldHandleSyntax},
 };
 

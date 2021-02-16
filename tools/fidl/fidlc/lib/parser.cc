@@ -481,6 +481,8 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
     if (!Ok())
       return Fail();
   } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
+    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDisallowOldUsingSyntax))
+      return Fail(ErrOldUsingSyntaxDeprecated, using_path->span());
     if (!Ok() || using_path->components.size() != 1u)
       return Fail(ErrCompoundAliasIdentifier, using_path->span());
     maybe_type_ctor = ParseTypeConstructor();

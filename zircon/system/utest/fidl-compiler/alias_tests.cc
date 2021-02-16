@@ -438,6 +438,23 @@ alias Bar2 = dependent.Bar;
   ASSERT_TRUE(library.Compile());
 }
 
+TEST(AliasTests, disallow_old_using_syntax) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kDisallowOldUsingSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+using alias_of_int16 = int16;
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
+}
+
 }  // namespace
 // TODO(pascallouis): Test various handle parametrization scenarios, and
 // capture maybe_handle_subtype into FromTypeAlias struct.

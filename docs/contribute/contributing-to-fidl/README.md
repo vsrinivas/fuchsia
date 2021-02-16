@@ -267,7 +267,7 @@ Tests are run using the [fidldev][fidldev] tool. Examples assume that the
 alias fidldev=$FIDLMISC_DIR/fidldev/fidldev.py
 ```
 
-### fidlc
+### `fidlc`
 
 ```sh
 # optional; builds fidlc for the host with ASan <https://github.com/google/sanitizers/wiki/AddressSanitizer>
@@ -298,7 +298,7 @@ If you want to allow the changes to be committed again, run:
 git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
 ```
 
-### fidlc tests
+#### `fidlc` tests
 
 `fidlc` tests are at:
 
@@ -313,21 +313,44 @@ To build and run `fidlc` tests:
 fidldev test fidlc
 ```
 
-To run a specific test case, use the `--case` flag with the fidlc test binary.
-The binary can be located by running `fidldev test --dry-run --no-regen fidlc`.
+If you prefer to use `ninja` directly:
 
 ```sh
-$FUCHSIA_DIR/out/default/host_x64/fidl-compiler --gtest_filter 'EnumsTests.*'
+fx_build_dir=$(cat .fx-build-dir) \
+    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
+    fx ninja -C $fx_build_dir $fidlc_tests_target && ./$fx_build_dir/$fidlc_tests_target
 ```
 
-To easily run tests in a debug build:
+To run a specific suite of tests, use the `--gtest_filter` with an appropriate
+pattern. For instance:
+
+```sh
+fx_build_dir=$(cat .fx-build-dir) \
+    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
+    fx ninja -C $fx_build_dir $fidlc_tests_target && ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'EnumsTests.*'
+```
+
+#### `fidlc` debugging
+
+To easily run tests in a debug build, set your environment slightly differently:
 
 ```
 fx set core.x64 --variant=host_asan --with //bundles/fidl:tests
 export ASAN_SYMBOLIZER_PATH="$(find `pwd` -name llvm-symbolizer | grep clang | head -1)"
-fx ninja -C out/default host_x64-asan/exe.unstripped/fidl-compiler && \
-    ./out/default/host_x64-asan/exe.unstripped/fidl-compiler --gtest_filter 'EnumsTests.*'
 ```
+
+Once properly set up, you can run tests using the commands listed previously,
+with or without filtering.
+
+To step through a test, you can use [`gdb`](#gdb):
+
+```sh
+fx_build_dir=$(cat .fx-build-dir) \
+    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
+    fx ninja -C $fx_build_dir $fidlc_tests_target && gdb --args ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'AliasTests.invalid_recursive_alias'
+```
+
+#### `fidlc` goldens
 
 To regenerate the `fidlc` JSON goldens:
 
@@ -618,7 +641,7 @@ fx ninja -C out/default host_x64/fidlgen_dart
 There are several ways of debugging issues in host binaries. This section gives
 instructions for the example case where `fidlc --files test.fidl` is crashing:
 
-- [GDB](#GDB)
+- [`gdb`](#gdb)
 - [Asan](#ASan)
 - [Valgrind](#Valgrind)
 
@@ -626,15 +649,17 @@ Note: Even with all optimizations turned off, the binaries in
 `out/default/host_x64` are stripped. For debugging, you should use the binaries
 in the `exe.unstripped` sub-directory, such as `out/default/host_x64/exe.unstripped/fidlc`.
 
-### GDB {#GDB}
+### `gdb` {#gdb}
 
-Start GDB:
+Start `gdb`:
 
 ```sh
 gdb --args out/default/host_x64/exe.unstripped/fidlc --files test.fidl
 ```
 
-Then, enter "r" to start the program.
+Then, enter "r" to start the program. For additionl uses, and a convenient quick
+reference we've found this [GDB Cheat
+Sheet](https://darkdust.net/files/GDB%20Cheat%20Sheet.pdf) very useful.
 
 ### ASan {#ASan}
 
