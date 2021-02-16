@@ -8,17 +8,15 @@ use {
     carnelian::{
         color::Color,
         drawing::path_for_rectangle,
+        facet::{Facet, LayerGroup, Scene, SceneBuilder},
         make_app_assistant,
-        render::{
-            BlendMode, Composition, Context, Fill, FillRule, Layer, Path, PreClear, RenderExt,
-            Style,
-        },
-        App, AppAssistant, Point, Rect, RenderOptions, ViewAssistant, ViewAssistantContext,
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
+        App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
     euclid::{size2, vec2, Transform2D},
     fuchsia_trace_provider,
-    fuchsia_zircon::{AsHandleRef, Event, Signals},
+    fuchsia_zircon::Event,
 };
 
 const BLACK_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
@@ -56,38 +54,33 @@ impl AppAssistant for GammaAppAssistant {
     }
 }
 
-struct GammaViewAssistant {
-    path: Option<Path>,
-    composition: Composition,
+struct GammaFacet {
+    path: Path,
 }
 
-impl GammaViewAssistant {
-    pub fn new() -> Self {
-        let composition = Composition::new(WHITE_COLOR);
+impl GammaFacet {
+    fn new(context: &mut RenderContext) -> Self {
+        let path = path_for_rectangle(&Rect::new(Point::zero(), size2(1.0, 1.0)), context);
 
-        Self { path: None, composition }
+        Self { path }
     }
 }
 
-impl ViewAssistant for GammaViewAssistant {
-    fn render(
+impl Facet for GammaFacet {
+    fn update_layers(
         &mut self,
-        render_context: &mut Context,
-        ready_event: Event,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        let path = self.path.take().unwrap_or_else(|| {
-            path_for_rectangle(&Rect::new(Point::zero(), size2(1.0, 1.0)), render_context)
-        });
-        let transform = Transform2D::scale(context.size.width * 0.5, context.size.height * 0.5);
+        size: Size,
+        layer_group: &mut LayerGroup,
+        render_context: &mut RenderContext,
+    ) -> std::result::Result<(), anyhow::Error> {
+        let transform = Transform2D::scale(size.width * 0.5, size.height * 0.5);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-        raster_builder.add(&path, Some(&transform));
+        raster_builder.add(&self.path, Some(&transform));
         let raster = raster_builder.build();
-        let transform = Transform2D::scale(context.size.width * 0.5, 1.0);
+        let transform = Transform2D::scale(size.width * 0.5, 1.0);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-        raster_builder.add(&path, Some(&transform));
+        raster_builder.add(&self.path, Some(&transform));
         let line_raster = raster_builder.build();
-        self.path.replace(path);
 
         let layers = std::iter::once(Layer {
             raster: raster.clone(),
@@ -98,30 +91,65 @@ impl ViewAssistant for GammaViewAssistant {
             },
         })
         .chain(std::iter::once(Layer {
-            raster: raster.clone().translate(vec2(0, (context.size.height * 0.5) as i32)),
+            raster: raster.clone().translate(vec2(0, (size.height * 0.5) as i32)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(TRANSLUCENT_COLOR),
                 blend_mode: BlendMode::Over,
             },
         }))
-        .chain((0..context.size.height as i32).step_by(2).map(|y| Layer {
-            raster: line_raster.clone().translate(vec2((context.size.width * 0.5) as i32, y)),
+        .chain((0..size.height as i32).step_by(2).map(|y| Layer {
+            raster: line_raster.clone().translate(vec2((size.width * 0.5) as i32, y)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(BLACK_COLOR),
                 blend_mode: BlendMode::Over,
             },
         }));
+        layer_group.replace_all(layers);
+        Ok(())
+    }
+}
 
-        self.composition.replace(.., layers);
+struct SceneDetails {
+    scene: Scene,
+}
 
-        let image = render_context.get_current_image(context);
-        let ext =
-            RenderExt { pre_clear: Some(PreClear { color: WHITE_COLOR }), ..Default::default() };
-        render_context.render(&self.composition, None, image, &ext);
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+struct GammaViewAssistant {
+    scene_details: Option<SceneDetails>,
+}
+
+impl GammaViewAssistant {
+    pub fn new() -> Self {
+        Self { scene_details: None }
+    }
+}
+
+impl ViewAssistant for GammaViewAssistant {
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        self.scene_details = None;
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext,
+    ) -> Result<(), Error> {
+        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let mut builder = SceneBuilder::new(WHITE_COLOR);
+            let gamma_facet = GammaFacet::new(render_context);
+            let _ = builder.facet(Box::new(gamma_facet));
+            SceneDetails { scene: builder.build() }
+        });
+
+        scene_details.scene.render(render_context, ready_event, context)?;
+
+        self.scene_details = Some(scene_details);
+
         context.request_render();
+
         Ok(())
     }
 }
