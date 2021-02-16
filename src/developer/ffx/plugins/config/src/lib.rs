@@ -10,8 +10,7 @@ use {
     },
     ffx_config_plugin_args::{
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
-        EnvCommand, EnvSetCommand, GetCommand, MappingMode, OutputType, RemoveCommand, SetCommand,
-        SubCommand,
+        EnvCommand, EnvSetCommand, GetCommand, MappingMode, RemoveCommand, SetCommand, SubCommand,
     },
     ffx_core::{ffx_bail, ffx_plugin},
     serde_json::Value,
@@ -34,7 +33,7 @@ pub async fn exec_config(config: ConfigCommand) -> Result<()> {
     }
 }
 
-fn json_output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<()> {
+fn output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<()> {
     match value {
         Some(v) => writeln!(writer, "{}", v).map_err(|e| anyhow!("{}", e)),
         // Use 2 error code so wrapper scripts don't need check for the string to differentiate
@@ -43,14 +42,7 @@ fn json_output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<(
     }
 }
 
-fn human_readable<W: Write + Sync>(mut writer: W, name: &str, value: Option<Value>) -> Result<()> {
-    match value {
-        Some(v) => writeln!(writer, "{}: {}", name, v).map_err(|e| anyhow!("{}", e)),
-        None => writeln!(writer, "{}: none", name).map_err(|e| anyhow!("{}", e)),
-    }
-}
-
-fn json_output_array<W: Write + Sync>(
+fn output_array<W: Write + Sync>(
     mut writer: W,
     values: std::result::Result<Vec<Value>, ConfigError>,
 ) -> Result<()> {
@@ -68,23 +60,6 @@ fn json_output_array<W: Write + Sync>(
     }
 }
 
-fn human_readable_array<W: Write + Sync>(
-    mut writer: W,
-    name: &str,
-    values: std::result::Result<Vec<Value>, ConfigError>,
-) -> Result<()> {
-    match values {
-        Ok(v) => {
-            if v.len() == 1 {
-                writeln!(writer, "{}: {}", name, v[0]).map_err(|e| anyhow!("{}", e))
-            } else {
-                writeln!(writer, "{}: {}", name, Value::Array(v)).map_err(|e| anyhow!("{}", e))
-            }
-        }
-        Err(_) => writeln!(writer, "{}: none", name).map_err(|e| anyhow!("{}", e)),
-    }
-}
-
 async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()> {
     let query = ConfigQuery::new(
         get_cmd.name.as_ref().map(|s| s.as_str()),
@@ -93,27 +68,18 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
         get_cmd.select,
     );
     match get_cmd.name.as_ref() {
-        Some(name) => match get_cmd.process {
+        Some(_) => match get_cmd.process {
             MappingMode::Raw => {
                 let value: Option<Value> = raw(query).await?;
-                match get_cmd.output {
-                    OutputType::HumanReadable => human_readable(writer, name, value),
-                    OutputType::Json => json_output(writer, value),
-                }
+                output(writer, value)
             }
             MappingMode::Substitute => {
                 let value: std::result::Result<Vec<Value>, _> = get(query).await;
-                match get_cmd.output {
-                    OutputType::HumanReadable => human_readable_array(writer, name, value),
-                    OutputType::Json => json_output_array(writer, value),
-                }
+                output_array(writer, value)
             }
             MappingMode::SubstituteAndFlatten => {
                 let value: Option<Value> = get(query).await?;
-                match get_cmd.output {
-                    OutputType::HumanReadable => human_readable(writer, name, value),
-                    OutputType::Json => json_output(writer, value),
-                }
+                output(writer, value)
             }
         },
         None => print_config(writer, &get_cmd.build_dir).await,
