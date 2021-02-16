@@ -215,9 +215,19 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
     fprintf(out, "<== %s %s page fault, PC at 0x%" PRIxPTR "\n", access_type, violation,
             decoded.pc);
   } else if (report.header.type == ZX_EXCP_POLICY_ERROR) {
-    fprintf(out, "<== policy error: %s (%d), PC at 0x%" PRIxPTR "\n",
-            inspector::policy_exception_code_to_str(report.context.synth_code),
-            report.context.synth_code, decoded.pc);
+    switch (report.context.synth_code) {
+      case ZX_EXCP_POLICY_CODE_BAD_SYSCALL:
+        fprintf(out, "<== policy error: %s (%d, syscall %d), PC at 0x%" PRIxPTR "\n",
+                inspector::policy_exception_code_to_str(report.context.synth_code),
+                report.context.synth_code, report.context.synth_data, decoded.pc);
+        break;
+
+      default:
+        fprintf(out, "<== policy error: %s (%d), PC at 0x%" PRIxPTR "\n",
+                inspector::policy_exception_code_to_str(report.context.synth_code),
+                report.context.synth_code, decoded.pc);
+        break;
+    }
   } else {
     fprintf(out, "<== %s, PC at 0x%" PRIxPTR "\n", inspector::excp_type_to_str(report.header.type),
             decoded.pc);
