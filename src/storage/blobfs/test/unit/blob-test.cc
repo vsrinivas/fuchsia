@@ -307,7 +307,8 @@ TEST_P(BlobTest, WriteErrorsAreFused) {
 }
 
 TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {
-  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
+  std::unique_ptr<BlobInfo> info;
+  GenerateRealisticBlob("", 1 << 16, GetBlobLayoutFormat(fs_->Info()), &info);
   auto root = OpenRoot();
 
   // Write the blob
@@ -341,7 +342,8 @@ TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {
 }
 
 TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
-  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
+  std::unique_ptr<BlobInfo> info;
+  GenerateRealisticBlob("", 1 << 16, GetBlobLayoutFormat(fs_->Info()), &info);
   auto root = OpenRoot();
 
   // Write the blob
