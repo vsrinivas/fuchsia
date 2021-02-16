@@ -12,7 +12,10 @@ use {
         utils, Inspector,
     },
     fuchsia_zircon::Vmo,
-    std::convert::TryFrom,
+    std::{
+        convert::TryFrom,
+        sync::atomic::{fence, Ordering},
+    },
 };
 
 pub use crate::reader::tree_reader::SnapshotTree;
@@ -50,45 +53,48 @@ impl Snapshot {
         Snapshot::try_once_with_callback(vmo, &mut || {})
     }
 
-    fn try_once_with_callback<F>(vmo: &Vmo, read_callback: &mut F) -> Result<Snapshot, ReaderError>
+    fn try_once_with_callback<F>(
+        vmo: &Vmo,
+        first_read_callback: &mut F,
+    ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
     {
-        // Read the generation count one time
         let mut header_bytes: [u8; 16] = [0; 16];
         vmo.read(&mut header_bytes, 0).map_err(ReaderError::Vmo)?;
+
         let generation = header_generation_count(&header_bytes[..]);
 
+        if cfg!(test) {
+            first_read_callback();
+        }
+
         if let Some(gen) = generation {
-            // Read the buffer
             let size = vmo.get_size().map_err(ReaderError::Vmo)?;
             let mut buffer = vec![0u8; size as usize];
             vmo.read(&mut buffer[..], 0).map_err(ReaderError::Vmo)?;
-            if cfg!(test) {
-                read_callback();
-            }
-
-            // Read the generation count one more time to ensure the previous buffer read is
-            // consistent.
-            vmo.read(&mut header_bytes, 0).map_err(ReaderError::Vmo)?;
-            match header_generation_count(&header_bytes[..]) {
-                None => return Err(ReaderError::InconsistentSnapshot),
-                Some(new_generation) if new_generation != gen => {
-                    return Err(ReaderError::InconsistentSnapshot);
-                }
-                Some(_) => return Ok(Snapshot { buffer }),
+            let block = Block::new(&buffer[..16], 0);
+            if block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
+                && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
+                && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
+                && block.header_generation_count().unwrap() == gen
+            {
+                return Ok(Snapshot { buffer });
             }
         }
 
         Err(ReaderError::InconsistentSnapshot)
     }
 
-    fn try_from_with_callback<F>(vmo: &Vmo, mut read_callback: F) -> Result<Snapshot, ReaderError>
+    fn try_from_with_callback<F>(
+        vmo: &Vmo,
+        mut first_read_callback: F,
+    ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
     {
         for _ in 0..SNAPSHOT_TRIES {
-            if let Ok(ret) = Snapshot::try_once_with_callback(&vmo, &mut read_callback) {
+            if let Ok(ret) = Snapshot::try_once_with_callback(&vmo, &mut first_read_callback) {
                 return Ok(ret);
             }
         }
@@ -109,6 +115,7 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
     if bytes.len() < 16 {
         return None;
     }
+    fence(Ordering::Acquire);
     let block = Block::new(&bytes[..16], 0);
     if block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
         && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
