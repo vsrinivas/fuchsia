@@ -46,6 +46,7 @@ rustc_binary("bin") {
     "src/hfp.rs",
     "src/main.rs",
     "src/peer.rs",
+    "src/peer/calls.rs",
     "src/peer/gain_control.rs",
     "src/peer/task.rs",
     "src/profile.rs",

@@ -16,7 +16,7 @@ use {
     log::{debug, info, warn},
 };
 
-use super::{gain_control::GainControl, PeerRequest};
+use super::{calls::Calls, gain_control::GainControl, PeerRequest};
 
 pub(super) struct PeerTask {
     id: PeerId,
@@ -24,6 +24,7 @@ pub(super) struct PeerTask {
     _profile_proxy: bredr::ProfileProxy,
     _handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
+    calls: Calls,
     gain_control: GainControl,
 }
 
@@ -39,6 +40,7 @@ impl PeerTask {
             _profile_proxy,
             _handler: None,
             network: NetworkInformation::EMPTY,
+            calls: Calls::new(None),
             gain_control: GainControl::new()?,
         })
     }
@@ -97,6 +99,8 @@ impl PeerTask {
             return Ok(());
         }
 
+        self.calls = Calls::new(Some(handler.clone()));
+
         self._handler = Some(handler);
 
         Ok(())
@@ -134,6 +138,11 @@ impl PeerTask {
                 _request = self.gain_control.select_next_some() => {
                     unimplemented!();
                 }
+                // A new call state has been received from the call service
+                _update = self.calls.select_next_some() => {
+                    unimplemented!();
+                }
+                complete => break,
             }
         }
 

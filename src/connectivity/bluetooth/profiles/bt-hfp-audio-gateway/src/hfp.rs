@@ -44,17 +44,31 @@ impl Hfp {
     pub async fn run(mut self) -> Result<(), Error> {
         loop {
             select! {
-                event = self.profile.select_next_some() => {
-                    self.handle_profile_event(event?).await?;
+                event = self.profile.next() => {
+                    if let Some(event) = event {
+                        self.handle_profile_event(event?).await?;
+                    } else {
+                        break;
+                    }
                 }
-                event = self.call_manager.select_next_some() => {
-                    self.handle_call_manager_event(event).await?;
+                event = self.call_manager.next() => {
+                    if let Some(event) = event {
+                        self.handle_call_manager_event(event).await?;
+                    } else {
+                        break;
+                    }
                 }
-                removed = self.peers.select_next_some() => {
-                    log::debug!("peer removed: {}", removed);
+                removed = self.peers.next() => {
+                    if let Some(removed) = removed {
+                        log::debug!("peer removed: {}", removed);
+                    }
+                }
+                complete => {
+                    break;
                 }
             }
         }
+        Ok(())
     }
 
     /// Handle a single `ProfileEvent` from `profile`.
