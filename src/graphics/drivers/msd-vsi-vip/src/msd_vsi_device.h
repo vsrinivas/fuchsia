@@ -316,6 +316,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class MsdVsiDeviceTest_PulseEater_Test;
   friend class MsdVsiDeviceTest_Reset_Test;
   friend class MsdVsiDeviceTest_Shutdown_Test;
+  friend class MsdVsiDeviceTest_UnmapInvalidSram_Test;
 };
 
 #endif  // MSD_VSI_DEVICE_H

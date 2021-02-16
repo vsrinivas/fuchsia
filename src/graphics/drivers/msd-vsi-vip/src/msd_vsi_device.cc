@@ -1194,6 +1194,7 @@ magma_status_t MsdVsiDevice::QuerySram(uint32_t* handle_out) {
   // Client looks for phys addr in the first few bytes
   std::optional<uint64_t> sram_base = platform_device_->GetExternalSramPhysicalBase();
   if (!sram_base.has_value()) {
+    external_sram_->UnmapCpu();
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Could not get external sram physical base");
   }
   *reinterpret_cast<uint64_t*>(ptr) = sram_base.value();

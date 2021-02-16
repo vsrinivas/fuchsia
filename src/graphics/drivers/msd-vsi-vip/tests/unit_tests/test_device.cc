@@ -234,3 +234,17 @@ TEST_F(MsdVsiDeviceTest, PulseEater) {
   uint32_t pulse_eater = device_->register_io()->Read32(0x10C);
   EXPECT_TRUE(pulse_eater & (1 << 18)) << "missing performance fix";
 }
+
+class FakePlatformDevice : public MsdVsiPlatformDevice {
+ public:
+  FakePlatformDevice() : MsdVsiPlatformDevice(nullptr) {}
+
+  std::optional<uint64_t> GetExternalSramPhysicalBase() const override { return std::nullopt; }
+};
+
+TEST_F(MsdVsiDeviceTest, UnmapInvalidSram) {
+  auto fake_platform_device = std::make_unique<FakePlatformDevice>();
+  device_->platform_device_ = std::move(fake_platform_device);
+  ASSERT_NE(device_->QuerySram(nullptr), MAGMA_STATUS_OK);
+  ASSERT_FALSE(device_->external_sram_->UnmapCpu());  // Should already be unmapped.
+}
