@@ -115,6 +115,29 @@ fn unlink_does_not_traverse() {
     });
 }
 
+#[test]
+fn unlink_fails_for_read_only_source() {
+    let root = mut_pseudo_directory! {
+        "etc" => mut_pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+        },
+    };
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
+        let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+
+        let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
+
+        assert_unlink_err!(&etc, "fstab", Status::BAD_HANDLE);
+
+        assert_close!(etc);
+        assert_close!(proxy);
+
+    })
+    .token_registry(token_registry::Simple::new())
+    .run();
+}
+
 /// Keep this test in sync with [`rename_within_directory_with_watchers`].  See there for details.
 #[test]
 fn rename_within_directory() {
@@ -473,7 +496,7 @@ fn get_token_fails_for_read_only_target() {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
         let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
-        assert_get_token_err!(&etc, Status::ACCESS_DENIED);
+        assert_get_token_err!(&etc, Status::BAD_HANDLE);
 
         assert_close!(etc);
         assert_close!(proxy);
@@ -500,7 +523,7 @@ fn rename_fails_for_read_only_source() {
         let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
         let tmp_token = assert_get_token!(&tmp);
 
-        assert_rename_err!(&etc, "fstab", tmp_token, "fstab", Status::ACCESS_DENIED);
+        assert_rename_err!(&etc, "fstab", tmp_token, "fstab", Status::BAD_HANDLE);
 
         assert_close!(etc);
         assert_close!(tmp);

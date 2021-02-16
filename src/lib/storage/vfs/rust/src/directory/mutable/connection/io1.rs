@@ -201,7 +201,7 @@ impl MutableConnection {
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
         if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return responder(Status::ACCESS_DENIED);
+            return responder(Status::BAD_HANDLE);
         }
 
         if path == "/" || path == "" || path == "." || path == "./" {
@@ -241,7 +241,7 @@ impl MutableConnection {
         R: FnOnce(Status, Option<Handle>) -> Result<(), fidl::Error>,
     {
         if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return responder(Status::ACCESS_DENIED, None);
+            return responder(Status::BAD_HANDLE, None);
         }
 
         let token_registry = match self.base.scope.token_registry() {
@@ -271,7 +271,7 @@ impl MutableConnection {
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
         if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return responder(Status::ACCESS_DENIED);
+            return responder(Status::BAD_HANDLE);
         }
 
         let src = match Path::validate_and_split(src) {

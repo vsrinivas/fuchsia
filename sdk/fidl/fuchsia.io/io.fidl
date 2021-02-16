@@ -537,7 +537,8 @@ protocol Directory {
     ///
     /// Other errors may be returned for filesystem-specific reasons.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     Unlink(string:MAX_PATH path) -> (zx.status s);
 
     /// Reads a collection of variably sized dirents into a buffer.
@@ -576,7 +577,8 @@ protocol Directory {
     /// Acquires a token to a Directory which can be used to identify
     /// access to it at a later point in time.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     GetToken() -> (zx.status s, handle? token);
 
     /// Renames an object named src to the name dst, in a directory represented by token.
@@ -586,7 +588,8 @@ protocol Directory {
     /// Returning "/" at the end of either string implies that it must be a
     /// directory, or else `ZX_ERR_NOT_DIR` should be returned.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Creates a link to an object named src by the name dst, within a directory represented by
@@ -598,7 +601,8 @@ protocol Directory {
     /// `dst` must be a resolved object name. Including "/" in the string will
     /// return `ZX_ERR_INVALID_ARGS`.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     // TODO(smklein): When stablized, remove the "This API is unstable" comment
