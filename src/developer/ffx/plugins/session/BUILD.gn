@@ -9,6 +9,7 @@ ffx_plugin("ffx_session") {
   edition = "2020"
   with_unit_tests = true
   plugin_deps = [
+    "add:ffx_session_add",
     "restart:ffx_session_restart",
     "//src/sys/run_test_suite/ffx:ffx_test",
   ]
@@ -20,6 +21,7 @@ group("tests") {
 
   deps = [
     ":ffx_session_tests",
+    "add:ffx_session_add_tests",
     "restart:ffx_session_restart_tests",
   ]
 }
