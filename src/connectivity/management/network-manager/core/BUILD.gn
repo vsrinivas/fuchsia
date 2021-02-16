@@ -15,6 +15,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -26,6 +27,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/network/fidl_fuchsia_net_name_ext",
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/syslog/rust:syslog",
@@ -42,6 +44,8 @@ rustc_library("lib") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
+    "//src/connectivity/lib/net-declare",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:matches",
   ]

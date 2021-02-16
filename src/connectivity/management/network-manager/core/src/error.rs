@@ -4,7 +4,8 @@
 
 //! Custom error types for the network manager.
 
-use std::path::PathBuf;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+use std::{collections::HashMap, path::PathBuf};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, NetworkManager>;
@@ -37,7 +38,7 @@ pub enum NetworkManager {
 }
 
 /// Error type for packet LIFManager.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Lif {
     #[error("Invalid number of ports")]
     InvalidNumberOfPorts,
@@ -55,6 +56,8 @@ pub enum Lif {
     NotFound,
     #[error("Invalid Parameter")]
     InvalidParameter,
+    #[error("Invalid interface properties in existing/added interface event: {0}")]
+    InvalidProperties(fidl_fuchsia_net_interfaces_ext::PropertiesValidationError),
     #[error("Operation is not supported")]
     NotSupported,
 }
@@ -132,6 +135,14 @@ pub enum Hal {
     BridgeNotFound,
     #[error("FIDL error: {context}")]
     Fidl { context: String, source: fidl::Error },
+    #[error("Get existing interface properties failed: {0}")]
+    GetExistingInterfacesFailed(
+        fnet_interfaces_ext::WatcherOperationError<HashMap<u64, fnet_interfaces_ext::Properties>>,
+    ),
+    #[error("Get interface properties failed: {0}")]
+    GetInterfaceFailed(
+        fnet_interfaces_ext::WatcherOperationError<fnet_interfaces_ext::InterfaceState>,
+    ),
     #[error("Operation failed")]
     OperationFailed,
 }

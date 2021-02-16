@@ -11,6 +11,7 @@
         ],
         "services": [
             "fuchsia.net.filter.Filter",
+            "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.overnet.Overnet"

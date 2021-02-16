@@ -5,15 +5,21 @@
 //! The reachability monitor monitors reachability state and generates an event to signal
 //! changes.
 
+// From https://docs.rs/futures/0.3.1/futures/macro.select.html:
+//   Note that select! relies on proc-macro-hack, and may require to set the compiler's
+//   recursion limit very high, e.g. #![recursion_limit="1024"].
+#![recursion_limit = "512"]
+
 extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
-use anyhow::Context as _;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect::component;
+use futures::{FutureExt as _, StreamExt as _};
 use reachability_core::{ping_fut, IcmpPinger, Monitor};
 
 mod eventloop;
-mod worker;
 
 use crate::eventloop::EventLoop;
 
@@ -28,24 +34,29 @@ fn main() -> Result<(), anyhow::Error> {
 
     let (request_tx, request_rx) = futures::channel::mpsc::unbounded();
     let (response_tx, response_rx) = futures::channel::mpsc::unbounded();
-    let ping_task = fasync::Task::blocking(ping_fut(request_rx, response_tx));
+    let mut ping_task = fasync::Task::blocking(ping_fut(request_rx, response_tx)).fuse();
 
-    info!("collecting initial state.");
-    let mut eventloop =
-        EventLoop::new(Monitor::new(Box::new(IcmpPinger::new(request_tx, response_rx)))?);
-    let () = executor
-        .run_singlethreaded(eventloop.populate_state())
-        .context("failed to populate initial reachability states")?;
+    let mut fs = ServiceFs::new_local();
+    let mut fs = fs.take_and_serve_directory_handle()?;
+
+    let inspector = component::inspector();
+    let () = inspector.serve(&mut fs)?;
+
+    let mut monitor = Monitor::new(Box::new(IcmpPinger::new(request_tx, response_rx)))?;
+    let () = monitor.set_inspector(inspector);
 
     info!("monitoring");
-    let eventloop_fut = eventloop.run();
+    let mut eventloop = EventLoop::new(monitor);
+    let eventloop_fut = eventloop.run().fuse();
     futures::pin_mut!(eventloop_fut);
-    match executor.run_singlethreaded(futures::future::select(eventloop_fut, ping_task)) {
-        futures::future::Either::Left(((), _)) => {
-            panic!("event loop ended unexpectedly");
+    let mut serve_fut = fs.collect().map(Ok);
+    executor.run_singlethreaded(async {
+        loop {
+            futures::select! {
+                r = eventloop_fut => break r,
+                r = ping_task => break r,
+                r = serve_fut => break r,
+            }
         }
-        futures::future::Either::Right((ping_res, _)) => {
-            panic!("ping backend ended unexpectedly with: {:?}", ping_res);
-        }
-    }
+    })
 }

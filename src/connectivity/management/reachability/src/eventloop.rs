@@ -8,220 +8,118 @@
 //! monitor to infer the connectivity state.
 
 use {
-    crate::worker::{EventWorker, FidlWorker, TimerWorker},
+    anyhow::{anyhow, Context as _},
+    fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext, Update as _},
     fuchsia_async as fasync,
     fuchsia_inspect::health::Reporter,
     fuchsia_zircon as zx,
-    futures::channel::mpsc,
-    futures::prelude::*,
-    reachability_core::{Monitor, Timer},
+    futures::{pin_mut, prelude::*, select},
+    reachability_core::Monitor,
+    std::collections::HashMap,
 };
 
-/// The events that can trigger an action in the event loop.
-#[derive(Debug)]
-pub enum Event {
-    /// An event coming from fuchsia.net.stack.
-    StackEvent(fidl_fuchsia_net_stack::StackEvent),
-    /// An event coming from fuchsia.netstack.
-    NetstackEvent(fidl_fuchsia_netstack::NetstackEvent),
-    /// A timer firing.
-    TimerEvent(Option<u64>),
-}
+const REPORT_PERIOD: zx::Duration = zx::Duration::from_seconds(60);
+const PROBE_PERIOD: zx::Duration = zx::Duration::from_seconds(60);
 
 /// The event loop.
 pub struct EventLoop {
-    event_recv: mpsc::UnboundedReceiver<Event>,
     monitor: Monitor,
-}
-
-struct EventTimer {
-    event_send: mpsc::UnboundedSender<Event>,
-}
-
-impl Timer for EventTimer {
-    fn periodic(&self, duration: zx::Duration, id: Option<u64>) {
-        let timer_worker = TimerWorker;
-        timer_worker.spawn(fasync::Interval::new(duration), self.event_send.clone(), id);
-    }
+    interface_properties: HashMap<u64, fnet_interfaces_ext::Properties>,
 }
 
 impl EventLoop {
     /// `new` returns an `EventLoop` instance.
-    pub fn new(mut monitor: Monitor) -> Self {
-        let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
-
-        let streams = monitor.take_event_streams();
-        let event_worker = EventWorker;
-        event_worker.spawn(streams, event_send.clone());
-        let fidl_worker = FidlWorker;
-        // Just panic on error. Nothing to do.
-        let inspector = fidl_worker.spawn().unwrap();
+    pub fn new(monitor: Monitor) -> Self {
         fuchsia_inspect::component::health().set_starting_up();
-        let timer = EventTimer { event_send };
-        monitor.set_timer(Box::new(timer));
-        monitor.set_inspector(inspector);
-        EventLoop { event_recv, monitor }
+        EventLoop { monitor, interface_properties: HashMap::new() }
     }
 
     /// `run` starts the event loop.
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) -> Result<(), anyhow::Error> {
         debug!("starting event loop");
+        let if_watcher_stream = fidl_fuchsia_net_interfaces_ext::event_stream(
+            self.monitor.create_interface_watcher().context("failed to get interface watcher")?,
+        )
+        .fuse();
+        let mut probe_futures = futures::stream::FuturesUnordered::new();
+        let report_stream = fasync::Interval::new(REPORT_PERIOD).fuse();
+        pin_mut!(if_watcher_stream, report_stream);
+
         fuchsia_inspect::component::health().set_ok();
-        while let Some(e) = self.event_recv.next().await {
-            match e {
-                Event::StackEvent(event) => self.handle_stack_event(event).await,
-                Event::NetstackEvent(event) => self.handle_netstack_event(event).await,
-                Event::TimerEvent(id) => match id {
-                    Some(id) => self.handle_timer_firing(id).await,
-                    None => self.monitor.report_state(),
-                },
+
+        loop {
+            select! {
+                if_watcher_res = if_watcher_stream.try_next() => {
+                    match if_watcher_res {
+                        Ok(Some(event)) => {
+                            let discovered_id = self
+                                .handle_interface_watcher_event(event)
+                                .await
+                                .context("failed to handle interface watcher event")?;
+                            if let Some(id) = discovered_id {
+                                probe_futures
+                                    .push(fasync::Interval::new(PROBE_PERIOD)
+                                    .map(move |()| id)
+                                    .into_future());
+                            }
+                        }
+                        Ok(None) => {
+                            return Err(anyhow!("interface watcher stream unexpectedly ended"));
+                        }
+                        Err(e) => return Err(anyhow!("interface watcher stream error: {}", e)),
+                    }
+                }
+                report = report_stream.next() => {
+                    let () = report.context("periodic timer for reporting unexpectedly ended")?;
+                    let () = self.monitor.report_state();
+                }
+                probe = probe_futures.next() => {
+                    match probe {
+                        Some((Some(id), stream)) => {
+                            if let Some(properties) = self.interface_properties.get(&id) {
+                                let () = self.monitor.compute_state(properties).await;
+                                let () = probe_futures.push(stream.into_future());
+                            }
+                        }
+                        Some((None, _)) => {
+                            return Err(anyhow!(
+                                "periodic timer for probing reachability unexpectedly ended"
+                            ));
+                        }
+                        // None is returned when there are no periodic timers in the
+                        // FuturesUnordered collection.
+                        None => {}
+                    }
+                }
             }
         }
-        fuchsia_inspect::component::health().set_unhealthy("no events, exiting.");
     }
 
-    pub async fn populate_state(&mut self) -> network_manager_core::error::Result<()> {
-        self.monitor.populate_state().await
-    }
-
-    async fn handle_timer_firing(&mut self, id: u64) {
-        self.monitor
-            .timer_event(id)
-            .await
-            .unwrap_or_else(|err| error!("error updating state: {:?}", err));
-    }
-
-    async fn handle_stack_event(&mut self, event: fidl_fuchsia_net_stack::StackEvent) {
-        self.monitor
-            .stack_event(event)
-            .await
-            .unwrap_or_else(|err| error!("error updating state: {:?}", err));
-    }
-
-    async fn handle_netstack_event(&mut self, event: fidl_fuchsia_netstack::NetstackEvent) {
-        self.monitor
-            .netstack_event(event)
-            .await
-            .unwrap_or_else(|err| error!("error updating state: {:?}", err));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use async_trait::async_trait;
-    use fidl_fuchsia_net as net;
-    use fidl_fuchsia_netstack as netstack;
-    use fuchsia_async as fasync;
-    use fuchsia_async::TimeoutExt;
-    use reachability_core::Pinger;
-
-    /// log::Log implementation that uses stdout.
-    ///
-    /// Useful when debugging tests.
-    struct Logger {}
-
-    impl log::Log for Logger {
-        fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-            true
-        }
-
-        fn log(&self, record: &log::Record<'_>) {
-            //self.printer.println(
-            println!(
-                "[{}] ({}) {}",
-                record.level(),
-                record.module_path().unwrap_or(""),
-                record.args(),
-            )
-        }
-
-        fn flush(&self) {}
-    }
-
-    fn net_interface(port: u32, addr: [u8; 4]) -> netstack::NetInterface {
-        netstack::NetInterface {
-            id: port,
-            flags: netstack::Flags::Up | netstack::Flags::Dhcp,
-            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
-            configuration: 0,
-            name: port.to_string(),
-            addr: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
-            netmask: net::IpAddress::Ipv4(net::Ipv4Address { addr: [255, 255, 255, 0] }),
-            broadaddr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 255] }),
-            ipv6addrs: vec![],
-            hwaddr: [1, 2, 3, 4, 5, port as u8].to_vec(),
-        }
-    }
-
-    struct Ping<'a> {
-        gateway_url: &'a str,
-        gateway_response: bool,
-        internet_url: &'a str,
-        internet_response: bool,
-        default_response: bool,
-    }
-
-    #[async_trait]
-    impl Pinger for Ping<'_> {
-        async fn ping(&mut self, url: &str) -> bool {
-            if self.gateway_url == url {
-                return self.gateway_response;
+    async fn handle_interface_watcher_event(
+        &mut self,
+        event: fnet_interfaces::Event,
+    ) -> Result<Option<u64>, anyhow::Error> {
+        match self
+            .interface_properties
+            .update(event)
+            .context("failed to update interface properties map with watcher event")?
+        {
+            fnet_interfaces_ext::UpdateResult::Added(properties)
+            | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
+                let id = properties.id;
+                debug!("setting timer for interface {}", id);
+                let () = self.monitor.compute_state(properties).await;
+                return Ok(Some(id));
             }
-            if self.internet_url == url {
-                return self.internet_response;
+            fnet_interfaces_ext::UpdateResult::Changed { previous: _, current: properties } => {
+                let () = self.monitor.compute_state(properties).await;
             }
-            self.default_response
+            fnet_interfaces_ext::UpdateResult::Removed(properties) => {
+                let () = self.monitor.handle_interface_removed(properties);
+            }
+            fnet_interfaces_ext::UpdateResult::NoChange => {}
         }
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_events_are_received() {
-        let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
-
-        let mut monitor = Monitor::new(Box::new(Ping {
-            gateway_url: "1.2.3.1",
-            gateway_response: true,
-            internet_url: "8.8.8.8",
-            internet_response: false,
-            default_response: false,
-        }))
-        .unwrap();
-        let streams = monitor.take_event_streams();
-        let event_worker = EventWorker;
-        event_worker.spawn(streams, event_send.clone());
-        let mut event_loop = EventLoop { event_recv, monitor };
-
-        fasync::Task::local(async {
-            // Send event to it
-            let e = Event::NetstackEvent(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [1, 2, 3, 1])],
-            });
-            event_send.unbounded_send(e).unwrap();
-
-            let e = Event::NetstackEvent(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [1, 2, 3, 2])],
-            });
-            event_send.unbounded_send(e).unwrap();
-            let e = Event::NetstackEvent(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [1, 2, 3, 3])],
-            });
-            event_send.unbounded_send(e).unwrap();
-            let e = Event::NetstackEvent(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [1, 2, 3, 4])],
-            });
-            event_send.unbounded_send(e).unwrap();
-            drop(event_send);
-        })
-        .detach();
-
-        let x = event_loop
-            .run()
-            .on_timeout(fasync::Time::after(fuchsia_zircon::Duration::from_seconds(10)), || {
-                panic!("timed out")
-            })
-            .await;
-        println!("eventloop result {:?}", x);
-        assert_eq!(event_loop.monitor.stats().events, 4);
+        Ok(None)
     }
 }

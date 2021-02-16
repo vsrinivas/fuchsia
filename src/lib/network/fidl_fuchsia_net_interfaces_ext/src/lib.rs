@@ -317,6 +317,9 @@ pub enum WatcherOperationError<B: Update + std::fmt::Debug> {
         /// The local state at the time of the watcher event stream's end.
         final_state: B,
     },
+    /// Watcher event stream yielded an event with unexpected type.
+    #[error("unexpected event type: {0:?}")]
+    UnexpectedEvent(fnet_interfaces::Event),
 }
 
 /// Interface watcher creation errors.
@@ -412,6 +415,38 @@ where
         }
     })
     .await
+}
+
+/// Read Existing interface events from `stream`, updating `init` until the Idle event is detected,
+/// returning the resulting state.
+pub async fn existing<S, B>(stream: S, init: B) -> Result<B, WatcherOperationError<B>>
+where
+    S: futures::Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
+    B: Update + std::fmt::Debug,
+{
+    async_utils::fold::try_fold_while(
+        stream.map_err(WatcherOperationError::EventStream),
+        init,
+        |mut acc, event| {
+            futures::future::ready(match event {
+                fnet_interfaces::Event::Existing(_) => match acc.update(event) {
+                    Ok::<UpdateResult<'_>, _>(_) => Ok(async_utils::fold::FoldWhile::Continue(acc)),
+                    Err(e) => Err(WatcherOperationError::Update(e)),
+                },
+                fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => {
+                    Ok(async_utils::fold::FoldWhile::Done(acc))
+                }
+                fnet_interfaces::Event::Added(_)
+                | fnet_interfaces::Event::Removed(_)
+                | fnet_interfaces::Event::Changed(_) => {
+                    Err(WatcherOperationError::UnexpectedEvent(event))
+                }
+            })
+        },
+    )
+    .await?
+    .short_circuited()
+    .map_err(|acc| WatcherOperationError::UnexpectedEnd { final_state: acc })
 }
 
 /// Returns a stream of interface change events obtained by repeatedly calling watch on `watcher`.
@@ -624,6 +659,7 @@ mod tests {
     fn test_event_stream() -> EventStream {
         EventStream(Rc::new(RefCell::new(vec![
             fnet_interfaces::Event::Existing(fidl_properties(ID)),
+            fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}),
             fnet_interfaces::Event::Added(fidl_properties(ID2)),
             fnet_interfaces::Event::Changed(properties_delta(ID)),
             fnet_interfaces::Event::Changed(properties_delta(ID2)),
@@ -701,6 +737,43 @@ mod tests {
                 InterfaceState::Known(validated_properties(ID)),
                 InterfaceState::Known(validated_properties_after_change(ID)),
             ],
+        );
+    }
+
+    const ID_NON_EXISTENT: u64 = 0xffffffff;
+    #[test_case(
+        InterfaceState::Unknown(ID_NON_EXISTENT),
+        InterfaceState::Unknown(ID_NON_EXISTENT);
+        "interface_state_unknown_different_id"
+    )]
+    #[test_case(
+        InterfaceState::Unknown(ID),
+        InterfaceState::Known(validated_properties(ID));
+        "interface_state_unknown")]
+    #[test_case(
+        HashMap::new(),
+        [(ID, validated_properties(ID)), (ID2, validated_properties(ID2))]
+            .iter()
+            .cloned()
+            .collect::<HashMap<_, _>>();
+        "hashmap"
+    )]
+    fn test_existing<B>(state: B, want: B)
+    where
+        B: Update + std::fmt::Debug + std::cmp::PartialEq,
+    {
+        let events = [
+            fnet_interfaces::Event::Existing(fidl_properties(ID)),
+            fnet_interfaces::Event::Existing(fidl_properties(ID2)),
+            fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}),
+        ];
+        let event_stream = futures::stream::iter(events.iter().cloned().map(Ok));
+        assert_eq!(
+            existing(event_stream, state)
+                .now_or_never()
+                .expect("existing did not complete immediately")
+                .expect("existing returned error"),
+            want,
         );
     }
 }

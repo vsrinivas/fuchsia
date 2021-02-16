@@ -74,10 +74,8 @@ async fn create_environments<'a>(
 
         // Wait for the interface to become online
         //
-        // TODO(fxbug.dev/21154): Replace this loop with a hanging get on `WatchInterfaces`.
-        //
-        // Note, netstack3 does not implement `fuchsia.netstack.Netstack/OnInterfacesChanged`
-        // or `fuchsia.net.stack.Stack/OnInterfaceStatusChange`.
+        // TODO(fxbug.dev/60923): Wait instead using `fuchsia.net.interfaces/Watcher`,
+        // which is currently not implemented by netstack3.
         loop {
             let props = iface.get_info().await.context("get interface info")?.properties;
             if props.physical_status == fnet_stack::PhysicalStatus::Up
@@ -97,9 +95,8 @@ async fn create_environments<'a>(
         // This is required for IPv6 since we need to wait for DAD to complete before an address
         // is bound to an interface.
         //
-        // TODO(fxbug.dev/21154): Replace this loop with a hanging get on `WatchInterfaces`.
-        //
-        // Note, netstack3 does not implement `fuchsia.netstack.Netstack/OnInterfacesChanged`.
+        // TODO(fxbug.dev/60923): Wait instead using `fuchsia.net.interfaces/Watcher`,
+        // which is currently not implemented by netstack3.
         loop {
             if iface.get_addrs().await.context("get addrs")?.contains(&config.static_ip) {
                 break;
