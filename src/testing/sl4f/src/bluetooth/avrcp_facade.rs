@@ -129,6 +129,24 @@ impl AvrcpFacade {
         }
     }
 
+    /// Sends an AVCPanelCommand to the controller.
+    ///
+    /// # Arguments
+    /// * `absolute_volume` - the value to which the volume is set
+    pub async fn set_absolute_volume(&self, absolute_volume: u8) -> Result<u8, Error> {
+        let tag = "AvrcpFacade::set_absolute_volume";
+        let result = match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => proxy.set_absolute_volume(absolute_volume).await?,
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        };
+        match result {
+            Ok(res) => Ok(res),
+            Err(err) => {
+                fx_err_and_bail!(&with_line!(tag), format!("Error setting volume:{:?}", err))
+            }
+        }
+    }
+
     /// A function to remove the profile service proxy and clear connected devices.
     fn clear(&self) {
         self.inner.write().avrcp_service_proxy = None;

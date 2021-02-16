@@ -9,7 +9,7 @@ use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_le::ScanFilter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
-use serde_json::{to_value, Value};
+use serde_json::{from_value, to_value, Value};
 
 // Bluetooth-related functionality
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
@@ -30,6 +30,8 @@ use crate::common_utils::common::{
 };
 
 use crate::common_utils::common::macros::parse_arg;
+
+use super::types::AbsoluteVolumeCommand;
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
 // ble_scan command
@@ -507,6 +509,16 @@ impl Facade for AvrcpFacade {
             "AvrcpSendCommand" => {
                 let command_str = parse_arg!(args, as_str, "command")?;
                 let result = self.send_command(command_str.to_string().into()).await?;
+                Ok(to_value(result)?)
+            }
+            "AvrcpSetAbsoluteVolume" => {
+                let absolute_volume_command: AbsoluteVolumeCommand = match from_value(args.clone())
+                {
+                    Ok(absolute_volume) => absolute_volume,
+                    _ => bail!("Invalid json argument to AvrcpSetAbsoluteVolume! - {}", args),
+                };
+                let result =
+                    self.set_absolute_volume(absolute_volume_command.absolute_volume).await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid AVRCP FIDL method: {:?}", method),
