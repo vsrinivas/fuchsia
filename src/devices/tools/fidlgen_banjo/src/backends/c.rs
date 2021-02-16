@@ -42,24 +42,11 @@ fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String 
     "".to_string()
 }
 
-fn integer_type_to_primitive(ty: &IntegerType) -> PrimitiveSubtype {
-    match ty {
-        IntegerType::Int8 => PrimitiveSubtype::Int8,
-        IntegerType::Int16 => PrimitiveSubtype::Int16,
-        IntegerType::Int32 => PrimitiveSubtype::Int32,
-        IntegerType::Int64 => PrimitiveSubtype::Int64,
-        IntegerType::Uint8 => PrimitiveSubtype::Uint8,
-        IntegerType::Uint16 => PrimitiveSubtype::Uint16,
-        IntegerType::Uint32 => PrimitiveSubtype::Uint32,
-        IntegerType::Uint64 => PrimitiveSubtype::Uint64,
-    }
-}
-
 fn primitive_type_to_c_str(ty: &PrimitiveSubtype) -> Result<String, Error> {
     match ty {
         PrimitiveSubtype::Bool => Ok(String::from("bool")),
-        PrimitiveSubtype::Float64 => Ok(String::from("double")),
         PrimitiveSubtype::Float32 => Ok(String::from("float")),
+        PrimitiveSubtype::Float64 => Ok(String::from("double")),
         PrimitiveSubtype::Int8 => Ok(String::from("int8_t")),
         PrimitiveSubtype::Int16 => Ok(String::from("int16_t")),
         PrimitiveSubtype::Int32 => Ok(String::from("int32_t")),
@@ -72,7 +59,7 @@ fn primitive_type_to_c_str(ty: &PrimitiveSubtype) -> Result<String, Error> {
 }
 
 fn integer_type_to_c_str(ty: &IntegerType) -> Result<String, Error> {
-    primitive_type_to_c_str(&integer_type_to_primitive(ty))
+    primitive_type_to_c_str(&ty.to_primitive())
 }
 
 fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
@@ -122,7 +109,7 @@ fn protocol_to_ops_c_str(id: &CompoundIdentifier, ir: &FidlIr) -> Result<String,
 }
 
 pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error> {
-    if let Some(layout) = get_attribute(ir.get_protocol_attributes(id)?, "BanjoLayout") {
+    if let Some(layout) = ir.get_protocol_attributes(id)?.get("BanjoLayout") {
         if layout == "ddk-callback" {
             return Ok(false);
         }
@@ -135,7 +122,7 @@ fn integer_constant_to_c_str(
     constant: &Constant,
     ir: &FidlIr,
 ) -> Result<String, Error> {
-    constant_to_c_str(&Type::Primitive { subtype: integer_type_to_primitive(ty) }, constant, ir)
+    constant_to_c_str(&ty.to_type(), constant, ir)
 }
 
 fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<String, Error> {
@@ -162,8 +149,7 @@ fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<Stri
             .expect(&format!("Can't identify: {:?}", identifier))
         {
             Declaration::Enum => {
-                let decl =
-                    ir.get_enum(identifier).expect(&format!("Can't find enum: {:?}", identifier));
+                let decl = ir.get_enum(identifier)?;
                 return integer_constant_to_c_str(&decl._type, constant, ir);
             }
             t => Err(anyhow!("Can't handle this constant identifier: {:?}", t)),
@@ -172,27 +158,8 @@ fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<Stri
     }
 }
 
-fn has_attribute(maybe_attributes: &Option<Vec<Attribute>>, name: &str) -> bool {
-    match maybe_attributes {
-        Some(attrs) => attrs.iter().any(|a| a.name == name),
-        None => false,
-    }
-}
-
-fn get_attribute<'b>(
-    maybe_attributes: &'b Option<Vec<Attribute>>,
-    name: &str,
-) -> Option<&'b String> {
-    match maybe_attributes {
-        Some(attrs) => {
-            attrs.iter().filter_map(|a| if a.name == name { Some(&a.value) } else { None }).next()
-        }
-        None => None,
-    }
-}
-
 pub fn name_buffer(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
-    if has_attribute(maybe_attributes, "Buffer") {
+    if maybe_attributes.has("Buffer") {
         "buffer"
     } else {
         "list"
@@ -200,7 +167,7 @@ pub fn name_buffer(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
 }
 
 pub fn name_size(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
-    if has_attribute(maybe_attributes, "Buffer") {
+    if maybe_attributes.has("Buffer") {
         "size"
     } else {
         "count"
@@ -241,7 +208,7 @@ fn field_to_c_str(
         );
         return Ok(accum);
     }
-    let prefix = if has_attribute(maybe_attributes, "Mutable") { "" } else { "const " };
+    let prefix = if maybe_attributes.has("Mutable") { "" } else { "const " };
     let ty_name = type_to_c_str(&ty, ir)?;
     match ty {
         Type::Str { maybe_element_count, .. } => {
@@ -269,7 +236,7 @@ fn field_to_c_str(
             }
         }
         Type::Vector { .. } => {
-            let ptr = if has_attribute(&maybe_attributes, "OutOfLineContents") { "*" } else { "" };
+            let ptr = if maybe_attributes.has("OutOfLineContents") { "*" } else { "" };
             accum.push_str(
                 format!(
                     "{indent}{prefix}{ty}{ptr}* {c_name}_{buffer};\n\
@@ -369,8 +336,8 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                             }
                         }
                         Declaration::Struct | Declaration::Union => {
-                            let prefix = if has_attribute(&param.maybe_attributes, "InOut")
-                                || has_attribute(&param.maybe_attributes, "Mutable")
+                            let prefix = if param.maybe_attributes.has("InOut")
+                                || param.maybe_attributes.has("Mutable")
                             {
                                 ""
                             } else {
@@ -393,11 +360,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                     ))
                 }
                 Type::Vector { .. } => {
-                    let ptr = if has_attribute(&param.maybe_attributes, "InnerPointer") {
-                        "*"
-                    } else {
-                        ""
-                    };
+                    let ptr = if param.maybe_attributes.has("InnerPointer") { "*" } else { "" };
                     Ok(format!(
                         "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
                         buffer = name_buffer(&param.maybe_attributes),
@@ -416,7 +379,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
 fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, String), Error> {
     let protocol_name = to_c_name(name);
     let method_name = to_c_name(&m.name.0);
-    if has_attribute(&m.maybe_attributes, "Async") {
+    if m.maybe_attributes.has("Async") {
         return Ok((
             vec![
                 format!(
@@ -462,7 +425,7 @@ fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, S
                         Type::Vector { .. } => {
                             let buffer_name = name_buffer(&param.maybe_attributes);
                             let size_name = name_size(&param.maybe_attributes);
-                            if has_attribute(&param.maybe_attributes, "CalleeAllocated") {
+                            if param.maybe_attributes.has("CalleeAllocated") {
                                 format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
                                         buffer = buffer_name,
                                         size = size_name,
@@ -506,7 +469,7 @@ fn get_in_args(m: &Method, _ir: &FidlIr) -> Result<Vec<String>, Error> {
 }
 
 fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
-    if has_attribute(&m.maybe_attributes, "Async") {
+    if m.maybe_attributes.has("Async") {
         return Ok((vec!["callback".to_string(), "cookie".to_string()], false));
     }
 
@@ -523,7 +486,7 @@ fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
                         Type::Vector { .. } => {
                             let buffer_name = name_buffer(&param.maybe_attributes);
                             let size_name = name_size(&param.maybe_attributes);
-                            if has_attribute(&param.maybe_attributes, "CalleeAllocated") {
+                            if param.maybe_attributes.has("CalleeAllocated") {
                                 format!(
                                     "out_{name}_{buffer}, {name}_{size}",
                                     buffer = buffer_name,
@@ -560,7 +523,7 @@ enum ProtocolType {
 
 impl From<&Option<Vec<Attribute>>> for ProtocolType {
     fn from(maybe_attributes: &Option<Vec<Attribute>>) -> Self {
-        if let Some(layout) = get_attribute(maybe_attributes, "BanjoLayout") {
+        if let Some(layout) = maybe_attributes.get("BanjoLayout") {
             if layout == "ddk-callback" {
                 ProtocolType::Callback
             } else if layout == "ddk-interface" {
@@ -669,7 +632,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
 
     fn codegen_struct_def(&self, data: &Struct, ir: &FidlIr) -> Result<String, Error> {
         let attrs = struct_attrs_to_c_str(&data.maybe_attributes);
-        let preserve_names = has_attribute(&data.maybe_attributes, "PreserveCNames");
+        let preserve_names = data.maybe_attributes.has("PreserveCNames");
         let members = data
             .members
             .iter()
@@ -858,7 +821,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     ) -> Result<String, Error> {
         Ok(data
             .iter()
-            .filter(|method| has_attribute(&method.maybe_attributes, "Async"))
+            .filter(|method| method.maybe_attributes.has("Async"))
             .map(|method| {
                 let mut temp_method = method.clone();
                 temp_method.maybe_request = method.maybe_response.clone();

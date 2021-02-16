@@ -1,0 +1,1 @@
+../../../banjo/test/rust/rust-derive.rs

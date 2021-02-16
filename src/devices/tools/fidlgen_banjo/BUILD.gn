@@ -53,6 +53,12 @@ rustc_library("lib") {
     "src/backends/templates/c/protocol_ops.h",
     "src/backends/templates/c/protocol.h",
     "src/backends/templates/c/struct.h",
+    "src/backends/templates/rust/body.rs",
+    "src/backends/templates/rust/enum.rs",
+    "src/backends/templates/rust/header.rs",
+    "src/backends/templates/rust/protocol.rs",
+    "src/backends/templates/rust/struct.rs",
+    "src/backends/templates/rust/union.rs",
   ]
 
   source_root = "src/lib.rs"

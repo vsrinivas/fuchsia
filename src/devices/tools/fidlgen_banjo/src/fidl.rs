@@ -58,7 +58,7 @@ where
     Ok(id)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 #[serde(transparent)]
 pub struct CompoundIdentifier(
     #[serde(deserialize_with = "validate_compound_identifier")] pub String,
@@ -569,34 +569,51 @@ macro_rules! fetch_declaration {
             .iter()
             .filter(|e| e.name == *$identifier)
             .next()
-            .expect(&format!("Could not find declaration: {:?}", $identifier))
+            .ok_or(anyhow!("Could not find declaration: {:?}", $identifier))
     };
 }
 
 impl FidlIr {
-    pub fn get_declaration(&self, identifier: &CompoundIdentifier) -> Option<&Declaration> {
-        self.declarations.0.get(identifier).or_else(|| {
-            self.library_dependencies
-                .iter()
-                .filter_map(|library| library.declarations.0.get(identifier))
-                .next()
-                .map(|decl| match decl {
-                    ExternalDeclaration::Bits => &Declaration::Bits,
-                    ExternalDeclaration::Const => &Declaration::Const,
-                    ExternalDeclaration::Enum => &Declaration::Enum,
-                    ExternalDeclaration::Interface => &Declaration::Interface,
-                    ExternalDeclaration::Service => &Declaration::Service,
-                    ExternalDeclaration::ExperimentalResource => &Declaration::ExperimentalResource,
-                    ExternalDeclaration::Struct { .. } => &Declaration::Struct,
-                    ExternalDeclaration::Table { .. } => &Declaration::Table,
-                    ExternalDeclaration::Union { .. } => &Declaration::Union,
-                    ExternalDeclaration::TypeAlias => &Declaration::TypeAlias,
-                })
-        })
+    pub fn get_declaration(&self, identifier: &CompoundIdentifier) -> Result<&Declaration, Error> {
+        self.declarations.0.get(identifier).ok_or(anyhow!("~~ error never seen ~~~")).or_else(
+            |_| {
+                self.library_dependencies
+                    .iter()
+                    .filter_map(|library| library.declarations.0.get(identifier))
+                    .next()
+                    .ok_or(anyhow!("Could not find declaration: {:?}", identifier))
+                    .map(|decl| match decl {
+                        ExternalDeclaration::Bits => &Declaration::Bits,
+                        ExternalDeclaration::Const => &Declaration::Const,
+                        ExternalDeclaration::Enum => &Declaration::Enum,
+                        ExternalDeclaration::Interface => &Declaration::Interface,
+                        ExternalDeclaration::Service => &Declaration::Service,
+                        ExternalDeclaration::ExperimentalResource => {
+                            &Declaration::ExperimentalResource
+                        }
+                        ExternalDeclaration::Struct { .. } => &Declaration::Struct,
+                        ExternalDeclaration::Table { .. } => &Declaration::Table,
+                        ExternalDeclaration::Union { .. } => &Declaration::Union,
+                        ExternalDeclaration::TypeAlias => &Declaration::TypeAlias,
+                    })
+            },
+        )
     }
 
-    pub fn get_enum(&self, identifier: &CompoundIdentifier) -> Option<&Enum> {
-        Some(fetch_declaration!(self, enum_declarations, identifier))
+    pub fn get_enum(&self, identifier: &CompoundIdentifier) -> Result<&Enum, Error> {
+        fetch_declaration!(self, enum_declarations, identifier)
+    }
+
+    pub fn get_struct(&self, identifier: &CompoundIdentifier) -> Result<&Struct, Error> {
+        fetch_declaration!(self, struct_declarations, identifier)
+    }
+
+    pub fn get_const(&self, identifier: &CompoundIdentifier) -> Result<&Const, Error> {
+        fetch_declaration!(self, const_declarations, identifier)
+    }
+
+    pub fn get_type_alias(&self, identifier: &CompoundIdentifier) -> Result<&TypeAlias, Error> {
+        fetch_declaration!(self, type_alias_declarations, identifier)
     }
 
     pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {
@@ -628,11 +645,11 @@ impl Type {
                     Ok(true)
                 } else {
                     match ir.get_declaration(identifier).unwrap() {
-                        Declaration::Bits => fetch_declaration!(ir, bits_declarations, identifier)
+                        Declaration::Bits => fetch_declaration!(ir, bits_declarations, identifier)?
                             ._type
                             .is_primitive(ir),
                         Declaration::Const => {
-                            fetch_declaration!(ir, const_declarations, identifier)
+                            fetch_declaration!(ir, const_declarations, identifier)?
                                 ._type
                                 .is_primitive(ir)
                         }
@@ -643,6 +660,49 @@ impl Type {
             }
             Type::Primitive { .. } => Ok(true),
             _ => Ok(false),
+        }
+    }
+}
+
+impl IntegerType {
+    pub fn to_primitive(&self) -> PrimitiveSubtype {
+        match self {
+            IntegerType::Int8 => PrimitiveSubtype::Int8,
+            IntegerType::Int16 => PrimitiveSubtype::Int16,
+            IntegerType::Int32 => PrimitiveSubtype::Int32,
+            IntegerType::Int64 => PrimitiveSubtype::Int64,
+            IntegerType::Uint8 => PrimitiveSubtype::Uint8,
+            IntegerType::Uint16 => PrimitiveSubtype::Uint16,
+            IntegerType::Uint32 => PrimitiveSubtype::Uint32,
+            IntegerType::Uint64 => PrimitiveSubtype::Uint64,
+        }
+    }
+
+    pub fn to_type(&self) -> Type {
+        Type::Primitive { subtype: self.to_primitive() }
+    }
+}
+
+pub trait AttributeContainer {
+    fn has(&self, name: &str) -> bool;
+    fn get(&self, name: &str) -> Option<&String>;
+}
+
+impl AttributeContainer for Option<Vec<Attribute>> {
+    fn has(&self, name: &str) -> bool {
+        match self {
+            Some(attrs) => attrs.iter().any(|a| a.name == name),
+            None => false,
+        }
+    }
+
+    fn get(&self, name: &str) -> Option<&String> {
+        match self {
+            Some(attrs) => attrs
+                .iter()
+                .filter_map(|a| if a.name == name { Some(&a.value) } else { None })
+                .next(),
+            None => None,
         }
     }
 }

@@ -15,7 +15,10 @@ _simple_libraries = [
   },
   {
     name = "alignment"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "api"
@@ -24,7 +27,10 @@ _simple_libraries = [
   },
   {
     name = "attributes"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
 
   # Note: badtypes verifies that the banjo parser correctly fails/
@@ -47,47 +53,80 @@ _simple_libraries = [
   },
   {
     name = "empty"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "enums"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example0"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example1"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example2"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example3"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example4"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example6"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example7"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example8"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "example9"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
@@ -137,7 +176,10 @@ _simple_libraries = [
   },
   {
     name = "point"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
   },
   {
     name = "preservenames"
@@ -177,21 +219,30 @@ _simple_libraries = [
   },
   {
     name = "rustderive"
-    backends = []
+    backends = [ "rust" ]
   },
   {
     name = "simple"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "tables"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
     name = "types"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
     deps = [ "//zircon/vdso/zx" ]
   },
   {
@@ -200,7 +251,10 @@ _simple_libraries = [
   },
   {
     name = "view"
-    backends = [ "c" ]
+    backends = [
+      "c",
+      "rust",
+    ]
     deps = [ ":point" ]
   },
 ]
@@ -250,6 +304,9 @@ foreach(lib, _enabled_libraries) {
       goldens = []
       if (lib.backends + [ "c" ] - [ "c" ] != lib.backends) {
         goldens += [ "$_base_label/c/$_name.h" ]
+      }
+      if (lib.backends + [ "rust" ] - [ "rust" ] != lib.backends) {
+        goldens += [ "$_base_label/rust/$_name.rs" ]
       }
     },
   ]

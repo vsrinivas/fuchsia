@@ -32,7 +32,7 @@ pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
     Ok(ir
         .declaration_order
         .iter()
-        .filter_map(|ident| match ir.get_declaration(ident)? {
+        .filter_map(|ident| match ir.get_declaration(ident).ok()? {
             Declaration::Const => Some(Decl::Const {
                 data: ir.const_declarations.iter().filter(|c| c.name == *ident).next()?,
             }),

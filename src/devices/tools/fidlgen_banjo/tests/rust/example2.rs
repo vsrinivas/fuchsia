@@ -1,0 +1,1 @@
+../../../banjo/test/rust/example-2.rs
