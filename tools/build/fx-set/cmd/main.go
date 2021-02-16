@@ -40,6 +40,22 @@ type subprocessRunner interface {
 	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
 }
 
+type fxRunner struct {
+	subprocessRunner
+	checkoutDir string
+}
+
+// run runs the given fx command with optional args.
+func (r *fxRunner) run(ctx context.Context, command string, args ...string) error {
+	// fx-reentry is specifically intended to let non-shell fx commands invoke
+	// other fx commands. We can use it to invoke fx subcommands, just like the
+	// regular fx executable.
+	fxPath := filepath.Join(r.checkoutDir, "scripts", "fx-reentry")
+	cmd := []string{fxPath, command}
+	cmd = append(cmd, args...)
+	return r.subprocessRunner.Run(ctx, cmd, os.Stdout, os.Stderr)
+}
+
 func main() {
 	ctx := command.CancelOnSignals(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 
@@ -96,7 +112,28 @@ func mainImpl(ctx context.Context) error {
 	}
 
 	_, err = fint.Set(ctx, staticSpec, contextSpec)
-	return err
+	if err != nil {
+		return err
+	}
+
+	fx := fxRunner{
+		subprocessRunner: r,
+		checkoutDir:      args.checkoutDir,
+	}
+
+	// Set the build dir used by subsequent fx commands.
+	if err := fx.run(ctx, "use", contextSpec.BuildDir); err != nil {
+		return fmt.Errorf("failed to set build directory: %w", err)
+	}
+
+	if staticSpec.UseGoma && !args.noEnsureGoma {
+		// Make sure Goma is set up.
+		if err := fx.run(ctx, "goma"); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type setArgs struct {
