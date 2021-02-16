@@ -168,8 +168,7 @@ class AppModel {
     ]).addListener(onCancel);
 
     // Add inspect data when requested.
-    // TODO(fxb/68973): Change back to onDemand after soft transition.
-    inspect.Inspect.onDemand2('ermine', _onInspect);
+    inspect.Inspect().onDemand('ermine', _onInspect);
 
     // Handle commands from Flutter Driver.
     _flutterDriverHandler = MethodChannel('flutter_driver/handler');
