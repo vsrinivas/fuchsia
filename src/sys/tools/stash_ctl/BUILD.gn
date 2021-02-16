@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "stash_ctl"
@@ -33,37 +32,18 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("stash_ctl") {
+fuchsia_shell_package("stash_ctl") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "stash_ctl"
-      path = "stash_ctl"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/stash_ctl.cmx")
-      dest = "stash_ctl.cmx"
-    },
-  ]
+  manifest = "meta/stash_ctl.cmx"
 }
 
-test_package("stash_ctl_tests") {
+fuchsia_unittest_package("stash_ctl_bin_test") {
+  manifest = "meta/stash_ctl_bin_test.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "stash_ctl_bin_test"
-    },
-  ]
 }
 
 group("tests") {
   testonly = true
 
-  public_deps = [ ":stash_ctl_tests" ]
+  public_deps = [ ":stash_ctl_bin_test" ]
 }

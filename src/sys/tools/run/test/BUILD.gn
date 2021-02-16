@@ -2,21 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-
-group("test") {
-  testonly = true
-  deps = [
-    ":bin",
-    ":exiter_bin",
-    ":run_return_value_test",
-    ":run_test_exiter",
-    ":run_tests",
-  ]
-}
+import("//src/sys/build/components.gni")
+import("//src/sys/component_index/component_index.gni")
 
 # Test `run` with a stubbed launcher implementation
-executable("bin") {
+executable("run_tests_bin") {
   testonly = true
   output_name = "run_tests"
 
@@ -36,7 +26,7 @@ executable("bin") {
 }
 
 # Test `run` from the platform's perspective, using a real launcher
-executable("run_return_value_test") {
+executable("run_return_value_test_bin") {
   testonly = true
 
   output_name = "run_return_value_test"
@@ -52,7 +42,7 @@ executable("run_return_value_test") {
 }
 
 # Helper program for tests
-executable("exiter_bin") {
+executable("run_test_exiter_bin") {
   output_name = "run_test_exiter"
 
   sources = [ "exiter.cc" ]
@@ -60,36 +50,44 @@ executable("exiter_bin") {
   deps = [ "//zircon/public/lib/zx" ]
 }
 
-# Helper program for tests
-package("run_test_exiter") {
-  meta = [
-    {
-      path = "meta/run_test_exiter.cmx"
-      dest = "run_test_exiter.cmx"
-    },
-  ]
+add_to_component_index("index") {
+  package_name = "run_tests"
+  manifest = "meta/run_test_exiter.cmx"
+}
 
-  deps = [ ":exiter_bin" ]
-
-  binaries = [
-    {
-      name = "run_test_exiter"
-    },
+fuchsia_component("run_test_exiter") {
+  testonly = true
+  manifest = "meta/run_test_exiter.cmx"
+  deps = [
+    ":index",
+    ":run_test_exiter_bin",
   ]
 }
 
-test_package("run_tests") {
-  deps = [
-    ":bin",
+fuchsia_component("run_return_value_test") {
+  testonly = true
+  manifest = "meta/run_return_value_test.cmx"
+  deps = [ ":run_return_value_test_bin" ]
+}
+
+fuchsia_component("run_tests") {
+  testonly = true
+  manifest = "meta/run_tests.cmx"
+  deps = [ ":run_tests_bin" ]
+}
+
+fuchsia_test_package("run_tests_pkg") {
+  package_name = "run_tests"
+
+  test_components = [
     ":run_return_value_test",
+    ":run_tests",
   ]
 
-  tests = [
-    {
-      name = "run_return_value_test"
-    },
-    {
-      name = "run_tests"
-    },
-  ]
+  deps = [ ":run_test_exiter" ]
+}
+
+group("test") {
+  testonly = true
+  deps = [ ":run_tests_pkg" ]
 }

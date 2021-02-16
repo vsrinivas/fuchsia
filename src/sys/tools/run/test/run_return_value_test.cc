@@ -13,15 +13,13 @@
 #include "src/lib/files/file.h"
 
 static constexpr char kRunPath[] = "/bin/run";
-static constexpr char kExiter[] =
-    "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx";
+static constexpr char kExiter[] = "fuchsia-pkg://fuchsia.com/run_tests#meta/run_test_exiter.cmx";
 static constexpr char kExiterV2Ext[] =
-    "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cm";
-static constexpr char kExiterNoExt[] =
-    "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter";
+    "fuchsia-pkg://fuchsia.com/run_tests#meta/run_test_exiter.cm";
+static constexpr char kExiterNoExt[] = "fuchsia-pkg://fuchsia.com/run_tests#meta/run_test_exiter";
 static constexpr char kExiterShort[] = "run_test_exiter.cmx";
 static constexpr char kStdout[] =
-    "Found fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx, "
+    "Found fuchsia-pkg://fuchsia.com/run_tests#meta/run_test_exiter.cmx, "
     "executing.\n";
 
 void test_case(const char* url, const char* value, bool daemonize) {
@@ -55,7 +53,7 @@ void test_case(const char* url, const char* value, bool daemonize) {
   std::string output;
   ASSERT_TRUE(files::ReadFileDescriptorToString(out_fd, &output));
   if (url == kExiterShort) {
-    ASSERT_EQ(kStdout, output);
+    EXPECT_EQ(kStdout, output);
   }
 
   // Verify `run` return code
@@ -64,9 +62,9 @@ void test_case(const char* url, const char* value, bool daemonize) {
   ASSERT_EQ(ZX_OK, status);
   if (daemonize) {
     // If we run daemonize, the return code for run is going to be 0.
-    ASSERT_EQ(ZX_OK, proc_info.return_code);
+    EXPECT_EQ(ZX_OK, proc_info.return_code);
   } else {
-    ASSERT_EQ(strtoll(value, NULL, 0), proc_info.return_code);
+    EXPECT_EQ(strtoll(value, NULL, 0), proc_info.return_code);
   }
 }
 

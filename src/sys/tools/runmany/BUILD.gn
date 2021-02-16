@@ -2,20 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("runmany") {
-  deps = [ ":runn" ]
-
-  binaries = [
-    {
-      name = "runmany"
-      shell = true
-    },
-  ]
+fuchsia_shell_package("runmany") {
+  deps = [ ":runmany_bin" ]
 }
 
-executable("runn") {
+executable("runmany_bin") {
   output_name = "runmany"
   sources = [ "src/runmany.c" ]
   deps = [

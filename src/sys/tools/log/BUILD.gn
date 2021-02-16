@@ -1,9 +1,8 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [ "log.cc" ]
@@ -35,25 +34,12 @@ executable("bin") {
   ]
 }
 
-package("log") {
+fuchsia_shell_package("log") {
   deps = [ ":bin" ]
-
-  meta = [
-    {
-      dest = "log.cmx"
-      path = "log.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "log"
-      shell = true
-    },
-  ]
+  manifest = "log.cmx"
 }
 
-executable("tools_log_test") {
+executable("tools_log_test_bin") {
   testonly = true
 
   sources = [ "test.cc" ]
@@ -68,18 +54,12 @@ executable("tools_log_test") {
   ]
 }
 
-unittest_package("log-test") {
-  deps = [ ":tools_log_test" ]
-
-  tests = [
-    {
-      name = "tools_log_test"
-    },
-  ]
+fuchsia_unittest_package("tools_log_test") {
+  deps = [ ":tools_log_test_bin" ]
 }
 
 group("tests") {
   testonly = true
 
-  public_deps = [ ":log-test" ]
+  public_deps = [ ":tools_log_test" ]
 }

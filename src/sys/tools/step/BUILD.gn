@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
@@ -45,14 +44,6 @@ rustc_binary("bin") {
   sources = [ "main.rs" ]
 }
 
-package("step") {
+fuchsia_shell_package("step") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bin"
-      dest = "step"
-      shell = true
-    },
-  ]
 }
