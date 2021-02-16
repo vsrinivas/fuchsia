@@ -20,7 +20,9 @@ namespace arch {
 // [intel/vol3]: Table 17-13.  MSR_LBR_SELECT for Intel® microarchitecture
 // code name Haswell.
 //
-// Register controlling LBR filtering.
+// MSR_LBR_SELECT.
+//
+// Control LBR filtering.
 //
 // Though the referenced section is for Haswell, the layout is generically
 // accurate, modulo EN_CALLSTACK (see note below).
@@ -47,6 +49,8 @@ struct LbrSelectMsr : public hwreg::RegisterBase<LbrSelectMsr, uint64_t> {
 
 // [intel/vol3]: 17.4.8  LBR Stack.
 //
+// MSR_LASTBRANCH_TOS.
+//
 // Points to the "top" of the LBR stack.
 struct LbrTopOfStackMsr : public hwreg::RegisterBase<LbrTopOfStackMsr, uint64_t> {
   // Gives the index of the most recent branch record, in turn given by bits
@@ -61,46 +65,64 @@ struct LbrTopOfStackMsr : public hwreg::RegisterBase<LbrTopOfStackMsr, uint64_t>
 
 // [intel/vol3]: 17.4.8.1  LBR Stack and Intel® 64 Processors.
 //
-// Pointer the source instruction in a branch, possibly along with metadata.
-struct LbrFromIpMsr : public hwreg::RegisterBase<LbrFromIpMsr, uint64_t> {
-  uint64_t value(LbrFormat format);
+// MSR_LASTBRANCH_N_FROM_IP.
+//
+// Pointer the source instruction in a branch possibly along with metadata.
+class LbrFromIpMsr : public hwreg::RegisterBase<LbrFromIpMsr, uint64_t> {
+ public:
+  uint64_t ip(X86LbrFormat format) const;
 
   // Metadata accessors return optional data, as the latter are only present
   // in particular (older) formats; on newer microarchictures it is expected
   // that this information can be found in the MSR_LBR_INFO_* MSRs instead.
-  std::optional<bool> tsx_abort(LbrFormat format);
-  std::optional<bool> in_tsx(LbrFormat format);
-  std::optional<bool> mispredicted(LbrFormat format);
+  std::optional<bool> tsx_abort(X86LbrFormat format) const;
+  std::optional<bool> in_tsx(X86LbrFormat format) const;
+  std::optional<bool> mispredicted(X86LbrFormat format) const;
 
   // Returns the value associated with MSR_LASTBRANCH_N_FROM_IP.
   static auto Get(size_t N) {
     return hwreg::RegisterAddr<LbrFromIpMsr>(
         static_cast<uint32_t>(X86Msr::MSR_LASTBRANCH_0_FROM_IP) + static_cast<uint32_t>(N));
   }
+
+ private:
+  DEF_FIELD(63, 0, modern_ip);
+  DEF_FIELD(62, 0, legacy_without_tsx_ip);
+  DEF_FIELD(60, 0, legacy_with_tsx_ip);
+  DEF_BIT(63, legacy_mispredicted);
+  DEF_BIT(62, legacy_in_tsx);
+  DEF_BIT(61, legacy_tsx_abort);
 };
 
 // [intel/vol3]: 17.4.8.1  LBR Stack and Intel® 64 Processors.
 //
+// MSR_LASTBRANCH_N_TO_IP.
 // Pointer the destination instruction in a branch, possibly along with
 // metadata.
-struct LbrToIpMsr : public hwreg::RegisterBase<LbrToIpMsr, uint64_t> {
-  uint64_t value(LbrFormat format);
+class LbrToIpMsr : public hwreg::RegisterBase<LbrToIpMsr, uint64_t> {
+ public:
+  uint64_t ip(X86LbrFormat format) const;
 
   // Optional, as this field is only present in particular (older) formats; on
   // newer microarchictures it is expected that this information can be found
   // in found in the MSR_LBR_INFO_* MSRs instead.
-  std::optional<uint16_t> cycle_count(LbrFormat format);
+  std::optional<uint16_t> cycle_count(X86LbrFormat format) const;
 
   // Returns the value associated with MSR_LASTBRANCH_N_TO_IP.
   static auto Get(size_t N) {
     return hwreg::RegisterAddr<LbrToIpMsr>(static_cast<uint32_t>(X86Msr::MSR_LASTBRANCH_0_TO_IP) +
                                            static_cast<uint32_t>(N));
   }
+
+ private:
+  DEF_FIELD(63, 0, modern_ip);
+  DEF_FIELD(63, 48, legacy_cycle_count);
+  DEF_FIELD(47, 0, legacy_ip);
 };
 
 // [intel/vol3]: Table 17-16.  MSR_LBR_INFO_x.
 //
-// Additional branch metadata.
+// MSR_LBR_INFO_N: Additional branch metadata.
 //
 // Though the referenced section is for Haswell, the layout is generically
 // accurate.
@@ -108,7 +130,7 @@ struct LbrInfoMsr : public hwreg::RegisterBase<LbrInfoMsr, uint64_t> {
   DEF_BIT(63, mispred);
   DEF_BIT(62, in_tsx);
   DEF_BIT(61, tsx_abort);
-  // Bits [60:16] are zero.
+  // Bits [60:16] are reserved.
   DEF_FIELD(15, 0, cycle_count);
 
   // Returns the value associated with MSR_LBR_INFO_N.
@@ -145,14 +167,14 @@ struct LastBranchRecord {
 //
 // Example usage (dumping kernel branch records):
 // ```
-//   hwreg::X86MrsIo msr_io;
+//   hwreg::X86MrsIo msr;
 //   LbrStack lbr_stack;
 //   DEBUG_ASSERT(lbr_stack.is_supported());
-//   DEBUG_ASSERT(lbr_stack.is_enabled(msr_io));  // Previously enabled.
+//   DEBUG_ASSERT(lbr_stack.is_enabled(msr));  // Previously enabled.
 //
 //   PrintfSymbolizerContext(stdout);
 //   printf("Last kernel branch records:\n");
-//   lbr_stack.ForEachRecord(msr_io, [](const LastBranchRecord& lbr) {
+//   lbr_stack.ForEachRecord(msr, [](const LastBranchRecord& lbr) {
 //     // Only include branches that end in the kernel.
 //     if (is_kernel_address(lbr.to)) {
 //       printf("from: {{{pc:%#" PRIxPTR "}}}\n", lbr.from);
@@ -162,14 +184,11 @@ struct LastBranchRecord {
 // ```
 class LbrStack {
  public:
-  template <typename CpuidIoProvider>
-  explicit LbrStack(CpuidIoProvider&& io) {
-    // While it would have been possible to create a chain of deferred
-    // constructors to initialize the members as const in an initializer list,
-    // that would have been won at the minor expense of some readability.
-    bool supports_pdcm = io.template Read<CpuidFeatureFlagsC>().pdcm();
-    Initialize(GetMicroarchitecture(std::forward<CpuidIoProvider>(io)), supports_pdcm);
-  }
+  template <typename CpuidIoProvider,
+            // To avoid precedence over copy and move constructors.
+            typename = std::enable_if_t<!std::is_same_v<CpuidIoProvider, LbrStack>>>
+  explicit LbrStack(CpuidIoProvider&& cpuid)
+      : LbrStack(GetMicroarchitecture(cpuid), std::forward<CpuidIoProvider>(cpuid)) {}
 
   LbrStack() = delete;
 
@@ -182,44 +201,46 @@ class LbrStack {
 
   bool is_supported() const { return supported_; }
 
-  template <typename MsrIo>
-  bool is_enabled(MsrIo io) const {
-    return supported_ && DebugControlMsr::Get().ReadFrom(&io).lbr();
+  template <typename MsrIoProvider>
+  bool is_enabled(MsrIoProvider&& msr) const {
+    return supported_ && DebugControlMsr::Get().ReadFrom(&msr).lbr();
   }
 
   // Enables the recording of LBRs on the current CPU with a set of default
   // options (e.g., for callstack profiling when available). If |for_user| is
   // true, only records that end in CPL > 0 will be recorded. This operation is
   // idempotent.
-  template <typename MsrIo>
-  void Enable(MsrIo io, bool for_user) const {
+  template <typename MsrIoProvider>
+  void Enable(MsrIoProvider&& msr, bool for_user) const {
     ZX_ASSERT(supported_);
-    DebugControlMsr::Get().ReadFrom(&io).set_lbr(1).set_freeze_lbr_on_pmi(1).WriteTo(&io);
-    GetDefaultSettings(for_user).WriteTo(&io);
+    DebugControlMsr::Get().ReadFrom(&msr).set_lbr(1).set_freeze_lbr_on_pmi(1).WriteTo(&msr);
+    GetDefaultSettings(for_user).WriteTo(&msr);
   }
 
   // Disables the recording of LBRs on the current CPU. This operation is
   // idempotent.
-  template <typename MsrIo>
-  void Disable(MsrIo io) const {
+  template <typename MsrIoProvider>
+  void Disable(MsrIoProvider&& msr) const {
     ZX_ASSERT(supported_);
-    DebugControlMsr::Get().ReadFrom(&io).set_lbr(0).WriteTo(&io);
+    DebugControlMsr::Get().ReadFrom(&msr).set_lbr(0).WriteTo(&msr);
   }
 
-  template <typename MsrIo, typename LbrCallback>
-  void ForEachRecord(MsrIo io, LbrCallback&& callback) const {
+  // Calls each record on a provided callback. LbrStack must be enabled when
+  // this method is called.
+  template <typename MsrIoProvider, typename LbrCallback>
+  void ForEachRecord(MsrIoProvider&& msr, LbrCallback&& callback) const {
     static_assert(std::is_invocable_r_v<void, LbrCallback, const LastBranchRecord&>);
-    ZX_ASSERT(supported_);
+    ZX_ASSERT(is_enabled(msr));
 
-    LbrFormat format = PerfCapabilitiesMsr::Get().ReadFrom(&io).lbr_fmt();
-    size_t top = LbrTopOfStackMsr::Get().ReadFrom(&io).top(size_);
+    X86LbrFormat format = PerfCapabilitiesMsr::Get().ReadFrom(&msr).lbr_fmt();
+    size_t top = LbrTopOfStackMsr::Get().ReadFrom(&msr).top(size_);
     for (size_t i = 0; i < size_; ++i) {
       size_t idx = (top + i) % size_;
-      LbrFromIpMsr from = LbrFromIpMsr::Get(idx).ReadFrom(&io);
-      LbrToIpMsr to = LbrToIpMsr::Get(idx).ReadFrom(&io);
+      LbrFromIpMsr from = LbrFromIpMsr::Get(idx).ReadFrom(&msr);
+      LbrToIpMsr to = LbrToIpMsr::Get(idx).ReadFrom(&msr);
       LastBranchRecord record{
-          .from = static_cast<zx_vaddr_t>(from.value(format)),
-          .to = static_cast<zx_vaddr_t>(to.value(format)),
+          .from = static_cast<zx_vaddr_t>(from.ip(format)),
+          .to = static_cast<zx_vaddr_t>(to.ip(format)),
           .mispredicted = from.mispredicted(format),
           .cycle_count = to.cycle_count(format),
           .in_tsx = from.in_tsx(format),
@@ -228,9 +249,8 @@ class LbrStack {
       // The *Info formats expect all metadata to be found in the info MSRs;
       // defer evaluation until we are in such a case, as only then will we
       // know that the latter are supported.
-      if (format == LbrFormat::k64BitEipWithFlagsInfo ||
-          format == LbrFormat::k64BitLipWithFlagsInfo) {
-        LbrInfoMsr info = LbrInfoMsr::Get(idx).ReadFrom(&io);
+      if (format == X86LbrFormat::k64BitEipWithInfo || format == X86LbrFormat::k64BitLipWithInfo) {
+        LbrInfoMsr info = LbrInfoMsr::Get(idx).ReadFrom(&msr);
         record.mispredicted = info.mispred();
         record.cycle_count = info.cycle_count();
         record.in_tsx = info.in_tsx();
@@ -241,25 +261,29 @@ class LbrStack {
   }
 
  private:
-  // Initializes the stack abstraction. `supports_pdcm` gives whether the
-  // IA32_PERF_CAPABILITIES MSR is accessible, which is how one determines the
-  // format of the LBRs.
-  void Initialize(Microarchitecture microarch, bool supports_pdcm);
+  // Exists so that we may initialize members as const in an initializer list.
+  template <typename CpuidIoProvider>
+  LbrStack(Microarchitecture microarch, CpuidIoProvider&& cpuid)
+      : size_(Size(microarch)),
+        supported_(size_ > 0 && PerfCapabilitiesMsr::IsSupported(cpuid)),
+        callstack_profiling_(SupportsCallstackProfiling(microarch)) {}
+
+  static size_t Size(Microarchitecture microarch);
+  static bool SupportsCallstackProfiling(Microarchitecture microarch);
 
   // A reasonable set of default settings (e.g., excluding returns and other
   // information implicitly found in a backtrace), enablind callstack profiling
-  // (see description of |callstack_profiling_| when appropriate). Revisit this
+  // (see description of `callstack_profiling_` when appropriate). Revisit this
   // set of choices when we have use-cases for variations.
   LbrSelectMsr GetDefaultSettings(bool for_user) const;
 
-  // Members are properly initialized in Initialize().
-  size_t size_ = 0;
-  bool supported_ = true;
+  const size_t size_;
+  const bool supported_;
   // Whether we can automatically flush records from the on-chip registers (in
   // a LIFO manner) when return instructions are executed, discarding branch
-  // information relative to leaf functions. [x86/v3/17.11] gives the
+  // information relative to leaf functions. `[intel/v3] 17.11` gives the
   // description.
-  bool callstack_profiling_ = false;
+  const bool callstack_profiling_;
 };
 
 }  // namespace arch

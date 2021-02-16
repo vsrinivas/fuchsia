@@ -43,21 +43,21 @@ struct DebugControlMsr : public hwreg::RegisterBase<DebugControlMsr, uint64_t> {
 // [intel/vol3]: 17.4.8.1  LBR Stack and Intel® 64 Processors.
 //  `
 // Last Branch Record format.
-enum class LbrFormat : uint8_t {
+enum class X86LbrFormat : uint8_t {
   k32Bit = 0b000000,
   k64BitLip = 0b000001,
   k64BitEip = 0b000010,
   k64BitEipWithFlags = 0b000011,
   k64BitEipWithFlagsTsx = 0b000100,
-  k64BitEipWithFlagsInfo = 0b000101,
+  k64BitEipWithInfo = 0b000101,
   k64BitLipWithFlagsCycles = 0b000110,
-  k64BitLipWithFlagsInfo = 0b000111,
+  k64BitLipWithInfo = 0b000111,
 };
 
 // [intel/vol3]; 18.6.2.4.2  PEBS Record Format.
 //
 // PEBS record format.
-enum class PebsFormat : uint8_t {
+enum class X86PebsFormat : uint8_t {
   k0000B = 0b0000,
   k0001B = 0b0001,
   k0010B = 0b0010,
@@ -75,10 +75,15 @@ struct PerfCapabilitiesMsr : public hwreg::RegisterBase<PerfCapabilitiesMsr, uin
   // Bit 14 is reserved.
   DEF_BIT(13, fw_write);
   DEF_BIT(12, smm_freeze);
-  DEF_ENUM_FIELD(PebsFormat, 11, 8, pebs_rec_fmt);
+  DEF_ENUM_FIELD(X86PebsFormat, 11, 8, pebs_rec_fmt);
   DEF_BIT(7, pebs_arch_reg);
   DEF_BIT(6, pebs_trap);
-  DEF_ENUM_FIELD(LbrFormat, 5, 0, lbr_fmt);
+  DEF_ENUM_FIELD(X86LbrFormat, 5, 0, lbr_fmt);
+
+  template <typename CpuidIoProvider>
+  static bool IsSupported(CpuidIoProvider&& cpuid) {
+    return cpuid.template Read<CpuidFeatureFlagsC>().pdcm();
+  }
 
   static auto Get() {
     return hwreg::RegisterAddr<PerfCapabilitiesMsr>(

@@ -6,160 +6,167 @@
 
 #include <lib/arch/x86/lbr.h>
 
-#include <fbl/bits.h>
-#include <fbl/function.h>
-
 namespace arch {
 
-uint64_t LbrFromIpMsr::value(LbrFormat format) {
+uint64_t LbrFromIpMsr::ip(X86LbrFormat format) const {
   switch (format) {
-    case LbrFormat::k32Bit:
-    case LbrFormat::k64BitLip:
-    case LbrFormat::k64BitEip:
-    case LbrFormat::k64BitEipWithFlagsInfo:
-    case LbrFormat::k64BitLipWithFlagsInfo:
-      return reg_value();
-    case LbrFormat::k64BitEipWithFlags:
-    case LbrFormat::k64BitLipWithFlagsCycles:
-      return fbl::ExtractBits<62, 0, uint64_t>(reg_value());
-    case LbrFormat::k64BitEipWithFlagsTsx:
-      return fbl::ExtractBits<60, 0, uint64_t>(reg_value());
+    case X86LbrFormat::k32Bit:
+    case X86LbrFormat::k64BitLip:
+    case X86LbrFormat::k64BitEip:
+    case X86LbrFormat::k64BitEipWithInfo:
+    case X86LbrFormat::k64BitLipWithInfo:
+      return modern_ip();
+    case X86LbrFormat::k64BitEipWithFlags:
+    case X86LbrFormat::k64BitLipWithFlagsCycles:
+      return legacy_without_tsx_ip();
+    case X86LbrFormat::k64BitEipWithFlagsTsx:
+      return legacy_with_tsx_ip();
   };
-  __UNREACHABLE;
+  return 0;
 }
 
-std::optional<bool> LbrFromIpMsr::tsx_abort(LbrFormat format) {
+std::optional<bool> LbrFromIpMsr::tsx_abort(X86LbrFormat format) const {
   switch (format) {
-    case LbrFormat::k32Bit:
-    case LbrFormat::k64BitLip:
-    case LbrFormat::k64BitEip:
-    case LbrFormat::k64BitEipWithFlagsInfo:
-    case LbrFormat::k64BitLipWithFlagsInfo:
-    case LbrFormat::k64BitEipWithFlags:
-    case LbrFormat::k64BitLipWithFlagsCycles:
+    case X86LbrFormat::k32Bit:
+    case X86LbrFormat::k64BitLip:
+    case X86LbrFormat::k64BitEip:
+    case X86LbrFormat::k64BitEipWithInfo:
+    case X86LbrFormat::k64BitLipWithInfo:
+    case X86LbrFormat::k64BitEipWithFlags:
+    case X86LbrFormat::k64BitLipWithFlagsCycles:
       return {};
-    case LbrFormat::k64BitEipWithFlagsTsx:
-      return fbl::ExtractBit<61, bool>(reg_value());
+    case X86LbrFormat::k64BitEipWithFlagsTsx:
+      return legacy_tsx_abort();
   };
-  __UNREACHABLE;
+  return {};
 }
 
-std::optional<bool> LbrFromIpMsr::in_tsx(LbrFormat format) {
+std::optional<bool> LbrFromIpMsr::in_tsx(X86LbrFormat format) const {
   switch (format) {
-    case LbrFormat::k32Bit:
-    case LbrFormat::k64BitLip:
-    case LbrFormat::k64BitEip:
-    case LbrFormat::k64BitEipWithFlagsInfo:
-    case LbrFormat::k64BitLipWithFlagsInfo:
-    case LbrFormat::k64BitEipWithFlags:
-    case LbrFormat::k64BitLipWithFlagsCycles:
+    case X86LbrFormat::k32Bit:
+    case X86LbrFormat::k64BitLip:
+    case X86LbrFormat::k64BitEip:
+    case X86LbrFormat::k64BitEipWithInfo:
+    case X86LbrFormat::k64BitLipWithInfo:
+    case X86LbrFormat::k64BitEipWithFlags:
+    case X86LbrFormat::k64BitLipWithFlagsCycles:
       return {};
-    case LbrFormat::k64BitEipWithFlagsTsx:
-      return fbl::ExtractBit<62, bool>(reg_value());
+    case X86LbrFormat::k64BitEipWithFlagsTsx:
+      return legacy_in_tsx();
   }
-  __UNREACHABLE;
+  return {};
 }
 
-std::optional<bool> LbrFromIpMsr::mispredicted(LbrFormat format) {
+std::optional<bool> LbrFromIpMsr::mispredicted(X86LbrFormat format) const {
   switch (format) {
-    case LbrFormat::k32Bit:
-    case LbrFormat::k64BitLip:
-    case LbrFormat::k64BitEip:
-    case LbrFormat::k64BitEipWithFlagsInfo:
-    case LbrFormat::k64BitLipWithFlagsInfo:
+    case X86LbrFormat::k32Bit:
+    case X86LbrFormat::k64BitLip:
+    case X86LbrFormat::k64BitEip:
+    case X86LbrFormat::k64BitEipWithInfo:
+    case X86LbrFormat::k64BitLipWithInfo:
       return {};
-    case LbrFormat::k64BitEipWithFlags:
-    case LbrFormat::k64BitEipWithFlagsTsx:
-    case LbrFormat::k64BitLipWithFlagsCycles:
-      return fbl::ExtractBit<63, bool>(reg_value());
+    case X86LbrFormat::k64BitEipWithFlags:
+    case X86LbrFormat::k64BitEipWithFlagsTsx:
+    case X86LbrFormat::k64BitLipWithFlagsCycles:
+      return legacy_mispredicted();
   }
-  __UNREACHABLE;
+  return {};
 }
 
-uint64_t LbrToIpMsr::value(LbrFormat format) {
+uint64_t LbrToIpMsr::ip(X86LbrFormat format) const {
   switch (format) {
-    case LbrFormat::k32Bit:
-    case LbrFormat::k64BitLip:
-    case LbrFormat::k64BitEip:
-    case LbrFormat::k64BitEipWithFlagsInfo:
-    case LbrFormat::k64BitLipWithFlagsInfo:
-    case LbrFormat::k64BitEipWithFlags:
-    case LbrFormat::k64BitEipWithFlagsTsx:
-      return reg_value();
-    case LbrFormat::k64BitLipWithFlagsCycles:
-      return fbl::ExtractBits<47, 0, uint64_t>(reg_value());
+    case X86LbrFormat::k32Bit:
+    case X86LbrFormat::k64BitLip:
+    case X86LbrFormat::k64BitEip:
+    case X86LbrFormat::k64BitEipWithInfo:
+    case X86LbrFormat::k64BitLipWithInfo:
+    case X86LbrFormat::k64BitEipWithFlags:
+    case X86LbrFormat::k64BitEipWithFlagsTsx:
+      return modern_ip();
+    case X86LbrFormat::k64BitLipWithFlagsCycles:
+      return legacy_ip();
   }
-  __UNREACHABLE;
+  return 0;
 }
 
-std::optional<uint16_t> LbrToIpMsr::cycle_count(LbrFormat format) {
+std::optional<uint16_t> LbrToIpMsr::cycle_count(X86LbrFormat format) const {
   switch (format) {
-    case LbrFormat::k32Bit:
-    case LbrFormat::k64BitLip:
-    case LbrFormat::k64BitEip:
-    case LbrFormat::k64BitEipWithFlagsInfo:
-    case LbrFormat::k64BitLipWithFlagsInfo:
-    case LbrFormat::k64BitEipWithFlags:
-    case LbrFormat::k64BitEipWithFlagsTsx:
+    case X86LbrFormat::k32Bit:
+    case X86LbrFormat::k64BitLip:
+    case X86LbrFormat::k64BitEip:
+    case X86LbrFormat::k64BitEipWithInfo:
+    case X86LbrFormat::k64BitLipWithInfo:
+    case X86LbrFormat::k64BitEipWithFlags:
+    case X86LbrFormat::k64BitEipWithFlagsTsx:
       return {};
-    case LbrFormat::k64BitLipWithFlagsCycles:
-      return fbl::ExtractBits<63, 48, uint16_t>(reg_value());
+    case X86LbrFormat::k64BitLipWithFlagsCycles:
+      return legacy_cycle_count();
   }
-  __UNREACHABLE;
+  return {};
 }
 
-void LbrStack::Initialize(Microarchitecture microarch, bool supports_pdcm) {
+size_t LbrStack::Size(Microarchitecture microarch) {
   // [intel/vol3]: Table 17-4.  LBR Stack Size and TOS Pointer Range.
-  //
-  // Sizes synthesized from the above reference; whether callstack profiling is
-  // supported is gleaned from scouring v4 to see which architectures have
-  // MSR_LBR_SELECT.EN_CALLSTACK defined.
-  //
-  // Do not rely on a default case; build failures are a desired failsafe in
-  // ensuring that this logic is updated on the introduction of new
-  // microarchitectures.
   switch (microarch) {
-    case Microarchitecture::kIntelCore2: {
-      size_ = 4;
-      break;
-    }
-    case Microarchitecture::kIntelBonnell:
-    case Microarchitecture::kIntelSilvermont:
-    case Microarchitecture::kIntelAirmont: {
-      size_ = 8;
-      break;
-    }
-    case Microarchitecture::kIntelNehalem:
-    case Microarchitecture::kIntelWestmere:
-    case Microarchitecture::kIntelSandyBridge:
-    case Microarchitecture::kIntelIvyBridge: {
-      size_ = 16;
-      break;
-    }
-    case Microarchitecture::kIntelHaswell:
-    case Microarchitecture::kIntelBroadwell: {
-      size_ = 16;
-      callstack_profiling_ = true;
-      break;
-    }
-    case Microarchitecture::kIntelSkylake:
-    case Microarchitecture::kIntelSkylakeServer:
-    case Microarchitecture::kIntelCannonLake:
-    case Microarchitecture::kIntelGoldmont:
-    case Microarchitecture::kIntelGoldmontPlus:
-    case Microarchitecture::kIntelTremont: {
-      size_ = 32;
-      callstack_profiling_ = true;
-      break;
-    }
     case Microarchitecture::kUnknown:
     case Microarchitecture::kAmdFamily0x15:
     case Microarchitecture::kAmdFamily0x16:
     case Microarchitecture::kAmdFamily0x17:
     case Microarchitecture::kAmdFamily0x19:
-      break;
+      return 0;
+    case Microarchitecture::kIntelCore2:
+      return 4;
+    case Microarchitecture::kIntelBonnell:
+    case Microarchitecture::kIntelSilvermont:
+    case Microarchitecture::kIntelAirmont:
+      return 8;
+    case Microarchitecture::kIntelNehalem:
+    case Microarchitecture::kIntelWestmere:
+    case Microarchitecture::kIntelSandyBridge:
+    case Microarchitecture::kIntelIvyBridge:
+    case Microarchitecture::kIntelHaswell:
+    case Microarchitecture::kIntelBroadwell:
+      return 16;
+    case Microarchitecture::kIntelSkylake:
+    case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelCannonLake:
+    case Microarchitecture::kIntelGoldmont:
+    case Microarchitecture::kIntelGoldmontPlus:
+    case Microarchitecture::kIntelTremont:
+      return 32;
   }
-  supported_ = supports_pdcm && (size_ > 0);
+  return 0;
+}
+
+bool LbrStack::SupportsCallstackProfiling(Microarchitecture microarch) {
+  // Gleaned from scouring [intel/v4] to see which microarchitectures have
+  // MSR_LBR_SELECT.EN_CALLSTACK defined.
+  switch (microarch) {
+    case Microarchitecture::kUnknown:
+    case Microarchitecture::kIntelCore2:
+    case Microarchitecture::kIntelBonnell:
+    case Microarchitecture::kIntelSilvermont:
+    case Microarchitecture::kIntelAirmont:
+    case Microarchitecture::kIntelNehalem:
+    case Microarchitecture::kIntelWestmere:
+    case Microarchitecture::kIntelSandyBridge:
+    case Microarchitecture::kIntelIvyBridge:
+    case Microarchitecture::kAmdFamily0x15:
+    case Microarchitecture::kAmdFamily0x16:
+    case Microarchitecture::kAmdFamily0x17:
+    case Microarchitecture::kAmdFamily0x19:
+      return false;
+    case Microarchitecture::kIntelHaswell:
+    case Microarchitecture::kIntelBroadwell:
+    case Microarchitecture::kIntelSkylake:
+    case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelCannonLake:
+    case Microarchitecture::kIntelGoldmont:
+    case Microarchitecture::kIntelGoldmontPlus:
+    case Microarchitecture::kIntelTremont:
+      return true;
+  }
+  return false;
 }
 
 LbrSelectMsr LbrStack::GetDefaultSettings(bool for_user) const {

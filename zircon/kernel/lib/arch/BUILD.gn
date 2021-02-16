@@ -22,7 +22,7 @@ zx_library("arch") {
     "cpuid.cc",
     "lbr.cc",
   ]
-  deps = [ "//zircon/system/ulib/fbl" ]
+  deps = []
 
   public_deps = [
     # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
