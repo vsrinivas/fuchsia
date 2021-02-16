@@ -403,6 +403,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }
 
+// Start a driver with an invalid client-end.
 TEST_F(DriverHostTest, InvalidHandleRights) {
   bool connected = false;
   AddEntry([&connected](zx::channel request) {
@@ -473,6 +474,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }
 
+// Start multiple drivers and inspect the driver host.
 TEST_F(DriverHostTest, StartAndInspect) {
   auto [driver_1, outgoing_dir_1] = StartDriver();
   auto [driver_2, outgoing_dir_2] = StartDriver();
