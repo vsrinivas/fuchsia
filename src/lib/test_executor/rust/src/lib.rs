@@ -214,7 +214,7 @@ impl StdoutStream {
 
 fn process_stdout_bytes(bytes: &[u8]) -> String {
     // TODO(anmittal): Change this to consider break in logs and handle it.
-    let log = std::str::from_utf8(bytes).unwrap();
+    let log = String::from_utf8_lossy(bytes);
     log.to_string()
 }
 
