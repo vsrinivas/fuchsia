@@ -732,7 +732,6 @@ fidl fmt --library my_library.fidl -i
 [/src/lib/fidl/rust]: /src/lib/fidl/rust
 [/zircon/system/ulib/fidl]: /zircon/system/ulib/fidl
 [/third_party/go/src/syscall/zx/fidl]: /third_party/go/src/syscall/zx/fidl
-[/sdk/lib/fidl/cpp]: /sdk/lib/fidl/cpp
 [/sdk/dart/fidl]: /sdk/dart/fidl
 [/src/lib/fidl/c]: /src/lib/fidl/c
 [/src/lib/fidl/llcpp]: /src/lib/fidl/llcpp

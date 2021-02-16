@@ -11,8 +11,11 @@ go_library("gopkg") {
   name = "go.fuchsia.dev/tools/mdlint"
   sources = [
     "main.go",
+    "mdhelpers.go",
+    "mdhelpers_test.go",
     "recognizer.go",
     "recognizer_test.go",
+    "reporter.go",
     "rules.go",
     "tokenizer.go",
     "tokenizer_test.go",
