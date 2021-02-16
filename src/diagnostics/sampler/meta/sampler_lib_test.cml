@@ -5,7 +5,7 @@
         "src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
-        binary: "test/sampler_lib_test",
+        binary: "bin/sampler_lib_test",
     },
     use: [
         {

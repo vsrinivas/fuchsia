@@ -6,7 +6,8 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/rust/rustc_wasm_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
 import("//src/diagnostics/wasm/wasm_bindings.gni")
 
 group("wasm") {
@@ -73,12 +74,6 @@ rustc_test("triage_lib_tests") {
   ]
 }
 
-unittest_package("wasm-triage-unittests") {
+fuchsia_unittest_package("wasm-triage-unittests") {
   deps = [ ":triage_lib_tests" ]
-  tests = [
-    {
-      name = "triage_lib_tests"
-      environments = basic_envs
-    },
-  ]
 }
