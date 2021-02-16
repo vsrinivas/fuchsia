@@ -129,9 +129,14 @@ VkResult LinuxEvent::ImportToSemaphore(VkDevice device, VkLayerDispatchTable* di
 std::unique_ptr<PlatformEvent> PlatformEvent::Create(VkDevice device,
                                                      VkLayerDispatchTable* dispatch_table,
                                                      bool signaled) {
+  VkExportFenceCreateInfo export_create_info = {
+    .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
+    .pNext = nullptr,
+    .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR
+  };
   VkFenceCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-      .pNext = nullptr,
+      .pNext = &export_create_info,
       .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0u,
   };
 
