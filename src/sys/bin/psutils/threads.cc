@@ -341,6 +341,7 @@ zx::status<std::unique_ptr<Writer>> Writer::Create() {
 void Writer::ThrottledWriteThread() {
   size_t decommit_offset = 0;
   size_t local_offset = 0;
+  const size_t sys_page_size = zx_system_get_page_size();
   auto* current = static_cast<const uint8_t*>(mapper_.start());
   zx::time last_deadline = zx::clock::get_monotonic();
   for (;;) {
@@ -369,9 +370,9 @@ void Writer::ThrottledWriteThread() {
       local_offset += written;
 
       // Try to decommit pages we no longer need to lower memory usage.
-      if (decommit_offset < fbl::round_down(local_offset, ZX_PAGE_SIZE)) {
-        ZX_DEBUG_ASSERT(decommit_offset % ZX_PAGE_SIZE == 0);
-        const size_t size = fbl::round_down(local_offset - decommit_offset, ZX_PAGE_SIZE);
+      if (decommit_offset < fbl::round_down(local_offset, sys_page_size)) {
+        ZX_DEBUG_ASSERT(decommit_offset % sys_page_size == 0);
+        const size_t size = fbl::round_down(local_offset - decommit_offset, sys_page_size);
         // This is best effort so we don't care if it fails.
         mapper_.vmo().op_range(0, decommit_offset, size, nullptr, 0);
         decommit_offset += size;

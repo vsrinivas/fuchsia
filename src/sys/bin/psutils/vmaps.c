@@ -136,7 +136,7 @@ zx_status_t print_maps(zx_info_maps_t* maps, size_t count, size_t avail) {
     printf(" %*s:sz", size_width, size_str);
     if (e->type == ZX_INFO_MAPS_TYPE_MAPPING) {
       const zx_info_maps_mapping_t* u = &e->u.mapping;
-      format_size(size_str, sizeof(size_str), u->committed_pages * PAGE_SIZE);
+      format_size(size_str, sizeof(size_str), u->committed_pages * zx_system_get_page_size());
       printf(" %4s:res", size_str);
       printf(" %5" PRIu64 ":vmo", u->vmo_koid);
     } else {
