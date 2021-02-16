@@ -6,7 +6,7 @@ use {
     crate::ast::{
         self, Attrs, BanjoAst, Constant, Decl, EnumVariant, Ident, Method, StructField, UnionField,
     },
-    crate::backends::util::{is_banjo_namespace, to_c_name},
+    crate::backends::util::{get_size_spec, is_banjo_namespace, to_c_name},
     crate::backends::Backend,
     anyhow::{format_err, Error},
     std::io,
@@ -81,19 +81,6 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
 
 fn ident_to_c_str(ast: &ast::BanjoAst, ident: &Ident) -> Result<String, Error> {
     ty_to_c_str(ast, &ast::Ty::Identifier { id: ident.clone(), reference: false })
-}
-
-fn get_size_spec<'b>(ast: &'b ast::BanjoAst, size: &'b str) -> &'b str {
-    // Check if the size specification is a constant and replace the constant name by its value
-    // if that's the case.
-    // This matches FIDL's behavior of inlining constant values in array sizes.
-    let size_ident = Ident::new_raw(size);
-    if let Some(size_decl) = ast.maybe_id_to_decl(&size_ident) {
-        if let Decl::Constant { value, .. } = size_decl {
-            return &value.0;
-        }
-    }
-    size
 }
 
 pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {

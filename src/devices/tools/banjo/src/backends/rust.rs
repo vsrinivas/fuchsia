@@ -4,7 +4,7 @@
 
 use {
     crate::ast::{self, BanjoAst, Constant},
-    crate::backends::util::to_c_name,
+    crate::backends::util::{get_size_spec, to_c_name},
     crate::backends::Backend,
     anyhow::{format_err, Error},
     std::collections::HashSet,
@@ -206,15 +206,14 @@ fn to_rust_type(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::Float64 => Ok(String::from("f64")),
         ast::Ty::Array { ty, size } => {
             let Constant(ref size) = size;
-            Ok(format!(
-                "[{ty}; {size} as usize]",
-                ty = to_rust_type(&ast, ty)?,
-                size = size.as_str().to_uppercase()
-            ))
+            let size_str = get_size_spec(ast, &size);
+            Ok(format!("[{ty}; {size} as usize]", ty = to_rust_type(&ast, ty)?, size = size_str))
         }
         ast::Ty::Enum { .. } => Ok(String::from("*mut std::ffi::c_void /* Enum not right*/")),
         ast::Ty::Str { size, .. } => match size {
-            Some(Constant(c)) => Ok(format!("[u8; {size} as usize]", size = c.to_uppercase())),
+            Some(Constant(c)) => {
+                Ok(format!("[u8; {size} as usize]", size = get_size_spec(ast, &c)))
+            }
             None => Ok(String::from("*mut std::ffi::c_void /* String */")),
         },
         ast::Ty::Vector { ref ty, size: _, nullable: _ } => to_rust_type(ast, ty),

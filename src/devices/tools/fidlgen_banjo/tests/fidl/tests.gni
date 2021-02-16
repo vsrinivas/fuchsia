@@ -33,7 +33,7 @@ _simple_libraries = [
     ]
   },
 
-  # Note: badtypes verifies that the banjo parser correctly fails/
+  # Note: badtypes verifies that the banjo parser correctly fails.
   {
     name = "binary"
     backends = [ "c" ]

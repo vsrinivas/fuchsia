@@ -48,13 +48,13 @@ pub struct EnumGrandParentStruct {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SmallArrayStruct {
-    pub small_array: [u8; SMALL_ARRAY_SIZE as usize],
+    pub small_array: [u8; 8 as usize],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct BigArrayStruct {
-    pub big_array: [u8; LARGE_ARRAY_SIZE as usize],
+    pub big_array: [u8; 2048 as usize],
 }
 
 #[repr(C)]

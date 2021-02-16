@@ -211,6 +211,15 @@ fn type_to_rust_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
     }
 }
 
+fn get_base_type_from_alias(alias: &Option<&String>) -> Option<String> {
+    if let Some(name) = alias {
+        if name.starts_with("zx/") {
+            return Some(format!("zircon::sys::zx_{}_t", &name[3..]));
+        }
+    }
+    None
+}
+
 impl<'a, W: io::Write> RustBackend<'a, W> {
     fn codegen_enum_decl(
         &self,
@@ -256,8 +265,32 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
             .join(""))
     }
 
-    fn codegen_const_decl(&self) -> Result<String, Error> {
-        Ok("".to_string())
+    fn codegen_const_decl(
+        &self,
+        declarations: &Vec<Decl<'_>>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        Ok(declarations
+            .iter()
+            .filter_map(|decl| match decl {
+                Decl::Const { data } => Some(data),
+                _ => None,
+            })
+            .map(|data| {
+                let value = match &data.value {
+                    Constant::Identifier { expression, .. } => expression,
+                    Constant::Literal { expression, .. } => expression,
+                    Constant::BinaryOperator { expression, .. } => expression,
+                };
+                Ok(format!(
+                    "pub const {name}: {ty} = {val};",
+                    name = data.name.get_name().to_uppercase(),
+                    ty = type_to_rust_str(&data._type, ir)?,
+                    val = value,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n"))
     }
 
     fn codegen_struct_decl(
@@ -288,10 +321,17 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                     if !can_derive_partialeq(&field._type, &mut parents, ir)? {
                         partial_eq = false;
                     }
+                    let ty = if let Some(arg_type) = get_base_type_from_alias(
+                        &field.experimental_maybe_from_type_alias.as_ref().map(|a| &a.name),
+                    ) {
+                        arg_type
+                    } else {
+                        type_to_rust_str(&field._type, ir)?
+                    };
                     field_str.push(format!(
                         "    pub {c_name}: {ty},",
                         c_name = field.name.0,
-                        ty = type_to_rust_str(&field._type, ir)?
+                        ty = ty
                     ));
                 }
                 Ok(format!(
@@ -307,8 +347,50 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
             .join("\n"))
     }
 
-    fn codegen_union_decl(&self) -> Result<String, Error> {
-        Ok("".to_string())
+    fn codegen_union_decl(
+        &self,
+        declarations: &Vec<Decl<'_>>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        Ok(declarations
+            .iter()
+            .filter_map(|decl| match decl {
+                Decl::Union { data } => Some(data),
+                _ => None,
+            })
+            .map(|data| {
+                let alignment = if data.maybe_attributes.has("Packed") { "C, packed" } else { "C" };
+
+                let field_str = data
+                    .members
+                    .iter()
+                    .filter(|f| f._type != None)
+                    .map(|field| {
+                        let ty = if let Some(arg_type) = get_base_type_from_alias(
+                            &field.experimental_maybe_from_type_alias.as_ref().map(|a| &a.name),
+                        ) {
+                            arg_type
+                        } else {
+                            type_to_rust_str(&field._type.as_ref().unwrap(), ir)?
+                        };
+                        Ok(format!(
+                            "    pub {c_name}: {ty},",
+                            c_name = to_c_name(&field.name.as_ref().unwrap().0),
+                            ty = ty
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?
+                    .join("\n");
+
+                Ok(format!(
+                    include_str!("templates/rust/union.rs"),
+                    name = data.name.get_name(),
+                    union_fields = field_str,
+                    alignment = alignment,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n"))
     }
 
     fn codegen_includes(&self, ir: &FidlIr) -> Result<String, Error> {
@@ -337,9 +419,9 @@ impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
         self.w.write_fmt(format_args!(
             include_str!("templates/rust/body.rs"),
             enum_decls = self.codegen_enum_decl(&decl_order, &ir)?,
-            constant_decls = self.codegen_const_decl()?,
+            constant_decls = self.codegen_const_decl(&decl_order, &ir)?,
             struct_decls = self.codegen_struct_decl(&decl_order, &ir)?,
-            union_decls = self.codegen_union_decl()?,
+            union_decls = self.codegen_union_decl(&decl_order, &ir)?,
         ))?;
 
         Ok(())
