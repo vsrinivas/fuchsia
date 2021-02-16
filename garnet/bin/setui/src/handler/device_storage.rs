@@ -627,7 +627,7 @@ mod tests {
         futures::pin_mut!(write_future);
 
         // Write request finishes immediately.
-        matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
 
         // Set request is received immediately on write.
         {

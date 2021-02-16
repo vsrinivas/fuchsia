@@ -18,6 +18,7 @@ use fidl_fuchsia_settings::{
 use fuchsia_async::{Executor, Task};
 use futures::task::Poll;
 use futures::{pin_mut, FutureExt};
+use matches::assert_matches;
 
 pub type RequestCallback<S> =
     Box<dyn Fn(Request<S>, ExitSender) -> RequestResultCreator<'static, S>>;
@@ -271,11 +272,14 @@ fn test_exit_sender_ends_processing() {
     let set_future =
         proxy.set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY });
     pin_mut!(set_future);
-    matches!(executor.run_until_stalled(&mut set_future), Poll::Ready(Result::Ok(_)));
+    assert_matches!(executor.run_until_stalled(&mut set_future), Poll::Ready(Result::Ok(_)));
 
-    // Second set is stalled since the processing loop ended.
+    // Second set finishes with an error since the processing loop ended.
     let set_future =
         proxy.set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY });
     pin_mut!(set_future);
-    matches!(executor.run_until_stalled(&mut set_future), Poll::Pending);
+    assert_matches!(
+        executor.run_until_stalled(&mut set_future),
+        Poll::Ready(Result::Err(fidl::Error::ClientChannelClosed { .. }))
+    );
 }
