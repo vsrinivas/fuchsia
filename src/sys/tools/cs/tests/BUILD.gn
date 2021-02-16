@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("cs_integration_test_bin") {
   name = "cs_integration_test"
@@ -21,58 +21,62 @@ rustc_test("cs_integration_test_bin") {
   sources = [ "cs_integration_test.rs" ]
 }
 
-test_package("cs-tests") {
+fuchsia_component("echo_server") {
+  testonly = true
+  manifest = "//examples/components/routing/echo_server/meta/echo_server.cml"
+  deps = [ "//examples/components/routing/echo_server" ]
+}
+
+fuchsia_component("indef_echo_client") {
+  testonly = true
+  manifest = "indef_echo_client/meta/indef_echo_client.cml"
+  deps = [ "indef_echo_client:indef_echo_client" ]
+}
+
+fuchsia_component("cs_integration_test") {
+  testonly = true
+  manifest = "meta/cs_integration_test.cmx"
+  deps = [ ":cs_integration_test_bin" ]
+}
+
+meta_components = []
+foreach(meta_file,
+        [
+          "empty",
+          "echo_realm",
+        ]) {
+  fuchsia_component(meta_file) {
+    testonly = true
+    manifest = "meta/${meta_file}.cml"
+  }
+  meta_components += [ ":${meta_file}" ]
+}
+
+meta_tree_components = []
+foreach(meta_file,
+        [
+          "bar",
+          "baz",
+          "foo",
+          "root",
+        ]) {
+  fuchsia_component(meta_file) {
+    testonly = true
+    manifest = "meta/tree/${meta_file}.cml"
+  }
+  meta_tree_components += [ ":${meta_file}" ]
+}
+
+fuchsia_test_package("cs-tests") {
   deps = [
-    ":cs_integration_test_bin",
-    "indef_echo_client",
-    "//examples/components/routing/echo_server",
+    ":echo_server",
+    ":indef_echo_client",
   ]
-  meta = [
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("indef_echo_client/meta/indef_echo_client.cml")
-      dest = "indef_echo_client.cm"
-    },
-    {
-      path = rebase_path("meta/echo_realm.cml")
-      dest = "echo_realm.cm"
-    },
-    {
-      path = rebase_path("meta/empty.cml")
-      dest = "empty.cm"
-    },
-    {
-      path = rebase_path("meta/tree/root.cml")
-      dest = "root.cm"
-    },
-    {
-      path = rebase_path("meta/tree/foo.cml")
-      dest = "foo.cm"
-    },
-    {
-      path = rebase_path("meta/tree/bar.cml")
-      dest = "bar.cm"
-    },
-    {
-      path = rebase_path("meta/tree/baz.cml")
-      dest = "baz.cm"
-    },
-  ]
-  binaries = [
-    {
-      name = "indef_echo_client"
-    },
-    {
-      name = "echo_server"
-    },
-  ]
-  tests = [
-    {
-      name = "cs_integration_test"
-    },
-  ]
+  foreach(component, meta_components) {
+    deps += [ component ]
+  }
+  foreach(component, meta_tree_components) {
+    deps += [ component ]
+  }
+  test_components = [ ":cs_integration_test" ]
 }
