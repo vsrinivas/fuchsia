@@ -6,12 +6,14 @@ library fuchsia.developer.remotecontrol;
 
 using fuchsia.device;
 using fuchsia.net;
+using fuchsia.hwinfo;
 
 table IdentifyHostResponse {
     1: vector<fuchsia.net.Subnet>:MAX addresses;
     2: string:fuchsia.device.DEVICE_NAME_MAX nodename;
     // UTC timestamp of the target's time of boot, in nanoseconds.
     3: uint64 boot_timestamp_nanos;
+    4: string:fuchsia.hwinfo.MAX_VALUE_SIZE serial_number;
 };
 
 enum IdentifyHostError : uint32 {

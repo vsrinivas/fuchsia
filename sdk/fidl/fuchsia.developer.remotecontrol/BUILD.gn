@@ -15,6 +15,7 @@ fidl("fuchsia.developer.remotecontrol") {
   public_deps = [
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.net",

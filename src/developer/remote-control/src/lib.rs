@@ -6,8 +6,8 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
     fidl_fuchsia_diagnostics::Selector,
-    fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io as io, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_net_stack as fnetstack, fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
     tracing::*,
@@ -20,17 +20,19 @@ const HUB_ROOT: &str = "/discovery_root";
 pub struct RemoteControlService {
     netstack_proxy: fnetstack::StackProxy,
     name_provider_proxy: fdevice::NameProviderProxy,
+    hwinfo_proxy: hwinfo::DeviceProxy,
     boot_timestamp_nanos: u64,
 }
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
-        let (netstack_proxy, name_provider_proxy) = Self::construct_proxies()?;
+        let (netstack_proxy, name_provider_proxy, hwinfo_proxy) = Self::construct_proxies()?;
         let boot_timestamp =
             fuchsia_runtime::utc_time().into_nanos() - zx::Time::get_monotonic().into_nanos();
         return Ok(Self::new_with_proxies_and_boot_time(
             netstack_proxy,
             name_provider_proxy,
+            hwinfo_proxy,
             boot_timestamp as u64,
         ));
     }
@@ -38,9 +40,10 @@ impl RemoteControlService {
     pub fn new_with_proxies_and_boot_time(
         netstack_proxy: fnetstack::StackProxy,
         name_provider_proxy: fdevice::NameProviderProxy,
+        hwinfo_proxy: hwinfo::DeviceProxy,
         boot_timestamp_nanos: u64,
     ) -> Self {
-        return Self { netstack_proxy, name_provider_proxy, boot_timestamp_nanos };
+        return Self { netstack_proxy, name_provider_proxy, hwinfo_proxy, boot_timestamp_nanos };
     }
 
     pub async fn serve_stream(
@@ -74,14 +77,18 @@ impl RemoteControlService {
         Ok(())
     }
 
-    fn construct_proxies() -> Result<(fnetstack::StackProxy, fdevice::NameProviderProxy), Error> {
+    fn construct_proxies(
+    ) -> Result<(fnetstack::StackProxy, fdevice::NameProviderProxy, hwinfo::DeviceProxy), Error>
+    {
         let netstack_proxy =
             fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
                 .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
         let name_provider_proxy =
             fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
                 .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
-        return Ok((netstack_proxy, name_provider_proxy));
+        let hwinfo_proxy = fuchsia_component::client::connect_to_service::<hwinfo::DeviceMarker>()
+            .map_err(|s| format_err!("Failed to connect to DeviceProxyy: {}", s))?;
+        return Ok((netstack_proxy, name_provider_proxy, hwinfo_proxy));
     }
 
     async fn connect_with_matcher(
@@ -168,6 +175,16 @@ impl RemoteControlService {
             }
         };
 
+        let serial_number = match self.hwinfo_proxy.get_info().await {
+            Ok(info) => info.serial_number,
+            Err(e) => {
+                error!(%e, "DeviceProxy internal err");
+                // This will fail on most targets (including the emulator), so
+                // no need to propagate this to the client via the responder.
+                None
+            }
+        };
+
         let result = ilist
             .iter_mut()
             .flat_map(|int| int.properties.addresses.drain(..))
@@ -198,6 +215,7 @@ impl RemoteControlService {
                 nodename: Some(nodename),
                 addresses: Some(result),
                 boot_timestamp_nanos: Some(self.boot_timestamp_nanos),
+                serial_number,
                 ..rcs::IdentifyHostResponse::EMPTY
             }))
             .context("sending IdentifyHost response")?;
@@ -221,9 +239,31 @@ mod tests {
 
     const NODENAME: &'static str = "thumb-set-human-shred";
     const BOOT_TIME: u64 = 123456789000000000;
+    const SERIAL: &'static str = "test_serial";
 
     const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
     const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
+
+    fn setup_fake_hwinfo_service() -> hwinfo::DeviceProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<hwinfo::DeviceMarker>().unwrap();
+        fasync::Task::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(hwinfo::DeviceRequest::GetInfo { responder }) => {
+                        let _ = responder.send(hwinfo::DeviceInfo {
+                            serial_number: Some(String::from(SERIAL)),
+                            ..hwinfo::DeviceInfo::EMPTY
+                        });
+                    }
+                    _ => panic!("invalid request"),
+                }
+            }
+        })
+        .detach();
+
+        proxy
+    }
 
     fn setup_fake_name_provider_service() -> fdevice::NameProviderProxy {
         let (proxy, mut stream) =
@@ -294,6 +334,7 @@ mod tests {
         Rc::new(RemoteControlService::new_with_proxies_and_boot_time(
             setup_fake_netstack_service(),
             setup_fake_name_provider_service(),
+            setup_fake_hwinfo_service(),
             BOOT_TIME,
         ))
     }
@@ -317,6 +358,7 @@ mod tests {
 
         let resp = rcs_proxy.identify_host().await.unwrap().unwrap();
 
+        assert_eq!(resp.serial_number.unwrap(), SERIAL);
         assert_eq!(resp.nodename.unwrap(), NODENAME);
 
         let addrs = resp.addresses.unwrap();
