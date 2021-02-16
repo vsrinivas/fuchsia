@@ -5,12 +5,20 @@
 import("//build/board.gni")
 
 group("drivers") {
+  testonly = true
+  deps = [
+    ":prod_drivers",
+    ":tests",
+    "test_utils",
+  ]
+}
+
+group("prod_drivers") {
   deps = [
     "bus",
     "controller/sherlock",
     "hw_accel",
     "sensors",
-    "test_utils",
   ]
 }
 
@@ -22,19 +30,6 @@ group("tests") {
     "hw_accel:tests",
     "sensors:tests",
     "test_utils:tests",
-  ]
-}
-
-# Use this target to include actual drivers and tests,
-# but not supporting libraries.
-group("all") {
-  testonly = true
-  deps = [
-    ":tests",
-    "bus",
-    "controller/sherlock",
-    "hw_accel",
-    "sensors",
   ]
 }
 
