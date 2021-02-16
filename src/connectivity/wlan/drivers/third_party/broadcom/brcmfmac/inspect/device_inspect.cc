@@ -39,6 +39,29 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
     return status;
   }
 
+  DeviceConnMetrics& conn_metrics_ = inspect->conn_metrics_;
+  conn_metrics_.root = inspect->root_.CreateChild("connection-metrics");
+  conn_metrics_.success = conn_metrics_.root.CreateUint("success", 0);
+  if ((status = conn_metrics_.success_24hrs.Init(&conn_metrics_.root, 24, "success_24hrs", 0)) !=
+      ZX_OK) {
+    return status;
+  }
+  conn_metrics_.no_network_fail = conn_metrics_.root.CreateUint("no_network_fail", 0);
+  if ((status = conn_metrics_.no_network_fail_24hrs.Init(&conn_metrics_.root, 24,
+                                                         "no_network_fail_24hrs", 0)) != ZX_OK) {
+    return status;
+  }
+  conn_metrics_.auth_fail = conn_metrics_.root.CreateUint("auth_fail", 0);
+  if ((status = conn_metrics_.auth_fail_24hrs.Init(&conn_metrics_.root, 24, "auth_fail_24hrs",
+                                                   0)) != ZX_OK) {
+    return status;
+  }
+  conn_metrics_.other_fail = conn_metrics_.root.CreateUint("other_fail", 0);
+  if ((status = conn_metrics_.other_fail_24hrs.Init(&conn_metrics_.root, 24, "other_fail_24hrs",
+                                                    0)) != ZX_OK) {
+    return status;
+  }
+
   // Start timers.
   constexpr bool kPeriodic = true;
   inspect->timer_hr_ = std::make_unique<Timer>(
@@ -46,6 +69,10 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
       [inspect = inspect.get()]() {
         inspect->tx_qfull_24hrs_.SlideWindow();
         inspect->fw_recovered_24hrs_.SlideWindow();
+        inspect->conn_metrics_.success_24hrs.SlideWindow();
+        inspect->conn_metrics_.no_network_fail_24hrs.SlideWindow();
+        inspect->conn_metrics_.auth_fail_24hrs.SlideWindow();
+        inspect->conn_metrics_.other_fail_24hrs.SlideWindow();
       },
       kPeriodic);
   inspect->timer_hr_->Start(zx::hour(1).get());
@@ -62,6 +89,23 @@ void DeviceInspect::LogTxQueueFull() {
 void DeviceInspect::LogFwRecovered() {
   fw_recovered_.Add(1);
   fw_recovered_24hrs_.Add(1);
+}
+
+void DeviceInspect::LogConnSuccess() {
+  conn_metrics_.success.Add(1);
+  conn_metrics_.success_24hrs.Add(1);
+}
+void DeviceInspect::LogConnAuthFail() {
+  conn_metrics_.auth_fail.Add(1);
+  conn_metrics_.auth_fail_24hrs.Add(1);
+}
+void DeviceInspect::LogConnNoNetworkFail() {
+  conn_metrics_.no_network_fail.Add(1);
+  conn_metrics_.no_network_fail_24hrs.Add(1);
+}
+void DeviceInspect::LogConnOtherFail() {
+  conn_metrics_.other_fail.Add(1);
+  conn_metrics_.other_fail_24hrs.Add(1);
 }
 
 }  // namespace wlan::brcmfmac

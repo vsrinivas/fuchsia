@@ -16,7 +16,7 @@
 
 /* Toplevel file. Relies on dhd_linux.c to send commands to the dongle. */
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "cfg80211.h"
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
@@ -39,24 +39,25 @@
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/btcoex.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/proto.h"
+#include "bits.h"
+#include "brcmu_d11.h"
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
+#include "btcoex.h"
+#include "common.h"
+#include "core.h"
+#include "debug.h"
+#include "defs.h"
+#include "device.h"
+#include "feature.h"
+#include "fweh.h"
+#include "fwil.h"
+#include "fwil_types.h"
+#include "inspect/device_inspect.h"
+#include "linuxisms.h"
+#include "macros.h"
+#include "netbuf.h"
+#include "proto.h"
 #include "third_party/bcmdhd/crossdriver/dhd.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 #include "third_party/bcmdhd/crossdriver/wlioctl.h"
@@ -4794,6 +4795,26 @@ static zx_status_t brcmf_rx_auth_frame(struct brcmf_if* ifp, const uint32_t data
   return ZX_OK;
 }
 
+static void brcmf_log_conn_status(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
+  BRCMF_DBG(CONN, "connect_status %s", brcmf_get_connect_status_str(connect_status));
+
+  // We track specific failures that are of interest on inspect.
+  switch (connect_status) {
+    case BRCMF_CONNECT_STATUS_CONNECTED:
+      ifp->drvr->device->GetInspect()->LogConnSuccess();
+      break;
+    case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
+      ifp->drvr->device->GetInspect()->LogConnAuthFail();
+      break;
+    case BRCMF_CONNECT_STATUS_NO_NETWORK:
+      ifp->drvr->device->GetInspect()->LogConnNoNetworkFail();
+      break;
+    default:
+      ifp->drvr->device->GetInspect()->LogConnOtherFail();
+      break;
+  }
+}
+
 static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
@@ -4803,7 +4824,8 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
     // Stop connect timer no matter connect success or not, this timer only timeout when nothing
     // is heard from firmware.
     cfg->connect_timer->Stop();
-    BRCMF_DBG(CONN, "connect_status %s", brcmf_get_connect_status_str(connect_status));
+    brcmf_log_conn_status(ifp, connect_status);
+
     switch (connect_status) {
       case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);

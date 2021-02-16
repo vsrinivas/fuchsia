@@ -26,6 +26,19 @@
 
 namespace wlan::brcmfmac {
 
+// TODO (fxbug.dev/70331) - Avoid duplicates for windowed and non-windowed property.
+struct DeviceConnMetrics {
+  inspect::Node root;
+  inspect::UintProperty success;
+  WindowedUintProperty success_24hrs;
+  inspect::UintProperty no_network_fail;
+  WindowedUintProperty no_network_fail_24hrs;
+  inspect::UintProperty auth_fail;
+  WindowedUintProperty auth_fail_24hrs;
+  inspect::UintProperty other_fail;
+  WindowedUintProperty other_fail_24hrs;
+};
+
 class DeviceInspect {
  public:
   // Factory creation function.
@@ -39,6 +52,10 @@ class DeviceInspect {
   // Metrics APIs.
   void LogTxQueueFull();
   void LogFwRecovered();
+  void LogConnSuccess();
+  void LogConnNoNetworkFail();
+  void LogConnAuthFail();
+  void LogConnOtherFail();
 
  private:
   // Only constructible through Create().
@@ -48,7 +65,8 @@ class DeviceInspect {
   inspect::Node root_;
   std::unique_ptr<Timer> timer_hr_;
 
-  // Metrics tracked
+  // Metrics
+  DeviceConnMetrics conn_metrics_;
   inspect::UintProperty tx_qfull_;
   WindowedUintProperty tx_qfull_24hrs_;
   inspect::UintProperty fw_recovered_;

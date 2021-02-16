@@ -118,6 +118,7 @@ executable("device_inspect_test") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:device_inspect_utils",
     "//src/devices/testing/fake_ddk",
