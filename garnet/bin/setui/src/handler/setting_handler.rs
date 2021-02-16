@@ -352,7 +352,7 @@ pub mod persist {
         use super::*;
 
         #[async_trait]
-        pub trait Create<S: Storage>: Sized {
+        pub trait Create: Sized {
             async fn create(handler: ClientProxy) -> Result<Self, ControllerError>;
         }
     }
@@ -443,7 +443,7 @@ pub mod persist {
 
     pub struct Handler<
         S: Storage + 'static,
-        C: controller::Create<S> + super::controller::Handle + Send + Sync + 'static,
+        C: controller::Create + super::controller::Handle + Send + Sync + 'static,
     > {
         _data: PhantomData<C>,
         _storage: PhantomData<S>,
@@ -451,7 +451,7 @@ pub mod persist {
 
     impl<
             S: Storage + 'static,
-            C: controller::Create<S> + super::controller::Handle + Send + Sync + 'static,
+            C: controller::Create + super::controller::Handle + Send + Sync + 'static,
         > Handler<S, C>
     {
         pub fn spawn<F: StorageFactory + 'static>(

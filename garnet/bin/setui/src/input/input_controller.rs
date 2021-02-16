@@ -315,7 +315,7 @@ impl InputController {
 }
 
 #[async_trait]
-impl data_controller::Create<InputInfoSources> for InputController {
+impl data_controller::Create for InputController {
     /// Creates the controller.
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         if let Some(config) = DefaultSetting::<InputConfiguration, &str>::new(

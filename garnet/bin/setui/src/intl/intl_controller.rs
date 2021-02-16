@@ -45,7 +45,7 @@ pub struct IntlController {
 }
 
 #[async_trait]
-impl data_controller::Create<IntlInfo> for IntlController {
+impl data_controller::Create for IntlController {
     /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let time_zone_ids = IntlController::load_time_zones();

@@ -58,7 +58,7 @@ pub struct LightController {
 }
 
 #[async_trait]
-impl data_controller::Create<LightInfo> for LightController {
+impl data_controller::Create for LightController {
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let light_hardware_config = DefaultSetting::<LightHardwareConfiguration, &str>::new(
             None,

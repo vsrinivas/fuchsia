@@ -31,7 +31,7 @@ pub struct PrivacyController {
 }
 
 #[async_trait]
-impl data_controller::Create<PrivacyInfo> for PrivacyController {
+impl data_controller::Create for PrivacyController {
     /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(PrivacyController { client })

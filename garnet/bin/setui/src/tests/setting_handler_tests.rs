@@ -75,7 +75,7 @@ macro_rules! gen_data_controller {
         }
 
         #[async_trait]
-        impl<S: Storage> data_controller::Create<S> for $name<S> {
+        impl<S: Storage> data_controller::Create for $name<S> {
             async fn create(_: DataClientProxy) -> Result<Self, ControllerError> {
                 if $succeed {
                     Ok(Self { _storage: PhantomData })

@@ -207,7 +207,7 @@ pub struct AudioController {
 }
 
 #[async_trait]
-impl data_controller::Create<AudioInfo> for AudioController {
+impl data_controller::Create for AudioController {
     /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(AudioController { volume: VolumeController::create(client).await })

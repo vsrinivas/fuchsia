@@ -126,7 +126,7 @@ impl FactoryResetManager {
 }
 
 #[async_trait]
-impl controller::Create<FactoryResetInfo> for FactoryResetController {
+impl controller::Create for FactoryResetController {
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(Self { handle: FactoryResetManager::from_client(client).await? })
     }

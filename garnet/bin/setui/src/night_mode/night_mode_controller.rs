@@ -31,7 +31,7 @@ pub struct NightModeController {
 }
 
 #[async_trait]
-impl data_controller::Create<NightModeInfo> for NightModeController {
+impl data_controller::Create for NightModeController {
     /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(NightModeController { client })

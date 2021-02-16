@@ -182,7 +182,7 @@ where
 }
 
 #[async_trait]
-impl<T> data_controller::Create<DisplayInfo> for DisplayController<T>
+impl<T> data_controller::Create for DisplayController<T>
 where
     T: BrightnessManager,
 {
