@@ -15,11 +15,11 @@ zx::status<fidl::Client<llcpp::fuchsia::input::report::InputReportsReader>> GetR
     fidl::Client<fuchsia_input_report::InputDevice>* client, async_dispatcher_t* dispatcher);
 
 zx_status_t PrintInputDescriptor(
-    std::string filename, Printer* printer, fidl::Client<fuchsia_input_report::InputDevice>* client,
+    std::string filename, Printer* printer, fidl::Client<fuchsia_input_report::InputDevice> client,
     fit::closure callback = [] {});
 void PrintInputReports(
     std::string filename, Printer* printer,
-    fidl::Client<fuchsia_input_report::InputReportsReader>* reader, size_t num_reads,
+    fidl::Client<fuchsia_input_report::InputReportsReader> reader, size_t num_reads,
     fit::closure callback = [] {});
 
 void PrintMouseDesc(Printer* printer, const fuchsia_input_report::MouseInputDescriptor& mouse_desc);

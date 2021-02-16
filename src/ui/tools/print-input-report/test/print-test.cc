@@ -117,7 +117,7 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports("test", &printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -175,7 +175,7 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
       "  Button: 5\n",
   });
 
-  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
 
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
@@ -217,7 +217,7 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
       "    Max:      1000\n",
   });
 
-  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
   loop_->RunUntilIdle();
 }
 
@@ -241,7 +241,7 @@ TEST_F(PrintInputReport, PrintSensorInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports("test", &printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -292,7 +292,7 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
       "      Max:       100\n",
   });
 
-  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
   loop_->RunUntilIdle();
 }
 
@@ -329,7 +329,7 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports("test", &printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -357,7 +357,7 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
       "  Led: SCROLL_LOCK\n",
   });
 
-  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
   loop_->RunUntilIdle();
 }
 
@@ -385,7 +385,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports("test", &printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -410,7 +410,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports("test", &printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -434,7 +434,7 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
       "  Button:           REBOOT\n",
   });
 
-  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
 
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
@@ -465,7 +465,7 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports("test", &printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }

@@ -13,10 +13,10 @@
 namespace print_input_report {
 
 zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
-                                 fidl::Client<fuchsia_input_report::InputDevice>* client,
+                                 fidl::Client<fuchsia_input_report::InputDevice> client,
                                  fit::closure callback) {
-  (*client)->GetDescriptor([filename, printer, callback = std::move(callback)](
-                               fuchsia_input_report::InputDevice::GetDescriptorResponse* result) {
+  client->GetDescriptor([filename, printer, callback = std::move(callback), _ = client.Clone()](
+                            fuchsia_input_report::InputDevice::GetDescriptorResponse* result) {
     printer->SetIndent(0);
     printer->Print("Descriptor from file: %s\n", filename.c_str());
     if (result->descriptor.has_mouse()) {
@@ -180,7 +180,7 @@ void PrintConsumerControlDesc(Printer* printer,
 }
 
 void PrintInputReports(std::string filename, Printer* printer,
-                       fidl::Client<fuchsia_input_report::InputReportsReader>* reader,
+                       fidl::Client<fuchsia_input_report::InputReportsReader> reader,
                        size_t num_reads, fit::closure callback) {
   if (num_reads == 0) {
     callback();
@@ -189,8 +189,8 @@ void PrintInputReports(std::string filename, Printer* printer,
   // Read the reports.
   // We need the ReadInputReport's callback to be mutable because the PrintInputReports callback is
   // moved into the next ReadInputReport's call.
-  (*reader)->ReadInputReports(
-      [=, callback = std::move(callback)](
+  reader->ReadInputReports(
+      [=, reader = reader.Clone(), callback = std::move(callback)](
           fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* result) mutable {
         size_t reads_left = num_reads;
         if (result->result.is_err()) {
@@ -231,7 +231,7 @@ void PrintInputReports(std::string filename, Printer* printer,
           }
           printer->Print("\n");
         }
-        PrintInputReports(filename, printer, reader, reads_left, std::move(callback));
+        PrintInputReports(filename, printer, std::move(reader), reads_left, std::move(callback));
       });
 }
 
