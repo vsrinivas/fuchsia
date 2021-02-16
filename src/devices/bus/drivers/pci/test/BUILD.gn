@@ -47,24 +47,6 @@ test("pci-driver") {
   ]
 }
 
-isolated_devmgr_unittest_package("pci-driver-test") {
-  executable_path = "test/pci-driver-test"
-  deps = [
-    ":pci-driver",
-    ":pci_fake",
-    ":pci_fake.proxy",
-    ":pci_protocol_test_driver",
-    "//src/devices/board/drivers/integration-test",
-    "//src/devices/bus/drivers/pci",
-    "//src/devices/bus/drivers/platform",
-  ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
 # These drivers are not 'test' drivers because at the moment having other
 # drivers in test/ breaks ddkltl integration tests.
 driver_module("pci_fake") {
@@ -125,11 +107,20 @@ fuchsia_unittest_package("pci-unit-test") {
   deps = [ ":pci-unit" ]
 }
 
-group("tests") {
-  testonly = true
+isolated_devmgr_unittest_package("pci-driver-test") {
+  executable_path = "test/pci-driver-test"
   deps = [
-    ":pci-driver-test",
-    ":pci-unit-test",
-    "driver:tests",
+    ":pci-driver",
+    ":pci_fake",
+    ":pci_fake.proxy",
+    ":pci_protocol_test_driver",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/pci",
+    "//src/devices/bus/drivers/platform",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

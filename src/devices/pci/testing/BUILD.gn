@@ -1,0 +1,35 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/library_headers.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
+
+library_headers("pci-protocol-fake") {
+  include_dir = "."
+  headers = [ "pci_protocol_fake.h" ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.pci",
+    "//src/devices/testing/fake-bti",
+  ]
+  testonly = true
+}
+
+test("pci-protocol-fake-test") {
+  sources = [ "pci_protocol_fake_tests.cc" ]
+  deps = [
+    "//src/devices/pci/testing:pci-protocol-fake",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("pci-protocol-fake-test-package") {
+  component_name = "pci-protocol-fake-test"
+  deps = [ ":pci-protocol-fake-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":pci-protocol-fake-test-package" ]
+}
