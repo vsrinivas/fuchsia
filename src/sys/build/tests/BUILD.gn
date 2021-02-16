@@ -94,10 +94,9 @@ rustc_test("echo_client_test") {
   sources = [ "echo_client.rs" ]
 }
 
-fuchsia_component("echo-client-test") {
+fuchsia_test_component("echo-client-test") {
   manifest = "echo_client_test.cmx"
   deps = [ ":echo_client_test" ]
-  testonly = true
 }
 
 fuchsia_test_package("echo-integration-test") {

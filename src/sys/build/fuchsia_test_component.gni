@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/fuchsia_component.gni")
+
+# Defines a Fuchsia component that is testonly.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# This is a thin wrapper around `fuchsia_component()`
+# that sets `testonly = true`.
+template("fuchsia_test_component") {
+  fuchsia_component(target_name) {
+    forward_variables_from(invoker, "*", [ "testonly" ])
+    testonly = true
+  }
+}
