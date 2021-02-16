@@ -371,15 +371,7 @@ void SimpleAudioStream::WatchGainState(StreamChannel* channel,
 
   ScopedToken t(domain_token());
   // Reply is delayed if there is no change since the last reported gain state.
-  // TODO(andresoportus): Create a type with default <=> in C++20, or just defined ==.
-  if (channel->last_reported_gain_state_.cur_gain != cur_gain_state_.cur_gain ||
-      channel->last_reported_gain_state_.cur_mute != cur_gain_state_.cur_mute ||
-      channel->last_reported_gain_state_.cur_agc != cur_gain_state_.cur_agc ||
-      channel->last_reported_gain_state_.can_mute != cur_gain_state_.can_mute ||
-      channel->last_reported_gain_state_.can_agc != cur_gain_state_.can_agc ||
-      channel->last_reported_gain_state_.min_gain != cur_gain_state_.min_gain ||
-      channel->last_reported_gain_state_.max_gain != cur_gain_state_.max_gain ||
-      channel->last_reported_gain_state_.gain_step != cur_gain_state_.gain_step) {
+  if (channel->last_reported_gain_state_ != cur_gain_state_) {
     auto builder = audio_fidl::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = cur_gain_state_.cur_mute;
     fidl::aligned<bool> agc = cur_gain_state_.cur_agc;

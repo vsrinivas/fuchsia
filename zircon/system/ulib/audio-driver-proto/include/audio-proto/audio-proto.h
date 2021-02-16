@@ -74,6 +74,21 @@ using RingBufPositionNotify = audio_rb_position_notify_t;
 
 const char* SampleFormatToString(SampleFormat sample_format);
 
+struct GainState {
+  bool cur_mute;   // True if the stream is currently muted.
+  bool cur_agc;    // True if the stream has AGC currently enabled.
+  float cur_gain;  // The current setting gain of the stream in dB
+
+  bool can_mute;    // True if the stream is capable of muting
+  bool can_agc;     // True if the stream has support for AGC
+  float min_gain;   // The minimum valid gain setting, in dB
+  float max_gain;   // The maximum valid gain setting, in dB
+  float gain_step;  // The smallest valid gain increment, counted from the minimum gain.
+};
+
+bool operator==(const GainState& left, const GainState& right);
+bool operator!=(const GainState& left, const GainState& right);
+
 }  // namespace audio_proto
 }  // namespace audio
 

@@ -553,7 +553,7 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
   ZX_DEBUG_ASSERT(ifc_->path() != nullptr);
   const auto& path = *(ifc_->path());
 
-  audio_proto::GetGainResp cur_gain_state = {};
+  audio_proto::GainState cur_gain_state = {};
   cur_gain_state.cur_mute = path.cur_mute();
   cur_gain_state.cur_agc = path.cur_agc();
   cur_gain_state.cur_gain = path.cur_gain();
@@ -563,15 +563,7 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
   cur_gain_state.max_gain = path.max_gain();
   cur_gain_state.gain_step = path.gain_res();
   // Reply is delayed if there is no change since the last reported gain state.
-  // TODO(andresoportus): Create a type with default <=> in C++20, or just defined ==.
-  if (channel->last_reported_gain_state_.cur_gain != cur_gain_state.cur_gain ||
-      channel->last_reported_gain_state_.cur_mute != cur_gain_state.cur_mute ||
-      channel->last_reported_gain_state_.cur_agc != cur_gain_state.cur_agc ||
-      channel->last_reported_gain_state_.can_mute != cur_gain_state.can_mute ||
-      channel->last_reported_gain_state_.can_agc != cur_gain_state.can_agc ||
-      channel->last_reported_gain_state_.min_gain != cur_gain_state.min_gain ||
-      channel->last_reported_gain_state_.max_gain != cur_gain_state.max_gain ||
-      channel->last_reported_gain_state_.gain_step != cur_gain_state.gain_step) {
+  if (channel->last_reported_gain_state_ != cur_gain_state) {
     auto builder = audio_fidl::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = cur_gain_state.cur_mute;
     fidl::aligned<bool> agc = cur_gain_state.cur_agc;

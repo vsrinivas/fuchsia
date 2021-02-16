@@ -38,5 +38,14 @@ const char* SampleFormatToString(SampleFormat sample_format) {
 }
 #undef WITH_FLAGS
 
+bool operator==(const GainState& left, const GainState& right) {
+  return (left.cur_gain == right.cur_gain && left.cur_mute == right.cur_mute &&
+          left.cur_agc == right.cur_agc && left.can_mute == right.can_mute &&
+          left.can_agc == right.can_agc && left.min_gain == right.min_gain &&
+          left.max_gain == right.max_gain && left.gain_step == right.gain_step);
+}
+
+bool operator!=(const GainState& left, const GainState& right) { return !(left == right); }
+
 }  // namespace audio_proto
 }  // namespace audio

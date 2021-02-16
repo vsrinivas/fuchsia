@@ -128,7 +128,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
     std::optional<StreamChannel::WatchPlugStateCompleter::Async> plug_completer_;
     std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
     Plugged last_reported_plugged_state_ = Plugged::kNotReported;
-    audio_proto::GetGainResp last_reported_gain_state_ = {};
+    audio_proto::GainState last_reported_gain_state_ = {};
   };
 
   static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,

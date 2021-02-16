@@ -287,7 +287,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // State and capabilities which need to be established and maintained by the
   // driver implementation.
   fbl::Vector<audio_stream_format_range_t> supported_formats_ __TA_GUARDED(domain_token());
-  audio_proto::GetGainResp cur_gain_state_ __TA_GUARDED(domain_token());
+  audio_proto::GainState cur_gain_state_ __TA_GUARDED(domain_token());
   audio_stream_unique_id_t unique_id_ __TA_GUARDED(domain_token()) = {};
   char mfr_name_[64] __TA_GUARDED(domain_token()) = {};
   char prod_name_[64] __TA_GUARDED(domain_token()) = {};
@@ -375,7 +375,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     std::optional<StreamChannel::WatchPlugStateCompleter::Async> plug_completer_;
     std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
     Plugged last_reported_plugged_state_ = Plugged::kNotReported;
-    audio_proto::GetGainResp last_reported_gain_state_ = {};
+    audio_proto::GainState last_reported_gain_state_ = {};
   };
   // Internal method; called by the general Create template method.
   zx_status_t CreateInternal();

@@ -61,14 +61,14 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static constexpr uint32_t kDefaultModuloBufferFrames = 1;
 
   // By default, support a wide gain range with good precision.
-  static constexpr audio::audio_proto::GetGainResp kDefaultGainState = {.cur_mute = false,
-                                                                        .cur_agc = false,
-                                                                        .cur_gain = -0.75f,
-                                                                        .can_mute = true,
-                                                                        .can_agc = false,
-                                                                        .min_gain = -160.0f,
-                                                                        .max_gain = 24.0f,
-                                                                        .gain_step = 0.25f};
+  static constexpr audio::audio_proto::GainState kDefaultGainState = {.cur_mute = false,
+                                                                      .cur_agc = false,
+                                                                      .cur_gain = -0.75f,
+                                                                      .can_mute = true,
+                                                                      .can_agc = false,
+                                                                      .min_gain = -160.0f,
+                                                                      .max_gain = 24.0f,
+                                                                      .gain_step = 0.25f};
 
   // By default, device is hot-pluggable
   static constexpr bool kDefaultPlugged = true;
@@ -191,7 +191,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   uint32_t max_buffer_frames_;
   uint32_t modulo_buffer_frames_;
 
-  audio::audio_proto::GetGainResp cur_gain_state_;
+  audio::audio_proto::GainState cur_gain_state_;
 
   zx_time_t plug_time_;
   bool plugged_;
