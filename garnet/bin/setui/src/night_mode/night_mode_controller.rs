@@ -27,14 +27,14 @@ impl Into<SettingInfo> for NightModeInfo {
 }
 
 pub struct NightModeController {
-    client: ClientProxy<NightModeInfo>,
+    client: ClientProxy,
 }
 
 #[async_trait]
 impl data_controller::Create<NightModeInfo> for NightModeController {
     /// Creates the controller
-    async fn create(client: ClientProxy<NightModeInfo>) -> Result<Self, ControllerError> {
-        Ok(NightModeController { client: client })
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+        Ok(NightModeController { client })
     }
 }
 
@@ -43,7 +43,7 @@ impl controller::Handle for NightModeController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetNightModeInfo(night_mode_info) => {
-                let mut current = self.client.read().await;
+                let mut current = self.client.read::<NightModeInfo>().await;
 
                 // Save the value locally.
                 current.night_mode_enabled = night_mode_info.night_mode_enabled;

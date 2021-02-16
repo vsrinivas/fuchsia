@@ -49,15 +49,13 @@ pub struct FactoryResetController {
 /// Keeps track of the current state of factory reset, is responsible for persisting that state to
 /// disk and notifying the fuchsia.recovery.policy.Device fidl interface of any changes.
 pub struct FactoryResetManager {
-    client: ClientProxy<FactoryResetInfo>,
+    client: ClientProxy,
     is_local_reset_allowed: bool,
     factory_reset_policy_service: ExternalServiceProxy<DeviceProxy>,
 }
 
 impl FactoryResetManager {
-    async fn from_client(
-        client: ClientProxy<FactoryResetInfo>,
-    ) -> Result<FactoryResetHandle, ControllerError> {
+    async fn from_client(client: ClientProxy) -> Result<FactoryResetHandle, ControllerError> {
         client
             .get_service_context()
             .await
@@ -82,7 +80,7 @@ impl FactoryResetManager {
     }
 
     async fn restore_reset_state(&mut self, send_event: bool) -> ControllerStateResult {
-        let info = self.client.read().await;
+        let info = self.client.read::<FactoryResetInfo>().await;
         self.is_local_reset_allowed = info.is_local_reset_allowed;
         if send_event {
             call!(self.factory_reset_policy_service =>
@@ -109,7 +107,7 @@ impl FactoryResetManager {
         &mut self,
         is_local_reset_allowed: bool,
     ) -> SettingHandlerResult {
-        let mut info = self.client.read().await;
+        let mut info = self.client.read::<FactoryResetInfo>().await;
         self.is_local_reset_allowed = is_local_reset_allowed;
         info.is_local_reset_allowed = is_local_reset_allowed;
         call!(self.factory_reset_policy_service =>
@@ -129,7 +127,7 @@ impl FactoryResetManager {
 
 #[async_trait]
 impl controller::Create<FactoryResetInfo> for FactoryResetController {
-    async fn create(client: ClientProxy<FactoryResetInfo>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(Self { handle: FactoryResetManager::from_client(client).await? })
     }
 }

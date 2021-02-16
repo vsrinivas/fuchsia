@@ -27,14 +27,14 @@ impl Into<SettingInfo> for SetupInfo {
 }
 
 pub struct SetupController {
-    client: ClientProxy<SetupInfo>,
+    client: ClientProxy,
 }
 
 #[async_trait]
 impl data_controller::Create<SetupInfo> for SetupController {
     /// Creates the controller
-    async fn create(client: ClientProxy<SetupInfo>) -> Result<Self, ControllerError> {
-        Ok(Self { client: client })
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+        Ok(Self { client })
     }
 }
 
@@ -43,7 +43,7 @@ impl controller::Handle for SetupController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetConfigurationInterfaces(interfaces) => {
-                let mut info = self.client.read().await;
+                let mut info = self.client.read::<SetupInfo>().await;
                 info.configuration_interfaces = interfaces;
 
                 return Some(write(&self.client, info, true).await.into_handler_result());

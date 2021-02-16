@@ -27,14 +27,14 @@ impl Into<SettingInfo> for PrivacyInfo {
 }
 
 pub struct PrivacyController {
-    client: ClientProxy<PrivacyInfo>,
+    client: ClientProxy,
 }
 
 #[async_trait]
 impl data_controller::Create<PrivacyInfo> for PrivacyController {
     /// Creates the controller
-    async fn create(client: ClientProxy<PrivacyInfo>) -> Result<Self, ControllerError> {
-        Ok(PrivacyController { client: client })
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+        Ok(PrivacyController { client })
     }
 }
 
@@ -43,7 +43,7 @@ impl controller::Handle for PrivacyController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetUserDataSharingConsent(user_data_sharing_consent) => {
-                let mut current = self.client.read().await;
+                let mut current = self.client.read::<PrivacyInfo>().await;
 
                 // Save the value locally.
                 current.user_data_sharing_consent = user_data_sharing_consent;

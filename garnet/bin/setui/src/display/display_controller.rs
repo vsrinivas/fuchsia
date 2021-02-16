@@ -105,17 +105,17 @@ impl From<DisplayInfoV4> for DisplayInfo {
 
 #[async_trait]
 pub trait BrightnessManager: Sized {
-    async fn from_client(client: &ClientProxy<DisplayInfo>) -> Result<Self, ControllerError>;
+    async fn from_client(client: &ClientProxy) -> Result<Self, ControllerError>;
     async fn update_brightness(
         &self,
         info: DisplayInfo,
-        client: &ClientProxy<DisplayInfo>,
+        client: &ClientProxy,
     ) -> SettingHandlerResult;
 }
 
 #[async_trait]
 impl BrightnessManager for () {
-    async fn from_client(_: &ClientProxy<DisplayInfo>) -> Result<Self, ControllerError> {
+    async fn from_client(_: &ClientProxy) -> Result<Self, ControllerError> {
         Ok(())
     }
 
@@ -124,7 +124,7 @@ impl BrightnessManager for () {
     async fn update_brightness(
         &self,
         info: DisplayInfo,
-        client: &ClientProxy<DisplayInfo>,
+        client: &ClientProxy,
     ) -> SettingHandlerResult {
         write(&client, info, false).await.into_handler_result()
     }
@@ -136,7 +136,7 @@ pub struct ExternalBrightnessControl {
 
 #[async_trait]
 impl BrightnessManager for ExternalBrightnessControl {
-    async fn from_client(client: &ClientProxy<DisplayInfo>) -> Result<Self, ControllerError> {
+    async fn from_client(client: &ClientProxy) -> Result<Self, ControllerError> {
         client
             .get_service_context()
             .await
@@ -153,7 +153,7 @@ impl BrightnessManager for ExternalBrightnessControl {
     async fn update_brightness(
         &self,
         info: DisplayInfo,
-        client: &ClientProxy<DisplayInfo>,
+        client: &ClientProxy,
     ) -> SettingHandlerResult {
         write(&client, info, false).await?;
 
@@ -177,7 +177,7 @@ pub struct DisplayController<T = ()>
 where
     T: BrightnessManager,
 {
-    client: ClientProxy<DisplayInfo>,
+    client: ClientProxy,
     brightness_manager: T,
 }
 
@@ -187,7 +187,7 @@ where
     T: BrightnessManager,
 {
     /// Creates the controller
-    async fn create(client: ClientProxy<DisplayInfo>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let brightness_manager = <T as BrightnessManager>::from_client(&client).await?;
         Ok(Self { client, brightness_manager })
     }

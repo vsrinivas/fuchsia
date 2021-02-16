@@ -221,8 +221,7 @@ impl TestLightEnvironmentBuilder {
                                 let storage = storage.clone();
                                 Box::pin(async move {
                                     let proxy =
-                                        ClientProxy::<LightInfo>::new(proxy, storage, setting_type)
-                                            .await;
+                                        ClientProxy::new(proxy, storage, setting_type).await;
                                     let controller_result = LightController::create_with_config(
                                         proxy,
                                         Some(config.clone()),

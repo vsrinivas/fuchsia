@@ -131,7 +131,7 @@ type InputControllerInnerHandle = Arc<Mutex<InputControllerInner>>;
 /// Allows the controller to use a lock on its contents.
 struct InputControllerInner {
     /// Client to communicate with persistent store and notify on.
-    client: ClientProxy<InputInfoSources>,
+    client: ClientProxy,
 
     /// Local tracking of the input device states.
     input_device_state: InputState,
@@ -149,7 +149,7 @@ impl InputControllerInner {
     // after a migration from a previous InputInfoSources version
     // or on pave.
     async fn get_stored_info(&self) -> InputInfoSources {
-        let mut input_info = self.client.read().await;
+        let mut input_info = self.client.read::<InputInfoSources>().await;
         if input_info.input_device_state.is_empty() {
             input_info.input_device_state = self.input_device_config.clone().into();
         }
@@ -294,14 +294,14 @@ impl InputController {
     /// Alternate constructor that allows specifying a configuration.
     #[allow(dead_code)]
     pub(crate) async fn create_with_config(
-        client: ClientProxy<InputInfoSources>,
+        client: ClientProxy,
         input_device_config: InputConfiguration,
     ) -> Result<Self, ControllerError> {
         Ok(Self {
             inner: Arc::new(Mutex::new(InputControllerInner {
-                client: client.clone(),
+                client,
                 input_device_state: InputState::new(),
-                input_device_config: input_device_config,
+                input_device_config,
             })),
         })
     }
@@ -317,7 +317,7 @@ impl InputController {
 #[async_trait]
 impl data_controller::Create<InputInfoSources> for InputController {
     /// Creates the controller.
-    async fn create(client: ClientProxy<InputInfoSources>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         if let Some(config) = DefaultSetting::<InputConfiguration, &str>::new(
             None,
             "/config/data/input_device_config.json",

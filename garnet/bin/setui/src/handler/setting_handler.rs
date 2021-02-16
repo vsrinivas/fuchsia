@@ -353,27 +353,24 @@ pub mod persist {
 
         #[async_trait]
         pub trait Create<S: Storage>: Sized {
-            async fn create(handler: ClientProxy<S>) -> Result<Self, ControllerError>;
+            async fn create(handler: ClientProxy) -> Result<Self, ControllerError>;
         }
     }
 
     #[derive(Clone)]
-    pub struct ClientProxy<S: Storage + 'static> {
+    pub struct ClientProxy {
         base: BaseProxy,
         storage: Arc<DeviceStorage>,
         setting_type: SettingType,
-        // TODO(fxbug.dev/67371) Temporary to minimize the size of CL's. Will be removed in a future
-        // CL.
-        _phantom: PhantomData<S>,
     }
 
-    impl<S: Storage + 'static> ClientProxy<S> {
+    impl ClientProxy {
         pub async fn new(
             base_proxy: BaseProxy,
             storage: Arc<DeviceStorage>,
             setting_type: SettingType,
         ) -> Self {
-            Self { base: base_proxy, storage, setting_type, _phantom: PhantomData }
+            Self { base: base_proxy, storage, setting_type }
         }
 
         pub async fn get_service_context(&self) -> ServiceContextHandle {
@@ -384,7 +381,10 @@ pub mod persist {
             self.base.notify(event).await;
         }
 
-        pub async fn read(&self) -> S {
+        pub async fn read<S>(&self) -> S
+        where
+            S: Storage + 'static,
+        {
             self.storage.get().await
         }
 
@@ -392,11 +392,14 @@ pub mod persist {
         /// Error if write failed. the argument `write_through` will block
         /// returning until the value has been completely written to persistent
         /// store, rather than any temporary in-memory caching.
-        pub async fn write(
+        pub async fn write<S>(
             &self,
             value: S,
             write_through: bool,
-        ) -> Result<UpdateState, ControllerError> {
+        ) -> Result<UpdateState, ControllerError>
+        where
+            S: Storage + 'static,
+        {
             if value == self.read().await {
                 return Ok(UpdateState::Unchanged);
             }
@@ -431,7 +434,7 @@ pub mod persist {
     }
 
     pub async fn write<S: Storage + 'static>(
-        client: &ClientProxy<S>,
+        client: &ClientProxy,
         value: S,
         write_through: bool,
     ) -> Result<UpdateState, ControllerError> {
@@ -470,7 +473,7 @@ pub mod persist {
                     Box::new(move |proxy| {
                         let storage = storage.clone();
                         Box::pin(async move {
-                            let proxy = ClientProxy::<S>::new(proxy, storage, setting_type).await;
+                            let proxy = ClientProxy::new(proxy, storage, setting_type).await;
                             let controller_result = C::create(proxy).await;
 
                             match controller_result {

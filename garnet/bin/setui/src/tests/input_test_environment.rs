@@ -109,12 +109,8 @@ impl TestInputEnvironmentBuilder {
                                 let config = config_clone.clone();
                                 let storage = storage.clone();
                                 Box::pin(async move {
-                                    let proxy = ClientProxy::<InputInfoSources>::new(
-                                        proxy,
-                                        storage,
-                                        setting_type,
-                                    )
-                                    .await;
+                                    let proxy =
+                                        ClientProxy::new(proxy, storage, setting_type).await;
                                     let controller_result =
                                         InputController::create_with_config(proxy, config.clone())
                                             .await;

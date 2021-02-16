@@ -27,14 +27,14 @@ impl Into<SettingInfo> for DoNotDisturbInfo {
 }
 
 pub struct DoNotDisturbController {
-    client: ClientProxy<DoNotDisturbInfo>,
+    client: ClientProxy,
 }
 
 #[async_trait]
 impl data_controller::Create<DoNotDisturbInfo> for DoNotDisturbController {
     /// Creates the controller
-    async fn create(client: ClientProxy<DoNotDisturbInfo>) -> Result<Self, ControllerError> {
-        Ok(DoNotDisturbController { client: client })
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+        Ok(DoNotDisturbController { client })
     }
 }
 
@@ -43,7 +43,7 @@ impl controller::Handle for DoNotDisturbController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetDnD(dnd_info) => {
-                let mut stored_value = self.client.read().await;
+                let mut stored_value = self.client.read::<DoNotDisturbInfo>().await;
                 if dnd_info.user_dnd.is_some() {
                     stored_value.user_dnd = dnd_info.user_dnd;
                 }

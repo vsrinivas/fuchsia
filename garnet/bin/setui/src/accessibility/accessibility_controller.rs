@@ -35,13 +35,13 @@ impl Into<SettingInfo> for AccessibilityInfo {
 }
 
 pub struct AccessibilityController {
-    client: ClientProxy<AccessibilityInfo>,
+    client: ClientProxy,
 }
 
 #[async_trait]
 impl data_controller::Create<AccessibilityInfo> for AccessibilityController {
     /// Creates the controller.
-    async fn create(client: ClientProxy<AccessibilityInfo>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(AccessibilityController { client })
     }
 }

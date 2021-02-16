@@ -46,7 +46,7 @@ impl Into<SettingInfo> for LightInfo {
 
 pub struct LightController {
     /// Provides access to common resources and functionality for controllers.
-    client: ClientProxy<LightInfo>,
+    client: ClientProxy,
 
     /// Proxy for interacting with light hardware.
     light_proxy: ExternalServiceProxy<LightProxy>,
@@ -59,7 +59,7 @@ pub struct LightController {
 
 #[async_trait]
 impl data_controller::Create<LightInfo> for LightController {
-    async fn create(client: ClientProxy<LightInfo>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let light_hardware_config = DefaultSetting::<LightHardwareConfiguration, &str>::new(
             None,
             "/config/data/light_hardware_config.json",
@@ -96,7 +96,7 @@ impl controller::Handle for LightController {
 impl LightController {
     /// Alternate constructor that allows specifying a configuration.
     pub(crate) async fn create_with_config(
-        client: ClientProxy<LightInfo>,
+        client: ClientProxy,
         light_hardware_config: Option<LightHardwareConfiguration>,
     ) -> Result<Self, ControllerError> {
         let light_proxy = client
@@ -117,7 +117,7 @@ impl LightController {
     }
 
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
-        let mut current = self.client.read().await;
+        let mut current = self.client.read::<LightInfo>().await;
 
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
@@ -221,7 +221,7 @@ impl LightController {
     }
 
     async fn on_mic_mute(&self, mic_mute: bool) -> SettingHandlerResult {
-        let mut current = self.client.read().await;
+        let mut current = self.client.read::<LightInfo>().await;
 
         for light in current
             .light_groups
@@ -253,7 +253,7 @@ impl LightController {
         &self,
         config: LightHardwareConfiguration,
     ) -> SettingHandlerResult {
-        let current = self.client.read().await;
+        let current = self.client.read::<LightInfo>().await;
         let mut light_groups: HashMap<String, LightGroup> = HashMap::new();
         for group_config in config.light_groups {
             let mut light_state: Vec<LightState> = Vec::new();
@@ -305,7 +305,7 @@ impl LightController {
                 ))
             })?;
 
-        let mut current = self.client.read().await;
+        let mut current = self.client.read::<LightInfo>().await;
         for i in 0..num_lights {
             let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,

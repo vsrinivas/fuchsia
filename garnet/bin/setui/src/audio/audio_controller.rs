@@ -36,7 +36,7 @@ fn get_streams_array_from_map(
 type VolumeControllerHandle = Arc<Mutex<VolumeController>>;
 
 pub struct VolumeController {
-    client: ClientProxy<AudioInfo>,
+    client: ClientProxy,
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
     mic_mute_state: Option<bool>,
@@ -44,9 +44,9 @@ pub struct VolumeController {
 }
 
 impl VolumeController {
-    async fn create(client: ClientProxy<AudioInfo>) -> VolumeControllerHandle {
+    async fn create(client: ClientProxy) -> VolumeControllerHandle {
         let handle = Arc::new(Mutex::new(Self {
-            client: client.clone(),
+            client,
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
             mic_mute_state: None,
@@ -65,14 +65,14 @@ impl VolumeController {
     /// the local state. Also pushes the changes to the audio core if
     /// [push_to_audio_core] is true.
     async fn restore_volume_state(&mut self, push_to_audio_core: bool) -> ControllerStateResult {
-        let audio_info = self.client.read().await;
+        let audio_info = self.client.read::<AudioInfo>().await;
         let stored_streams = audio_info.streams.iter().cloned().collect();
         self.update_volume_streams(&stored_streams, push_to_audio_core).await?;
         Ok(())
     }
 
     async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
-        let mut audio_info = self.client.read().await;
+        let mut audio_info = self.client.read::<AudioInfo>().await;
 
         // Only override the mic mute state if present.
         if let Some(mic_mute_state) = self.mic_mute_state {
@@ -109,7 +109,7 @@ impl VolumeController {
     async fn set_mic_mute_state(&mut self, mic_mute_state: bool) -> SettingHandlerResult {
         self.mic_mute_state = Some(mic_mute_state);
 
-        let mut audio_info = self.client.read().await;
+        let mut audio_info = self.client.read::<AudioInfo>().await;
         audio_info.input.mic_mute = mic_mute_state;
 
         write(&self.client, audio_info, false).await.into_handler_result()
@@ -139,7 +139,7 @@ impl VolumeController {
             self.check_and_bind_volume_controls(new_streams).await?;
         }
 
-        let mut stored_value = self.client.read().await;
+        let mut stored_value = self.client.read::<AudioInfo>().await;
         stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
         stored_value.modified_counters = Some(self.modified_counters.clone());
 
@@ -209,7 +209,7 @@ pub struct AudioController {
 #[async_trait]
 impl data_controller::Create<AudioInfo> for AudioController {
     /// Creates the controller
-    async fn create(client: ClientProxy<AudioInfo>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(AudioController { volume: VolumeController::create(client).await })
     }
 }

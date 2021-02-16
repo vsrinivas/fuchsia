@@ -76,7 +76,7 @@ macro_rules! gen_data_controller {
 
         #[async_trait]
         impl<S: Storage> data_controller::Create<S> for $name<S> {
-            async fn create(_: DataClientProxy<S>) -> Result<Self, ControllerError> {
+            async fn create(_: DataClientProxy) -> Result<Self, ControllerError> {
                 if $succeed {
                     Ok(Self { _storage: PhantomData })
                 } else {
@@ -146,8 +146,7 @@ async fn test_write_notify() {
     )
     .build();
 
-    let (client_tx, mut client_rx) =
-        futures::channel::mpsc::unbounded::<persist::ClientProxy<AccessibilityInfo>>();
+    let (client_tx, mut client_rx) = futures::channel::mpsc::unbounded::<persist::ClientProxy>();
 
     let storage = Arc::new(
         context
@@ -166,14 +165,7 @@ async fn test_write_notify() {
             let storage = storage.clone();
             Box::pin(async move {
                 client_tx
-                    .unbounded_send(
-                        persist::ClientProxy::<AccessibilityInfo>::new(
-                            proxy,
-                            storage,
-                            setting_type,
-                        )
-                        .await,
-                    )
+                    .unbounded_send(persist::ClientProxy::new(proxy, storage, setting_type).await)
                     .ok();
                 Ok(Box::new(BlankController {}) as BoxedController)
             })
@@ -215,7 +207,7 @@ async fn test_write_notify() {
 }
 
 async fn verify_write_behavior<S: DeviceStorageCompatible + Into<SettingInfo> + Send + Sync>(
-    proxy: &mut persist::ClientProxy<S>,
+    proxy: &mut persist::ClientProxy,
     value: S,
     notified: bool,
 ) {

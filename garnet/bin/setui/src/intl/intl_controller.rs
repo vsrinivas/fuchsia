@@ -40,16 +40,16 @@ impl Into<SettingInfo> for IntlInfo {
 }
 
 pub struct IntlController {
-    client: ClientProxy<IntlInfo>,
+    client: ClientProxy,
     time_zone_ids: std::collections::HashSet<String>,
 }
 
 #[async_trait]
 impl data_controller::Create<IntlInfo> for IntlController {
     /// Creates the controller
-    async fn create(client: ClientProxy<IntlInfo>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let time_zone_ids = IntlController::load_time_zones();
-        Ok(IntlController { client: client, time_zone_ids: time_zone_ids })
+        Ok(IntlController { client, time_zone_ids })
     }
 }
 
