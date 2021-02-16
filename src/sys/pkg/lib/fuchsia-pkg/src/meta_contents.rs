@@ -141,6 +141,11 @@ impl MetaContents {
     pub fn into_contents(self) -> BTreeMap<String, Hash> {
         self.contents
     }
+
+    /// Take the Merkle Tree root hashes in a iterator.
+    pub fn into_hashes(self) -> impl Iterator<Item = Hash> {
+        self.contents.into_iter().map(|(_, hash)| hash)
+    }
 }
 
 #[cfg(test)]

@@ -41,11 +41,17 @@ const TEST_CASE_REALM: &str =
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+
+    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error>;
 }
 
 impl PkgFs for PkgfsRamdisk {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         PkgfsRamdisk::root_dir_handle(self)
+    }
+
+    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
+        self.blobfs().root_dir_proxy()
     }
 }
 
@@ -105,6 +111,7 @@ where
 
         let pkgfs = (self.pkgfs)().await;
         fs.add_remote("pkgfs", pkgfs.root_dir_handle().unwrap().into_proxy().unwrap());
+        fs.add_remote("blob", pkgfs.blobfs_root_proxy().unwrap());
 
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);

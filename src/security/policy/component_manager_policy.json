@@ -177,6 +177,7 @@
                     "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
+                    "/core/pkg-cache",
                 ],
             },
             {

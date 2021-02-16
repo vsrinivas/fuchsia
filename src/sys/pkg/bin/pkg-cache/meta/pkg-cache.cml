@@ -23,6 +23,11 @@
             path: "/pkgfs",
         },
         {
+            directory: "blob",
+            rights: [ "rw*" ],
+            path: "/blob",
+        },
+        {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.tracing.provider.Registry",

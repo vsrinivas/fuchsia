@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{blob_location::BlobLocation, pkgfs_inspect::PkgfsInspectState},
+    crate::{
+        blob_location::BlobLocation, dynamic_index::DynamicIndex, pkgfs_inspect::PkgfsInspectState,
+    },
     anyhow::{anyhow, Context as _, Error},
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
@@ -14,6 +16,7 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::prelude::*,
+    parking_lot::Mutex,
     std::sync::Arc,
     system_image::StaticPackages,
 };
@@ -24,6 +27,9 @@ mod cache_service;
 mod dynamic_index;
 mod gc_service;
 mod pkgfs_inspect;
+
+#[cfg(test)]
+mod test_utils;
 
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 
@@ -69,8 +75,10 @@ async fn main_inner() -> Result<(), Error> {
         pkgfs::install::Client::open_from_namespace().context("error opening /pkgfs/install")?;
     let pkgfs_needs =
         pkgfs::needs::Client::open_from_namespace().context("error opening /pkgfs/needs")?;
+    let blobfs = blobfs::Client::open_from_namespace().context("error opening blobfs")?;
 
-    let (static_packages, _pkgfs_inspect, blob_location) = {
+    let mut dynamic_index = DynamicIndex::new();
+    let (static_packages, _pkgfs_inspect, blob_location, _load_cache_packages) = {
         let static_packages_fut = get_static_packages(&pkgfs_system);
 
         let pkgfs_inspect_fut =
@@ -82,7 +90,17 @@ async fn main_inner() -> Result<(), Error> {
             inspector.root().create_child("blob-location"),
         );
 
-        future::join3(static_packages_fut, pkgfs_inspect_fut, blob_location_fut).await
+        let load_cache_packages_fut =
+            dynamic_index::load_cache_packages(&mut dynamic_index, &pkgfs_system, &pkgfs_versions)
+                .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)));
+
+        future::join4(
+            static_packages_fut,
+            pkgfs_inspect_fut,
+            blob_location_fut,
+            load_cache_packages_fut,
+        )
+        .await
     };
 
     let mut _blob_location = None;
@@ -107,6 +125,8 @@ async fn main_inner() -> Result<(), Error> {
         .add_fidl_service(IncomingService::PackageCache)
         .add_fidl_service(IncomingService::SpaceManager);
 
+    let dynamic_index = Arc::new(Mutex::new(dynamic_index));
+
     let () = fs
         .for_each_concurrent(None, move |svc| {
             match svc {
@@ -116,6 +136,8 @@ async fn main_inner() -> Result<(), Error> {
                         pkgfs_ctl.clone(),
                         pkgfs_install.clone(),
                         pkgfs_needs.clone(),
+                        Arc::clone(&dynamic_index),
+                        blobfs.clone(),
                         Arc::clone(&static_packages),
                         stream,
                         cobalt_sender.clone(),

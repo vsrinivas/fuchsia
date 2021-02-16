@@ -87,7 +87,7 @@ impl Directory {
     pub async fn blobs(&self) -> Result<impl Iterator<Item = Hash>, anyhow::Error> {
         let meta_contents = self.read_file_to_string("meta/contents").await?;
         let meta_contents = MetaContents::deserialize(meta_contents.as_bytes())?;
-        Ok(meta_contents.into_contents().into_iter().map(|(_, hash)| hash))
+        Ok(meta_contents.into_hashes())
     }
 
     async fn read_file_to_string(&self, path: &str) -> Result<String, anyhow::Error> {

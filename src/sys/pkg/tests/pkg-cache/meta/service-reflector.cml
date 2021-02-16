@@ -15,6 +15,11 @@
             path: "/reflected/pkgfs",
         },
         {
+            directory: "blob",
+            rights: [ "rw*" ],
+            path: "/reflected/blob",
+        },
+        {
             protocol: "fuchsia.paver.Paver",
             path: "/reflected/fuchsia.paver.Paver",
         },
@@ -44,6 +49,10 @@
         },
         {
             directory: "pkgfs",
+            from: "self",
+        },
+        {
+            directory: "blob",
             from: "self",
         },
     ],

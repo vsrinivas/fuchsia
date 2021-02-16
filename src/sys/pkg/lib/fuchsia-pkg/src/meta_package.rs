@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::MetaPackageError;
-use crate::path::{check_package_name, check_package_variant};
+use crate::{
+    errors::MetaPackageError,
+    path::{check_package_name, check_package_variant, PackagePath},
+};
 use serde::{Deserialize, Serialize};
 use std::io;
 
@@ -44,6 +46,12 @@ impl MetaPackage {
     /// Returns the package's variant.
     pub fn variant(&self) -> &str {
         &self.variant
+    }
+
+    /// Convert into PackagePath.
+    pub fn into_path(self) -> PackagePath {
+        // unwrap can not fail because the name and variant has already been validated.
+        PackagePath::from_name_and_variant(self.name, self.variant).unwrap()
     }
 
     /// Deserializes a `MetaPackage` from json.

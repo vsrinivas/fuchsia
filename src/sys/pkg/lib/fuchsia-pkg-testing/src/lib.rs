@@ -26,3 +26,5 @@ mod update_package;
 pub use crate::update_package::{make_packages_json, TestUpdatePackage};
 
 mod process;
+
+pub mod blobfs;

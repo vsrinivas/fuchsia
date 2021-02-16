@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::blobs::{open_blob, BlobKind, OpenBlob, OpenBlobError, OpenBlobSuccess},
+    crate::{
+        blobs::{open_blob, BlobKind, OpenBlob, OpenBlobError, OpenBlobSuccess},
+        dynamic_index::{fulfill_meta_far_blob, DynamicIndex, DynamicIndexError},
+    },
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::{RequestStream, ServerEnd},
@@ -22,6 +25,7 @@ use {
     fuchsia_trace as trace,
     fuchsia_zircon::{sys::ZX_CHANNEL_MAX_MSG_BYTES, Status},
     futures::{prelude::*, select_biased, stream::FuturesUnordered},
+    parking_lot::Mutex,
     std::{collections::HashSet, sync::Arc},
     system_image::StaticPackages,
 };
@@ -35,6 +39,8 @@ pub async fn serve(
     pkgfs_ctl: pkgfs::control::Client,
     pkgfs_install: pkgfs::install::Client,
     pkgfs_needs: pkgfs::needs::Client,
+    dynamic_index: Arc<Mutex<DynamicIndex>>,
+    blobfs: blobfs::Client,
     static_packages: Arc<StaticPackages>,
     stream: PackageCacheRequestStream,
     cobalt_sender: CobaltSender,
@@ -59,6 +65,8 @@ pub async fn serve(
                         &pkgfs_versions,
                         &pkgfs_install,
                         &pkgfs_needs,
+                        &dynamic_index,
+                        &blobfs,
                         meta_far_blob,
                         selectors,
                         needed_blobs,
@@ -106,6 +114,8 @@ async fn get<'a>(
     pkgfs_versions: &'a pkgfs::versions::Client,
     pkgfs_install: &'a pkgfs::install::Client,
     pkgfs_needs: &'a pkgfs::needs::Client,
+    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    blobfs: &blobfs::Client,
     meta_far_blob: BlobInfo,
     selectors: Vec<String>,
     needed_blobs: ServerEnd<NeededBlobsMarker>,
@@ -126,20 +136,27 @@ async fn get<'a>(
         // Otherwise, go through the process to cache it.
         fx_log_info!("fetching {}", meta_far_blob.blob_id);
 
-        let () = serve_needed_blobs(needed_blobs, meta_far_blob, pkgfs_install, pkgfs_needs)
-            .await
-            .map_err(|e| {
-                fx_log_err!("error while caching package {}: {:#}", meta_far_blob.blob_id, e);
+        let () = serve_needed_blobs(
+            needed_blobs,
+            meta_far_blob,
+            pkgfs_install,
+            pkgfs_needs,
+            dynamic_index,
+            blobfs,
+        )
+        .await
+        .map_err(|e| {
+            fx_log_err!("error while caching package {}: {:#}", meta_far_blob.blob_id, anyhow!(e));
 
-                cobalt_sender.log_event_count(
-                    metrics::PKG_CACHE_OPEN_METRIC_ID,
-                    metrics::PkgCacheOpenMetricDimensionResult::Io,
-                    0,
-                    1,
-                );
+            cobalt_sender.log_event_count(
+                metrics::PKG_CACHE_OPEN_METRIC_ID,
+                metrics::PkgCacheOpenMetricDimensionResult::Io,
+                0,
+                1,
+            );
 
-                Status::UNAVAILABLE
-            })?;
+            Status::UNAVAILABLE
+        })?;
 
         pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await.map_err(|err| {
             fx_log_err!(
@@ -271,6 +288,9 @@ enum ServeNeededBlobsError {
 
     #[error("the operation was aborted by the caller")]
     Aborted,
+
+    #[error("while updating dynamic index")]
+    DynamicIndex(#[from] DynamicIndexError),
 }
 
 #[derive(Debug)]
@@ -305,16 +325,19 @@ impl std::fmt::Display for BlobContext {
 ///
 /// Once all needed blobs are written by the client, the package cache will complete the pending
 /// [`PackageCache.Get`] request and close this channel with a `ZX_OK` epitaph.
-#[cfg_attr(not(test), allow(dead_code))]
 async fn serve_needed_blobs(
     mut stream: NeededBlobsRequestStream,
     meta_far_info: BlobInfo,
     pkgfs_install: &pkgfs::install::Client,
     pkgfs_needs: &pkgfs::needs::Client,
+    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    blobfs: &blobfs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
     let res = async {
         // Step 1: Open and write the meta.far, or determine it is not needed.
-        let () = handle_open_meta_blob(&mut stream, meta_far_info, pkgfs_install).await?;
+        let () =
+            handle_open_meta_blob(&mut stream, meta_far_info, pkgfs_install, dynamic_index, blobfs)
+                .await?;
 
         // Step 2: Determine which data blobs are needed and report them to the client.
         let (serve_iterator, needs) =
@@ -327,6 +350,12 @@ async fn serve_needed_blobs(
         Ok(())
     }
     .await;
+
+    if res.is_ok() {
+        dynamic_index.lock().complete_install(meta_far_info.blob_id.into())?;
+    } else {
+        dynamic_index.lock().cancel_install(&meta_far_info.blob_id.into());
+    }
 
     // TODO in the Err(_) case, a responder was likely dropped, which would have already shutdown
     // the stream without our custom epitaph value.  Need to find a nice way to always shutdown
@@ -345,7 +374,12 @@ async fn handle_open_meta_blob(
     stream: &mut NeededBlobsRequestStream,
     meta_far_info: BlobInfo,
     pkgfs_install: &pkgfs::install::Client,
+    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    blobfs: &blobfs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
+    let hash = meta_far_info.blob_id.into();
+    dynamic_index.lock().start_install(hash);
+
     loop {
         let (file, responder) =
             match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
@@ -362,14 +396,7 @@ async fn handle_open_meta_blob(
 
         let file_stream = file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
 
-        match open_write_blob(
-            file_stream,
-            responder,
-            pkgfs_install,
-            meta_far_info.blob_id.into(),
-            BlobKind::Package,
-        )
-        .await
+        match open_write_blob(file_stream, responder, pkgfs_install, hash, BlobKind::Package).await
         {
             Ok(()) => break,
             Err(OpenWriteBlobError::Serve(e)) => return Err(e),
@@ -379,6 +406,8 @@ async fn handle_open_meta_blob(
             }
         }
     }
+
+    fulfill_meta_far_blob(dynamic_index, blobfs, hash).await?;
 
     Ok(())
 }
@@ -1107,6 +1136,7 @@ mod iter_tests {
 mod serve_needed_blobs_tests {
     use {
         super::*,
+        crate::test_utils::add_meta_far_to_blobfs,
         fidl_fuchsia_io::FileMarker,
         fidl_fuchsia_pkg::{BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsProxy},
         fuchsia_hash::HashRangeFull,
@@ -1122,9 +1152,20 @@ mod serve_needed_blobs_tests {
 
         let (pkgfs_install, _) = pkgfs::install::Client::new_test();
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
+        let (blobfs, _) = blobfs::Client::new_test();
+
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
 
         assert_matches!(
-            serve_needed_blobs(stream, meta_blob_info, &pkgfs_install, &pkgfs_needs).await,
+            serve_needed_blobs(
+                stream,
+                meta_blob_info,
+                &pkgfs_install,
+                &pkgfs_needs,
+                &dynamic_index,
+                &blobfs
+            )
+            .await,
             Err(ServeNeededBlobsError::UnexpectedClose)
         );
     }
@@ -1136,20 +1177,33 @@ mod serve_needed_blobs_tests {
         NeededBlobsProxy,
         pkgfs::install::Mock,
         pkgfs::needs::Mock,
+        fuchsia_pkg_testing::blobfs::Fake,
     ) {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<NeededBlobsMarker>().unwrap();
 
         let (pkgfs_install, pkgfs_install_mock) = pkgfs::install::Client::new_mock();
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
+        let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
+
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
 
         (
             Task::spawn(async move {
-                serve_needed_blobs(stream, meta_blob_info, &pkgfs_install, &pkgfs_needs).await
+                serve_needed_blobs(
+                    stream,
+                    meta_blob_info,
+                    &pkgfs_install,
+                    &pkgfs_needs,
+                    &dynamic_index,
+                    &blobfs,
+                )
+                .await
             }),
             proxy,
             pkgfs_install_mock,
             pkgfs_needs_mock,
+            blobfs_fake,
         )
     }
 
@@ -1212,7 +1266,7 @@ mod serve_needed_blobs_tests {
     async fn expects_open_meta_blob() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
 
-        let (task, proxy, pkgfs_install, pkgfs_needs) =
+        let (task, proxy, pkgfs_install, pkgfs_needs, _blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let (iter, iter_server_end) =
@@ -1234,7 +1288,7 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_open_meta_blob_once() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         // Open a needed meta FAR blob and write it.
@@ -1245,6 +1299,8 @@ mod serve_needed_blobs_tests {
                     .await
                     .expect_payload(&[])
                     .await;
+
+                add_meta_far_to_blobfs(&blobfs, [0; 32], "fake-package", vec![]);
             },
             async {
                 let (blob, blob_server_end) =
@@ -1277,8 +1333,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_present_meta_blob() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        add_meta_far_to_blobfs(&blobfs, [0; 32], "fake-package", vec![]);
 
         // Try to open the meta FAR blob, but report it is no longer needed.
         let ((), ()) = future::join(
@@ -1317,7 +1375,7 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn allows_retrying_nonfatal_open_meta_blob_errors() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 1 };
-        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         // Try to open the meta FAR blob, but report it is already being written concurrently.
@@ -1371,6 +1429,8 @@ mod serve_needed_blobs_tests {
                     .await
                     .expect_payload(&[0])
                     .await;
+
+                add_meta_far_to_blobfs(&blobfs, [0; 32], "fake-package", vec![]);
             },
             async {
                 let (blob, blob_server_end) =
@@ -1402,8 +1462,12 @@ mod serve_needed_blobs_tests {
     pub(super) async fn write_meta_blob(
         proxy: &NeededBlobsProxy,
         pkgfs_install: &mut pkgfs::install::Mock,
+        blobfs: &fuchsia_pkg_testing::blobfs::Fake,
         meta_blob_info: BlobInfo,
+        needed_blobs: impl IntoIterator<Item = Hash>,
     ) {
+        add_meta_far_to_blobfs(blobfs, meta_blob_info.blob_id, "fake-package", needed_blobs);
+
         let ((), ()) = future::join(
             async {
                 pkgfs_install
@@ -1440,10 +1504,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn discovers_and_reports_missing_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
 
         let expected = HashRangeFull::default().take(2000).collect::<Vec<_>>();
 
@@ -1484,10 +1548,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_no_missing_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
 
         let ((), ()) = future::join(
             async {
@@ -1522,10 +1586,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn fails_on_needs_enumeration_error() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
 
         let ((), ()) = future::join(
             async {
@@ -1558,10 +1622,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn dropping_needed_blobs_stops_missing_blob_iterator() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
 
         let ((), ()) = future::join(
             async {
@@ -1595,10 +1659,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_get_missing_blobs_once() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
 
         // Enumerate the needs successfully once.
         let ((), ()) = future::join(
@@ -1665,10 +1729,11 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn single_need() {
         let meta_blob_info = BlobInfo { blob_id: [1; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![[2; 32].into()])
+            .await;
         enumerate_missing_blobs(
             &proxy,
             &mut pkgfs_needs,
@@ -1715,10 +1780,11 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_open_blob_per_blob_once() {
         let meta_blob_info = BlobInfo { blob_id: [1; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![[2; 32].into()])
+            .await;
         enumerate_missing_blobs(
             &proxy,
             &mut pkgfs_needs,
@@ -1763,12 +1829,12 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_many_content_blobs_that_need_written() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blobs = || HashRangeFull::default().skip(1).take(100);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, content_blobs()).await;
         enumerate_missing_blobs(&proxy, &mut pkgfs_needs, meta_blob_info.blob_id, content_blobs())
             .await;
 
@@ -1825,12 +1891,12 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_many_content_blobs_that_are_already_present() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blobs = || HashRangeFull::default().skip(1).take(100);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, content_blobs()).await;
         enumerate_missing_blobs(&proxy, &mut pkgfs_needs, meta_blob_info.blob_id, content_blobs())
             .await;
 
@@ -1874,12 +1940,13 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn allows_retrying_nonfatal_open_blob_errors() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blob = Hash::from([1; 32]);
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![content_blob])
+            .await;
         enumerate_missing_blobs(
             &proxy,
             &mut pkgfs_needs,
@@ -1968,7 +2035,7 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn abort_aborts_while_waiting_for_open_meta_blob() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, pkgfs_install, pkgfs_needs) =
+        let (task, proxy, pkgfs_install, pkgfs_needs, _blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let abort_fut = proxy.abort();
@@ -1985,9 +2052,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn abort_aborts_while_waiting_for_get_missing_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
 
         let abort_fut = proxy.abort();
 
@@ -2003,9 +2071,10 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn abort_aborts_while_waiting_for_open_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_serve_needed_blobs_with_mocks(meta_blob_info);
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
         enumerate_missing_blobs(
             &proxy,
             &mut pkgfs_needs,
@@ -2043,12 +2112,16 @@ mod get_handler_tests {
         pkgfs::versions::Mock,
         pkgfs::install::Mock,
         pkgfs::needs::Mock,
+        fuchsia_pkg_testing::blobfs::Fake,
     ) {
         let (proxy, stream) = fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
 
         let (pkgfs_versions, pkgfs_versions_mock) = pkgfs::versions::Client::new_mock();
         let (pkgfs_install, pkgfs_install_mock) = pkgfs::install::Client::new_mock();
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
+        let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
+
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
 
         let (cobalt_sender, _) =
             CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
@@ -2059,6 +2132,8 @@ mod get_handler_tests {
                     &pkgfs_versions,
                     &pkgfs_install,
                     &pkgfs_needs,
+                    &dynamic_index,
+                    &blobfs,
                     meta_blob_info,
                     vec![],
                     stream,
@@ -2071,6 +2146,7 @@ mod get_handler_tests {
             pkgfs_versions_mock,
             pkgfs_install_mock,
             pkgfs_needs_mock,
+            blobfs_fake,
         )
     }
 
@@ -2083,6 +2159,9 @@ mod get_handler_tests {
         let (pkgfs_versions, _) = pkgfs::versions::Client::new_test();
         let (pkgfs_install, _) = pkgfs::install::Client::new_test();
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
+        let (blobfs, _) = blobfs::Client::new_test();
+
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
 
         let (cobalt_sender, _) =
             CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
@@ -2092,6 +2171,8 @@ mod get_handler_tests {
                 &pkgfs_versions,
                 &pkgfs_install,
                 &pkgfs_needs,
+                &dynamic_index,
+                &blobfs,
                 meta_blob_info,
                 vec![],
                 stream,
@@ -2110,7 +2191,7 @@ mod get_handler_tests {
         let (pkgdir, pkgdir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
 
-        let (task, proxy, mut pkgfs_versions, pkgfs_install, pkgfs_needs) =
+        let (task, proxy, mut pkgfs_versions, pkgfs_install, pkgfs_needs, _blobfs) =
             spawn_get_with_mocks(meta_blob_info, Some(pkgdir_server_end));
 
         pkgfs_versions
@@ -2137,7 +2218,7 @@ mod get_handler_tests {
         let (pkgdir, pkgdir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
 
-        let (task, proxy, mut pkgfs_versions, pkgfs_install, pkgfs_needs) =
+        let (task, proxy, mut pkgfs_versions, pkgfs_install, pkgfs_needs, _blobfs) =
             spawn_get_with_mocks(meta_blob_info, Some(pkgdir_server_end));
 
         drop(proxy);
@@ -2162,12 +2243,12 @@ mod get_handler_tests {
         let (pkgdir, pkgdir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
 
-        let (task, proxy, mut pkgfs_versions, mut pkgfs_install, mut pkgfs_needs) =
+        let (task, proxy, mut pkgfs_versions, mut pkgfs_install, mut pkgfs_needs, blobfs) =
             spawn_get_with_mocks(meta_blob_info, Some(pkgdir_server_end));
 
         pkgfs_versions.expect_open_package([0; 32].into()).await.fail_open_with_not_found().await;
 
-        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        write_meta_blob(&proxy, &mut pkgfs_install, &blobfs, meta_blob_info, vec![]).await;
         enumerate_missing_blobs(
             &proxy,
             &mut pkgfs_needs,

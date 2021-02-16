@@ -65,6 +65,23 @@ impl PkgFs for MockPkgFs {
         self.root_dir_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server)?;
         Ok(client.into_channel().into())
     }
+
+    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+        let mut directory_entry = pseudo_directory! {};
+        let (client, server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().expect("create_proxy");
+        directory_entry.open(
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY,
+            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+            &mut std::iter::empty(),
+            server,
+        );
+        fasync::Task::spawn(async move {
+            directory_entry.await;
+        })
+        .detach();
+        Ok(client.into_channel().unwrap().into_zx_channel().into())
+    }
 }
 
 #[derive(Clone)]

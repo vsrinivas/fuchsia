@@ -7,9 +7,13 @@
 //! Typesafe wrappers around the /blob filesystem.
 
 use {
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileObject, FileProxy, NodeInfo,
+    },
     fuchsia_hash::{Hash, ParseHashError},
-    fuchsia_zircon::Status,
+    fuchsia_syslog::fx_log_warn,
+    fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
+    futures::StreamExt as _,
     std::collections::HashSet,
     thiserror::Error,
 };
@@ -84,6 +88,62 @@ impl Client {
         let status = self.proxy.unlink(&blob.to_string()).await?;
         Status::ok(status).map_err(BlobfsError::Unlink)
     }
+
+    /// Open the blob for reading.
+    pub async fn open_blob_for_read(
+        &self,
+        blob: &Hash,
+    ) -> Result<FileProxy, io_util::node::OpenError> {
+        io_util::directory::open_file(
+            &self.proxy,
+            &blob.to_string(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )
+        .await
+    }
+
+    /// Returns whether blobfs has a blob with the given hash.
+    pub async fn has_blob(&self, blob: &Hash) -> bool {
+        let file = match io_util::directory::open_file_no_describe(
+            &self.proxy,
+            &blob.to_string(),
+            fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        ) {
+            Ok(file) => file,
+            Err(_) => return false,
+        };
+
+        let mut events = file.take_event_stream();
+
+        let fidl_fuchsia_io::FileEvent::OnOpen_ { s, info } = match events.next().await {
+            Some(Ok(event)) => event,
+            _ => return false,
+        };
+
+        if Status::from_raw(s) != Status::OK {
+            return false;
+        }
+
+        let event = match info {
+            Some(info) => match *info {
+                NodeInfo::File(FileObject { event: Some(event), stream: None }) => event,
+                _ => return false,
+            },
+            _ => return false,
+        };
+
+        // Check that the USER_0 signal has been asserted on the file's event to make sure we
+        // return false on the edge case of the blob is current being written.
+        match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+            Ok(_) => true,
+            Err(status) => {
+                if status != Status::TIMED_OUT {
+                    fx_log_warn!("blobfs: unknown error asserting blob existence: {}", status);
+                }
+                false
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -91,7 +151,7 @@ mod tests {
     use {
         super::*, blobfs_ramdisk::BlobfsRamdisk, fidl_fuchsia_io::DirectoryRequest,
         fuchsia_async as fasync, fuchsia_merkle::MerkleTree, futures::stream::TryStreamExt,
-        maplit::hashset, matches::assert_matches,
+        maplit::hashset, matches::assert_matches, std::io::Write as _,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -163,5 +223,39 @@ mod tests {
         .detach();
 
         assert_matches!(client.delete_blob(&blob_merkle).await, Ok(()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn has_blob() {
+        let blobfs = BlobfsRamdisk::builder().with_blob(&b"blob 1"[..]).start().unwrap();
+        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+
+        assert_eq!(
+            client.has_blob(&MerkleTree::from_reader(&b"blob 1"[..]).unwrap().root()).await,
+            true
+        );
+        assert_eq!(client.has_blob(&Hash::from([1; 32])).await, false);
+
+        blobfs.stop().await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn has_blob_return_false_if_blob_is_partially_written() {
+        let blobfs = BlobfsRamdisk::start().unwrap();
+        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+
+        let blob = [3; 1024];
+        let hash = MerkleTree::from_reader(&blob[..]).unwrap().root();
+
+        let mut file = blobfs.root_dir().unwrap().write_file(hash.to_string(), 0o777).unwrap();
+        assert_eq!(client.has_blob(&hash).await, false);
+        file.set_len(blob.len() as u64).unwrap();
+        assert_eq!(client.has_blob(&hash).await, false);
+        file.write_all(&blob[..512]).unwrap();
+        assert_eq!(client.has_blob(&hash).await, false);
+        file.write_all(&blob[512..]).unwrap();
+        assert_eq!(client.has_blob(&hash).await, true);
+
+        blobfs.stop().await.unwrap();
     }
 }

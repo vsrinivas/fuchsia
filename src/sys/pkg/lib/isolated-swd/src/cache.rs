@@ -5,6 +5,8 @@
 use {
     crate::pkgfs::Pkgfs,
     anyhow::{anyhow, Context, Error},
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -28,17 +30,22 @@ pub struct Cache {
 }
 
 impl Cache {
-    /// Launch the package cache using the given pkgfs.
-    pub fn launch(pkgfs: &Pkgfs) -> Result<Self, Error> {
-        Self::launch_with_components(pkgfs, CACHE_URL)
+    /// Launch the package cache using the given pkgfs and blobfs.
+    pub fn launch(pkgfs: &Pkgfs, blobfs: ClientEnd<DirectoryMarker>) -> Result<Self, Error> {
+        Self::launch_with_components(pkgfs, blobfs, CACHE_URL)
     }
 
     /// Launch the package cache. This is the same as `launch`, but the URL for the cache's
     /// manifest must be provided.
-    fn launch_with_components(pkgfs: &Pkgfs, cache_url: &str) -> Result<Self, Error> {
+    fn launch_with_components(
+        pkgfs: &Pkgfs,
+        blobfs: ClientEnd<DirectoryMarker>,
+        cache_url: &str,
+    ) -> Result<Self, Error> {
         let mut pkg_cache = AppBuilder::new(cache_url)
             .arg("--ignore-system-image")
-            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle());
+            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle())
+            .add_handle_to_namespace("/blob".to_owned(), blobfs.into_handle());
 
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
@@ -112,8 +119,9 @@ pub mod for_tests {
         /// Create a new `Cache` and backing `pkgfs`.
         pub fn new_with_component(url: &str) -> Result<Self, Error> {
             let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
-            let cache =
-                Cache::launch_with_components(&pkgfs.pkgfs, url).context("launching cache")?;
+            let blobfs = pkgfs.blobfs.root_dir_handle().context("blobfs handle")?;
+            let cache = Cache::launch_with_components(&pkgfs.pkgfs, blobfs, url)
+                .context("launching cache")?;
 
             Ok(CacheForTest { pkgfs, cache: Arc::new(cache) })
         }

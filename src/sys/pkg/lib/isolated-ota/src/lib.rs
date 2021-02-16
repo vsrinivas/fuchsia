@@ -75,14 +75,13 @@ pub async fn download_and_apply_update(
     let blobfs_proxy = DirectoryProxy::from_channel(
         fasync::Channel::from_channel(blobfs.into_channel()).map_err(UpdateError::IoError)?,
     );
-    let (blobfs_clone, remote) =
-        fidl::endpoints::create_endpoints::<DirectoryMarker>().map_err(UpdateError::FidlError)?;
-    blobfs_proxy
-        .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
-        .map_err(UpdateError::FidlError)?;
 
-    let pkgfs = Pkgfs::launch(blobfs_clone).map_err(UpdateError::PkgfsLaunchError)?;
-    let cache = Arc::new(Cache::launch(&pkgfs).map_err(UpdateError::PkgCacheLaunchError)?);
+    let pkgfs =
+        Pkgfs::launch(clone_blobfs(&blobfs_proxy)?).map_err(UpdateError::PkgfsLaunchError)?;
+    let cache = Arc::new(
+        Cache::launch(&pkgfs, clone_blobfs(&blobfs_proxy)?)
+            .map_err(UpdateError::PkgCacheLaunchError)?,
+    );
     let resolver = Arc::new(
         Resolver::launch(
             &pkgfs,
@@ -94,12 +93,7 @@ pub async fn download_and_apply_update(
         .map_err(UpdateError::PkgResolverLaunchError)?,
     );
 
-    let (blobfs_clone, remote) =
-        fidl::endpoints::create_endpoints::<DirectoryMarker>().map_err(UpdateError::FidlError)?;
-    blobfs_proxy
-        .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
-        .map_err(UpdateError::FidlError)?;
-
+    let blobfs_clone = clone_blobfs(&blobfs_proxy)?;
     if let Some(cfg) = omaha_cfg {
         let () = omaha::install_update(
             blobfs_clone,
@@ -123,4 +117,13 @@ pub async fn download_and_apply_update(
         let () = updater.install_update(None).await.map_err(UpdateError::InstallError)?;
     }
     Ok(())
+}
+
+fn clone_blobfs(blobfs_proxy: &DirectoryProxy) -> Result<ClientEnd<DirectoryMarker>, UpdateError> {
+    let (blobfs_clone, remote) =
+        fidl::endpoints::create_endpoints::<DirectoryMarker>().map_err(UpdateError::FidlError)?;
+    blobfs_proxy
+        .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
+        .map_err(UpdateError::FidlError)?;
+    Ok(blobfs_clone)
 }

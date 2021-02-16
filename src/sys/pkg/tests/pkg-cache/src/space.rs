@@ -6,7 +6,7 @@ use {
     crate::{PkgFs, TestEnv},
     anyhow::Error,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_paver as paver,
     fidl_fuchsia_space::{ErrorCode, ManagerMarker},
     fuchsia_async::{self as fasync, OnSignals},
@@ -74,6 +74,8 @@ impl TempDirPkgFs {
             contents.serialize(&mut File::create(meta_path.join("contents")).unwrap()).unwrap();
         }
 
+        create_dir(root.path().join("blobfs")).unwrap();
+
         Self { root }
     }
 
@@ -93,6 +95,12 @@ impl TempDirPkgFs {
 impl PkgFs for TempDirPkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         Ok(fdio::transfer_fd(File::open(self.root.path()).unwrap()).unwrap().into())
+    }
+
+    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
+        let dir_handle: ClientEnd<DirectoryMarker> =
+            fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap()).unwrap().into();
+        Ok(dir_handle.into_proxy().unwrap())
     }
 }
 

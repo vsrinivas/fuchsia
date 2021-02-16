@@ -56,11 +56,17 @@ pub mod mock_filesystem;
 
 pub trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+
+    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 }
 
 impl PkgFs for PkgfsRamdisk {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         PkgfsRamdisk::root_dir_handle(self)
+    }
+
+    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+        self.blobfs().root_dir_handle()
     }
 }
 
@@ -421,6 +427,10 @@ where
         .add_handle_to_namespace(
             "/pkgfs".to_owned(),
             pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
+        )
+        .add_handle_to_namespace(
+            "/blob".to_owned(),
+            pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into(),
         );
 
         let local_mirror_dir = tempfile::tempdir().unwrap();

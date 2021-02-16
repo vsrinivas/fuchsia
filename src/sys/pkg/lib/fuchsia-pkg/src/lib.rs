@@ -17,8 +17,8 @@ pub use crate::{
     build::build,
     creation_manifest::CreationManifest,
     errors::{
-        BuildError, CreationManifestError, MetaPackageError, PackageNameError, PackagePathError,
-        PackageVariantError, ParsePackagePathError,
+        BuildError, CreationManifestError, MetaContentsError, MetaPackageError, PackageNameError,
+        PackagePathError, PackageVariantError, ParsePackagePathError,
     },
     meta_contents::MetaContents,
     meta_package::MetaPackage,

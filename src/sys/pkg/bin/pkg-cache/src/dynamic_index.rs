@@ -7,9 +7,15 @@
 use {
     anyhow::{Context as _, Error},
     fuchsia_merkle::Hash,
-    fuchsia_pkg::PackagePath,
+    fuchsia_pkg::{MetaContents, MetaPackage, PackagePath},
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    futures::{stream, StreamExt},
+    parking_lot::Mutex,
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
-    std::collections::{HashMap, HashSet},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
     system_image::CachePackages,
 };
 
@@ -19,8 +25,30 @@ pub struct DynamicIndex {
     packages: HashMap<Hash, Package>,
     /// map of package path to most recently activated package hash.
     active_packages: HashMap<PackagePath, Hash>,
-    /// map of hashes of missing blobs to a set of package hashes that need that blob.
-    needed_blobs: HashMap<Hash, HashSet<Hash>>,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum DynamicIndexError {
+    #[error("the blob being fulfilled ({0}) is not needed")]
+    FulfillNotNeededBlob(Hash),
+
+    #[error("the package is in an unexpected state: {0:?}")]
+    UnexpectedPackageState(Option<Package>),
+
+    #[error("failed to open blob")]
+    OpenBlob(#[source] io_util::node::OpenError),
+
+    #[error("failed to read blob")]
+    ReadBlob(#[source] io_util::file::ReadError),
+
+    #[error("failed to parse meta far")]
+    ParseMetaFar(#[from] fuchsia_archive::Error),
+
+    #[error("failed to parse meta package")]
+    ParseMetaPackage(#[from] fuchsia_pkg::MetaPackageError),
+
+    #[error("failed to parse meta contents")]
+    ParseMetaContents(#[from] fuchsia_pkg::MetaContentsError),
 }
 
 impl DynamicIndex {
@@ -32,11 +60,7 @@ impl DynamicIndex {
     fn add_package(&mut self, hash: Hash, package: Package) {
         match &package {
             Package::Pending => {}
-            Package::WithMetaFar { missing_blobs, .. } => {
-                for &blob in missing_blobs {
-                    self.needed_blobs.entry(blob).or_default().insert(hash);
-                }
-            }
+            Package::WithMetaFar { .. } => {}
             Package::Active { path, .. } => {
                 if let Some(previous_package) = self.active_packages.insert(path.clone(), hash) {
                     self.packages.remove(&previous_package);
@@ -60,6 +84,51 @@ impl DynamicIndex {
             })
             .cloned()
             .collect()
+    }
+
+    /// Notifies dynamic index that the given package is going to be installed, to keep the meta
+    /// far blob protected.
+    pub fn start_install(&mut self, package_hash: Hash) {
+        self.packages.entry(package_hash).or_insert(Package::Pending);
+    }
+
+    /// Notifies dynamic index that the given package has completed installation.
+    pub fn complete_install(&mut self, package_hash: Hash) -> Result<(), DynamicIndexError> {
+        match self.packages.get_mut(&package_hash) {
+            Some(package @ Package::WithMetaFar { .. }) => {
+                if let Package::WithMetaFar { path, missing_blobs: _, required_blobs } =
+                    std::mem::replace(package, Package::Pending)
+                {
+                    *package = Package::Active { path: path.clone(), required_blobs };
+
+                    if let Some(previous_package) = self.active_packages.insert(path, package_hash)
+                    {
+                        self.packages.remove(&previous_package);
+                    }
+                } else {
+                    unreachable!()
+                }
+            }
+            package => {
+                return Err(DynamicIndexError::UnexpectedPackageState(package.cloned()));
+            }
+        }
+        Ok(())
+    }
+
+    /// Notifies dynamic index that the given package installation has been canceled.
+    pub fn cancel_install(&mut self, package_hash: &Hash) {
+        match self.packages.get(package_hash) {
+            Some(Package::Pending) | Some(Package::WithMetaFar { .. }) => {
+                self.packages.remove(package_hash);
+            }
+            Some(Package::Active { .. }) => {
+                fx_log_warn!("Unable to cancel install for active package {}", package_hash);
+            }
+            None => {
+                fx_log_err!("Unable to cancel install for unknown package {}", package_hash);
+            }
+        }
     }
 }
 
@@ -96,8 +165,65 @@ pub async fn load_cache_packages(
     Ok(())
 }
 
-#[derive(Debug, Eq, PartialEq)]
-enum Package {
+/// Notifies dynamic index that the given meta far blob is now available in blobfs.
+/// Do not use this for regular blob (unless it's also a meta far).
+pub async fn fulfill_meta_far_blob(
+    index: &Arc<Mutex<DynamicIndex>>,
+    blobfs: &blobfs::Client,
+    blob_hash: Hash,
+) -> Result<(), DynamicIndexError> {
+    if index.lock().packages.get(&blob_hash) != Some(&Package::Pending) {
+        return Err(DynamicIndexError::FulfillNotNeededBlob(blob_hash));
+    }
+
+    let (path, required_blobs) = {
+        let file =
+            blobfs.open_blob_for_read(&blob_hash).await.map_err(DynamicIndexError::OpenBlob)?;
+        let meta_far_blob =
+            io_util::file::read(&file).await.map_err(DynamicIndexError::ReadBlob)?;
+        // TODO: Switch to async far reader (fxbug.dev/68929) to save memory.
+        let mut meta_far = fuchsia_archive::Reader::new(std::io::Cursor::new(meta_far_blob))?;
+        let meta_package = MetaPackage::deserialize(&meta_far.read_file("meta/package")?[..])?;
+        let meta_contents = MetaContents::deserialize(&meta_far.read_file("meta/contents")?[..])?;
+
+        (meta_package.into_path(), meta_contents.into_hashes().collect::<HashSet<_>>())
+    };
+
+    // This heuristic was taken from pkgfs, the total number of blobs has grown since it was
+    // initially written, we probably want to reevaluate the proper value to use here.
+    let all_known_blobs =
+        if required_blobs.len() > 20 { blobfs.list_known_blobs().await.ok() } else { None };
+    let all_known_blobs = Arc::new(all_known_blobs);
+
+    let missing_blobs: HashSet<_> = stream::iter(required_blobs.clone())
+        .map(move |blob| {
+            let all_known_blobs = Arc::clone(&all_known_blobs);
+            async move {
+                // We still need to check `has_blob()` even if the blob is in `all_known_blobs`,
+                // because it might not have been fully written yet.
+                if (*all_known_blobs).as_ref().map(|blobs| blobs.contains(&blob)) == Some(false)
+                    || !blobfs.has_blob(&blob).await
+                {
+                    Some(blob)
+                } else {
+                    None
+                }
+            }
+        })
+        .buffer_unordered(50)
+        .filter_map(|blob| async move { blob })
+        .collect()
+        .await;
+
+    index
+        .lock()
+        .add_package(blob_hash, Package::WithMetaFar { path, missing_blobs, required_blobs });
+
+    Ok(())
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Package {
     /// Only the package hash is known, meta.far isn't available yet.
     Pending,
     /// We have the meta.far
@@ -105,6 +231,7 @@ enum Package {
         /// The name and variant of the package.
         path: PackagePath,
         /// Subset of `required_blobs` that does not exist in blobfs.
+        /// This could be empty if all blobs already exist when meta far blob is fulfilled.
         missing_blobs: HashSet<Hash>,
         /// Set of blobs this package depends on, does not include meta.far blob itself.
         required_blobs: HashSet<Hash>,
@@ -122,10 +249,14 @@ enum Package {
 mod tests {
     use {
         super::*,
+        crate::test_utils::{add_meta_far_to_blobfs, get_meta_far},
         fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync,
+        fuchsia_merkle::MerkleTree,
         fuchsia_pkg::MetaContents,
+        futures::future,
         maplit::{btreemap, hashmap, hashset},
+        matches::assert_matches,
         std::{
             collections::HashMap,
             fs::{create_dir, create_dir_all, File},
@@ -165,6 +296,162 @@ mod tests {
                 Hash::from([6; 32]),
             }
         );
+    }
+
+    #[test]
+    fn test_complete_install() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let required_blobs =
+            hashset! { Hash::from([3; 32]), Hash::from([4; 32]), Hash::from([5; 32]) };
+        let previous_hash = Hash::from([6; 32]);
+        dynamic_index.add_package(
+            previous_hash,
+            Package::Active {
+                path: path.clone(),
+                required_blobs: hashset! { Hash::from([7; 32]) },
+            },
+        );
+        dynamic_index.add_package(
+            hash,
+            Package::WithMetaFar {
+                path: path.clone(),
+                missing_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+                required_blobs: required_blobs.clone(),
+            },
+        );
+
+        dynamic_index.complete_install(hash).unwrap();
+        assert_eq!(
+            dynamic_index.packages,
+            hashmap! {
+                hash => Package::Active {
+                    path: path.clone(),
+                    required_blobs,
+                },
+            }
+        );
+        assert_eq!(dynamic_index.active_packages, hashmap! { path => hash });
+    }
+
+    #[test]
+    fn complete_install_unknown_package() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        assert_matches!(
+            dynamic_index.complete_install(Hash::from([2; 32])),
+            Err(DynamicIndexError::UnexpectedPackageState(None))
+        );
+    }
+
+    #[test]
+    fn complete_install_pending_package() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        dynamic_index.add_package(hash, Package::Pending);
+        assert_matches!(
+            dynamic_index.complete_install(hash),
+            Err(DynamicIndexError::UnexpectedPackageState(Some(Package::Pending)))
+        );
+    }
+
+    #[test]
+    fn complete_install_active_package() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        let package = Package::Active {
+            path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+            required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+        };
+        dynamic_index.add_package(hash, package.clone());
+        assert_matches!(
+            dynamic_index.complete_install(hash),
+            Err(DynamicIndexError::UnexpectedPackageState(Some(p))) if p == package
+        );
+    }
+
+    #[test]
+    fn start_install() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        dynamic_index.start_install(hash);
+
+        assert_eq!(dynamic_index.packages, hashmap! { hash => Package::Pending });
+    }
+
+    #[test]
+    fn start_install_do_not_overwrite() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        let package = Package::WithMetaFar {
+            path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+            missing_blobs: hashset! { Hash::from([3; 32]) },
+            required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+        };
+        dynamic_index.add_package(hash, package.clone());
+
+        dynamic_index.start_install(hash);
+
+        assert_eq!(dynamic_index.packages, hashmap! { hash => package });
+    }
+
+    #[test]
+    fn cancel_install() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        dynamic_index.start_install(hash);
+        assert_eq!(dynamic_index.packages, hashmap! { hash => Package::Pending });
+        dynamic_index.cancel_install(&hash);
+        assert_eq!(dynamic_index.packages, hashmap! {});
+    }
+
+    #[test]
+    fn cancel_install_with_meta_far() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        dynamic_index.add_package(
+            hash,
+            Package::WithMetaFar {
+                path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+                missing_blobs: hashset! { Hash::from([3; 32]) },
+                required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+            },
+        );
+        dynamic_index.cancel_install(&hash);
+        assert_eq!(dynamic_index.packages, hashmap! {});
+    }
+
+    #[test]
+    fn cancel_install_active() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let package = Package::Active {
+            path: path.clone(),
+            required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+        };
+        dynamic_index.add_package(hash, package.clone());
+        dynamic_index.cancel_install(&hash);
+        assert_eq!(dynamic_index.packages, hashmap! { hash => package });
+        assert_eq!(dynamic_index.active_packages, hashmap! { path => hash });
+    }
+
+    #[test]
+    fn cancel_install_unknown() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        dynamic_index.start_install(Hash::from([2; 32]));
+        dynamic_index.cancel_install(&Hash::from([4; 32]));
+        assert_eq!(dynamic_index.packages, hashmap! { Hash::from([2; 32]) => Package::Pending });
     }
 
     struct TestPkgfs {
@@ -276,7 +563,6 @@ mod tests {
                 share_blob_package_path => share_blob_package_hash
             }
         );
-        assert_eq!(dynamic_index.needed_blobs, hashmap! {});
         assert_eq!(
             dynamic_index.all_blobs(),
             hashset! {
@@ -286,6 +572,88 @@ mod tests {
                 other_blob_hash,
                 yet_another_blob_hash,
             }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn fulfill_meta_far_blob_with_missing_blobs() {
+        let mut dynamic_index = DynamicIndex::new();
+
+        let hash = Hash::from([2; 32]);
+        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        dynamic_index.start_install(hash);
+
+        let dynamic_index = Arc::new(Mutex::new(dynamic_index));
+
+        let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
+
+        let blob_hash = Hash::from([3; 32]);
+        add_meta_far_to_blobfs(&blobfs_fake, hash, "fake-package", vec![blob_hash]);
+
+        fulfill_meta_far_blob(&dynamic_index, &blobfs, hash).await.unwrap();
+
+        let dynamic_index = dynamic_index.lock();
+        assert_eq!(
+            dynamic_index.packages,
+            hashmap! {
+                hash => Package::WithMetaFar {
+                    path,
+                    missing_blobs: hashset! { blob_hash },
+                    required_blobs: hashset! { blob_hash },
+                }
+            }
+        );
+        assert_eq!(dynamic_index.active_packages, hashmap! {});
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn fulfill_meta_far_blob_no_missing_blobs() {
+        let mut dynamic_index = DynamicIndex::new();
+        let (mut blobfs_mock, blobfs) = fuchsia_pkg_testing::blobfs::Mock::new();
+
+        let blob_hash = Hash::from([3; 32]);
+        let meta_far = get_meta_far("fake-package", vec![blob_hash]);
+        let meta_far_hash = MerkleTree::from_reader(&meta_far[..]).unwrap().root();
+
+        dynamic_index.start_install(meta_far_hash);
+
+        let dynamic_index = Arc::new(Mutex::new(dynamic_index));
+
+        let ((), ()) = future::join(
+            async {
+                blobfs_mock.expect_open_blob(meta_far_hash).await.expect_read(&meta_far).await;
+                blobfs_mock.expect_open_blob(blob_hash).await.expect_close().await;
+            },
+            async {
+                fulfill_meta_far_blob(&dynamic_index, &blobfs, meta_far_hash).await.unwrap();
+            },
+        )
+        .await;
+
+        let dynamic_index = dynamic_index.lock();
+        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        assert_eq!(
+            dynamic_index.packages,
+            hashmap! {
+                meta_far_hash => Package::WithMetaFar {
+                    path,
+                    missing_blobs: hashset! {  },
+                    required_blobs: hashset! { blob_hash },
+                }
+            }
+        );
+        assert_eq!(dynamic_index.active_packages, hashmap! {});
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn fulfill_meta_far_blob_not_needed() {
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
+
+        let (blobfs, _) = blobfs::Client::new_test();
+
+        assert_matches!(
+            fulfill_meta_far_blob(&dynamic_index, &blobfs, Hash::from([2; 32])).await,
+            Err(DynamicIndexError::FulfillNotNeededBlob(hash)) if hash == Hash::from([2; 32])
         );
     }
 }

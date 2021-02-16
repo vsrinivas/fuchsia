@@ -167,6 +167,11 @@
             to: [ "#pkg-cache" ],
         },
         {
+            directory: "blob",
+            from: "parent",
+            to: [ "#pkg-cache" ],
+        },
+        {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.tracing.provider.Registry",

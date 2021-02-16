@@ -127,7 +127,7 @@ impl Package {
         let meta_contents = self.meta_contents()?;
 
         let mut res = btreeset![self.meta_far_merkle];
-        res.extend(meta_contents.contents().iter().map(|(_, merkle)| merkle));
+        res.extend(meta_contents.into_hashes());
         Ok(res)
     }
 

@@ -48,6 +48,11 @@
             to: [ "#pkg_cache" ],
         },
         {
+            directory: "blob",
+            from: "#service_reflector",
+            to: [ "#pkg_cache" ],
+        },
+        {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system_update_committer",
             to: [ "#pkg_cache" ],
