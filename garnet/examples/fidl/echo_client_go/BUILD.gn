@@ -5,7 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 go_binary("echo_client_go_bin") {
   output_name = "echo_client_go"
@@ -26,19 +26,16 @@ go_library("echo_client_go_lib") {
   ]
 }
 
-package("echo_client_go") {
+resource("echo_client_file") {
+  sources = [ "${root_build_dir}/echo_client_go" ]
+  outputs = [ "bin/echo_client" ]
   deps = [ ":echo_client_go_bin" ]
 
-  binaries = [
-    {
-      name = "echo_client_go"
-      dest = "echo_client"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("../meta/echo_client.cmx")
-      dest = "echo_client_go.cmx"
-    },
-  ]
+  # data_deps is necessary to include shared libraries in package.
+  data_deps = [ ":echo_client_go_bin" ]
+}
+
+fuchsia_package_with_single_component("echo_client_go") {
+  manifest = "../meta/echo_client.cmx"
+  deps = [ ":echo_client_file" ]
 }

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -31,21 +31,18 @@ executable("bin") {
   ]
 }
 
-package("echo_server_cpp") {
+resource("echo_server_file") {
+  sources = [ "${root_build_dir}/echo_server_cpp" ]
+  outputs = [ "bin/echo_server" ]
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "echo_server_cpp"
-      dest = "echo_server"
-    },
-  ]
 
-  meta = [
-    {
-      path = rebase_path("../meta/echo_server.cmx")
-      dest = "echo_server_cpp.cmx"
-    },
-  ]
+  # data_deps is necessary to include shared libraries in package.
+  data_deps = [ ":bin" ]
+}
+
+fuchsia_package_with_single_component("echo_server_cpp") {
+  manifest = "../meta/echo_server.cmx"
+  deps = [ ":echo_server_file" ]
 }
 
 executable("echo_server_cpp_unittests") {
@@ -61,13 +58,9 @@ executable("echo_server_cpp_unittests") {
   ]
 }
 
-test_package("echo_server_cpp_tests") {
+fuchsia_unittest_package("echo_server_cpp_tests") {
   deps = [ ":echo_server_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "echo_server_cpp_unittests"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }

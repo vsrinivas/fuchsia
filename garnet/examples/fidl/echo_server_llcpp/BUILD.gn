@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "echo_server_llcpp"
@@ -23,19 +23,16 @@ executable("bin") {
   ]
 }
 
-package("echo_server_llcpp") {
+resource("echo_server_file") {
+  sources = [ "${root_build_dir}/echo_server_llcpp" ]
+  outputs = [ "bin/echo_server" ]
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "echo_server_llcpp"
-      dest = "echo_server"
-    },
-  ]
 
-  meta = [
-    {
-      path = rebase_path("../meta/echo_server.cmx")
-      dest = "echo_server_llcpp.cmx"
-    },
-  ]
+  # data_deps is necessary to include shared libraries in package.
+  data_deps = [ ":bin" ]
+}
+
+fuchsia_package_with_single_component("echo_server_llcpp") {
+  manifest = "../meta/echo_server.cmx"
+  deps = [ ":echo_server_file" ]
 }

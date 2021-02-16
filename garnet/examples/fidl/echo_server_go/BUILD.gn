@@ -5,7 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 go_binary("echo_server_go_bin") {
   output_name = "echo_server_go"
@@ -26,19 +26,16 @@ go_library("echo_server_go_lib") {
   ]
 }
 
-package("echo_server_go") {
+resource("echo_server_file") {
+  sources = [ "${root_build_dir}/echo_server_go" ]
+  outputs = [ "bin/echo_server" ]
   deps = [ ":echo_server_go_bin" ]
-  binaries = [
-    {
-      name = "echo_server_go"
-      dest = "echo_server"
-    },
-  ]
 
-  meta = [
-    {
-      path = rebase_path("../meta/echo_server.cmx")
-      dest = "echo_server_go.cmx"
-    },
-  ]
+  # data_deps is necessary to include shared libraries in package.
+  data_deps = [ ":echo_server_go_bin" ]
+}
+
+fuchsia_package_with_single_component("echo_server_go") {
+  manifest = "../meta/echo_server.cmx"
+  deps = [ ":echo_server_file" ]
 }
