@@ -145,8 +145,8 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
   ASSERT_EQ(escher_image2->width(), kImage2Dim);
 }
 
-// Present two frames on the ImagePipe, making sure that acquire fence is
-// being listened to and release fences are signalled.
+// Present two frames on the ImagePipe, making sure that acquire fence is being listened to and
+// release fences are signalled.
 VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   ResourceId next_id = 1;
   auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
@@ -170,9 +170,10 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
 
   // Make checkerboard the currently displayed image.
   zx::event acquire_fence1 = CreateEvent();
+  zx::event release_fence1 = CreateEvent();
 
   image_pipe->PresentImage(image1_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence1),
-                           /*release_fences=*/{}, /*callback=*/[](auto) {});
+                           CopyEventIntoFidlArray(release_fence1), /*callback=*/[](auto) {});
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
@@ -180,6 +181,8 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   Visit(pipe_material.get());
   ASSERT_FALSE(image_pipe->current_image());
   ASSERT_FALSE(image_pipe->GetEscherImage());
+  ASSERT_FALSE(IsEventSignalled(acquire_fence1, ZX_EVENT_SIGNALED));
+  ASSERT_FALSE(IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
 
   // Signal on the acquire fence.
   acquire_fence1.signal(0u, escher::kFenceSignalled);
@@ -207,25 +210,27 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   // The first image should not have been released.
   ASSERT_FALSE(RunLoopFor(zx::sec(1)));
   Visit(pipe_material.get());
+  ASSERT_FALSE(IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
 
   // Make gradient the currently displayed image.
   zx::event acquire_fence2 = CreateEvent();
-
   image_pipe->PresentImage(image2_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence2),
                            /*release_fences=*/{}, /*callback=*/[](auto) {});
 
-  // Verify that the currently display image hasn't changed yet, since we
-  // haven't signalled the acquire fence.
+  // Verify that the currently display image hasn't changed yet, since we haven't signalled the
+  // acquire fence.
   ASSERT_FALSE(RunLoopUntilIdle());
   Visit(pipe_material.get());
   ASSERT_TRUE(image_pipe->GetEscherImage());
   ASSERT_EQ(image_pipe->GetEscherImage(), image1);
+  ASSERT_FALSE(IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
 
   // Signal on the acquire fence.
   acquire_fence2.signal(0u, escher::kFenceSignalled);
 
   // There should be a new image presented.
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
+  ASSERT_TRUE(IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
   Visit(pipe_material.get());
   escher::ImagePtr image2 = image_pipe->GetEscherImage();
   ASSERT_TRUE(image2);
