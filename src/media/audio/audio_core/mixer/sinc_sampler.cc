@@ -306,6 +306,14 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
       break;
     case 4:
       // Unlike other samplers, we handle 4:4 here since there is no NxN sinc sampler variant.
+      // Like other samplers, to mix 4-channel sources to Mono or Stereo destinations, we mix
+      // (average) multiple source channels to each destination channel. Given a 4-channel source
+      // (call it A|B|C|D), the Stereo output channel-mix would be [avg(A,C), avg(B,D)] and the Mono
+      // output channel-mix would be [avg(A,B,C,D)].
+      //
+      // Audio formats do not include info needed to filter frequencies or 3D-locate channels.
+      // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
+      // TODO(fxbug.dev/13682): account for frequency range (e.g. "4-channel" stereo woofer+tweeter)
       if constexpr (DestChanCount <= 2 || DestChanCount == 4) {
         return SelectSSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format);
       }
@@ -313,6 +321,8 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
     default:
       break;
   }
+  FX_LOGS(WARNING) << "SincSampler does not support this channelization: " << source_format.channels
+                   << " -> " << dest_format.channels;
   return nullptr;
 }
 
@@ -331,6 +341,8 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return SelectSSM<DestChanCount, float>(source_format, dest_format);
     default:
+      FX_LOGS(WARNING) << "SincSampler does not support this sample_format: "
+                       << static_cast<int32_t>(source_format.sample_format);
       return nullptr;
   }
 }
@@ -362,6 +374,8 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
       // woofer+tweeter).
       return SelectSSM<4>(source_format, dest_format);
     default:
+      FX_LOGS(WARNING) << "SincSampler does not support this channelization: "
+                       << source_format.channels << " -> " << dest_format.channels;
       return nullptr;
   }
 }

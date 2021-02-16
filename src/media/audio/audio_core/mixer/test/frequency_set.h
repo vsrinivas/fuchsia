@@ -76,7 +76,7 @@ class FrequencySet {
   static const uint32_t kReferenceFreq;
 
   // Summary audio tests use a small frequency set taken from the full list.
-  static constexpr uint32_t kNumSummaryIdxs = 3;
+  static constexpr uint32_t kNumSummaryIdxs = 4;
 
   // Each val is a kReferenceFreqs index, pointing to a summary freq.
   static const std::array<uint32_t, kNumSummaryIdxs> kSummaryIdxs;

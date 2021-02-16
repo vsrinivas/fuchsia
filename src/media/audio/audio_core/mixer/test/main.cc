@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  syslog::SetTags({"audio_core_mixer_test"});
+  syslog::SetTags({"audio_fidelity_tests"});
 
   // --profile  Profile the performance of Mixer creation, Mix() and ProduceOutput() across numerous
   //            configurations, and don't do further testing.

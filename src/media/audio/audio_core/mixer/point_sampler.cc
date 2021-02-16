@@ -369,7 +369,7 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
     return SelectNxNPSM(source_format);
   }
 
-  if ((source_format.channels < 1 || dest_format.channels < 1) || (source_format.channels > 4)) {
+  if (source_format.channels < 1 || source_format.channels > 4) {
     FX_LOGS(WARNING) << "PointSampler does not support this channelization: "
                      << source_format.channels << " -> " << dest_format.channels;
     return nullptr;
@@ -385,13 +385,13 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
-      // Audio formats do not include info needed to filter frequencies or locate channels in 3D
-      // space.
+      // Audio formats do not include info needed to filter frequencies or 3D-locate channels.
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
-      // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo
-      // woofer+tweeter).
+      // TODO(fxbug.dev/13682): account for frequency range (e.g. "4-channel" stereo woofer+tweeter)
       return SelectPSM<4>(source_format, dest_format);
     default:
+      FX_LOGS(WARNING) << "PointSampler does not support this channelization: "
+                       << source_format.channels << " -> " << dest_format.channels;
       return nullptr;
   }
 }

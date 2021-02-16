@@ -905,13 +905,14 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   }
   int32_t expected_frac_source_offset = frac_source_frames;
   if (dest_offset < dest_frames) {
-    AUDIO_LOG(WARNING) << "Performing wraparound mix: dest_frames " << dest_frames
-                       << ", dest_offset " << dest_offset << ", frac_source_frames " << std::hex
-                       << frac_source_frames << ", frac_source_offset " << frac_source_offset;
+    // This is expected, for resamplers with width.
+    AUDIO_LOG(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
+                     << dest_offset << ", frac_source_frames " << std::hex << frac_source_frames
+                     << ", frac_source_offset " << frac_source_offset;
     ASSERT_GE(frac_source_offset, 0);
     EXPECT_GE(static_cast<uint32_t>(frac_source_offset) + mixer->pos_filter_width().raw_value(),
               frac_source_frames)
-        << "source_off " << std::hex << frac_source_offset << ", pos_width "
+        << "source_offset " << std::hex << frac_source_offset << ", pos_width "
         << mixer->pos_filter_width().raw_value() << ", source_frames " << frac_source_frames;
 
     // Wrap around in the source buffer -- making the offset slightly negative. We can do
@@ -975,6 +976,34 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   }
 }
 
-// TODO(fxbug.dev/69307): reenable cross-talk tests, to replace the recently-removed NxN tests
+// Measure Freq Response for NxN Sinc sampler, with minimum down-sampling rate change.
+TEST(FrequencyResponse, Sinc_NxN) {
+  TestNxNEquivalence(Resampler::WindowedSinc, AudioResult::FreqRespSincNxN.data(),
+                     AudioResult::SinadSincNxN.data(), AudioResult::PhaseSincNxN.data());
+
+  // The final param signals to evaluate only at summary frequencies.
+  EvaluateFreqRespResults(AudioResult::FreqRespSincNxN.data(),
+                          AudioResult::kPrevFreqRespSincMicro.data(), true);
+}
+
+// Measure SINAD for NxN Sinc sampler, with minimum down-sampling rate change.
+TEST(Sinad, Sinc_NxN) {
+  TestNxNEquivalence(Resampler::WindowedSinc, AudioResult::FreqRespSincNxN.data(),
+                     AudioResult::SinadSincNxN.data(), AudioResult::PhaseSincNxN.data());
+
+  // The final param signals to evaluate only at summary frequencies.
+  EvaluateSinadResults(AudioResult::SinadSincNxN.data(), AudioResult::kPrevSinadSincMicro.data(),
+                       true);
+}
+
+// Measure Phase Response for NxN Sinc sampler, with minimum down-sampling rate change.
+TEST(Phase, Sinc_NxN) {
+  TestNxNEquivalence(Resampler::WindowedSinc, AudioResult::FreqRespSincNxN.data(),
+                     AudioResult::SinadSincNxN.data(), AudioResult::PhaseSincNxN.data());
+
+  // The final param signals to evaluate only at summary frequencies.
+  EvaluatePhaseResults(AudioResult::PhaseSincNxN.data(), AudioResult::kPrevPhaseSincMicro.data(),
+                       true);
+}
 
 }  // namespace media::audio::test

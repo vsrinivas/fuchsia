@@ -56,6 +56,7 @@ const uint32_t FrequencySet::kReferenceFreq = kReferenceFreqs[kRefFreqIdx];
 constexpr uint32_t FrequencySet::kNumSummaryIdxs;
 const std::array<uint32_t, FrequencySet::kNumSummaryIdxs> FrequencySet::kSummaryIdxs = {
     6,   //  kReferenceFreqs[6] == 53, which translates => 40 Hz
+    17,  //  kReferenceFreqs[17] == 683, => 500 Hz
     20,  //  1353, translates => 1000 Hz
     31   //  16381 => 12000 Hz
 };

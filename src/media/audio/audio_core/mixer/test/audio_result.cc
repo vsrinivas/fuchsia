@@ -78,6 +78,8 @@ std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespS
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp2 = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp3 = {NAN};
 
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincNxN = {NAN};
+
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
 // - 191999:48000, significant but not perfectly integral down-sampling (referred to as Down0)
@@ -166,6 +168,8 @@ std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincMicro
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp1 = {NAN};
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp2 = {NAN};
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp3 = {NAN};
+
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincNxN = {NAN};
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
@@ -266,6 +270,8 @@ std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSinc
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp1 = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp2 = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp3 = {NAN};
+
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincNxN = {NAN};
 
 // clang-format off
 const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointUnity = {
@@ -454,6 +460,8 @@ void AudioResult::DumpFreqRespValues() {
   DumpFreqRespValueSet(AudioResult::FreqRespSincUp1.data(), "FreqRespSincUp1");
   DumpFreqRespValueSet(AudioResult::FreqRespSincUp2.data(), "FreqRespSincUp2");
   DumpFreqRespValueSet(AudioResult::FreqRespSincUp3.data(), "FreqRespSincUp3");
+
+  DumpFreqRespValueSet(AudioResult::FreqRespSincNxN.data(), "FreqRespSincNxN");
 }
 
 void AudioResult::DumpSinadValues() {
@@ -470,6 +478,8 @@ void AudioResult::DumpSinadValues() {
   DumpSinadValueSet(AudioResult::SinadSincUp1.data(), "SinadSincUp1");
   DumpSinadValueSet(AudioResult::SinadSincUp2.data(), "SinadSincUp2");
   DumpSinadValueSet(AudioResult::SinadSincUp3.data(), "SinadSincUp3");
+
+  DumpSinadValueSet(AudioResult::SinadSincNxN.data(), "SinadSincNxN");
 }
 
 void AudioResult::DumpPhaseValues() {
@@ -486,6 +496,8 @@ void AudioResult::DumpPhaseValues() {
   DumpPhaseValueSet(AudioResult::PhaseSincUp1.data(), "PhaseSincUp1");
   DumpPhaseValueSet(AudioResult::PhaseSincUp2.data(), "PhaseSincUp2");
   DumpPhaseValueSet(AudioResult::PhaseSincUp3.data(), "PhaseSincUp3");
+
+  DumpPhaseValueSet(AudioResult::PhaseSincNxN.data(), "PhaseSincNxN");
 }
 
 // Display a single frequency response results array, for import and processing.
