@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/pci.h>
@@ -93,6 +94,195 @@ TEST_F(FakePciProtocolTests, GetDeviceInfo) {
   ASSERT_EQ(expected.sub_class, val8);
   ASSERT_OK(pci().ConfigRead8(PCI_CFG_CLASS_CODE_INTR, &val8));
   ASSERT_EQ(expected.program_interface, val8);
+}
+
+TEST_F(FakePciProtocolTests, QueryIrqMode) {
+  uint32_t irq_cnt = 0;
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &irq_cnt));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
+
+  fake_pci().AddLegacyInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &irq_cnt));
+  ASSERT_EQ(1, irq_cnt);
+
+  // MSI supports interrupt configuration via powers of two, so ensure that we
+  // round down if not enough have been added.
+  fake_pci().AddMsiInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
+  ASSERT_EQ(1, irq_cnt);
+  fake_pci().AddMsiInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
+  ASSERT_EQ(2, irq_cnt);
+  fake_pci().AddMsiInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
+  ASSERT_EQ(2, irq_cnt);
+  fake_pci().AddMsiInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
+  ASSERT_EQ(4, irq_cnt);
+
+  // MSI-X doesn't care about alignment, so any value should work.
+  fake_pci().AddMsixInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
+  ASSERT_EQ(1, irq_cnt);
+  fake_pci().AddMsixInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
+  ASSERT_EQ(2, irq_cnt);
+  fake_pci().AddMsixInterrupt();
+  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
+  ASSERT_EQ(3, irq_cnt);
+}
+
+TEST_F(FakePciProtocolTests, SetIrqMode) {
+  fake_pci().AddLegacyInterrupt();
+  fake_pci().AddMsiInterrupt();
+  fake_pci().AddMsiInterrupt();
+  fake_pci().AddMsiInterrupt();
+  fake_pci().AddMsiInterrupt();
+  fake_pci().AddMsixInterrupt();
+  fake_pci().AddMsixInterrupt();
+
+  pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
+  ASSERT_OK(pci().SetIrqMode(mode, 1));
+  ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetIrqMode(mode, 2));
+
+  mode = PCI_IRQ_MODE_MSI;
+  ASSERT_OK(pci().SetIrqMode(mode, 1));
+  ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+
+  ASSERT_OK(pci().SetIrqMode(mode, 2));
+  ASSERT_EQ(2, fake_pci().GetIrqCount());
+  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetIrqMode(mode, 3));
+  ASSERT_EQ(2, fake_pci().GetIrqCount());
+  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+
+  ASSERT_OK(pci().SetIrqMode(mode, 4));
+  ASSERT_EQ(4, fake_pci().GetIrqCount());
+  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+}
+
+TEST_F(FakePciProtocolTests, ConfigureIrqMode) {
+  // The intent is to check that the IRQ modes are always favored in order of
+  // MSI-X > MSI > Legacy, but also choosing based on how many interrupts each
+  // mode is configured to provide.
+  fake_pci().AddLegacyInterrupt();
+  ASSERT_OK(pci().ConfigureIrqMode(1));
+  ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_LEGACY, fake_pci().GetIrqMode());
+
+  fake_pci().AddMsiInterrupt();
+  ASSERT_OK(pci().ConfigureIrqMode(1));
+  ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI, fake_pci().GetIrqMode());
+
+  fake_pci().AddMsixInterrupt();
+  ASSERT_OK(pci().ConfigureIrqMode(1));
+  ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, fake_pci().GetIrqMode());
+
+  // Ensure it will find the mode that supports the number necessary.
+  fake_pci().AddMsiInterrupt();
+  ASSERT_OK(pci().ConfigureIrqMode(2));
+  ASSERT_EQ(2, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI, fake_pci().GetIrqMode());
+
+  fake_pci().AddMsixInterrupt();
+  ASSERT_OK(pci().ConfigureIrqMode(2));
+  ASSERT_EQ(2, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, fake_pci().GetIrqMode());
+}
+
+namespace {
+// When interrupts are added to the fake a borrowed copy of the interrupt is
+// returned for comparison by tests later. Its koid should match the koid of the
+// duplicated handle returned by MapInterrupt.
+template <typename T>
+bool MatchKoids(const zx::unowned<T>& first, const zx::object<T>& second) {
+  zx_info_handle_basic finfo{}, sinfo{};
+  ZX_ASSERT(first->get_info(ZX_INFO_HANDLE_BASIC, &finfo, sizeof(finfo), nullptr, nullptr) ==
+            ZX_OK);
+  ZX_ASSERT(second.get_info(ZX_INFO_HANDLE_BASIC, &sinfo, sizeof(sinfo), nullptr, nullptr) ==
+            ZX_OK);
+
+  return finfo.koid == sinfo.koid;
+}
+}  // namespace
+
+TEST_F(FakePciProtocolTests, MapInterrupt) {
+  // One notable difference between this fake and the real PCI protocol is that
+  // it is an error to call SetIrqMode and switch modes if an existing MSI is
+  // mapped still. In the fake though, it's fine to do so. Switching IRQ modes
+  // is not something drivers do in practice, so it's fine if they encounter
+  // ZX_ERR_BAD_STATE at runtime if documentation details it.
+  zx::unowned_interrupt legacy = fake_pci().AddLegacyInterrupt();
+  zx::unowned_interrupt msi0 = fake_pci().AddMsiInterrupt();
+  zx::unowned_interrupt msi1 = fake_pci().AddMsiInterrupt();
+  zx::unowned_interrupt msix0 = fake_pci().AddMsixInterrupt();
+  zx::unowned_interrupt msix1 = fake_pci().AddMsixInterrupt();
+  zx::unowned_interrupt msix2 = fake_pci().AddMsixInterrupt();
+
+  zx::interrupt interrupt{};
+  uint32_t irq_cnt = 1;
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, irq_cnt));
+  ASSERT_OK(pci().MapInterrupt(0, &interrupt));
+  ASSERT_TRUE(MatchKoids(legacy, interrupt));
+  ASSERT_FALSE(MatchKoids(msi0, interrupt));
+  ASSERT_FALSE(MatchKoids(msi1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix0, interrupt));
+  ASSERT_FALSE(MatchKoids(msix1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix2, interrupt));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
+
+  irq_cnt = 2;
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, irq_cnt));
+  ASSERT_OK(pci().MapInterrupt(0, &interrupt));
+  ASSERT_FALSE(MatchKoids(legacy, interrupt));
+  ASSERT_TRUE(MatchKoids(msi0, interrupt));
+  ASSERT_FALSE(MatchKoids(msi1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix0, interrupt));
+  ASSERT_FALSE(MatchKoids(msix1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix2, interrupt));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
+
+  ASSERT_OK(pci().MapInterrupt(1, &interrupt));
+  ASSERT_FALSE(MatchKoids(legacy, interrupt));
+  ASSERT_FALSE(MatchKoids(msi0, interrupt));
+  ASSERT_TRUE(MatchKoids(msi1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix0, interrupt));
+  ASSERT_FALSE(MatchKoids(msix1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix2, interrupt));
+
+  irq_cnt = 3;
+  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
+  ASSERT_OK(pci().MapInterrupt(0, &interrupt));
+  ASSERT_FALSE(MatchKoids(legacy, interrupt));
+  ASSERT_FALSE(MatchKoids(msi0, interrupt));
+  ASSERT_FALSE(MatchKoids(msi1, interrupt));
+  ASSERT_TRUE(MatchKoids(msix0, interrupt));
+  ASSERT_FALSE(MatchKoids(msix1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix2, interrupt));
+
+  ASSERT_OK(pci().MapInterrupt(1, &interrupt));
+  ASSERT_FALSE(MatchKoids(legacy, interrupt));
+  ASSERT_FALSE(MatchKoids(msi0, interrupt));
+  ASSERT_FALSE(MatchKoids(msi1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix0, interrupt));
+  ASSERT_TRUE(MatchKoids(msix1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix2, interrupt));
+
+  ASSERT_OK(pci().MapInterrupt(2, &interrupt));
+  ASSERT_FALSE(MatchKoids(legacy, interrupt));
+  ASSERT_FALSE(MatchKoids(msi0, interrupt));
+  ASSERT_FALSE(MatchKoids(msi1, interrupt));
+  ASSERT_FALSE(MatchKoids(msix0, interrupt));
+  ASSERT_FALSE(MatchKoids(msix1, interrupt));
+  ASSERT_TRUE(MatchKoids(msix2, interrupt));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
 }
 
 TEST_F(FakePciProtocolTests, ConfigRW) {
