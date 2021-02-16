@@ -105,7 +105,7 @@ To perform an initial build and deploy of Fuchsia with `fx`, do the following:
 1.  On your target device, run:
 
     ```posix-terminal
-    install-disk-image init-partition-tables --block_device_path <BLOCK_DEVICE_PATH>
+    install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>
     ```
 
 1.  To start the bootserver, from your host, run:
