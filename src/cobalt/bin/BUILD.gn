@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fuzzing/fuzzer.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
-import("//third_party/protobuf/proto_library.gni")
 
 group("tests") {
   testonly = true
@@ -20,81 +18,75 @@ group("tests") {
   ]
 }
 
-test_package("cobalt_tests") {
+fuchsia_unittest_component("cobalt_app_unittests") {
+  manifest = "meta/cobalt_app_unittests.cmx"
+  deps = [ "app:cobalt_app_unittests" ]
+}
+
+fuchsia_unittest_component("cobalt_system_metrics_unittests") {
+  manifest = "meta/cobalt_system_metrics_unittests.cmx"
+  deps = [ "system-metrics:cobalt_system_metrics_unittests" ]
+}
+
+fuchsia_unittest_component("cobalt_utils_unittests") {
+  deps = [ "utils:cobalt_utils_unittests" ]
+}
+
+fuchsia_component("cobalt_testapp_no_network") {
+  testonly = true
+  manifest = "meta/cobalt_testapp_no_network.cmx"
+  deps = [ "testapp:cobalt_testapp" ]
+}
+
+resource("testapp_metrics_registry") {
+  sources = [ rebase_path(
+          get_label_info("app:testapp_metrics_registry", "target_gen_dir") +
+          "/testapp_metrics_registry.pb") ]
+  outputs = [ "data/testapp_metrics_registry.pb" ]
+}
+resource("log_stats_component_allowlist") {
+  sources = [ rebase_path("system-metrics/log_stats_component_allowlist.txt") ]
+  outputs = [ "data/log_stats_component_allowlist.txt" ]
+}
+resource("default_granular_error_stats_specs") {
+  sources = [ rebase_path("system-metrics/granular_error_stats_specs.txt") ]
+  outputs = [ "data/default_granular_error_stats_specs.txt" ]
+}
+resource("alternate_granular_error_stats_specs") {
+  sources = [ rebase_path(
+          "system-metrics/testing/alternate_granular_error_stats_specs_for_testing.txt") ]
+  outputs = [ "data/alternate_granular_error_stats_specs.txt" ]
+}
+resource("bad_granular_error_stats_specs") {
+  sources = [ rebase_path(
+          "system-metrics/testing/bad_granular_error_stats_specs_for_testing.txt") ]
+  outputs = [ "data/bad_granular_error_stats_specs.txt" ]
+}
+
+fuchsia_test_package("cobalt_tests") {
+  test_components = [
+    ":cobalt_app_unittests",
+    ":cobalt_system_metrics_unittests",
+    ":cobalt_utils_unittests",
+    ":cobalt_testapp_no_network",
+  ]
   deps = [
-    "app:app",
-    "app:cobalt_app_unittests",
+    ":alternate_granular_error_stats_specs",
+    ":bad_granular_error_stats_specs",
+    ":default_granular_error_stats_specs",
+    ":log_stats_component_allowlist",
+    ":testapp_metrics_registry",
+    "app:analyzer_devel_public",
+    "app:component",
     "app:global_metrics_registry",
+    "app:shuffler_devel_public",
     "app:testapp_metrics_registry",
-    "system-metrics:cobalt_system_metrics_unittests",
-    "testapp:testapp",
-    "utils:cobalt_utils_unittests",
   ]
-
-  tests = [
-    {
-      name = "cobalt_app_unittests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "cobalt_system_metrics_unittests"
-    },
-
-    {
-      name = "cobalt_utils_unittests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-
-    {
-      name = "cobalt_testapp"
-      dest = "cobalt_testapp_no_network"
-    },
-  ]
-
-  resources = [
-    {
-      # Cobalt 1.0 analyzer public key for devel environment.
-      path = rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key")
-      dest = "keys/analyzer_devel_public"
-    },
-    {
-      # Cobalt 1.0 shuffler public key for devel environment.
-      path = rebase_path("//third_party/cobalt/keys/shuffler_public.cobalt_key")
-      dest = "keys/shuffler_devel_public"
-    },
-    {
-      path = rebase_path(
-              get_label_info("app:testapp_metrics_registry", "target_gen_dir") +
-              "/testapp_metrics_registry.pb")
-      dest = "testapp_metrics_registry.pb"
-    },
-    {
-      path = rebase_path("system-metrics/log_stats_component_allowlist.txt")
-      dest = "log_stats_component_allowlist.txt"
-    },
-    {
-      path = rebase_path("system-metrics/granular_error_stats_specs.txt")
-      dest = "default_granular_error_stats_specs.txt"
-    },
-    {
-      path = rebase_path(
-              "system-metrics/testing/alternate_granular_error_stats_specs_for_testing.txt")
-      dest = "alternate_granular_error_stats_specs.txt"
-    },
-    {
-      path = rebase_path(
-              "system-metrics/testing/bad_granular_error_stats_specs_for_testing.txt")
-      dest = "bad_granular_error_stats_specs.txt"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_component("cobalt-testapp") {
@@ -111,43 +103,36 @@ fuchsia_test_package("cobalt-manual-tests") {
   }
 }
 
-test_package("cobalt_tests_do_not_run_manually") {
+fuchsia_component("cobalt_testapp_for_prober_do_not_run_manually") {
+  testonly = true
+  manifest = "meta/cobalt_testapp_for_prober_do_not_run_manually.cmx"
   deps = [ "testapp:cobalt_testapp" ]
+}
 
-  binaries = [
-    # Referred to by cobalt_testapp_for_prober_do_not_run_manually.cmx
-    {
-      name = "cobalt_testapp"
-    },
-  ]
-
-  tests = [
-    {
-      name =
-          rebase_path("meta/cobalt_testapp_for_prober_do_not_run_manually.cmx")
-      dest = "cobalt_testapp_for_prober_do_not_run_manually"
-
-      # We don't want to run this version of cobalt_testapp in the Fuchsia
-      # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
-      # instead. This version is run in the Cobalt Prober.
-      # It should not be run outside of CI, since it populates a test pipeline
-      # whose output is inspected.
-      environments = [
-        {
-          dimensions = {
-            device_type = "Astro"
-          }
-          tags = [ "cobalt-prober" ]
-        },
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-          tags = [ "cobalt-prober" ]
-        },
-      ]
-    },
-  ]
+fuchsia_test_package("cobalt_tests_do_not_run_manually") {
+  test_components = [ ":cobalt_testapp_for_prober_do_not_run_manually" ]
+  deps = [ "app:component" ]
+  test_specs = {
+    # We don't want to run this version of cobalt_testapp in the Fuchsia
+    # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
+    # instead. This version is run in the Cobalt Prober.
+    # It should not be run outside of CI, since it populates a test pipeline
+    # whose output is inspected.
+    environments = [
+      {
+        dimensions = {
+          device_type = "Astro"
+        }
+        tags = [ "cobalt-prober" ]
+      },
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "cobalt-prober" ]
+      },
+    ]
+  }
 }
 
 fuzzers_package("cobalt_fuzzers") {

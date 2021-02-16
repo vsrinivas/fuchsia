@@ -6,7 +6,7 @@
         "args": [
             "--no_network_for_testing"
         ],
-        "binary": "test/cobalt_testapp_no_network"
+        "binary": "bin/cobalt_testapp"
     },
     "sandbox": {
         "services": [
