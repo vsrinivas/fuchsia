@@ -9,6 +9,9 @@
   <string name="role_progressbar">Barre de progression</string>
   <string name="role_slider">Curseur</string>
   <string name="role_tab">Onglet</string>
+  <string name="role_toggleswitch">Bouton d\'activation</string>
+  <string name="element_toggled_on">Bouton activé</string>
+  <string name="element_toggled_off">Bouton désactivé</string>
   <string name="role_radiobutton">Case d\'option</string>
   <string name="radio_button_selected">{name}, case d\'option sélectionnée</string>
   <string name="radio_button_unselected">{name}, case d\'option non sélectionnée</string>

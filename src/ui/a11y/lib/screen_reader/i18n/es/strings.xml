@@ -9,6 +9,9 @@
   <string name="role_progressbar">Barra de progreso</string>
   <string name="role_slider">Control deslizante</string>
   <string name="role_tab">Pestaña</string>
+  <string name="role_toggleswitch">Interruptor</string>
+  <string name="element_toggled_on">Interruptor activado</string>
+  <string name="element_toggled_off">Interruptor desactivado</string>
   <string name="role_radiobutton">Botón de selección</string>
   <string name="radio_button_selected">{name}, botón seleccionado</string>
   <string name="radio_button_unselected">{name}, botón deseleccionado</string>

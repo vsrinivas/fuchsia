@@ -9,6 +9,9 @@
   <string name="role_progressbar">Statuslinje</string>
   <string name="role_slider">Skyder</string>
   <string name="role_tab">Fane</string>
+  <string name="role_toggleswitch">Kontakt</string>
+  <string name="element_toggled_on">Kontakten er slået til</string>
+  <string name="element_toggled_off">Kontakten er slået fra</string>
   <string name="role_radiobutton">Alternativknap</string>
   <string name="radio_button_selected">Alternativknappen {name} er valgt</string>
   <string name="radio_button_unselected">Alternativknappen {name} er ikke valgt</string>

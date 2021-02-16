@@ -9,6 +9,9 @@
   <string name="role_progressbar">진행률 표시줄</string>
   <string name="role_slider">슬라이더</string>
   <string name="role_tab">탭</string>
+  <string name="role_toggleswitch">전환 스위치</string>
+  <string name="element_toggled_on">스위치 켜짐</string>
+  <string name="element_toggled_off">스위치 꺼짐</string>
   <string name="role_radiobutton">라디오 버튼</string>
   <string name="radio_button_selected">{name}, 버튼 선택됨</string>
   <string name="radio_button_unselected">{name}, 라디오 버튼 선택 해제됨</string>
