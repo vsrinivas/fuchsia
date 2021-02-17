@@ -665,7 +665,6 @@ config("Wno-conversion") {
     "//src/cobalt/bin/system-metrics/*",
     "//src/cobalt/bin/testapp/*",
     "//src/cobalt/bin/testing/*",
-    "//src/connectivity/bluetooth/core/bt-host/*",
     "//src/connectivity/bluetooth/examples/bt-le-heart-rate-peripheral/*",
     "//src/connectivity/bluetooth/hci/transport/uart/*",
     "//src/connectivity/bluetooth/hci/vendor/broadcom/*",
