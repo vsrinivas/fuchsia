@@ -22,7 +22,8 @@ run:
 $ sudo ip tuntap add dev qemu mode tap user $USER
 $ sudo ip link set qemu up";
 static SUCCESS_MESSAGE_LINUX: &str = "Found tuntap device named 'qemu' for current user";
-static SUCCESS_MESSAGE_MACOS: &str = "MacOS provides networking for the Fuchsia emulator natively";
+static SUCCESS_MESSAGE_MACOS: &str =
+    "MacOS supports Fuchsia emulator networking requirements out of the box";
 
 lazy_static! {
     // Regex to match the output of `ip tuntap list` looking for a tuntap named "qemu".
