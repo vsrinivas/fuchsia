@@ -115,20 +115,6 @@ out-of-band rejection and dynamic range, the additional digit would be "floored"
 -19.3948736 would be saved as -19.394874, also slightly less tight).
 
 
-## Performance Profiling
-
-The audio_fidelity_tests test binary also contains the ability to profile the performance of the Mixer,
-Gain and OutputProducer classes. Use the __--profile__ flag to trigger these micro-benchmark tests,
-which use *zx::clock::get_monotonic()* to measure the time required for a target to execute Mix() or
-ProduceOutput() calls (for Mixer/Gain or OutputProducer objects, respectively) to generate 64k
-frames. The aggregated results that are displayed for each permutation of parameters represent the
-time consumed *per-call*, although to determine a relatively reliable Mean we run these
-micro-benchmarks many tens or even hundreds of times. As is often the case with performance
-profiling, one should be mindful not to directly compare results from different machines; generally
-this profiling functionality should be used to provide a general sense of "before versus after" with
-regards to a specific change that affects the mixer pipeline.
-
-
 ## Issues
 
 Each Jira issue below represents a system behavior encountered during the creation of these tests.

@@ -8,19 +8,22 @@ group("test") {
   deps = [ ":audio_fidelity_tests" ]
 }
 
-executable("test_bin") {
+source_set("frequency_set") {
+  sources = [
+    "frequency_set.cc",
+    "frequency_set.h",
+  ]
+}
+
+executable("fidelity_test_bin") {
   visibility = [ ":*" ]
   testonly = true
   output_name = "audio_fidelity_tests"
 
   sources = [
-    "audio_performance.cc",
-    "audio_performance.h",
     "audio_result.cc",
     "audio_result.h",
-    "frequency_set.cc",
-    "frequency_set.h",
-    "main.cc",
+    "fidelity_main.cc",
     "mixer_bitwise_tests.cc",
     "mixer_gain_tests.cc",
     "mixer_position_tests.cc",
@@ -33,6 +36,7 @@ executable("test_bin") {
   ]
 
   deps = [
+    ":frequency_set",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/audio_core/mixer",
@@ -47,7 +51,7 @@ executable("test_bin") {
 }
 
 test_package("audio_fidelity_tests") {
-  deps = [ ":test_bin" ]
+  deps = [ ":fidelity_test_bin" ]
 
   tests = [
     {

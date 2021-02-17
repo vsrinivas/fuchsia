@@ -343,3 +343,8 @@ group("tests") {
     "//src/media/audio/audio_core",
   ]
 }
+
+group("tools") {
+  testonly = true
+  deps = [ "mixer:tools" ]
+}

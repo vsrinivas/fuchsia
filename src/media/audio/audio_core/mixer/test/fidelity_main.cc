@@ -7,7 +7,6 @@
 #include "lib/syslog/cpp/log_settings.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "src/media/audio/audio_core/mixer/test/audio_performance.h"
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_recap.h"
@@ -21,15 +20,6 @@ int main(int argc, char** argv) {
   }
 
   syslog::SetTags({"audio_fidelity_tests"});
-
-  // --profile  Profile the performance of Mixer creation, Mix() and ProduceOutput() across numerous
-  //            configurations, and don't do further testing.
-  //
-  bool do_performance_profiling = command_line.HasOption("profile");
-  if (do_performance_profiling) {
-    media::audio::test::AudioPerformance::Profile();
-    return 0;
-  }
 
   // --full  Measure across the full frequency spectrum; display full results in tabular format.
   // --recap Display summary fidelity results.

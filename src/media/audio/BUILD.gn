@@ -8,12 +8,12 @@ group("audio") {
   testonly = true
   deps = [
     ":tests",
+    ":tools",
     "audio_core",
     "bundles:virtual_audio_service_with_config",
     "drivers",
     "examples",
     "lib",
-    "tools",
     "vim2_media_config",
   ]
 }
@@ -61,5 +61,13 @@ group("tests") {
     "lib/audio_test_devmgr",
     "tools:tests",
     "//src/power/testing/thermal-test-control",
+  ]
+}
+
+group("tools") {
+  testonly = true
+  deps = [
+    "audio_core:tools",
+    "tools",
   ]
 }

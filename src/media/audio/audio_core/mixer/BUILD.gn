@@ -114,3 +114,8 @@ executable("unittest_bin") {
     "//zircon/public/lib/fbl",
   ]
 }
+
+group("tools") {
+  testonly = true
+  deps = [ "tools" ]
+}

@@ -1,19 +1,18 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/test/audio_performance.h"
+#include "src/media/audio/audio_core/mixer/tools/audio_performance.h"
 
 #include <lib/zx/clock.h>
 
 #include <string>
 
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
-#include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/traits.h"
 
-namespace media::audio::test {
+namespace media::audio::tools {
 
 float to_frac_usecs(zx::duration duration) {
   return static_cast<double>(duration.to_nsecs()) / 1000.0;
@@ -23,13 +22,82 @@ float to_frac_usecs(zx::duration duration) {
 using Resampler = ::media::audio::Mixer::Resampler;
 using ASF = fuchsia::media::AudioSampleFormat;
 
-// For the given resampler, measure elapsed time over a number of mix jobs.
-void AudioPerformance::Profile() {
+const uint32_t AudioPerformance::kProfilerBufferSize = ::media::audio::test::kFreqTestBufSize;
+const uint32_t AudioPerformance::kProfilerFrequency = ::media::audio::test::FrequencySet::
+    kReferenceFreqs[::media::audio::test::FrequencySet::kRefFreqIdx];
+
+BenchmarkType AudioPerformance::benchmark_type_ = BenchmarkType::All;
+
+//
+// Subtest utility functions -- used by test functions; can ASSERT on their own.
+//
+// Find a suitable mixer for the provided format, channels and frame rates.
+// In testing, we choose ratio-of-frame-rates and source_channels carefully, to
+// trigger the selection of a specific mixer. Note: Mixers convert audio into
+// our accumulation format (not the destination format), so we need not specify
+// a dest_format. Actual frame rate values are unimportant, but inter-rate RATIO
+// is VERY important: required SRC is the primary factor in Mix selection.
+std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_format,
+                                   uint32_t source_channels, uint32_t source_frame_rate,
+                                   uint32_t dest_channels, uint32_t dest_frame_rate,
+                                   Resampler resampler) {
+  if (resampler == Resampler::Default) {
+    FX_LOGS(FATAL) << "Profiler should specify the Resampler exactly";
+    return nullptr;
+  }
+
+  fuchsia::media::AudioStreamType source_details;
+  source_details.sample_format = source_format;
+  source_details.channels = source_channels;
+  source_details.frames_per_second = source_frame_rate;
+
+  fuchsia::media::AudioStreamType dest_details;
+  dest_details.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
+  dest_details.channels = dest_channels;
+  dest_details.frames_per_second = dest_frame_rate;
+
+  return Mixer::Select(source_details, dest_details, resampler);
+}
+
+// Just as Mixers convert audio into our accumulation format, OutputProducer objects exist to
+// format-convert audio frames during the copy from accumulator to destination. They perform no
+// rate-conversion, gain scaling or rechannelization, so frames_per_second is unreferenced.
+// Num_channels and sample_format are used, to calculate the size of a (multi-channel) audio frame.
+std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,
+                                                     uint32_t num_channels) {
+  fuchsia::media::AudioStreamType dest_details;
+  dest_details.sample_format = dest_format;
+  dest_details.channels = num_channels;
+  dest_details.frames_per_second = 48000;  // unreferenced - see comment above.
+
+  return OutputProducer::Select(dest_details);
+}
+
+// Measure elapsed time over certain mixer-related operations.
+int AudioPerformance::Profile() {
   printf("\n\n Performance Profiling\n\n");
 
-  AudioPerformance::ProfileMixerCreation();
-  AudioPerformance::ProfileMixing();
-  AudioPerformance::ProfileOutputProducers();
+  switch (benchmark_type_) {
+    case BenchmarkType::CreationOnly:
+      AudioPerformance::ProfileMixerCreation();
+      break;
+
+    case BenchmarkType::MixingOnly:
+      AudioPerformance::ProfileMixing();
+      break;
+
+    case BenchmarkType::OutputOnly:
+      AudioPerformance::ProfileOutputProducers();
+      break;
+
+    case BenchmarkType::All:
+      AudioPerformance::ProfileMixerCreation();
+      AudioPerformance::ProfileMixing();
+      AudioPerformance::ProfileOutputProducers();
+      break;
+  }
+
+  return 0;
 }
 
 void AudioPerformance::ProfileMixerCreation() {
@@ -43,8 +111,8 @@ void AudioPerformance::ProfileMixerCreation() {
 
   DisplayMixerCreationColumnHeader();
 
-  printf("   Total time to profile Mixer creation: %lu ms\n   --------\n\n",
-         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+  printf("   Total time to profile Mixer creation (%u iterations): %lu ms\n   --------\n\n",
+         kNumMixerCreationRuns, (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 void AudioPerformance::DisplayMixerCreationLegend() {
@@ -56,7 +124,7 @@ void AudioPerformance::DisplayMixerCreationLegend() {
       "\t     I: Input channels (one-digit number)\n"
       "\t     O: Output channels (one-digit number)\n"
       "\t sssss: Source sample rate\n"
-      "\t ddddd: Destination sample rate\n\n");
+      "\t ddddd: Destination sample rate\n");
 }
 
 void AudioPerformance::DisplayMixerCreationColumnHeader() {
@@ -160,7 +228,7 @@ void AudioPerformance::ProfileMixerCreationTypeChanRateFormat(
       sampler_ch = 'W';
       break;
     case Resampler::Default:
-      FX_LOGS(ERROR) << "Test should specify the Resampler exactly";
+      FX_LOGS(FATAL) << "Profiler should specify the Resampler exactly";
       return;
   }
 
@@ -174,7 +242,7 @@ void AudioPerformance::ProfileMixerCreationTypeChanRateFormat(
   } else if (sample_format == ASF::FLOAT) {
     format = "F32";
   } else {
-    ASSERT_TRUE(false) << "Unknown mix sample format for testing";
+    FX_LOGS(FATAL) << "Unknown sample format for creation profiling";
     return;
   }
 
@@ -199,12 +267,12 @@ void AudioPerformance::ProfileMixing() {
 
   DisplayMixerColumnHeader();
 
-  printf("   Total time to profile Mixing: %lu ms\n   --------\n\n",
-         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+  printf("   Total time to profile Mixing (%u iterations): %lu ms\n   --------\n\n",
+         kNumMixerProfilerRuns, (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 void AudioPerformance::DisplayMixerConfigLegend() {
-  printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n", kFreqTestBufSize);
+  printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n", kProfilerBufferSize);
   printf(
       "\n   For mixer configuration R-fff.IOGAnnnnn, where:\n"
       "\t     R: Resampler type - [P]oint, [W]indowed Sinc\n"
@@ -213,11 +281,11 @@ void AudioPerformance::DisplayMixerConfigLegend() {
       "\t     O: Output channels (one-digit number)\n"
       "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amping\n"
       "\t     A: Accumulate - [-] no or [+] yes\n"
-      "\t nnnnn: Sample rate (five-digit number)\n\n");
+      "\t nnnnn: Sample rate (five-digit number)\n");
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
-  printf("Configuration   \t     Mean\t    First\t     Best\t    Worst\n");
+  printf("\nConfiguration   \t     Mean\t    First\t     Best\t    Worst\n");
 }
 
 // Profile the samplers in various input and output channel configurations
@@ -242,7 +310,11 @@ void AudioPerformance::ProfileSamplerIn(uint32_t num_input_chans, Resampler samp
 void AudioPerformance::ProfileSamplerChans(uint32_t num_input_chans, uint32_t num_output_chans,
                                            Resampler sampler_type) {
   ProfileSamplerChansRate(num_input_chans, num_output_chans, sampler_type, 48000);
-  ProfileSamplerChansRate(num_input_chans, num_output_chans, sampler_type, 44100);
+
+  if (sampler_type != Resampler::SampleAndHold) {
+    ProfileSamplerChansRate(num_input_chans, num_output_chans, sampler_type, 44100);
+    ProfileSamplerChansRate(num_input_chans, num_output_chans, sampler_type, 192000);
+  }
 }
 
 // Profile the samplers with gains of: Mute, Unity, Scaling (non-mute non-unity)
@@ -310,7 +382,7 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
     amplitude = 1.0;
     format = "F32";
   } else {
-    ASSERT_TRUE(false) << "Unknown mix sample format for testing";
+    FX_LOGS(FATAL) << "Unknown sample format for mix profiling";
     return;
   }
 
@@ -322,16 +394,13 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
   }
 
   auto source_format = Format::Create<SampleFormat>(num_input_chans, source_rate).take_value();
-  uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
-  uint32_t source_frames = source_buffer_size;
+  uint32_t source_frame_count = kProfilerBufferSize * source_rate / dest_rate;
 
   auto source =
-      GenerateCosineAudio(source_format, source_frames,
-                          FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx], amplitude);
+      GenerateCosineAudio(source_format, source_frame_count, kProfilerFrequency, amplitude);
 
-  auto accum = std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
-  uint32_t frac_source_frames = source_frames * Mixer::FRAC_ONE;
-  int32_t frac_source_offset;
+  auto accum = std::make_unique<float[]>(kProfilerBufferSize * num_output_chans);
+  uint32_t frac_source_frames = source_frame_count * Mixer::FRAC_ONE;
   uint32_t dest_offset, previous_dest_offset;
 
   auto& info = mixer->bookkeeping();
@@ -368,7 +437,6 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
   }
 
   info.gain.SetDestGain(Gain::kUnityGainDb);
-  auto width = mixer->pos_filter_width().raw_value();
 
   zx::duration first, worst, best, total_elapsed{0};
 
@@ -384,17 +452,18 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
     auto start_time = zx::clock::get_monotonic();
 
     dest_offset = 0;
-    frac_source_offset = 0;
+    int32_t frac_source_offset = 0;
     info.source_pos_modulo = 0;
 
-    while (dest_offset < kFreqTestBufSize) {
+    while (dest_offset < kProfilerBufferSize) {
       previous_dest_offset = dest_offset;
-      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, &source.samples()[0],
-                 frac_source_frames, &frac_source_offset, accumulate);
+      bool buffer_done =
+          mixer->Mix(accum.get(), kProfilerBufferSize, &dest_offset, &source.samples()[0],
+                     frac_source_frames, &frac_source_offset, accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
       info.gain.Advance(dest_offset - previous_dest_offset, TimelineRate(source_rate, ZX_SEC(1)));
-      if (frac_source_offset + width >= frac_source_frames) {
+      if (buffer_done) {
         frac_source_offset -= frac_source_frames;
       }
     }
@@ -421,7 +490,7 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
       sampler_ch = 'W';
       break;
     case Resampler::Default:
-      FX_LOGS(ERROR) << "Test should specify the Resampler exactly";
+      FX_LOGS(FATAL) << "Profiler should specify the Resampler exactly";
       return;
   }
 
@@ -446,21 +515,21 @@ void AudioPerformance::ProfileOutputProducers() {
 
   DisplayOutputColumnHeader();
 
-  printf("   Total time to profile OutputProducers: %lu ms\n   --------\n\n",
-         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+  printf("   Total time to profile OutputProducers (%u iterations): %lu ms\n   --------\n\n",
+         kNumOutputProfilerRuns, (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 void AudioPerformance::DisplayOutputConfigLegend() {
-  printf("\n   Elapsed time in microsec to ProduceOutput() %u frames\n", kFreqTestBufSize);
+  printf("\n   Elapsed time in microsec to ProduceOutput() %u frames\n", kProfilerBufferSize);
   printf(
       "\n   For output configuration FFF-Rn, where:\n"
       "\t   FFF: Format of output data - Un8, I16, I24, F32\n"
       "\t     R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal\n"
-      "\t     n: Number of output channels (one-digit number)\n\n");
+      "\t     n: Number of output channels (one-digit number)\n");
 }
 
 void AudioPerformance::DisplayOutputColumnHeader() {
-  printf("Config\t    Mean\t   First\t    Best\t   Worst\n");
+  printf("\nConfig\t    Mean\t   First\t    Best\t   Worst\n");
 }
 
 void AudioPerformance::ProfileOutputChans(uint32_t num_chans) {
@@ -490,7 +559,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   } else if constexpr (SampleFormat == ASF::FLOAT) {
     format = "F32";
   } else {
-    ASSERT_TRUE(false) << "Unknown output sample format for testing";
+    FX_LOGS(FATAL) << "Unknown output sample format for profiling";
     return;
   }
 
@@ -500,7 +569,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   }
 
   using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
-  uint32_t num_samples = kFreqTestBufSize * num_chans;
+  uint32_t num_samples = kProfilerBufferSize * num_chans;
   auto dest = std::make_unique<SampleT[]>(num_samples);
 
   auto accum_format = Format::Create<ASF::FLOAT>(num_chans, 48000 /* unused */).take_value();
@@ -509,22 +578,21 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   switch (data_range) {
     case OutputDataRange::Silence:
       range = 'S';
-      accum = GenerateSilentAudio(accum_format, kFreqTestBufSize);
+      accum = GenerateSilentAudio(accum_format, kProfilerBufferSize);
       break;
     case OutputDataRange::OutOfRange:
       range = 'O';
-      accum = AudioBuffer(accum_format, kFreqTestBufSize);
+      accum = AudioBuffer(accum_format, kProfilerBufferSize);
       for (size_t idx = 0; idx < num_samples; ++idx) {
         accum.samples()[idx] = (idx % 2 ? -1.5f : 1.5f);
       }
       break;
     case OutputDataRange::Normal:
       range = 'N';
-      accum = GenerateCosineAudio(accum_format, kFreqTestBufSize,
-                                  FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx]);
+      accum = GenerateCosineAudio(accum_format, kProfilerBufferSize, kProfilerFrequency);
       break;
     default:
-      ASSERT_TRUE(false) << "Unknown output sample format for testing";
+      FX_LOGS(FATAL) << "Unknown output data range for profiling";
       return;
   }
 
@@ -534,7 +602,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       auto start_time = zx::clock::get_monotonic();
 
-      output_producer->FillWithSilence(dest.get(), kFreqTestBufSize);
+      output_producer->FillWithSilence(dest.get(), kProfilerBufferSize);
       auto elapsed = zx::clock::get_monotonic() - start_time;
 
       if (i > 0) {
@@ -551,7 +619,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       auto start_time = zx::clock::get_monotonic();
 
-      output_producer->ProduceOutput(&accum.samples()[0], dest.get(), kFreqTestBufSize);
+      output_producer->ProduceOutput(&accum.samples()[0], dest.get(), kProfilerBufferSize);
       auto elapsed = zx::clock::get_monotonic() - start_time;
 
       if (i > 0) {
@@ -571,4 +639,4 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
          to_frac_usecs(mean), to_frac_usecs(first), to_frac_usecs(best), to_frac_usecs(worst));
 }
 
-}  // namespace media::audio::test
+}  // namespace media::audio::tools
