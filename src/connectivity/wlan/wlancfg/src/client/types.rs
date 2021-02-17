@@ -18,6 +18,7 @@ pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
 pub type WlanChan = fidl_common::WlanChan;
+pub type Band = fidl_common::Band;
 pub type Bssid = [u8; 6];
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
 pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;

@@ -8,6 +8,7 @@ pub mod listener;
 pub mod logger;
 pub mod sme_conversion;
 pub mod state_machine;
+pub mod telemetry;
 
 #[cfg(test)]
 pub mod testing;
