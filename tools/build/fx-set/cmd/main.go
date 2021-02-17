@@ -164,6 +164,7 @@ type setArgs struct {
 	cachePackages    []string
 	hostLabels       []string
 	variants         []string
+	fuzzSanitizers   []string
 	gnArgs           []string
 }
 
@@ -208,6 +209,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	flagSet.StringSliceVar(&cmd.cachePackages, "with-cache", []string{}, "")
 	flagSet.StringSliceVar(&cmd.hostLabels, "with-host", []string{}, "")
 	flagSet.StringSliceVar(&cmd.variants, "variant", []string{}, "")
+	flagSet.StringSliceVar(&cmd.fuzzSanitizers, "fuzz-with", []string{}, "")
 	// Unlike StringSliceVar, StringArrayVar doesn't split flag values at
 	// commas. Commas are syntactically significant in GN, so they should be
 	// preserved rather than interpreting them as value separators.
@@ -285,6 +287,11 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 		optimize = fintpb.Static_RELEASE
 	}
 
+	variants := args.variants
+	for _, sanitizer := range args.fuzzSanitizers {
+		variants = append(variants, fuzzerVariants(sanitizer)...)
+	}
+
 	var (
 		// These variables eventually represent our final decisions of whether
 		// to use goma/ccache, since the logic is somewhat convoluted.
@@ -341,10 +348,20 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 		CachePackages:    args.cachePackages,
 		UniversePackages: args.universePackages,
 		HostLabels:       args.hostLabels,
-		Variants:         args.variants,
+		Variants:         variants,
 		GnArgs:           gnArgs,
 		UseGoma:          useGomaFinal,
 	}, nil
+}
+
+// fuzzerVariants produces the variants for enabling a sanitizer on fuzzers.
+func fuzzerVariants(sanitizer string) []string {
+	return []string{
+		fmt.Sprintf(`{variant="%s-fuzzer" target_type=["fuzzed_executable"]}`, sanitizer),
+		// TODO(fxbug.dev/38226): Fuzzers need a version of libfdio.so that is sanitized,
+		// but doesn't collect coverage data.
+		fmt.Sprintf(`{variant="%s" label=["//sdk/lib/fdio"]}`, sanitizer),
+	}
 }
 
 // findGNIFile returns the relative path to a board or product file in a

@@ -106,6 +106,15 @@ func TestParseArgsAndEnv(t *testing.T) {
 			},
 		},
 		{
+			name: "fuzz-with",
+			args: []string{"core.x64", "--fuzz-with", "asan,ubsan", "--fuzz-with", "kasan"},
+			expected: setArgs{
+				product:        "core",
+				board:          "x64",
+				fuzzSanitizers: []string{"asan", "ubsan", "kasan"},
+			},
+		},
+		{
 			name: "gn args",
 			args: []string{"core.x64", "--args", `foo=["bar", "baz"]`, "--args", "x=5"},
 			expected: setArgs{
@@ -300,6 +309,16 @@ func TestConstructStaticSpec(t *testing.T) {
 			runner: fakeSubprocessRunner{fail: true},
 			expected: &fintpb.Static{
 				UseGoma: false,
+			},
+		},
+		{
+			name: "fuzzer variants",
+			args: &setArgs{
+				fuzzSanitizers: []string{"asan", "ubsan"},
+			},
+			expected: &fintpb.Static{
+				UseGoma:  true,
+				Variants: append(fuzzerVariants("asan"), fuzzerVariants("ubsan")...),
 			},
 		},
 	}
