@@ -217,6 +217,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // during mount and once during unmount.
   zx_status_t UpdateFragmentationMetrics();
 
+  // Return true if streaming writes feature is enabled.
+  static bool StreamingWritesEnabled();
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.

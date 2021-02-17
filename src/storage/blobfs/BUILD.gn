@@ -11,6 +11,11 @@ declare_args() {
   # This will also increase the inspect VMO size for blobfs to 2 MiB,
   # to accommodate the large number of metrics entries.
   blobfs_page_in_metrics_recording = false
+
+  # Set this to true when configuring gn args to enable blobfs streaming writes.
+  # This is a compile time argument which allows us to conditionally enable blobfs streaming writes
+  # only on specific configurations.
+  blobfs_enable_streaming_writes = false
 }
 
 static_library("blobfs") {
@@ -192,6 +197,14 @@ static_library("blobfs") {
 
       # The page-in metrics feature requires a large Inspect VMO (>512KB) for blobfs.
       "BLOBFS_ENABLE_LARGE_INSPECT_VMO",
+    ]
+  }
+
+  if (blobfs_enable_streaming_writes) {
+    defines = [
+      # Enable blobfs streaming writes feature only when we are running on fuchsia and gn config
+      # asks us to enable.
+      "BLOBFS_ENABLE_STREAMING_WRITES",
     ]
   }
 

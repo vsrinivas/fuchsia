@@ -801,6 +801,14 @@ void Blobfs::Sync(SyncCallback cb) {
       }));
 }
 
+bool Blobfs::StreamingWritesEnabled() {
+#if defined(__Fuchsia__) && defined(BLOBFS_ENABLE_STREAMING_WRITES)
+  return true;
+#else
+  return false;
+#endif  // __Fuchsia__
+}
+
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
