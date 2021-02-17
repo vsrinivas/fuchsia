@@ -22,6 +22,17 @@
 
 #define LOCAL_TRACE 0
 
+#ifndef WAIT_QUEUE_DEPTH_TRACING_ENABLED
+#define WAIT_QUEUE_DEPTH_TRACING_ENABLED false
+#endif
+
+static inline void WqTraceDepth(const WaitQueueCollection* collection, uint32_t depth) {
+  if constexpr (WAIT_QUEUE_DEPTH_TRACING_ENABLED) {
+    ktrace_probe(TraceEnabled<true>{}, TraceContext::Cpu, "wq_depth"_stringref,
+                 reinterpret_cast<uint64_t>(collection), static_cast<uint64_t>(depth));
+  }
+}
+
 // add expensive code to do a full validation of the wait queue at various entry points
 // to this module.
 #define WAIT_QUEUE_VALIDATION (0 || (LK_DEBUGLEVEL > 2))
@@ -128,6 +139,7 @@ const Thread* WaitQueueCollection::Peek() const {
 void WaitQueueCollection::Insert(Thread* thread) {
   // Regardless of the state of the collection, the count goes up one.
   ++count_;
+  WqTraceDepth(this, count_);
 
   if (unlikely(!heads_.is_empty())) {
     const int pri = thread->scheduler_state().effective_priority();
@@ -154,6 +166,7 @@ void WaitQueueCollection::Insert(Thread* thread) {
 void WaitQueueCollection::Remove(Thread* thread) {
   // Either way, the count goes down one.
   --count_;
+  WqTraceDepth(this, count_);
 
   if (!thread->wait_queue_state().IsHead()) {
     // We're just in a queue, not a head.

@@ -302,6 +302,7 @@ if (is_kernel) {
     defines = [
       "SCHEDULER_TRACING_LEVEL=$scheduler_tracing_level",
       "SCHEDULER_QUEUE_TRACING_ENABLED=$scheduler_queue_tracing_enabled",
+      "WAIT_QUEUE_DEPTH_TRACING_ENABLED=$wait_queue_depth_tracing_enabled",
     ]
   }
 

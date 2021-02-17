@@ -47,6 +47,11 @@ declare_args() {
   # analysis.
   scheduler_queue_tracing_enabled = false
 
+  # Enables tracing of wait queue depths.  Used for post-processing analysis of
+  # how deep wait queues tend to be under various loads, as well as how
+  # frequently the change depth.
+  wait_queue_depth_tracing_enabled = false
+
   # The level of detail for traces emitted by the VM system. Values greater than
   # zero add increasing details at the cost of increased trace buffer use.
   #
