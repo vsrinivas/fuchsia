@@ -29,10 +29,10 @@ static_assert(PciFidl::BASE_CONFIG_SIZE == PCI_BASE_CONFIG_SIZE);
 void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
   fbl::AutoLock devices_lock(&devices_lock_);
   size_t dev_cnt = devices_.size();
-  fidl::BufferThenHeapAllocator<kAllocatorSize> alloc;
+  fidl::FidlAllocator<kAllocatorSize> allocator;
 
   size_t dev_idx = 0;
-  auto devices = alloc.make<PciFidl::Device[]>(dev_cnt);
+  fidl::VectorView<PciFidl::Device> devices(allocator, dev_cnt);
   for (auto& device : devices_) {
     auto& cfg = device.config();
     if (dev_idx >= PciFidl::MAX_DEVICES) {
@@ -44,13 +44,13 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     devices[dev_idx].device_id = cfg->bdf().device_id;
     devices[dev_idx].function_id = cfg->bdf().function_id;
 
-    auto config = alloc.make<uint8_t[]>(PCI_BASE_CONFIG_SIZE);
+    fidl::VectorView<uint8_t> config(allocator, PCI_BASE_CONFIG_SIZE);
     for (uint16_t cfg_idx = 0; cfg_idx < PCI_BASE_CONFIG_SIZE; cfg_idx++) {
       config[cfg_idx] = device.config()->Read(PciReg8(static_cast<uint8_t>(cfg_idx)));
     }
 
     size_t bar_cnt = device.bar_count();
-    auto bars = alloc.make<PciFidl::BaseAddress[]>(bar_cnt);
+    fidl::VectorView<PciFidl::BaseAddress> bars(allocator, bar_cnt);
     for (size_t i = 0; i < bar_cnt; i++) {
       auto info = device.GetBar(i);
       bars[i].is_memory = info.is_mmio;
@@ -62,7 +62,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     }
 
     size_t cap_cnt = device.capabilities().list.size_slow();
-    auto capabilities = alloc.make<PciFidl::Capability[]>(cap_cnt);
+    fidl::VectorView<PciFidl::Capability> capabilities(allocator, cap_cnt);
     size_t cap_idx = 0;
     for (auto& cap : device.capabilities().list) {
       if (cap_idx >= PciFidl::MAX_CAPABILITIES) {
@@ -76,7 +76,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     }
 
     size_t ext_cap_cnt = device.capabilities().ext_list.size_slow();
-    auto ext_capabilities = alloc.make<PciFidl::ExtendedCapability[]>(ext_cap_cnt);
+    fidl::VectorView<PciFidl::ExtendedCapability> ext_capabilities(allocator, ext_cap_cnt);
     size_t ext_cap_idx = 0;
     for (auto& cap : device.capabilities().ext_list) {
       if (ext_cap_idx >= PciFidl::MAX_EXT_CAPABILITIES) {
@@ -91,13 +91,13 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
       ext_cap_idx++;
     }
 
-    devices[dev_idx].base_addresses = fidl::VectorView(std::move(bars), bar_cnt);
-    devices[dev_idx].capabilities = fidl::VectorView(std::move(capabilities), cap_cnt);
-    devices[dev_idx].ext_capabilities = fidl::VectorView(std::move(ext_capabilities), ext_cap_cnt);
-    devices[dev_idx].config = fidl::VectorView(std::move(config), PciFidl::BASE_CONFIG_SIZE);
+    devices[dev_idx].base_addresses = std::move(bars);
+    devices[dev_idx].capabilities = std::move(capabilities);
+    devices[dev_idx].ext_capabilities = std::move(ext_capabilities);
+    devices[dev_idx].config = std::move(config);
     dev_idx++;
   }
-  completer.Reply(fidl::VectorView<PciFidl::Device>(std::move(devices), dev_cnt));
+  completer.Reply(std::move(devices));
 }
 
 void Bus::GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) {
