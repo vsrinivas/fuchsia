@@ -34,6 +34,14 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     zx::vmo vmo;
   };
 
+  struct FakeCapability {
+    bool operator<(const FakeCapability& r) const { return this->position < r.position; }
+
+    uint8_t id;
+    uint8_t position;
+    uint8_t size;
+  };
+
   zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) {
     if (!out_res) {
       return ZX_ERR_INVALID_ARGS;
@@ -234,12 +242,33 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ConfigWrite(offset, value);
   }
 
+  zx_status_t CommonCapabilitySearch(uint8_t id, std::optional<uint8_t> offset,
+                                     uint8_t* out_offset) {
+    if (!out_offset) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    for (auto& cap : capabilities_) {
+      // Skip until we've caught up to last one found if one was provided.
+      if (offset && cap.position <= offset) {
+        continue;
+      }
+
+      if (cap.id == id) {
+        *out_offset = cap.position;
+        return ZX_OK;
+      }
+    }
+
+    return ZX_ERR_NOT_FOUND;
+  }
+
   zx_status_t PciGetFirstCapability(uint8_t id, uint8_t* out_offset) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return CommonCapabilitySearch(id, std::nullopt, out_offset);
   }
 
   zx_status_t PciGetNextCapability(uint8_t id, uint8_t offset, uint8_t* out_offset) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return CommonCapabilitySearch(id, offset, out_offset);
   }
 
   zx_status_t PciGetFirstExtendedCapability(uint16_t id, uint16_t* out_offset) {
@@ -251,6 +280,9 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   }
 
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti) {
+    if (!out_bti) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     return bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
   }
 
@@ -306,6 +338,67 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return info;
   }
 
+  void AddVendorCapability(uint8_t position, uint8_t size) {
+    ZX_ASSERT_MSG(
+        size > 2,
+        "FakePciProtocol Error: a vendor capability must be at least size 0x3 (size = %#x).", size);
+    AddCapability(PCI_CAP_ID_VENDOR, position, size);
+    // Vendor capabilities store a size at the byte following the next pointer.
+    config_.write(&size, position + 2, sizeof(size));
+  }
+
+  // No registers are configured, but most devices that check for this
+  // capability do so just to understand the configuration space they have
+  // available, not to actually attempt to modify this capability.
+  static constexpr uint8_t kPciExpressCapabilitySize = 0x3B;
+  void AddPciExpressCapability(uint8_t position) {
+    AddCapability(PCI_CAP_ID_PCI_EXPRESS, position, kPciExpressCapabilitySize);
+  }
+
+  // Capabilities are the hardest part to implement because if a device expects a capability
+  // at a given address in configuration space then it's possible they will want to write to it.
+  // Additionally, vendor capabilities are of a variable size which is read from the capability
+  // at runtime. To further complicate things, particular devices will have registers in their
+  // configuration space that the device may be expected to use but which are not exposed
+  // through any PCI base address register mechanism. This makes it risky to lay out a
+  // capability wherever we wish for fear it may overlap with one of these spaces. For this
+  // reason we do no validation of the capability's setup in configuration space besides writing
+  // the capability id and next pointer. The test author is responsible for setting up the
+  // layout of the capabilities as necessary to match their device, but we can provide helper
+  // methods to ensure they're doing it properly.
+  void AddCapability(uint8_t capability_id, uint8_t position, uint8_t size) {
+    ZX_ASSERT_MSG(
+        capability_id > 0 && capability_id <= PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE,
+        "FakePciProtocol Error: capability_id must be non-zero and <= %#x (capability_id = %#x).",
+        PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE, capability_id);
+    ZX_ASSERT_MSG(
+        position >= PCI_CFG_HEADER_SIZE && position + size < PCI_BASE_CONFIG_SIZE,
+        "FakePciProtocolError: capability must fit the range [%#x, %#x] (capability = [%#x, %#x]).",
+        PCI_CFG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, position, position + size - 1);
+
+    // We need to update the next pointer of the previous capability, or the
+    // original header capabilities pointer if this is the first.
+    uint8_t next_ptr = PCI_CFG_CAPABILITIES_PTR;
+    if (!capabilities_.empty()) {
+      for (auto& cap : capabilities_) {
+        ZX_ASSERT_MSG(!(position <= cap.position && position + size > cap.position) &&
+                          !(position >= cap.position && position <= cap.position + cap.size),
+                      "FakePciProtocol Error: New capability overlaps with a previous capability "
+                      "[%#x, %#x] (new capability id = %#x @ [%#x, %#x]).",
+                      cap.position, cap.position + cap.size - 1, capability_id, position,
+                      position + size - 1);
+      }
+      next_ptr = capabilities_[capabilities_.size() - 1].position + 1;
+    }
+
+    config_.write(&capability_id, position, sizeof(capability_id));
+    config_.write(&position, next_ptr, sizeof(position));
+    capabilities_.push_back({.id = capability_id, .position = position, .size = size});
+    // Not fast, but not as error prone as doing it by hand on insertion with
+    // capability cyles being a possibility.
+    std::sort(capabilities_.begin(), capabilities_.end());
+  }
+
   zx::unowned_vmo SetBar(uint32_t bar_id, size_t size, zx::vmo vmo) {
     ZX_ASSERT_MSG(bar_id < PCI_DEVICE_BAR_COUNT,
                   "FakePciProtocol Error: valid BAR ids are [0, 5] (bar_id = %u)", bar_id);
@@ -348,6 +441,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     irq_cnt_ = 0;
 
     bars_ = {};
+    capabilities_.clear();
 
     bus_master_en_ = std::nullopt;
     reset_cnt_ = 0;
@@ -368,6 +462,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   uint32_t irq_cnt_;
 
   std::array<FakeBar, PCI_DEVICE_BAR_COUNT> bars_{};
+  std::vector<FakeCapability> capabilities_{};
 
   zx::bti bti_;
   uint32_t reset_cnt_;

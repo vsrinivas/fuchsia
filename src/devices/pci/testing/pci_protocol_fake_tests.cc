@@ -349,6 +349,8 @@ TEST_F(FakePciProtocolTests, GetBar) {
   ASSERT_NO_DEATH([&]() { fake_pci().SetBar(valid_bar, bar_size, std::move(vmo)); });
   zx::unowned_vmo borrowed = fake_pci().GetBar(valid_bar);
   ASSERT_OK(pci().GetBar(valid_bar, &bar));
+  // Verify that the VMO we got back wit hthe protocol method matches the setup
+  // and that the other fields are correct.
   ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.handle)));
   ASSERT_EQ(valid_bar, bar.id);
   ASSERT_EQ(bar_size, bar.size);
@@ -368,4 +370,56 @@ TEST_F(FakePciProtocolTests, MapMmio) {
   std::optional<ddk::MmioBuffer> mmio = std::nullopt;
   ASSERT_OK(dp_pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
   ASSERT_TRUE(MatchKoids(borrow, *mmio->get_vmo()));
+}
+
+TEST_F(FakePciProtocolTests, Capabilities) {
+  // Try invalid capabilities.
+  ASSERT_DEATH([&]() { fake_pci().AddCapability(0, PCI_CFG_HEADER_SIZE, 16); });
+  ASSERT_DEATH([&]() {
+    fake_pci().AddCapability(PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE + 1, PCI_CFG_HEADER_SIZE, 16);
+  });
+
+  // Try invalid locations.
+  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(PCI_CFG_HEADER_SIZE - 16, 32); });
+  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(PCI_BASE_CONFIG_SIZE - 16, 32); });
+
+  // Overlap tests.
+  ASSERT_NO_DEATH([&]() { fake_pci().AddVendorCapability(0xB0, 16); });
+  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0 + 8, 16); });
+  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0 - 8, 16); });
+  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0, 32); });
+}
+
+TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
+  auto config = fake_pci().GetConfigVmo();
+  // The first capability should set up the capabilities pointer.
+  fake_pci().AddVendorCapability(0x50, 6);
+  uint8_t offset1 = 0;
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_VENDOR, &offset1));
+  uint8_t val;
+  config->read(&val, PCI_CFG_CAPABILITIES_PTR, sizeof(val));
+  ASSERT_EQ(0x50, val);
+  config->read(&val, offset1, sizeof(val));
+  ASSERT_EQ(PCI_CAP_ID_VENDOR, val);
+  config->read(&val, offset1 + 2, sizeof(val));
+  ASSERT_EQ(6, val);
+
+  // After adding the new capability we need to check that the previous next pointer was set up.
+  fake_pci().AddVendorCapability(0x60, 8);
+  config->read(&val, 0x51, sizeof(val));
+  ASSERT_EQ(val, 0x60);
+
+  // Can we find sequential capabilites, or different IDs?
+  uint8_t offset2 = 0;
+  ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_VENDOR, offset1, &offset2));
+  ASSERT_EQ(0x60, offset2);
+
+  fake_pci().AddPciExpressCapability(0x70);
+  fake_pci().AddVendorCapability(0xB0, 16);
+
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_PCI_EXPRESS, &offset1));
+  ASSERT_EQ(0x70, offset1);
+
+  ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_VENDOR, offset2, &offset1));
+  ASSERT_EQ(0xB0, offset1);
 }
