@@ -30,6 +30,8 @@ toc:
 
   - title: "Health"
     path: /docs/concepts/diagnostics/inspect/health.md
+  - title: "Rust libraries"
+    path: /docs/concepts/diagnostics/inspect/rust.md
 - title: "Logs"
   section:
   - title: "Overview"
