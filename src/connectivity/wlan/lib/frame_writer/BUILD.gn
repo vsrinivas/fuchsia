@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("wlan-frame-writer") {
   name = "wlan_frame_writer"
@@ -23,13 +23,6 @@ rustc_library("wlan-frame-writer") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("wlan-frame-writer-tests") {
+fuchsia_unittest_package("wlan-frame-writer-tests") {
   deps = [ ":wlan-frame-writer_test" ]
-
-  tests = [
-    {
-      name = "wlan_frame_writer_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
