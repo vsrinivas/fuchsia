@@ -3,23 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("headless_root_presenter") {
+fuchsia_package_with_single_component("headless_root_presenter") {
+  manifest = "meta/headless_root_presenter.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "headless_root_presenter"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/headless_root_presenter.cmx")
-      dest = "headless_root_presenter.cmx"
-    },
-  ]
 }
 
 group("configs") {
