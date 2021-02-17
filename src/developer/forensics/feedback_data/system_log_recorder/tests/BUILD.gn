@@ -158,6 +158,12 @@ fuchsia_test_package("system-log-recorder-tests") {
     ":system_log_recorder_unittest",
     ":writer_unittest",
   ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 ###############################################################################
