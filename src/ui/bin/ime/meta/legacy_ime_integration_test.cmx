@@ -15,7 +15,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/legacy_ime_integration_test"
+        "binary": "bin/legacy_ime_integration_test"
     },
     "sandbox": {
         "services": [

@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -67,56 +68,47 @@ rustc_binary("bin") {
   ]
 }
 
-package("ime_service") {
+fuchsia_component("ime_service_comp") {
+  component_name = "ime_service"
+  manifest = "meta/ime_service.cmx"
   deps = [
     ":bin",
-    "//src/ui/bin/default_hardware_ime:bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ime_service.cmx")
-      dest = "ime_service.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx")
-      dest = "default_hardware_ime.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/ui/bin/default_hardware_ime/assets/us.json")
-      dest = "us.json"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "ime_service"
-    },
-    {
-      name = "default_hardware_ime"
-    },
+    ":us-json",
   ]
 }
 
-test_package("ime_test") {
+fuchsia_component("default_hardware_ime_comp") {
+  component_name = "default_hardware_ime"
+  manifest = "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx"
+  deps = [
+    ":us-json",
+    "//src/ui/bin/default_hardware_ime:bin",
+  ]
+}
+
+fuchsia_package("ime_service") {
+  deps = [
+    ":default_hardware_ime_comp",
+    ":ime_service_comp",
+  ]
+}
+
+fuchsia_component("ime_service_bin_test") {
+  testonly = true
+  component_name = "ime_service_bin_test"
+  manifest = "meta/ime_service_bin_test.cmx"
   deps = [
     ":bin_test",
     "//src/ui/testing/text:test_suite",
   ]
-
-  tests = [
-    {
-      name = "ime_service_bin_test"
-      environments = basic_envs
-    },
-  ]
 }
 
-rustc_test("keyboard_test_bin") {
+fuchsia_test_package("ime_test") {
+  test_components = [ ":ime_service_bin_test" ]
+}
+
+rustc_test("keyboard_test_bin_bin") {
+  output_name = "keyboard_test_bin"
   edition = "2018"
 
   deps = [
@@ -140,7 +132,8 @@ rustc_test("keyboard_test_bin") {
   sources = [ "tests/keyboard.rs" ]
 }
 
-rustc_test("keyboard3_integration_test") {
+rustc_test("keyboard3_integration_test_bin") {
+  output_name = "keyboard3_integration_test"
   edition = "2018"
 
   deps = [
@@ -162,7 +155,8 @@ rustc_test("keyboard3_integration_test") {
   sources = [ "tests/keyboard3.rs" ]
 }
 
-rustc_test("ime_service_integration_test") {
+rustc_test("ime_service_integration_test_bin") {
+  output_name = "ime_service_integration_test"
   edition = "2018"
 
   deps = [
@@ -188,7 +182,8 @@ rustc_test("ime_service_integration_test") {
   ]
 }
 
-rustc_test("legacy_ime_integration_test") {
+rustc_test("legacy_ime_integration_test_bin") {
+  output_name = "legacy_ime_integration_test"
   edition = "2018"
 
   deps = [
@@ -214,64 +209,51 @@ rustc_test("legacy_ime_integration_test") {
   ]
 }
 
-test_package("keyboard_test") {
+fuchsia_component("keyboard_test_bin") {
+  testonly = true
   deps = [
-    ":bin",
-    ":ime_service_integration_test",
-    ":keyboard3_integration_test",
+    ":en-us-json",
+    ":keyboard_test_bin_bin",
+  ]
+  manifest = "meta/keyboard_test_bin.cmx"
+}
+
+fuchsia_component("keyboard3_integration_test") {
+  testonly = true
+  deps = [
+    ":ime_service_comp",
+    ":keyboard3_integration_test_bin",
+  ]
+  manifest = "meta/keyboard3_integration_test.cmx"
+}
+
+fuchsia_component("ime_service_integration_test") {
+  testonly = true
+  deps = [ ":ime_service_integration_test_bin" ]
+  manifest = "meta/ime_service_integration_test.cmx"
+}
+
+fuchsia_component("legacy_ime_integration_test") {
+  testonly = true
+  deps = [ ":legacy_ime_integration_test_bin" ]
+  manifest = "meta/legacy_ime_integration_test.cmx"
+}
+
+fuchsia_test_package("keyboard_test") {
+  test_components = [
     ":keyboard_test_bin",
+    ":keyboard3_integration_test",
+    ":ime_service_integration_test",
     ":legacy_ime_integration_test",
-    "//src/ui/bin/default_hardware_ime:bin",
   ]
+}
 
-  tests = [
-    {
-      name = "keyboard_test_bin"
-      environments = basic_envs
-    },
-    {
-      name = "keyboard3_integration_test"
-      environments = basic_envs
-    },
-    {
-      name = "ime_service_integration_test"
-      environments = basic_envs
-    },
-    {
-      name = "legacy_ime_integration_test"
-      environments = basic_envs
-    },
-  ]
+resource("us-json") {
+  sources = [ "//src/ui/bin/default_hardware_ime/assets/us.json" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  binaries = [
-    {
-      name = "ime_service"
-    },
-    {
-      name = "default_hardware_ime"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/ui/bin/default_hardware_ime/assets/us.json")
-      dest = "us.json"
-    },
-    {
-      path = rebase_path("tests/goldens/en-us.json")
-      dest = "goldens/en-us.json"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ime_service.cmx")
-      dest = "ime_service.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx")
-      dest = "default_hardware_ime.cmx"
-    },
-  ]
+resource("en-us-json") {
+  sources = [ "tests/goldens/en-us.json" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
 }

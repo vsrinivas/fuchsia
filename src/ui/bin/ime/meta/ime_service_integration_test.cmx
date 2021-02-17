@@ -15,7 +15,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/ime_service_integration_test"
+        "binary": "bin/ime_service_integration_test"
     },
     "sandbox": {
         "services": [

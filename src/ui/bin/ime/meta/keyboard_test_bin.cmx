@@ -12,7 +12,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/keyboard_test_bin"
+        "binary": "bin/keyboard_test_bin"
     },
     "sandbox": {
         "services": [

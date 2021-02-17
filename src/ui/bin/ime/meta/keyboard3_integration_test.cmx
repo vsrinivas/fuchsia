@@ -14,7 +14,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/keyboard3_integration_test"
+        "binary": "bin/keyboard3_integration_test"
     },
     "sandbox": {
         "services": [
