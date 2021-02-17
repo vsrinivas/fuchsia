@@ -18,7 +18,7 @@ use {
     lib::{make_repo, make_repo_config, MountsBuilder, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     serde_json::json,
-    std::sync::Arc,
+    std::{net::Ipv4Addr, sync::Arc},
 };
 
 async fn assert_elapsed_duration_events(
@@ -344,8 +344,8 @@ async fn pkg_resolver_fetch_blob_failure() {
         Err(Status::UNAVAILABLE),
         metrics::FETCH_BLOB_METRIC_ID,
         vec![
-            metrics::FetchBlobMetricDimensionResult::BadHttpStatus,
-            metrics::FetchBlobMetricDimensionResult::BadHttpStatus,
+            metrics::FetchBlobMetricDimensionResult::HttpNotFound,
+            metrics::FetchBlobMetricDimensionResult::HttpNotFound,
         ],
     )
     .await;
@@ -553,6 +553,307 @@ async fn load_repository_for_channel_success_no_rewrite_rule() {
         vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success],
     )
     .await;
+
+    env.stop().await;
+}
+
+// Test the HTTP status range space for metrics handling for a blob fetch.
+#[fasync::run_singlethreaded(test)]
+async fn pkg_resolver_blob_fetch_status_ranges() {
+    let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+    let env = TestEnvBuilder::new().build().await;
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+
+    let (handler, response_code) = handler::DynamicResponseCode::new(100);
+    let served_repository = repo
+        .server()
+        .bind_to_addr(Ipv4Addr::LOCALHOST)
+        .uri_path_override_handler(handler::ForPath::new(
+            format!("/blobs/{}", pkg.meta_far_merkle_root()),
+            handler,
+        ))
+        .start()
+        .unwrap();
+    env.register_repo(&served_repository).await;
+
+    struct StatusTest {
+        min_code: u16,
+        max_code: u16,
+        count: usize,
+        status: metrics::FetchBlobMetricDimensionResult,
+    }
+
+    // Quick macro to construct a test table.
+    macro_rules! test_cases {
+        ( $( ( $min:expr, $max:expr, $count:expr, $status:ident ), )+ ) => {
+            vec![
+                $(
+                    StatusTest {
+                        min_code: $min,
+                        max_code: $max,
+                        count: $count,
+                        status: metrics::FetchBlobMetricDimensionResult::$status,
+                    },
+                )+
+            ]
+        }
+    }
+
+    // Test cases are:
+    // (start code, end code, number of expected metrics, metric name)
+    let test_table: Vec<StatusTest> = test_cases![
+        // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
+        // turns them into a 500 and closes the connection. That results in flakiness when we can
+        // request faster than the connection is removed from the pool.
+        (101, 101, 2, Http1xx),
+        // We're not sending a body, so we expect a C-L issue rather than Success.
+        (200, 200, 1, ContentLengthMismatch),
+        (201, 299, 2, Http2xx),
+        (300, 399, 2, Http3xx),
+        (400, 400, 2, HttpBadRequest),
+        (401, 401, 2, HttpUnauthorized),
+        (402, 402, 2, Http4xx),
+        (403, 403, 2, HttpForbidden),
+        (404, 404, 2, HttpNotFound),
+        (405, 405, 2, HttpMethodNotAllowed),
+        (406, 407, 2, Http4xx),
+        (408, 408, 2, HttpRequestTimeout),
+        (409, 411, 2, Http4xx),
+        (412, 412, 2, HttpPreconditionFailed),
+        (413, 415, 2, Http4xx),
+        (416, 416, 2, HttpRangeNotSatisfiable),
+        (417, 428, 2, Http4xx),
+        // We expect 4 metrics here because this response triggers a different retry policy.
+        (429, 429, 4, HttpTooManyRequests),
+        (430, 499, 2, Http4xx),
+        (500, 500, 2, HttpInternalServerError),
+        (501, 501, 2, Http5xx),
+        (502, 502, 2, HttpBadGateway),
+        (503, 503, 2, HttpServiceUnavailable),
+        (504, 504, 2, HttpGatewayTimeout),
+        (505, 599, 2, Http5xx),
+        // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
+        // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
+        // these because StatusCode won't let us create new ones in this range.
+    ];
+
+    let mut statuses: Vec<metrics::FetchBlobMetricDimensionResult> = Vec::new();
+
+    for ent in test_table.iter() {
+        for code in ent.min_code..=ent.max_code {
+            response_code.set(code);
+            let _ = env.resolve_package(&pkg_url).await;
+            statuses.append(&mut vec![ent.status; ent.count]);
+        }
+    }
+
+    env.assert_count_events(metrics::FETCH_BLOB_METRIC_ID, statuses).await;
+
+    env.stop().await;
+}
+
+// Test the HTTP status range space for metrics related to TUF client construction.
+#[fasync::run_singlethreaded(test)]
+async fn pkg_resolver_create_tuf_client_status_ranges() {
+    let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+    let env = TestEnvBuilder::new().build().await;
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+
+    let (handler, response_code) = handler::DynamicResponseCode::new(100);
+    let served_repository = repo
+        .server()
+        .bind_to_addr(Ipv4Addr::LOCALHOST)
+        .uri_path_override_handler(handler::ForPath::new("/1.root.json", handler))
+        .start()
+        .unwrap();
+    env.register_repo(&served_repository).await;
+
+    struct StatusTest {
+        min_code: u16,
+        max_code: u16,
+        status: metrics::CreateTufClientMetricDimensionResult,
+    }
+
+    // Quick macro to construct a test table.
+    macro_rules! test_cases {
+        ( $( ( $min:expr, $max:expr, $status:ident ), )+ ) => {
+            vec![
+                $(
+                    StatusTest {
+                        min_code: $min,
+                        max_code: $max,
+                        status: metrics::CreateTufClientMetricDimensionResult::$status,
+                    },
+                )+
+            ]
+        }
+    }
+
+    // Test cases are:
+    // (start code, end code, number of expected metrics, metric name)
+    let test_table: Vec<StatusTest> = test_cases![
+        // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
+        // turns them into a 500 and closes the connection. That results in flakiness when we can
+        // request faster than the connection is removed from the pool.
+        (101, 101, Http1xx),
+        // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
+        // turns them into a 500.
+        (100, 100, HttpInternalServerError),
+        (101, 101, Http1xx),
+        (102, 199, HttpInternalServerError),
+        // We're not sending a body, so our empty response will report as an encoding issue.
+        (200, 200, Encoding),
+        (201, 299, Http2xx),
+        (300, 399, Http3xx),
+        (400, 400, HttpBadRequest),
+        (401, 401, HttpUnauthorized),
+        (402, 402, Http4xx),
+        (403, 403, HttpForbidden),
+        // rust-tuf returns its own NotFound for this, so we never use HttpNotFound.
+        (404, 404, NotFound),
+        (405, 405, HttpMethodNotAllowed),
+        (406, 407, Http4xx),
+        (408, 408, HttpRequestTimeout),
+        (409, 411, Http4xx),
+        (412, 412, HttpPreconditionFailed),
+        (413, 415, Http4xx),
+        (416, 416, HttpRangeNotSatisfiable),
+        (417, 428, Http4xx),
+        (429, 429, HttpTooManyRequests),
+        (430, 499, Http4xx),
+        (500, 500, HttpInternalServerError),
+        (501, 501, Http5xx),
+        (502, 502, HttpBadGateway),
+        (503, 503, HttpServiceUnavailable),
+        (504, 504, HttpGatewayTimeout),
+        (505, 599, Http5xx),
+        // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
+        // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
+        // these because StatusCode won't let us create new ones in this range.
+    ];
+
+    let mut statuses: Vec<metrics::CreateTufClientMetricDimensionResult> = Vec::new();
+
+    for ent in test_table.iter() {
+        for code in ent.min_code..=ent.max_code {
+            response_code.set(code);
+            let _ = env.resolve_package(&pkg_url).await;
+            statuses.push(ent.status);
+        }
+    }
+
+    env.assert_count_events(metrics::CREATE_TUF_CLIENT_METRIC_ID, statuses).await;
+
+    env.stop().await;
+}
+
+// Test the HTTP status range space for metrics related to TUF update clients.
+#[fasync::run_singlethreaded(test)]
+async fn pkg_resolver_update_tuf_client_status_ranges() {
+    let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+    let env = TestEnvBuilder::new().build().await;
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+
+    let (handler, response_code) = handler::DynamicResponseCode::new(100);
+    let served_repository = repo
+        .server()
+        .bind_to_addr(Ipv4Addr::LOCALHOST)
+        .uri_path_override_handler(handler::ForPath::new("/2.root.json", handler))
+        .start()
+        .unwrap();
+    env.register_repo(&served_repository).await;
+
+    struct StatusTest {
+        min_code: u16,
+        max_code: u16,
+        status: metrics::UpdateTufClientMetricDimensionResult,
+    }
+
+    // Quick macro to construct a test table.
+    macro_rules! test_cases {
+        ( $( ( $min:expr, $max:expr, $status:ident ), )+ ) => {
+            vec![
+                $(
+                    StatusTest {
+                        min_code: $min,
+                        max_code: $max,
+                        status: metrics::UpdateTufClientMetricDimensionResult::$status,
+                    },
+                )+
+            ]
+        }
+    }
+
+    // Test cases are:
+    // (start code, end code, number of expected metrics, metric name)
+    let test_table: Vec<StatusTest> = test_cases![
+        // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
+        // turns them into a 500 and closes the connection. That results in flakiness when we can
+        // request faster than the connection is removed from the pool.
+        (101, 101, Http1xx),
+        // We're not sending a body, so our empty response will report as an encoding issue.
+        (200, 200, Encoding),
+        (201, 299, Http2xx),
+        (300, 399, Http3xx),
+        (400, 400, HttpBadRequest),
+        (401, 401, HttpUnauthorized),
+        (402, 402, Http4xx),
+        (403, 403, HttpForbidden),
+        // It's fine if this file doesn't exist.
+        (404, 404, Success),
+        (405, 405, HttpMethodNotAllowed),
+        (406, 407, Http4xx),
+        (408, 408, HttpRequestTimeout),
+        (409, 411, Http4xx),
+        (412, 412, HttpPreconditionFailed),
+        (413, 415, Http4xx),
+        (416, 416, HttpRangeNotSatisfiable),
+        (417, 428, Http4xx),
+        (429, 429, HttpTooManyRequests),
+        (430, 499, Http4xx),
+        (500, 500, HttpInternalServerError),
+        (501, 501, Http5xx),
+        (502, 502, HttpBadGateway),
+        (503, 503, HttpServiceUnavailable),
+        (504, 504, HttpGatewayTimeout),
+        (505, 599, Http5xx),
+        // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
+        // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
+        // these because StatusCode won't let us create new ones in this range.
+    ];
+
+    let mut statuses: Vec<metrics::UpdateTufClientMetricDimensionResult> = Vec::new();
+
+    for ent in test_table.iter() {
+        for code in ent.min_code..=ent.max_code {
+            response_code.set(code);
+            let _ = env.resolve_package(&pkg_url).await;
+            statuses.push(ent.status);
+        }
+    }
+
+    env.assert_count_events(metrics::UPDATE_TUF_CLIENT_METRIC_ID, statuses).await;
 
     env.stop().await;
 }

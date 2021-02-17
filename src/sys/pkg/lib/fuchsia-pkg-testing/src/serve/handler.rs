@@ -17,7 +17,7 @@ use {
         collections::HashSet,
         path::{Path, PathBuf},
         sync::{
-            atomic::{AtomicBool, AtomicU32, Ordering},
+            atomic::{AtomicBool, AtomicU16, AtomicU32, Ordering},
             Arc,
         },
     },
@@ -56,6 +56,42 @@ impl StaticResponseCode {
     /// Creates handler that always responds with 429 Too Many Requests
     pub fn too_many_requests() -> Self {
         Self(StatusCode::TOO_MANY_REQUESTS)
+    }
+}
+
+/// An atomic HTTP status code carrier.
+#[derive(Debug, Default)]
+pub struct DynamicResponseSetter(Arc<AtomicU16>);
+
+impl DynamicResponseSetter {
+    /// Atomically sets this toggle to the supplied code.
+    pub fn set(&self, code: u16) {
+        self.0.store(code, Ordering::SeqCst);
+    }
+}
+
+/// Handler that replies with an externally-settable HTTP status.
+pub struct DynamicResponseCode {
+    code: Arc<AtomicU16>,
+}
+
+impl UriPathHandler for DynamicResponseCode {
+    fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        ready(
+            Response::builder()
+                .status(self.code.load(Ordering::SeqCst))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .boxed()
+    }
+}
+
+impl DynamicResponseCode {
+    /// Creates a new handler with a (re)settable status code.
+    pub fn new(initial: u16) -> (Self, DynamicResponseSetter) {
+        let setter = DynamicResponseSetter(Arc::new(initial.into()));
+        (Self { code: Arc::clone(&setter.0) }, setter)
     }
 }
 
