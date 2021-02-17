@@ -42,7 +42,8 @@ class LowEnergyConnectionRequest final {
   using ConnectionResult = fit::result<std::unique_ptr<LowEnergyConnectionHandle>, HostError>;
   using ConnectionResultCallback = fit::function<void(ConnectionResult)>;
 
-  LowEnergyConnectionRequest(const DeviceAddress& address, ConnectionResultCallback first_callback,
+  LowEnergyConnectionRequest(PeerId peer_id, const DeviceAddress& address,
+                             ConnectionResultCallback first_callback,
                              LowEnergyConnectionOptions connection_options);
   LowEnergyConnectionRequest() = default;
   ~LowEnergyConnectionRequest() = default;
@@ -58,6 +59,9 @@ class LowEnergyConnectionRequest final {
   void NotifyCallbacks(fit::result<RefFunc, HostError> result);
 
   const DeviceAddress& address() const { return address_; }
+
+  PeerId peer_id() const { return peer_id_; }
+
   LowEnergyConnectionOptions connection_options() const { return connection_options_; }
 
   void set_discovery_session(LowEnergyDiscoverySessionPtr session) {
@@ -66,16 +70,12 @@ class LowEnergyConnectionRequest final {
 
   LowEnergyDiscoverySession* discovery_session() { return session_.get(); }
 
-  void add_connection_attempt() { connection_attempts_++; }
-
-  int connection_attempts() const { return connection_attempts_; }
-
  private:
+  PeerId peer_id_;
   DeviceAddress address_;
   std::list<ConnectionResultCallback> callbacks_;
   LowEnergyConnectionOptions connection_options_;
   LowEnergyDiscoverySessionPtr session_;
-  int connection_attempts_;
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(LowEnergyConnectionRequest);
 };

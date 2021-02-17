@@ -70,4 +70,17 @@ adapter:
             record
             registered_psms:
                 (none)
+<<<<<<< HEAD   (8e8bd1 [bt][gap] Move connection parameter logic to LowEnergyConnec)
+=======
+    low_energy_connection_manager:
+        pending_requests:
+            pending_request_0x0:
+                address
+                callbacks
+        connections:
+            connection_0x0:
+                peer_id
+                peer_address
+                ref_count
+>>>>>>> CHANGE (e58c26 [bt][gap] Create gap::LowEnergyConnector)
 ```

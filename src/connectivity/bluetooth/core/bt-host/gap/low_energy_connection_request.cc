@@ -7,9 +7,9 @@
 namespace bt::gap::internal {
 
 LowEnergyConnectionRequest::LowEnergyConnectionRequest(
-    const DeviceAddress& address, ConnectionResultCallback first_callback,
+    PeerId peer_id, const DeviceAddress& address, ConnectionResultCallback first_callback,
     LowEnergyConnectionOptions connection_options)
-    : address_(address), connection_options_(connection_options), connection_attempts_(0) {
+    : peer_id_(peer_id), address_(address), connection_options_(connection_options) {
   callbacks_.push_back(std::move(first_callback));
 }
 
