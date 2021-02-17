@@ -7,7 +7,7 @@ import("//build/unification/zx_library.gni")
 zx_library("spi") {
   sdk = "source"
   sdk_headers = [ "lib/spi/spi.h" ]
-  sources = []
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_c" ]
-  deps = [ "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_c" ]
+  sources = [ "spi.cc" ]
+  public_deps = [ "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp" ]
+  deps = [ "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp" ]
 }

@@ -240,7 +240,7 @@ TEST(SpiDevice, SpiTest) {
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
 
   // test it
-  const uint8_t txbuf[] = {0, 1, 2, 3, 4, 5, 6};
+  uint8_t txbuf[] = {0, 1, 2, 3, 4, 5, 6};
   uint8_t rxbuf[sizeof txbuf];
 
   for (size_t i = 0; i < ddk.children_.size(); i++) {
