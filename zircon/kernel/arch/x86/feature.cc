@@ -204,7 +204,7 @@ void x86_cpu_feature_init() {
   }
 
   // Evaluate speculative execution mitigation settings.
-  g_disable_spec_mitigations = gBootOptions->disable_spec_mitigations;
+  g_disable_spec_mitigations = gBootOptions->disable_x86_spec_mitigations;
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);

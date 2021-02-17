@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <lib/fixed_point.h>
 #include <lib/unittest/unittest.h>
@@ -303,14 +303,9 @@ static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_
 // Run once on the boot cpu to decide if we want to start an event stream on each
 // cpu and at what rate.
 static void event_stream_init(uint32_t cntfrq) {
-  // Check to see if it's enabled in the command line
-  event_stream_enable = gCmdline.GetBool(kernel_option::kArm64EventStreamEnable, false);
-  if (!event_stream_enable) {
+  if (!gBootOptions->event_stream_enabled) {
     return;
   }
-
-  // Default target frequency is 10khz
-  uint32_t target_event_freq = gCmdline.GetUInt32(kernel_option::kArm64EventStreamFreqHz, 10000);
 
   // Compute the closest power of two from the timer frequency to get to the target.
   //
@@ -323,7 +318,8 @@ static void event_stream_init(uint32_t cntfrq) {
   for (shift = 0; shift <= 14; shift++) {
     // Find a matching shift to the target frequency within range. If the target frequency is too
     // large even for shift 0 then it'll just pick shift 0 because of the <=.
-    if (log2_uint_floor(cntfrq >> (shift + 1)) <= log2_uint_floor(target_event_freq)) {
+    if (log2_uint_floor(cntfrq >> (shift + 1)) <=
+        log2_uint_floor(gBootOptions->event_stream_freq_hz)) {
       break;
     }
   }

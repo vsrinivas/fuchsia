@@ -131,6 +131,7 @@ struct BootOptions {
 #define DEFINE_OPTION(name, type, member, init, doc) type member init;
 #include "options.inc"
 #if BOOT_OPTIONS_GENERATOR
+#include "arm64.inc"
 #include "x86.inc"
 #endif
 #undef DEFINE_OPTION

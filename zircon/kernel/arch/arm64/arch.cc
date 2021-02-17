@@ -13,6 +13,7 @@
 #include <lib/arch/arm64/system.h>
 #include <lib/arch/intrin.h>
 #include <lib/arch/sysreg.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <platform.h>
@@ -230,11 +231,8 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void arch_late_init_percpu(void) {
-  bool disable_spec_mitigations = gCmdline.GetBool(kernel_option::kArm64DisableSpecMitigations,
-                                                   /*default_value=*/false);
-
   arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch =
-      !disable_spec_mitigations && arm64_uarch_needs_spectre_v2_mitigation();
+      !gBootOptions->disable_arm64_spec_mitigations && arm64_uarch_needs_spectre_v2_mitigation();
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {

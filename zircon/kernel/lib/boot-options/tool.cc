@@ -147,6 +147,11 @@ void WriteJson(const BootOptions& options, const char* json_output) {
 #include <lib/boot-options/x86.inc>
   writer.EndArray();
 
+  writer.Key("arm64");
+  writer.StartArray();
+#include <lib/boot-options/arm64.inc>
+  writer.EndArray();
+
 #undef DEFINE_OPTION
   writer.EndObject();
 

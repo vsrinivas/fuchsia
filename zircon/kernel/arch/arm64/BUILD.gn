@@ -137,6 +137,7 @@ if (toolchain.environment == "physmem" ||
       "//zircon/kernel/dev/iommu/dummy",
       "//zircon/kernel/dev/psci",
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/cmdline",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/counters",

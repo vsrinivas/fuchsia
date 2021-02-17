@@ -9,7 +9,7 @@
 //
 // These are the x86-specific boot options.
 
-DEFINE_OPTION("kernel.x86.disable_spec_mitigations", bool, disable_spec_mitigations, {false}, R"""(
+DEFINE_OPTION("kernel.x86.disable_spec_mitigations", bool, disable_x86_spec_mitigations, {false}, R"""(
 If set, disables all speculative execution information leak mitigations.
 
 If unset, the per-mitigation defaults will be used.

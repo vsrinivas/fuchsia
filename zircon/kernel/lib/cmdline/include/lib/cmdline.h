@@ -124,10 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kArm64DisableSpecMitigations[] =
-    "kernel.arm64.disable_spec_mitigations";
-static constexpr const char kArm64EventStreamEnable[] = "kernel.arm64.event-stream.enable";
-static constexpr const char kArm64EventStreamFreqHz[] = "kernel.arm64.event-stream.freq-hz";
 static constexpr const char kAslrDisable[] = "aslr.disable";
 static constexpr const char kAslrEntropyBits[] = "aslr.entropy_bits";
 static constexpr const char kBufferchainReservePages[] = "kernel.bufferchain.reserve-pages";

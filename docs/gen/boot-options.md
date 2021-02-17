@@ -61,6 +61,30 @@ processing inside of jitterentropy is somewhat redundant.
 TODO(53594)
 
 
+## Options available only on arm64 machines
+
+### kernel.arm64.disable_spec_mitigations=\<bool>
+**Default:** `false`
+
+If set, disables all speculative execution information leak mitigations.
+
+If unset, the per-mitigation defaults will be used.
+
+### kernel.arm64.event-stream.enable=\<bool>
+**Default:** `false`
+
+When enabled, each ARM cpu will enable an event stream generator, which per-cpu
+sets the hidden event flag at a particular rate. This has the effect of kicking
+cpus out of any WFE states they may be sitting in.
+
+### kernel.arm64.event-stream.freq-hz=\<uint32_t>
+**Default:** `0x2710`
+
+If the event stream is enabled, specifies the frequency at which it will attempt
+to run. The resolution is limited, so the driver will only be able to pick the
+nearest power of 2 from the cpu timer counter.
+
+
 ## Options available only on x86 machines
 
 ### kernel.x86.disable_spec_mitigations=\<bool>
