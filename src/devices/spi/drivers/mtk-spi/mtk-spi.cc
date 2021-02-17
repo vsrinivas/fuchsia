@@ -121,7 +121,7 @@ zx_status_t MtkSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
 }
 
 zx_status_t MtkSpi::SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                       uint64_t size) {
+                                       uint64_t size, uint32_t rights) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

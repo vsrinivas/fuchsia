@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/status.h>
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
@@ -32,7 +33,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
                               uint8_t* out_rxdata, size_t rxdata_size, size_t* out_rxdata_actual);
 
   zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
-                                 uint64_t offset, uint64_t size);
+                                 uint64_t offset, uint64_t size, uint32_t rights);
   zx_status_t SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo);
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size);
@@ -45,19 +46,13 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   struct OwnedVmoInfo {
     uint64_t offset;
     uint64_t size;
+    uint32_t rights;
   };
 
   using SpiVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
 
   struct ChipInfo {
-    ChipInfo()
-        : registered_vmos(vmo_store::Options{
-              .map = {{
-                  .vm_option = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                  .vmar = {nullptr},
-              }},
-              .pin = {},
-          }) {}
+    ChipInfo() : registered_vmos(vmo_store::Options{}) {}
     ~ChipInfo() = default;
 
     ddk::GpioProtocolClient gpio;
@@ -73,8 +68,8 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   // Checks size against the registered VMO size and returns a Span with offset applied. Returns a
   // Span with data set to nullptr if vmo_id wasn't found. Returns a Span with size set to zero if
   // offset and/or size are invalid.
-  fbl::Span<uint8_t> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
-                                uint64_t size);
+  zx::status<fbl::Span<uint8_t>> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                            uint64_t size, uint32_t right);
 
   ddk::MmioBuffer mmio_;
   fbl::Array<ChipInfo> chips_;

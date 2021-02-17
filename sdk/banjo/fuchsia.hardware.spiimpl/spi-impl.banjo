@@ -6,6 +6,12 @@ library fuchsia.hardware.spiimpl;
 
 using zx;
 
+// Must match //sdk/fidl/fuchsia.hardware.sharedmemory/sharedmemory.fidl
+enum SpiVmoRight : uint32 {
+    READ = 0x1;   // The protocol implementation can read from this VMO (used for write requests).
+    WRITE = 0x2;  // The protocol implementation can write to this VMO (used for read requests).
+};
+
 /// Low-level protocol for spi drivers.
 [BanjoLayout = "ddk-protocol"]
 protocol SpiImpl {
@@ -19,8 +25,10 @@ protocol SpiImpl {
     /// Regardless, both vectors must have the same length.
     Exchange(uint32 chip_select, vector<uint8> txdata) -> (zx.status status, vector<uint8> rxdata);
 
-    RegisterVmo(uint32 chip_select, uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size)
-            -> (zx.status status);
+    /// rights is a bit field containing SpiVmoRight values, and determines the read/write
+    /// permissions used by the implementation when pinning or mapping the VMO.
+    RegisterVmo(uint32 chip_select, uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size,
+                uint32 rights) -> (zx.status status);
     UnregisterVmo(uint32 chip_select, uint32 vmo_id) -> (zx.status status, zx.handle:VMO vmo);
 
     TransmitVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)

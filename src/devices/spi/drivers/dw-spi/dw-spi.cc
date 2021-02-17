@@ -89,7 +89,7 @@ zx_status_t DwSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t tx
 }
 
 zx_status_t DwSpi::SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                      uint64_t size) {
+                                      uint64_t size, uint32_t rights) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

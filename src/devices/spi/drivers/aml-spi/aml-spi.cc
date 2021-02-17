@@ -56,19 +56,23 @@ void AmlSpi::DumpState() {
 
 #undef dump_reg
 
-fbl::Span<uint8_t> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
-                                      uint64_t size) {
+zx::status<fbl::Span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
+                                                  uint64_t offset, uint64_t size, uint32_t right) {
   vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
       chips_[chip_select].registered_vmos.GetVmo(vmo_id);
   if (!vmo_info) {
-    return fbl::Span<uint8_t>();
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+
+  if ((vmo_info->meta().rights & right) == 0) {
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
 
   if (offset + size > vmo_info->meta().size) {
-    return fbl::Span<uint8_t>(vmo_info->data().data(), 0UL);
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  return vmo_info->data().subspan(vmo_info->meta().offset + offset);
+  return zx::ok(vmo_info->data().subspan(vmo_info->meta().offset + offset));
 }
 
 zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
@@ -148,15 +152,27 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
 }
 
 zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
-                                       uint64_t offset, uint64_t size) {
+                                       uint64_t offset, uint64_t size, uint32_t rights) {
   if (chip_select >= SpiImplGetChipSelectCount()) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (rights & ~(SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE)) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   vmo_store::StoredVmo<OwnedVmoInfo> stored_vmo(std::move(vmo), OwnedVmoInfo{
                                                                     .offset = offset,
                                                                     .size = size,
+                                                                    .rights = rights,
                                                                 });
+  const zx_vm_option_t map_opts = ((rights & SPI_VMO_RIGHT_READ) ? ZX_VM_PERM_READ : 0) |
+                                  ((rights & SPI_VMO_RIGHT_WRITE) ? ZX_VM_PERM_WRITE : 0);
+  zx_status_t status = stored_vmo.Map(map_opts);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   return chips_[chip_select].registered_vmos.RegisterWithKey(vmo_id, std::move(stored_vmo));
 }
 
@@ -191,15 +207,13 @@ zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, ui
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  fbl::Span<const uint8_t> buffer = GetVmoSpan(chip_select, vmo_id, offset, size);
-  if (!buffer.data()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (buffer.empty()) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<fbl::Span<const uint8_t>> buffer =
+      GetVmoSpan(chip_select, vmo_id, offset, size, SPI_VMO_RIGHT_READ);
+  if (buffer.is_error()) {
+    return buffer.error_value();
   }
 
-  return SpiImplExchange(chip_select, buffer.data(), size, nullptr, 0, nullptr);
+  return SpiImplExchange(chip_select, buffer->data(), size, nullptr, 0, nullptr);
 }
 
 zx_status_t AmlSpi::SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
@@ -208,15 +222,13 @@ zx_status_t AmlSpi::SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uin
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  fbl::Span<uint8_t> buffer = GetVmoSpan(chip_select, vmo_id, offset, size);
-  if (!buffer.data()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (buffer.empty()) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<fbl::Span<uint8_t>> buffer =
+      GetVmoSpan(chip_select, vmo_id, offset, size, SPI_VMO_RIGHT_WRITE);
+  if (buffer.is_error()) {
+    return buffer.error_value();
   }
 
-  return SpiImplExchange(chip_select, nullptr, 0, buffer.data(), size, nullptr);
+  return SpiImplExchange(chip_select, nullptr, 0, buffer->data(), size, nullptr);
 }
 
 zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id, uint64_t tx_offset,
@@ -225,23 +237,19 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  fbl::Span<uint8_t> tx_buffer = GetVmoSpan(chip_select, tx_vmo_id, tx_offset, size);
-  if (!tx_buffer.data()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (tx_buffer.empty()) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<fbl::Span<uint8_t>> tx_buffer =
+      GetVmoSpan(chip_select, tx_vmo_id, tx_offset, size, SPI_VMO_RIGHT_READ);
+  if (tx_buffer.is_error()) {
+    return tx_buffer.error_value();
   }
 
-  fbl::Span<uint8_t> rx_buffer = GetVmoSpan(chip_select, rx_vmo_id, rx_offset, size);
-  if (!rx_buffer.data()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (rx_buffer.empty()) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<fbl::Span<uint8_t>> rx_buffer =
+      GetVmoSpan(chip_select, rx_vmo_id, rx_offset, size, SPI_VMO_RIGHT_WRITE);
+  if (rx_buffer.is_error()) {
+    return rx_buffer.error_value();
   }
 
-  return SpiImplExchange(chip_select, tx_buffer.data(), size, rx_buffer.data(), size, nullptr);
+  return SpiImplExchange(chip_select, tx_buffer->data(), size, rx_buffer->data(), size, nullptr);
 }
 
 fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map, zx_device_t* device) {

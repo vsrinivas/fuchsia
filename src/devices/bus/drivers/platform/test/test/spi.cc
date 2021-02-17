@@ -89,7 +89,7 @@ class TestSpiDevice : public DeviceType,
   }
 
   zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
-                                 uint64_t offset, uint64_t size) {
+                                 uint64_t offset, uint64_t size, uint32_t rights) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

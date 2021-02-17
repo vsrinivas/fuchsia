@@ -117,7 +117,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
   }
 
   zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
-                                 uint64_t offset, uint64_t size) {
+                                 uint64_t offset, uint64_t size, uint32_t rights) {
     if (chip_select > 1) {
       return ZX_ERR_OUT_OF_RANGE;
     }

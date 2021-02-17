@@ -38,7 +38,8 @@ void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Syn
 
 void SpiChild::RegisterVmo(uint32_t vmo_id, ::zx::vmo vmo, uint64_t offset, uint64_t size,
                            RegisterVmoCompleter::Sync& completer) {
-  completer.Reply(spi_.RegisterVmo(cs_, vmo_id, std::move(vmo), offset, size));
+  completer.Reply(spi_.RegisterVmo(cs_, vmo_id, std::move(vmo), offset, size,
+                                   SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
 }
 
 void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) {

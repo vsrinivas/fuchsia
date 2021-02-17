@@ -262,13 +262,13 @@ TEST(AmlSpiTest, RegisterVmo) {
   {
     zx::vmo vmo;
     EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
   }
 
   {
     zx::vmo vmo;
     EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    EXPECT_NOT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE));
+    EXPECT_NOT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
   }
 
   {
@@ -299,7 +299,8 @@ TEST(AmlSpiTest, Transmit) {
   {
     zx::vmo vmo;
     EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256));
+    EXPECT_OK(
+        spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256, SPI_VMO_RIGHT_READ));
   }
 
   bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
@@ -331,7 +332,8 @@ TEST(AmlSpiTest, ReceiveVmo) {
   {
     zx::vmo vmo;
     EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256,
+                                      SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
 
   bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
@@ -366,7 +368,8 @@ TEST(AmlSpiTest, ExchangeVmo) {
   {
     zx::vmo vmo;
     EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256,
+                                      SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
 
   bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
@@ -402,7 +405,8 @@ TEST(AmlSpiTest, TransfersOutOfRange) {
   {
     zx::vmo vmo;
     EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    EXPECT_OK(spi0.SpiImplRegisterVmo(1, 1, std::move(vmo), PAGE_SIZE - 4, 4));
+    EXPECT_OK(spi0.SpiImplRegisterVmo(1, 1, std::move(vmo), PAGE_SIZE - 4, 4,
+                                      SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
 
   bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
@@ -431,6 +435,42 @@ TEST(AmlSpiTest, TransfersOutOfRange) {
   EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 3, 2));
   EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 4, 1));
   EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 5, 1));
+
+  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+}
+
+TEST(AmlSpiTest, VmoBadRights) {
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 2);
+  AmlSpi& spi1 = *bind.children()[1].device;
+
+  zx::vmo test_vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, 256, SPI_VMO_RIGHT_READ));
+  }
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 2, std::move(vmo), 0, 256,
+                                      SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
+  }
+
+  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(spi1.SpiImplExchangeVmo(0, 1, 0, 2, 128, 128));
+  EXPECT_EQ(spi1.SpiImplExchangeVmo(0, 2, 0, 1, 128, 128), ZX_ERR_ACCESS_DENIED);
+  EXPECT_EQ(spi1.SpiImplExchangeVmo(0, 1, 0, 1, 128, 128), ZX_ERR_ACCESS_DENIED);
+  EXPECT_EQ(spi1.SpiImplReceiveVmo(0, 1, 0, 128), ZX_ERR_ACCESS_DENIED);
 
   ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
 }
