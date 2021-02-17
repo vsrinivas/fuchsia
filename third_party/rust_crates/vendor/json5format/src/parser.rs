@@ -378,15 +378,14 @@ impl<'parser> Parser<'parser> {
                 } else {
                     // All block comment lines are indented at least beyond the "/*", so strip the
                     // indent and re-indent when formatting.
-                    let line_count = content.lines().count();
                     let trimmed_lines = content
                         .lines()
                         .enumerate()
                         .map(|(index, line)| {
                             if index == 0 {
                                 line
-                            } else if index == line_count - 1 && line.trim() == "" {
-                                line.trim()
+                            } else if line.trim().len() == 0 {
+                                ""
                             } else {
                                 &line[indent_count..]
                             }

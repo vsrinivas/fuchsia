@@ -105,7 +105,7 @@ impl Comment {
                     let is_last = index == len - 1;
                     if is_first {
                         formatter.append(&format!("/*{}", line))?;
-                    } else {
+                    } else if line.len() > 0 {
                         formatter.append(&format!("{}", line))?;
                     }
                     if !is_last {

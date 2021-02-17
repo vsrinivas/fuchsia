@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "json5format"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Rich Kadel <richkadel@google.com>"]
 description = "Customizable JSON5 document formatter that preserves comments"
 keywords = ["json", "json5", "style", "formatter", "comments"]

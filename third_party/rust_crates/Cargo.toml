@@ -67,7 +67,7 @@ http = "0.2.1"
 hyper = { version = "0.13.4", default-features = false, features = ["stream"] }
 itertools = "0.8"
 itoa = "0.4"
-json5format = "0.1.4"
+json5format = "0.1.5"
 lazy_static = "1.4"
 libc = "0.2.84"
 libm = "0.2.1"

@@ -155,25 +155,36 @@ fn test_comment_block() {
     expose: [
     /*
     what happens
-    with this
+    with this 1
     */
       /*
     what happens
-    with this
+    with this 2
       */
       /*
        what happens
-       with this
+       with this 3
       */
       /*
         what happens
-        with this
+        with this 4
       */
+        /*
+          what happens
+
+          with this 5
+        */
+        /*
+
+          what happens
+
+          with this 6
+        */
       /* what happens
-         with this
+         with this 7
          */
       /* what happens
-         with this
+         with this 8
          and this */
          {
          }
@@ -190,30 +201,43 @@ fn test_comment_block() {
     expose: [
         /*
         what happens
-        with this
+        with this 1
         */
 
         /*
     what happens
-    with this
+    with this 2
       */
 
         /*
          what happens
-         with this
+         with this 3
         */
 
         /*
           what happens
-          with this
+          with this 4
+        */
+
+        /*
+          what happens
+
+          with this 5
+        */
+
+        /*
+
+          what happens
+
+          with this 6
         */
 
         /* what happens
-           with this
+           with this 7
         */
 
         /* what happens
-           with this
+           with this 8
            and this */
         {},
 
