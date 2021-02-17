@@ -23,9 +23,6 @@ zx_library("image-format") {
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/sysmem-version",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # TODO(dustingreen): Migrate / move anything that's still needed into

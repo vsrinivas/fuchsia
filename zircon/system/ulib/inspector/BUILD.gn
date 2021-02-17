@@ -35,9 +35,4 @@ zx_library("inspector") {
     configs -= [ "//build/config:default_frame_pointers" ]
     configs += [ "//build/config:frame_pointers" ]
   }
-
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }

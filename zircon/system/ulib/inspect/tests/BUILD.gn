@@ -35,9 +35,6 @@ test("inspect") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuzzer("inspect-reader-fuzzer") {
