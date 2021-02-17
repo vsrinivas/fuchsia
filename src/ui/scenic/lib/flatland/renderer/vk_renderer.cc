@@ -10,6 +10,7 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 
 namespace escher {
 namespace {
@@ -78,6 +79,7 @@ bool VkRenderer::RegisterCollection(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     vk::ImageUsageFlags usage) {
+  TRACE_DURATION("flatland", "VkRenderer::RegisterCollection");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   FX_DCHECK(vk_device);
@@ -192,6 +194,7 @@ void VkRenderer::ReleaseImage(sysmem_util::GlobalImageId image_id) {
 escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,
                                           ImageMetadata metadata, vk::ImageUsageFlags usage,
                                           vk::ImageLayout layout) {
+  TRACE_DURATION("flatland", "VkRenderer::ExtractImage");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
 
@@ -265,6 +268,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
                         const std::vector<Rectangle2D>& rectangles,
                         const std::vector<ImageMetadata>& images,
                         const std::vector<zx::event>& release_fences) {
+  TRACE_DURATION("flatland", "VkRenderer::Render");
+
   // Escher's frame class acts as a command buffer manager that we use to create a
   // command buffer and submit it to the device queue once we are done.
   auto frame = escher_->NewFrame("flatland::VkRenderer", ++frame_number_);
