@@ -157,8 +157,8 @@ static fb_cmd_t cmdlist[NUM_COMMANDS] = {
 // varlist contains all variables this bootloader supports.
 static fb_var_t varlist[NUM_VARIABLES] = {
     {
-      .name = "has-slot",
-      .value = "",
+        .name = "has-slot",
+        .value = "",
     },
     {
         .name = "partition-type",
@@ -214,7 +214,8 @@ static fb_var_t varlist[NUM_VARIABLES] = {
     {
         .name = "version",
         .value = "0.4",
-    }};
+    },
+};
 
 // fb_recv runs every time a UDP packet destined for the fastboot port is
 // received.
@@ -260,10 +261,10 @@ void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport
     } else {
       // Send an error to the host.
       pkt_to_send.pkt_id = ERROR_TYPE;
-      snprintf((char *) pkt_to_send.data, FB_MAX_PAYLOAD_SIZE,
+      snprintf((char *)pkt_to_send.data, FB_MAX_PAYLOAD_SIZE,
                "fastboot packet had malformed type %#02x", pkt->pkt_id);
-      udp6_send((void *)&pkt_to_send, FB_HDR_SIZE +
-                strnlen((char *) pkt_to_send.data, FB_MAX_PAYLOAD_SIZE),
+      udp6_send((void *)&pkt_to_send,
+                FB_HDR_SIZE + strnlen((char *)pkt_to_send.data, FB_MAX_PAYLOAD_SIZE),
                 dest_addr.daddr, dest_addr.dport, dest_addr.sport);
       printf("error: malformed type: %#02x", pkt->pkt_id);
       return;
@@ -383,8 +384,8 @@ void respond_to_query_packet(fb_pkt_t *pkt) {
   if (DEBUG) {
     pp_fb_pkt("device", &pkt_to_send, FB_HDR_SIZE + sizeof(uint16_t));
   }
-  udp6_send((void *)&pkt_to_send, FB_HDR_SIZE + sizeof(uint16_t),
-            dest_addr.daddr, dest_addr.dport, dest_addr.sport);
+  udp6_send((void *)&pkt_to_send, FB_HDR_SIZE + sizeof(uint16_t), dest_addr.daddr, dest_addr.dport,
+            dest_addr.sport);
 }
 
 void respond_to_init_packet(fb_pkt_t *pkt) {
@@ -476,11 +477,14 @@ void fb_erase(char *cmd) {
     fb_send_fail("could not find boot disk");
     return;
   }
-  if (disk_find_partition(&disk, DEBUG, guid_value, partition) < 0) {
+
+  gpt_entry_t entry;
+  if (disk_find_partition(&disk, DEBUG, guid_value, NULL, NULL, &entry)) {
     fb_send_fail("could not find partition");
     return;
   }
-  uint64_t size = (disk.last - disk.first) * disk.blksz;
+  uint64_t offset = entry.first * disk.blksz;
+  uint64_t size = (entry.last - entry.first + 1) * disk.blksz;
 
   // Allocate some memory to clear.
   size_t num_pages = PAGE_SIZE * 16;
@@ -500,7 +504,6 @@ void fb_erase(char *cmd) {
   // is a bit fragile to future partition size increases, so we should
   // probably intermittently poll the network interface so the host doesn't
   // think the port is closed.
-  size_t offset = 0;
   while (size > 0) {
     size_t len = (size < increment) ? size : increment;
     efi_status status = disk_write(&disk, offset, (void *)pg_addr, len);
@@ -570,7 +573,7 @@ void fb_download(char *cmd) {
     return;
   }
   curr_img.size = hex_to_int(hexstring);
-  if (curr_img.size == (uint32_t) (-1)) {
+  if (curr_img.size == (uint32_t)(-1)) {
     fb_send_fail("failed to convert download size to integer");
     return;
   }
@@ -858,4 +861,3 @@ void fb_send_info(const char *msg) {
   memcpy(pkt_to_send.data, "INFO", 4);
   fb_send(msg);
 }
-

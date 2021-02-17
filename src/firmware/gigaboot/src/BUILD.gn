@@ -22,6 +22,7 @@ source_set("src") {
     "netifc.c",
     "osboot.c",
     "pci.c",
+    "utf_conversion.c",
     "zircon.c",
   ]
   include_dirs = [ "." ]
@@ -45,6 +46,7 @@ test("gigaboot_test") {
   sources = [
     "diskio.c",
     "diskio_test.cc",
+    "utf_conversion.c",
   ]
   include_dirs = [ "." ]
   deps = [

@@ -5,7 +5,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#pragma once
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_UTF_CONVERSION_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_UTF_CONVERSION_H_
 
 // Attempt to convert a UTF16 string to UTF8 using an unspecified endianness (utf16_*).
 //
@@ -39,3 +40,5 @@ zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, siz
 // null termination of the destination buffer will be performed by default.
 
 zx_status_t utf8_to_utf16(const uint8_t* src, size_t src_len, uint16_t* dst, size_t* dst_len);
+
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_UTF_CONVERSION_H_

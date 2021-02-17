@@ -19,6 +19,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+// Equality operator so we can do EXPECT_EQ() with gpt_entry_t.
+// Has to be in the global namespace.
+bool operator==(const gpt_entry_t& a, const gpt_entry_t& b) {
+  return memcmp(&a, &b, sizeof(a)) == 0;
+}
+
 namespace {
 
 using testing::_;
@@ -40,6 +46,65 @@ static_assert(kBootMediaBlockSize % 8 == 0, "Block size must be 8-byte aligned")
 const efi_handle kImageHandle = reinterpret_cast<efi_handle>(0x10);
 const efi_handle kDeviceHandle = reinterpret_cast<efi_handle>(0x20);
 const efi_handle kBlockHandle = reinterpret_cast<efi_handle>(0x30);
+
+// A set of partitions we can use to set up a fake GPT.
+// These are broken out as individual variables as well to make it easy to
+// grab GUIDs when needed.
+const gpt_entry_t kZirconAGptEntry = {
+    .type = GPT_ZIRCON_ABR_TYPE_GUID,
+    .guid = {0x01},
+    .first = 3,
+    .last = 4,
+    // Partition names are little-endian UTF-16.
+    .name = "z\0i\0r\0c\0o\0n\0_\0a\0",
+};
+const gpt_entry_t kZirconBGptEntry = {
+    .type = GPT_ZIRCON_ABR_TYPE_GUID,
+    .guid = {0x02},
+    .first = 5,
+    .last = 6,
+    .name = "z\0i\0r\0c\0o\0n\0_\0b\0",
+};
+const gpt_entry_t kZirconRGptEntry = {
+    .type = GPT_ZIRCON_ABR_TYPE_GUID,
+    .guid = {0x03},
+    .first = 7,
+    .last = 8,
+    .name = "z\0i\0r\0c\0o\0n\0_\0r\0",
+};
+const gpt_entry_t kFvmGptEntry = {
+    .type = GPT_FVM_TYPE_GUID,
+    .guid = {0x04},
+    .first = 9,
+    .last = 11,
+    .name = "f\0v\0m\0",
+};
+
+std::vector<gpt_entry_t> TestPartitions() {
+  return std::vector<gpt_entry_t>{
+      // Defined out-of-order to make sure our code handles it properly.
+      kFvmGptEntry,
+      kZirconAGptEntry,
+      kZirconBGptEntry,
+      kZirconRGptEntry,
+  };
+}
+
+// Returns a disk_t with reasonable default values to represent the boot media.
+disk_t TestBootDisk(efi_disk_io_protocol* disk_protocol, efi_boot_services* boot_services) {
+  return disk_t{
+      .io = disk_protocol,
+      .h = kBlockHandle,
+      .bs = boot_services,
+      .img = kImageHandle,
+      .first = 0,
+      .last = kBootMediaNumBlocks - 1,
+      .blksz = kBootMediaBlockSize,
+      .id = kBootMediaId,
+  };
+}
+
+const uint8_t kUnknownPartitionGuid[GPT_GUID_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0xFF};
 
 class MockBootServices : public efi::StubBootServices {
  public:
@@ -163,6 +228,10 @@ TEST(DiskFindBoot, Success) {
 // Writes a primary GPT to |fake_disk| such that it will contain the given
 // |partitions|. Partition contents on disk are unchanged.
 //
+// This will use blocks 0-2 for MBR/header/partition data, so a
+// properly-configured set of partitions should only use blocks in the range
+// [3, kBootMediaNumBlocks).
+//
 // Should be called with ASSERT_NO_FATAL_FAILURES().
 void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
                          const std::vector<gpt_entry_t>& partitions) {
@@ -199,86 +268,129 @@ void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
   ASSERT_LT(header->last, kBootMediaNumBlocks);
 }
 
-TEST(DiskFindPartition, SinglePartitionSuccess) {
+TEST(DiskFindPartition, ByType) {
   MockBootServices mock_services;
   efi::FakeDiskIoProtocol fake_disk_protocol;
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, TestPartitions()));
 
-  std::vector<gpt_entry_t> partitions = {{.type = GPT_ZIRCON_ABR_TYPE_GUID, .first = 3, .last = 5}};
-  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
+  const disk_t disk = TestBootDisk(fake_disk_protocol.protocol(), mock_services.services());
+  gpt_entry_t partition = {};
 
-  disk_t disk = {
-      .io = fake_disk_protocol.protocol(),
-      .h = kBlockHandle,
-      .bs = mock_services.services(),
-      .img = kImageHandle,
-      .first = 0,
-      .last = kBootMediaNumBlocks - 1,
-      .blksz = kBootMediaBlockSize,
-      .id = kBootMediaId,
-  };
-  EXPECT_EQ(0, disk_find_partition(&disk, false, partitions[0].type, nullptr));
-  EXPECT_EQ(3u, disk.first);
-  EXPECT_EQ(5u, disk.last);
+  // Success.
+  EXPECT_EQ(0, disk_find_partition(&disk, false, kFvmGptEntry.type, nullptr, nullptr, &partition));
+  EXPECT_EQ(kFvmGptEntry, partition);
+
+  // Failure due to no matches.
+  EXPECT_NE(0,
+            disk_find_partition(&disk, false, kUnknownPartitionGuid, nullptr, nullptr, &partition));
+
+  // Failure due to multiple matches (zircon_{a,b,r} have the same type GUID).
+  EXPECT_NE(0,
+            disk_find_partition(&disk, false, kZirconAGptEntry.type, nullptr, nullptr, &partition));
 }
 
-TEST(DiskFindPartition, MultiPartitionSuccess) {
+TEST(DiskFindPartition, ByGuid) {
   MockBootServices mock_services;
   efi::FakeDiskIoProtocol fake_disk_protocol;
 
-  std::vector<gpt_entry_t> partitions = {{.type = GPT_ZIRCON_ABR_TYPE_GUID, .first = 3, .last = 5},
-                                         {.type = GPT_VBMETA_ABR_TYPE_GUID, .first = 8, .last = 8},
-                                         {.type = GPT_FVM_TYPE_GUID, .first = 6, .last = 7}};
+  // Duplicate the zircon_a GUID so we can test multiple match failure.
+  auto partitions = TestPartitions();
+  memcpy(partitions[2].guid, kZirconAGptEntry.guid, sizeof(kZirconAGptEntry.guid));
   ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
 
-  const disk_t disk = {
-      .io = fake_disk_protocol.protocol(),
-      .h = kBlockHandle,
-      .bs = mock_services.services(),
-      .img = kImageHandle,
-      .first = 0,
-      .last = kBootMediaNumBlocks - 1,
-      .blksz = kBootMediaBlockSize,
-      .id = kBootMediaId,
-  };
-  // disk_find_partition() returns the result by overwriting disk_t fields,
-  // make a copy so we can call it again afterwards using the original.
-  disk_t disk_copy = disk;
-  EXPECT_EQ(0, disk_find_partition(&disk_copy, false, partitions[0].type, nullptr));
-  EXPECT_EQ(3u, disk_copy.first);
-  EXPECT_EQ(5u, disk_copy.last);
+  const disk_t disk = TestBootDisk(fake_disk_protocol.protocol(), mock_services.services());
+  gpt_entry_t partition = {};
 
-  disk_copy = disk;
-  EXPECT_EQ(0, disk_find_partition(&disk_copy, false, partitions[1].type, nullptr));
-  EXPECT_EQ(8u, disk_copy.first);
-  EXPECT_EQ(8u, disk_copy.last);
+  // Success.
+  EXPECT_EQ(0, disk_find_partition(&disk, false, nullptr, kFvmGptEntry.guid, nullptr, &partition));
+  EXPECT_EQ(kFvmGptEntry, partition);
 
-  disk_copy = disk;
-  EXPECT_EQ(0, disk_find_partition(&disk_copy, false, partitions[2].type, nullptr));
-  EXPECT_EQ(6u, disk_copy.first);
-  EXPECT_EQ(7u, disk_copy.last);
+  // Failure due to no matches.
+  EXPECT_NE(0,
+            disk_find_partition(&disk, false, nullptr, kUnknownPartitionGuid, nullptr, &partition));
+
+  // Failure due to multiple matches.
+  EXPECT_NE(0,
+            disk_find_partition(&disk, false, nullptr, kZirconAGptEntry.guid, nullptr, &partition));
 }
 
-TEST(DiskFindPartition, UnknownPartitionFailure) {
+TEST(DiskFindPartition, ByName) {
   MockBootServices mock_services;
   efi::FakeDiskIoProtocol fake_disk_protocol;
 
-  std::vector<gpt_entry_t> partitions = {{.type = GPT_ZIRCON_ABR_TYPE_GUID, .first = 3, .last = 5},
-                                         {.type = GPT_VBMETA_ABR_TYPE_GUID, .first = 8, .last = 8},
-                                         {.type = GPT_FVM_TYPE_GUID, .first = 6, .last = 7}};
+  // Duplicate the zircon_a name so we can test multiple match failure.
+  auto partitions = TestPartitions();
+  memcpy(partitions[2].name, kZirconAGptEntry.name, sizeof(kZirconAGptEntry.name));
   ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
 
-  disk_t disk = {
-      .io = fake_disk_protocol.protocol(),
-      .h = kBlockHandle,
-      .bs = mock_services.services(),
-      .img = kImageHandle,
-      .first = 0,
-      .last = kBootMediaNumBlocks - 1,
-      .blksz = kBootMediaBlockSize,
-      .id = kBootMediaId,
-  };
-  uint8_t unknown_guid[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
-  EXPECT_NE(0, disk_find_partition(&disk, false, unknown_guid, nullptr));
+  const disk_t disk = TestBootDisk(fake_disk_protocol.protocol(), mock_services.services());
+  gpt_entry_t partition = {};
+
+  // Success.
+  EXPECT_EQ(0, disk_find_partition(&disk, false, nullptr, nullptr, "fvm", &partition));
+  EXPECT_EQ(kFvmGptEntry, partition);
+
+  // Failure due to no matches.
+  EXPECT_NE(0, disk_find_partition(&disk, false, nullptr, nullptr, "unknown", &partition));
+
+  // Failure due to multiple matches.
+  EXPECT_NE(0, disk_find_partition(&disk, false, nullptr, nullptr, "zircon_a", &partition));
+}
+
+TEST(DiskFindPartition, ByAll) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk_protocol;
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, TestPartitions()));
+
+  const disk_t disk = TestBootDisk(fake_disk_protocol.protocol(), mock_services.services());
+  gpt_entry_t partition = {};
+
+  // Success.
+  EXPECT_EQ(0, disk_find_partition(&disk, false, kFvmGptEntry.type, kFvmGptEntry.guid, "fvm",
+                                   &partition));
+  EXPECT_EQ(kFvmGptEntry, partition);
+
+  // Failure due to param mismatches.
+  EXPECT_NE(0, disk_find_partition(&disk, false, kFvmGptEntry.type, kFvmGptEntry.guid, "zircon_a",
+                                   &partition));
+  EXPECT_NE(0, disk_find_partition(&disk, false, kFvmGptEntry.type, kZirconAGptEntry.guid, "fvm",
+                                   &partition));
+  EXPECT_NE(0, disk_find_partition(&disk, false, kZirconAGptEntry.type, kFvmGptEntry.guid, "fvm",
+                                   &partition));
+}
+
+TEST(DiskFindPartition, Verbose) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk_protocol;
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, TestPartitions()));
+
+  const disk_t disk = TestBootDisk(fake_disk_protocol.protocol(), mock_services.services());
+  gpt_entry_t partition = {};
+
+  // We don't need to check the verbose output, just make sure it doesn't
+  // crash and still gives the expected result.
+  EXPECT_EQ(
+      0, disk_find_partition(&disk, true, kFvmGptEntry.type, kFvmGptEntry.guid, "fvm", &partition));
+  EXPECT_EQ(kFvmGptEntry, partition);
+}
+
+TEST(DiskFindPartition, SkipInvalidPartitions) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk_protocol;
+
+  auto partitions = TestPartitions();
+  partitions[0].first = 0;
+  partitions[1].last = 0;
+  partitions[2].first = partitions[2].last + 1;
+  ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk_protocol, partitions));
+
+  const disk_t disk = TestBootDisk(fake_disk_protocol.protocol(), mock_services.services());
+  gpt_entry_t partition = {};
+
+  // Match any partition by passing all null filters. This should skip
+  // partitions 0-2 and only find partitions 3.
+  EXPECT_EQ(0, disk_find_partition(&disk, false, nullptr, nullptr, nullptr, &partition));
+  EXPECT_EQ(partitions[3], partition);
 }
 
 TEST(GuidValueFromName, KnownPartitionNames) {

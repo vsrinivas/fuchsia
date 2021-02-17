@@ -6,7 +6,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/types.h>
 
 #include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path-to-text.h>
@@ -20,6 +22,10 @@
 #endif
 
 #include "osboot.h"
+#include "utf_conversion.h"
+
+// Max number of UTF-16 chars in a GPT partition name.
+#define GPT_NAME_LEN_U16 (GPT_NAME_LEN / sizeof(uint16_t))
 
 static bool path_node_match(efi_device_path_protocol* a, efi_device_path_protocol* b) {
   size_t alen = a->Length[0] | (a->Length[1] << 8);
@@ -75,7 +81,7 @@ static void print_path(efi_boot_services* bs, efi_device_path_protocol* path) {
   bs->FreePool(txt);
 }
 
-static efi_status disk_read(disk_t* disk, size_t offset, void* data, size_t length) {
+static efi_status disk_read(const disk_t* disk, size_t offset, void* data, size_t length) {
   if (disk->first > disk->last) {
     return EFI_VOLUME_CORRUPTED;
   }
@@ -209,16 +215,12 @@ fail_open_devpath:
   return found ? 0 : -1;
 }
 
-int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
-                        const char* guid_name) {
+int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, const uint8_t* guid,
+                        const char* name, gpt_entry_t* partition) {
+  // Block 0 is MBR, read from block 1 to get GPT header.
   gpt_header_t gpt;
   efi_status status = disk_read(disk, disk->blksz, &gpt, sizeof(gpt));
   if (status != EFI_SUCCESS) {
-    return -1;
-  }
-
-  if (gpt.magic != GPT_MAGIC) {
-    printf("gpt - bad magic!\n");
     return -1;
   }
 
@@ -233,15 +235,29 @@ int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
     printf("gpt: e.size:  %u\n", gpt.entries_size);
   }
 
+  // TODO(69527): checksum validation and backup GPT support.
   if ((gpt.magic != GPT_MAGIC) || (gpt.size != GPT_HEADER_SIZE) ||
       (gpt.entries_size != GPT_ENTRY_SIZE) || (gpt.entries_count > 256)) {
     printf("gpt - malformed header\n");
     return -1;
   }
 
+  // If the user gave a name, convert to UTF-16 so we can compare it to
+  // the GPT entry directly with memcmp().
+  uint16_t name_utf16[GPT_NAME_LEN_U16];
+  size_t name_utf16_len = sizeof(name_utf16);
+  if (name) {
+    zx_status_t status =
+        utf8_to_utf16((const uint8_t*)name, strlen(name) + 1, name_utf16, &name_utf16_len);
+    if (status != ZX_OK) {
+      printf("gpt - failed to convert name '%s' to UTF-16: %d\n", name, status);
+      return -1;
+    }
+  }
+
+  // Allocate memory to hold the partition entry table and read it from disk.
   gpt_entry_t* table;
   size_t tsize = gpt.entries_count * gpt.entries_size;
-
   status = disk->bs->AllocatePool(EfiLoaderData, tsize, (void**)&table);
   if (status != EFI_SUCCESS) {
     printf("gpt - allocation failure\n");
@@ -258,32 +274,35 @@ int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
   bool found = false;
   for (unsigned n = 0; n < gpt.entries_count; n++) {
     if ((table[n].first == 0) || (table[n].last == 0) || (table[n].last < table[n].first)) {
-      // ignore empty or bogus entries
+      // Ignore empty or bogus entries.
       continue;
     }
 
-    const char* type;
-    if (!memcmp(table[n].type, guid_value, GPT_GUID_LEN)) {
-      type = guid_name;
-      disk->first = table[n].first;
-      disk->last = table[n].last;
+    if ((!type || memcmp(table[n].type, type, GPT_GUID_LEN) == 0) &&
+        (!guid || memcmp(table[n].guid, guid, GPT_GUID_LEN) == 0) &&
+        (!name || memcmp(table[n].name, name_utf16, name_utf16_len) == 0)) {
+      // Multi-partition match is an error.
+      if (found) {
+        disk->bs->FreePool(table);
+        return -1;
+      }
+
       found = true;
-    } else {
-      type = "unknown";
+      memcpy(partition, &table[n], sizeof(*partition));
     }
 
     if (verbose) {
-      char name[GPT_NAME_LEN / 2];
-      for (unsigned i = 0; i < GPT_NAME_LEN / 2; i++) {
-        unsigned c = table[n].name[i * 2 + 0] | (table[n].name[i * 2 + 1] << 8);
-        if ((c != 0) && ((c < ' ') || (c > 127))) {
-          c = '.';
-        }
-        name[i] = c;
-      }
-      name[GPT_NAME_LEN / 2 - 1] = 0;
-      printf("#%03d %" PRIu64 "..%" PRIu64 " %" PRIx64 " name='%s' type='%s'\n", n, table[n].first,
-             table[n].last, table[n].flags, name, type);
+      // Convert UTF-16 partition name to UTF-8 for printing. This assumes
+      // the name will actually be basic ASCII and might truncate if not,
+      // but it's fine for debug purposes.
+      char gpt_name[GPT_NAME_LEN / 2] = "<unknown>";
+      size_t gpt_name_length = sizeof(gpt_name);
+      utf16_to_utf8((const uint16_t*)table[n].name, GPT_NAME_LEN_U16, (uint8_t*)gpt_name,
+                    &gpt_name_length);
+      gpt_name[GPT_NAME_LEN / 2 - 1] = '\0';
+
+      printf("#%03d %" PRIu64 "..%" PRIu64 " %16s %" PRIx64 "\n", n, table[n].first, table[n].last,
+             gpt_name, table[n].flags);
     }
   }
   disk->bs->FreePool(table);
@@ -303,12 +322,14 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
     return NULL;
   }
 
-  if (disk_find_partition(&disk, verbose, guid_value, guid_name)) {
+  gpt_entry_t partition;
+  if (disk_find_partition(&disk, verbose, guid_value, NULL, NULL, &partition)) {
     printf("Cannot find %s partition on bootloader disk.\n", guid_name);
     goto fail0;
   }
+  const uint64_t partition_offset = partition.first * disk.blksz;
 
-  efi_status status = disk_read(&disk, 0, sector, 512);
+  efi_status status = disk_read(&disk, partition_offset, sector, 512);
   if (status != EFI_SUCCESS) {
     printf("Failed to read disk: %zu\n", status);
     goto fail0;
@@ -328,7 +349,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
     goto fail0;
   }
 
-  status = disk_read(&disk, 0, image, sz);
+  status = disk_read(&disk, partition_offset, image, sz);
   if (status != EFI_SUCCESS) {
     printf("Failed to read image from %s partition\n", guid_name);
     goto fail1;
@@ -360,13 +381,15 @@ efi_status read_partition(efi_handle img, efi_system_table* sys, const uint8_t* 
     return EFI_NOT_FOUND;
   }
 
-  if (disk_find_partition(&disk, verbose, guid_value, guid_name)) {
+  gpt_entry_t partition;
+  if (disk_find_partition(&disk, verbose, guid_value, NULL, NULL, &partition)) {
     printf("Cannot find %s partition on bootloader disk.\n", guid_name);
     disk_close(&disk);
     return EFI_NOT_FOUND;
   }
+  const uint64_t partition_offset = partition.first * disk.blksz;
 
-  efi_status status = disk_read(&disk, offset, data, size);
+  efi_status status = disk_read(&disk, offset + partition_offset, data, size);
   disk_close(&disk);
   return status;
 }
@@ -382,13 +405,15 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
     return EFI_NOT_FOUND;
   }
 
-  if (disk_find_partition(&disk, verbose, guid_value, guid_name)) {
+  gpt_entry_t partition;
+  if (disk_find_partition(&disk, verbose, guid_value, NULL, NULL, &partition)) {
     printf("Cannot find %s partition on bootloader disk.\n", guid_name);
     disk_close(&disk);
     return EFI_NOT_FOUND;
   }
+  const uint64_t partition_offset = partition.first * disk.blksz;
 
-  efi_status status = disk_write(&disk, offset, (void*)data, size);
+  efi_status status = disk_write(&disk, offset + partition_offset, (void*)data, size);
   disk_close(&disk);
   return status;
 }

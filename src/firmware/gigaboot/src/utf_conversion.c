@@ -15,8 +15,7 @@ const uint32_t kUnicodeReplacementChar = 0xFFFD;
 // take.
 //
 // If the input is an invalid Unicode codepoint, signal this by returning 0.
-uint32_t EncodeUtf8CodePoint(uint32_t code_point, uint8_t* tgt, size_t tgt_len,
-                                    size_t offset) {
+uint32_t EncodeUtf8CodePoint(uint32_t code_point, uint8_t* tgt, size_t tgt_len, size_t offset) {
   // If this codepoint is illegal (for whatever reason), replace it with the
   // Unicode replacement character instead.
   if (code_point > kMaxUnicodeCodePoint) {
@@ -58,8 +57,7 @@ uint32_t EncodeUtf8CodePoint(uint32_t code_point, uint8_t* tgt, size_t tgt_len,
 //
 // If the input is an invalid Unicode codepoint, signal this by returning 0.
 // Input length is in bytes.
-uint32_t EncodeUtf16CodePoint(uint32_t code_point, uint16_t* tgt, size_t tgt_len,
-                                    size_t offset) {
+uint32_t EncodeUtf16CodePoint(uint32_t code_point, uint16_t* tgt, size_t tgt_len, size_t offset) {
   // If this codepoint is illegal (for whatever reason), replace it with the
   // Unicode replacement character instead.
   if (code_point > kMaxUnicodeCodePoint) {
@@ -75,7 +73,6 @@ uint32_t EncodeUtf16CodePoint(uint32_t code_point, uint16_t* tgt, size_t tgt_len
   }
   return 1;
 }
-
 
 zx_status_t Utf16ToUtf8(const uint16_t* src, size_t src_len, uint8_t* dst, size_t* dst_len) {
   zx_status_t ret = ZX_OK;
@@ -103,8 +100,8 @@ zx_status_t Utf16ToUtf8(const uint16_t* src, size_t src_len, uint8_t* dst, size_
       if (IsLowSurrogate(code_unit)) {
         const uint32_t SHIFT = 10u;
         const uint32_t MASK = (1u << SHIFT) - 1;
-        code_point = ((code_unit & MASK) | ((uint32_t)(high & MASK) << SHIFT)) +
-                     kSupplementaryPlaneStart;
+        code_point =
+            ((code_unit & MASK) | ((uint32_t)(high & MASK) << SHIFT)) + kSupplementaryPlaneStart;
         ++rd;
       } else {
         code_point = kUnicodeReplacementChar;

@@ -18,7 +18,6 @@ if (is_efi_toolchain) {
       "stdlib.c",
       "string.c",
       "strings.c",
-      "utf_conversion.c",
       "xefi.c",
     ]
     deps = [
