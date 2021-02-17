@@ -2748,7 +2748,7 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:54
+From //build/rust/config.gni:53
 
 ### rust_incremental
 Enable incremental rust compilation. Takes a path to the directory to use
@@ -2763,7 +2763,7 @@ Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:46
+From //build/rust/config.gni:45
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -2772,7 +2772,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:64
+From //build/rust/config.gni:63
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -2781,7 +2781,7 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:59
+From //build/rust/config.gni:58
 
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
@@ -2789,14 +2789,14 @@ looks for the standard library
 
 **Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64"`
 
-From //build/rust/config.gni:43
+From //build/rust/config.gni:42
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:49
+From //build/rust/config.gni:48
 
 ### rust_v0_symbol_mangling
 Controls whether the rust compiler uses v0 symbol mangling scheme
@@ -2822,7 +2822,7 @@ This can be used to test custom Rust toolchains.
 
 **Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:25
+From //build/rust/config.gni:24
 
 ### rustc_version_description
 Human-readable identifier for the toolchain version.
@@ -2832,7 +2832,7 @@ e.g., clang_version_description = read_file("$_rustc_lib_dir/VERSION")
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:39
+From //build/rust/config.gni:38
 
 ### rustc_version_string
 This is a string identifying the particular toolchain version in use.  Its
@@ -2844,7 +2844,7 @@ prebuilt is used.
 
 **Current value (from the default):** `"3npWHcc6Oq8UJXs2GvTOUSB_oqUApJYi8IfQXWA3WIIC"`
 
-From //build/rust/config.gni:33
+From //build/rust/config.gni:32
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
