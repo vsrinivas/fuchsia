@@ -53,9 +53,10 @@ The *options* field can be 0 or a combination of:
 non-resizable VMO can be resized.
 
 **ZX_VMO_DISCARDABLE** to create a VMO that the kernel can discard pages from
-under memory pressure. Use [`zx_vmo_op_range()`] with **ZX_VMO_OP_LOCK** to
-lock discardable VMOs when in use, and unlock them when done with
-**ZX_VMO_OP_UNLOCK** making them eligible for reclamation by the kernel.
+under memory pressure. Use [`zx_vmo_op_range()`] with **ZX_VMO_OP_LOCK** to lock
+discardable VMOs when in use, and unlock them when done with
+**ZX_VMO_OP_UNLOCK** making them eligible for reclamation by the kernel. A newly
+created discardable VMO is initially unlocked.
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
 inactive whenever a child of the VMO is created and becomes active again when

@@ -48,10 +48,10 @@ children, and for slice children of such vmos. Provided range must be page align
 efficiently and save memory by de-duping to shared zero pages. Requires the **ZX_RIGHT_WRITE** right.
 
 **ZX_VMO_OP_LOCK** - Locks a range of pages in a discardable VMO, preventing them from being
-discarded by the kernel. Guaranteed to succeed if the arguments are valid.  *buffer* should point to
-a `zx_vmo_lock_state_t` struct, and *buffer_size* should accommodate the struct. Returns information
-about the locked and previously discarded ranges in *buffer*, so that clients can reinitialize
-discarded contents if needed.
+discarded by the kernel. Guaranteed to successfully lock the VMO and return **ZX_OK** if the
+arguments are valid.  *buffer* should point to a `zx_vmo_lock_state_t` struct, and *buffer_size*
+should accommodate the struct. Returns information about the locked and previously discarded ranges
+in *buffer*, so that clients can reinitialize discarded contents if needed.
 
 The entire VMO should be locked at once, so *offset* should be 0 and *size* should be the current
 size of the VMO.  Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right. Note that locking
@@ -59,7 +59,7 @@ itself does not commit any pages in the VMO; it just marks the state of the VMO 
 by the kernel.
 
 *buffer* should be a pointer of type `zx_info_lock_state_t`.
-```
+```c
 typedef struct zx_vmo_lock_state {
   // |offset| and |size| track the locked range, and will be set to the |offset|
   // and |size| arguments passed in if the ZX_VMO_OP_LOCK is successful.
@@ -79,8 +79,8 @@ typedef struct zx_vmo_lock_state {
 discarded by the kernel. Will only succeed if the range has not already been discarded by the
 kernel, and will fail with **ZX_ERR_UNAVAILABLE** otherwise. This operation is meant as a
 lightweight alternative to **ZX_VMO_OP_LOCK** for trying to lock the VMO without having to set up
-the *buffer* argument; it also affords clients the choice to not take any action following failure
-to lock the VMO.
+the *buffer* argument. It also affords clients the choice to not take any action following failure
+to lock the VMO; clients must use **ZX_VMO_OP_LOCK** if they wish to lock the VMO again.
 
 The entire VMO should be locked at once, so *offset* should be 0 and *size* should be the current
 size of the VMO.  Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right. Note that locking
@@ -88,9 +88,11 @@ itself does not commit any pages in the VMO; it just marks the state of the VMO 
 by the kernel.
 
 **ZX_VMO_OP_UNLOCK** - Unlocks a range of pages in a discardable VMO, indicating that the kernel is
-free to discard them under memory pressure. The entire VMO should be unlocked at once, so *offset*
-should be 0 and *size* should be the current size of the VMO. Requires the **ZX_RIGHT_READ** or
-**ZX_RIGHT_WRITE** right.
+free to discard them under memory pressure. Unlocked pages that have not been discarded yet will be
+counted as committed pages.
+
+The entire VMO should be unlocked at once, so *offset* should be 0 and *size* should be the current
+size of the VMO. Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right.
 
 **ZX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
 Requires the **ZX_RIGHT_READ** right.
