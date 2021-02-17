@@ -132,8 +132,6 @@ class ExtCapability : public fbl::DoublyLinkedListable<std::unique_ptr<ExtCapabi
 using ExtCapabilityList = fbl::DoublyLinkedList<std::unique_ptr<ExtCapability>>;
 static_assert(static_cast<uint16_t>(ExtCapability::Id::kSystemFirmwareIntermediary) == 0x2c);
 
-const char* CapabilityIdToName(Capability::Id id);
-const char* ExtCapabilityIdToName(ExtCapability::Id id);
 }  // namespace pci
 
 #endif  // SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_H_
