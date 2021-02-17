@@ -34,19 +34,17 @@ an IPv6 network.
 
 ### Linux {#linux-config}
 
-To enable networking in FEMU, run the following commands:
+To enable networking in FEMU using [tap networking](https://wiki.qemu.org/Documentation/Networking#Tap), run the following commands:
 
 <pre class="prettyprint">
 <code class="devsite-terminal">sudo ip tuntap add dev qemu mode tap user $USER</code>
 <code class="devsite-terminal">sudo ip link set qemu up</code>
 </pre>
 
-Note: FEMU on Linux does not support external internet access.
 
 ### macOS {#mac-config}
 
-Networking for FEMU is set up by default for macOS.
-
+[User Networking (SLIRP)](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29){: .external} is the default networking set up for FEMU on macOS. This networking set up does not support Fuchsia device discovery.
 
 ## Start FEMU
 
@@ -54,26 +52,66 @@ The most common way to run FEMU is with networking enabled, using the following 
 
 ### Linux {#linux-start-femu}
 
+To support device discovery without access to external networks.
+
 ```posix-terminal
-fx emu -N
+fx vdl start -N
 ```
-Once you run the command, a separate window opens with the title "Fuchsia Emulator". You
+
+To get access to external networks:
+
+{% dynamic if user.is_googler %}
+
+Note: Command will differ depending on the type of machines you use.
+
+* {Corp}
+
+  ```posix-terminal
+  fx vdl start -N -u /usr/bin/shortleash-upscript
+  ```
+
+* {Non-Corp}
+
+  Note: `FUCHSIA_ROOT` is the path to the Fuchsia checkout on your local machine (ex: `~/fuchsia`).
+
+  ```posix-terminal
+  fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/script/start-unsecure-internet.sh
+  ``` 
+
+{% dynamic else %}
+
+Note: `FUCHSIA_ROOT` is the path to the Fuchsia checkout on your local machine (ex: `~/fuchsia`).
+
+```posix-terminal
+fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/script/start-unsecure-internet.sh
+```
+{% dynamic endif %}
+
+
+Once you run the command, a separate window opens with the title "Fuchsia Emulator". After
+the Fuchsia emulator launches successfully, the terminal starts with the SSH console. You 
 can run shell commands in this window, just like you would on a Fuchsia device.
 
 ### macOS {#mac-start-femu}
+
+On macOS, Fuchsia device discovery does not work. However, you can still use `fx` tools such as `fx ssh`.
+
 
 ```posix-terminal
 fx vdl start --host-gpu
 ```
 
+From the output, take note of the instruction on running `fx set-device`, you will need it for the steps below.
+
 Note: When you launch FEMU for the first time on your Mac machine after starting up (ex: after a reboot),
 a window pops up asking if you want to allow the process “aemu” to run on your machine.
 Click “allow”.
 
-To enable `fx tools` (like `fx ssh`) on macOS, run the following command:
+Run `fx set-device` to specify the launched Fuchsia emulator SSH port. For `SSH_PORT`, use the value that the `fx vdl start --host-gpu` command outputted.
+
 
 ```posix-terminal
-fx set-device 127.0.0.1:${SSH_PORT} // where ${SSH_PORT} is a line printed in stdout
+fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
 ```
 
 ## Additional FEMU options
@@ -83,14 +121,6 @@ fx set-device 127.0.0.1:${SSH_PORT} // where ${SSH_PORT} is a line printed in st
 By default FEMU uses a mouse pointer for input. You can add the argument `--pointing-device touch`
 for touch input instead.
 
-#### Linux
-
-```posix-terminal
-fx emu --pointing-device touch
-```
-
-#### macOS
-
 ```posix-terminal
 fx vdl start --pointing-device touch
 ```
@@ -99,62 +129,30 @@ fx vdl start --pointing-device touch
 
 If you don't need graphics or working under the remote workflow, you can run FEMU in headless mode:
 
-#### Linux
-
-```posix-terminal
-fx emu --headless
-```
-
-#### macOS
-
 ```posix-terminal
 fx vdl start --headless
 ```
 
 ### Specify GPU used by FEMU
 
-By default, FEMU tries using the host GPU automatically if it is available, and falls
-back to software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/)
-if a host GPU is unavailable.
+By default, FEMU launcher uses software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/). 
+To force FEMU to use a specific graphics emulation method, use the parameters `--host-gpu` or `--software-gpu` to the `fx vdl start` command.
 
-You can also add the argument `--host-gpu` or `--software-gpu` to the `fx emu` command
-to force FEMU to use a specific graphics device. The commands and flags are listed below:
-
-#### Linux
+These are the valid commands and options:
 
 <table><tbody>
   <tr>
    <th>GPU Emulation method</th>
    <th>Explanation</th>
-   <th><code>fx emu</code> flag</th>
+   <th><code>fx vdl start</code> flag</th>
   </tr>
   <tr>
-   <td>hardware (host GPU) </td>
-   <td>Uses the host machine’s GPU directly to perform GPU processing.</td>
-   <td><code>fx emu --host-gpu</code></td>
-  </tr>
-  <tr>
-   <td>software (host CPU)</td>
-   <td>Uses the host machine’s CPU to simulate GPU processing.</td>
-   <td><code>fx emu --software-gpu</code></td>
-  </tr>
-</tbody></table>
-
-#### macOS
-
-<table><tbody>
-  <tr>
-   <th>GPU Emulation method</th>
-   <th>Explanation</th>
-   <th><code>fx vdl</code> flag</th>
-  </tr>
-  <tr>
-   <td>hardware (host GPU)</td>
+   <td>Hardware (host GPU)</td>
    <td>Uses the host machine’s GPU directly to perform GPU processing.</td>
    <td><code>fx vdl start --host-gpu</code></td>
   </tr>
   <tr>
-   <td>software (host CPU)</td>
+   <td>Software (host CPU)</td>
    <td>Uses the host machine’s CPU to simulate GPU processing.</td>
    <td><code>fx vdl start --software-gpu</code></td>
   </tr>
