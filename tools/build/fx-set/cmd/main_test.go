@@ -197,6 +197,15 @@ func TestParseArgsAndEnv(t *testing.T) {
 			args:      []string{"core.x64", "--auto-dir", "--variant", "asan-fuzzer/foo"},
 			expectErr: true,
 		},
+		{
+			name: "netboot",
+			args: []string{"core.x64", "--netboot"},
+			expected: setArgs{
+				product: "core",
+				board:   "x64",
+				netboot: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -319,6 +328,16 @@ func TestConstructStaticSpec(t *testing.T) {
 			expected: &fintpb.Static{
 				UseGoma:  true,
 				Variants: append(fuzzerVariants("asan"), fuzzerVariants("ubsan")...),
+			},
+		},
+		{
+			name: "netboot",
+			args: &setArgs{
+				netboot: true,
+			},
+			expected: &fintpb.Static{
+				UseGoma: true,
+				GnArgs:  []string{"enable_netboot=true"},
 			},
 		},
 	}

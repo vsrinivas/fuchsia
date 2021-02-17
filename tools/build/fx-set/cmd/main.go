@@ -159,6 +159,7 @@ type setArgs struct {
 	noCcache         bool
 	ccacheDir        string
 	isRelease        bool
+	netboot          bool
 	universePackages []string
 	basePackages     []string
 	cachePackages    []string
@@ -204,6 +205,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	// anywhere.
 	flagSet.StringVar(&cmd.gomaDir, "goma-dir", "", "")
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
+	flagSet.BoolVar(&cmd.netboot, "netboot", false, "")
 	flagSet.StringSliceVar(&cmd.universePackages, "with", []string{}, "")
 	flagSet.StringSliceVar(&cmd.basePackages, "with-base", []string{}, "")
 	flagSet.StringSliceVar(&cmd.cachePackages, "with-cache", []string{}, "")
@@ -338,6 +340,9 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 	gnArgs := args.gnArgs
 	if useCcacheFinal {
 		gnArgs = append(gnArgs, "use_ccache=true")
+	}
+	if args.netboot {
+		gnArgs = append(gnArgs, "enable_netboot=true")
 	}
 
 	return &fintpb.Static{
