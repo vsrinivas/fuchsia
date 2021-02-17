@@ -1702,15 +1702,9 @@ TEST(VmoTestCase, Discardable) {
   memset(buf, 0xbb, sizeof(buf));
   EXPECT_OK(vmo.write(buf, 0, sizeof(buf)));
 
-  // Mapping without ZX_VM_ALLOW_FAULTS should fail.
+  // Mapping with READ | WRITE should succeed.
   uintptr_t ptr;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
-            zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo.get(), 0,
-                        kSize, &ptr), );
-
-  // Mapping with ZX_VM_ALLOW_FAULTS should succeed.
-  EXPECT_OK(zx_vmar_map(zx_vmar_root_self(),
-                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS, 0, vmo.get(), 0,
+  EXPECT_OK(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo.get(), 0,
                         kSize, &ptr));
   EXPECT_NE(0u, ptr);
 
