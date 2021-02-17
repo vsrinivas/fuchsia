@@ -21,6 +21,7 @@ struct OneFingerNTapRecognizer::Contest {
   bool tap_in_progress = false;
   // Keeps the count of the number of taps detected so far, for the gesture.
   int number_of_taps_detected = 0;
+
   // Async task used to schedule long-press timeout.
   async::TaskClosureMethod<ContestMember, &ContestMember::Reject> reject_task;
 };
@@ -45,32 +46,31 @@ void OneFingerNTapRecognizer::HandleEvent(
       // If a tap is already detected, make sure the pointer_id and device_id of the new event,
       // matches with the previous one.
       if (contest_->number_of_taps_detected) {
-        if (!ValidatePointerEvent(gesture_start_info_, pointer_event)) {
+        if (!ValidatePointerEvent(gesture_context_, pointer_event)) {
           FX_LOGS(INFO) << DebugName()
                         << ": Pointer Event is not a valid pointer event. Dropping current event.";
-          contest_.reset();
+          ResetRecognizer();
           break;
         }
       }
 
       // Check if pointer event has all the required fields and initialize gesture_start_info and
       // gesture_context.
-      if (!InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
+      if (!InitializeStartingGestureContext(pointer_event, &gesture_context_)) {
         FX_LOGS(INFO) << DebugName()
                       << ": Pointer Event is missing required fields. Dropping current event.";
-        contest_.reset();
+        ResetRecognizer();
         break;
       }
 
       // If the gesture is already in progress then abandon this gesture since DownEvent()
       // represents the start of the gesture. Also, validate pointer event is valid for one finger
       // tap.
-      if (contest_->tap_in_progress ||
-          !PointerEventIsValidTap(gesture_start_info_, pointer_event)) {
+      if (contest_->tap_in_progress || !PointerEventIsValidTap(gesture_context_, pointer_event)) {
         FX_LOGS(INFO) << DebugName()
                       << ": Pointer Event is not valid for current gesture."
                          "Dropping current event.";
-        contest_.reset();
+        ResetRecognizer();
         break;
       }
 
@@ -88,8 +88,11 @@ void OneFingerNTapRecognizer::HandleEvent(
 
       // Validate the pointer_event for the gesture being performed.
       if (!ValidateEvent(pointer_event)) {
-        contest_.reset();
+        ResetRecognizer();
       }
+
+      UpdateGestureContext(pointer_event, true, &gesture_context_);
+
       break;
 
     case fuchsia::ui::input::PointerEventPhase::UP:
@@ -98,9 +101,11 @@ void OneFingerNTapRecognizer::HandleEvent(
 
       // Validate pointer_event for the gesture being performed.
       if (!ValidateEvent(pointer_event)) {
-        contest_.reset();
+        ResetRecognizer();
         break;
       }
+
+      UpdateGestureContext(pointer_event, false, &gesture_context_);
 
       // Tap is detected.
       contest_->number_of_taps_detected += 1;
@@ -124,20 +129,26 @@ void OneFingerNTapRecognizer::HandleEvent(
   }
 }
 
-void OneFingerNTapRecognizer::OnWin() { on_finger_tap_callback_(gesture_context_); }
+void OneFingerNTapRecognizer::OnWin() {
+  on_finger_tap_callback_(gesture_context_);
+  ResetGestureContext(&gesture_context_);
+}
 
-void OneFingerNTapRecognizer::OnDefeat() { contest_.reset(); }
+void OneFingerNTapRecognizer::OnDefeat() { ResetRecognizer(); }
+
+void OneFingerNTapRecognizer::ResetRecognizer() {
+  contest_.reset();
+  ResetGestureContext(&gesture_context_);
+}
 
 bool OneFingerNTapRecognizer::ValidateEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
-  // Validate pointer event for one finger tap.
-  return ValidatePointerEvent(gesture_start_info_, pointer_event) &&
-         PointerEventIsValidTap(gesture_start_info_, pointer_event);
+  return ValidatePointerEvent(gesture_context_, pointer_event) &&
+         PointerEventIsValidTap(gesture_context_, pointer_event);
 }
 
 void OneFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
-  ResetGestureInfo(&gesture_start_info_);
-  ResetGestureContext(&gesture_context_);
+  ResetRecognizer();
   contest_ = std::make_unique<Contest>(std::move(contest_member));
 }
 

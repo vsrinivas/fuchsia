@@ -17,7 +17,6 @@ struct OneFingerDragRecognizer::Contest {
       : member(std::move(contest_member)), claim_win_task(member.get()) {}
 
   std::unique_ptr<ContestMember> member;
-  unsigned int pointer_count = 0;
   bool won = false;
   // Async task that claims a win if the drag gesture lasts longer than a delay.
   async::TaskClosureMethod<ContestMember, &ContestMember::Accept> claim_win_task;
@@ -38,39 +37,44 @@ void OneFingerDragRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   FX_DCHECK(contest_);
   FX_DCHECK(pointer_event.has_phase());
+  FX_DCHECK(pointer_event.has_pointer_id());
+  const auto pointer_id = pointer_event.pointer_id();
 
   switch (pointer_event.phase()) {
     case fuchsia::ui::input::PointerEventPhase::DOWN:
-      ++contest_->pointer_count;
-
-      if (contest_->pointer_count > 1) {
-        // Ignore pointers past the first.
+      // If there are any fingers already onscreen, then we should reject if
+      // another comes down.
+      if (NumberOfFingersOnScreen(gesture_context_)) {
+        ResetRecognizer();
         return;
       }
 
-      if (InitGestureInfo(pointer_event, &previous_update_location_info_, &gesture_context_) &&
-          ValidatePointerEvent(previous_update_location_info_, pointer_event)) {
+      if (InitializeStartingGestureContext(pointer_event, &gesture_context_) &&
+          ValidatePointerEvent(gesture_context_, pointer_event)) {
+        previous_update_location_ = gesture_context_.starting_pointer_locations[pointer_id];
         // Schedule a task to attempt to claim win after duration of drag_gesture_delay_.
         contest_->claim_win_task.PostDelayed(async_get_default_dispatcher(), drag_gesture_delay_);
       } else {
-        contest_.reset();
+        ResetRecognizer();
+        return;
       }
 
       break;
 
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      FX_DCHECK(contest_->pointer_count)
-          << DebugName() << ": Pointer MOVE event received without preceding DOWN event.";
-      if (contest_->pointer_count > 1) {
-        // Ignore pointers past the first.
+      // If there are zero fingers on screen or multiple fingers on screen, then we should reset.
+      if (NumberOfFingersOnScreen(gesture_context_) != 1) {
+        ResetRecognizer();
         return;
       }
 
-      // TODO: Move ValidatePointerEvent check into InitGestureInfo method.
-      if (!ValidatePointerEvent(previous_update_location_info_, pointer_event)) {
-        contest_.reset();
+      if (!ValidatePointerEvent(gesture_context_, pointer_event)) {
+        ResetRecognizer();
         return;
       }
+
+      // Update pointer book-keeping.
+      UpdateGestureContext(pointer_event, true /*finger is on screen*/, &gesture_context_);
 
       // IF this recognizer is the contest winner, previous_update_location_info_ reflects the
       // location of the previous update. Otherwise, previous_update_location_info_ reflects the
@@ -82,30 +86,32 @@ void OneFingerDragRecognizer::HandleEvent(
       // distance between the location of the current event and the previous update exceeds the
       // minimum threshold.
       if (!contest_->won) {
-        InitGestureInfo(pointer_event, &previous_update_location_info_, &gesture_context_);
+        previous_update_location_ = gesture_context_.current_pointer_locations[pointer_id];
       } else if (DragDistanceExceedsUpdateThreshold(pointer_event)) {
-        InitGestureInfo(pointer_event, &previous_update_location_info_, &gesture_context_);
+        previous_update_location_ = gesture_context_.current_pointer_locations[pointer_id];
         on_drag_update_(gesture_context_);
       }
 
       break;
 
     case fuchsia::ui::input::PointerEventPhase::UP:
-      FX_DCHECK(contest_->pointer_count);
-      --contest_->pointer_count;
-
-      if (contest_->pointer_count) {
-        // Ignore (removal of) pointers past the first.
+      if (!ValidatePointerEvent(gesture_context_, pointer_event)) {
+        ResetRecognizer();
         return;
       }
 
-      if (ValidatePointerEvent(previous_update_location_info_, pointer_event)) {
-        // Update gesture context to reflect UP event info.
-        InitGestureInfo(pointer_event, &previous_update_location_info_, &gesture_context_);
+      // Update gesture context to reflect UP event info.
+      UpdateGestureContext(pointer_event, false /*finger is off screen*/, &gesture_context_);
 
-        if (contest_->won) {
-          on_drag_complete_(gesture_context_);
-        }
+      // If any fingers are left onscreen after an UP event, then this gesture
+      // cannot be a valid one-finger drag.
+      if (NumberOfFingersOnScreen(gesture_context_)) {
+        ResetRecognizer();
+        return;
+      }
+
+      if (contest_->won) {
+        on_drag_complete_(gesture_context_);
       }
 
       contest_.reset();
@@ -132,24 +138,29 @@ void OneFingerDragRecognizer::OnWin() {
     // which case just call the start and complete handler.
     on_drag_started_(gesture_context_);
     on_drag_complete_(gesture_context_);
+    ResetRecognizer();
   }
 }
 
-void OneFingerDragRecognizer::OnDefeat() { contest_.reset(); }
+void OneFingerDragRecognizer::OnDefeat() { ResetRecognizer(); }
+
+void OneFingerDragRecognizer::ResetRecognizer() {
+  ResetGestureContext(&gesture_context_);
+  contest_.reset();
+}
 
 bool OneFingerDragRecognizer::DragDistanceExceedsUpdateThreshold(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   // Check if distance between previous update point and current event exceeds specified minimum
   // threshold.
-  auto dx = pointer_event.ndc_point().x - previous_update_location_info_.starting_ndc_position.x;
-  auto dy = pointer_event.ndc_point().y - previous_update_location_info_.starting_ndc_position.y;
+  auto dx = pointer_event.ndc_point().x - previous_update_location_.ndc_point.x;
+  auto dy = pointer_event.ndc_point().y - previous_update_location_.ndc_point.y;
 
   return dx * dx + dy * dy >= kMinDragDistanceForUpdate * kMinDragDistanceForUpdate;
 }
 
 void OneFingerDragRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
-  ResetGestureInfo(&previous_update_location_info_);
-  ResetGestureContext(&gesture_context_);
+  ResetRecognizer();
   contest_ = std::make_unique<Contest>(std::move(contest_member));
 }
 

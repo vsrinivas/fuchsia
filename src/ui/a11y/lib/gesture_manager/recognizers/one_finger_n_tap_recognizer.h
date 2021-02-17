@@ -67,6 +67,9 @@ class OneFingerNTapRecognizer : public GestureRecognizer {
   // Checks if required number of taps are recognized.
   bool CheckIfGestureIsDetected() const;
 
+  // Resets contest and gesture_context_.
+  void ResetRecognizer();
+
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;
 
@@ -81,10 +84,6 @@ class OneFingerNTapRecognizer : public GestureRecognizer {
 
   // Maximum time under which the next tap should start.
   const zx::duration timeout_between_taps_;
-
-  // GestureInfo which is used to store the initial state of the gesture which is currently
-  // being performed.
-  GestureInfo gesture_start_info_;
 
   // Pointer to Contest which is required to perform operations like reset() or ScheduleTask.
   std::unique_ptr<Contest> contest_;

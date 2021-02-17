@@ -19,7 +19,7 @@ namespace accessibility_test {
 
 namespace {
 
-constexpr int kNumberOfDoubleTaps = 2;
+constexpr uint32_t kNumberOfDoubleTaps = 2;
 constexpr uint32_t kDefaultFingers = 2;
 constexpr uint32_t kDefaultTaps = 1;
 
@@ -270,9 +270,9 @@ TEST_F(MFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback) {
 
   // Send first finger down event with location specified.
   {
-    auto event = ToPointerEvent({1, Phase::ADD, {}}, 0);
+    auto event = ToPointerEvent({1, Phase::ADD, {0, 0.01}}, 0);
     event.set_viewref_koid(100);
-    event.set_local_point({1, 1});
+    event.set_local_point({1, 2});
     recognizer_->HandleEvent(event);
     event.set_phase(Phase::DOWN);
     recognizer_->HandleEvent(event);
@@ -282,22 +282,28 @@ TEST_F(MFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback) {
   // The recognizer should pass the location from this event through to the
   // callback.
   {
-    auto event = ToPointerEvent({2, Phase::ADD, {}}, 0);
+    auto event = ToPointerEvent({2, Phase::ADD, {0.02, 0.03}}, 0);
     event.set_viewref_koid(100);
-    event.set_local_point({2, 2});
+    event.set_local_point({3, 4});
     recognizer_->HandleEvent(event);
     event.set_phase(Phase::DOWN);
     recognizer_->HandleEvent(event);
   }
 
   // Send up events.
-  SendPointerEvents(UpEvents(1, {}) + UpEvents(2, {}));
+  SendPointerEvents(UpEvents(1, {0.04, 0.05}) + UpEvents(2, {0.06, 0.07}));
   recognizer_->OnWin();
 
   EXPECT_TRUE(gesture_won_);
   EXPECT_EQ(gesture_context_.view_ref_koid, 100u);
-  EXPECT_EQ(gesture_context_.local_point->x, 2);
-  EXPECT_EQ(gesture_context_.local_point->y, 2);
+  EXPECT_EQ(gesture_context_.starting_pointer_locations[1].ndc_point.x, 0);
+  EXPECT_LE(gesture_context_.starting_pointer_locations[1].ndc_point.y, 0.011);
+  EXPECT_LE(gesture_context_.starting_pointer_locations[2].ndc_point.x, 0.021);
+  EXPECT_LE(gesture_context_.starting_pointer_locations[2].ndc_point.y, 0.031);
+  EXPECT_LE(gesture_context_.current_pointer_locations[1].ndc_point.x, 0.041);
+  EXPECT_LE(gesture_context_.current_pointer_locations[1].ndc_point.y, 0.051);
+  EXPECT_LE(gesture_context_.current_pointer_locations[2].ndc_point.x, 0.061);
+  EXPECT_LE(gesture_context_.current_pointer_locations[2].ndc_point.y, 0.071);
 }
 
 TEST_F(MFingerNTapRecognizerTest, LiftAndReplaceSecondFingerIsNotRecognized) {
@@ -336,7 +342,7 @@ TEST_F(MFingerNTapRecognizerTest, OneFingerTripleTapDetected) {
 
 // Tests successfulthree-finger double tap gesture detection.
 TEST_F(MFingerNTapRecognizerTest, ThreeFingerDoubleTapDetected) {
-  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of taps*/);
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.

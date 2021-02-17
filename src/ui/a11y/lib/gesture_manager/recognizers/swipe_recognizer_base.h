@@ -69,6 +69,9 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // Represents state internal to a contest, i.e. contest member, hold timeout, and tap state.
   struct Contest;
 
+  // Resets contest_ and gesture_context_.
+  void ResetRecognizer();
+
   // Determines whether a gesture's is close enough to up, down, left, or right to be
   // remain in consideration as a swipe. Returns true if so, false otherwise.
   bool ValidateSwipePath(
@@ -91,9 +94,6 @@ class SwipeRecognizerBase : public GestureRecognizer {
   void UpdateLastPointerPosition(
       uint32_t pointer_id, const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
-  // Stores the Gesture Context which is required to execute the callback.
-  GestureContext gesture_context_;
-
   // Callback which will be executed when the gesture is performed.
   SwipeGestureCallback swipe_gesture_callback_;
 
@@ -101,16 +101,7 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // period, then it won't be recognized.
   const zx::duration swipe_gesture_timeout_;
 
-  // Stores GestureInfo per pointer id(pointer id represents a unique finger).
-  // GestureInfo is used to store the initial state of the gesture per finger.
-  std::unordered_map<uint32_t, GestureInfo> gesture_info_map_;
-
-  // Stores point after which finger should start stopping. This is needed when one of the finger is
-  // removed then all the other fingers should then start coming to a stop.
-  std::unordered_map<uint32_t, GestureInfo> stopping_position_;
-
-  // Tracks how many times the up event is detected.
-  uint32_t number_of_up_event_detected_ = 0;
+  GestureContext gesture_context_;
 
   // Number of fingers that will be used to perform the swipe gesture.
   uint32_t number_of_fingers_ = kDefaultNumberOfFingers;

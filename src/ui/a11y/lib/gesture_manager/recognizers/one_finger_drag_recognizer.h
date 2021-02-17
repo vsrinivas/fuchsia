@@ -63,6 +63,9 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // Represents state internal to a contest, i.e. contest member, accept delay, and pointer state.
   struct Contest;
 
+  // Resets gesture_context_ and contest_.
+  void ResetRecognizer();
+
   // Helper function to handle move events (for readability to avoid nested switch statements).
   void HandleMoveEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
@@ -70,9 +73,6 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // update callback exceeds kMinDragDistanceForUpdate.
   bool DragDistanceExceedsUpdateThreshold(
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
-
-  // Stores the Gesture Context which is required to execute the callback.
-  GestureContext gesture_context_;
 
   // Callback invoked once the drag gesture has been recognized.
   DragGestureCallback on_drag_started_;
@@ -83,13 +83,15 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // Callback invoked when the drag gesture is completed (as finger is lifted from screen).
   DragGestureCallback on_drag_complete_;
 
+  GestureContext gesture_context_;
+
   // Once a drag is recognized and the recognizer claims the win, it should call update callback
   // whenever the pointer location changes by a distance exceeding kMinDragDistanceForUpdate. In
   // order to enforce this update schedule, the recognizer needs to maintain state on the previous
   // update. This field stores the location of the previous update (if the recognizer is the winner)
   // OR the location of the previous pointer event ingested (if the recognizer is not yet the
   // winner).
-  GestureInfo previous_update_location_info_;
+  PointerLocation previous_update_location_;
 
   // Minimum time a finger can be in contact with the screen to be considered a drag.
   zx::duration drag_gesture_delay_;

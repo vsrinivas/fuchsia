@@ -300,8 +300,9 @@ TEST_F(OneFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback)
 
   EXPECT_TRUE(gesture_won_);
   EXPECT_EQ(gesture_context_.view_ref_koid, 100u);
-  EXPECT_EQ(gesture_context_.local_point->x, 2);
-  EXPECT_EQ(gesture_context_.local_point->y, 2);
+  auto& location = gesture_context_.current_pointer_locations[1].local_point;
+  EXPECT_EQ(location.x, 2);
+  EXPECT_EQ(location.y, 2);
 }
 
 }  // namespace

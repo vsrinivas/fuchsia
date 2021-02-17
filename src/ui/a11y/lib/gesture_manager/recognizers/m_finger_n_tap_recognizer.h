@@ -56,9 +56,8 @@ class MFingerNTapRecognizer : public GestureRecognizer {
   // Represents state internal to a contest, i.e. contest member, long-press timeout, and tap state.
   struct Contest;
 
-  // Helper method to reset gesture state and log the reason for abandoning the
-  // current gesture.
-  void ResetGesture(const std::string& reason);
+  // Resets contest_ and gesture_context_.
+  void ResetRecognizer();
 
   // Contains validation logic which is needed for PointerEvent.
   bool EventIsValid(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
@@ -81,10 +80,6 @@ class MFingerNTapRecognizer : public GestureRecognizer {
 
   // Number of taps this gesture recognizer will detect.
   const uint32_t number_of_taps_in_gesture_;
-
-  // Stores information about finger down events detected, keyed by pointer id
-  // of the down event.
-  std::map<uint32_t, GestureInfo> start_info_by_finger_;
 
   // Pointer to Contest which is required to perform operations like reset() or ScheduleTask.
   std::unique_ptr<Contest> contest_;

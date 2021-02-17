@@ -10,72 +10,121 @@
 
 namespace a11y {
 
-bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
-                     GestureInfo* gesture_start_info, GestureContext* gesture_context) {
-  if (!pointer_event.has_event_time()) {
-    return false;
-  }
-  gesture_start_info->gesture_start_time = pointer_event.event_time();
+namespace {
 
+::fuchsia::math::PointF Centroid(const std::vector<::fuchsia::math::PointF>& points) {
+  ::fuchsia::math::PointF centroid;
+
+  for (const auto& point : points) {
+    centroid.x += point.x;
+    centroid.y += point.y;
+  }
+
+  centroid.x /= static_cast<float>(points.size());
+  centroid.y /= static_cast<float>(points.size());
+
+  return centroid;
+}
+
+}  // namespace
+
+::fuchsia::math::PointF GestureContext::StartingCentroid(bool local) {
+  std::vector<::fuchsia::math::PointF> points;
+  for (const auto& it : starting_pointer_locations) {
+    points.push_back(local ? it.second.local_point : it.second.ndc_point);
+  }
+
+  return Centroid(points);
+}
+
+::fuchsia::math::PointF GestureContext::CurrentCentroid(bool local) {
+  std::vector<::fuchsia::math::PointF> points;
+  for (const auto& it : current_pointer_locations) {
+    points.push_back(local ? it.second.local_point : it.second.ndc_point);
+  }
+
+  return Centroid(points);
+}
+
+bool InitializeStartingGestureContext(
+    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
+    GestureContext* gesture_context) {
+  uint32_t pointer_id;
   if (!pointer_event.has_pointer_id()) {
     return false;
   }
-  gesture_start_info->pointer_id = pointer_event.pointer_id();
+  pointer_id = pointer_event.pointer_id();
 
-  if (!pointer_event.has_device_id()) {
+  if (!pointer_event.has_viewref_koid()) {
     return false;
   }
-  gesture_start_info->device_id = pointer_event.device_id();
+  gesture_context->view_ref_koid = pointer_event.viewref_koid();
 
-  if (!pointer_event.has_ndc_point()) {
-    return false;
+  PointerLocation location;
+  location.pointer_on_screen = true;
+
+  if (pointer_event.has_ndc_point()) {
+    location.ndc_point = pointer_event.ndc_point();
   }
-  gesture_start_info->starting_ndc_position = pointer_event.ndc_point();
 
   if (pointer_event.has_local_point()) {
-    gesture_start_info->starting_local_position = pointer_event.local_point();
+    location.local_point = pointer_event.local_point();
   }
 
-  if (pointer_event.has_viewref_koid()) {
-    gesture_start_info->view_ref_koid = pointer_event.viewref_koid();
-  }
+  gesture_context->starting_pointer_locations[pointer_id] =
+      gesture_context->current_pointer_locations[pointer_id] = location;
 
-  // Init GestureContext.
-  gesture_context->view_ref_koid = gesture_start_info->view_ref_koid;
-  if (gesture_start_info->starting_local_position) {
-    gesture_context->local_point = gesture_start_info->starting_local_position;
-  }
   return true;
 }
 
-void ResetGestureInfo(GestureInfo* gesture_info) {
-  gesture_info->gesture_start_time = 0;
+bool UpdateGestureContext(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
+                          bool pointer_on_screen, GestureContext* gesture_context) {
+  uint32_t pointer_id;
+  if (!pointer_event.has_pointer_id()) {
+    return false;
+  }
+  pointer_id = pointer_event.pointer_id();
 
-  gesture_info->starting_ndc_position.x = 0;
-  gesture_info->starting_ndc_position.y = 0;
+  if (pointer_event.has_ndc_point()) {
+    gesture_context->current_pointer_locations[pointer_id].ndc_point = pointer_event.ndc_point();
+  }
 
-  // IMPORTANT! Do NOT set local coordinates to zero.
-  //
-  // The starting_local_position field uses a std::optional to accommodate the
-  // case in which no starting position is present.
-  gesture_info->starting_local_position.reset();
+  if (pointer_event.has_local_point()) {
+    gesture_context->current_pointer_locations[pointer_id].local_point =
+        pointer_event.local_point();
+  }
 
-  gesture_info->device_id = 0;
-  gesture_info->pointer_id = 0;
-  gesture_info->view_ref_koid = ZX_KOID_INVALID;
+  gesture_context->current_pointer_locations[pointer_id].pointer_on_screen = pointer_on_screen;
+
+  return true;
+}
+
+uint32_t NumberOfFingersOnScreen(const GestureContext& gesture_context) {
+  uint32_t num_fingers = 0;
+  for (const auto& it : gesture_context.current_pointer_locations) {
+    if (it.second.pointer_on_screen) {
+      num_fingers++;
+    }
+  }
+
+  return num_fingers;
+}
+
+bool FingerIsOnScreen(const GestureContext& gesture_context, uint32_t pointer_id) {
+  if (!gesture_context.current_pointer_locations.count(pointer_id)) {
+    return false;
+  }
+
+  return gesture_context.current_pointer_locations.at(pointer_id).pointer_on_screen;
 }
 
 void ResetGestureContext(GestureContext* gesture_context) {
-  gesture_context->view_ref_koid = 0;
-
-  // IMPORTANT! Do NOT set local coordinates to zero.
-  //
-  // The local_point field uses a std::optional to accommodate the
-  // case in which no local position is present.
-  gesture_context->local_point.reset();
+  gesture_context->view_ref_koid = ZX_KOID_INVALID;
+  gesture_context->starting_pointer_locations.clear();
+  gesture_context->current_pointer_locations.clear();
 }
 
-bool ValidatePointerEvent(const GestureInfo gesture_start_info,
+bool ValidatePointerEvent(const GestureContext& gesture_context,
                           const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   // Check if pointer_event has all the required fields.
   if (!pointer_event.has_event_time() || !pointer_event.has_pointer_id() ||
@@ -84,20 +133,21 @@ bool ValidatePointerEvent(const GestureInfo gesture_start_info,
     return false;
   }
 
-  // Check if pointer event information matches the gesture start information.
-  if ((gesture_start_info.device_id != pointer_event.device_id()) ||
-      (gesture_start_info.pointer_id != pointer_event.pointer_id())) {
-    FX_LOGS(INFO) << "Pointer event is not valid for current gesture.";
-    return false;
-  }
-  return true;
+  return gesture_context.starting_pointer_locations.count(pointer_event.pointer_id());
 }
 
-bool PointerEventIsValidTap(const GestureInfo& gesture_start_info,
+bool PointerEventIsValidTap(const GestureContext& gesture_context,
                             const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
+  FX_DCHECK(pointer_event.has_pointer_id());
+  if (!gesture_context.starting_pointer_locations.count(pointer_event.pointer_id())) {
+    return false;
+  }
+
   // Check if the new pointer event is under the threshold value for the move.
-  auto dx = pointer_event.ndc_point().x - gesture_start_info.starting_ndc_position.x;
-  auto dy = pointer_event.ndc_point().y - gesture_start_info.starting_ndc_position.y;
+  auto dx = pointer_event.ndc_point().x -
+            gesture_context.starting_pointer_locations.at(pointer_event.pointer_id()).ndc_point.x;
+  auto dy = pointer_event.ndc_point().y -
+            gesture_context.starting_pointer_locations.at(pointer_event.pointer_id()).ndc_point.y;
   return dx * dx + dy * dy <= kGestureMoveThreshold * kGestureMoveThreshold;
 }
 

@@ -75,8 +75,11 @@ TEST_F(OneFingerDragRecognizerTest, WonAfterGestureDetected) {
 
   // We should see an update at location of the last event ingested prior to the delay elapsing.
   EXPECT_EQ(gesture_updates_.size(), 1u);
-  EXPECT_EQ(gesture_updates_[0].local_point->x, first_update_local_coordinates.x);
-  EXPECT_EQ(gesture_updates_[0].local_point->y, first_update_local_coordinates.y);
+  {
+    auto& location = gesture_updates_[0].current_pointer_locations[1].local_point;
+    EXPECT_EQ(location.x, first_update_local_coordinates.x);
+    EXPECT_EQ(location.y, first_update_local_coordinates.y);
+  }
 
   SendPointerEvents(MoveEvents(1, {0, .7f}, {0, .85f}) + UpEvents(1, {0, .85f}));
 
@@ -93,14 +96,31 @@ TEST_F(OneFingerDragRecognizerTest, WonAfterGestureDetected) {
   auto third_update_local_coordinates = ToLocalCoordinates({0, .85f});
 
   EXPECT_EQ(gesture_updates_.size(), 3u);
-  EXPECT_EQ(gesture_updates_[1].local_point->x, second_update_local_coordinates.x);
-  EXPECT_EQ(gesture_updates_[1].local_point->y, second_update_local_coordinates.y);
-  EXPECT_EQ(gesture_updates_[2].local_point->x, third_update_local_coordinates.x);
-  EXPECT_EQ(gesture_updates_[2].local_point->y, third_update_local_coordinates.y);
+  {
+    auto& location = gesture_updates_[1].current_pointer_locations[1].local_point;
+    EXPECT_EQ(location.x, second_update_local_coordinates.x);
+    EXPECT_EQ(location.y, second_update_local_coordinates.y);
+  }
+
+  {
+    auto& location = gesture_updates_[2].current_pointer_locations[1].local_point;
+    EXPECT_EQ(location.x, third_update_local_coordinates.x);
+    EXPECT_EQ(location.y, third_update_local_coordinates.y);
+  }
 }
 
-// Verifies that recognizer suppresses updates while multiple pointers are down.
-TEST_F(OneFingerDragRecognizerTest, SuppressMultitouch) {
+// Verifies that recognizer rejects if multiple pointers are onscreen prior to
+// accept.
+TEST_F(OneFingerDragRecognizerTest, RejectMultifinger) {
+  recognizer_.OnContestStarted(member_.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {0, .7f}) + DownEvents(2, {}));
+
+  ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
+}
+
+// Verifies that recognizer ignores additional pointers after accepting.
+TEST_F(OneFingerDragRecognizerTest, SuppressMultitouchAfterAccept) {
   recognizer_.OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {0, .7f}));
@@ -117,18 +137,6 @@ TEST_F(OneFingerDragRecognizerTest, SuppressMultitouch) {
   SendPointerEvents(DownEvents(2, {}) + MoveEvents(1, {0, .7f}, {0, .85f}));
 
   EXPECT_EQ(gesture_updates_.size(), 1u);
-
-  SendPointerEvents(UpEvents(2, {}));
-  SendPointerEvent({1, Phase::MOVE, {0, .95f}});
-
-  // Resume after the extra pointer is released. Note that the continuing pointer must be the
-  // original at present.
-  EXPECT_EQ(gesture_updates_.size(), 2u);
-
-  SendPointerEvents(UpEvents(1, {0, .95f}));
-
-  EXPECT_FALSE(member_.is_held());
-  EXPECT_TRUE(gesture_complete_callback_called_);
 }
 
 // Tests that distance threshold between updates is enforced after first update.
