@@ -55,9 +55,10 @@ pub struct Record {
     )]
     pub categories: TraceCategories,
 
-    /// duration of trace capture in seconds. Defaults to 10 seconds.
-    #[argh(option, default = "10.0")]
-    pub duration: f64,
+    /// duration of trace capture in seconds. If not set, interactive
+    /// mode is used.
+    #[argh(option)]
+    pub duration: Option<f64>,
 
     /// name of output trace file.  Defaults to trace.fxt.
     #[argh(option, default = "String::from(\"trace.fxt\")")]

@@ -4,15 +4,41 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    async_std::fs::File,
+    async_std::{
+        fs::File,
+        io::{stdin, Stdin},
+        prelude::*,
+    },
     ffx_core::ffx_plugin,
     ffx_trace_args::{Record, TraceCommand, TraceSubCommand},
     fidl_fuchsia_tracing_controller::{
         ControllerProxy, StartOptions, StopOptions, TerminateOptions, TraceConfig,
     },
+    futures::future::BoxFuture,
+    futures::FutureExt,
     std::io::{stdout, Write},
     std::time::Duration,
 };
+
+// LineWaiter abstracts waiting for the user to press enter.  It is needed
+// to unit test interactive mode.
+trait LineWaiter<'a> {
+    type LineWaiterFut: 'a + Future<Output = ()>;
+    fn wait(&'a mut self) -> Self::LineWaiterFut;
+}
+
+impl<'a> LineWaiter<'a> for Stdin {
+    type LineWaiterFut = BoxFuture<'a, ()>;
+
+    fn wait(&'a mut self) -> Self::LineWaiterFut {
+        async move {
+            let mut line = String::new();
+            // Ignoring error, though maybe Ack would want to bubble up errors instead?
+            let _ = self.read_line(&mut line).await;
+        }
+        .boxed()
+    }
+}
 
 #[ffx_plugin("tracing", ControllerProxy = "core/appmgr:out:fuchsia.tracing.controller.Controller")]
 pub async fn trace(controller_proxy: ControllerProxy, cmd: TraceCommand) -> Result<()> {
@@ -21,7 +47,7 @@ pub async fn trace(controller_proxy: ControllerProxy, cmd: TraceCommand) -> Resu
             list_providers_cmd_impl(controller_proxy, Box::new(stdout())).await?
         }
         TraceSubCommand::Record(sub_cmd) => {
-            record_cmd_impl(sub_cmd, controller_proxy, Box::new(stdout())).await?
+            record_cmd_impl(sub_cmd, controller_proxy, &mut stdin(), Box::new(stdout())).await?
         }
     }
 
@@ -42,10 +68,11 @@ async fn list_providers_cmd_impl<W: Write>(
     Ok(())
 }
 
-async fn record_trace<W: Write>(
+async fn record_trace<'a, L: LineWaiter<'a>, W: Write>(
     opts: Record,
     controller_proxy: ControllerProxy,
     server_socket: fidl::Socket,
+    waiter: &'a mut L,
     mut writer: W,
 ) -> Result<()> {
     let trace_config = TraceConfig {
@@ -65,8 +92,13 @@ async fn record_trace<W: Write>(
         .await?
         .map_err(|e| anyhow!("Failed to start trace: {:?}", e))?;
 
-    write!(writer, "waiting for {} seconds\n", &opts.duration)?;
-    fuchsia_async::Timer::new(Duration::from_secs_f64(opts.duration)).await;
+    if let Some(duration) = &opts.duration {
+        write!(writer, "waiting for {} seconds\n", duration)?;
+        fuchsia_async::Timer::new(Duration::from_secs_f64(*duration)).await;
+    } else {
+        write!(writer, "press <enter> to stop trace\n")?;
+        waiter.wait().await;
+    }
 
     write!(writer, "stopping trace\n")?;
 
@@ -86,9 +118,10 @@ async fn record_trace<W: Write>(
     Ok(())
 }
 
-async fn record_cmd_impl<W: Write>(
+async fn record_cmd_impl<'a, L: LineWaiter<'a>, W: Write>(
     opts: Record,
     controller_proxy: ControllerProxy,
+    waiter: &'a mut L,
     writer: W,
 ) -> Result<()> {
     let (client_socket, server_socket) =
@@ -102,7 +135,7 @@ async fn record_cmd_impl<W: Write>(
         futures::io::copy(client_socket, &mut f).await
     });
 
-    record_trace(opts, controller_proxy, server_socket, writer).await?;
+    record_trace(opts, controller_proxy, server_socket, waiter, writer).await?;
 
     t.cancel().await;
 
@@ -114,6 +147,16 @@ mod tests {
     use super::*;
     use fidl_fuchsia_tracing_controller::{ControllerRequest, ProviderInfo, TerminateResult};
     use std::sync::{Arc, Mutex};
+
+    struct NullWaiter {}
+
+    impl<'a> LineWaiter<'a> for NullWaiter {
+        type LineWaiterFut = BoxFuture<'a, ()>;
+
+        fn wait(&'a mut self) -> Self::LineWaiterFut {
+            async move { () }.boxed()
+        }
+    }
 
     const TEST_TRACE_OUTPUT: &'static [u8] = &[0x00, 0x55, 0xaa, 0xff];
 
@@ -193,8 +236,11 @@ mod tests {
         assert_eq!(output, TEST_OUTPUT);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_record() {
+    async fn do_record_test<'a, L: LineWaiter<'a>>(
+        waiter: &'a mut L,
+        duration: Option<f64>,
+        expected_output: &str,
+    ) {
         let trace_file = tempfile::NamedTempFile::new().unwrap();
         let trace_path = trace_file.into_temp_path();
 
@@ -204,10 +250,11 @@ mod tests {
             Record {
                 buffer_size: 1,
                 categories: vec!["a".to_string(), "b".to_string(), "c".to_string()],
-                duration: 0.5,
+                duration: duration,
                 output: trace_path.to_str().unwrap().to_string(),
             },
             proxy,
+            waiter,
             &mut output,
         )
         .await
@@ -219,7 +266,7 @@ mod tests {
         // Verify that record handles its arguments correctly.
         assert_eq!(state.categories, vec!["a".to_string(), "b".to_string(), "c".to_string(),]);
         assert_eq!(state.buffer_size, 1);
-        assert!(out_string.contains("waiting for 0.5 seconds"));
+        assert!(out_string.contains(expected_output));
 
         // Verify that the trace was written correctly.
         let trace_output = std::fs::read(&trace_path).unwrap();
@@ -227,5 +274,15 @@ mod tests {
 
         // Verify that we've cleaned up the temp file.
         trace_path.close().unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_interactive_record() {
+        do_record_test(&mut NullWaiter {}, None, "press <enter> to stop trace").await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_duration_record() {
+        do_record_test(&mut NullWaiter {}, Some(0.5), "waiting for 0.5 seconds").await;
     }
 }
