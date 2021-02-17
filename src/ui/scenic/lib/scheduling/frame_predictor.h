@@ -50,7 +50,7 @@ class FramePredictor {
   // |PredictedTimes.presentation_time| are guaranteed to be after
   // |request.now|. |PredictedTimes.presentation_time| is guaranteed to be later
   // than or equal to |request.requested_presentation_time|.
-  virtual PredictedTimes GetPrediction(PredictionRequest request) = 0;
+  virtual PredictedTimes GetPrediction(PredictionRequest request) const = 0;
 
   // Used by the client to report a measured render duration. The render
   // duration is the CPU + GPU time it takes to build and render a frame. This

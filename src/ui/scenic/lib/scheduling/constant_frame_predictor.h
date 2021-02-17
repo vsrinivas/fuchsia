@@ -17,7 +17,7 @@ class ConstantFramePredictor : public FramePredictor {
   // |FramePredictor|
   // The |PredictedTimes.latch_point| will always be a static constant from the
   // |PredictedTimes.target_presentation_time|.
-  PredictedTimes GetPrediction(PredictionRequest request) override;
+  PredictedTimes GetPrediction(PredictionRequest request) const override;
 
   // |FramePredictor|
   void ReportRenderDuration(zx::duration time_to_render) override;

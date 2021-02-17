@@ -13,7 +13,7 @@ ConstantFramePredictor::ConstantFramePredictor(zx::duration static_vsync_offset)
 
 ConstantFramePredictor::~ConstantFramePredictor() {}
 
-PredictedTimes ConstantFramePredictor::GetPrediction(PredictionRequest request) {
+PredictedTimes ConstantFramePredictor::GetPrediction(PredictionRequest request) const {
   // Pretty print the times in milliseconds.
   TRACE_INSTANT("gfx", "ConstantFramePredictor::GetPrediction", TRACE_SCOPE_PROCESS,
                 "Predicted frame duration(ms)",

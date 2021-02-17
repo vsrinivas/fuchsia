@@ -19,7 +19,7 @@ class WindowedFramePredictor : public FramePredictor {
   ~WindowedFramePredictor();
 
   // |FramePredictor|
-  PredictedTimes GetPrediction(PredictionRequest request) override;
+  PredictedTimes GetPrediction(PredictionRequest request) const override;
 
   // |FramePredictor|
   void ReportRenderDuration(zx::duration time_to_render) override;

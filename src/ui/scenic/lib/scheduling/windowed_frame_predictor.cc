@@ -47,7 +47,7 @@ zx::duration WindowedFramePredictor::PredictTotalRequiredDuration() const {
   return predicted_frame_duration;
 }
 
-PredictedTimes WindowedFramePredictor::GetPrediction(PredictionRequest request) {
+PredictedTimes WindowedFramePredictor::GetPrediction(PredictionRequest request) const {
 #if SCENIC_IGNORE_VSYNC
   // Predict that the frame should be rendered immediately.
   return {.presentation_time = request.now, .latch_point_time = request.now};
