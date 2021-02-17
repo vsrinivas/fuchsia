@@ -105,18 +105,16 @@ class RegistersDeviceTest : public zxtest::Test {
   std::map<uint64_t, std::unique_ptr<::llcpp::fuchsia::hardware::registers::Device::SyncClient>>
       clients_;
 
-  fidl::BufferThenHeapAllocator<2048> allocator_;
+  fidl::FidlAllocator<2048> allocator_;
 };
 
 TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
-  auto mmio_alloc = allocator_.make<MmioMetadataEntry[]>(3);
-  fidl::VectorView<MmioMetadataEntry> mmio(std::move(mmio_alloc), 3);
+  fidl::VectorView<MmioMetadataEntry> mmio(allocator_, 3);
   mmio[0] = registers::BuildMetadata(allocator_, 0);
   mmio[1] = registers::BuildMetadata(allocator_, 1);
   mmio[2] = registers::BuildMetadata(allocator_, 2);
 
-  auto registers_alloc = allocator_.make<RegistersMetadataEntry[]>(2);
-  fidl::VectorView<RegistersMetadataEntry> registers(std::move(registers_alloc), 2);
+  fidl::VectorView<RegistersMetadataEntry> registers(allocator_, 2);
   registers[0] = registers::BuildMetadata(allocator_, 0, 0,
                                           std::vector<MaskEntryBuilder<uint32_t>>{
                                               {.mask = 0xFFFF, .mmio_offset = 0x1, .reg_count = 3},

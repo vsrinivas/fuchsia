@@ -35,17 +35,13 @@ zx_status_t Astro::RegistersInit() {
       },
   };
 
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  fidl::VectorView<registers::MmioMetadataEntry> mmio_entries;
-  mmio_entries.set_data(allocator.make<registers::MmioMetadataEntry[]>(MMIO_COUNT));
-  mmio_entries.set_count(MMIO_COUNT);
+  fidl::FidlAllocator<2048> allocator;
+  fidl::VectorView<registers::MmioMetadataEntry> mmio_entries(allocator, MMIO_COUNT);
 
   mmio_entries[RESET_MMIO] = registers::BuildMetadata(allocator, RESET_MMIO);
 
-  fidl::VectorView<registers::RegistersMetadataEntry> register_entries;
-  register_entries.set_data(
-      allocator.make<registers::RegistersMetadataEntry[]>(aml_registers::REGISTER_ID_COUNT));
-  register_entries.set_count(aml_registers::REGISTER_ID_COUNT);
+  fidl::VectorView<registers::RegistersMetadataEntry> register_entries(
+      allocator, aml_registers::REGISTER_ID_COUNT);
 
   register_entries[aml_registers::REGISTER_USB_PHY_V2_RESET] =
       registers::BuildMetadata(allocator, aml_registers::REGISTER_USB_PHY_V2_RESET, RESET_MMIO,
