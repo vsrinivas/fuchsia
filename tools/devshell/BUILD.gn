@@ -72,6 +72,7 @@ test_scripts = [
   "tests/subcommands/fx_pave_test",
   "tests/subcommands/fx_regen_goldens_test",
   "tests/subcommands/fx_remote_test",
+  "tests/subcommands/fx_report_bug_test",
   "tests/subcommands/fx_runtest_test",
   "tests/subcommands/fx_set_test",
   "tests/subcommands/fx_ssh_test",

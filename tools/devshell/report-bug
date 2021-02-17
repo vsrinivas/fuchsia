@@ -6,13 +6,18 @@
 #### CATEGORY=Software delivery
 ### report a bug for an fx command
 ## usage:
-##        fx report-bug <command> [<args>]
+##        fx report-bug [<flags>] <command> [<args>]
 ##          Report an issue on an fx <command>.
-##          Optionally, <args> are the arguments passed to the fx <command> that
-##          caused the issue being reported.
 ##
-##        fx report-bug [-h | --help]
-##          Provide this help.
+##          <flags>: [optional] include:
+##              -v, --verbose: verbose output
+##              -h, --help : provide this help.
+##
+##          <command>: any fx command.
+##
+##          <args>: [optional] the arguments passed to the fx <command> that
+##                  caused the issue being reported, for inclusion in the bug
+##                  report.
 ##
 ## This tool will help file a bug on bugs.fuchsia.dev for the given command. It
 ## parses the COMPONENT and OWNERS lines of the command's metadata or, if those
@@ -32,15 +37,39 @@ set -e
 
 # Globals
 readonly DEFAULT_COMPONENT="Tools>fx"
+verbose=false
 
 # shellcheck source=/dev/null
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
+# Look for an `include <filename>` line in an OWNERS file. Return the filename.
+function parse_owners_file_for_includes() {
+  local file=$1
+
+  grep -E "^include " "${file}" | # Find lines with the token followed by a space or colon.
+    cut -d" " -f2 |               # Use only the part after the =.
+    cut -d"#" -f1 |               # Strip any additional comments.
+    xargs -n 1                    # Trim whitespace at beginning and end.
+}
+
+# Look for the email addresses listed in an OWNERS file. Return the addresses as
+# a comma-separated string.
+function parse_owners_file_for_owners() {
+  local file=$1
+
+  grep -E -o "^\s*\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" "${file}" | # Find email addresses at line starts.
+    tr -d ' ' |                                                                    # Remove spaces.
+    xargs -n 1 |                                                                   # Trim whitespace at beginning and end.
+    sort | uniq |                                                                  # Remove duplicates.
+    paste -sd "," -                                                                # Recombine into a comma-separated list.
+}
+
 # Look for "<token> <command> = <address> [, <address>]*" lines in OWNERS files
 # and return the addresses. The token is a regular expression expected at the
 # start of a line. Example tokens include "per-file" and
-# "#[[:space:]]*per-file-COMPONENT".
+# "#[[:space:]]*per-file-COMPONENT". The addresses are not checked for format
+# so may contain a `file: <filename>`.
 function parse_owners_file_for_per_file() {
   local file=$1
   local token=$2
@@ -48,16 +77,16 @@ function parse_owners_file_for_per_file() {
 
   # Note that there can be multiple per-file entries for a command. The sequence
   # below will include and combine them.
-  grep -E "^${token}[ \:]+" "${file}" | # Find lines with the token followed by a space or colon.
-    grep -E "[, ]+${cmd_name}[, =]+" |  # Find the command as a whole word only.
-    grep -E "${cmd_name}.*=" |          # Only lines with the cmd *followed* by =.
-    cut -d"=" -f2 |                     # Use only the part after the =.
-    cut -d"#" -f1 |                     # Strip any additional comments.
-    tr -d ' ' |                         # Remove spaces.
-    tr ',' '\n' |                       # Split into separate lines.
-    xargs -n 1 |                        # Trim whitespace at beginning and end.
-    sort | uniq |                       # Remove duplicates.
-    paste -sd "," -                     # Recombine into a comma-separated list.
+  grep -E "^${token}[ \:]+" "${file}" |                 # Find lines with the token followed by a space or colon.
+    grep -E "[, ]+(${cmd_name}|${cmd_name}.fx)[, =]+" | # Find the command as a whole word (+/- '.fx') only.
+    grep -E "(${cmd_name}|${cmd_name}.fx).*=" |         # Only lines with the cmd (+/- '.fx') *followed* by =.
+    cut -d"=" -f2 |                                     # Use only the part after the =.
+    cut -d"#" -f1 |                                     # Strip any additional comments.
+    tr -d ' ' |                                         # Remove spaces.
+    tr ',' '\n' |                                       # Split into separate lines.
+    xargs -n 1 |                                        # Trim whitespace at beginning and end.
+    sort | uniq |                                       # Remove duplicates.
+    paste -sd "," -                                     # Recombine into a comma-separated list.
 }
 
 # Look for "# COMPONENT: <component> [, <component>]*" lines in OWNERS files and
@@ -93,6 +122,8 @@ rawurlencode() {
   echo "${encoded}"
 }
 
+# Given a command and arguments, file a bug in the given component and cc the
+# given owners.
 function file_bug() {
   local cmd_name=$1
   local cmd_args=$2
@@ -146,36 +177,85 @@ to ensure bugs are filed to the correct component.]
 
 # Find a bugs.fuchsia.dev component or command owners in a given OWNERS file.
 # Return 0 if found else 1 if the search should continue.
+#
+# This is a recursive algorithm that follows `file:` directives in `per-file`
+# and `per-file_COMPONENT` lines. To keep it understandable, it works simply: It
+# recurses one-way on one path, carrying the parent call's variables as globals.
+# When sufficient owners and component data is found, a bug is created and
+# written to stdout. It stops as soon as it has sufficient data, thus keeping
+# the data as close to the given command as possible.
+#
+# The algorithm prefers `file:` directives over includes and will not trace both
+# `file:` and `include` directives in the same file. This is usually correct
+# because `file:` directives override `include` directives. It will traverse
+# multiple `file:` directives if they occur in both per-file and
+# per-file-COMPONENT lines.
 function check_an_owners_file() {
   local cmd_name=$1
   local cmd_args=$2
-  local cmd_path=$3
+  local file=$3
 
-  local f
-  f="${parent}/OWNERS"
-
-  if [[ ! -f "${f}" ]]; then
+  if [[ ! -f "${file}" ]]; then
     return 1
   fi
 
-  echo "looking for a component and owners in ${f}"
+  "${verbose}" && echo "looking for a component and owners in ${file}"
 
-  # Look for a `# COMPONENT: <string>` line in the OWNERS file.
-  local component_in_owners_file
-  component_in_owners_file=$(parse_owners_file_for_COMPONENTS "${f}")
-  [[ -n "${component_in_owners_file}" ]] && echo "found a component line: ${component_in_owners_file}"
+  # 1. The list of email addresses in the file.
+  local new_listed_owners
+  new_listed_owners=$(parse_owners_file_for_owners "${file}")
+  # Note that here and below, the global value is used if one is not found
+  # locally.
+  local listed_owners="${new_listed_owners:-$listed_owners}"
+  [[ -n "${listed_owners}" ]] && "${verbose}" && echo "found owners: ${listed_owners}"
 
-  # Look for a per-file components line.
-  per_file_component=$(parse_owners_file_for_per_file "${f}" "#[[:space:]]*per-file-COMPONENT" "${cmd_name}")
-  [[ -n "${per_file_component}" ]] && echo "found a per_file components: ${per_file_component}"
+  # 2. `# COMPONENT: <string>` line in the OWNERS file.
+  local new_component_in_owners_file
+  new_component_in_owners_file=$(parse_owners_file_for_COMPONENTS "${file}")
+  local component_in_owners_file="${new_component_in_owners_file:-$component_in_owners_file}"
+  [[ -n "${component_in_owners_file}" ]] && "${verbose}" && echo "found components: ${component_in_owners_file}"
 
-  # Look for a `per-file` owners line.
-  owners=$(parse_owners_file_for_per_file "${f}" "per-file" "${cmd_name}")
-  [[ -n "${owners}" ]] && echo "found a per-file owners: ${owners}"
+  # 3.  `per-file-COMPONENT` line.
+  local new_per_file_component
+  new_per_file_component=$(parse_owners_file_for_per_file "${file}" "#[[:space:]]*per-file-COMPONENT" "${cmd_name}")
+  local per_file_component="${per_file_component:-$new_per_file_component}"
+  [[ -n "${per_file_component}" ]] && "${verbose}" && echo "found per_file components: ${per_file_component}"
 
-  # If nothing here, then keep searching.
-  if [[ -z "${component_in_owners_file}" ]] && [[ -z "${per_file_component}" ]] && [[ -z "${owners}" ]]; then
-    return 1
+  # 4. `per-file` owners line.
+  local new_per_file_owners
+  new_per_file_owners=$(parse_owners_file_for_per_file "${file}" "per-file" "${cmd_name}")
+  if [[ -n "${new_per_file_owners}" ]]; then
+    listed_owners=""
+  fi
+  local per_file_owners="${per_file_owners:-$new_per_file_owners}"
+
+  # If there's a per-file `file:` directive, follow it, carrying the above
+  # values into the call as global variables.
+  if [[ "${per_file_owners}" =~ ^\s*file\s*:.* ]]; then
+    local next_file=${FUCHSIA_DIR}${per_file_owners#"file:"}
+    "${verbose}" && echo "per-file file to search: ${next_file}"
+    per_file_owners="" # clear so it isn't re-expanded
+    if check_an_owners_file "${cmd_name}" "${cmd_args}" "${next_file}"; then
+      return 0 # Success.
+    fi
+  fi
+
+  # Prefer the per_file_owners over any listed owners.
+  local owners="${per_file_owners:-${listed_owners}}"
+
+  # If we don't have any owners, then follow include files, carrying the above
+  # values into the call as global variables.
+  local include_file
+  include_file=$(parse_owners_file_for_includes "${file}")
+  # We prefer the owner listed directly in a file over those in a remote
+  # included directory. This preference ensures that we don't accummulate whole
+  # team lists as we recurse farther and farther from the fx command files.
+  if [[ -n "${include_file}" ]] && [[ -z "${listed_owners}" ]]; then
+    "${verbose}" && echo "found an 'include' directive': ${include_file}"
+    fullpath="${FUCHSIA_DIR}${include_file}"
+    if check_an_owners_file "${cmd_name}" "${cmd_args}" "${fullpath}"; then
+      return 0 # Success.
+    fi
   fi
 
   # Found enough to file a bug. As the component may have come from several
@@ -185,7 +265,6 @@ function check_an_owners_file() {
   component="${component:-${DEFAULT_COMPONENT}}"
 
   file_bug "${cmd_name}" "${cmd_args}" "${component}" "${owners}"
-
   return 0
 }
 
@@ -199,8 +278,8 @@ function parse_owners_files() {
   local parent
   parent="${cmd_path%/*}"
   while [[ -n "${parent}" ]] && [[ "${parent}" != "${FUCHSIA_DIR}" ]]; do
-    if check_an_owners_file "${cmd_name}" "${cmd_args}" "${cmd_path}" "${component}"; then
-      return # Success.
+    if check_an_owners_file "${cmd_name}" "${cmd_args}" "${parent}/OWNERS"; then
+      return 0 # Success.
     fi
     parent="${parent%/*}"
   done
@@ -214,7 +293,7 @@ function analyze_command_and_report_issue() {
   local cmd_args=$2
 
   local cmd_path
-  cmd_path="$(commands "${cmd_name}")"
+  cmd_path="$(commands "${cmd_name}" | head -1)"
   if [[ -z "${cmd_path}" ]]; then
     fx-error "cannot find command: ${cmd_name}"
     exit 1
@@ -224,17 +303,31 @@ function analyze_command_and_report_issue() {
 }
 
 function main() {
-  case $1 in
-  -h | --help | "")
-    fx-command-help
-    exit 0
-    ;;
-  *)
-    local cmd_name=$1
-    shift
-    local cmd_args="$*"
-    ;;
-  esac
+  [[ $# == 0 ]] && fx-command-help && exit 0
+
+  while [[ $# -ne 0 ]]; do
+    case $1 in
+    -h | --help | "")
+      fx-command-help
+      exit 0
+      ;;
+    -v | --verbose)
+      verbose=true
+      shift
+      ;;
+    -*)
+      fx-error "Unknown argument $1"
+      fx-command-help
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+    esac
+  done
+  local cmd_name=$1
+  shift
+  local cmd_args="$*"
 
   if [[ -z "${cmd_name}" ]]; then
     fx-error "error parsing command name"

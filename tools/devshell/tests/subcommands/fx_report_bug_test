@@ -5,32 +5,19 @@
 
 ### Test expected behavior of `fx report-bug`.
 
-BT_LINKED_DEPS=(
-)
-
-BT_FILE_DEPS=(
+export BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/report-bug"
-  "tools/devshell/contrib/lint"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
 )
 
-BT_MOCKED_TOOLS=(
-)
-
 BT_SET_UP() {
+  # shellcheck source=/dev/null
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
-
-  # source "${BT_TEMP_DIR}/tools/devshell/report-bug"
-  # Needed?
-  # if [[ "${FUCHSIA_DIR}" == "" ]]; then
-  #   FUCHSIA_DIR="${BT_TEMP_DIR}"
-  #   source "${FUCHSIA_DIR}/tools/devshell/report-bug"
-  # fi
 }
 
 # Ensure that "fx report-bug --help" and friends run and emit help.
@@ -85,30 +72,45 @@ EOF
 }
 
 TEST_contrib_commands() {
+  mkdir "${BT_TEMP_DIR}/tools/devshell/contrib"
+  cat >"${BT_TEMP_DIR}/tools/devshell/contrib/test-command" <<EOF
+#!/bin/bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-info "test command"
+EOF
+  chmod u+x "${BT_TEMP_DIR}/tools/devshell/contrib/test-command"
+
   local out="_fx_report_bug_output"
   cat >"${BT_TEMP_DIR}/tools/devshell/contrib/OWNERS" <<EOF
 # nothing here
 EOF
   cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
-# per-file-COMPONENT lint=foo3
+# per-file-COMPONENT test-command=foo3
 EOF
-  BT_EXPECT "${fx}" report-bug lint &>${out}
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=foo3" # Picked from parent dir.
-  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc="     # no per-file, so empty.
+  BT_EXPECT "${fx}" report-bug test-command &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=Tools%3efx" # Not picked from parent dir.
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc="           # no per-file, so empty.
 }
 
 TEST_contrib_commands2() {
+  mkdir "${BT_TEMP_DIR}/tools/devshell/contrib"
+  cat >"${BT_TEMP_DIR}/tools/devshell/contrib/test-command" <<EOF
+#!/bin/bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-info "test command"
+EOF
+  chmod u+x "${BT_TEMP_DIR}/tools/devshell/contrib/test-command"
+
   local out="_fx_report_bug_output"
   cat >"${BT_TEMP_DIR}/tools/devshell/contrib/OWNERS" <<EOF
-# nothing here
+# per-file-COMPONENT test-command=foo3
 EOF
   cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
-per-file lint=bar
-# per-file-COMPONENT lint=foo3
+per-file test-command=bar
 EOF
-  BT_EXPECT "${fx}" report-bug lint &>${out}
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=foo3" # Picked from parent dir.
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=bar"          # Picked from parent dir.
+  BT_EXPECT "${fx}" report-bug test-command &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=foo3"
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc=" # Not picked from parent dir.
 }
 
 TEST_multiple_lines() {
@@ -121,6 +123,19 @@ EOF
   local out="_fx_report_bug_output"
   BT_EXPECT "${fx}" report-bug report-bug &>${out}
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=bar%2cfoo" # Note: alphabetized.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=baz%2cbop"
+}
+
+TEST_dot_fx_lines() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=foo
+per-file report-bug.fx=bim,bar                 # Additional .fx owners.
+# per-file-COMPONENT report-bug=baz            #
+# per-file-COMPONENT report-bug.fx=bop         # An additional .fx component.
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=bar%2cbim%2cfoo" # Note: alphabetized.
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=baz%2cbop"
 }
 
@@ -151,6 +166,189 @@ EOF
   BT_EXPECT "${fx}" report-bug report-bug &>${out}
   BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc="                              # no per-file, so empty.
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=s%2ct%2cu%2cv%2cw%2cx%2cy%2cz" # s,t,u,v,w,x,y,z
+}
+
+TEST_OWNERS_list() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=Tools%3efx" # Default component.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=s1%40g.com%2cs%40g.com%2ct%40g.com"
+}
+
+TEST_OWNERS_file_directive() {
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file: report-bug= file:/foo/OWNERS
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=Tools%3efx" # Default component.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=s1%40g.com%2cs%40g.com%2ct%40g.com"
+}
+
+TEST_OWNERS_include_directive() {
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+# COMPONENT: t>bar
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+include /foo/OWNERS
+# COMPONENT: t>bim    # This component overrides.
+z@g.com               # This owner appends.
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug -v report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=t%3ebim" # Default component.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=z%40g.com"
+}
+
+# The per-file-COMPONENT is found and not overridden by the component in the the
+# per-file file.
+TEST_OWNERS_file_directive_and_per_file_component() {
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+# COMPONENT: t>bar
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=file:/foo/OWNERS
+#per-file-COMPONENT report-bug=FT>y
+# COMPONENT: t>bim
+z@g.com
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug -v report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=FT%3ey"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=s1%40g.com%2cs%40g.com%2ct%40g.com"
+}
+
+TEST_OWNERS_deep() {
+  mkdir "${BT_TEMP_DIR}/bar"
+  cat >"${BT_TEMP_DIR}/bar/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+# COMPONENT: t>baz
+EOF
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+include /bar/OWNERS
+# COMPONENT: t>bar
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=file:/foo/OWNERS
+#per-file-COMPONENT report-bug=FT>y
+# COMPONENT: t>bim
+z@g.com
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug -v report-bug &>${out}
+  # WRONG: Should be FT>y. per-file-COMPONENT should be preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=FT%3ey"
+  # Right: file authors preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=s1%40g.com%2cs%40g.com%2ct%40g.com"
+}
+
+# In this test, the top-level OWNERS has a per-file owners, so that overrides
+# the z@g.com listed there. That per-file OWNERS (foo/) has an owner, x@g.com,
+# so that is used and the other owners found in its include file are ignored.
+# Also, the per-file-COMPONENT is not overridden by includes.
+TEST_OWNERS_deep2() {
+  mkdir "${BT_TEMP_DIR}/bar"
+  cat >"${BT_TEMP_DIR}/bar/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+# COMPONENT: t>baz
+EOF
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+include /bar/OWNERS
+# COMPONENT: t>bar
+x@g.com
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=file:/foo/OWNERS
+#per-file-COMPONENT report-bug=FT>y
+# COMPONENT: t>bim
+z@g.com
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug -v report-bug &>${out}
+  # WRONG: Should be FT>y. per-file-COMPONENT should be preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=FT%3ey"
+  # Right: file authors preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=x%40g.com"
+}
+
+# Here the per-file owners and component go one deep.
+TEST_OWNERS_deep3() {
+  mkdir "${BT_TEMP_DIR}/bar"
+  cat >"${BT_TEMP_DIR}/bar/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+# COMPONENT: t>baz
+EOF
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+include /bar/OWNERS
+# COMPONENT: t>bar
+x@g.com
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=file:/foo/OWNERS
+# COMPONENT: t>bim
+z@g.com
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug -v report-bug &>${out}
+  # WRONG: Should be FT>y. per-file-COMPONENT should be preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=t%3ebar"
+  # Right: file authors preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=x%40g.com"
+}
+
+# Here the per-file owners and component go into the include file
+# because there are not owners or component in the perf-file file.
+TEST_OWNERS_deep4() {
+  mkdir "${BT_TEMP_DIR}/bar"
+  cat >"${BT_TEMP_DIR}/bar/OWNERS" <<EOF
+t@g.com
+s@g.com  # comment.
+s1@g.com
+# COMPONENT: t>baz
+EOF
+  mkdir "${BT_TEMP_DIR}/foo"
+  cat >"${BT_TEMP_DIR}/foo/OWNERS" <<EOF
+include /bar/OWNERS
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=file:/foo/OWNERS
+# COMPONENT: t>bim
+z@g.com
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug -v report-bug &>${out}
+  # WRONG: Should be FT>y. per-file-COMPONENT should be preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=t%3ebaz"
+  # Right: file authors preferred.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=s1%40g.com%2cs%40g.com%2ct%40g.com"
 }
 
 BT_RUN_TESTS "$@"
