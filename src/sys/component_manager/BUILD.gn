@@ -106,6 +106,7 @@ template("component_manager") {
     "src/config.rs",
     "src/constants.rs",
     "src/elf_runner/mod.rs",
+    "src/elf_runner/stdout.rs",
     "src/framework.rs",
     "src/fuchsia_boot_resolver.rs",
     "src/fuchsia_pkg_resolver.rs",
@@ -347,6 +348,7 @@ fuchsia_test_package("component-manager-tests") {
     "src/elf_runner/tests:run-indefinitely",
     "//examples/components/basic:hello-world",
     "//examples/components/basic:lifecycle-full",
+    "//examples/hello_world/rust",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
   ]
 }

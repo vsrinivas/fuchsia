@@ -34,6 +34,16 @@ pub enum StartInfoProgramError {
 
     #[error("\"program\" must be specified")]
     NotFound,
+
+    #[error("the value of \"program.forward_stdout_to\" must be 'none' or 'log'")]
+    InvalidStdoutSink,
+}
+
+/// Target sink for stdout and stderr output streams.
+#[derive(Debug, PartialEq, Eq)]
+pub enum StdoutSink {
+    Log,
+    None,
 }
 
 // Retrieves component URL from start_info or errors out if not found.
@@ -95,6 +105,31 @@ pub fn get_program_args(
         }
     }
     Ok(vec![])
+}
+
+/// Retrieves program.forward_stdout_to from ComponentStartInfo and validates.
+/// Valid values for this field are: "log", "none".
+pub fn get_program_stdout_sink(
+    start_info: &fcrunner::ComponentStartInfo,
+) -> Result<StdoutSink, StartInfoProgramError> {
+    if let Some(program) = &start_info.program {
+        if let Some(val) = find(program, "forward_stdout_to") {
+            if let fdata::DictionaryValue::Str(sink) = val {
+                match sink.as_str() {
+                    "log" => {
+                        return Ok(StdoutSink::Log);
+                    }
+                    "none" => {
+                        return Ok(StdoutSink::None);
+                    }
+                    _ => {
+                        return Err(StartInfoProgramError::InvalidStdoutSink);
+                    }
+                }
+            }
+        }
+    }
+    Ok(StdoutSink::None)
 }
 
 #[cfg(test)]
@@ -197,6 +232,32 @@ mod tests {
         assert_eq!(
             Ok(vec!["a".to_string(), "b".to_string()]),
             get_program_args(&new_args_set(vec!["a".to_string(), "b".to_string()]))
+        );
+    }
+
+    #[test]
+    fn get_program_stdout_sink_test() {
+        let new_start_info = |sink: Option<&str>| fcrunner::ComponentStartInfo {
+            program: Some(fdata::Dictionary {
+                entries: Some(vec![fdata::DictionaryEntry {
+                    key: "forward_stdout_to".to_string(),
+                    value: sink
+                        .and_then(|s| Some(Box::new(fdata::DictionaryValue::Str(s.to_string())))),
+                }]),
+                ..fdata::Dictionary::EMPTY
+            }),
+            ns: None,
+            outgoing_dir: None,
+            runtime_dir: None,
+            resolved_url: None,
+            ..fcrunner::ComponentStartInfo::EMPTY
+        };
+        assert_eq!(Ok(StdoutSink::Log), get_program_stdout_sink(&new_start_info(Some("log"))),);
+        assert_eq!(Ok(StdoutSink::None), get_program_stdout_sink(&new_start_info(Some("none"))),);
+        assert_eq!(Ok(StdoutSink::None), get_program_stdout_sink(&new_start_info(None)),);
+        assert_eq!(
+            Err(StartInfoProgramError::InvalidStdoutSink),
+            get_program_stdout_sink(&new_start_info(Some("unknown_value")))
         );
     }
 }

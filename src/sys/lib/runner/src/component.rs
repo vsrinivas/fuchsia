@@ -220,6 +220,10 @@ impl ComponentNamespace {
         }
         Ok(ns)
     }
+
+    pub fn items(&self) -> &Vec<(String, fio::DirectoryProxy)> {
+        &self.items
+    }
 }
 
 /// An error encountered trying to launch a component.

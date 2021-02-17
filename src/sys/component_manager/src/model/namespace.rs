@@ -231,29 +231,12 @@ impl IncomingNamespace {
         let mut logger = Option::<NamespaceLogger>::None;
         match dir.into_proxy() {
             Ok(dir_proxy) => {
-                // Use io_util instead of fuchsia_component::client because
-                // `at_path` might be in a subdirectory of `dir`.
-                match io_util::open_node(
-                    &dir_proxy,
-                    &PathBuf::from(at_path.trim_start_matches("/")),
-                    fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                    fidl_fuchsia_io::MODE_TYPE_SERVICE,
-                ) {
-                    Ok(log_sink_node) => {
-                        let mut sink =
-                            LogSinkProxy::from_channel(log_sink_node.into_channel().unwrap());
-                        if let Ok(log_socket) = connect_to_logger(&mut sink).await.map_err(|e| {
-                            info!("LogSink.Connect() failed, logs will be attributed to component manager: {}", e);
-                            e
-                        }) {
-                            logger = Some(NamespaceLogger {
-                                _log_sink_protocol: sink,
-                                logger: log_socket,
-                            });
-                        }
+                match get_logger_from_proxy(&dir_proxy, at_path).await {
+                    Ok(ns_logger) => {
+                        logger = Some(ns_logger);
                     }
-                    Err(e) => {
-                        info!("Could not connect to LogSink, logs will be attributed to component manager: {:?}", e);
+                    Err(err) => {
+                        info!("LogSink.Connect() failed, logs will be attributed to component manager: {}", err);
                     }
                 }
 
@@ -597,6 +580,27 @@ impl IncomingNamespace {
         } else {
             Ok(remainder)
         }
+    }
+}
+
+/// Instantiate a NamespaceLogger by connecting to the provided path within
+/// the directory.
+pub async fn get_logger_from_proxy(
+    dir: &DirectoryProxy,
+    path: String,
+) -> Result<NamespaceLogger, Error> {
+    match io_util::open_node(
+        &dir,
+        &PathBuf::from(path.trim_start_matches("/")),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        fidl_fuchsia_io::MODE_TYPE_SERVICE,
+    ) {
+        Ok(log_sink_node) => {
+            let mut sink = LogSinkProxy::from_channel(log_sink_node.into_channel().unwrap());
+            let log_socket = connect_to_logger(&mut sink).await?;
+            Ok(NamespaceLogger { _log_sink_protocol: sink, logger: log_socket })
+        }
+        Err(e) => Err(e),
     }
 }
 

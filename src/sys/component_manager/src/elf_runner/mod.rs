@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod stdout;
+
 use {
     crate::{
         builtin::{process_launcher::ProcessLauncher, runner::BuiltinRunnerFactory},
@@ -252,6 +254,12 @@ pub struct ElfRunner {
     utc_clock: Option<Arc<Clock>>,
 }
 
+struct ConfigureLauncherResult {
+    launch_info: fidl_fuchsia_process::LaunchInfo,
+    runtime_dir_builder: RuntimeDirBuilder,
+    tasks: Vec<fasync::Task<()>>,
+}
+
 impl ElfRunner {
     pub fn new(config: &RuntimeConfig, utc_clock: Option<Arc<Clock>>) -> ElfRunner {
         ElfRunner { launcher_connector: ProcessLauncherConnector::new(config), utc_clock }
@@ -264,11 +272,14 @@ impl ElfRunner {
         job: zx::Job,
         launcher: &fidl_fuchsia_process::LauncherProxy,
         lifecycle_server: Option<zx::Channel>,
-    ) -> Result<Option<(fidl_fuchsia_process::LaunchInfo, RuntimeDirBuilder)>, ElfRunnerError> {
+    ) -> Result<Option<ConfigureLauncherResult>, ElfRunnerError> {
         let bin_path = runner::get_program_binary(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
         let args = runner::get_program_args(&start_info)
+            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
+
+        let stdout_sink = runner::get_program_stdout_sink(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
         // TODO(fxbug.dev/45586): runtime_dir may be unavailable in tests. We should fix tests so
@@ -292,7 +303,18 @@ impl ElfRunner {
         )
         .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
+        let (tasks, stdio_handles) = match stdout_sink {
+            runner::StdoutSink::Log => stdout::forward_stdout_to_syslog(&ns)
+                .await
+                .map_err(|s| RunnerError::component_launch_error(resolved_url.clone(), s))?,
+            runner::StdoutSink::None => {
+                (Vec::<fasync::Task<()>>::new(), Vec::<fproc::HandleInfo>::new())
+            }
+        };
+
         let mut handle_infos = vec![];
+
+        handle_infos.extend(stdio_handles);
 
         if let Some(outgoing_dir) = start_info.outgoing_dir {
             handle_infos.push(fproc::HandleInfo {
@@ -343,7 +365,7 @@ impl ElfRunner {
             .await
             .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?;
 
-        Ok(Some((launch_info, runtime_dir_builder)))
+        Ok(Some(ConfigureLauncherResult { launch_info, runtime_dir_builder, tasks }))
     }
 
     async fn start_component(
@@ -439,11 +461,11 @@ impl ElfRunner {
             ElfRunnerError::component_job_duplication_error(resolved_url.clone(), e)
         })?;
 
-        let (mut launch_info, runtime_dir_builder) = match self
+        let (mut launch_info, runtime_dir_builder, tasks) = match self
             .configure_launcher(&resolved_url, start_info, job_dup, &launcher, lifecycle_server)
             .await?
         {
-            Some(s) => s,
+            Some(result) => (result.launch_info, result.runtime_dir_builder, result.tasks),
             None => return Ok(None),
         };
 
@@ -489,6 +511,7 @@ impl ElfRunner {
             process,
             lifecycle_client,
             program_config.main_process_critical,
+            tasks,
         )))
     }
 }
@@ -593,6 +616,11 @@ struct ElfComponent {
     /// We need to remember if we marked the main process as critical, because if we're asked to
     /// kill a component that has such a marking it'll bring down everything.
     main_process_critical: bool,
+
+    /// Any tasks spawned to serve this component. For example, stdout and stderr
+    /// listeners are Task objects that live for the duration of the component's
+    /// lifetime.
+    _tasks: Vec<fasync::Task<()>>,
 }
 
 impl ElfComponent {
@@ -602,6 +630,7 @@ impl ElfComponent {
         process: Process,
         lifecycle_channel: Option<LifecycleProxy>,
         main_process_critical: bool,
+        tasks: Vec<fasync::Task<()>>,
     ) -> Self {
         Self {
             _runtime_dir,
@@ -609,6 +638,7 @@ impl ElfComponent {
             process: Some(Arc::new(process)),
             lifecycle_channel,
             main_process_critical,
+            _tasks: tasks,
         }
     }
 
@@ -866,17 +896,26 @@ mod tests {
         super::*,
         crate::config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
         fdio,
-        fidl::endpoints::{create_proxy, ClientEnd, Proxy},
-        fidl_fuchsia_component as fcomp, fidl_fuchsia_data as fdata,
+        fidl::endpoints::{self, create_proxy, ClientEnd, Proxy, ServiceMarker},
+        fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
+        fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::prelude::*,
+        fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest, LogSinkRequestStream},
+        fuchsia_async as fasync,
+        fuchsia_component::server::ServiceFs,
+        fuchsia_zircon as zx,
+        futures::{prelude::*, StreamExt},
         io_util,
         matches::assert_matches,
         moniker::AbsoluteMoniker,
         runner::component::Controllable,
         scoped_task,
-        std::{convert::TryFrom, ffi::CString, task::Poll},
+        std::{
+            convert::TryFrom,
+            ffi::CString,
+            sync::{Arc, Mutex},
+            task::Poll,
+        },
     };
 
     // Rust's test harness does not allow passing through arbitrary arguments, so to get coverage
@@ -1033,6 +1072,7 @@ mod tests {
             dummy_process,
             lifecycle_client,
             critical,
+            Vec::new(),
         );
         (job.into_inner(), component)
     }
@@ -1505,5 +1545,130 @@ mod tests {
         // field. We should panic before anything happens on the controller stream, because the
         // component is critical.
         let _ = controller.take_event_stream().try_next().await;
+    }
+
+    enum FidlServices {
+        LogSink(LogSinkRequestStream),
+    }
+
+    fn hello_world_startinfo_forward_stdout_to_log(
+        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+        mut ns: Vec<fcrunner::ComponentNamespaceEntry>,
+    ) -> fcrunner::ComponentStartInfo {
+        let pkg_path = "/pkg".to_string();
+        let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
+            .unwrap()
+            .into_channel()
+            .unwrap()
+            .into_zx_channel();
+        let pkg_handle = ClientEnd::new(pkg_chan);
+
+        ns.push(fcrunner::ComponentNamespaceEntry {
+            path: Some(pkg_path),
+            directory: Some(pkg_handle),
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
+        });
+
+        fcrunner::ComponentStartInfo {
+            resolved_url: Some(
+                "fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cm".to_string(),
+            ),
+            program: Some(fdata::Dictionary {
+                entries: Some(vec![
+                    fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            "bin/hello_world".to_string(),
+                        ))),
+                    },
+                    fdata::DictionaryEntry {
+                        key: "forward_stdout_to".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("log".to_string()))),
+                    },
+                ]),
+                ..fdata::Dictionary::EMPTY
+            }),
+            ns: Some(ns),
+            outgoing_dir: None,
+            runtime_dir,
+            ..fcrunner::ComponentStartInfo::EMPTY
+        }
+    }
+
+    // TODO(fxbug.dev/69634): Following function shares a lot of code with
+    // //src/sys/component_manager/src/model/namespace.rs tests. Shared
+    // functionality should be refactored into a common test util lib.
+    #[fasync::run_singlethreaded(test)]
+    async fn enable_stdout_logging() {
+        let (dir_client, dir_server) =
+            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
+                .expect("failed to create VFS endpoints");
+        let mut root_dir = ServiceFs::new_local();
+        root_dir.add_fidl_service_at(LogSinkMarker::NAME, FidlServices::LogSink);
+        root_dir
+            .serve_connection(dir_server.into_channel())
+            .expect("failed to add serving channel");
+
+        let ns = vec![fcrunner::ComponentNamespaceEntry {
+            path: Some("/svc".to_string()),
+            directory: Some(dir_client),
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
+        }];
+
+        let (_, runtime_dir_server) = zx::Channel::create().unwrap();
+        let start_info = hello_world_startinfo_forward_stdout_to_log(
+            Some(ServerEnd::new(runtime_dir_server)),
+            ns,
+        );
+
+        let config = RuntimeConfig {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+
+        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&Arc::new(config)),
+            AbsoluteMoniker::root(),
+        ));
+        let (client_controller, server_controller) =
+            create_proxy::<fcrunner::ComponentControllerMarker>()
+                .expect("could not create component controller endpoints");
+
+        runner.start(start_info, server_controller).await;
+
+        // We expect 2 connections to be made to LogSink. The first one is done
+        // for all components, regardless if stdout/stderr is enabled. The
+        // second is only made for the stdout/stderr forwarding code.
+        // TODO(fxbug.dev/69634): Instead of checking for connection count,
+        // we should assert that a message printed to stdout is logged. To
+        // do so, we can use the archvist_lib to unpack the socket payload.
+        // Until then, integration tests shall cover this validation.
+        let connection_count = 2u8;
+        let request_count = Arc::new(Mutex::new(0u8));
+        let request_count_copy = request_count.clone();
+        root_dir
+            .for_each_concurrent(10usize, move |request: FidlServices| match request {
+                FidlServices::LogSink(mut r) => {
+                    let req_count = request_count_copy.clone();
+                    async move {
+                        match r.next().await.expect("stream error").expect("fidl error") {
+                            LogSinkRequest::Connect { .. } => {
+                                let mut count = req_count.lock().expect("locking failed");
+                                *count += 1;
+                            }
+                            LogSinkRequest::ConnectStructured { .. } => {
+                                panic!("Unexpected call to `ConnectStructured`");
+                            }
+                        }
+                    }
+                }
+            })
+            .await;
+        assert_matches!(
+            client_controller.take_event_stream().try_next().await,
+            Err(fidl::Error::ClientChannelClosed { .. })
+        );
+        assert_eq!(*request_count.lock().expect("lock failed"), connection_count);
     }
 }

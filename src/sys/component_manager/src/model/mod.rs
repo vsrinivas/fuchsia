@@ -19,6 +19,7 @@ pub(crate) mod context;
 pub(crate) mod environment;
 pub(crate) mod events;
 pub(crate) mod logging;
+pub(crate) mod namespace;
 pub(crate) mod policy;
 pub(crate) mod resolver;
 pub(crate) mod rights;
@@ -30,7 +31,6 @@ pub(crate) mod storage;
 mod addable_directory;
 mod dir_tree;
 mod exposed_dir;
-mod namespace;
 #[cfg(test)]
 mod tests;
 mod walk_state;
