@@ -5,6 +5,7 @@
 #include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <lib/svc/outgoing.h>
 
+#include "src/devices/lib/driver2/inspect.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/lib/driver2/record.h"
@@ -36,7 +37,16 @@ class PackagedDriver {
     }
     logger_ = std::move(logger.value());
 
+    auto inspect = ExposeInspector(inspector_, outgoing_.root_dir());
+    if (inspect.is_error()) {
+      FDF_LOG(ERROR, "Failed to expose inspector: %s", inspect.status_string());
+      return inspect.take_error();
+    }
+    inspect_vmo_ = std::move(inspect.value());
+
     FDF_LOG(INFO, "Hello world");
+    auto& root = inspector_.GetRoot();
+    root.CreateString("hello", "world", &inspector_);
     status = outgoing_.Serve(std::move(start_args->outgoing_dir()));
     return zx::make_status(status);
   }
@@ -47,6 +57,8 @@ class PackagedDriver {
   fidl::Client<fdf::Node> node_;
   Namespace ns_;
   Logger logger_;
+  inspect::Inspector inspector_;
+  zx::vmo inspect_vmo_;
 };
 
 zx_status_t PackagedDriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,

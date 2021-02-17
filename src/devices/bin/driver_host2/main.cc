@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
          zx_status_get_string(status));
     return status;
   }
-  status = outgoing.root_dir()->AddEntry(kDiagnosticsDir, diagnostics_dir);
+  status = outgoing.root_dir()->AddEntry(kDiagnosticsDir, std::move(diagnostics_dir));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to add directory entry '%s': %s", kDiagnosticsDir,
          zx_status_get_string(status));

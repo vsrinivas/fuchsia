@@ -21,6 +21,8 @@ source_set("lib") {
 
 source_set("llcpp") {
   sources = [
+    "inspect.cc",
+    "inspect.h",
     "logger.cc",
     "logger.h",
     "namespace.cc",
@@ -36,6 +38,8 @@ source_set("llcpp") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/syslog",
   ]
 }
