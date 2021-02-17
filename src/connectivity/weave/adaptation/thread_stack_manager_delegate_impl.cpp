@@ -30,6 +30,7 @@ using fuchsia::lowpan::device::DeviceSyncPtr;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::LookupSyncPtr;
 using fuchsia::lowpan::device::Protocols;
+using fuchsia::lowpan::thread::LegacyJoiningSyncPtr;
 using fuchsia::net::IpAddress;
 using fuchsia::net::Ipv4Address;
 using fuchsia::net::Ipv6Address;
@@ -43,6 +44,11 @@ using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
 
 constexpr uint16_t kMinThreadChannel = 11;
 constexpr uint16_t kMaxThreadChannel = 26;
+
+// Default joinable period for Thread network setup.
+constexpr zx_duration_t kThreadJoinableDuration = zx_duration_from_sec(300);
+// A joinable duration of 0 stops any active joinable state.
+constexpr zx_duration_t kThreadJoinableStop = zx_duration_from_sec(0);
 
 // The required size of a buffer supplied to GetPrimary802154MACAddress.
 constexpr size_t k802154MacAddressBufSize =
@@ -484,11 +490,24 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetPrimary802154MACAddress(uint8_t* 
   return WEAVE_NO_ERROR;
 }
 
-WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadJoinable(bool value) {
-  // TODO(fxbug.dev/58249): This is currently a no-op. Once there is an appropriate API available to
-  // set the joinable/rendezvous mode for Thread, this should forward the request to that API and
-  // return an appropriate status. For now, this will silently succeed so that assisted pairing can
-  // work in the general case.
+WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadJoinable(bool enable) {
+  LegacyJoiningSyncPtr thread_legacy;
+  zx_status_t status;
+
+  // Get the legacy Thread protocol
+  status = GetProtocols(std::move(Protocols().set_thread_legacy_joining(thread_legacy.NewRequest())));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Set joinable or disable joinable based on the intended value.
+  status = thread_legacy->MakeJoinable(enable ? kThreadJoinableDuration : kThreadJoinableStop,
+                                       WEAVE_UNSECURED_PORT);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Confirm joinable state has been updated successfully.
   return WEAVE_NO_ERROR;
 }
 

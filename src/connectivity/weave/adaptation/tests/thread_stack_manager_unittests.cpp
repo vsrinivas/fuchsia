@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/lowpan/device/cpp/fidl_test_base.h>
+#include <fuchsia/lowpan/thread/cpp/fidl_test_base.h>
 #include <fuchsia/net/routes/cpp/fidl.h>
 #include <fuchsia/net/routes/cpp/fidl_test_base.h>
 #include <lib/async/cpp/task.h>
@@ -41,6 +42,7 @@ using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
+using fuchsia::lowpan::thread::LegacyJoining;
 using fuchsia::net::IpAddress;
 using fuchsia::net::Ipv4Address;
 using fuchsia::net::Ipv6Address;
@@ -229,8 +231,46 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
   Role role_{Role::DETACHED};
 };
 
+class FakeThreadLegacy : public fuchsia::lowpan::thread::testing::LegacyJoining_TestBase {
+ public:
+  using CallList = std::vector<std::pair<zx_duration_t, uint16_t>>;
+
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void MakeJoinable(zx_duration_t duration, uint16_t port, MakeJoinableCallback callback) override {
+    calls_.emplace_back(duration, port);
+
+    if (return_status_ != ZX_OK) {
+      bindings_->CloseBinding(this, return_status_);
+    } else {
+      callback();
+    }
+  }
+
+  void SetReturnStatus(zx_status_t return_status) {
+    return_status_ = return_status;
+  }
+
+  const CallList& calls() {
+    return calls_;
+  }
+
+  void SetBindingSet(fidl::BindingSet<LegacyJoining>* bindings) {
+    bindings_ = bindings;
+  }
+
+ private:
+  CallList calls_;
+  zx_status_t return_status_ = ZX_OK;
+  fidl::BindingSet<LegacyJoining>* bindings_ = nullptr;
+};
+
 class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_TestBase {
  public:
+  FakeLowpanLookup() {
+    thread_legacy_.SetBindingSet(&thread_legacy_bindings_);
+  }
+
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
   void GetDevices(GetDevicesCallback callback) override { callback({kFakeInterfaceName}); }
@@ -253,6 +293,11 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
                                         dispatcher_);
     }
 
+    if (protocols.has_thread_legacy_joining()) {
+      thread_legacy_bindings_.AddBinding(&thread_legacy_, std::move(*protocols.mutable_thread_legacy_joining()),
+                                         dispatcher_);
+    }
+
     result.set_response(response);
     callback(std::move(result));
   }
@@ -266,11 +311,14 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   }
 
   FakeLowpanDevice& device() { return device_; }
+  FakeThreadLegacy& thread_legacy() { return thread_legacy_; }
 
  private:
   FakeLowpanDevice device_;
+  FakeThreadLegacy thread_legacy_;
   fidl::BindingSet<Device> device_bindings_;
   fidl::BindingSet<DeviceExtra> device_extra_bindings_;
+  fidl::BindingSet<LegacyJoining> thread_legacy_bindings_;
   async_dispatcher_t* dispatcher_;
   fidl::Binding<Lookup> binding_{this};
 };
@@ -647,6 +695,47 @@ TEST_F(ThreadStackManagerTest, GetPrimary802154MacAddress) {
 
   EXPECT_EQ(ThreadStackMgr().GetPrimary802154MACAddress(mac_addr), WEAVE_NO_ERROR);
   EXPECT_EQ(0, std::memcmp(expected, mac_addr, k802154MacAddressBufSize));
+}
+
+TEST_F(ThreadStackManagerTest, SetThreadJoinable) {
+  EXPECT_EQ(fake_lookup_.thread_legacy().calls().size(), 0u);
+
+  EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(true), WEAVE_NO_ERROR);
+  {
+    const auto& calls = fake_lookup_.thread_legacy().calls();
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_NE(calls[0].first, 0);
+    EXPECT_EQ(calls[0].second, WEAVE_UNSECURED_PORT);
+  }
+
+  EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(false), WEAVE_NO_ERROR);
+  {
+    const auto& calls = fake_lookup_.thread_legacy().calls();
+    ASSERT_EQ(calls.size(), 2u);
+    EXPECT_EQ(calls[1].first, 0);
+    EXPECT_EQ(calls[1].second, WEAVE_UNSECURED_PORT);
+  }
+}
+
+TEST_F(ThreadStackManagerTest, SetThreadJoinableFail) {
+  EXPECT_EQ(fake_lookup_.thread_legacy().calls().size(), 0u);
+  fake_lookup_.thread_legacy().SetReturnStatus(ZX_ERR_BAD_STATE);
+
+  EXPECT_NE(ThreadStackMgrImpl().SetThreadJoinable(true), WEAVE_NO_ERROR);
+  {
+    const auto& calls = fake_lookup_.thread_legacy().calls();
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_NE(calls[0].first, 0);
+    EXPECT_EQ(calls[0].second, WEAVE_UNSECURED_PORT);
+  }
+
+  EXPECT_NE(ThreadStackMgrImpl().SetThreadJoinable(false), WEAVE_NO_ERROR);
+  {
+    const auto& calls = fake_lookup_.thread_legacy().calls();
+    ASSERT_EQ(calls.size(), 2u);
+    EXPECT_EQ(calls[1].first, 0);
+    EXPECT_EQ(calls[1].second, WEAVE_UNSECURED_PORT);
+  }
 }
 
 }  // namespace testing

@@ -91,8 +91,8 @@ const std::string& ThreadStackManagerImpl::GetInterfaceName() const {
 
 bool ThreadStackManagerImpl::IsThreadSupported() const { return delegate_->IsThreadSupported(); }
 
-WEAVE_ERROR ThreadStackManagerImpl::SetThreadJoinable(bool value) {
-  return delegate_->SetThreadJoinable(value);
+WEAVE_ERROR ThreadStackManagerImpl::SetThreadJoinable(bool enable) {
+  return delegate_->SetThreadJoinable(enable);
 }
 
 }  // namespace DeviceLayer

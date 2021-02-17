@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_THREAD_STACK_MANAGER_DELEGATE_IMPL_H_
 
 #include <fuchsia/lowpan/device/cpp/fidl.h>
+#include <fuchsia/lowpan/thread/cpp/fidl.h>
 
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
@@ -42,7 +43,7 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   const std::string& GetInterfaceName() const override;
   bool IsThreadSupported() const override;
   WEAVE_ERROR GetPrimary802154MACAddress(uint8_t* mac_address) override;
-  WEAVE_ERROR SetThreadJoinable(bool value) override;
+  WEAVE_ERROR SetThreadJoinable(bool enable) override;
 
  private:
   std::string interface_name_;
