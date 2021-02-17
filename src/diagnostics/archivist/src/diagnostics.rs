@@ -8,7 +8,8 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
         component, health::Reporter, ExponentialHistogramParams, HistogramProperty, Inspector,
-        Node, NumericProperty, UintExponentialHistogramProperty, UintProperty,
+        LinearHistogramParams, Node, NumericProperty, UintExponentialHistogramProperty,
+        UintLinearHistogramProperty, UintProperty,
     },
     fuchsia_zircon::{self as zx, Duration},
     futures::FutureExt,
@@ -153,6 +154,18 @@ const EXPONENTIAL_HISTOGRAM_USEC_STEP: u64 = 1;
 const EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER: u64 = 2;
 const EXPONENTIAL_HISTOGRAM_USEC_BUCKETS: u64 = 26;
 
+// Linear histogram for max snapshot size in bytes requested by clients.
+// Divide configs into 10kb buckets, from 0mb to 1mb.
+const LINEAR_HISTOGRAM_BYTES_FLOOR: u64 = 0;
+const LINEAR_HISTOGRAM_BYTES_STEP: u64 = 10000;
+const LINEAR_HISTOGRAM_BYTES_BUCKETS: u64 = 100;
+
+// Linear histogram tracking percent of schemas truncated for a given snapshot.
+// Divide configs into 5% buckets, from 0% to 100%.
+const LINEAR_HISTOGRAM_TRUNCATION_PERCENT_FLOOR: u64 = 0;
+const LINEAR_HISTOGRAM_TRUNCATION_PERCENT_STEP: u64 = 5;
+const LINEAR_HISTOGRAM_TRUNCATION_PERCENT_BUCKETS: u64 = 20;
+
 pub struct GlobalConnectionStats {
     /// The name of the diagnostics source being tracked by this struct.
     diagnostics_source: &'static str,
@@ -188,6 +201,10 @@ pub struct GlobalConnectionStats {
     batch_iterator_get_next_time_usec: UintExponentialHistogramProperty,
     /// Optional histogram of processing times for individual components in GetNext
     component_time_usec: Mutex<Option<UintExponentialHistogramProperty>>,
+    /// Histogram of max aggregated snapshot sizes for overall Snapshot requests.
+    max_snapshot_sizes_bytes: UintLinearHistogramProperty,
+    /// Percentage of schemas in a single snapshot that got truncated.
+    snapshot_schema_truncation_percentage: UintLinearHistogramProperty,
     /// Longest processing times for individual components, with timestamps.
     processing_time_tracker: Mutex<Option<ProcessingTimeTracker>>,
 }
@@ -244,6 +261,24 @@ impl GlobalConnectionStats {
             },
         );
 
+        let max_snapshot_sizes_bytes = connection_node.create_uint_linear_histogram(
+            format!("{}_max_snapshot_sizes_bytes", diagnostics_source),
+            LinearHistogramParams {
+                floor: LINEAR_HISTOGRAM_BYTES_FLOOR,
+                step_size: LINEAR_HISTOGRAM_BYTES_STEP,
+                buckets: LINEAR_HISTOGRAM_BYTES_BUCKETS as usize,
+            },
+        );
+
+        let snapshot_schema_truncation_percentage = connection_node.create_uint_linear_histogram(
+            format!("{}_snapshot_schema_truncation_percentage", diagnostics_source),
+            LinearHistogramParams {
+                floor: LINEAR_HISTOGRAM_TRUNCATION_PERCENT_FLOOR,
+                step_size: LINEAR_HISTOGRAM_TRUNCATION_PERCENT_STEP,
+                buckets: LINEAR_HISTOGRAM_TRUNCATION_PERCENT_BUCKETS as usize,
+            },
+        );
+
         let schema_truncation_count = connection_node
             .create_uint(format!("{}_schema_truncation_count", diagnostics_source), 0);
 
@@ -261,6 +296,8 @@ impl GlobalConnectionStats {
             batch_iterator_get_next_result_count,
             batch_iterator_get_next_result_errors,
             batch_iterator_get_next_time_usec,
+            max_snapshot_sizes_bytes,
+            snapshot_schema_truncation_percentage,
             schema_truncation_count,
             component_time_usec: Mutex::new(None),
             processing_time_tracker: Mutex::new(None),
@@ -269,6 +306,14 @@ impl GlobalConnectionStats {
 
     pub fn add_timeout(&self) {
         self.component_timeouts_count.add(1);
+    }
+
+    pub fn record_percent_truncated_schemas(&self, percent_truncated_schemas: u64) {
+        self.snapshot_schema_truncation_percentage.insert(percent_truncated_schemas);
+    }
+
+    pub fn record_max_snapshot_size_config(&self, max_snapshot_size_config: u64) {
+        self.max_snapshot_sizes_bytes.insert(max_snapshot_size_config);
     }
 
     /// Record the duration of a whole request to GetNext.

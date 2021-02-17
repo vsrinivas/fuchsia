@@ -28,7 +28,7 @@ use {
     serde::Serialize,
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
-    std::sync::Arc,
+    std::sync::{Arc, Mutex},
     tracing::warn,
 };
 
@@ -118,6 +118,10 @@ impl ArchiveAccessor {
                         .aggregated_content_limit_bytes
                         .map(|limit| (limit as usize) / unpopulated_container_vec.len())
                 };
+
+                if let Some(max_snapshot_size) = performance_config.aggregated_content_limit_bytes {
+                    stats.global_stats().record_max_snapshot_size_config(max_snapshot_size);
+                }
 
                 BatchIterator::new(
                     inspect::ReaderServer::stream(
@@ -215,10 +219,22 @@ impl ArchiveAccessor {
     }
 }
 
+struct SchemaTruncationCounter {
+    truncated_schemas: u64,
+    total_schemas: u64,
+}
+
+impl SchemaTruncationCounter {
+    pub fn new() -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self { truncated_schemas: 0, total_schemas: 0 }))
+    }
+}
+
 pub struct BatchIterator {
     requests: BatchIteratorRequestStream,
     stats: Arc<ConnectionStats>,
     data: FormattedStream,
+    truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
 }
 
 // Checks if a given schema is within a components budget, and if it is, updates the budget,
@@ -254,7 +270,12 @@ impl BatchIterator {
 
         let mut budget_tracker: HashMap<String, usize> = HashMap::new();
 
+        let truncation_counter = SchemaTruncationCounter::new();
+        let stream_owned_counter = truncation_counter.clone();
+
         let data = data.map(move |d| {
+            let mut unlocked_counter = stream_owned_counter.lock().unwrap();
+            unlocked_counter.total_schemas += 1;
             if D::has_errors(&d.metadata) {
                 result_stats.add_result_error();
             }
@@ -277,9 +298,12 @@ impl BatchIterator {
                                 Ok(contents)
                             } else {
                                 result_stats.add_schema_truncated();
+                                unlocked_counter.truncated_schemas += 1;
+
                                 let new_data = d.dropped_payload_schema(
                                     "Schema failed to fit component budget.".to_string(),
                                 );
+
                                 // TODO(66085): If a payload is truncated, cache the
                                 // new schema so that we can reuse if other schemas from
                                 // the same component get dropped.
@@ -292,7 +316,12 @@ impl BatchIterator {
             }
         });
 
-        Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats)
+        Self::new_inner(
+            new_batcher(data, stats.clone(), mode),
+            requests,
+            stats,
+            Some(truncation_counter),
+        )
     }
 
     pub fn new_serving_arrays<D, S>(
@@ -307,16 +336,17 @@ impl BatchIterator {
     {
         let data =
             JsonPacketSerializer::new(stats.clone(), FORMATTED_CONTENT_CHUNK_SIZE_TARGET, data);
-        Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats)
+        Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats, None)
     }
 
     fn new_inner(
         data: FormattedStream,
         requests: BatchIteratorRequestStream,
         stats: Arc<ConnectionStats>,
+        truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
     ) -> Result<Self, AccessorError> {
         stats.open_connection();
-        Ok(Self { data, requests, stats })
+        Ok(Self { data, requests, stats, truncation_counter })
     }
 
     pub async fn run(mut self) -> Result<(), AccessorError> {
@@ -332,6 +362,17 @@ impl BatchIterator {
             // increment counters
             self.stats.add_response();
             if batch.is_empty() {
+                if let Some(truncation_count) = &self.truncation_counter {
+                    let unlocked_count = truncation_count.lock().unwrap();
+                    if unlocked_count.total_schemas > 0 {
+                        self.stats.global_stats().record_percent_truncated_schemas(
+                            ((unlocked_count.truncated_schemas as f32
+                                / unlocked_count.total_schemas as f32)
+                                * 100.0)
+                                .round() as u64,
+                        );
+                    }
+                }
                 self.stats.add_terminal();
             }
             self.stats.global_stats().record_batch_duration(zx::Time::get_monotonic() - start_time);
