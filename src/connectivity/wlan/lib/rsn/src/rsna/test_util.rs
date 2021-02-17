@@ -8,7 +8,7 @@ use crate::key::exchange::handshake::fourway::{self, Fourway};
 use crate::key::exchange::{compute_mic, compute_mic_from_buf};
 use crate::key::{
     gtk::{Gtk, GtkProvider},
-    igtk::Igtk,
+    igtk::{Igtk, IgtkProvider},
     ptk::Ptk,
 };
 use crate::key_data::kde;
@@ -18,6 +18,7 @@ use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate};
 use crate::ProtectionInfo;
 use crate::{Authenticator, Supplicant};
 use eapol::KeyFrameTx;
+use fidl_fuchsia_wlan_mlme::SaeFrame;
 use hex::FromHex;
 use std::sync::{Arc, Mutex};
 use wlan_common::{
@@ -27,6 +28,7 @@ use wlan_common::{
             akm,
             cipher::{self, Cipher},
             fake_wpa2_a_rsne, fake_wpa2_s_rsne, fake_wpa3_a_rsne, fake_wpa3_s_rsne,
+            suite_filter::DEFAULT_GROUP_MGMT_CIPHER,
             suite_selector::OUI,
         },
         write_wpa1_ie,
@@ -43,7 +45,7 @@ pub fn get_rsne_protection() -> NegotiatedProtection {
         .expect("error creating RSNE NegotiatedProtection")
 }
 
-pub fn get_supplicant() -> Supplicant {
+pub fn get_wpa2_supplicant() -> Supplicant {
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("error computing PSK");
@@ -58,7 +60,7 @@ pub fn get_supplicant() -> Supplicant {
     .expect("could not create Supplicant")
 }
 
-pub fn get_authenticator() -> Authenticator {
+pub fn get_wpa2_authenticator() -> Authenticator {
     let gtk_provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
         .expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
@@ -72,6 +74,43 @@ pub fn get_authenticator() -> Authenticator {
         ProtectionInfo::Rsne(fake_wpa2_s_rsne()),
         test_util::A_ADDR,
         ProtectionInfo::Rsne(fake_wpa2_a_rsne()),
+    )
+    .expect("could not create Authenticator")
+}
+
+pub fn get_wpa3_supplicant() -> Supplicant {
+    let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    Supplicant::new_wpa_personal(
+        nonce_rdr,
+        auth::Config::Sae {
+            password: "ThisIsAPassword".as_bytes().to_vec(),
+            mac: test_util::S_ADDR,
+            peer_mac: test_util::A_ADDR,
+        },
+        test_util::S_ADDR,
+        ProtectionInfo::Rsne(fake_wpa3_s_rsne()),
+        test_util::A_ADDR,
+        ProtectionInfo::Rsne(fake_wpa3_a_rsne()),
+    )
+    .expect("could not create Supplicant")
+}
+
+pub fn get_wpa3_authenticator() -> Authenticator {
+    let gtk_provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
+        .expect("error creating GtkProvider");
+    let igtk_provider =
+        IgtkProvider::new(DEFAULT_GROUP_MGMT_CIPHER).expect("error creating IgtkProvider");
+    let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    let password = "ThisIsAPassword".as_bytes().to_vec();
+    Authenticator::new_wpa3(
+        nonce_rdr,
+        Arc::new(Mutex::new(gtk_provider)),
+        Arc::new(Mutex::new(igtk_provider)),
+        password,
+        test_util::S_ADDR,
+        ProtectionInfo::Rsne(fake_wpa3_s_rsne()),
+        test_util::A_ADDR,
+        ProtectionInfo::Rsne(fake_wpa3_a_rsne()),
     )
     .expect("could not create Authenticator")
 }
@@ -364,7 +403,26 @@ fn make_fourway_cfg(
     s_protection: ProtectionInfo,
     a_protection: ProtectionInfo,
 ) -> fourway::Config {
-    let gtk_provider = GtkProvider::new(cipher).expect("error creating GtkProvider");
+    let gtk_provider = match role {
+        Role::Authenticator => Some(Arc::new(Mutex::new(
+            GtkProvider::new(cipher).expect("error creating GtkProvider"),
+        ))),
+        Role::Supplicant => None,
+    };
+    let igtk_provider = match role {
+        Role::Authenticator => {
+            match fourway::get_group_mgmt_cipher(&s_protection, &a_protection)
+                .expect("error getting group mgmt cipher")
+            {
+                Some(group_mgmt_cipher) => Some(Arc::new(Mutex::new(
+                    IgtkProvider::new(group_mgmt_cipher).expect("error creating GtkProvider"),
+                ))),
+                None => None,
+            }
+        }
+        Role::Supplicant => None,
+    };
+
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     fourway::Config::new(
         role,
@@ -373,7 +431,8 @@ fn make_fourway_cfg(
         test_util::A_ADDR,
         a_protection,
         nonce_rdr,
-        Some(Arc::new(Mutex::new(gtk_provider))),
+        gtk_provider,
+        igtk_provider,
     )
     .expect("could not construct PTK exchange method")
 }
@@ -428,6 +487,8 @@ fn make_verified<B: ByteSlice + std::fmt::Debug>(
     result.unwrap()
 }
 
+// TODO(fxbug.dev/70332): The expect_* functions that follow should be refactored with a macro.
+
 pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrameBuf> {
     updates
         .iter()
@@ -441,6 +502,52 @@ pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrameBuf> 
 
 pub fn expect_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrameBuf {
     get_eapol_resp(updates).expect("updates do not contain EAPOL frame")
+}
+
+pub fn get_schedule_sae_timeout(updates: &[SecAssocUpdate]) -> Option<u64> {
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::ScheduleSaeTimeout(timeout) => Some(timeout),
+            _ => None,
+        })
+        .next()
+        .map(|x| x.clone())
+}
+
+pub fn expect_schedule_sae_timeout(updates: &[SecAssocUpdate]) -> u64 {
+    get_schedule_sae_timeout(updates).expect("updates do not schedule SAE timeout")
+}
+
+pub fn get_sae_frame_vec(updates: &[SecAssocUpdate]) -> Vec<SaeFrame> {
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::TxSaeFrame(sae_frame) => Some(sae_frame.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+pub fn expect_sae_frame_vec(updates: &[SecAssocUpdate]) -> Vec<SaeFrame> {
+    let sae_frame_vec = get_sae_frame_vec(updates);
+    assert!(sae_frame_vec.len() > 0, "updates do not contain SAE frame: {:?}", updates);
+    sae_frame_vec
+}
+
+pub fn get_reported_pmk(updates: &[SecAssocUpdate]) -> Option<Vec<u8>> {
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::Key(Key::Pmk(pmk)) => Some(pmk),
+            _ => None,
+        })
+        .next()
+        .map(|x| x.clone())
+}
+
+pub fn expect_reported_pmk(updates: &[SecAssocUpdate]) -> Vec<u8> {
+    get_reported_pmk(updates).expect("updates do not contain PMK")
 }
 
 pub fn get_reported_ptk(updates: &[SecAssocUpdate]) -> Option<Ptk> {
@@ -488,6 +595,30 @@ pub fn expect_reported_igtk(updates: &[SecAssocUpdate]) -> Igtk {
     get_reported_igtk(updates).expect("updates do not contain IGTK")
 }
 
+pub fn get_reported_sae_auth_status(updates: &[SecAssocUpdate]) -> Option<AuthStatus> {
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::SaeAuthStatus(status) => Some(status),
+            _ => None,
+        })
+        .next()
+        .map(|x| x.clone())
+}
+
+pub fn expect_reported_sae_auth_status(
+    updates: &[SecAssocUpdate],
+    expected_status: AuthStatus,
+) -> AuthStatus {
+    match get_reported_sae_auth_status(updates) {
+        Some(status) => {
+            assert_eq!(status, expected_status, "SAE AuthStatus does not match expected");
+            status
+        }
+        None => panic!("updates do not contain a SAE AuthStatus"),
+    }
+}
+
 pub fn get_reported_status(updates: &[SecAssocUpdate]) -> Option<SecAssocStatus> {
     updates
         .iter()
@@ -499,8 +630,17 @@ pub fn get_reported_status(updates: &[SecAssocUpdate]) -> Option<SecAssocStatus>
         .map(|x| x.clone())
 }
 
-pub fn expect_reported_status(updates: &[SecAssocUpdate]) -> SecAssocStatus {
-    get_reported_status(updates).expect("updates do not contain a status")
+pub fn expect_reported_status(
+    updates: &[SecAssocUpdate],
+    expected_status: SecAssocStatus,
+) -> SecAssocStatus {
+    match get_reported_status(updates) {
+        Some(status) => {
+            assert_eq!(status, expected_status, "EAPOL SecAssocStatus does not match expected");
+            status
+        }
+        None => panic!("updates do not contain a EAPOL SecAssocStatus"),
+    }
 }
 
 pub struct FourwayTestEnv {
@@ -509,21 +649,21 @@ pub struct FourwayTestEnv {
 }
 
 pub fn send_msg_to_fourway<B: ByteSlice + std::fmt::Debug>(
-    supplicant: &mut Fourway,
+    fourway: &mut Fourway,
     msg: eapol::KeyFrameRx<B>,
     krc: u64,
     protection: &NegotiatedProtection,
 ) -> UpdateSink {
-    let role = match &supplicant {
+    let role = match &fourway {
         Fourway::Authenticator(_) => Role::Authenticator,
         Fourway::Supplicant(_) => Role::Supplicant,
     };
     let verified_msg = make_verified(msg, role, krc, &protection);
 
-    let mut s_update_sink = UpdateSink::default();
-    let result = supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg);
+    let mut update_sink = UpdateSink::default();
+    let result = fourway.on_eapol_key_frame(&mut update_sink, 0, verified_msg);
     assert!(result.is_ok(), "{:?} failed processing msg: {}", role, result.unwrap_err());
-    s_update_sink
+    update_sink
 }
 
 impl FourwayTestEnv {

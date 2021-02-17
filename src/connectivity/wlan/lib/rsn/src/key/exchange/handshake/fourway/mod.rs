@@ -5,13 +5,19 @@
 mod authenticator;
 mod supplicant;
 
-use crate::key::{exchange, gtk::GtkProvider};
+use crate::key::{
+    exchange,
+    gtk::{Gtk, GtkProvider},
+    igtk::{Igtk, IgtkProvider},
+    ptk::Ptk,
+};
 use crate::nonce::NonceReader;
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocUpdate, UpdateSink};
 use crate::ProtectionInfo;
 use crate::{rsn_ensure, Error};
 use eapol;
 use std::sync::{Arc, Mutex};
+use wlan_common::ie::rsn::{cipher::Cipher, rsne::Rsne, suite_filter::DEFAULT_GROUP_MGMT_CIPHER};
 use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
@@ -79,6 +85,89 @@ impl<B: ByteSlice> std::ops::Deref for FourwayHandshakeFrame<B> {
     }
 }
 
+pub fn get_group_mgmt_cipher(
+    s_protection: &ProtectionInfo,
+    a_protection: &ProtectionInfo,
+) -> Result<Option<Cipher>, Error> {
+    // IEEE 802.1-2016 12.6.3 - Management frame protection is
+    // negotiated when an AP and non-AP STA set the Management
+    // Frame Protection Capable field to 1 in their respective
+    // RSNEs in the (re)association procedure, ...
+    match (s_protection, a_protection) {
+        (
+            ProtectionInfo::Rsne(Rsne {
+                rsn_capabilities: Some(s_rsn_capabilities),
+                group_mgmt_cipher_suite: s_group_mgmt_cipher_suite,
+                ..
+            }),
+            ProtectionInfo::Rsne(Rsne {
+                rsn_capabilities: Some(a_rsn_capabilities),
+                group_mgmt_cipher_suite: a_group_mgmt_cipher_suite,
+                ..
+            }),
+        ) => {
+            // Check for invalid bits
+            if !s_rsn_capabilities.mgmt_frame_protection_cap()
+                && s_rsn_capabilities.mgmt_frame_protection_req()
+            {
+                return Err(Error::InvalidClientMgmtFrameProtectionCapabilityBit);
+            }
+            if !a_rsn_capabilities.mgmt_frame_protection_cap()
+                && a_rsn_capabilities.mgmt_frame_protection_req()
+            {
+                return Err(Error::InvalidApMgmtFrameProtectionCapabilityBit);
+            }
+
+            // Check for incompatible capabilities and requirements
+            if s_rsn_capabilities.mgmt_frame_protection_req()
+                && !a_rsn_capabilities.mgmt_frame_protection_cap()
+            {
+                return Err(Error::MgmtFrameProtectionRequiredByClient);
+            }
+            if !s_rsn_capabilities.mgmt_frame_protection_cap()
+                && a_rsn_capabilities.mgmt_frame_protection_req()
+            {
+                return Err(Error::MgmtFrameProtectionRequiredByAp);
+            }
+
+            if s_rsn_capabilities.mgmt_frame_protection_cap()
+                && a_rsn_capabilities.mgmt_frame_protection_cap()
+            {
+                let s_group_mgmt_cipher_suite =
+                    s_group_mgmt_cipher_suite.unwrap_or(DEFAULT_GROUP_MGMT_CIPHER);
+                let a_group_mgmt_cipher_suite =
+                    a_group_mgmt_cipher_suite.unwrap_or(DEFAULT_GROUP_MGMT_CIPHER);
+
+                if s_group_mgmt_cipher_suite != a_group_mgmt_cipher_suite {
+                    return Err(Error::GroupMgmtCipherMismatch(
+                        s_group_mgmt_cipher_suite,
+                        a_group_mgmt_cipher_suite,
+                    ));
+                }
+
+                return Ok(Some(s_group_mgmt_cipher_suite));
+            }
+        }
+        (_, ProtectionInfo::Rsne(Rsne { rsn_capabilities: Some(a_rsn_capabilities), .. })) => {
+            if a_rsn_capabilities.mgmt_frame_protection_req() {
+                return Err(Error::MgmtFrameProtectionRequiredByAp);
+            }
+        }
+        (ProtectionInfo::Rsne(Rsne { rsn_capabilities: Some(s_rsn_capabilities), .. }), _) => {
+            if s_rsn_capabilities.mgmt_frame_protection_req() {
+                return Err(Error::MgmtFrameProtectionRequiredByClient);
+            }
+        }
+
+        // If management frame protection will not be used or is not required, then we can
+        // safely ignore the supplicant ProtectionInfo
+        (ProtectionInfo::Rsne(Rsne { rsn_capabilities: None, .. }), _)
+        | (ProtectionInfo::LegacyWpa(_), _) => {}
+    }
+
+    Ok(None)
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub role: Role,
@@ -88,6 +177,11 @@ pub struct Config {
     pub a_protection: ProtectionInfo,
     pub nonce_rdr: Arc<NonceReader>,
     pub gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
+    pub igtk_provider: Option<Arc<Mutex<IgtkProvider>>>,
+
+    // Private field to ensure Config can only be created by one of Config's
+    // associated functions.
+    _private: (),
 }
 
 impl Config {
@@ -99,17 +193,73 @@ impl Config {
         a_protection: ProtectionInfo,
         nonce_rdr: Arc<NonceReader>,
         gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
+        igtk_provider: Option<Arc<Mutex<IgtkProvider>>>,
     ) -> Result<Config, Error> {
-        rsn_ensure!(
-            role != Role::Authenticator || gtk_provider.is_some(),
-            "GtkProvider is missing"
-        );
-        rsn_ensure!(
-            NegotiatedProtection::from_protection(&s_protection).is_ok(),
-            "invalid supplicant protection"
-        );
+        // Check that the supplicant protection is a subset of the authenticator protection.
+        match (&s_protection, &a_protection) {
+            (ProtectionInfo::Rsne(s_rsne), ProtectionInfo::Rsne(a_rsne)) => {
+                // TODO(fxbug.dev/29786): Replace with ? syntax when
+                // NegotiatedProtection::from_protection no longer returns
+                // anyhow::Error.
+                match s_rsne.is_valid_subset_of(a_rsne) {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        return Err(Error::RsneInvalidSubset(s_rsne.clone(), a_rsne.clone()))
+                    }
+                    Err(e) => return Err(e.into()),
+                };
+            }
+            // TODO (fxbug.dev/70414): Check if the ProtectionInfo::LegacyWpa is a
+            // subset or superset of the other ProtectionInfo
+            (_, ProtectionInfo::LegacyWpa(_)) => {}
+            (ProtectionInfo::LegacyWpa(_), _) => {}
+        }
 
-        Ok(Config { role, s_addr, s_protection, a_addr, a_protection, nonce_rdr, gtk_provider })
+        // TODO(fxbug.dev/29786): Replace with ? syntax when
+        // NegotiatedProtection::from_protection no longer returns
+        // anyhow::Error.
+        // TODO(fxbug.dev/70417): NegotiatedProtection should take into
+        // account a_protection since the use of management frame
+        // protection cannot be determined from s_protection alone.
+        match NegotiatedProtection::from_protection(&s_protection) {
+            Ok(negotiated_protection) => negotiated_protection,
+            Err(e) => return Err(Error::InvalidSupplicantProtection(format!("{:?}", e))),
+        };
+
+        // Check that both an GtkProvider and IgtkProvider are provided if this configuration
+        // is for an authenticator. An IgtkProvider is only required if management frame
+        // protection is activated by this Config.
+        if role == Role::Authenticator {
+            rsn_ensure!(gtk_provider.is_some(), Error::MissingGtkProvider);
+
+            // TODO(fxbug.dev/70417): NegotiatedProtection should have a group_mgmt_cipher
+            // associated function instead.
+            match get_group_mgmt_cipher(&s_protection, &a_protection)? {
+                Some(group_mgmt_cipher) => match igtk_provider.as_ref() {
+                    None => return Err(Error::MissingIgtkProvider),
+                    Some(igtk_provider) => {
+                        let igtk_provider_cipher = igtk_provider.lock().unwrap().cipher();
+                        rsn_ensure!(
+                            group_mgmt_cipher == igtk_provider_cipher,
+                            Error::WrongIgtkProviderCipher(group_mgmt_cipher, igtk_provider_cipher),
+                        );
+                    }
+                },
+                None => {}
+            }
+        }
+
+        Ok(Config {
+            role,
+            s_addr,
+            s_protection,
+            a_addr,
+            a_protection,
+            nonce_rdr,
+            gtk_provider,
+            igtk_provider,
+            _private: (),
+        })
     }
 }
 
@@ -180,6 +330,27 @@ impl Fourway {
                 state_machine.replace_state(|state| state.on_eapol_key_frame(update_sink, frame));
                 Ok(())
             }
+        }
+    }
+
+    pub fn ptk(&self) -> Option<Ptk> {
+        match self {
+            Fourway::Authenticator(state_machine) => state_machine.as_ref().ptk(),
+            Fourway::Supplicant(state_machine) => state_machine.as_ref().ptk(),
+        }
+    }
+
+    pub fn gtk(&self) -> Option<Gtk> {
+        match self {
+            Fourway::Authenticator(state_machine) => state_machine.as_ref().gtk(),
+            Fourway::Supplicant(state_machine) => state_machine.as_ref().gtk(),
+        }
+    }
+
+    pub fn igtk(&self) -> Option<Igtk> {
+        match self {
+            Fourway::Authenticator(state_machine) => state_machine.as_ref().igtk(),
+            Fourway::Supplicant(state_machine) => state_machine.as_ref().igtk(),
         }
     }
 
@@ -411,9 +582,18 @@ fn is_zero(slice: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::Fourway;
-    use crate::key::ptk::Ptk;
-    use crate::rsna::{test_util, SecAssocUpdate, UpdateSink};
-    use wlan_common::big_endian::BigEndianU64;
+    use super::*;
+    use crate::{
+        rsna::{test_util, SecAssocUpdate, UpdateSink},
+        rsne::RsnCapabilities,
+    };
+    use wlan_common::{
+        big_endian::BigEndianU64,
+        ie::{
+            rsn::cipher::{Cipher, CIPHER_BIP_CMAC_128, CIPHER_BIP_CMAC_256},
+            wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie,
+        },
+    };
 
     // Create an Authenticator and Supplicant and performs the entire 4-Way Handshake.
     #[test]
@@ -436,7 +616,46 @@ mod tests {
         assert_eq!(s_gtk, a_gtk);
     }
 
-    fn run_wpa3_handshake(gtk: &[u8], igtk: Option<&[u8]>) -> (Ptk, Vec<SecAssocUpdate>) {
+    fn run_wpa3_handshake_real_authenticator() -> (
+        Fourway, // authenticator
+        Fourway, // supplicant
+    ) {
+        let mut supplicant = test_util::make_wpa3_handshake(super::Role::Supplicant);
+        let mut authenticator = test_util::make_wpa3_handshake(super::Role::Authenticator);
+        let protection = test_util::get_wpa3_protection();
+
+        let mut update_sink = UpdateSink::default();
+        authenticator.initiate(&mut update_sink, 12).expect("initiating Authenticator");
+        let msg1_buf = test_util::expect_eapol_resp(&update_sink[..]);
+        let msg1 = msg1_buf.keyframe();
+
+        let update_sink = test_util::send_msg_to_fourway(&mut supplicant, msg1, 0, &protection);
+        let msg2_buf = test_util::expect_eapol_resp(&update_sink[..]);
+        let msg2 = msg2_buf.keyframe();
+
+        let update_sink = test_util::send_msg_to_fourway(&mut authenticator, msg2, 0, &protection);
+        let msg3_buf = test_util::expect_eapol_resp(&update_sink[..]);
+        let msg3 = msg3_buf.keyframe();
+
+        let update_sink = test_util::send_msg_to_fourway(&mut supplicant, msg3, 0, &protection);
+        test_util::expect_eapol_resp(&update_sink[..]);
+
+        (authenticator, supplicant)
+    }
+
+    #[test]
+    fn test_wpa3_handshake_generates_igtk_real_authenticator() {
+        let (authenticator, supplicant) = run_wpa3_handshake_real_authenticator();
+
+        assert_eq!(authenticator.ptk(), supplicant.ptk());
+        assert_eq!(authenticator.gtk(), supplicant.gtk());
+        assert_eq!(authenticator.igtk(), supplicant.igtk());
+    }
+
+    fn run_wpa3_handshake_mock_authenticator(
+        gtk: &[u8],
+        igtk: Option<&[u8]>,
+    ) -> (Ptk, Vec<SecAssocUpdate>) {
         let anonce = [0xab; 32];
         let mut supplicant = test_util::make_wpa3_handshake(super::Role::Supplicant);
         let protection = test_util::get_wpa3_protection();
@@ -452,10 +671,10 @@ mod tests {
     }
 
     #[test]
-    fn test_wpa3_handshake_generates_igtk() {
+    fn test_wpa3_handshake_generates_igtk_mock_authenticator() {
         let gtk = [0xbb; 32];
         let igtk = [0xcc; 32];
-        let (ptk, updates) = run_wpa3_handshake(&gtk[..], Some(&igtk[..]));
+        let (ptk, updates) = run_wpa3_handshake_mock_authenticator(&gtk[..], Some(&igtk[..]));
 
         test_util::expect_eapol_resp(&updates[..]);
         let s_ptk = test_util::expect_reported_ptk(&updates[..]);
@@ -469,7 +688,7 @@ mod tests {
     #[test]
     fn test_wpa3_handshake_requires_igtk() {
         let gtk = [0xbb; 32];
-        let (_ptk, updates) = run_wpa3_handshake(&gtk[..], None);
+        let (_ptk, updates) = run_wpa3_handshake_mock_authenticator(&gtk[..], None);
         assert!(
             test_util::get_eapol_resp(&updates[..]).is_none(),
             "WPA3 should not send EAPOL msg4 without IGTK"
@@ -681,5 +900,173 @@ mod tests {
 
         // Verify Supplicant picked up the Authenticator's GTK RSC.
         assert_eq!(s_gtk.rsc, GTK_RSC);
+    }
+
+    fn make_protection_info_with_mfp_parameters(
+        mfp_bits: Option<(bool, bool)>, // Option<(mfpc, mfpr)>
+        group_mgmt_cipher_suite: Option<Cipher>,
+    ) -> ProtectionInfo {
+        ProtectionInfo::Rsne(Rsne {
+            rsn_capabilities: match mfp_bits {
+                None => None,
+                Some((mfpc, mfpr)) => Some(
+                    RsnCapabilities(0)
+                        .with_mgmt_frame_protection_cap(mfpc)
+                        .with_mgmt_frame_protection_req(mfpr),
+                ),
+            },
+            group_mgmt_cipher_suite,
+            ..Default::default()
+        })
+    }
+
+    fn check_rsne_get_group_mgmt_cipher(
+        s_mfp_bits: Option<(bool, bool)>, // Option<(mfpc, mfpr)>
+        s_cipher: Option<Cipher>,
+        a_mfp_bits: Option<(bool, bool)>, // Option<(mfpc, mfpr)>
+        a_cipher: Option<Cipher>,
+        expected_result: Result<Option<Cipher>, Error>,
+    ) {
+        let s_protection_info = make_protection_info_with_mfp_parameters(s_mfp_bits, s_cipher);
+        let a_protection_info = make_protection_info_with_mfp_parameters(a_mfp_bits, a_cipher);
+
+        assert_eq!(get_group_mgmt_cipher(&s_protection_info, &a_protection_info), expected_result);
+    }
+
+    #[test]
+    fn test_get_group_mgmt_cipher() {
+        // Check that CIPHER_BIP_CMAC_256 is not DEFAULT_GROUP_MGMT_CIPHER so we can check cases when a
+        // non-default cipher is specified.
+        assert!(
+            CIPHER_BIP_CMAC_256 != DEFAULT_GROUP_MGMT_CIPHER,
+            "default group mgmt cipher is CIPHER_BIP_CMAC_256"
+        );
+
+        for (s_mfpr, a_mfpr) in vec![(false, false), (false, true), (true, false), (true, true)] {
+            check_rsne_get_group_mgmt_cipher(
+                Some((true, s_mfpr)),
+                None,
+                Some((true, a_mfpr)),
+                None,
+                Ok(Some(DEFAULT_GROUP_MGMT_CIPHER)),
+            );
+        }
+
+        for (s_mfpr, a_mfpr) in vec![(false, false), (false, true), (true, false), (true, true)] {
+            check_rsne_get_group_mgmt_cipher(
+                Some((true, s_mfpr)),
+                Some(CIPHER_BIP_CMAC_256),
+                Some((true, a_mfpr)),
+                Some(CIPHER_BIP_CMAC_256),
+                Ok(Some(CIPHER_BIP_CMAC_256)),
+            );
+        }
+
+        for (s_mfpc, a_mfpc) in vec![(false, false), (false, true), (true, false)] {
+            check_rsne_get_group_mgmt_cipher(
+                Some((s_mfpc, false)),
+                Some(CIPHER_BIP_CMAC_128),
+                Some((a_mfpc, false)),
+                None,
+                Ok(None),
+            );
+        }
+
+        for (s_mfpc, a_mfpc) in vec![(false, false), (false, true), (true, false)] {
+            check_rsne_get_group_mgmt_cipher(
+                Some((s_mfpc, false)),
+                None,
+                Some((a_mfpc, false)),
+                None,
+                Ok(None),
+            );
+        }
+
+        let s_protection_info = ProtectionInfo::LegacyWpa(fake_deprecated_wpa1_vendor_ie());
+        let a_protection_info = make_protection_info_with_mfp_parameters(None, None);
+        assert_eq!(get_group_mgmt_cipher(&s_protection_info, &a_protection_info), Ok(None));
+
+        let s_protection_info = make_protection_info_with_mfp_parameters(None, None);
+        let a_protection_info = ProtectionInfo::LegacyWpa(fake_deprecated_wpa1_vendor_ie());
+        assert_eq!(get_group_mgmt_cipher(&s_protection_info, &a_protection_info), Ok(None));
+    }
+
+    #[test]
+    fn test_get_group_mgmt_cipher_errors() {
+        // Error::Invalid*MgmtFrameProtectionCapabilityBit
+        check_rsne_get_group_mgmt_cipher(
+            Some((false, true)),
+            None,
+            Some((false, false)),
+            None,
+            Err(Error::InvalidClientMgmtFrameProtectionCapabilityBit),
+        );
+        check_rsne_get_group_mgmt_cipher(
+            Some((false, false)),
+            None,
+            Some((false, true)),
+            None,
+            Err(Error::InvalidApMgmtFrameProtectionCapabilityBit),
+        );
+
+        // Error::MgmtFrameProtectionRequiredByClient
+        check_rsne_get_group_mgmt_cipher(
+            Some((true, true)),
+            None,
+            Some((false, false)),
+            None,
+            Err(Error::MgmtFrameProtectionRequiredByClient),
+        );
+        check_rsne_get_group_mgmt_cipher(
+            Some((true, true)),
+            None,
+            None,
+            None,
+            Err(Error::MgmtFrameProtectionRequiredByClient),
+        );
+        let s_protection_info = make_protection_info_with_mfp_parameters(Some((true, true)), None);
+        let a_protection_info = ProtectionInfo::LegacyWpa(fake_deprecated_wpa1_vendor_ie());
+        assert_eq!(
+            get_group_mgmt_cipher(&s_protection_info, &a_protection_info),
+            Err(Error::MgmtFrameProtectionRequiredByClient)
+        );
+
+        // Error::MgmtFrameProtectionRequiredByAp
+        check_rsne_get_group_mgmt_cipher(
+            Some((false, false)),
+            None,
+            Some((true, true)),
+            None,
+            Err(Error::MgmtFrameProtectionRequiredByAp),
+        );
+        check_rsne_get_group_mgmt_cipher(
+            None,
+            None,
+            Some((true, true)),
+            None,
+            Err(Error::MgmtFrameProtectionRequiredByAp),
+        );
+        let s_protection_info = ProtectionInfo::LegacyWpa(fake_deprecated_wpa1_vendor_ie());
+        let a_protection_info = make_protection_info_with_mfp_parameters(Some((true, true)), None);
+        assert_eq!(
+            get_group_mgmt_cipher(&s_protection_info, &a_protection_info),
+            Err(Error::MgmtFrameProtectionRequiredByAp)
+        );
+
+        // Error::GroupMgmtCipherMismatch
+        check_rsne_get_group_mgmt_cipher(
+            Some((true, true)),
+            Some(CIPHER_BIP_CMAC_128),
+            Some((true, true)),
+            Some(CIPHER_BIP_CMAC_256),
+            Err(Error::GroupMgmtCipherMismatch(CIPHER_BIP_CMAC_128, CIPHER_BIP_CMAC_256)),
+        );
+        check_rsne_get_group_mgmt_cipher(
+            Some((true, true)),
+            Some(CIPHER_BIP_CMAC_256),
+            Some((true, true)),
+            None,
+            Err(Error::GroupMgmtCipherMismatch(CIPHER_BIP_CMAC_256, DEFAULT_GROUP_MGMT_CIPHER)),
+        );
     }
 }

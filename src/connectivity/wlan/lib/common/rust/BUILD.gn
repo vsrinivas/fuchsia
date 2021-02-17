@@ -67,6 +67,7 @@ rustc_library("wlan-common") {
     "src/ie/rsn/rsne.rs",
     "src/ie/rsn/suite_filter.rs",
     "src/ie/rsn/suite_selector.rs",
+    "src/ie/wpa/fake_wpa_ies.rs",
     "src/ie/wpa/mod.rs",
     "src/ie/write.rs",
     "src/ie/wsc/constants.rs",

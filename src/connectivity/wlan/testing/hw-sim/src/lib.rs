@@ -24,15 +24,12 @@ use {
         data_writer,
         ie::{
             rsn::{
-                akm,
-                cipher::{self, CIPHER_CCMP_128, CIPHER_TKIP},
+                cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
                 rsne,
             },
-            wpa::WpaIe,
+            wpa,
         },
-        mac, mgmt_writer,
-        organization::Oui,
-        TimeUnit,
+        mac, mgmt_writer, TimeUnit,
     },
     wlan_frame_writer::write_frame_with_dynamic_buf,
     wlan_rsn::rsna::SecAssocUpdate,
@@ -289,11 +286,7 @@ fn default_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
 }
 
 fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
-    WpaIe {
-        unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::CCMP_128 }],
-        akm_list: vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
-        multicast_cipher: cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
-    }
+    wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie()
 }
 
 pub fn create_network_config<S: ToString>(

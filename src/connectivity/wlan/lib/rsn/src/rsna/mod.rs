@@ -479,7 +479,7 @@ pub enum Role {
     Supplicant,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SecAssocStatus {
     // TODO(hahnr): Rather than reporting wrong password as a status, report it as an error.
     WrongPassword,
@@ -487,7 +487,7 @@ pub enum SecAssocStatus {
     EssSaEstablished,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AuthStatus {
     Success,
     Rejected,
