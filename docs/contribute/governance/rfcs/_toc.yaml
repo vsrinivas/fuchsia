@@ -51,3 +51,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0017_folding_ftp_into_rfc.md
 - title: "RFC-0068: Page Eviction Hints"
   path: /docs/contribute/governance/rfcs/0068_eviction_hints.md
+- title: "RFC-0069 - Standard I/O in ELF Runner"
+  path: /docs/contribute/governance/rfcs/0069_stdio_in_elf_runner.md

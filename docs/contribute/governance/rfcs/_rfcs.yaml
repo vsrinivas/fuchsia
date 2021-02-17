@@ -248,3 +248,16 @@
   reviewers: ['adanis@google.com', 'cpu@google.com', 'scottmg@google.com']
   submitted: '2021-01-08'
   reviewed: '2021-02-10'
+
+- name: 'RFC-0069'
+  title: 'Standard I/O in ELF Runner'
+  short_description: 'Mechanism for ELF components to forward stdout and stderr streams to the LogSink service.'
+  authors: ['yaneury@google.com']
+  file: '0069_stdio_in_elf_runner.md'
+  area: ['Component Framework']
+  issue: []
+  gerrit_change_id: ['480362']
+  status: 'Accepted'
+  reviewers: ['jamesr@google.com', 'shayba@google.com', 'geb@google.com', 'adamperry@google.com', 'pascallouis@google.com', 'abarth@google.com', 'vaas@google.com', 'cpu@google.com']
+  submitted: '2021-02-02'
+  reviewed: '2021-02-17'
