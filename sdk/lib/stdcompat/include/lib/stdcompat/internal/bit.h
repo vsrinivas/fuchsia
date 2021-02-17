@@ -20,7 +20,7 @@ struct is_bit_type
                     !std::is_same<T, char32_t>::value && !std::is_same<T, wchar_t>::value> {};
 
 // Rotation implementation.
-// Only internal for usage in implementaiton of certain methods.
+// Only internal for usage in implementation of certain methods.
 template <class T>
 [[gnu::warn_unused_result]] constexpr std::enable_if_t<is_bit_type<T>::value, T> rotl(
     T x, int s) noexcept {
