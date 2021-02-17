@@ -24,6 +24,7 @@ func TestParseArgsAndEnv(t *testing.T) {
 	testCases := []struct {
 		name      string
 		args      []string
+		env       map[string]string
 		expected  setArgs
 		expectErr bool
 	}{
@@ -141,6 +142,52 @@ func TestParseArgsAndEnv(t *testing.T) {
 			args:      []string{"core.x64", "--ccache", "--no-ccache"},
 			expectErr: true,
 		},
+		{
+			name: "honors top-level fx --dir flag",
+			args: []string{"core.x64"},
+			env: map[string]string{
+				// fx sets this env var if the top-level --dir flag is set.
+				buildDirEnvVar: "/usr/foo/fuchsia/out/foo",
+			},
+			expected: setArgs{
+				product:  "core",
+				board:    "x64",
+				buildDir: "/usr/foo/fuchsia/out/foo",
+			},
+		},
+		{
+			name: "rejects --dir and --auto-dir",
+			args: []string{"core.x64", "--auto-dir"},
+			env: map[string]string{
+				// fx sets this env var if the top-level --dir flag is set.
+				buildDirEnvVar: "/usr/foo/fuchsia/out/foo",
+			},
+			expectErr: true,
+		},
+		{
+			name: "auto dir",
+			args: []string{"bringup.arm64", "--auto-dir"},
+			expected: setArgs{
+				product:  "bringup",
+				board:    "arm64",
+				buildDir: "out/bringup.arm64",
+			},
+		},
+		{
+			name: "auto dir with variants",
+			args: []string{"core.x64", "--auto-dir", "--variant", "profile,kasan", "--variant", "ubsan"},
+			expected: setArgs{
+				product:  "core",
+				board:    "x64",
+				buildDir: "out/core.x64-profile-kasan-ubsan",
+				variants: []string{"profile", "kasan", "ubsan"},
+			},
+		},
+		{
+			name:      "auto dir with complex variants",
+			args:      []string{"core.x64", "--auto-dir", "--variant", "asan-fuzzer/foo"},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -148,7 +195,17 @@ func TestParseArgsAndEnv(t *testing.T) {
 			checkoutDir := t.TempDir()
 			tc.expected.checkoutDir = checkoutDir
 
-			cmd, err := parseArgsAndEnv(tc.args, map[string]string{checkoutDirEnvVar: checkoutDir})
+			if tc.expected.buildDir == "" {
+				tc.expected.buildDir = filepath.Join(checkoutDir, defaultBuildDir)
+			} else if !filepath.IsAbs(tc.expected.buildDir) {
+				tc.expected.buildDir = filepath.Join(checkoutDir, tc.expected.buildDir)
+			}
+
+			env := map[string]string{checkoutDirEnvVar: checkoutDir}
+			for k, v := range tc.env {
+				env[k] = v
+			}
+			cmd, err := parseArgsAndEnv(tc.args, env)
 			if err != nil {
 				if !tc.expectErr {
 					t.Fatalf("Parse args error: %s", err)

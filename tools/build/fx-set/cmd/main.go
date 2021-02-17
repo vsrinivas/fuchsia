@@ -34,6 +34,13 @@ const (
 
 	// fx ensures that this env var is set.
 	checkoutDirEnvVar = "FUCHSIA_DIR"
+
+	// Populated when fx's top-level `--dir` flag is set. Guaranteed to be absolute.
+	buildDirEnvVar = "_FX_BUILD_DIR"
+
+	// We'll fall back to using this build dir if neither `fx --dir` nor `fx set
+	// --auto-dir` is specified.
+	defaultBuildDir = "out/default"
 )
 
 type subprocessRunner interface {
@@ -106,9 +113,7 @@ func mainImpl(ctx context.Context) error {
 
 	contextSpec := &fintpb.Context{
 		CheckoutDir: args.checkoutDir,
-		// TODO(olivernewman): Implement support for --auto-dir and --build-dir
-		// flags to make this configurable.
-		BuildDir: filepath.Join(args.checkoutDir, "out", "default"),
+		BuildDir:    args.buildDir,
 	}
 
 	_, err = fint.Set(ctx, staticSpec, contextSpec)
@@ -142,6 +147,7 @@ type setArgs struct {
 
 	checkoutDir  string
 	noEnsureGoma bool
+	buildDir     string
 
 	// Flags passed to GN.
 	board            string
@@ -170,6 +176,8 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	}
 	cmd.ccacheDir = env[ccacheDirEnvVar] // Not required.
 
+	cmd.buildDir = env[buildDirEnvVar] // Not required.
+
 	flagSet := flag.NewFlagSet("fx set", flag.ExitOnError)
 	// TODO(olivernewman): Decide whether to have this tool print usage or
 	// to let //tools/devshell/set handle usage.
@@ -178,9 +186,12 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	// intermediate errors.
 	flagSet.SetOutput(ioutil.Discard)
 
+	var autoDir bool
+
 	// Help strings don't matter because `fx set -h` uses the help text from
 	// //tools/devshell/set, which should be kept up to date with these flags.
 	flagSet.BoolVar(&cmd.verbose, "verbose", false, "")
+	flagSet.BoolVar(&autoDir, "auto-dir", false, "")
 	flagSet.StringVar(&cmd.fintParamsPath, "fint-params-path", "", "")
 	flagSet.BoolVar(&cmd.useCcache, "ccache", false, "")
 	flagSet.BoolVar(&cmd.noCcache, "no-ccache", false, "")
@@ -206,9 +217,18 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 		return nil, err
 	}
 
+	if cmd.buildDir == "" {
+		cmd.buildDir = filepath.Join(cmd.checkoutDir, defaultBuildDir)
+	} else if autoDir {
+		return nil, fmt.Errorf("'fx --dir' and 'fx set --auto-dir' are mutually exclusive")
+	}
+
 	// If a fint params file was specified then no other arguments are required,
 	// so no need to validate them.
 	if cmd.fintParamsPath != "" {
+		if autoDir {
+			return nil, fmt.Errorf("--auto-dir is not supported with --fint-params-path")
+		}
 		return cmd, nil
 	}
 
@@ -234,6 +254,18 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 		return nil, fmt.Errorf("unable to parse PRODUCT.BOARD: %q", productDotBoard)
 	}
 	cmd.product, cmd.board = productAndBoard[0], productAndBoard[1]
+
+	if autoDir {
+		for _, variant := range cmd.variants {
+			if strings.Contains(variant, "/") {
+				return nil, fmt.Errorf(
+					"--auto-dir only works with simple catch-all --variant switches; choose your " +
+						"own directory name with fx --dir for a complex configuration")
+			}
+		}
+		nameComponents := append([]string{productDotBoard}, cmd.variants...)
+		cmd.buildDir = filepath.Join(cmd.checkoutDir, "out", strings.Join(nameComponents, "-"))
+	}
 
 	return cmd, nil
 }
