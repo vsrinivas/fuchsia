@@ -16,6 +16,7 @@ use fidl_fuchsia_lowpan_device::{
     ProvisioningMonitorMarker,
 };
 use fidl_fuchsia_lowpan_test::*;
+use fidl_fuchsia_lowpan_thread::*;
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
@@ -264,6 +265,9 @@ pub trait Driver: Send + Sync {
 
     /// Returns a vector containing all of the locally added external routes.
     async fn get_local_external_routes(&self) -> ZxResult<Vec<ExternalRoute>>;
+
+    /// Changes the joinability status of the interface
+    async fn make_joinable(&self, duration: fuchsia_zircon::Duration, port: u16) -> ZxResult<()>;
 }
 
 #[async_trait()]
@@ -873,6 +877,45 @@ impl<T: Driver> ServeTo<CountersRequestStream> for T {
             request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
         {
             fx_log_err!("Error serving CountersRequestStream: {:?}", err);
+
+            // TODO: Properly route epitaph codes. This is tricky to do because
+            //       `request_stream` is consumed by `try_for_each_concurrent`,
+            //       which means that code like the code below will not work:
+            //
+            // ```
+            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+            //     request_stream.into_inner().0
+            //         .shutdown_with_epitaph(*epitaph);
+            // }
+            // ```
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
+    async fn serve_to(&self, request_stream: LegacyJoiningRequestStream) -> anyhow::Result<()> {
+        let closure = |command| async {
+            match command {
+                LegacyJoiningRequest::MakeJoinable { duration, port, responder, .. } => {
+                    self.make_joinable(fuchsia_zircon::Duration::from_nanos(duration), port)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in make_joinable request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        if let Some(err) =
+            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
+        {
+            fx_log_err!("Error serving LegacyJoiningRequestStream: {:?}", err);
 
             // TODO: Properly route epitaph codes. This is tricky to do because
             //       `request_stream` is consumed by `try_for_each_concurrent`,

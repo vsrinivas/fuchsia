@@ -1093,6 +1093,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         }
     }
 
+    async fn make_joinable(&self, duration: fuchsia_zircon::Duration, port: u16) -> ZxResult<()> {
+        fx_log_info!("make_joinable: duration: {} port: {}", duration.into_seconds(), port);
+
+        Ok(())
+    }
+
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;

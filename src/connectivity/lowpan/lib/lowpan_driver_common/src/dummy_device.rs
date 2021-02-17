@@ -523,4 +523,8 @@ impl Driver for DummyDevice {
     async fn get_local_external_routes(&self) -> ZxResult<Vec<ExternalRoute>> {
         Ok(vec![])
     }
+
+    async fn make_joinable(&self, _duration: fuchsia_zircon::Duration, _port: u16) -> ZxResult<()> {
+        Ok(())
+    }
 }
