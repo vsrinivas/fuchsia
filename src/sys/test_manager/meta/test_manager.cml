@@ -130,7 +130,12 @@
             from: "self",
             to: [ "#tests" ],
         },
-
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#tests" ]
+        },
+        
         // temporary solution for tests that depend on having admin rights on
         // /tmp. Will be removed once these tests either remove this requirement
         // or begin hosting their own memfs.
