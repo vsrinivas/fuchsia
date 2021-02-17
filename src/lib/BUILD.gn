@@ -99,6 +99,7 @@ group("tests") {
     "intl:tests",
     "isolated_devmgr:tests",
     "json_parser:tests",
+    "libdoc:tests($host_toolchain)",
     "line_input:tests",
     "listnode:tests",
     "loader_service:tests",
