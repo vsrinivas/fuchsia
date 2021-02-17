@@ -322,7 +322,9 @@ uint64_t Blob::SizeData() const {
 }
 
 Blob::Blob(Blobfs* bs, const Digest& digest)
-    : CacheNode(digest), blobfs_(bs), clone_watcher_(this) {}
+    : CacheNode(digest), blobfs_(bs), clone_watcher_(this) {
+  write_info_ = std::make_unique<WriteInfo>();
+}
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(Digest(inode.merkle_root_hash)),
@@ -331,7 +333,9 @@ Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
       syncing_state_(SyncingState::kDone),
       map_index_(node_index),
       clone_watcher_(this),
-      inode_(inode) {}
+      inode_(inode) {
+  write_info_ = std::make_unique<WriteInfo>();
+}
 
 zx_status_t Blob::WriteNullBlob() {
   ZX_DEBUG_ASSERT(inode_.blob_size == 0);
@@ -362,24 +366,31 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
     return ZX_ERR_BAD_STATE;
   }
 
+  // Fail early if target_compression_size is set is not sane.
+  if (write_info_->target_compression_size_.has_value() &&
+      (write_info_->target_compression_size_.value() == 0 ||
+       (write_info_->target_compression_size_.value()) == std::numeric_limits<uint64_t>::max())) {
+    FX_LOGS(ERROR) << "Target compressed size is invalid: "
+                   << write_info_->target_compression_size_.value();
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   memset(inode_.merkle_root_hash, 0, sizeof(inode_.merkle_root_hash));
   inode_.blob_size = size_data;
 
-  auto write_info = std::make_unique<WriteInfo>();
-
   // Reserve a node for blob's inode. We might need more nodes for extents later.
-  zx_status_t status = blobfs_->GetAllocator()->ReserveNodes(1, &write_info->node_indices);
+  zx_status_t status = blobfs_->GetAllocator()->ReserveNodes(1, &write_info_->node_indices);
   if (status != ZX_OK) {
     return status;
   }
-  map_index_ = write_info->node_indices[0].index();
+  map_index_ = write_info_->node_indices[0].index();
 
   // For compressed blobs, we only write into the compression buffer.  For uncompressed blobs we
   // write into the data vmo.
   if (compress) {
-    write_info->compressor =
+    write_info_->compressor =
         BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
-    if (!write_info->compressor) {
+    if (!write_info_->compressor) {
       // TODO(fxbug.dev/70356)Make BlobCompressor::Create return the actual error instead.
       // Replace ZX_ERR_INTERNAL with the correct error once fxbug.dev/70356 is fixed.
       FX_LOGS(ERROR) << "Failed to initialize compressor: " << ZX_ERR_INTERNAL;
@@ -391,22 +402,21 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
     }
   }
 
-  write_info->merkle_tree_creator.SetUseCompactFormat(
+  write_info_->merkle_tree_creator.SetUseCompactFormat(
       ShouldUseCompactMerkleTreeFormat(GetBlobLayoutFormat(blobfs_->Info())));
-  if ((status = write_info->merkle_tree_creator.SetDataLength(inode_.blob_size)) != ZX_OK) {
+  if ((status = write_info_->merkle_tree_creator.SetDataLength(inode_.blob_size)) != ZX_OK) {
     return status;
   }
-  const size_t tree_len = write_info->merkle_tree_creator.GetTreeLength();
+  const size_t tree_len = write_info_->merkle_tree_creator.GetTreeLength();
   // Allow for zero padding before and after.
-  write_info->merkle_tree_buffer =
+  write_info_->merkle_tree_buffer =
       std::make_unique<uint8_t[]>(tree_len + WriteInfo::kPreMerkleTreePadding);
-  if ((status = write_info->merkle_tree_creator.SetTree(
-           write_info->merkle_tree(), tree_len, &write_info->digest, sizeof(write_info->digest))) !=
-      ZX_OK) {
+  if ((status = write_info_->merkle_tree_creator.SetTree(write_info_->merkle_tree(), tree_len,
+                                                         &write_info_->digest,
+                                                         sizeof(write_info_->digest))) != ZX_OK) {
     return status;
   }
 
-  write_info_ = std::move(write_info);
   set_state(BlobState::kDataWrite);
 
   // Special case for the null blob: We skip the write phase.
@@ -1124,6 +1134,10 @@ zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
   return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
+}
+
+void Blob::SetTargetCompressionSize(uint64_t size) {
+  write_info_.get()->SetTargetCompressionSize(size);
 }
 
 #ifdef __Fuchsia__

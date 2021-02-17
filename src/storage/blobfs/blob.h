@@ -155,6 +155,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // *must* not be currently in use.  It is designed to be used for mount time migrations.
   void SetOldBlob(Blob& blob);
 
+  // Sets the target_compression_size in write_info to |size|.
+  // Setter made public for testing.
+  void SetTargetCompressionSize(uint64_t size);
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
@@ -367,6 +371,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
     // The old blob that this write is replacing.
     fbl::RefPtr<Blob> old_blob;
+
+    // Sets the target_compression_size_ field.
+    void SetTargetCompressionSize(uint64_t size) {
+      target_compression_size_ = std::make_optional(size);
+    }
   };
 
   std::unique_ptr<WriteInfo> write_info_ = {};
