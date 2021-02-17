@@ -160,6 +160,7 @@ type setArgs struct {
 	ccacheDir        string
 	isRelease        bool
 	netboot          bool
+	cargoTOMLGen     bool
 	universePackages []string
 	basePackages     []string
 	cachePackages    []string
@@ -206,6 +207,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	flagSet.StringVar(&cmd.gomaDir, "goma-dir", "", "")
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
 	flagSet.BoolVar(&cmd.netboot, "netboot", false, "")
+	flagSet.BoolVar(&cmd.cargoTOMLGen, "cargo-toml-gen", false, "")
 	flagSet.StringSliceVar(&cmd.universePackages, "with", []string{}, "")
 	flagSet.StringSliceVar(&cmd.basePackages, "with-base", []string{}, "")
 	flagSet.StringSliceVar(&cmd.cachePackages, "with-cache", []string{}, "")
@@ -345,11 +347,16 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 		gnArgs = append(gnArgs, "enable_netboot=true")
 	}
 
+	basePackages := args.basePackages
+	if args.cargoTOMLGen {
+		basePackages = append(basePackages, "//build/rust:cargo_toml_gen")
+	}
+
 	return &fintpb.Static{
 		Board:            boardPath,
 		Product:          productPath,
 		Optimize:         optimize,
-		BasePackages:     args.basePackages,
+		BasePackages:     basePackages,
 		CachePackages:    args.cachePackages,
 		UniversePackages: args.universePackages,
 		HostLabels:       args.hostLabels,

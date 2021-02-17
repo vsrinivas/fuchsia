@@ -198,12 +198,13 @@ func TestParseArgsAndEnv(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "netboot",
-			args: []string{"core.x64", "--netboot"},
+			name: "simple boolean flags",
+			args: []string{"core.x64", "--netboot", "--cargo-toml-gen"},
 			expected: setArgs{
-				product: "core",
-				board:   "x64",
-				netboot: true,
+				product:      "core",
+				board:        "x64",
+				netboot:      true,
+				cargoTOMLGen: true,
 			},
 		},
 	}
@@ -338,6 +339,17 @@ func TestConstructStaticSpec(t *testing.T) {
 			expected: &fintpb.Static{
 				UseGoma: true,
 				GnArgs:  []string{"enable_netboot=true"},
+			},
+		},
+		{
+			name: "cargo toml gen",
+			args: &setArgs{
+				basePackages: []string{"foo"},
+				cargoTOMLGen: true,
+			},
+			expected: &fintpb.Static{
+				UseGoma:      true,
+				BasePackages: []string{"foo", "//build/rust:cargo_toml_gen"},
 			},
 		},
 	}
