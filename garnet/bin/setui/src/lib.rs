@@ -57,7 +57,12 @@ use {
     crate::setup::types::SetupInfo,
     crate::switchboard::switchboard::SwitchboardBuilder,
     anyhow::{format_err, Error},
-    fidl_fuchsia_settings::*,
+    fidl_fuchsia_settings::{
+        AccessibilityRequestStream, AudioRequestStream, DeviceRequestStream, DisplayRequestStream,
+        DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream,
+        IntlRequestStream, LightRequestStream, NightModeRequestStream, PrivacyRequestStream,
+        SetupRequestStream,
+    },
     fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
@@ -239,7 +244,7 @@ macro_rules! register_fidl_handler {
             let service_messenger_factory = $service_messenger_factory.clone();
             let factory = $messenger_factory.clone();
             $service_dir.add_fidl_service(
-                    move |stream: paste::paste!{[<$interface RequestStream>]}| {
+                    move |stream: $interface| {
                         crate::$handler_mod::fidl_io::spawn(factory.clone(),
                                 service_messenger_factory.clone(), stream);
                     });
@@ -682,7 +687,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Light,
+        LightRequestStream,
         light,
         Light
     );
@@ -692,7 +697,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Accessibility,
+        AccessibilityRequestStream,
         accessibility,
         Accessibility
     );
@@ -702,7 +707,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Audio,
+        AudioRequestStream,
         audio,
         Audio
     );
@@ -712,7 +717,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Device,
+        DeviceRequestStream,
         device,
         Device
     );
@@ -722,7 +727,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Display,
+        DisplayRequestStream,
         display,
         Display,
         LightSensor
@@ -733,7 +738,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        DoNotDisturb,
+        DoNotDisturbRequestStream,
         do_not_disturb,
         DoNotDisturb
     );
@@ -743,7 +748,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        FactoryReset,
+        FactoryResetRequestStream,
         factory_reset,
         FactoryReset
     );
@@ -753,7 +758,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Intl,
+        IntlRequestStream,
         intl,
         Intl
     );
@@ -763,7 +768,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        NightMode,
+        NightModeRequestStream,
         night_mode,
         NightMode
     );
@@ -773,7 +778,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Privacy,
+        PrivacyRequestStream,
         privacy,
         Privacy
     );
@@ -783,7 +788,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Input,
+        InputRequestStream,
         input,
         Input
     );
@@ -793,7 +798,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         service_dir,
         messenger_factory,
         switchboard_messenger_factory,
-        Setup,
+        SetupRequestStream,
         setup,
         Setup
     );
