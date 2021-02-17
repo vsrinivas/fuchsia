@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -313,17 +314,21 @@ bool CloudStorageSymbolServer::LoadCachedAuth() {
 }
 
 bool CloudStorageSymbolServer::LoadGCloudAuth() {
-  const char* home = std::getenv("HOME");
-  if (!home) {
+  std::string gcloud_config;
+  if (auto cloudsdk_config = std::getenv("CLOUDSDK_CONFIG")) {
+    gcloud_config = cloudsdk_config;
+  } else if (auto home = std::getenv("HOME")) {
+    gcloud_config = std::string(home) + "/.config/gcloud";
+  } else {
     return false;
   }
 
-  std::ifstream file(std::string(home) + "/.config/gcloud/application_default_credentials.json");
-  if (!file) {
+  std::ifstream credential_file(gcloud_config + "/application_default_credentials.json");
+  if (!credential_file) {
     return false;
   }
 
-  rapidjson::IStreamWrapper input_stream(file);
+  rapidjson::IStreamWrapper input_stream(credential_file);
   rapidjson::Document credentials;
   credentials.ParseStream(input_stream);
 
