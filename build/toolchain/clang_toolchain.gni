@@ -313,18 +313,14 @@ template("clang_toolchain") {
 
           # Disable link map args, which also seems to have problems with WASM.
           link_map_args = ""
-          shared_lib_dir =
-              rebase_path("//prebuilt/third_party/rust/${host_platform}/lib",
-                          root_build_dir)
+          shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
           ld_location_env = "LD_LIBRARY_PATH=\"$shared_lib_dir\""
         } else if (invoker.toolchain_cpu == "wasm32" && host_os == "mac") {
           # See previous section comment.
           # We use the fallback dynamic library path on Mac to ensure we first
           # search default locations.
           link_map_args = ""
-          shared_lib_dir =
-              rebase_path("//prebuilt/third_party/rust/${host_platform}/lib",
-                          root_build_dir)
+          shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
           ld_location_env = "DYLD_FALLBACK_LIBRARY_PATH=\"$shared_lib_dir\""
         } else {
           # On host, clang seems to be used to perform linking

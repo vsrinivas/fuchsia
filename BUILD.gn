@@ -725,9 +725,9 @@ group("tool_paths.metadata") {
   prebuilt_tools = [
     "//garnet/bin/perfcompare",
     "//prebuilt/sdk/bazel/bazel",
-    "//prebuilt/third_party/rust/$host_platform/bin/cargo",
-    "//prebuilt/third_party/rust/$host_platform/bin/rustc",
-    "//prebuilt/third_party/rust/$host_platform/bin/rustdoc",
+    "$rustc_tool_dir/cargo",
+    "$rustc_tool_dir/rustc",
+    "$rustc_tool_dir/rustdoc",
     "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-format-diff.py",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-tidy-diff.py",

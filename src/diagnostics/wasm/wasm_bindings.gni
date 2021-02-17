@@ -4,8 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/rust/config.gni")
-cargo_bin_path =
-    rebase_path("//prebuilt/third_party/rust/${host_platform}/bin/cargo")
 
 # Generates bindings for a WASM file.
 #
