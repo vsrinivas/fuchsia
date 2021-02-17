@@ -692,7 +692,12 @@ template("package") {
         metadata.distribution_entries_barrier = []
       }
 
-      deps += [ "//build:deprecated_package" ]
+      # A solution for deprecated_system_image is not yet available.
+      #
+      # See https://fuchsia.dev/fuchsia-src/development/components/build#other_unsupported_features.
+      if (!defined(invoker.__deprecated_system_image)) {
+        deps += [ "//build:deprecated_package" ]
+      }
     }
   } else {
     # A reference from a different toolchain, e.g. a variant toolchain, is
