@@ -63,9 +63,6 @@ template("ot_radio_driver") {
 
       deps += [ ":version-string-${driver_suffix}" ]
     }
-
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   if (internal_access) {

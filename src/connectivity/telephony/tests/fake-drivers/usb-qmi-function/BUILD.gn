@@ -48,7 +48,4 @@ driver_module("qmi_function") {
     "//zircon/public/lib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -63,8 +63,6 @@ executable("unittests-bin") {
     "//third_party/openthread/include",
     "//src/connectivity/openthread/third_party/openthread/platform",
   ]
-
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bootstrap-unittests-bin") {
@@ -90,6 +88,4 @@ executable("bootstrap-unittests-bin") {
 
   include_dirs =
       [ "//src/connectivity/openthread/third_party/openthread/platform" ]
-
-  configs += [ "//build/config:Wno-conversion" ]
 }

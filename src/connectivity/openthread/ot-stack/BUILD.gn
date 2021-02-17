@@ -45,9 +45,6 @@ source_set("app") {
       [ "//src/connectivity/openthread/third_party/openthread/platform" ]
 
   configs += [ ":unused" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

@@ -82,9 +82,9 @@ bool SystemLoadHeartModel::ReadMeasurement(Measurement* measurement) {
   const auto idle_percent = (idle_sum.get() * 100) / (elapsed.get() * cpu_stats_.size());
 
   measurement->contact = true;
-  measurement->rate = 100 - idle_percent;
-  measurement->energy_expended =
-      std::min<decltype(energy_counter_)>(energy_counter_, std::numeric_limits<int>::max());
+  measurement->rate = static_cast<int>(100 - idle_percent);
+  measurement->energy_expended = static_cast<int>(
+      std::min<decltype(energy_counter_)>(energy_counter_, std::numeric_limits<int>::max()));
 
   last_read_time_ = read_time;
   last_cpu_stats_.swap(cpu_stats_);

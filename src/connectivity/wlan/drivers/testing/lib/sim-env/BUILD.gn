@@ -23,7 +23,4 @@ static_library("sim-env") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/system/ulib/async",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -55,9 +55,6 @@ driver_module("rtl88xx_driver") {
     "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_package("rtl88xx") {

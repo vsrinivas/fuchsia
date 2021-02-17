@@ -92,7 +92,6 @@ source_set("core") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/backtrace-request",
   ]
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # Contains the entire driver, separate from the driver_module for the unit
@@ -128,8 +127,6 @@ source_set("pcie") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/sync",
   ]
-
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("iwlwifi_driver") {
