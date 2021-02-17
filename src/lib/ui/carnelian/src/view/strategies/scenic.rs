@@ -133,9 +133,6 @@ pub(crate) struct ScenicViewStrategy {
     pending_present_count: usize,
     next_presentation_times: Vec<i64>,
     present_interval: i64,
-    // TODO(fxbug.dev/69491): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    last_presentation_time: i64,
     remaining_presents_in_flight_allowed: i64,
     render_timer_scheduled: bool,
     missed_frame: bool,
@@ -177,7 +174,6 @@ impl ScenicViewStrategy {
             pending_present_count: 1,
             next_presentation_times: Vec::new(),
             present_interval: DEFAULT_PRESENT_INTERVAL,
-            last_presentation_time: 0,
             remaining_presents_in_flight_allowed: 3,
             render_timer_scheduled: false,
             missed_frame: false,
@@ -508,7 +504,6 @@ impl ViewStrategy for ScenicViewStrategy {
 
             // Advance presentation time.
             self.pending_present_count += 1;
-            self.last_presentation_time = presentation_time;
         }
     }
 

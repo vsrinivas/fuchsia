@@ -453,9 +453,6 @@ pub struct Scene {
     facet_order: Vec<FacetId>,
     layers: LayerMap,
     composition: Composition,
-    // TODO(fxbug.dev/69491): Remove this or explain why it's here.
-    #[allow(dead_code)]
-    size: Option<Size>,
     options: SceneOptions,
 }
 
@@ -474,7 +471,6 @@ impl Scene {
             facet_order,
             layers: LayerMap::new(),
             composition: Composition::new(options.background_color),
-            size: None,
             options,
         }
     }
@@ -648,7 +644,6 @@ impl Scene {
             background_color,
             &mut self.composition,
         );
-        self.size = Some(size);
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
