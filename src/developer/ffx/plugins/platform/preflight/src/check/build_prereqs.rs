@@ -56,7 +56,8 @@ impl<'a> BuildPrereqs<'a> {
         minor_version: &u32,
     ) -> Result<PreflightCheckResult, anyhow::Error> {
         if *major_version < MACOS_MINIMUM_MAJOR_VERSION
-            || *minor_version < MACOS_MINIMUM_MINOR_VERSION
+            || (*major_version == MACOS_MINIMUM_MAJOR_VERSION
+                && *minor_version < MACOS_MINIMUM_MINOR_VERSION)
         {
             return Ok(Failure(
                 format!(
@@ -157,7 +158,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_success_macos_10_15() -> Result<()> {
+    async fn test_success_macos_10_15_and_newer() -> Result<()> {
         let run_command: CommandRunner = |args| {
             assert_eq!(args.to_vec(), vec!["xcode-select", "-p"]);
             Ok((ExitStatus(0), "".to_string(), "".to_string()))
@@ -170,19 +171,31 @@ mod test {
                 .await;
             assert!(matches!(response?, PreflightCheckResult::Success(..)));
         }
+
+        let response = check.run(&PreflightConfig { system: OperatingSystem::MacOS(11, 1) }).await;
+        assert!(matches!(response?, PreflightCheckResult::Success(..)));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_failure_macos_10_15() -> Result<()> {
+    async fn test_failure_macos_10_15_and_older() -> Result<()> {
         let run_command: CommandRunner = |args| {
             assert_eq!(args.to_vec(), vec!["xcode-select", "-p"]);
             Ok((ExitStatus(1), "".to_string(), "".to_string()))
         };
 
-        let check = BuildPrereqs::new(&run_command);
-        let response = check.run(&PreflightConfig { system: OperatingSystem::MacOS(10, 15) }).await;
-        assert!(matches!(response?, PreflightCheckResult::Failure(..)));
+        {
+            let check = BuildPrereqs::new(&run_command);
+            let response =
+                check.run(&PreflightConfig { system: OperatingSystem::MacOS(10, 15) }).await;
+            assert!(matches!(response?, PreflightCheckResult::Failure(..)));
+        }
+        {
+            let check = BuildPrereqs::new(&run_command);
+            let response =
+                check.run(&PreflightConfig { system: OperatingSystem::MacOS(9, 17) }).await;
+            assert!(matches!(response?, PreflightCheckResult::Failure(..)));
+        }
         Ok(())
     }
 
