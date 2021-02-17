@@ -342,7 +342,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers-support"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support"]`
 
 From //boards/arm64.gni:30
 
@@ -350,7 +350,7 @@ From //boards/arm64.gni:30
 
 From //build/board.gni:11
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config"]`
 
 From //boards/common/x64-common.gni:68
 
@@ -929,7 +929,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:59
+From //zircon/kernel/params.gni:64
 
 ### enable_api_diff
 Detect dart API changes
@@ -986,7 +986,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:86
+From //zircon/kernel/params.gni:91
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1576,7 +1576,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:71
+From //zircon/kernel/params.gni:76
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -1587,7 +1587,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:78
+From //zircon/kernel/params.gni:83
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -1595,7 +1595,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //zircon/kernel/params.gni:63
+From //zircon/kernel/params.gni:68
 
 ### kernel_version_git_checkout
 By default the kernel version string is generated based on the full git
@@ -2739,7 +2739,7 @@ From //src/recovery/system/system_recovery_args.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:15](https://fuchsia.googlesource.com/third_party/boringssl/+/0e1398c94ad9791b5de876438af8c377408c1d9b/BUILD.gn#15)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/c5e65a950e98c1ca863862992ab31d9aecf85616/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -3551,7 +3551,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:55
+From //zircon/kernel/params.gni:60
 
 ### vulkan_host_runtime_dir
 
@@ -3579,6 +3579,15 @@ From //src/lib/vulkan/build/config.gni:16
 **Current value (from the default):** `""`
 
 From //src/graphics/examples/vkproto/common/common.gni:45
+
+### wait_queue_depth_tracing_enabled
+Enables tracing of wait queue depths.  Used for post-processing analysis of
+how deep wait queues tend to be under various loads, as well as how
+frequently the change depth.
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/params.gni:53
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
