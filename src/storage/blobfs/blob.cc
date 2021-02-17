@@ -380,8 +380,10 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
     write_info->compressor =
         BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
     if (!write_info->compressor) {
-      FX_LOGS(ERROR) << "Failed to initialize compressor: " << status;
-      return status;
+      // TODO(fxbug.dev/70356)Make BlobCompressor::Create return the actual error instead.
+      // Replace ZX_ERR_INTERNAL with the correct error once fxbug.dev/70356 is fixed.
+      FX_LOGS(ERROR) << "Failed to initialize compressor: " << ZX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
   } else if (inode_.blob_size != 0) {
     if ((status = PrepareDataVmoForWriting()) != ZX_OK) {

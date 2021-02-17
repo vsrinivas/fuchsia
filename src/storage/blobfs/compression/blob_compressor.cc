@@ -88,20 +88,21 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
         FX_LOGS(ERROR) << "Failed to create compressor: " << zx_status_get_string(status);
         return std::nullopt;
       }
-      fzl::OwnedVmoMapper compressed_blob;
+      fzl::OwnedVmoMapper compressed_inmemory_blob;
       max = fbl::round_up(max, kBlobfsBlockSize);
-      status = compressed_blob.CreateAndMap(max, "chunk-compressed-blob");
+      status = compressed_inmemory_blob.CreateAndMap(max, "chunk-compressed-blob");
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to create mapping for compressed data: "
                        << zx_status_get_string(status);
         return std::nullopt;
       }
-      status = compressor->SetOutput(compressed_blob.start(), compressed_blob.size());
+      status = compressor->SetOutput(compressed_inmemory_blob.start(),
+                                     compressed_inmemory_blob.size());
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to initialize compressor: " << zx_status_get_string(status);
         return std::nullopt;
       }
-      return BlobCompressor(std::move(compressor), std::move(compressed_blob),
+      return BlobCompressor(std::move(compressor), std::move(compressed_inmemory_blob),
                             settings.compression_algorithm);
     }
     case CompressionAlgorithm::UNCOMPRESSED:

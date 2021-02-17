@@ -13,6 +13,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/digest/digest.h"
@@ -388,6 +389,32 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
     zx::nanosleep(zx::deadline_after(zx::sec(1)));
   }
   EXPECT_TRUE(deleted);
+}
+
+TEST_P(BlobTest, BlobPrepareWriteFailure) {
+  // Remount without compression so that we can trigger failure.
+  MountOptions options = {.compression_settings = {
+                              .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                          }};
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
+                           zx::resource(), &fs_),
+            ZX_OK);
+
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  {
+    auto root = OpenRoot();
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    auto blob = fbl::RefPtr<Blob>::Downcast(file);
+    // PrepareWrite should assert on debug builds and return ZX_ERR_INTERNAL
+    // on non-debug builds.
+#ifndef NDEBUG
+    ASSERT_DEATH({ blob->PrepareWrite(info->size_data, /*compress=*/true); }, "");
+#else
+    EXPECT_EQ(blob->PrepareWrite(info->size_data, /*compress=*/true), ZX_ERR_INTERNAL);
+#endif
+    ASSERT_EQ(file->Close(), ZX_OK);
+  }
 }
 
 using BlobMigrationTest = BlobTestWithOldMinorVersion;

@@ -87,6 +87,7 @@ test("blobfs_unittest") {
     "//src/storage/blobfs",
     "//src/storage/blobfs:decompressor_impl",
     "//src/storage/blobfs:fuchsia.blobfs.internal",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/zstd:zstdseek",
     "//zircon/public/lib/cksum",
