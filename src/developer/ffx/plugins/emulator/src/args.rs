@@ -153,6 +153,10 @@ pub struct StartCommand {
     #[argh(option)]
     pub vdl_output: Option<String>,
 
+    /// extra kernel flags to pass into aemu.
+    #[argh(option, short = 'c')]
+    pub kernel_args: Option<String>,
+
     /// bool, turn off interactive mode.
     /// if turned off, fvdl will not land user in ssh console. A ssh port will still be forwarded.
     /// User needs to specify --vdl-output flag with this mode, and manually call
@@ -164,6 +168,10 @@ pub struct StartCommand {
     /// If not set (default), image files will be stored in a temp location and removed with `kill` subcommand.
     #[argh(switch, short = 'i')]
     pub cache_image: bool,
+
+    /// bool, pause on launch and wait for a debugger process to attach before resuming
+    #[argh(switch)]
+    pub debugger: bool,
 }
 
 fn default_window_height() -> usize {

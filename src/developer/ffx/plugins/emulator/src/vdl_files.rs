@@ -310,6 +310,7 @@ impl VDLFiles {
             "linux" => true,
             _ => false,
         };
+
         let status = Command::new(&vdl)
             .arg("--action=start")
             .arg("--emulator_binary_path")
@@ -336,6 +337,7 @@ impl VDLFiles {
             .arg("--proto_file_path")
             .arg(&fvd)
             .arg("--audio=true")
+            .arg(format!("--debugger={}", &start_command.debugger))
             .arg(format!("--resize_fvm={}", vdl_args.image_size))
             .arg(format!("--gpu={}", vdl_args.gpu))
             .arg(format!("--headless_mode={}", vdl_args.headless))
@@ -351,6 +353,7 @@ impl VDLFiles {
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
+            .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
             .status()?;
         if !status.success() {
             let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
@@ -538,6 +541,8 @@ mod tests {
             vdl_output: None,
             nointeractive: false,
             cache_image: false,
+            debugger: false,
+            kernel_args: None,
         }
     }
 

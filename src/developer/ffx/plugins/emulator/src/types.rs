@@ -389,6 +389,7 @@ pub struct VDLArgs {
     pub gcs_image_archive: String,
     pub sdk_version: String,
     pub cache_root: PathBuf,
+    pub extra_kerel_args: String,
 }
 
 impl From<&StartCommand> for VDLArgs {
@@ -449,6 +450,7 @@ impl From<&StartCommand> for VDLArgs {
             gcs_image_archive: gcs_image,
             sdk_version: sdk_version,
             cache_root: cache_path,
+            extra_kerel_args: cmd.kernel_args.as_ref().unwrap_or(&String::from("")).to_string(),
         }
     }
 }
@@ -491,6 +493,8 @@ mod tests {
             vdl_output: None,
             nointeractive: false,
             cache_image: true,
+            kernel_args: None,
+            debugger: false,
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);
