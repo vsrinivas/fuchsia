@@ -1,0 +1,65 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/archivist-for-embedding.cm",
+        },
+        {
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/driver.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#archivist",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "#archivist",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "fuchsia.logger.LogSink" },
+        },
+
+        // These events are not needed for the test to pass, but including them
+        // reduces log noise.
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#archivist" ],
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_ready",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "diagnostics" },
+            modes: [ "async" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#driver",
+        },
+    ],
+}

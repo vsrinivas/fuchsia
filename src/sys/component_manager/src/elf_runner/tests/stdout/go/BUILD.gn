@@ -1,0 +1,27 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//src/sys/build/components.gni")
+
+go_library("prints_when_launched_go_lib") {
+  # name = "prints_when_launched_go"
+  sources = [ "src/main.go" ]
+
+  deps = []
+}
+
+go_binary("prints_when_launched_go_bin") {
+  output_name = "prints_when_launched_go"
+  gopackage = "go.fuchsia.dev/fuchsia/src/sys/component_manager/src/elf_runner/tests/stdout/go/src"
+
+  deps = [ ":prints_when_launched_go_lib" ]
+}
+
+fuchsia_component("prints-when-launched-go-component") {
+  deps = [ ":prints_when_launched_go_bin" ]
+  component_name = "prints-when-launched-go"
+  manifest = "meta/prints_when_launched_go.cml"
+}

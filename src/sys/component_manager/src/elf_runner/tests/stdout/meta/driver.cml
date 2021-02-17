@@ -1,0 +1,41 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/elf_runner_stdout",
+    },
+    children: [
+        {
+            name: "prints_when_launched_cpp",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-cpp.cm",
+        },
+        {
+            name: "prints_when_launched_go",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-go.cm",
+        },
+        {
+            name: "prints_when_launched_rust",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-rust.cm",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#prints_when_launched_cpp",
+                "#prints_when_launched_go",
+                "#prints_when_launched_rust",
+            ],
+        },
+    ],
+}

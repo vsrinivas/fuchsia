@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "prints_when_launched_rust"
+  edition = "2018"
+
+  deps = []
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("prints-when-launched-rust-component") {
+  deps = [ ":bin" ]
+  component_name = "prints-when-launched-rust"
+  manifest = "meta/prints_when_launched_rust.cml"
+}

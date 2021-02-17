@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  output_name = "prints_when_launched_cpp"
+
+  sources = [ "src/main.cc" ]
+}
+
+fuchsia_component("prints-when-launched-cpp-component") {
+  deps = [ ":bin" ]
+  component_name = "prints-when-launched-cpp"
+  manifest = "meta/prints_when_launched_cpp.cml"
+}
