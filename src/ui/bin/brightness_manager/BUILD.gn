@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "brightness_manager"
@@ -48,28 +47,23 @@ rustc_binary("bin") {
   ]
 }
 
-package("brightness_manager") {
+fuchsia_component("brightness_manager_cmx") {
+  component_name = "brightness_manager"
+  manifest = "meta/brightness_manager.cmx"
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "brightness_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/brightness_manager.cmx")
-      dest = "brightness_manager.cmx"
-    },
-  ]
 }
 
-test_package("brightness_manager_tests") {
-  deps = [ ":bin_test" ]
+fuchsia_package("brightness_manager") {
+  deps = [ ":brightness_manager_cmx" ]
+}
 
-  tests = [
-    {
-      name = "brightness_manager_bin_test"
-      dest = "brightness_manager_test"
-    },
-  ]
+fuchsia_component("brightness_manager_bin_test") {
+  testonly = true
+  component_name = "brightness_manager_test"
+  manifest = "meta/brightness_manager_test.cmx"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("brightness_manager_tests") {
+  test_components = [ ":brightness_manager_bin_test" ]
 }

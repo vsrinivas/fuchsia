@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/brightness_manager_test"
+        "binary": "bin/brightness_manager_bin_test"
     },
     "sandbox": {
         "features": [
