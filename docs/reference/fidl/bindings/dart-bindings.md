@@ -528,3 +528,4 @@ and all events are implemented by returning a Stream with a single
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
+[traversal]: /docs/reference/fidl/language/wire-format/README.md#traversal-order

@@ -327,6 +327,7 @@ The FIDL toolchain generates a `struct` `User` with optional members:
 pub struct User {
   pub age: Option<u8>,
   pub name: Option<String>,
+  pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
   #[deprecated = "Use `..Foo::empty()` to construct and `..` to match."]
   #[doc(hidden)]
   pub __non_exhaustive: (),
@@ -337,7 +338,13 @@ And the following associated constants:
 
 * `const EMPTY: User`: A `User` with each member initialized to `None`.
 
-The generated `User` `struct` follows the [`#[derive]` rules](#derives).
+The `unknown_data` member stores a mapping from ordinal to the raw bytes of any
+unknown field that was encountered during decoding. If the table is declared
+as a `resource`, the map will also contain the raw handles in addition to the
+bytes (i.e. the `unknown_data` member will have type
+`Option<BTreeMap<u64, fidl::UnknownData>>`). If no unknown members were
+encountered during decoding, the `unknown_data` field is guaranteed to be
+`None` rather than `Some` of an empty map.
 
 The `__non_exhaustive` member prevents intializing the table exhaustively, which
 causes API breakage when new fields are added. Instead, you should use the
@@ -353,6 +360,8 @@ Similarly, tables do not permit exhaustive matching. Instead, you must use the
 ```rust
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_match" adjust_indentation="auto" %}
 ```
+
+The generated `User` `struct` follows the [`#[derive]` rules](#derives).
 
 ### Derives {#derives}
 
