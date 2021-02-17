@@ -25,6 +25,9 @@ using diagnostics::Diagnostic;
 
 // |JsonWriter| requires the derived type as a template parameter so it can
 // match methods declared with parameter overrides in the derived class.
+//
+// Specification of the output format is
+// https://chromium.googlesource.com/infra/infra/+/refs/heads/master/go/src/infra/tricium/api/v1/data.proto#135
 class DiagnosticsJson : public utils::JsonWriter<DiagnosticsJson> {
  public:
   // "using" is required for overridden methods, so the implementations in
