@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/device-protocol/pci.h>
+#include <lib/mmio/mmio.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 #include <zircon/syscalls/object.h>
@@ -326,4 +328,44 @@ TEST_F(FakePciProtocolTests, ConfigRW) {
     ASSERT_OK(config->read(&val32, off, sizeof(val32)));
     ASSERT_EQ(off, val32);
   }
+}
+
+TEST_F(FakePciProtocolTests, GetBar) {
+  uint32_t page_size = zx_system_get_page_size();
+  zx::vmo vmo{};
+  // Verify the bar_id and bounds asserts.
+  ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
+  ASSERT_DEATH([&]() { fake_pci().SetBar(6, page_size, std::move(vmo)); });
+  ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
+  ASSERT_DEATH([&]() { fake_pci().SetBar(0, page_size + 1, std::move(vmo)); });
+
+  zx_pci_bar_t bar{};
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(0, &bar));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(6, &bar));
+
+  uint32_t valid_bar = 3;
+  uint64_t bar_size = 256;
+  ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
+  ASSERT_NO_DEATH([&]() { fake_pci().SetBar(valid_bar, bar_size, std::move(vmo)); });
+  zx::unowned_vmo borrowed = fake_pci().GetBar(valid_bar);
+  ASSERT_OK(pci().GetBar(valid_bar, &bar));
+  ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.handle)));
+  ASSERT_EQ(valid_bar, bar.id);
+  ASSERT_EQ(bar_size, bar.size);
+}
+
+TEST_F(FakePciProtocolTests, MapMmio) {
+  const uint32_t bar_id = 0;
+  const uint64_t bar_size = 256;
+  zx::vmo vmo{};
+  ASSERT_OK(zx::vmo::create(bar_size, 0, &vmo));
+  fake_pci().SetBar(bar_id, bar_size, std::move(vmo));
+  zx::unowned_vmo borrow = fake_pci().GetBar(bar_id);
+
+  // Ensure that our fake implementation / backend for the BAR methods still works with
+  // the MapMmio helper method added to device-protocol.
+  ddk::Pci dp_pci(fake_pci().get_protocol());
+  std::optional<ddk::MmioBuffer> mmio = std::nullopt;
+  ASSERT_OK(dp_pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
+  ASSERT_TRUE(MatchKoids(borrow, *mmio->get_vmo()));
 }

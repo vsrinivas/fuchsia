@@ -19,6 +19,8 @@ library_headers("pci-protocol-fake") {
 test("pci-protocol-fake-test") {
   sources = [ "pci_protocol_fake_tests.cc" ]
   deps = [
+    "//src/devices/lib/mmio",
+    "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//zircon/public/lib/zxtest",
   ]

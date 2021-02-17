@@ -34,7 +34,29 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     zx::vmo vmo;
   };
 
-  zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) {
+    if (!out_res) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (bar_id >= PCI_DEVICE_BAR_COUNT) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (bars_[bar_id].size == 0) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    auto& bar = bars_[bar_id];
+    zx::vmo bar_vmo{};
+    zx_status_t status = bar.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &bar_vmo);
+    ZX_ASSERT_MSG(status == ZX_OK, kFakePciInternalError);
+    out_res->id = bar_id;
+    out_res->size = bar.size;
+    out_res->type = ZX_PCI_BAR_TYPE_MMIO;
+    out_res->handle = bar_vmo.release();
+    return ZX_OK;
+  }
 
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
     if (!out_handle) {
@@ -284,6 +306,30 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return info;
   }
 
+  zx::unowned_vmo SetBar(uint32_t bar_id, size_t size, zx::vmo vmo) {
+    ZX_ASSERT_MSG(bar_id < PCI_DEVICE_BAR_COUNT,
+                  "FakePciProtocol Error: valid BAR ids are [0, 5] (bar_id = %u)", bar_id);
+    uint64_t vmo_size = 0;
+    zx_status_t status = vmo.get_size(&vmo_size);
+    ZX_ASSERT_MSG(status == ZX_OK, kFakePciInternalError);
+    ZX_ASSERT_MSG(vmo_size >= size,
+                  "FakePciProtocol Error: vmo is not large enough for BAR size (BAR size = %#lx, "
+                  "vmo size = %#lx)",
+                  size, vmo_size);
+
+    bars_[bar_id].size = size;
+    bars_[bar_id].vmo = std::move(vmo);
+    return bars_[bar_id].vmo.borrow();
+  }
+
+  zx::unowned_vmo GetBar(uint32_t bar_id) {
+    ZX_ASSERT_MSG(bar_id < PCI_DEVICE_BAR_COUNT,
+                  "FakePciProtocol Error: valid BAR ids are [0, 5] (bar_id = %u)", bar_id);
+    ZX_ASSERT_MSG(bars_[bar_id].size > 0, "FakePciProtocol Error: BAR %u has not been set.",
+                  bar_id);
+    return bars_[bar_id].vmo.borrow();
+  }
+
   zx::unowned_vmo GetConfigVmo() { return config_.borrow(); }
   pci_irq_mode_t GetIrqMode() const { return irq_mode_; }
   uint32_t GetIrqCount() const { return irq_cnt_; }
@@ -300,6 +346,8 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     msix_interrupts_.clear();
     irq_mode_ = PCI_IRQ_MODE_DISABLED;
     irq_cnt_ = 0;
+
+    bars_ = {};
 
     bus_master_en_ = std::nullopt;
     reset_cnt_ = 0;
@@ -318,6 +366,8 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   std::vector<zx::interrupt> msix_interrupts_;
   pci_irq_mode_t irq_mode_;
   uint32_t irq_cnt_;
+
+  std::array<FakeBar, PCI_DEVICE_BAR_COUNT> bars_{};
 
   zx::bti bti_;
   uint32_t reset_cnt_;
