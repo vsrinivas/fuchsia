@@ -1181,6 +1181,7 @@ magma_status_t MsdVsiDevice::QuerySram(uint32_t* handle_out) {
   if (!external_sram_)
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Device has no external SRAM");
 
+  // TODO(fxbug.dev/70430): this may fail due to delays in handling client VMO release
   if (external_sram_->HasChildren())
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "External SRAM has children");
 

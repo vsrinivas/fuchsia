@@ -66,6 +66,7 @@ class PlatformBuffer {
   virtual bool CreateChild(uint32_t* handle_out) = 0;
 
   // Returns true if one or more child buffers exist.
+  // Note: when last child is released, transition from true to false may have some delay.
   virtual bool HasChildren() const = 0;
 
   // Ensures the specified pages are backed by real memory.
