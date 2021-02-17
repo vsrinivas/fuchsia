@@ -437,16 +437,10 @@ reader_bench_fn!(bench_256k_1hz, 4096 * 64, 1, "Snapshot/256K/1hz");
 reader_bench_fn!(bench_256k_10hz, 4096 * 64, 10, "Snapshot/256K/10hz");
 reader_bench_fn!(bench_256k_100hz, 4096 * 64, 100, "Snapshot/256K/100hz");
 reader_bench_fn!(bench_256k_1khz, 4096 * 64, 1000, "Snapshot/256K/1khz");
-reader_bench_fn!(bench_256k_10khz, 4096 * 64, 10000, "Snapshot/256K/10khz");
-reader_bench_fn!(bench_256k_100khz, 4096 * 64, 100000, "Snapshot/256K/100khz");
-reader_bench_fn!(bench_256k_1mhz, 4096 * 64, 1000000, "Snapshot/256K/1mhz");
 reader_bench_fn!(bench_1m_1hz, 4096 * 256, 1, "Snapshot/1M/1hz");
 reader_bench_fn!(bench_1m_10hz, 4096 * 256, 10, "Snapshot/1M/10hz");
 reader_bench_fn!(bench_1m_100hz, 4096 * 256, 100, "Snapshot/1M/100hz");
 reader_bench_fn!(bench_1m_1khz, 4096 * 256, 1000, "Snapshot/1M/1khz");
-reader_bench_fn!(bench_1m_10khz, 4096 * 256, 10000, "Snapshot/1M/10khz");
-reader_bench_fn!(bench_1m_100khz, 4096 * 256, 100000, "Snapshot/1M/100khz");
-reader_bench_fn!(bench_1m_1mhz, 4096 * 256, 1000000, "Snapshot/1M/1mhz");
 
 fn reader_benchmark(iterations: usize) {
     // TODO(fxbug.dev/43505): Implement benchmarks where the real size doesn't match the inspector size.
@@ -463,16 +457,10 @@ fn reader_benchmark(iterations: usize) {
     bench_256k_10hz(iterations);
     bench_256k_100hz(iterations);
     bench_256k_1khz(iterations);
-    bench_256k_10khz(iterations);
-    bench_256k_100khz(iterations);
-    bench_256k_1mhz(iterations);
     bench_1m_1hz(iterations);
     bench_1m_10hz(iterations);
     bench_1m_100hz(iterations);
     bench_1m_1khz(iterations);
-    bench_1m_10khz(iterations);
-    bench_1m_100khz(iterations);
-    bench_1m_1mhz(iterations);
 }
 
 fn writer_benchmark(iterations: usize) {
