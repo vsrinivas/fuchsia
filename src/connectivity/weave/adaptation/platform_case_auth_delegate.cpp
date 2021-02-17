@@ -35,16 +35,10 @@ PlatformCASEAuthDelegate gPlatformCASEAuthDelegate;
 // Implementation of Internal::InitCASEAuthDelegate as defined in the
 // openweave-core adaptation layer.
 WEAVE_ERROR InitCASEAuthDelegate() {
-  new (&gPlatformCASEAuthDelegate)
-      PlatformCASEAuthDelegate(sys::ComponentContext::CreateAndServeOutgoingDirectory());
+  new (&gPlatformCASEAuthDelegate) PlatformCASEAuthDelegate();
   SecurityMgr.SetCASEAuthDelegate(&gPlatformCASEAuthDelegate);
   return WEAVE_NO_ERROR;
 }
-
-PlatformCASEAuthDelegate::PlatformCASEAuthDelegate() : PlatformCASEAuthDelegate(nullptr) {}
-
-PlatformCASEAuthDelegate::PlatformCASEAuthDelegate(std::unique_ptr<sys::ComponentContext> context)
-    : context_(std::move(context)) {}
 
 WEAVE_ERROR PlatformCASEAuthDelegate::EncodeNodePayload(const BeginSessionContext& msg_ctx,
                                                         uint8_t* payload_buf,
@@ -129,7 +123,8 @@ WEAVE_ERROR PlatformCASEAuthDelegate::GenerateNodeSignature(const BeginSessionCo
   }
 
   fuchsia::weave::SignerSyncPtr signer;
-  if ((status = context_->svc()->Connect(signer.NewRequest())) != ZX_OK) {
+  if ((status = PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(
+           signer.NewRequest())) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to signer: " << status;
     return status;
   }
@@ -260,6 +255,7 @@ WEAVE_ERROR PlatformCASEAuthDelegate::HandleValidationResult(const BeginSessionC
 void PlatformCASEAuthDelegate::EndValidation(const BeginSessionContext& msg_ctx,
                                              ValidationContext& valid_ctx,
                                              WeaveCertificateSet& cert_set) {
+  cert_set.Release();
   service_config_.clear();
 }
 

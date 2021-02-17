@@ -9,6 +9,7 @@
 
 #include <fuchsia/weave/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -200,13 +201,14 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
   PlatformCASEAuthDelegateTest() {
     context_provider_.service_directory_provider()->AddService(
         fake_weave_signer_.GetHandler(dispatcher()));
-    platform_case_auth_delegate_ =
-        std::make_unique<PlatformCASEAuthDelegate>(context_provider_.TakeContext());
+    platform_case_auth_delegate_ = std::make_unique<PlatformCASEAuthDelegate>();
   }
 
   void SetUp() {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
+
+    PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
 
     ConfigurationMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
@@ -318,6 +320,7 @@ TEST_F(PlatformCASEAuthDelegateTest, EncodeNodeCertInfo) {
   EXPECT_EQ(reader.GetTag(), TLV::ContextTag(kTag_CASECertificateInfo_EntityCertificate));
 
   // Check that the CommonName of the certificate matches our dummy account id.
+  auto release_cert_set = fit::defer([&] { cert_set.Release(); });
   EXPECT_EQ(cert_set.Init(kMaxCerts, kCertDecodeBufferSize), WEAVE_NO_ERROR);
   EXPECT_EQ(cert_set.LoadCert(reader, Profiles::Security::kDecodeFlag_GenerateTBSHash, cert),
             WEAVE_NO_ERROR);
@@ -438,6 +441,7 @@ TEST_F(PlatformCASEAuthDelegateTest, BeginValidation) {
   EXPECT_EQ(certs.Certs[1].CertType, kCertType_CA);
   EXPECT_EQ(valid_ctx.RequiredKeyUsages, kKeyUsageFlag_DigitalSignature);
   EXPECT_EQ(valid_ctx.RequiredKeyPurposes, kKeyPurposeFlag_ServerAuth);
+  platform_case_auth_delegate_->EndValidation(msg_ctx, valid_ctx, certs);
 }
 
 TEST_F(PlatformCASEAuthDelegateTest, BeginValidationInvalidServiceConfig) {

@@ -29,9 +29,8 @@ using nl::Weave::Profiles::Security::CASE::BeginSessionContext;
 
 class PlatformCASEAuthDelegate final : public WeaveCASEAuthDelegate {
  public:
-  PlatformCASEAuthDelegate();
-  PlatformCASEAuthDelegate(std::unique_ptr<sys::ComponentContext> context);
-  ~PlatformCASEAuthDelegate() {}
+  PlatformCASEAuthDelegate() = default;
+  ~PlatformCASEAuthDelegate() = default;
 
   // nl::Weave::Profiles::Security::CASE::WeaveCASEAuthDelegate implementation
   WEAVE_ERROR EncodeNodePayload(const BeginSessionContext& msg_ctx, uint8_t* payload_buf,
@@ -51,7 +50,6 @@ class PlatformCASEAuthDelegate final : public WeaveCASEAuthDelegate {
   WEAVE_ERROR LoadCertsFromServiceConfig(const uint8_t* service_config, uint16_t service_config_len,
                                          WeaveCertificateSet& cert_set);
 
-  std::unique_ptr<sys::ComponentContext> context_;
   std::vector<uint8_t> service_config_;
 };
 
