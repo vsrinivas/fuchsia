@@ -56,15 +56,35 @@ std::string AggregateRepeatedMessages(const std::string_view message) {
   std::string output;
   size_t repeat_count = 0;
   for (auto line : lines) {
-    if (line.rfind(kRepeatedStrPrefix, 0) == 0) {
-      int count;
-      // Extract the number of times from the line.
-      FX_CHECK(sscanf(line.data(), "!!! MESSAGE REPEATED %d", &count) == 1);
-      repeat_count += count;
-    } else if (!line.empty()) {
-      output += line;
-      output += "\n";
+    // If the line doesn't start with "!!! MESSAGE REPEATED" append it to the output, followed by a
+    // newline.
+    if (line.rfind(kRepeatedStrPrefix, 0) != 0) {
+      if (!line.empty()) {
+        output += line;
+        output += "\n";
+      }
+      continue;
     }
+
+    // Extract the single repeated count and, if successful, add it to the aggreagted repeated
+    // count.
+    if (int count = 0; sscanf(line.data(), "!!! MESSAGE REPEATED %d", &count) == 1) {
+      repeat_count += count;
+      continue;
+    }
+
+    FX_LOGS(ERROR) << "Failed to extract repeat_count from '" << line << "'";
+
+    // If extracting the single reated count fails, append the aggregated repeated count to the
+    // output, followed by the line containing the ill-formed message and reset the aggregated
+    // repeated count.
+    if (repeat_count != 0) {
+      output += MakeRepeatedWarning(repeat_count);
+      repeat_count = 0;
+    }
+
+    output += line;
+    output += "\n";
   }
 
   if (repeat_count != 0) {
