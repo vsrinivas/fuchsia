@@ -78,6 +78,11 @@ func (a *Archive) GetBuildByID(
 // directly to `dst`. Otherwise, `dst` should be the directory under which to
 // download the artifacts.
 func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, dst string, srcs []string) error {
+	tmpDir, err := ioutil.TempDir("", "download")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
 	var src string
 	var srcsFile string
 	if len(srcs) > 1 {
@@ -95,15 +100,12 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 			return nil
 		}
 
-		tmpFile, err := ioutil.TempFile(dst, "srcs-file")
+		tmpFile, err := ioutil.TempFile(tmpDir, "srcs-file")
 		if err != nil {
 			return err
 		}
 		tmpFile.Close()
 		srcsFile = tmpFile.Name()
-		defer func() {
-			os.Remove(srcsFile)
-		}()
 		if err := ioutil.WriteFile(srcsFile, []byte(strings.Join(filesToDownload, "\n")), 0755); err != nil {
 			return fmt.Errorf("failed to write srcs-file: %w", err)
 		}
@@ -124,12 +126,16 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 	retryCap := uint64(22)
 	return retry.Retry(ctx, retry.WithMaxAttempts(eb, retryCap), func() error {
 		// We don't want to leak files if we are interrupted during a download.
-		// So we'll remove all destination files in the case of an error.
+		// So we'll download all files to a temporary directory before moving
+		// them to the specified destination, and we'll remove them in the case
+		// of an error.
+		tmpDst := filepath.Join(tmpDir, filepath.Base(dst))
+		defer os.RemoveAll(tmpDst)
 		args := []string{
 			"cp",
 			"-build", buildID,
 			"-src", src,
-			"-dst", dst,
+			"-dst", tmpDst,
 		}
 
 		if fromRoot {
@@ -141,13 +147,35 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 
 		_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
 		if err != nil {
-			defer os.RemoveAll(dst)
 			if len(stderr) != 0 {
 				return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
 			}
 			return fmt.Errorf("artifacts failed: %w", err)
 		}
-
-		return nil
+		return filepath.Walk(tmpDst, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if path == tmpDst && info.IsDir() {
+				return nil
+			}
+			relPath, err := filepath.Rel(tmpDst, path)
+			if err != nil {
+				return err
+			}
+			dstPath := filepath.Join(dst, relPath)
+			if err = os.MkdirAll(filepath.Dir(dstPath), os.ModePerm); err != nil {
+				return err
+			}
+			if info.IsDir() {
+				// Move/replace entire directory and skip walking contents.
+				err = filepath.SkipDir
+				os.RemoveAll(dstPath)
+			}
+			if moveErr := os.Rename(path, dstPath); moveErr != nil {
+				return moveErr
+			}
+			return err
+		})
 	}, nil)
 }

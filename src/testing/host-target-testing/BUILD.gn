@@ -34,6 +34,7 @@ go_library("host-target-testing") {
   non_go_deps = [ ":test_tools($host_toolchain)" ]
   sources = [
     "artifacts/archive.go",
+    "artifacts/archive_test.go",
     "artifacts/build.go",
     "artifacts/builder.go",
     "avb/avb.go",
@@ -69,6 +70,7 @@ go_library("host-target-testing") {
 }
 
 test_packages = [
+  "artifacts",
   "avb",
   "packages",
   "paver",
