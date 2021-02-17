@@ -12,6 +12,49 @@ string of lowercase hexadecimal digits.
 The original value will be scrubbed from memory as soon as possible and will be
 redacted from all diagnostic output.
 
+### kernel.jitterentropy.bs=\<uint32_t>
+**Default:** `0x40`
+
+Sets the "memory block size" parameter for jitterentropy. When jitterentropy is
+performing memory operations (to increase variation in CPU timing), the memory
+will be accessed in blocks of this size.
+
+### kernel.jitterentropy.bc=\<uint32_t>
+**Default:** `0x200`
+
+Sets the "memory block count" parameter for jitterentropy. When jitterentropy
+is performing memory operations (to increase variation in CPU timing), this
+controls how many blocks (of size `kernel.jitterentropy.bs`) are accessed.
+
+### kernel.jitterentropy.ml=\<uint32_t>
+**Default:** `0x20`
+
+Sets the "memory loops" parameter for jitterentropy. When jitterentropy is
+performing memory operations (to increase variation in CPU timing), this
+controls how many times the memory access routine is repeated. This parameter
+is only used when `kernel.jitterentropy.raw` is true. If the value of this
+parameter is `0` or if `kernel.jitterentropy.raw` is `false`, then
+jitterentropy chooses the number of loops is a random-ish way.
+
+### kernel.jitterentropy.ll=\<uint32_t>
+**Default:** `0x1`
+
+Sets the "LFSR loops" parameter for jitterentropy (the default is 1). When
+jitterentropy is performing CPU-intensive LFSR operations (to increase variation
+in CPU timing), this controls how many times the LFSR routine is repeated.  This
+parameter is only used when `kernel.jitterentropy.raw` is true. If the value of
+this parameter is `0` or if `kernel.jitterentropy.raw` is `false`, then
+jitterentropy chooses the number of loops is a random-ish way.
+
+### kernel.jitterentropy.raw=\<bool>
+**Default:** `true`
+
+When true (the default), the jitterentropy entropy collector will return raw,
+unprocessed samples. When false, the raw samples will be processed by
+jitterentropy, producing output data that looks closer to uniformly random. Note
+that even when set to false, the CPRNG will re-process the samples, so the
+processing inside of jitterentropy is somewhat redundant.
+
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 

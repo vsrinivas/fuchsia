@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <zircon/errors.h>
 
@@ -71,16 +71,15 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
 // bytes of random data.
 JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
     : Collector("jitterentropy", /* entropy_per_1000_bytes */ 50) {
-  // TODO(fxbug.dev/30967): optimize default jitterentropy parameters, then update
-  // values here and in docs/kernel_cmdline.md.
-  uint32_t bs = gCmdline.GetUInt32(kernel_option::kJitterEntropyBs, 64);
-  uint32_t bc = gCmdline.GetUInt32(kernel_option::kJitterEntropyBc, 512);
-  mem_loops_ = gCmdline.GetUInt32(kernel_option::kJitterEntropyMl, 32);
-  lfsr_loops_ = gCmdline.GetUInt32(kernel_option::kJitterEntropyLl, 1);
-  use_raw_samples_ = gCmdline.GetBool(kernel_option::kJitterEntropyRaw, true);
+  // TODO(fxbug.dev/30967): optimize default jitterentropy parameters and
+  // update them in //zircon/kernel/lib/boot-options/include/lib/boot-options/options.inc.
+  const uint32_t bs = gBootOptions->jitterentropy_bs;
+  const uint32_t bc = gBootOptions->jitterentropy_bc;
+  mem_loops_ = gBootOptions->jitterentropy_ml;
+  lfsr_loops_ = gBootOptions->jitterentropy_ll;
+  use_raw_samples_ = gBootOptions->jitterentropy_raw;
 
-  jent_entropy_collector_init(&ec_, mem, len, bs, bc, mem_loops_,
-                              /* stir */ true);
+  jent_entropy_collector_init(&ec_, mem, len, bs, bc, mem_loops_, /*stir=*/true);
 }
 
 size_t JitterentropyCollector::DrawEntropy(uint8_t* buf, size_t len) {
