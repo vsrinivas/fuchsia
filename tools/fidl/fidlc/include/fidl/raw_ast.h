@@ -734,6 +734,62 @@ class UnionDeclaration final : public SourceElement {
   const types::Resourceness resourceness;
 };
 
+class Layout;
+
+class LayoutMember final : public SourceElement {
+ public:
+  LayoutMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
+               std::unique_ptr<Identifier> identifier, std::unique_ptr<Layout> layout)
+      : SourceElement(element),
+        ordinal(std::move(ordinal)),
+        identifier(std::move(identifier)),
+        layout(std::move(layout)) {}
+
+  std::unique_ptr<Ordinal64> ordinal;
+  std::unique_ptr<Identifier> identifier;
+  std::unique_ptr<Layout> layout;
+};
+
+// TODO(fxbug.dev/65978): Expand this cover enums, bits, tables.
+class Layout final : public SourceElement {
+ public:
+  enum Kind {
+    kStruct,
+    kUnion,
+    kTypeCtor,
+  };
+
+  Layout(SourceElement const& element,
+         // TODO(fxbug.dev/65978): Support layout attributes.
+         // TODO(fxbug.dev/65978): Support type decl modifiers (e.g. `flexible`).
+         Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
+         std::unique_ptr<TypeConstructor> type_ctor)
+      : SourceElement(element),
+        kind(kind),
+        members(std::move(members)),
+        type_ctor(std::move(type_ctor)) {}
+
+  Kind kind;
+  std::vector<std::unique_ptr<raw::LayoutMember>> members;
+  std::unique_ptr<TypeConstructor> type_ctor;
+};
+
+class TypeDecl final : public SourceElement {
+ public:
+  TypeDecl(SourceElement const& element,
+           // TODO(fxbug.dev/65978): Support type decl attributes.
+           std::unique_ptr<Identifier> identifier,
+           // TODO(fxbug.dev/65978): We should also allow type decl over type
+           // constructors, i.e. FTP-052 type declaration.
+           std::unique_ptr<Layout> layout)
+      : SourceElement(element), identifier(std::move(identifier)), layout(std::move(layout)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<Identifier> identifier;
+  std::unique_ptr<Layout> layout;
+};
+
 class File final : public SourceElement {
  public:
   File(SourceElement const& element, Token end, std::unique_ptr<AttributeList> attributes,
@@ -749,6 +805,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
        std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
+       std::vector<std::unique_ptr<TypeDecl>> type_decls,
        std::vector<std::unique_ptr<Token>> comment_tokens_list)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -764,6 +821,7 @@ class File final : public SourceElement {
         struct_declaration_list(std::move(struct_declaration_list)),
         table_declaration_list(std::move(table_declaration_list)),
         union_declaration_list(std::move(union_declaration_list)),
+        type_decls(std::move(type_decls)),
         comment_tokens_list(std::move(comment_tokens_list)),
         end_(end) {}
 
@@ -782,6 +840,7 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
+  std::vector<std::unique_ptr<TypeDecl>> type_decls;
 
   // TODO(fxbug.dev/70247): this member has been created solely for the benefit
   //   of fidlconv.  Once the conversion using that tool has been completed and

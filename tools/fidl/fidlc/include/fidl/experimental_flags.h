@@ -17,6 +17,7 @@ class ExperimentalFlags {
     kEnableHandleRights = 0b01,
     kDisallowOldUsingSyntax = 0b10,
     kDisallowOldHandleSyntax = 0b100,
+    kFtp050 = 0b1000,
   };
 
   ExperimentalFlags() : flags_(0) {}

@@ -71,6 +71,7 @@ KEYWORD(Strict, "strict")
 KEYWORD(Struct, "struct")
 KEYWORD(Table, "table")
 KEYWORD(Flexible, "flexible")
+KEYWORD(Type, "type")
 KEYWORD(Union, "union")
 KEYWORD(XUnion, "xunion")
 

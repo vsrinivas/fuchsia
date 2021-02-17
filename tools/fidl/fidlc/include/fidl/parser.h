@@ -287,6 +287,8 @@ class Parser {
   std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
                                          const Modifiers&);
 
+  std::unique_ptr<raw::TypeConstructor> ParseTypeConstructorOf(
+      ASTScope&, std::unique_ptr<raw::CompoundIdentifier>);
   std::unique_ptr<raw::TypeConstructor> ParseTypeConstructor();
 
   std::unique_ptr<raw::BitsMember> ParseBitsMember();
@@ -335,6 +337,15 @@ class Parser {
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::File> ParseFile();
+
+  // --- FTP-050 ---
+
+  std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::Layout::Kind);
+  std::unique_ptr<raw::Layout> ParseLayout(ASTScope&);
+  std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
+  std::unique_ptr<raw::File> ParseFileFtp050(ASTScope&,
+                                             std::unique_ptr<raw::AttributeList> library_attributes,
+                                             std::unique_ptr<raw::CompoundIdentifier> library_name);
 
   enum class RecoverResult {
     Failure,

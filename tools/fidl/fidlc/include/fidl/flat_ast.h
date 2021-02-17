@@ -146,7 +146,7 @@ struct TypeConstructor final {
   bool compiling = false;
   bool compiled = false;
   const Type* type = nullptr;
-  uint32_t handle_obj_type_resolved  = std::numeric_limits<uint32_t>::max();
+  uint32_t handle_obj_type_resolved = std::numeric_limits<uint32_t>::max();
   types::HandleSubtype handle_subtype_identifier_resolved;
   std::optional<FromTypeAlias> from_type_alias;
 };
@@ -837,6 +837,8 @@ class Library {
   void ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
   void ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
+  void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
+
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
@@ -1018,6 +1020,9 @@ class ConsumeStep : public StepBase {
   }
   void ForUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
     library_->ConsumeUnionDeclaration(std::move(union_declaration));
+  }
+  void ForTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
+    library_->ConsumeTypeDecl(std::move(type_decl));
   }
 };
 

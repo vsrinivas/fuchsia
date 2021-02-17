@@ -495,11 +495,8 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
                                       std::move(maybe_type_ctor));
 }
 
-std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
-  ASTScope scope(this);
-  auto identifier = ParseCompoundIdentifier();
-  if (!Ok())
-    return Fail();
+std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
+    ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier) {
   std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
   std::unique_ptr<raw::Constant> handle_rights;
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
@@ -561,6 +558,14 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
       scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
       std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
       nullability);
+}
+
+std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
+  ASTScope scope(this);
+  auto identifier = ParseCompoundIdentifier();
+  if (!Ok())
+    return Fail();
+  return ParseTypeConstructorOf(scope, std::move(identifier));
 }
 
 std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
@@ -1213,7 +1218,7 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
     ConsumeTokenOrRecover(OfKind(Token::Kind::kSemicolon));
   }
   if (!Ok())
-    Fail();
+    return Fail();
 
   const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
   if (resourceness == types::Resourceness::kResource) {
@@ -1436,18 +1441,6 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
 
 std::unique_ptr<raw::File> Parser::ParseFile() {
   ASTScope scope(this);
-  bool done_with_library_imports = false;
-  std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
-  std::vector<std::unique_ptr<raw::Using>> using_list;
-  std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
-  std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
-  std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
-  std::vector<std::unique_ptr<raw::ProtocolDeclaration>> protocol_declaration_list;
-  std::vector<std::unique_ptr<raw::ResourceDeclaration>> resource_declaration_list;
-  std::vector<std::unique_ptr<raw::ServiceDeclaration>> service_declaration_list;
-  std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
-  std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
-  std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
 
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
@@ -1462,6 +1455,22 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   if (!Ok())
     return Fail();
 
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kFtp050))
+    return ParseFileFtp050(scope, std::move(attributes), std::move(library_name));
+
+  bool done_with_library_imports = false;
+  std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
+  std::vector<std::unique_ptr<raw::Using>> using_list;
+  std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
+  std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
+  std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
+  std::vector<std::unique_ptr<raw::ProtocolDeclaration>> protocol_declaration_list;
+  std::vector<std::unique_ptr<raw::ResourceDeclaration>> resource_declaration_list;
+  std::vector<std::unique_ptr<raw::ServiceDeclaration>> service_declaration_list;
+  std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
+  std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
+  std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
+  std::vector<std::unique_ptr<raw::TypeDecl>> type_decls;
   auto parse_declaration = [&alias_list, &bits_declaration_list, &const_declaration_list,
                             &enum_declaration_list, &protocol_declaration_list,
                             &resource_declaration_list, &service_declaration_list,
@@ -1603,7 +1612,211 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(const_declaration_list), std::move(enum_declaration_list),
       std::move(protocol_declaration_list), std::move(resource_declaration_list),
       std::move(service_declaration_list), std::move(struct_declaration_list),
-      std::move(table_declaration_list), std::move(union_declaration_list),
+      std::move(table_declaration_list), std::move(union_declaration_list), std::move(type_decls),
+      std::move(comment_tokens_));
+}
+
+std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind kind) {
+  ASTScope scope(this);
+
+  // TODO(fxbug.dev/65978): Parse attributes.
+
+  std::unique_ptr<raw::Ordinal64> ordinal = nullptr;
+  if (kind == raw::Layout::Kind::kUnion) {
+    ordinal = ParseOrdinal64();
+    if (!Ok())
+      return Fail();
+  }
+
+  auto identifier = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  auto layout = ParseLayout(scope);
+  if (!Ok())
+    return Fail();
+
+  // TODO(fxbug.dev/65978): Parse default values.
+
+  return std::make_unique<raw::LayoutMember>(scope.GetSourceElement(), std::move(ordinal),
+                                             std::move(identifier), std::move(layout));
+}
+
+std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
+  // name
+  //      [ { ... } ]
+  //      [ < ... > ]
+  //                  [ : ... ]
+
+  // TODO(fxbug.dev/65978): Introduce a ParseLayoutConfig struct to configure
+  // how layout parse should be done e.g. has an ordinal? default value
+  // allowed?.
+
+  auto identifier = ParseCompoundIdentifier();
+  if (!Ok())
+    return Fail();
+
+  raw::Layout::Kind kind;
+  switch (Peek().kind()) {
+    case Token::Kind::kLeftCurly: {
+      if (identifier->components.size() != 1) {
+        // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
+        // union, table, bits, and enum layouts exist.
+        return Fail();
+      }
+      // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
+      // remove token subkinds for struct, union, table, bits, and enum. Or
+      // maybe we want to have a 'recognize token subkind' on an identifier
+      // instead of doing string comparison directly.
+      if (identifier->components[0]->span().data() == "struct") {
+        kind = raw::Layout::Kind::kStruct;
+      } else if (identifier->components[0]->span().data() == "union") {
+        kind = raw::Layout::Kind::kUnion;
+      } else {
+        // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
+        // union, table, bits, and enum layouts exist.
+        return Fail();
+      }
+      break;
+    }
+    case Token::Kind::kLeftAngle:
+    case Token::Kind::kColon:
+    case Token::Kind::kSemicolon: {
+      auto type_ctor = ParseTypeConstructorOf(scope, std::move(identifier));
+      if (!Ok())
+        return Fail();
+      return std::make_unique<raw::Layout>(scope.GetSourceElement(), raw::Layout::Kind::kTypeCtor,
+                                           std::vector<std::unique_ptr<raw::LayoutMember>>(),
+                                           std::move(type_ctor));
+      break;
+    }
+    default:
+      // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
+      // union, table, bits, and enum layouts exist.
+      return Fail();
+  }
+
+  ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+  if (!Ok())
+    return Fail();
+
+  std::vector<std::unique_ptr<raw::LayoutMember>> members;
+  auto parse_member = [&]() {
+    if (Peek().kind() == Token::Kind::kRightCurly) {
+      ConsumeToken(OfKind(Token::Kind::kRightCurly));
+      return Done;
+    } else {
+      add(&members, [&] { return ParseLayoutMember(kind); });
+      return More;
+    }
+  };
+
+  while (parse_member() == More) {
+    if (!Ok()) {
+      const auto result = RecoverToEndOfMember();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      } else if (result == RecoverResult::EndOfScope) {
+        continue;
+      }
+    }
+    ConsumeTokenOrRecover(OfKind(Token::Kind::kSemicolon));
+  }
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::Layout>(scope.GetSourceElement(), kind, std::move(members),
+                                       /*type_ctor=*/nullptr);
+};
+
+std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(ASTScope& scope) {
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kType));
+  assert(Ok() && "caller should check first token");
+
+  auto identifier = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  ConsumeToken(OfKind(Token::Kind::kEqual));
+  if (!Ok())
+    return Fail();
+
+  auto layout = ParseLayout(scope);
+  if (!Ok())
+    return Fail();
+  return std::make_unique<raw::TypeDecl>(scope.GetSourceElement(), std::move(identifier),
+                                         std::move(layout));
+}
+
+std::unique_ptr<raw::File> Parser::ParseFileFtp050(
+    ASTScope& scope, std::unique_ptr<raw::AttributeList> library_attributes,
+    std::unique_ptr<raw::CompoundIdentifier> library_name) {
+  std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
+  std::vector<std::unique_ptr<raw::Using>> using_list;
+  std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
+  std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
+  std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
+  std::vector<std::unique_ptr<raw::ProtocolDeclaration>> protocol_declaration_list;
+  std::vector<std::unique_ptr<raw::ResourceDeclaration>> resource_declaration_list;
+  std::vector<std::unique_ptr<raw::ServiceDeclaration>> service_declaration_list;
+  std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
+  std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
+  std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
+  std::vector<std::unique_ptr<raw::TypeDecl>> type_decls;
+
+  // TODO(fxbug.dev/65978): Parse library imports (`using ...`).
+
+  auto parse_declaration = [&]() {
+    ASTScope scope(this);
+
+    // TODO(fxbug.dev/65978): Parse attributes.
+    // TODO(fxbug.dev/65978): Parse modifiers.
+
+    switch (Peek().combined()) {
+      default:
+        Fail(ErrExpectedDeclaration, last_token_.data());
+        return More;
+
+      case CASE_TOKEN(Token::Kind::kEndOfFile):
+        return Done;
+
+      case CASE_IDENTIFIER(Token::Subkind::kType): {
+        add(&type_decls, [&] { return ParseTypeDecl(scope); });
+        return More;
+
+        // TODO(fxbug.dev/65978): Parse protocol declarations (`protocol ...`).
+        // TODO(fxbug.dev/65978): Parse type aliases (`alias ...`).
+        // TODO(fxbug.dev/65978): Parse resource definition declarations (`resource_definition
+        // ...`).
+      }
+    }
+  };
+
+  while (parse_declaration() == More) {
+    if (!Ok()) {
+      // If this returns RecoverResult::Continue, we have consumed up to a '}'
+      // and expect a ';' to follow.
+      auto result = RecoverToEndOfDecl();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      } else if (result == RecoverResult::EndOfScope) {
+        break;
+      }
+    }
+    ConsumeTokenOrRecover(OfKind(Token::Kind::kSemicolon));
+  }
+
+  std::optional<Token> end = ConsumeToken(OfKind(Token::Kind::kEndOfFile));
+  if (!Ok() || !end)
+    return Fail();
+
+  return std::make_unique<raw::File>(
+      scope.GetSourceElement(), end.value(), std::move(library_attributes), std::move(library_name),
+      std::move(alias_list), std::move(using_list), std::move(bits_declaration_list),
+      std::move(const_declaration_list), std::move(enum_declaration_list),
+      std::move(protocol_declaration_list), std::move(resource_declaration_list),
+      std::move(service_declaration_list), std::move(struct_declaration_list),
+      std::move(table_declaration_list), std::move(union_declaration_list), std::move(type_decls),
       std::move(comment_tokens_));
 }
 

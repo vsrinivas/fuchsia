@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <iostream>
 #include <sstream>
 #include <utility>
 
@@ -1941,6 +1942,97 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
                                        union_declaration->resourceness));
 }
 
+void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
+  // TODO(fxbug.dev/65978): Create a naming context, and use it to name all
+  // anonymous layouts present in this type declaration. Currently, we do this
+  // inline, and in a very crude way (simple concatenantion). We'll want to unit
+  // test the naming context separately since it is a key part of the language
+  // specification, and enables stable bindings generation.
+
+  std::function<void(Name, std::unique_ptr<raw::Layout>)> process_layout;
+  process_layout = [this, &process_layout](Name context, std::unique_ptr<raw::Layout> layout) {
+    std::vector<std::unique_ptr<TypeConstructor>> type_ctors;
+    for (auto& member : layout->members) {
+      switch (member->layout->kind) {
+        case raw::Layout::Kind::kStruct:
+        case raw::Layout::Kind::kUnion: {
+          // TODO(fxbug.dev/65978): Here specifically we need the naming context
+          // mentionned above.
+          auto name_of_anonymous_layout = Name::CreateDerived(
+              this, member->span(),
+              std::string(context.decl_name()) +
+                  utils::to_upper_camel_case(std::string(member->identifier->span().data())));
+          process_layout(name_of_anonymous_layout, std::move(member->layout));
+          auto type_ctor = std::make_unique<TypeConstructor>(
+              std::move(name_of_anonymous_layout),
+              /*maybe_arg_type_ctor=*/nullptr,
+              /*handle_subtype_identifier=*/std::nullopt,
+              /*handle_rights=*/nullptr,
+              /*maybe_size=*/nullptr, types::Nullability::kNonnullable);
+          type_ctors.emplace_back(std::move(type_ctor));
+          break;
+        }
+        case raw::Layout::Kind::kTypeCtor: {
+          std::unique_ptr<TypeConstructor> type_ctor;
+          // TODO(fxbug.dev/65978): Double check the below, which was copied
+          // from other methods. Why not `member->type_ctor->span();`?
+          auto span = member->identifier->span();
+          if (!ConsumeTypeConstructor(std::move(member->layout->type_ctor), span, &type_ctor))
+            return;
+          type_ctors.emplace_back(std::move(type_ctor));
+          break;
+        }
+      }
+    }
+
+    switch (layout->kind) {
+      case raw::Layout::Kind::kStruct: {
+        std::vector<Struct::Member> members;
+        size_t index = 0;
+        for (auto& member : layout->members) {
+          members.emplace_back(std::move(type_ctors[index]), member->identifier->span(),
+                               /*maybe_default_value=*/nullptr, /*attributes=*/nullptr);
+          index++;
+        }
+
+        RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, std::move(context),
+                                              std::move(members),
+                                              // TODO(fxbug.dev/65978): Change, this is hard coded.
+                                              types::Resourceness::kValue));
+        break;
+      }
+      case raw::Layout::Kind::kUnion: {
+        std::vector<Union::Member> members;
+        size_t index = 0;
+        for (auto& member : layout->members) {
+          if (type_ctors[index]->nullability != types::Nullability::kNonnullable) {
+            Fail(ErrNullableUnionMember, member->span());
+            return;
+          }
+          members.emplace_back(std::move(member->ordinal), std::move(type_ctors[index]),
+                               member->identifier->span(),
+                               /*attributes=*/nullptr);
+          index++;
+        }
+
+        RegisterDecl(std::make_unique<Union>(/*attributes=*/nullptr, std::move(context),
+                                             std::move(members),
+                                             // TODO(fxbug.dev/65978): Change, this is hard coded.
+                                             types::Strictness::kFlexible,
+                                             // TODO(fxbug.dev/65978): Change, this is hard coded.
+                                             types::Resourceness::kValue));
+        break;
+      }
+      case raw::Layout::Kind::kTypeCtor: {
+        assert(false && "not handled yet");
+      }
+    }
+  };
+
+  auto name = Name::CreateSourced(this, type_decl->identifier->span());
+  process_layout(std::move(name), std::move(type_decl->layout));
+}
+
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   if (file->attributes) {
     ValidateAttributesPlacement(AttributeSchema::Placement::kLibrary, file->attributes.get());
@@ -2026,6 +2118,11 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   auto union_declaration_list = std::move(file->union_declaration_list);
   for (auto& union_declaration : union_declaration_list) {
     step.ForUnionDeclaration(std::move(union_declaration));
+  }
+
+  auto type_decls = std::move(file->type_decls);
+  for (auto& type_decl : type_decls) {
+    step.ForTypeDecl(std::move(type_decl));
   }
 
   return step.Done();
