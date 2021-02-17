@@ -16,7 +16,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <string.h>
+#include <string>
 
 #include "brcmu_utils.h"
 #include "debug.h"
@@ -400,4 +400,23 @@ void brcmu_set_rx_rate_index_hist_rx11ac(
   for (size_t i = 0; i < WSTATS_MCS_RANGE_11AC; i++) {
     out_rx_rate[i + start] = rx11ac[1][1][2][i];
   }
+}
+
+size_t brcmu_ssid_hash(const std::vector<uint8_t>& ssid) {
+  std::string ssid_str(ssid.begin(), ssid.end());
+  std::hash<std::string> ssid_hash;
+  return ssid_hash(ssid_str);
+}
+
+std::string brcmu_mac_hash(const uint8_t bssid[ETH_ALEN]) {
+  // Create a hash from the last three octets of the MAC
+  std::string mac_id_str(&bssid[3], &bssid[5] + 1);
+  std::hash<std::string> bssid_hash;
+  size_t id_hash = bssid_hash(mac_id_str);
+
+  // Print into a string, preserving the OUI
+  char tmp_buf[(ETH_ALEN * 3) + (sizeof(size_t) * 2) + 1];
+  snprintf(tmp_buf, sizeof(tmp_buf), "%02x:%02x:%02x:%zx", bssid[0], bssid[1], bssid[2], id_hash);
+  std::string mac_as_str(tmp_buf);
+  return mac_as_str;
 }

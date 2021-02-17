@@ -18,7 +18,10 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <netinet/if_ether.h>
 #include <zircon/compiler.h>
+
+#include <vector>
 
 #include <third_party/bcmdhd/crossdriver/dhd.h>
 
@@ -234,5 +237,14 @@ void brcmu_set_rx_rate_index_hist_rx11ac(
     const uint32_t (
         &rx11ac)[WSTATS_NSS_RANGE][WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11AC][WSTATS_MCS_RANGE_11AC],
     uint32_t* out_rx_rate);
+/*
+ * Convert SSID into a hashed value for identification without revealing the actual SSID.
+ */
+size_t brcmu_ssid_hash(const std::vector<uint8_t>& ssid);
+/*
+ * Convert MAC into a string value that preserves OUI but hashes the last three octets to protect
+ * personally-identifiable information.
+ */
+std::string brcmu_mac_hash(const uint8_t bssid[ETH_ALEN]);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_

@@ -3303,8 +3303,8 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   wlanif_join_confirm_t result;
   if (!ssid.empty()) {
     BRCMF_IFDBG(WLANIF, ndev,
-                "Join request from SME. ssid: %.*s, bssid: " MAC_FMT_STR ", channel: %u",
-                static_cast<int>(ssid.size()), ssid.data(), MAC_FMT_ARGS(sme_bss.bssid),
+                "Join request from SME. ssid: " SSID_FMT_STR ", bssid: " MAC_FMT_STR
+                ", channel: %u", SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid),
                 sme_bss.chan.primary);
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
     if (ifp->bss.ies_bytes_count > WLAN_MSDU_MAX_LEN) {
