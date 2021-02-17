@@ -130,8 +130,32 @@ class Fixed {
     return Format::Saturate(static_cast<Integer>(rounded_value / power));
   }
 
-  // Returns the fractional component of this fixed-point value.
-  constexpr Fixed Fraction() const { return *this - Fixed{Floor()}; }
+  // Returns the integral component of this fixed-point value. The result retains
+  // the sign of this value. For example, Fixed{-2.5}.Integral() == -2.
+  //
+  // This preserves the following invariant:
+  //
+  //   Fixed f;
+  //   f.Integral() + f.Fraction() == f
+  //
+  constexpr Fixed Integral() const {
+    if constexpr (Format::IntegralBits == 0) {
+      if constexpr (Format::IsSigned) {
+        if (*this <= Fixed{-1}) {
+          return Fixed{-1};
+        }
+      }
+      return Fixed{0};
+    } else {
+      return Fixed(value_ / static_cast<Integer>(Format::Power));
+    }
+  }
+
+  // Returns the fractional component of this fixed-point value. The result retains
+  // the sign of this value. For example, Fixed(-2.5).Fraction() == -0.5.
+  //
+  // See Integral().
+  constexpr Fixed Fraction() const { return *this - Integral(); }
 
   // Returns the absolute value of this fixed-point value.
   constexpr Fixed Absolute() const {

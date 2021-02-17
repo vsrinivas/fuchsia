@@ -950,29 +950,175 @@ static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint16_t>());
 static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint32_t>());
 static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint64_t>());
 
-static_assert(1 == Fixed<int, 0>{1}.Ceiling());
-static_assert(0 == Fixed<int, 0>{0}.Ceiling());
-static_assert(-1 == Fixed<int, 0>{-1}.Ceiling());
+template <typename Int>
+static constexpr bool TestMethodsOnNegativeIntegers() {
+  // Ceiling
+  static_assert(-1 == Fixed<Int, 0>{-1}.Ceiling());
+  static_assert(0 == Fixed<Int, 1>{FromRatio(-1, 2)}.Ceiling());
 
-static_assert(1 == Fixed<int, 1>{FromRatio(1, 2)}.Ceiling());
-static_assert(0 == Fixed<int, 1>{FromRatio(-1, 2)}.Ceiling());
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-8, 4)}.Ceiling());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-7, 4)}.Ceiling());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-5, 4)}.Ceiling());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-4, 4)}.Ceiling());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(-2, 4)}.Ceiling());
 
-static_assert(2 == Fixed<int, 2>{FromRatio(8, 4)}.Ceiling());
-static_assert(2 == Fixed<int, 2>{FromRatio(7, 4)}.Ceiling());
-static_assert(2 == Fixed<int, 2>{FromRatio(5, 4)}.Ceiling());
-static_assert(1 == Fixed<int, 2>{FromRatio(4, 4)}.Ceiling());
-static_assert(1 == Fixed<int, 2>{FromRatio(3, 4)}.Ceiling());
-static_assert(1 == Fixed<int, 2>{FromRatio(2, 4)}.Ceiling());
-static_assert(1 == Fixed<int, 2>{FromRatio(1, 4)}.Ceiling());
-static_assert(0 == Fixed<int, 2>{0}.Ceiling());
-static_assert(0 == Fixed<int, 2>{FromRatio(-1, 4)}.Ceiling());
-static_assert(0 == Fixed<int, 2>{FromRatio(-2, 4)}.Ceiling());
-static_assert(0 == Fixed<int, 2>{FromRatio(-3, 4)}.Ceiling());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-4, 4)}.Ceiling());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-5, 4)}.Ceiling());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-7, 4)}.Ceiling());
-static_assert(-2 == Fixed<int, 2>{FromRatio(-8, 4)}.Ceiling());
+  // Floor
+  static_assert(-1 == Fixed<Int, 0>{-1}.Floor());
+  static_assert(-1 == Fixed<Int, 1>{FromRatio(-1, 2)}.Floor());
 
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-8, 4)}.Floor());
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-7, 4)}.Floor());
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-5, 4)}.Floor());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-4, 4)}.Floor());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-3, 4)}.Floor());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-2, 4)}.Floor());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-1, 4)}.Floor());
+
+  // Round
+  static_assert(-1 == Fixed<Int, 0>{-1}.Round());
+  static_assert(-1 == Fixed<Int, 1>{-1}.Round());
+
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-8, 4)}.Round());
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-7, 4)}.Round());
+  static_assert(-2 == Fixed<Int, 2>{FromRatio(-6, 4)}.Round());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-5, 4)}.Round());
+  static_assert(-1 == Fixed<Int, 2>{FromRatio(-4, 4)}.Round());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(-2, 4)}.Round());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(-1, 4)}.Round());
+  static_assert(0 == Fixed<Int, 1>{FromRatio(-1, 2)}.Round());
+
+  // Integral
+  static_assert(Fixed<Int, 0>{FromRatio(-2, 1)} == Fixed<Int, 0>{FromRatio(-2, 1)}.Integral());
+  static_assert(Fixed<Int, 0>{FromRatio(-1, 1)} == Fixed<Int, 0>{FromRatio(-1, 1)}.Integral());
+
+  static_assert(Fixed<Int, 2>{FromRatio(-2, 1)} == Fixed<Int, 2>{FromRatio(-9, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(-2, 1)} == Fixed<Int, 2>{FromRatio(-8, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(-1, 1)} == Fixed<Int, 2>{FromRatio(-7, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(-1, 1)} == Fixed<Int, 2>{FromRatio(-5, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(-1, 1)} == Fixed<Int, 2>{FromRatio(-4, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(-3, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(-2, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(-1, 4)}.Integral());
+
+  // Fraction
+  static_assert(Fixed<Int, 0>{FromRatio(0, 1)} == Fixed<Int, 0>{FromRatio(-2, 1)}.Fraction());
+  static_assert(Fixed<Int, 0>{FromRatio(0, 1)} == Fixed<Int, 0>{FromRatio(-1, 1)}.Fraction());
+
+  static_assert(Fixed<Int, 2>{FromRatio(-1, 4)} == Fixed<Int, 2>{FromRatio(-9, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 4)} == Fixed<Int, 2>{FromRatio(-8, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(-3, 4)} == Fixed<Int, 2>{FromRatio(-7, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(-1, 4)} == Fixed<Int, 2>{FromRatio(-5, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 4)} == Fixed<Int, 2>{FromRatio(-4, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(-3, 4)} == Fixed<Int, 2>{FromRatio(-3, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(-2, 4)} == Fixed<Int, 2>{FromRatio(-2, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(-1, 4)} == Fixed<Int, 2>{FromRatio(-1, 4)}.Fraction());
+
+  // Absolute
+  static_assert(Fixed<Int, 2>{FromRatio(4, 4)} == Fixed<Int, 2>{FromRatio(-4, 4)}.Absolute());
+  static_assert(Fixed<Int, 2>{FromRatio(2, 4)} == Fixed<Int, 2>{FromRatio(-2, 4)}.Absolute());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 4)} == Fixed<Int, 2>{FromRatio(-1, 4)}.Absolute());
+
+  return true;
+}
+
+template <typename Int>
+static constexpr bool TestMethods() {
+  if constexpr (std::is_signed_v<Int>) {
+    static_assert(TestMethodsOnNegativeIntegers<Int>());
+  }
+
+  // Ceiling
+  static_assert(0 == Fixed<Int, 0>{0}.Ceiling());
+  static_assert(1 == Fixed<Int, 0>{1}.Ceiling());
+  static_assert(1 == Fixed<Int, 1>{FromRatio(1, 2)}.Ceiling());
+
+  static_assert(0 == Fixed<Int, 2>{FromRatio(-3, 4)}.Ceiling());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(-2, 4)}.Ceiling());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(-1, 4)}.Ceiling());
+  static_assert(0 == Fixed<Int, 2>{0}.Ceiling());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(1, 4)}.Ceiling());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(2, 4)}.Ceiling());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(3, 4)}.Ceiling());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(4, 4)}.Ceiling());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(5, 4)}.Ceiling());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(7, 4)}.Ceiling());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(8, 4)}.Ceiling());
+
+  // Floor
+  static_assert(0 == Fixed<Int, 0>{0}.Floor());
+  static_assert(1 == Fixed<Int, 0>{1}.Floor());
+  static_assert(0 == Fixed<Int, 1>{FromRatio(1, 2)}.Floor());
+
+  static_assert(0 == Fixed<Int, 2>{0}.Floor());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(1, 4)}.Floor());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(2, 4)}.Floor());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(3, 4)}.Floor());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(5, 4)}.Floor());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(7, 4)}.Floor());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(8, 4)}.Floor());
+
+  // Round
+  static_assert(0 == Fixed<Int, 0>{0}.Round());
+  static_assert(1 == Fixed<Int, 0>{1}.Round());
+  static_assert(1 == Fixed<Int, 1>{1}.Round());
+
+  static_assert(0 == Fixed<Int, 1>{FromRatio(1, 2)}.Round());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(1, 4)}.Round());
+  static_assert(0 == Fixed<Int, 2>{FromRatio(2, 4)}.Round());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(4, 4)}.Round());
+  static_assert(1 == Fixed<Int, 2>{FromRatio(5, 4)}.Round());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(6, 4)}.Round());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(7, 4)}.Round());
+  static_assert(2 == Fixed<Int, 2>{FromRatio(8, 4)}.Round());
+
+  // Integral
+  static_assert(Fixed<Int, 0>{FromRatio(0, 1)} == Fixed<Int, 0>{FromRatio(0, 1)}.Integral());
+  static_assert(Fixed<Int, 0>{FromRatio(1, 1)} == Fixed<Int, 0>{FromRatio(1, 1)}.Integral());
+  static_assert(Fixed<Int, 0>{FromRatio(2, 1)} == Fixed<Int, 0>{FromRatio(2, 1)}.Integral());
+
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(0, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(1, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(2, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(3, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 1)} == Fixed<Int, 2>{FromRatio(4, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 1)} == Fixed<Int, 2>{FromRatio(5, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 1)} == Fixed<Int, 2>{FromRatio(7, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(2, 1)} == Fixed<Int, 2>{FromRatio(8, 4)}.Integral());
+  static_assert(Fixed<Int, 2>{FromRatio(2, 1)} == Fixed<Int, 2>{FromRatio(9, 4)}.Integral());
+
+  // Fraction
+  static_assert(Fixed<Int, 0>{FromRatio(0, 1)} == Fixed<Int, 0>{FromRatio(0, 1)}.Fraction());
+  static_assert(Fixed<Int, 0>{FromRatio(0, 1)} == Fixed<Int, 0>{FromRatio(1, 1)}.Fraction());
+  static_assert(Fixed<Int, 0>{FromRatio(0, 1)} == Fixed<Int, 0>{FromRatio(2, 1)}.Fraction());
+
+  static_assert(Fixed<Int, 2>{FromRatio(0, 1)} == Fixed<Int, 2>{FromRatio(0, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 4)} == Fixed<Int, 2>{FromRatio(1, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(2, 4)} == Fixed<Int, 2>{FromRatio(2, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(3, 4)} == Fixed<Int, 2>{FromRatio(3, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 4)} == Fixed<Int, 2>{FromRatio(4, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 4)} == Fixed<Int, 2>{FromRatio(5, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(3, 4)} == Fixed<Int, 2>{FromRatio(7, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(0, 4)} == Fixed<Int, 2>{FromRatio(8, 4)}.Fraction());
+  static_assert(Fixed<Int, 2>{FromRatio(1, 4)} == Fixed<Int, 2>{FromRatio(9, 4)}.Fraction());
+
+  // Absolute
+  static_assert(Fixed<Int, 2>{FromRatio(1, 4)} == Fixed<Int, 2>{FromRatio(1, 4)}.Absolute());
+  static_assert(Fixed<Int, 2>{FromRatio(2, 4)} == Fixed<Int, 2>{FromRatio(2, 4)}.Absolute());
+  static_assert(Fixed<Int, 2>{FromRatio(4, 4)} == Fixed<Int, 2>{FromRatio(4, 4)}.Absolute());
+
+  return true;
+}
+
+static_assert(TestMethods<int8_t>());
+static_assert(TestMethods<int16_t>());
+static_assert(TestMethods<int32_t>());
+static_assert(TestMethods<int64_t>());
+static_assert(TestMethods<uint8_t>());
+static_assert(TestMethods<uint16_t>());
+static_assert(TestMethods<uint32_t>());
+static_assert(TestMethods<uint64_t>());
+
+// Boundary cases with zero integral bits.
 static_assert(1 == Fixed<int8_t, 7>::Max().Ceiling());
 static_assert(1 == Fixed<int16_t, 15>::Max().Ceiling());
 static_assert(1 == Fixed<int32_t, 31>::Max().Ceiling());
@@ -990,28 +1136,6 @@ static_assert(0 == Fixed<uint8_t, 8>::Min().Ceiling());
 static_assert(0 == Fixed<uint16_t, 16>::Min().Ceiling());
 static_assert(0 == Fixed<uint32_t, 32>::Min().Ceiling());
 static_assert(0 == Fixed<uint64_t, 64>::Min().Ceiling());
-
-static_assert(1 == Fixed<int, 0>{1}.Floor());
-static_assert(0 == Fixed<int, 0>{0}.Floor());
-static_assert(-1 == Fixed<int, 0>{-1}.Floor());
-
-static_assert(0 == Fixed<int, 1>{FromRatio(1, 2)}.Floor());
-static_assert(-1 == Fixed<int, 1>{FromRatio(-1, 2)}.Floor());
-
-static_assert(2 == Fixed<int, 2>{FromRatio(8, 4)}.Floor());
-static_assert(1 == Fixed<int, 2>{FromRatio(7, 4)}.Floor());
-static_assert(1 == Fixed<int, 2>{FromRatio(5, 4)}.Floor());
-static_assert(0 == Fixed<int, 2>{FromRatio(3, 4)}.Floor());
-static_assert(0 == Fixed<int, 2>{FromRatio(2, 4)}.Floor());
-static_assert(0 == Fixed<int, 2>{FromRatio(1, 4)}.Floor());
-static_assert(0 == Fixed<int, 2>{0}.Floor());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-1, 4)}.Floor());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-2, 4)}.Floor());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-3, 4)}.Floor());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-4, 4)}.Floor());
-static_assert(-2 == Fixed<int, 2>{FromRatio(-5, 4)}.Floor());
-static_assert(-2 == Fixed<int, 2>{FromRatio(-7, 4)}.Floor());
-static_assert(-2 == Fixed<int, 2>{FromRatio(-8, 4)}.Floor());
 
 static_assert(0 == Fixed<int8_t, 7>::Max().Floor());
 static_assert(0 == Fixed<int16_t, 15>::Max().Floor());
@@ -1031,15 +1155,6 @@ static_assert(0 == Fixed<uint16_t, 16>::Min().Floor());
 static_assert(0 == Fixed<uint32_t, 32>::Min().Floor());
 static_assert(0 == Fixed<uint64_t, 64>::Min().Floor());
 
-static_assert(1 == Fixed<int, 0>{1}.Round());
-static_assert(0 == Fixed<int, 1>{FromRatio(1, 2)}.Round());
-static_assert(0 == Fixed<int, 2>{FromRatio(1, 2)}.Round());
-static_assert(0 == Fixed<int, 2>{FromRatio(1, 4)}.Round());
-static_assert(0 == Fixed<int, 1>{FromRatio(-1, 2)}.Round());
-static_assert(0 == Fixed<int, 2>{FromRatio(-1, 2)}.Round());
-static_assert(0 == Fixed<int, 2>{FromRatio(-1, 4)}.Round());
-static_assert(-1 == Fixed<int, 0>{-1}.Round());
-
 static_assert(1 == Fixed<int8_t, 7>::Max().Round());
 static_assert(1 == Fixed<int16_t, 15>::Max().Round());
 static_assert(1 == Fixed<int32_t, 31>::Max().Round());
@@ -1058,12 +1173,62 @@ static_assert(0 == Fixed<uint16_t, 16>::Min().Round());
 static_assert(0 == Fixed<uint32_t, 32>::Min().Round());
 static_assert(0 == Fixed<uint64_t, 64>::Min().Round());
 
-static_assert(Fixed<int, 2>{FromRatio(1, 1)} == Fixed<int, 2>{FromRatio(1, 1)}.Absolute());
-static_assert(Fixed<int, 2>{FromRatio(1, 2)} == Fixed<int, 2>{FromRatio(1, 2)}.Absolute());
-static_assert(Fixed<int, 2>{FromRatio(1, 4)} == Fixed<int, 2>{FromRatio(1, 4)}.Absolute());
-static_assert(Fixed<int, 2>{FromRatio(1, 1)} == Fixed<int, 2>{FromRatio(-1, 1)}.Absolute());
-static_assert(Fixed<int, 2>{FromRatio(1, 2)} == Fixed<int, 2>{FromRatio(-1, 2)}.Absolute());
-static_assert(Fixed<int, 2>{FromRatio(1, 4)} == Fixed<int, 2>{FromRatio(-1, 4)}.Absolute());
+static_assert(Fixed<int8_t, 7>(0) == Fixed<int8_t, 7>::Max().Integral());
+static_assert(Fixed<int16_t, 15>(0) == Fixed<int16_t, 15>::Max().Integral());
+static_assert(Fixed<int32_t, 31>(0) == Fixed<int32_t, 31>::Max().Integral());
+static_assert(Fixed<int64_t, 63>(0) == Fixed<int64_t, 63>::Max().Integral());
+static_assert(Fixed<uint8_t, 8>(0) == Fixed<uint8_t, 8>::Max().Integral());
+static_assert(Fixed<uint16_t, 16>(0) == Fixed<uint16_t, 16>::Max().Integral());
+static_assert(Fixed<uint32_t, 32>(0) == Fixed<uint32_t, 32>::Max().Integral());
+static_assert(Fixed<uint64_t, 64>(0) == Fixed<uint64_t, 64>::Max().Integral());
+
+static_assert(Fixed<int8_t, 7>(-1) == Fixed<int8_t, 7>::Min().Integral());
+static_assert(Fixed<int16_t, 15>(-1) == Fixed<int16_t, 15>::Min().Integral());
+static_assert(Fixed<int32_t, 31>(-1) == Fixed<int32_t, 31>::Min().Integral());
+static_assert(Fixed<int64_t, 63>(-1) == Fixed<int64_t, 63>::Min().Integral());
+static_assert(Fixed<uint8_t, 8>(0) == Fixed<uint8_t, 8>::Min().Integral());
+static_assert(Fixed<uint16_t, 16>(0) == Fixed<uint16_t, 16>::Min().Integral());
+static_assert(Fixed<uint32_t, 32>(0) == Fixed<uint32_t, 32>::Min().Integral());
+static_assert(Fixed<uint64_t, 64>(0) == Fixed<uint64_t, 64>::Min().Integral());
+
+static_assert(Fixed<int, 31>{FromRatio(-1, 1)} == Fixed<int, 31>{FromRatio(-4, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(-1, 1)} == Fixed<int, 31>{FromRatio(-3, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(-1, 1)} == Fixed<int, 31>{FromRatio(-2, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(0, 1)} == Fixed<int, 31>{FromRatio(-1, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(0, 1)} == Fixed<int, 31>{FromRatio(0, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(0, 1)} == Fixed<int, 31>{FromRatio(1, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(0, 1)} == Fixed<int, 31>{FromRatio(2, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(0, 1)} == Fixed<int, 31>{FromRatio(3, 2)}.Integral());
+static_assert(Fixed<int, 31>{FromRatio(0, 1)} == Fixed<int, 31>{FromRatio(4, 2)}.Integral());
+
+static_assert(Fixed<int8_t, 7>::Max() == Fixed<int8_t, 7>::Max().Fraction());
+static_assert(Fixed<int16_t, 15>::Max() == Fixed<int16_t, 15>::Max().Fraction());
+static_assert(Fixed<int32_t, 31>::Max() == Fixed<int32_t, 31>::Max().Fraction());
+static_assert(Fixed<int64_t, 63>::Max() == Fixed<int64_t, 63>::Max().Fraction());
+static_assert(Fixed<uint8_t, 8>::Max() == Fixed<uint8_t, 8>::Max().Fraction());
+static_assert(Fixed<uint16_t, 16>::Max() == Fixed<uint16_t, 16>::Max().Fraction());
+static_assert(Fixed<uint32_t, 32>::Max() == Fixed<uint32_t, 32>::Max().Fraction());
+static_assert(Fixed<uint64_t, 64>::Max() == Fixed<uint64_t, 64>::Max().Fraction());
+
+template <typename Int, size_t Bits>
+static constexpr Fixed<Int, Bits> FixedMinPlusOne() {
+  // Can't do +1 because it's not representable when there are no integral bits.
+  return Fixed<Int, Bits>::Min() - Fixed<Int, Bits>(-1);
+}
+
+static_assert(FixedMinPlusOne<int8_t, 7>() == Fixed<int8_t, 7>::Min().Fraction());
+static_assert(FixedMinPlusOne<int16_t, 15>() == Fixed<int16_t, 15>::Min().Fraction());
+static_assert(FixedMinPlusOne<int32_t, 31>() == Fixed<int32_t, 31>::Min().Fraction());
+static_assert(FixedMinPlusOne<int64_t, 63>() == Fixed<int64_t, 63>::Min().Fraction());
+static_assert(Fixed<uint8_t, 8>(0) == Fixed<uint8_t, 8>::Min().Fraction());
+static_assert(Fixed<uint16_t, 16>(0) == Fixed<uint16_t, 16>::Min().Fraction());
+static_assert(Fixed<uint32_t, 32>(0) == Fixed<uint32_t, 32>::Min().Fraction());
+static_assert(Fixed<uint64_t, 64>(0) == Fixed<uint64_t, 64>::Min().Fraction());
+
+static_assert(Fixed<int, 31>{FromRatio(0, 2)} == Fixed<int, 31>{FromRatio(-2, 2)}.Fraction());
+static_assert(Fixed<int, 31>{FromRatio(-1, 2)} == Fixed<int, 31>{FromRatio(-1, 2)}.Fraction());
+static_assert(Fixed<int, 31>{FromRatio(0, 2)} == Fixed<int, 31>{FromRatio(0, 2)}.Fraction());
+static_assert(Fixed<int, 31>{FromRatio(1, 2)} == Fixed<int, 31>{FromRatio(1, 2)}.Fraction());
 
 static_assert(Fixed<int8_t, 7>::Max() == Fixed<int8_t, 7>::Max().Absolute());
 static_assert(Fixed<int16_t, 15>::Max() == Fixed<int16_t, 15>::Max().Absolute());
