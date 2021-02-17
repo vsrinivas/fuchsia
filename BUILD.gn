@@ -902,9 +902,6 @@ group("default") {
     "//build/input:build_only",
     "//build/unification",
     "//sdk",
-
-    # Once the kernel is migrated, have this be a dep of the kernel instead.
-    "//zircon/kernel/lib/boot-options:check-markdown",
   ]
 
   # SDK-only builds must not attempt to build images.

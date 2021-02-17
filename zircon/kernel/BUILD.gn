@@ -332,6 +332,9 @@ if (is_kernel) {
       ":code-patching",
       ":test",  # TODO: make optional, add testonly taint
       "top",
+
+      # Ensures that //docs/gen/boot-options.md is never stale.
+      "lib/boot-options:check-markdown($default_toolchain)",
     ]
     if (current_cpu == "arm64") {
       deps += [ "platform/generic-arm" ]

@@ -18,5 +18,5 @@ echo >&2 '\\\'
 echo >&2 ""
 echo >&2 "cp $1 $2"
 echo >&2 ""
-echo >&2 '\\\'echo >&2 '\\\'
+echo >&2 '\\\'
 exit 1
