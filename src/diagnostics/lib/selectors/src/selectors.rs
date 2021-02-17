@@ -588,26 +588,10 @@ pub fn sanitize_string_for_selectors(node: &str) -> String {
     sanitized_string
 }
 
-/// Evaluates a component moniker against a single selector, returning
-/// True if the selector matches the component, else false.
-///
-/// Requires: hierarchy_path is not empty.
-///           selectors contains valid Selectors.
-pub fn match_component_moniker_against_selector(
+pub fn match_moniker_against_component_selector(
     moniker: &[impl AsRef<str> + std::string::ToString],
-    selector: &Arc<Selector>,
+    component_selector: &ComponentSelector,
 ) -> Result<bool, Error> {
-    validate_selector(selector)?;
-
-    if moniker.is_empty() {
-        return Err(format_err!(
-            "Cannot have empty monikers, at least the component name is required."
-        ));
-    }
-
-    // Unwrap is safe because the validator ensures there is a component selector.
-    let component_selector = selector.component_selector.as_ref().unwrap();
-
     let moniker_selector: &Vec<StringSelector> = match &component_selector.moniker_segments {
         Some(path_vec) => &path_vec,
         None => return Err(format_err!("Component selectors require moniker segments.")),
@@ -629,6 +613,29 @@ pub fn match_component_moniker_against_selector(
     )?)?;
 
     Ok(moniker_regex.is_match(&sanitized_moniker))
+}
+
+/// Evaluates a component moniker against a single selector, returning
+/// True if the selector matches the component, else false.
+///
+/// Requires: hierarchy_path is not empty.
+///           selectors contains valid Selectors.
+pub fn match_component_moniker_against_selector(
+    moniker: &[impl AsRef<str> + std::string::ToString],
+    selector: &Arc<Selector>,
+) -> Result<bool, Error> {
+    validate_selector(selector)?;
+
+    if moniker.is_empty() {
+        return Err(format_err!(
+            "Cannot have empty monikers, at least the component name is required."
+        ));
+    }
+
+    // Unwrap is safe because the validator ensures there is a component selector.
+    let component_selector = selector.component_selector.as_ref().unwrap();
+
+    match_moniker_against_component_selector(moniker, component_selector)
 }
 
 /// Evaluates a component moniker against a list of selectors, returning
@@ -662,6 +669,39 @@ pub fn match_component_moniker_against_selectors(
                 .transpose()
         })
         .collect::<Result<Vec<Arc<Selector>>, Error>>()
+}
+
+/// Evaluates a component moniker against a list of component selectors, returning
+/// all of the component selectors which are matches for that moniker.
+///
+/// Requires: moniker is not empty.
+///           component_selectors contains valid ComponentSelectors.
+pub fn match_moniker_against_component_selectors(
+    moniker: &[String],
+    selectors: &[Arc<ComponentSelector>],
+) -> Result<Vec<Arc<ComponentSelector>>, Error> {
+    if moniker.is_empty() {
+        return Err(format_err!(
+            "Cannot have empty monikers, at least the component name is required."
+        ));
+    }
+
+    let component_selectors: Result<Vec<Arc<ComponentSelector>>, Error> = selectors
+        .iter()
+        .map(|selector| {
+            validate_component_selector(selector)?;
+            Ok(selector.clone())
+        })
+        .collect::<Result<Vec<Arc<ComponentSelector>>, Error>>();
+
+    component_selectors?
+        .iter()
+        .filter_map(|selector| {
+            match_moniker_against_component_selector(moniker, selector)
+                .map(|is_match| if is_match { Some(selector.clone()) } else { None })
+                .transpose()
+        })
+        .collect::<Result<Vec<Arc<ComponentSelector>>, Error>>()
 }
 
 #[cfg(test)]
@@ -1230,6 +1270,22 @@ mod tests {
                 moniker
             );
         }
+    }
+
+    #[test]
+    fn multiple_component_selectors_match_test() {
+        let selectors = vec![r#"*/echo.cmx"#, r#"ab*/echo.cmx"#, r#"abc/m*"#];
+        let moniker = vec!["abc".to_string(), "echo.cmx".to_string()];
+
+        let component_selectors: Vec<Arc<ComponentSelector>> = selectors
+            .into_iter()
+            .map(|selector| Arc::new(parse_component_selector(&selector.to_string()).unwrap()))
+            .collect();
+
+        let match_res =
+            match_moniker_against_component_selectors(moniker.as_slice(), &component_selectors);
+        assert!(match_res.is_ok());
+        assert_eq!(match_res.unwrap().len(), 2);
     }
 
     #[test]
