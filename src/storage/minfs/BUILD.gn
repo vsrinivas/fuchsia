@@ -107,8 +107,8 @@ static_library("minfs") {
   if (is_fuchsia) {
     if (minfs_enable_dirty_cache) {
       defines = [
-        # Enable dirty cache only when we are running on fuchis and gn config
-        # asks us to enable.
+        # Enable dirty cache only when we are running on fuchsia and gn config
+        # asks us to enable it.
         "MINFS_ENABLE_DIRTY_CACHE",
       ]
     }
