@@ -239,6 +239,31 @@
                     "/core/appmgr",
                 ],
             },
+            {
+                // We restrict access to PackageResolver because it gives direct access to package
+                // handles which provide executability which bypass VX security policy.
+                source_moniker: "/core/appmgr",
+                source: "component",
+                source_name: "fuchsia.pkg.PackageResolver",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/netsvc",
+                    "/core/universe-resolver",
+                ],
+            },
+            {
+                // We restrict access to PackageCache because it gives direct access to package
+                // handles which provide executability which bypass VX security policy.
+                source_moniker: "/core/pkg-cache",
+                source: "component",
+                source_name: "fuchsia.pkg.PackageCache",
+                capability: "protocol",
+                target_monikers: [
+                    "/core/appmgr",
+                ],
+            },
         ]
     }
 }
