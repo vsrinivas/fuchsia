@@ -2,11 +2,14 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.testing.FakeClock": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx",
-                "fuchsia.testing.FakeClockControl": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx"
+                "fuchsia.testing.FakeClock": "fuchsia-pkg://fuchsia.com/fake_clock_gotests#meta/fake_clock.cmx",
+                "fuchsia.testing.FakeClockControl": "fuchsia-pkg://fuchsia.com/fake_clock_gotests#meta/fake_clock.cmx"
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/fake_clock_test"
     },

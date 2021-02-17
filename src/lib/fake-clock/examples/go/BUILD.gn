@@ -29,7 +29,10 @@ go_test("fake_clock_test") {
 
 fuchsia_unittest_package("fake_clock_gotests") {
   manifest = "meta/fake_clock_test.cmx"
-  deps = [ ":fake_clock_test" ]
+  deps = [
+    ":fake_clock_test",
+    "//src/lib/fake-clock/svc",
+  ]
   test_specs = {
     environments = [ emu_env ]
   }

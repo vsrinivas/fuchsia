@@ -28,22 +28,11 @@ rustc_binary("fake_clock_svc") {
   sources = [ "src/main.rs" ]
 }
 
-package("svc") {
-  package_name = "fake_clock"
+fuchsia_component("svc") {
+  testonly = true
+  component_name = "fake_clock"
+  manifest = "meta/fake_clock.cmx"
   deps = [ ":fake_clock_svc" ]
-
-  binaries = [
-    {
-      name = "fake_clock_svc"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/fake_clock.cmx")
-      dest = "fake_clock.cmx"
-    },
-  ]
 }
 
 fuchsia_unittest_package("tests") {

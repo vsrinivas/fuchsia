@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fakeclock.test;
+using zx;
+
+/// An example protocol for demonstrating fake time.
+[Discoverable]
+protocol Example {
+    /// Gets the current monotonic time.
+    GetMonotonic() -> (zx.time time);
+    /// Wait until the given timeout, then return.
+    WaitUntil(zx.time timeout) -> ();
+};

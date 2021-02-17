@@ -35,9 +35,16 @@ executable("test_bin") {
   ]
 }
 
-fuchsia_unittest_package("fake_clock_lib_test") {
+fuchsia_component("test_component") {
+  testonly = true
+  component_name = "fake_clock_lib_test"
   manifest = "meta/fake_clock_lib_test.cmx"
   deps = [ ":test_bin" ]
+}
+
+fuchsia_test_package("fake_clock_lib_test") {
+  test_components = [ ":test_component" ]
+  deps = [ "//src/lib/fake-clock/svc" ]
   test_specs = {
     environments = [ emu_env ]
   }

@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.testing.FakeClock": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx",
-                "fuchsia.testing.FakeClockControl": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx"
+                "fuchsia.testing.FakeClock": "fuchsia-pkg://fuchsia.com/fake_clock_lib_test#meta/fake_clock.cmx",
+                "fuchsia.testing.FakeClockControl": "fuchsia-pkg://fuchsia.com/fake_clock_lib_test#meta/fake_clock.cmx"
             }
         }
     },
