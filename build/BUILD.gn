@@ -298,8 +298,6 @@ group("deprecated_package") {
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext/*",
     "//src/sys/pkg/lib/forced-fdr/*",
     "//src/sys/pkg/lib/omaha-client/*",
-    "//src/sys/pkg/testing/mock-omaha-server/*",
-    "//src/sys/pkg/testing/mock-resolver/*",
     "//src/sys/pkg/tests/far/*",
     "//src/sys/pkg/tests/pkg-resolver/*",
     "//src/sys/pkg/tests/pkgctl/*",

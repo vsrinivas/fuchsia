@@ -11,6 +11,6 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/mock-omaha-server-lib-test"
+        "binary": "bin/mock_omaha_server_lib_test"
     }
 }

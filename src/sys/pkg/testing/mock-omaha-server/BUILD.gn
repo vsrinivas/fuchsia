@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mock-omaha-server") {
   edition = "2018"
@@ -23,15 +23,9 @@ rustc_library("mock-omaha-server") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("mock-omaha-server-tests") {
+fuchsia_unittest_package("mock-omaha-server-tests") {
+  manifest = "meta/mock-omaha-server-lib-test.cmx"
   deps = [ ":mock-omaha-server_test" ]
-
-  tests = [
-    {
-      name = "mock_omaha_server_lib_test"
-      dest = "mock-omaha-server-lib-test"
-    },
-  ]
 }
 
 group("tests") {
