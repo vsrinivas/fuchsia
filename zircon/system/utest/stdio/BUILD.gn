@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("stdio-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -26,31 +26,11 @@ executable("stdio-test-util") {
   deps = [ "//sdk/lib/fdio" ]
 }
 
-package("stdio-test-package") {
-  testonly = true
-
+fuchsia_unittest_package("stdio-test-package") {
+  package_name = "stdio-test"
   deps = [
     ":stdio-test",
     ":stdio-test-util",
   ]
-
-  meta = [
-    {
-      path = "stdio-test.cmx"
-      dest = "stdio-test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "stdio-test"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "stdio-test-util"
-      dest = "stdio-test-util"
-    },
-  ]
+  manifest = "stdio-test.cmx"
 }
