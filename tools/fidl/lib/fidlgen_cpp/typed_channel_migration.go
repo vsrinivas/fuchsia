@@ -91,8 +91,6 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::llcpp::fuchsia::io2::Directory":                                  true,
 	"::llcpp::fuchsia::paver::DynamicDataSink":                          true,
 	"::llcpp::fuchsia::paver::Paver":                                    true,
-	"::llcpp::fuchsia::posix::socket::StreamSocket":                     true,
-	"::llcpp::fuchsia::pkg::LocalMirror":                                true,
 	"::llcpp::fuchsia::sysmem::Allocator":                               true,
 	"::llcpp::fuchsia::sysmem::BufferCollection":                        true,
 	"::llcpp::fuchsia::sysmem::BufferCollectionToken":                   true,
@@ -101,6 +99,5 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::llcpp::fuchsia::wlan::tap::WlantapCtl":                           true,
 	"::llcpp::fuchsia::driver::framework::Node":                         true,
 	"::llcpp::fuchsia::paver::DataSink":                                 true,
-	"::llcpp::fuchsia::component::runner::ComponentRunner":              true,
 	"::llcpp::fuchsia::power::manager::DriverManagerRegistration":       true,
 }
