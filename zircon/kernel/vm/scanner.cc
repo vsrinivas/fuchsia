@@ -31,6 +31,8 @@ constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
 constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
 constexpr uint32_t kScannerOpReclaim = 1u << 6;
 constexpr uint32_t kScannerOpHarvestAccessed = 1u << 7;
+constexpr uint32_t kScannerOpEnablePTReclaim = 1u << 8;
+constexpr uint32_t kScannerOpDisablePTReclaim = 1u << 9;
 
 // Amount of time between pager queue rotations.
 constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
@@ -55,6 +57,14 @@ uint64_t zero_page_scans_per_second = 0;
 
 // Eviction is globally enabled/disabled on startup through the kernel cmdline.
 bool eviction_enabled = false;
+
+enum class PageTableReclaim {
+  Always,
+  Never,
+  OnRequest,
+};
+
+PageTableReclaim page_table_reclaim_policy = PageTableReclaim::OnRequest;
 
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
@@ -220,6 +230,7 @@ void scanner_do_evict(uint64_t *pages_freed_pager_backed_out,
 
 int scanner_request_thread(void *) {
   bool disabled = false;
+  bool pt_eviction_enabled = false;
   zx_time_t next_rotate_deadline = zx_time_add_duration(current_time(), kQueueRotateTime);
   zx_time_t next_zero_scan_deadline = calc_next_zero_scan_deadline(current_time());
   while (1) {
@@ -255,11 +266,8 @@ int scanner_request_thread(void *) {
       op &= ~kScannerOpRotateQueues;
       pmm_page_queues()->RotatePagerBackedQueues();
       next_rotate_deadline = zx_time_add_duration(current, kQueueRotateTime);
-      // Accessed information currently only impacts page eviction, so only harvest when page
-      // eviction is enabled.
-      if (eviction_enabled) {
-        op |= kScannerOpHarvestAccessed;
-      }
+      // Accessed harvesting currently happens in sync with rotating pager queues.
+      op |= kScannerOpHarvestAccessed;
     }
 
     bool print = false;
@@ -289,9 +297,36 @@ int scanner_request_thread(void *) {
       op &= ~kScannerOpDump;
       scanner_print_stats(zx_time_sub_time(next_rotate_deadline, current));
     }
+    if (op & kScannerOpEnablePTReclaim) {
+      pt_eviction_enabled = true;
+      op &= ~kScannerOpEnablePTReclaim;
+    }
+    if (op & kScannerOpDisablePTReclaim) {
+      pt_eviction_enabled = false;
+      op &= ~kScannerOpDisablePTReclaim;
+    }
     if (op & kScannerOpHarvestAccessed) {
       op &= ~kScannerOpHarvestAccessed;
-      VmObject::HarvestAllAccessedBits();
+      // Determine if our architecture requires us to harvest the terminal accessed bits in order
+      // to perform page table reclamation.
+      const bool pt_reclaim_harvest_terminal = !ArchVmAspace::HasNonTerminalAccessedFlag() &&
+                                               page_table_reclaim_policy != PageTableReclaim::Never;
+      // Potentially reclaim any unaccessed user page tables. This must be done before the other
+      // accessed bit harvesting, otherwise if we do not have non-terminal accessed flags we will
+      // always reclaim everything.
+      if (page_table_reclaim_policy != PageTableReclaim::Never) {
+        const VmAspace::NonTerminalAction action =
+            page_table_reclaim_policy == PageTableReclaim::Always || pt_eviction_enabled
+                ? VmAspace::NonTerminalAction::FreeUnaccessed
+                : VmAspace::NonTerminalAction::Retain;
+        VmAspace::HarvestAllUserPageTables(action);
+      }
+      // Accessed information for page mappings for VMOs impacts page eviction and page table
+      // reclamation. For page table reclamation it is only needed if we do not have non-terminal
+      // accessed flags.
+      if (pt_reclaim_harvest_terminal || eviction_enabled) {
+        VmObject::HarvestAllAccessedBits();
+      }
     }
     if (current >= next_zero_scan_deadline || reclaim_all) {
       const uint64_t scan_limit = reclaim_all ? UINT64_MAX : zero_page_scans_per_second;
@@ -393,6 +428,22 @@ uint64_t scanner_do_zero_scan(uint64_t limit) {
   return deduped;
 }
 
+void scanner_enable_page_table_reclaim() {
+  if (page_table_reclaim_policy != PageTableReclaim::OnRequest) {
+    return;
+  }
+  scanner_operation.fetch_or(kScannerOpEnablePTReclaim);
+  scanner_request_event.Signal();
+}
+
+void scanner_disable_page_table_reclaim() {
+  if (page_table_reclaim_policy != PageTableReclaim::OnRequest) {
+    return;
+  }
+  scanner_operation.fetch_or(kScannerOpDisablePTReclaim);
+  scanner_request_event.Signal();
+}
+
 void scanner_push_disable_count() {
   Guard<Mutex> guard{scanner_disabled_lock::Get()};
   if (scanner_disable_count == 0) {
@@ -430,6 +481,16 @@ static void scanner_init_func(uint level) {
   if (gCmdline.GetBool(kernel_option::kPageScannerPromoteNoClones, false)) {
     VmObject::EnableEvictionPromoteNoClones();
   }
+  const char *pt_eviction = gCmdline.GetString("kernel.page-scanner.page-table-eviction-policy");
+  if (pt_eviction && !strcmp(pt_eviction, "never")) {
+    page_table_reclaim_policy = PageTableReclaim::Never;
+  } else if (pt_eviction && !strcmp(pt_eviction, "always")) {
+    page_table_reclaim_policy = PageTableReclaim::Always;
+  } else if (pt_eviction && !strcmp(pt_eviction, "on_request")) {
+    page_table_reclaim_policy = PageTableReclaim::OnRequest;
+  } else {
+    // Leave the policy at the default.
+  }
   thread->Resume();
 }
 
@@ -446,6 +507,8 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     printf("%s reclaim_all             : attempt to reclaim all possible memory\n", argv[0].str);
     printf("%s rotate_queue            : immediately rotate the page queues\n", argv[0].str);
     printf("%s reclaim <MB> [only_old] : attempt to reclaim requested MB of memory.\n",
+           argv[0].str);
+    printf("%s pt_reclaim [on|off]     : turn unused page table reclamation on or off\n",
            argv[0].str);
     printf("%s harvest_accessed        : harvest all page accessed information\n", argv[0].str);
     return ZX_ERR_INTERNAL;
@@ -479,6 +542,29 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     }
     const uint64_t bytes = argv[2].u * MB;
     scanner_trigger_asynchronous_evict(bytes, 0, eviction_level, scanner::Output::Print);
+  } else if (!strcmp(argv[1].str, "pt_reclaim")) {
+    if (argc < 3) {
+      goto usage;
+    }
+    bool enable = false;
+    if (!strcmp(argv[2].str, "on")) {
+      enable = true;
+    } else if (!strcmp(argv[2].str, "off")) {
+      enable = false;
+    } else {
+      goto usage;
+    }
+    if (page_table_reclaim_policy == PageTableReclaim::Always) {
+      printf("Page table reclamation set to always by command line, cannot adjust\n");
+    } else if (page_table_reclaim_policy == PageTableReclaim::Never) {
+      printf("Page table reclamation set to never by command line, cannot adjust\n");
+    } else {
+      if (enable) {
+        scanner_enable_page_table_reclaim();
+      } else {
+        scanner_disable_page_table_reclaim();
+      }
+    }
   } else {
     printf("unknown command\n");
     goto usage;

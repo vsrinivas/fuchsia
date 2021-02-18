@@ -682,3 +682,20 @@ bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {
   return vdso_code_mapping_ &&
          Intersects(vdso_code_mapping_->base(), vdso_code_mapping_->size(), base, size);
 }
+
+void VmAspace::HarvestAllUserPageTables(NonTerminalAction action) {
+  Guard<Mutex> guard{&aspace_list_lock};
+
+  for (auto& a : aspaces) {
+    a.HarvestUserPageTables(action);
+  }
+}
+
+void VmAspace::HarvestUserPageTables(NonTerminalAction action) {
+  Guard<Mutex> guard{&lock_};
+  if (!is_user() || aspace_destroyed_)
+    return;
+  zx_status_t __UNUSED result =
+      arch_aspace().HarvestNonTerminalAccessed(base(), size() / PAGE_SIZE, action);
+  DEBUG_ASSERT(result == ZX_OK);
+}

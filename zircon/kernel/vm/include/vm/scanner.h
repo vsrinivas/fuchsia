@@ -57,6 +57,14 @@ void scanner_trigger_asynchronous_evict(
 uint64_t scanner_synchronous_evict(uint64_t max_pages, scanner::EvictionLevel eviction_level,
                                    scanner::Output output);
 
+// Sets the scanner to reclaim page tables when harvesting accessed bits in the future, unless
+// page table reclamation was explicitly disabled on the command line. Repeatedly enabling does not
+// stack.
+void scanner_enable_page_table_reclaim();
+
+// Inverse of |scanner_enable_page_table_reclaim|, also does not stack.
+void scanner_disable_page_table_reclaim();
+
 // AutoVmScannerDisable is an RAII helper for disabling scanning using the
 // scanner_push_disable_count()/scanner_pop_disable_count(). Disabling the scanner is useful in test
 // code where it is not possible or practical to hold locks to prevent the scanner from taking

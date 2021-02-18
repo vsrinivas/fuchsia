@@ -474,9 +474,9 @@ zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
   ArchVmAspace::HarvestCallback callback = [&accessed_callback, this](paddr_t paddr, vaddr_t vaddr,
                                                                       uint) {
     AssertHeld(object_->lock_ref());
-    // Any pages mapped in from a vmo must have originated as a vm_page_t.
     vm_page_t* page = paddr_to_vm_page(paddr);
-    DEBUG_ASSERT(page);
+    // It's possible page is invalid in the case of physical mappings that did not originate from
+    // a vm_page_t. We just let the accessed_callback deal with this.
 
     // Turn the virtual address into an object offset. We know this will work as our virtual address
     // range we are operating on was already determined from the object earlier in

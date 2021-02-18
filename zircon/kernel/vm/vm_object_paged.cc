@@ -110,17 +110,33 @@ void VmObjectPaged::HarvestAccessedBits() {
   canary_.Assert();
 
   Guard<Mutex> guard{lock()};
-  // If there is no root page source, then we have nothing worth harvesting bits from.
-  if (!cow_pages_locked()->is_pager_backed_locked()) {
+
+  // Without non-terminal access flags we must harvest from every mapping in order for page table
+  // reclamation to happen.
+  constexpr bool must_harvest = !ArchVmAspace::HasNonTerminalAccessedFlag();
+
+  // If there is no root page source, and we aren't required to harvest, then we have nothing
+  // worth harvesting bits from.
+  if (!must_harvest && !cow_pages_locked()->is_pager_backed_locked()) {
     return;
   }
 
-  fbl::Function<bool(vm_page_t*, uint64_t)> f = [this](vm_page_t* p, uint64_t offset) {
+  // Cache whether or not this is pager backed for more efficient short circuiting later. By
+  // leveraging the fact we know that we would have returned early above if not pager backed and
+  // with non-terminal access flag we can enable |pager_backed| to potentially be a compile time
+  // constant and get propagated into the lambda below.
+  const bool pager_backed = must_harvest ? cow_pages_locked()->is_pager_backed_locked() : true;
+
+  fbl::Function<bool(vm_page_t*, uint64_t)> f = [&](vm_page_t* p, uint64_t offset) {
     AssertHeld(lock_);
-    // Skip the zero page as we are never going to evict it and initial zero pages will not be
-    // returned by GetPageLocked down below.
-    if (p == vm_get_zero_page()) {
-      return false;
+    // We only map in things from actual vm_page_t's, so we expect one to have been provided to us.
+    DEBUG_ASSERT(p);
+
+    if (p == vm_get_zero_page() || !pager_backed) {
+      // Skip the zero page as we are never going to evict it and initial zero pages will not be
+      // returned by GetPageLocked down below. We may still need to harvest the accessed bit for
+      // page table reclamation though.
+      return must_harvest;
     }
     // Use GetPageLocked to perform page lookup. Pass neither software fault, hardware fault or
     // write to prevent any committing or copy-on-write behavior. This will just cause the page to

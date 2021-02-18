@@ -314,9 +314,7 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
       mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
       ArchVmAspace::NonTerminalAction::FreeUnaccessed));
   if constexpr (!ArchVmAspace::HasNonTerminalAccessedFlag()) {
-    EXPECT_OK(mem->aspace()->arch_aspace().HarvestAccessed(
-        mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-        [](paddr_t, vaddr_t, uint) { return true; }));
+    vmo->HarvestAccessedBits();
   }
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
@@ -326,9 +324,7 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
       mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
       ArchVmAspace::NonTerminalAction::FreeUnaccessed));
   if constexpr (!ArchVmAspace::HasNonTerminalAccessedFlag()) {
-    EXPECT_OK(mem->aspace()->arch_aspace().HarvestAccessed(
-        mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-        [](paddr_t, vaddr_t, uint) { return true; }));
+    vmo->HarvestAccessedBits();
   }
   EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
       mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
