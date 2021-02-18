@@ -117,6 +117,10 @@ func runGen(
 	}
 	if staticSpec.GenerateIde {
 		genCmd = append(genCmd, "--ide=json")
+	} else {
+		for _, f := range staticSpec.IdeFiles {
+			genCmd = append(genCmd, fmt.Sprintf("--ide=%s", f))
+		}
 	}
 
 	genCmd = append(genCmd, fmt.Sprintf("--args=%s", strings.Join(args, " ")))

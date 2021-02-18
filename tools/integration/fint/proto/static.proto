@@ -91,6 +91,7 @@ message Static {
   bool generate_compdb = 18;
 
   // Whether to generate an IDE project.json file containing target information.
+  // TODO(olivernewman): Remove in favor of ide_files.
   bool generate_ide = 19;
 
   // Host-only targets to build.
@@ -101,4 +102,7 @@ message Static {
 
   // Whether to use a rust cache when building.
   bool enable_rust_cache = 22;
+
+  // Which IDE files to generate.
+  repeated string ide_files = 23;
 }

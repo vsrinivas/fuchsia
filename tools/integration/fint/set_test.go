@@ -143,12 +143,22 @@ func TestRunGen(t *testing.T) {
 			},
 		},
 		{
-			name: "generate IDE project",
+			name: "generate JSON IDE project",
 			staticSpec: &fintpb.Static{
 				GenerateIde: true,
 			},
 			expectedOptions: []string{
 				"--ide=json",
+			},
+		},
+		{
+			name: "generate IDE files",
+			staticSpec: &fintpb.Static{
+				IdeFiles: []string{"json", "vs"},
+			},
+			expectedOptions: []string{
+				"--ide=json",
+				"--ide=vs",
 			},
 		},
 	}
