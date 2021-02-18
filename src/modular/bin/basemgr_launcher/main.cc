@@ -13,6 +13,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <zircon/errors.h>
 
 #include <iostream>
 #include <regex>
@@ -25,8 +26,10 @@
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
+constexpr char kLaunchCommandString[] = "launch";
 constexpr char kShutdownBasemgrCommandString[] = "shutdown";
 constexpr char kClearConfigCommandString[] = "delete_config";
+constexpr char kDisableRestartAgentOnCrashFlagString[] = "disable_agent_restart_on_crash";
 
 // Returns false if no basemgr debug service can be found, because
 // basemgr is not running.
@@ -113,16 +116,88 @@ std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
   return dir;
 }
 
+zx_status_t LaunchBasemgr(async::Loop* loop, bool disable_agent_restart_on_crash) {
+  // If basemgr is already running, shut it down first.
+  if (files::Glob(kBasemgrHubPath).size() != 0) {
+    auto result = ShutdownBasemgr(loop);
+    if (result != ZX_OK) {
+      std::cerr << "Could not shut down running instance of basemgr: "
+                << zx_status_get_string(result);
+      return result;
+    }
+  }
+
+  // Read the configuration file in from stdin.
+  std::string config_str;
+  std::string line;
+  while (getline(std::cin, line)) {
+    config_str += line;
+  }
+
+  auto config = modular::DefaultConfig();
+  if (!config_str.empty()) {
+    auto parse_result = modular::ParseConfig(config_str);
+    if (parse_result.is_error()) {
+      std::cerr << "Could not parse ModularConfig: " << parse_result.error();
+      return ZX_ERR_INVALID_ARGS;
+    }
+    config = parse_result.take_ok_result().value;
+  }
+
+  if (disable_agent_restart_on_crash) {
+    config.mutable_sessionmgr_config()->set_disable_agent_restart_on_crash(true);
+  }
+
+  // Create the pseudo directory with our config "file" mapped to
+  // kConfigFilename.
+  auto config_dir = CreateConfigPseudoDir(modular::ConfigToJsonString(config));
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
+  config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel());
+
+  // Build a LaunchInfo with the config directory above mapped to
+  // /config_override/data.
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kBasemgrUrl;
+  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
+  launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
+
+  // Quit the loop when basemgr's out directory has been mounted.
+  fuchsia::sys::ComponentControllerPtr controller;
+  controller.events().OnDirectoryReady = [&controller, &loop] {
+    controller->Detach();
+    loop->Quit();
+  };
+
+  // Launch a basemgr instance with the custom namespace we created above.
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  fuchsia::sys::LauncherPtr launcher;
+  context->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  loop->Run();
+  return ZX_OK;
+}
+
 std::string GetUsage() {
   return R"(Control the lifecycle of instances of basemgr.
 
-Usage: basemgr_launcher [<command>]
+Usage: basemgr_launcher [<command>] [--disable_agent_restart_on_crash] 
 
   <command>
-    (none)         Launches a new instance of basemgr with a modular JSON configuration
+    (none)         Alias for 'launch'.
+    launch         Launches a new instance of basemgr with a modular JSON configuration
                    read from stdin.
     shutdown       Terminates the running instance of basemgr, if found.
     delete_config  Clears any cached persistent configuration (see below).
+    
+  --disable_agent_restart_on_crash
+
+    Convenience flag for the 'launch' command to set
+    ModularConfig.sessionmgr_config.disable_agent_restart_on_crash to true.
+    Equivalent to setting the flag to true in the ModularConfig provided as
+    input to the 'launch' command.
 
 # Examples (from host machine):
 
@@ -145,68 +220,21 @@ int main(int argc, const char** argv) {
   syslog::SetTags({"basemgr_launcher"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::string config_str;
-  if (argc > 1) {
-    const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-    const auto& positional_args = command_line.positional_args();
-    const auto& cmd = positional_args.empty() ? "" : positional_args[0];
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  const auto& positional_args = command_line.positional_args();
 
-    if (cmd.empty()) {
-      config_str = modular::ConfigToJsonString(modular::DefaultConfig());
-    } else if (cmd == kShutdownBasemgrCommandString) {
-      return ShutdownBasemgr(&loop);
-    } else if (cmd == kClearConfigCommandString) {
-      return ClearPersistedConfig(&loop);
-    } else {
-      std::cerr << GetUsage() << std::endl;
-      return ZX_ERR_INVALID_ARGS;
-    }
-  } else {
-    // Read the configuration file in from stdin.
-    std::string line;
-    while (getline(std::cin, line)) {
-      config_str += line;
-    }
+  const auto& cmd = positional_args.empty() ? kLaunchCommandString : positional_args[0];
+
+  if (cmd == kShutdownBasemgrCommandString) {
+    return ShutdownBasemgr(&loop);
+  }
+  if (cmd == kClearConfigCommandString) {
+    return ClearPersistedConfig(&loop);
+  }
+  if (cmd == kLaunchCommandString) {
+    return LaunchBasemgr(&loop, command_line.HasOption(kDisableRestartAgentOnCrashFlagString));
   }
 
-  // If basemgr is already running, shut it down first.
-  if (files::Glob(kBasemgrHubPath).size() != 0) {
-    auto result = ShutdownBasemgr(&loop);
-    if (result != ZX_OK) {
-      std::cerr << "Could not shut down running instance of basemgr: "
-                << zx_status_get_string(result);
-      return result;
-    }
-  }
-
-  // Create the pseudo directory with our config "file" mapped to
-  // kConfigFilename.
-  auto config_dir = CreateConfigPseudoDir(config_str);
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel());
-
-  // Build a LaunchInfo with the config directory above mapped to
-  // /config_override/data.
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kBasemgrUrl;
-  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
-  launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-  launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
-
-  // Quit the loop when basemgr's out directory has been mounted.
-  fuchsia::sys::ComponentControllerPtr controller;
-  controller.events().OnDirectoryReady = [&controller, &loop] {
-    controller->Detach();
-    loop.Quit();
-  };
-
-  // Launch a basemgr instance with the custom namespace we created above.
-  std::unique_ptr<sys::ComponentContext> context =
-      sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  fuchsia::sys::LauncherPtr launcher;
-  context->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-
-  loop.Run();
-  return ZX_OK;
+  std::cerr << GetUsage() << std::endl;
+  return ZX_ERR_INVALID_ARGS;
 }

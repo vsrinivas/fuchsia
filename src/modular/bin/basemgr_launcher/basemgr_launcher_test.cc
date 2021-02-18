@@ -62,6 +62,7 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
     return exit_code;
   }
 
+ private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   sys::testing::ComponentInterceptor interceptor_;
 };
@@ -88,6 +89,13 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
   RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 1; });
 }
+
+TEST_F(BasemgrLauncherTest, BasemgrLauncherAcceptsLaunchCommand) {
+  // Launch basemgr.
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"launch"}));
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"launch", "--disable_agent_restart_on_crash"}));
+  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"launch", "--disable_agent_restart_on_crash"}));
+};
 
 // Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.
 TEST_F(BasemgrLauncherTest, BadArgs) {
