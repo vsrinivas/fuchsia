@@ -206,6 +206,7 @@ home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
 indoc = "0.3.3"
 nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
+parking = "2"
 petgraph = "0.5.1"
 proc-macro2 = "1.0.24"
 pulldown-cmark = "0.6.0"

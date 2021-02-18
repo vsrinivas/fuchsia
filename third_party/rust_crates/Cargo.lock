@@ -962,6 +962,7 @@ dependencies = [
  "once_cell",
  "openat",
  "owning_ref",
+ "parking",
  "parking_lot 0.9.0",
  "paste",
  "percent-encoding 2.1.0",
@@ -1902,6 +1903,12 @@ checksum = "49a4b8ea2179e6a2e27411d3bca09ca6dd630821cf6894c6c7c8467a8ee7ef13"
 dependencies = [
  "stable_deref_trait",
 ]
+
+[[package]]
+name = "parking"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 
 [[package]]
 name = "parking_lot"

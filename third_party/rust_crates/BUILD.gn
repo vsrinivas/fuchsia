@@ -360,6 +360,12 @@ if (current_os == "fuchsia") {
   }
 }
 
+if (!(current_os == "fuchsia")) {
+  group("parking") {
+    deps = [ ":parking-v2_0_0" ]
+  }
+}
+
 group("parking_lot") {
   deps = [ ":parking_lot-v0_9_0" ]
 }
@@ -5195,6 +5201,27 @@ rust_library("owning_ref-v0_4_0") {
     "--edition=2015",
     "-Cmetadata=163177019c6dfe3a",
     "-Cextra-filename=-163177019c6dfe3a",
+  ]
+}
+
+rust_library("parking-v2_0_0") {
+  crate_name = "parking"
+  crate_root = "//third_party/rust_crates/vendor/parking/src/lib.rs"
+  output_name = "parking-f53320ef53395fc3"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f53320ef53395fc3",
+    "-Cextra-filename=-f53320ef53395fc3",
   ]
 }
 
