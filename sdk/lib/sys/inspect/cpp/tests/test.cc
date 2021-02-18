@@ -30,8 +30,8 @@ using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/sys_inspect_cpp_tests#meta/"
-    "sys_inspect_cpp_bin.cmx";
-constexpr char kTestProcessName[] = "sys_inspect_cpp_bin.cmx";
+    "sys_inspect_cpp.cmx";
+constexpr char kTestProcessName[] = "sys_inspect_cpp.cmx";
 
 class SysInspectTest : public sys::testing::TestWithEnvironment {
  protected:
