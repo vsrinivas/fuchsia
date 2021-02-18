@@ -269,14 +269,16 @@ bool MsdArmDevice::InitializeHardware() {
   DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() == 0);
   EnableInterrupts();
   InitializeHardwareQuirks(&gpu_features_, register_io_.get());
+  EnableAllCores();
+  return true;
+}
 
+void MsdArmDevice::EnableAllCores() {
   uint64_t enabled_cores = 1;
 #if defined(MSD_ARM_ENABLE_ALL_CORES)
   enabled_cores = gpu_features_.shader_present;
 #endif
   power_manager_->EnableCores(register_io_.get(), enabled_cores);
-
-  return true;
 }
 
 std::shared_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id) {
@@ -387,6 +389,20 @@ int MsdArmDevice::DeviceThreadLoop() {
   return 0;
 }
 
+void MsdArmDevice::HandleResetInterrupt() {
+  DLOG("Received GPU reset completed");
+  if (exiting_protected_mode_flag_) {
+    exiting_protected_mode_flag_ = false;
+    // Call Finish before clearing the irq register because the TEE requires the interrupt is
+    // still set to prove that the reset happened.
+    zx_status_t status = mali_protocol_client_.FinishExitProtectedMode();
+    if (status != ZX_OK) {
+      MAGMA_LOG(ERROR, "error from FinishExitProtectedMode: %d", status);
+    }
+  }
+  reset_semaphore_->Signal();
+}
+
 int MsdArmDevice::GpuInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("Gpu InterruptThread");
   DLOG("GPU Interrupt thread started");
@@ -432,8 +448,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     // Handle interrupts on the interrupt thread so the device thread can wait for them to
     // complete.
     if (irq_status.reset_completed().get()) {
-      DLOG("Received GPU reset completed");
-      reset_semaphore_->Signal();
+      HandleResetInterrupt();
       irq_status.reset_completed().set(0);
     }
     if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
@@ -1316,16 +1331,46 @@ bool MsdArmDevice::IsProtectedModeSupported() {
 
 void MsdArmDevice::EnterProtectedMode() {
   TRACE_DURATION("magma", "MsdArmDevice::EnterProtectedMode");
-  // TODO(fxbug.dev/13130): If cache-coherency is enabled, power down L2 and wait for the
-  // completion of that.
-  register_io_->Write32(registers::GpuCommand::kOffset,
-                        registers::GpuCommand::kCmdSetProtectedMode);
+  // Remove perf counter address mapping.
+  perf_counters_->ForceDisable();
+
+  if (!mali_properties_.use_protected_mode_callbacks) {
+    // TODO(fxbug.dev/13130): If cache-coherency is enabled, power down L2 and wait for the
+    // completion of that.
+    register_io_->Write32(registers::GpuCommand::kOffset,
+                          registers::GpuCommand::kCmdSetProtectedMode);
+    return;
+  }
+  // |force_expire| is false because nothing should have been using an address
+  // space before. Do this before powering down L2 so connections don't try to
+  // hit the MMU while that's happening.
+  address_manager_->ClearAddressMappings(false);
+
+  if (!PowerDownShaders()) {
+    MAGMA_LOG(ERROR, "Powering down shaders timed out");
+    // Keep trying to reset the device, or the job scheduler will hang forever.
+  }
+  if (!PowerDownL2()) {
+    MAGMA_LOG(ERROR, "Powering down L2 timed out");
+    // Keep trying to reset the device, or the job scheduler will hang forever.
+  }
+
+  zx_status_t status = mali_protocol_client_.EnterProtectedMode();
+  if (status != ZX_OK) {
+    MAGMA_LOG(ERROR, "Error from EnterProtectedMode: %d", status);
+  }
+
+  EnableAllCores();
+
+  if (!power_manager_->WaitForShaderReady(register_io_.get())) {
+    MAGMA_LOG(WARNING, "Waiting for shader ready failed");
+    return;
+  }
 }
 
 bool MsdArmDevice::ExitProtectedMode() {
   TRACE_DURATION("magma", "MsdArmDevice::ExitProtectedMode");
-  // Remove perf counter address mapping.
-  perf_counters_->ForceDisable();
+  DASSERT(perf_counters_->force_disabled());
   // |force_expire| is false because nothing should have been using an address
   // space before. Do this before powering down L2 so connections don't try to
   // hit the MMU while that's happening.
@@ -1352,12 +1397,22 @@ bool MsdArmDevice::ResetDevice() {
       .set_reset_completed(1)
       .WriteTo(register_io_.get());
 
-  register_io_->Write32(registers::GpuCommand::kOffset, registers::GpuCommand::kCmdSoftReset);
+  if (!mali_properties_.use_protected_mode_callbacks) {
+    register_io_->Write32(registers::GpuCommand::kOffset, registers::GpuCommand::kCmdSoftReset);
+  } else {
+    exiting_protected_mode_flag_ = true;
+    zx_status_t status = mali_protocol_client_.StartExitProtectedMode();
+    if (status != ZX_OK) {
+      MAGMA_LOG(ERROR, "Error from StartExitProtectedMode: %d", status);
+      return false;
+    }
+  }
 
   if (!assume_reset_happened_ && !reset_semaphore_->Wait(1000)) {
     MAGMA_LOG(WARNING, "Hardware reset timed out");
     return false;
   }
+  DASSERT(assume_reset_happened_ || !exiting_protected_mode_flag_);
 
   if (!InitializeHardware()) {
     MAGMA_LOG(WARNING, "Initialize hardware failed");

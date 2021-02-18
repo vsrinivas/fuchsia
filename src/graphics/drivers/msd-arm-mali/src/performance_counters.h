@@ -61,6 +61,8 @@ class PerformanceCounters {
 
   void RemoveForceDisable() { force_disabled_ = false; }
 
+  bool force_disabled() const { return force_disabled_; }
+
  private:
   friend class PerformanceCounterTest;
   enum class PerformanceCounterState {

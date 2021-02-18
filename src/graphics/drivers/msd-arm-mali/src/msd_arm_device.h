@@ -199,6 +199,9 @@ class MsdArmDevice : public msd_device_t,
   void InitInspect();
   void UpdateProtectedModeSupported();
   void AppendInspectEvent(InspectEvent event);
+  // Power on all GPU cores.
+  void EnableAllCores();
+  void HandleResetInterrupt();
 
   magma::Status ProcessDumpStatusToLog();
   magma::Status ProcessPerfCounterSampleCompleted();
@@ -235,6 +238,8 @@ class MsdArmDevice : public msd_device_t,
   MAGMA_GUARDED(inspect_events_mutex_) std::deque<InspectEvent> inspect_events_;
 
   ddk::ArmMaliProtocolClient mali_protocol_client_;
+  // Flag is set to true if reset completion should trigger FinishExitProtectedMode.
+  std::atomic_bool exiting_protected_mode_flag_{false};
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;

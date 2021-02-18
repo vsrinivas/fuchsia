@@ -118,10 +118,11 @@ class TestMsdArmDevice {
     device->perf_counters_->AddManager(&perf_count_manager);
     device->perf_counters_->Update();
 
+    EXPECT_TRUE(device->perf_counters_->running());
     device->EnterProtectedMode();
     EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
     EXPECT_TRUE(device->IsInProtectedMode());
-    EXPECT_TRUE(device->perf_counters_->running());
+    EXPECT_FALSE(device->perf_counters_->running());
 
     EXPECT_TRUE(device->ExitProtectedMode());
     EXPECT_EQ(1u, device->power_manager_->l2_ready_status());

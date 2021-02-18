@@ -398,6 +398,7 @@ class TestNonHardwareMsdArmDevice {
   }
 
   static void mali_protocol_handler(void* ctx, mali_properties_t* properties) {
+    *properties = {};
     properties->supports_protected_mode = true;
   }
 
@@ -430,6 +431,51 @@ class TestNonHardwareMsdArmDevice {
     EXPECT_EQ(registers::GpuCommand::kCmdSoftReset,
               device->register_io_->Read32(registers::GpuCommand::kOffset));
   }
+
+  static void mali_get_properties_with_callbacks(void* ctx, mali_properties_t* properties) {
+    *properties = {};
+    properties->supports_protected_mode = true;
+    properties->use_protected_mode_callbacks = true;
+  }
+
+  static zx_status_t mali_start_exit_protected(void* ctx) {
+    static_cast<TestNonHardwareMsdArmDevice*>(ctx)->got_start_exit_protected_ = true;
+    return ZX_OK;
+  }
+  static zx_status_t mali_finish_exit_protected(void* ctx) {
+    static_cast<TestNonHardwareMsdArmDevice*>(ctx)->got_finish_exit_protected_ = true;
+    return ZX_OK;
+  }
+
+  void ProtectedCallbacks() {
+    auto driver = MsdArmDriver::Create();
+    arm_mali_protocol mali_proto{};
+    arm_mali_protocol_ops_t ops;
+    ops.get_properties = mali_get_properties_with_callbacks;
+    ops.start_exit_protected_mode = mali_start_exit_protected;
+    ops.finish_exit_protected_mode = mali_finish_exit_protected;
+    mali_proto.ctx = this;
+    mali_proto.ops = &ops;
+    std::vector<uint8_t> proto_vec(sizeof(mali_proto));
+    memcpy(proto_vec.data(), &mali_proto, proto_vec.size());
+
+    auto device = driver->CreateDeviceForTesting(std::make_unique<FakePlatformDeviceWithProtocol>(
+                                                     ZX_PROTOCOL_ARM_MALI, std::move(proto_vec)),
+                                                 std::make_unique<MockBusMapper>());
+    ASSERT_TRUE(device);
+    EXPECT_TRUE(device->IsProtectedModeSupported());
+    EXPECT_TRUE(got_start_exit_protected_);
+    EXPECT_TRUE(device->exiting_protected_mode_flag_);
+    device->HandleResetInterrupt();
+    EXPECT_FALSE(device->exiting_protected_mode_flag_);
+    EXPECT_TRUE(got_finish_exit_protected_);
+    // Callbacks should have been used instead of a soft stop command.
+    EXPECT_EQ(0u, device->register_io_->Read32(registers::GpuCommand::kOffset));
+  }
+
+ private:
+  bool got_start_exit_protected_ = false;
+  bool got_finish_exit_protected_ = false;
 };
 
 TEST(NonHardwareMsdArmDevice, MockDump) {
@@ -470,4 +516,9 @@ TEST(NonHardwareMsdArmDevice, MaliProtocol) {
 TEST(NonHardwareMsdArmDevice, ResetOnStart) {
   TestNonHardwareMsdArmDevice test;
   test.ResetOnStart();
+}
+
+TEST(NonHardwareMsdArmDevice, ProtectedCallbacks) {
+  TestNonHardwareMsdArmDevice test;
+  test.ProtectedCallbacks();
 }

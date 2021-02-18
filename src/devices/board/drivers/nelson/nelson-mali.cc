@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <zircon/syscalls/smc.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -49,6 +50,17 @@ static pbus_bti_t mali_btis[] = {
     },
 };
 
+// SMC is used to switch GPU into protected mode.
+constexpr pbus_smc_t nelson_mali_smcs[] = {
+    {
+        .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_BASE,
+        .count = 1,
+        // The video decoder and TEE driver also use this SMC range. The aml-gpu driver only uses
+        // the kFuncIdConfigDeviceSecure function with DMC_DEV_ID_GPU, and the other users don't
+        // touch device ID.
+        .exclusive = false,
+    },
+};
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
@@ -78,7 +90,7 @@ zx_status_t Nelson::MaliInit() {
   mali_dev.bti_count = countof(mali_btis);
   using ::llcpp::fuchsia::hardware::gpu::amlogic::Metadata;
   auto metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
-                      .set_supports_protected_mode(std::make_unique<bool>(false))
+                      .set_supports_protected_mode(std::make_unique<bool>(true))
                       .build();
   fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
@@ -94,6 +106,8 @@ zx_status_t Nelson::MaliInit() {
   };
   mali_dev.metadata_list = mali_metadata_list;
   mali_dev.metadata_count = countof(mali_metadata_list);
+  mali_dev.smc_list = nelson_mali_smcs;
+  mali_dev.smc_count = countof(nelson_mali_smcs);
 
   // Populate the BTI information
   mali_btis[0].iommu_index = 0;

@@ -77,6 +77,9 @@ class AmlGpu final : public DdkDeviceType,
 
   // ArmMaliProtocol implementation.
   void ArmMaliGetProperties(mali_properties_t* out_properties);
+  zx_status_t ArmMaliEnterProtectedMode();
+  zx_status_t ArmMaliStartExitProtectedMode();
+  zx_status_t ArmMaliFinishExitProtectedMode();
 
   zx_status_t SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn);
 
@@ -88,6 +91,7 @@ class AmlGpu final : public DdkDeviceType,
   void SetClkFreqSource(int32_t clk_source);
   void SetInitialClkFreqSource(int32_t clk_source);
   zx_status_t ProcessMetadata(std::vector<uint8_t> metadata);
+  zx_status_t SetProtected(uint32_t protection_mode);
 
   ddk::PDev pdev_;
   mali_properties_t properties_{};
@@ -96,6 +100,8 @@ class AmlGpu final : public DdkDeviceType,
   std::optional<ddk::MmioBuffer> gpu_buffer_;
 
   ::llcpp::fuchsia::hardware::registers::Device::SyncClient reset_register_;
+  // Resource used to perform SMC calls. Only needed on SM1.
+  zx::resource secure_monitor_;
 
   aml_gpu_block_t* gpu_block_;
   std::unique_ptr<aml_hiu_dev_t> hiu_dev_;

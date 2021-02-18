@@ -19,6 +19,7 @@
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/smc.h>
 
 #include <bind/fuchsia/arm/platform/cpp/fidl.h>
 #include <bind/fuchsia/platform/cpp/fidl.h>
@@ -31,6 +32,7 @@
 
 #include "s905d2-gpu.h"
 #include "s912-gpu.h"
+#include "src/devices/tee/drivers/optee/tee-smc.h"
 #include "src/graphics/drivers/aml-gpu/aml_gpu-bind.h"
 #include "t931-gpu.h"
 
@@ -200,6 +202,66 @@ void AmlGpu::ArmMaliGetProperties(mali_properties_t* out_properties) {
   *out_properties = properties_;
 }
 
+// Match the definitions in the Amlogic OPTEE implementation.
+#define DMC_DEV_ID_GPU 1
+
+#define DMC_DEV_TYPE_NON_SECURE 0
+#define DMC_DEV_TYPE_SECURE 1
+#define DMC_DEV_TYPE_INACCESSIBLE 2
+
+zx_status_t AmlGpu::SetProtected(uint32_t protection_mode) {
+  if (!secure_monitor_)
+    return ZX_ERR_NOT_SUPPORTED;
+
+  // Call into the TEE to mark a particular hardware unit as able to access
+  // protected memory or not.
+  zx_smc_parameters_t params = {};
+  zx_smc_result_t result = {};
+  constexpr uint32_t kFuncIdConfigDeviceSecure = 14;
+  params.func_id = tee_smc::CreateFunctionId(tee_smc::kFastCall, tee_smc::kSmc32CallConv,
+                                             tee_smc::kTrustedOsService, kFuncIdConfigDeviceSecure);
+  params.arg1 = DMC_DEV_ID_GPU;
+  params.arg2 = protection_mode;
+  zx_status_t status = zx_smc_call(secure_monitor_.get(), &params, &result);
+  if (status != ZX_OK) {
+    GPU_ERROR("Failed to set unit %ld protected status %ld code: %d", params.arg1, params.arg2,
+              status);
+    return status;
+  }
+  if (result.arg0 != 0) {
+    GPU_ERROR("Failed to set unit %ld protected status %ld: %lx", params.arg1, params.arg2,
+              result.arg0);
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
+zx_status_t AmlGpu::ArmMaliEnterProtectedMode() {
+  if (!secure_monitor_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return SetProtected(DMC_DEV_TYPE_SECURE);
+}
+
+zx_status_t AmlGpu::ArmMaliStartExitProtectedMode() {
+  if (!secure_monitor_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  // Switch device to inaccessible mode. This will prevent writes to all memory
+  // and start resetting the GPU.
+  return SetProtected(DMC_DEV_TYPE_INACCESSIBLE);
+}
+
+zx_status_t AmlGpu::ArmMaliFinishExitProtectedMode() {
+  if (!secure_monitor_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  // Switch to non-secure mode. This will check that the device has been reset
+  // and will re-enable access to non-protected memory.
+  return SetProtected(DMC_DEV_TYPE_NON_SECURE);
+}
+
 zx_status_t AmlGpu::SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn) {
   if (clk_source >= kMaxGpuClkFreq) {
     GPU_ERROR("Invalid clock freq source index\n");
@@ -312,6 +374,18 @@ zx_status_t AmlGpu::Bind() {
   reset_register.Connect(std::move(register_server_end));
   reset_register_ =
       ::llcpp::fuchsia::hardware::registers::Device::SyncClient(std::move(register_client_end));
+
+  if (info.pid == PDEV_PID_AMLOGIC_S905D3 && properties_.supports_protected_mode) {
+    // S905D3 needs to use an SMC into the TEE to do protected mode switching.
+    static constexpr uint32_t kTrustedOsSmcIndex = 0;
+    status = pdev_.GetSmc(kTrustedOsSmcIndex, &secure_monitor_);
+    if (status != ZX_OK) {
+      GPU_ERROR("Unable to retrieve secure monitor SMC: %d", status);
+      return status;
+    }
+
+    properties_.use_protected_mode_callbacks = true;
+  }
 
   if (info.pid == PDEV_PID_AMLOGIC_S905D2 || info.pid == PDEV_PID_AMLOGIC_S905D3) {
     status = Gp0Init();
