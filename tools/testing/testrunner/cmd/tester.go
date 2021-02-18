@@ -500,7 +500,7 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 
 // Exposed for testability.
 var newTestStartedContext = func(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, time.Second)
+	return context.WithTimeout(ctx, 5*time.Second)
 }
 
 // lastWriteSaver is an io.Writer that saves the bytes written in the last Write().

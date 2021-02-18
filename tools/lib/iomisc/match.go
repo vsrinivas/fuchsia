@@ -65,7 +65,7 @@ func (m *MatchingReader) Read(p []byte) (int, error) {
 			}
 		}
 		if m.matchIdx >= 0 {
-			break
+			return n, io.EOF
 		}
 	}
 	return n, err

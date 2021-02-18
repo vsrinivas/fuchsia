@@ -105,7 +105,7 @@ func TestMatchingReader(t *testing.T) {
 		assertMatch(t, m, nil)
 		buf.Write([]byte("ABCD"))
 		p := make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
+		if _, err := m.Read(p); err != nil && !errors.Is(err, io.EOF) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		assertMatch(t, m, sequence)
