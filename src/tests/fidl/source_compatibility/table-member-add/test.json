@@ -1,0 +1,102 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_before.dart",
+            "steps": [
+                {
+                    "fidl": "step_01_after",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "dart/step_02_after.dart",
+                    "step_num": 2
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_before.go",
+            "steps": [
+                {
+                    "fidl": "step_01_after",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "go/step_02_after.go",
+                    "step_num": 2
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_01_after",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "hlcpp/step_02_after.cc",
+                    "step_num": 2
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_01_after",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "llcpp/step_02_after.cc",
+                    "step_num": 2
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "fidl": "step_01_after",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "You can now use the new member"
+                    ],
+                    "source": "rust/step_02_after.rs",
+                    "step_num": 2
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_01_after": {
+            "instructions": [
+                "Add the new member"
+            ],
+            "source": "fidl/step_01_after.test.fidl"
+        }
+    },
+    "title": "Add a table member"
+}

@@ -18,6 +18,8 @@ group("tests") {
     "protocol-event-remove:tests",
     "protocol-method-add:tests",
     "protocol-method-remove:tests",
+    "table-member-add:tests",
+    "table-member-remove:tests",
     "union-flexible-strict:tests",
     "union-member-add:tests",
     "union-member-remove:tests",

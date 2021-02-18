@@ -208,7 +208,7 @@ fn use_bits(bits: &fidl_lib::Flags) {
 
 ```
 ## Update FIDL Library {#step-2}
-- Remove the old member
+- Remove the bits member
 
 ```diff
   flexible bits Flags {

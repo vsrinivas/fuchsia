@@ -297,7 +297,7 @@ fn reader(color: fidl_lib::Color) -> &'static str {
 
 ```
 ## Update FIDL Library {#step-2}
-- Remove the old member
+- Remove the enum member
 
 ```diff
   flexible enum Color {

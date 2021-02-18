@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+import 'package:fidl_fidl_test_tablememberremove/fidl_async.dart' as fidllib;
+
+// [START contents]
+void useTable(fidllib.Profile profile) {
+  if (profile.timezone != null) {
+    print('timezone: ${profile.timezone}');
+  }
+  if (profile.temperatureUnit != null) {
+    print('preferred unit: ${profile.temperatureUnit}');
+  }
+  if (profile.darkMode != null) {
+    print('dark mode on: ${profile.darkMode}');
+  }
+  profile.$unknownData?.forEach((ordinal, data) {
+    print('unknown ordinal $ordinal with bytes ${data.data}');
+  });
+}
+// [END contents]

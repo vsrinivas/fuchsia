@@ -96,7 +96,6 @@ From this, you can deduce that the files in question are
 `protocol-event-remove/fidl/step_02_during.dart`, and use that to debug the
 compile error.
 
-
 ### "Reverse" tests:
 
 Many tests are symmetrical: for example, removing a method consists of the
@@ -117,6 +116,8 @@ the test, there are two additional manual steps:
 * Update the transition instructions for the test. Generally, this will involve
   negating any existing instructions. For example, an instruction of
   `"add method foo"`, would become `"remove method foo"` in the reversed test.
+* Run the regen command (`scompat regen [test_name]`) to regenerate the
+  documentation based on any instruction changes.
 
 ## Transition terminology
 

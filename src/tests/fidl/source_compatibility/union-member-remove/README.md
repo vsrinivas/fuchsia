@@ -335,7 +335,7 @@ fn reader(value: fidl_lib::JsonValue) -> String {
 
 ```
 ## Update FIDL Library {#step-2}
-- Remove the old variant
+- Remove the union variant
 
 ```diff
   flexible union JsonValue {

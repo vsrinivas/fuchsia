@@ -116,7 +116,8 @@ def generate_docs(test_root: Path, test: CompatTest, out: IO) -> str:
             out.write(f'[link](#fidl-{i})')
     out.write('\n')
 
-    for b, transition in test.bindings.items():
+    bindings = sorted(test.bindings.items())
+    for b, transition in bindings:
         out.write(f'{b}|[link](#{b}-init)')
         src_step_nums = {
             s.step_num for s in transition.steps if isinstance(s, SourceStep)
@@ -137,13 +138,13 @@ def generate_docs(test_root: Path, test: CompatTest, out: IO) -> str:
     # Initial bindings
     prev_fidl = test.fidl[starting_fidl].source
     prev_srcs = {}
-    for b, t in test.bindings.items():
+    for b, t in bindings:
         out.write(f'### {binding_title(b)} {{#{b}-init}}\n')
         cat(out, b, test_root / t.starting_src)
         prev_srcs[b] = t.starting_src
 
     # Transition steps
-    remaining_steps = {b: list(t.steps) for b, t in test.bindings.items()}
+    remaining_steps = {b: list(t.steps) for b, t in bindings}
     current_step = 1
     while any(remaining_steps.values()):
         is_first_write = True
