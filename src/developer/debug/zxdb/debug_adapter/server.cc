@@ -15,6 +15,14 @@
 
 namespace zxdb {
 
+DebugAdapterServer::DebugAdapterServer(Session* session, uint16_t port)
+    : session_(session), port_(port) {
+  int fd[2] = {};
+  pipe(fd);
+  exit_pipe_[0] = fbl::unique_fd(fd[0]);
+  exit_pipe_[1] = fbl::unique_fd(fd[1]);
+}
+
 Err DebugAdapterServer::Init() {
   main_loop_ = debug_ipc::MessageLoop::Current();
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
@@ -72,6 +80,26 @@ void DebugAdapterServer::ListenBackgroundThread() {
 }
 
 bool DebugAdapterServer::Accept(fbl::unique_fd& client) {
+  // Wait on server_socket fd and exit_event fd until new connection is received or thread exit is
+  // requested.
+  fd_set read_set;
+  FD_ZERO(&read_set);
+  FD_SET(server_socket_.get(), &read_set);
+  FD_SET(exit_pipe_[0].get(), &read_set);
+  int nfds =
+      server_socket_.get() > exit_pipe_[0].get() ? server_socket_.get() : exit_pipe_[0].get();
+  auto status = select(nfds + 1, &read_set, NULL, NULL, NULL);
+  if (status <= 0) {
+    // An error or timeout occured.
+    return false;
+  }
+
+  if (FD_ISSET(exit_pipe_[0].get(), &read_set)) {
+    // Thread exit requested.
+    return false;
+  }
+
+  // Accept the new connection.
   sockaddr_in6 addr;
   memset(&addr, 0, sizeof(addr));
 
@@ -79,6 +107,7 @@ bool DebugAdapterServer::Accept(fbl::unique_fd& client) {
   client =
       fbl::unique_fd(accept(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen));
   if (!client.is_valid()) {
+    FX_LOGS(ERROR) << "Accept failed.";
     return false;
   }
 
@@ -129,9 +158,16 @@ void DebugAdapterServer::ResetClientConnection() {
 
 DebugAdapterServer::~DebugAdapterServer() {
   ResetClientConnection();
-  server_socket_.reset();
+
   if (background_thread_) {
     background_thread_exit_ = true;
+    // Write to exit_event to unblock select().
+    int ret;
+    do {
+      int val = 1;
+      ret = write(exit_pipe_[1].get(), &val, sizeof(val));
+    } while (ret < 0 && errno == EINTR);
+    // Wait for background thread to exit.
     background_thread_->join();
     background_thread_.reset();
   }

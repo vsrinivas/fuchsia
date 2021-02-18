@@ -27,7 +27,7 @@ class DebugAdapterServerObserver {
 // incoming connections.
 class DebugAdapterServer {
  public:
-  DebugAdapterServer(Session* session, uint16_t port) : session_(session), port_(port) {}
+  DebugAdapterServer(Session* session, uint16_t port);
 
   ~DebugAdapterServer();
 
@@ -48,6 +48,7 @@ class DebugAdapterServer {
 
   std::unique_ptr<std::thread> background_thread_;
   bool background_thread_exit_ = false;
+  fbl::unique_fd exit_pipe_[2];
   std::unique_ptr<DebugAdapterContext> context_;
   std::unique_ptr<debug_ipc::BufferedFD> buffer_;
 

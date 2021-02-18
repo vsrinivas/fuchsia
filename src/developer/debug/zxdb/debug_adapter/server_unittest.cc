@@ -30,6 +30,7 @@ class TestClient {
     addr.sin6_addr = in6addr_any;
     addr.sin6_port = htons(port);
     if (connect(socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in6))) {
+      FX_LOGS(ERROR) << "Could not connect to port - " << port;
       return false;
     }
     return true;
@@ -41,7 +42,7 @@ class TestClient {
   fbl::unique_fd socket_;
 };
 
-constexpr uint16_t kServerPort = 32100;
+constexpr uint16_t kServerPort = 15678;
 
 }  // namespace
 
@@ -63,27 +64,25 @@ class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObs
 
 TEST_F(DebugAdapterServerTest, InitTest) { server().Init(); }
 
-// TODO(bug 66771): Re-enable when the port issue is fixed.
-TEST_F(DebugAdapterServerTest, DISABLED_ConnectionTest) {
+TEST_F(DebugAdapterServerTest, ConnectionTest) {
   auto err = server().Init();
-  EXPECT_FALSE(err.has_error());
+  ASSERT_FALSE(err.has_error());
   TestClient client;
-  EXPECT_TRUE(client.Connect(kServerPort));
+  ASSERT_TRUE(client.Connect(kServerPort));
   // Loop is quit once the observer is notified of the connection
   debug_ipc::MessageLoop::Current()->Run();
   EXPECT_TRUE(server().IsConnected());
 }
 
-// TODO(bug 66134): Re-enable this test when it's not flaky.
-TEST_F(DebugAdapterServerTest, DISABLED_ConnectDisconnectTest) {
-  server().Init();
+TEST_F(DebugAdapterServerTest, ConnectDisconnectTest) {
+  auto err = server().Init();
+  ASSERT_FALSE(err.has_error());
   TestClient client;
-  EXPECT_TRUE(client.Connect(kServerPort));
+  ASSERT_TRUE(client.Connect(kServerPort));
 
   // Loop is quit once the observer is notified of the connection
   debug_ipc::MessageLoop::Current()->Run();
-  EXPECT_TRUE(server().IsConnected());
-
+  ASSERT_TRUE(server().IsConnected());
   client.Disconnect();
 
   // Loop is quit once the observer is notified of the disconnection
