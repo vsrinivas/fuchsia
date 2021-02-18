@@ -504,10 +504,7 @@ mod tests {
         assert_eq!(vdl_args.image_size, "2G");
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, "host");
-        assert_eq!(
-            vdl_args.cache_root.as_path(),
-            get_sdk_data_dir().unwrap_or_default().join("qemu-x64").join("0.20201130.3.1")
-        );
+        assert!(vdl_args.cache_root.as_path().ends_with("qemu-x64/0.20201130.3.1"));
     }
 
     #[test]
