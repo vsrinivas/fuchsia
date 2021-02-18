@@ -53,27 +53,30 @@ class MFingerNTapRecognizer : public GestureRecognizer {
   void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
 
  private:
-  // Represents state internal to a contest, i.e. contest member, long-press timeout, and tap state.
   struct Contest;
 
+  // Helper method invoked when more than m fingers are in contact with the
+  // screen.
+  virtual void OnExcessFingers();
+
+  // Helper method invoked when the mth finger comes into contact with the
+  // screen at the start of a tap.
+  virtual void OnTapStarted();
+
+  // Helper method invoked for valid MOVE events.
+  virtual void OnMoveEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+
+  // Helper method invoked for valid UP events.
+  virtual void OnUpEvent();
+
   // Resets contest_ and gesture_context_.
-  void ResetRecognizer();
-
-  // Contains validation logic which is needed for PointerEvent.
-  bool EventIsValid(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
-
-  // Returns true if GestureInfo exists in |start_info_by_finger_| for pointer_id represented by
-  // |pointer_event|.
-  bool StartInfoExist(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
-
-  // Checks if required number of taps are recognized.
-  bool CheckIfGestureIsDetected() const;
+  virtual void ResetRecognizer();
 
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;
 
   // Callback which will be executed when gesture is detected and is also a winner in the arena.
-  OnMFingerNTapCallback on_m_finger_n_tap_callback_;
+  OnMFingerNTapCallback on_recognize_;
 
   // Number of fingers in gesture.
   const uint32_t number_of_fingers_in_gesture_;

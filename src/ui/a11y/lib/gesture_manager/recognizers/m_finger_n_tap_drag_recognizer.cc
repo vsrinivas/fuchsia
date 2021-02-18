@@ -1,8 +1,8 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_drag_recognizer.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -15,9 +15,9 @@
 
 namespace a11y {
 
-struct MFingerNTapRecognizer::Contest {
+struct MFingerNTapDragRecognizer::Contest {
   Contest(std::unique_ptr<ContestMember> contest_member)
-      : member(std::move(contest_member)), reject_task(member.get()) {}
+      : member(std::move(contest_member)), reject_task(member.get()), accept_task(member.get()) {}
 
   std::unique_ptr<ContestMember> member;
   // Indicates whether m fingers have been on the screen at the same time
@@ -25,61 +25,112 @@ struct MFingerNTapRecognizer::Contest {
   bool tap_in_progress = false;
   // Keeps the count of the number of taps detected so far, for the gesture.
   uint32_t number_of_taps_detected = 0;
-
+  // Indicaes whether the recognizer has successfully accepted the gesture.
+  bool won = false;
   // Async task used to schedule long-press timeout.
   async::TaskClosureMethod<ContestMember, &ContestMember::Reject> reject_task;
+  // Async task to schedule delayed win for held tap.
+  async::TaskClosureMethod<ContestMember, &ContestMember::Accept> accept_task;
 };
 
-MFingerNTapRecognizer::MFingerNTapRecognizer(OnMFingerNTapCallback callback,
-                                             uint32_t number_of_fingers, uint32_t number_of_taps)
-    : on_recognize_(std::move(callback)),
-      number_of_fingers_in_gesture_(number_of_fingers),
-      number_of_taps_in_gesture_(number_of_taps) {}
+MFingerNTapDragRecognizer::MFingerNTapDragRecognizer(OnMFingerNTapDragCallback on_recognize,
+                                                     OnMFingerNTapDragCallback on_update,
+                                                     OnMFingerNTapDragCallback on_complete,
+                                                     uint32_t number_of_fingers,
+                                                     uint32_t number_of_taps)
+    : number_of_fingers_in_gesture_(number_of_fingers),
+      number_of_taps_in_gesture_(number_of_taps),
+      on_recognize_(std::move(on_recognize)),
+      on_update_(std::move(on_update)),
+      on_complete_(std::move(on_complete)) {}
 
-MFingerNTapRecognizer::~MFingerNTapRecognizer() = default;
+MFingerNTapDragRecognizer::~MFingerNTapDragRecognizer() = default;
 
-void MFingerNTapRecognizer::OnExcessFingers() { ResetRecognizer(); }
-
-void MFingerNTapRecognizer::OnTapStarted() {
-  contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
+void MFingerNTapDragRecognizer::OnTapStarted() {
+  // If this tap is the last in the gesture, post a task to accept the gesture
+  // if the fingers are still on screen after kMinTapHoldDuration has elapsed.
+  // Otherwise, if this tap is NOT the last in the gesture, post a task to
+  // reject the gesture if the fingers have not lifted by the time kTapTimeout
+  // elapses.
+  if (contest_->number_of_taps_detected == number_of_taps_in_gesture_ - 1) {
+    contest_->accept_task.PostDelayed(async_get_default_dispatcher(), kMinTapHoldDuration);
+  } else {
+    contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
+  }
 }
 
-void MFingerNTapRecognizer::OnMoveEvent(
+void MFingerNTapDragRecognizer::OnExcessFingers() {
+  // If the gesture has already been accepted (i.e. the user has successfully
+  // performed n-1 taps, followed by a valid hold, but an (m+1)th finger comes
+  // down on screen, we should invoke the on_complete_ callback.
+  // In any event, the gesture is no longer valid, so we should reset the
+  // recognizer.
+  if (contest_->won) {
+    on_complete_(gesture_context_);
+  }
+
+  ResetRecognizer();
+}
+
+void MFingerNTapDragRecognizer::OnMoveEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
-  if (!PointerEventIsValidTap(gesture_context_, pointer_event)) {
+  // If we've accepted the gesture, invoke on_update_. Otherwise, if the current
+  // tap is the last (which could become a drag), we should check if the
+  // fingers have already moved far enough to constitute a drag.
+  // If this tap is not the last, we should verify that the
+  // fingers are close enough to their starting locations to constitute a valid
+  // tap.
+  if (contest_->won) {
+    on_update_(gesture_context_);
+  } else if (contest_->number_of_taps_detected == number_of_taps_in_gesture_ - 1) {
+    if (DisplacementExceedsDragThreshold()) {
+      contest_->member->Accept();
+      return;
+    }
+  } else if (!PointerEventIsValidTap(gesture_context_, pointer_event)) {
     ResetRecognizer();
   }
 }
 
-void MFingerNTapRecognizer::OnUpEvent() {
-  // If there are still fingers on the screen, then we haven't yet detected
-  // a full tap, so there's no more work to do at this point.
-  if (NumberOfFingersOnScreen(gesture_context_)) {
+void MFingerNTapDragRecognizer::OnUpEvent() {
+  // If we've already accepted the gesture, then we should invoke on_complete_
+  // and reset the recognizer once the first UP event is received (at which
+  // point, the drag is considered complete).
+  if (contest_->won) {
+    on_complete_(gesture_context_);
+    ResetRecognizer();
     return;
   }
 
-  // If we've made it this far, we know that (1) m fingers were on screen
-  // simultaneously during the current gesture, and (2) The m fingers have
-  // now been removed, without any interceding finger DOWN events.
-  // Therefore, we can conclude that a complete m-finger tap has occurred.
-  contest_->number_of_taps_detected++;
+  // If we have counted number_of_taps_in_gesture_ - 1 complete taps, then this
+  // UP event must mark the end of the drag. If we have not already accepted the
+  // gesture at this point, we should reject.
+  if (contest_->number_of_taps_detected == number_of_taps_in_gesture_ - 1) {
+    ResetRecognizer();
+    return;
+  }
 
-  // Check if this is not the last tap of the gesture.
-  if (contest_->number_of_taps_detected < number_of_taps_in_gesture_) {
+  // If this UP event removed the last finger from the screen, then the most
+  // recent tap is complete.
+  if (!NumberOfFingersOnScreen(gesture_context_)) {
+    // If we've made it this far, we know that (1) m fingers were on screen
+    // simultaneously during the current single tap, and (2) The m fingers have
+    // now been removed, without any interceding finger DOWN events.
+    // Therefore, we can conclude that a complete m-finger tap has occurred.
+    contest_->number_of_taps_detected++;
+
+    // Mark that all m fingers were removed from the screen.
     contest_->tap_in_progress = false;
+
     // Cancel task which was scheduled for detecting single tap.
     contest_->reject_task.Cancel();
 
     // Schedule task with delay of timeout_between_taps_.
     contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
-  } else {
-    // Tap gesture is detected.
-    contest_->member->Accept();
-    contest_.reset();
   }
 }
 
-void MFingerNTapRecognizer::HandleEvent(
+void MFingerNTapDragRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   FX_DCHECK(contest_);
   FX_DCHECK(pointer_event.has_pointer_id())
@@ -191,24 +242,38 @@ void MFingerNTapRecognizer::HandleEvent(
   }
 }
 
-void MFingerNTapRecognizer::ResetRecognizer() {
+bool MFingerNTapDragRecognizer::DisplacementExceedsDragThreshold() {
+  return SquareDistanceBetweenPoints(
+             gesture_context_.StartingCentroid(false /*use_local_coordinates*/),
+             gesture_context_.CurrentCentroid(false /*use_local_coordinates*/)) >=
+         kDragDisplacementThreshold * kDragDisplacementThreshold;
+}
+
+void MFingerNTapDragRecognizer::ResetRecognizer() {
   contest_.reset();
   ResetGestureContext(&gesture_context_);
 }
 
-void MFingerNTapRecognizer::OnWin() {
+void MFingerNTapDragRecognizer::OnWin() {
   on_recognize_(gesture_context_);
-  ResetGestureContext(&gesture_context_);
+  if (contest_) {
+    contest_->won = true;
+  } else {
+    // It's possible that we don't get awarded the win until after the gesture has
+    // completed, in which case we also need to call the complete handler.
+    on_complete_(gesture_context_);
+    ResetRecognizer();
+  }
 }
 
-void MFingerNTapRecognizer::OnDefeat() { ResetRecognizer(); }
+void MFingerNTapDragRecognizer::OnDefeat() { ResetRecognizer(); }
 
-void MFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
+void MFingerNTapDragRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
   ResetRecognizer();
   contest_ = std::make_unique<Contest>(std::move(contest_member));
 }
 
-std::string MFingerNTapRecognizer::DebugName() const {
+std::string MFingerNTapDragRecognizer::DebugName() const {
   return fxl::StringPrintf("MFingerNTapDragRecognizer(m=%d, n=%d)", number_of_fingers_in_gesture_,
                            number_of_taps_in_gesture_);
 }

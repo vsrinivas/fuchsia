@@ -11,6 +11,7 @@ executable("gesture_recognizers_tests") {
   testonly = true
 
   sources = [
+    "m_finger_n_tap_drag_recognizer_test.cc",
     "m_finger_n_tap_recognizer_test.cc",
     "one_finger_drag_recognizer_test.cc",
     "one_finger_n_tap_recognizer_test.cc",

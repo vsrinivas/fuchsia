@@ -151,4 +151,10 @@ bool PointerEventIsValidTap(const GestureContext& gesture_context,
   return dx * dx + dy * dy <= kGestureMoveThreshold * kGestureMoveThreshold;
 }
 
+float SquareDistanceBetweenPoints(::fuchsia::math::PointF a, ::fuchsia::math::PointF b) {
+  auto dx = a.x - b.x;
+  auto dy = a.y - b.y;
+
+  return dx * dx + dy * dy;
+}
 }  // namespace a11y

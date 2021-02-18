@@ -8,6 +8,8 @@ source_set("recognizers") {
     "any_recognizer.h",
     "directional_swipe_recognizers.cc",
     "directional_swipe_recognizers.h",
+    "m_finger_n_tap_drag_recognizer.cc",
+    "m_finger_n_tap_drag_recognizer.h",
     "m_finger_n_tap_recognizer.cc",
     "m_finger_n_tap_recognizer.h",
     "one_finger_drag_recognizer.cc",

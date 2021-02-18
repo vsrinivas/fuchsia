@@ -70,6 +70,8 @@ bool ValidatePointerEvent(const GestureContext& gesture_context,
 bool PointerEventIsValidTap(const GestureContext& gesture_start_context,
                             const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
+// Returns the square of the distance between points a and b.
+float SquareDistanceBetweenPoints(::fuchsia::math::PointF a, ::fuchsia::math::PointF b);
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_GESTURE_MANAGER_GESTURE_UTIL_UTIL_H_
