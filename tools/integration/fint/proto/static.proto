@@ -90,19 +90,15 @@ message Static {
   // Whether to generate a listing of the commands run during the build.
   bool generate_compdb = 18;
 
-  // Whether to generate an IDE project.json file containing target information.
-  // TODO(olivernewman): Remove in favor of ide_files.
-  bool generate_ide = 19;
-
   // Host-only targets to build.
-  repeated string host_labels = 20;
+  repeated string host_labels = 21;
 
   // Whether to use a go cache when building.
-  bool enable_go_cache = 21;
+  bool enable_go_cache = 22;
 
   // Whether to use a rust cache when building.
-  bool enable_rust_cache = 22;
+  bool enable_rust_cache = 23;
 
   // Which IDE files to generate.
-  repeated string ide_files = 23;
+  repeated string ide_files = 24;
 }
