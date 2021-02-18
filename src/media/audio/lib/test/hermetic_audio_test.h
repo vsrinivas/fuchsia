@@ -39,6 +39,10 @@ class HermeticAudioTest : public TestFixture {
   // in an override of `SetUpTestSuite()`.
   static void SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options options);
 
+  // The default implementation calls SetTestSuiteEnvironmentOptions() with default Options.
+  // Test suites can override this to provide custom behavior.
+  static void SetUpTestSuite();
+
   void SetUp() override;
   void TearDown() override;
 

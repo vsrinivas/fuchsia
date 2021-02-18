@@ -46,6 +46,13 @@ void HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment:
   test_suite_options_ = options;
 }
 
+void HermeticAudioTest::SetUpTestSuite() {
+  // We need this default implementation in case one test binary has multiple test suites:
+  // this ensures that test suite A cannot unintentionally set the environment options for
+  // a subsequent test suite B.
+  SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options());
+}
+
 void HermeticAudioTest::SetUpEnvironment() {
   auto options = test_suite_options_.value_or(HermeticAudioEnvironment::Options());
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
