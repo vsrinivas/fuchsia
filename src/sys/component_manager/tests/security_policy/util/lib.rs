@@ -4,15 +4,12 @@
 
 use {
     anyhow::{Context, Error},
+    component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints::{create_proxy, DiscoverableService},
     fidl_fuchsia_component as fcomp,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_component,
-    test_utils_lib::{
-        events::*,
-        matcher::EventMatcher,
-        opaque_test::{OpaqueTest, OpaqueTestBuilder},
-    },
+    test_utils_lib::opaque_test::{OpaqueTest, OpaqueTestBuilder},
 };
 
 fn connect_to_root_service<S: DiscoverableService>(test: &OpaqueTest) -> Result<S::Proxy, Error> {

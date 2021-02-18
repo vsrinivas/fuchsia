@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::EventSource,
     anyhow::{Context as _, Error},
+    component_events::events::EventSource,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,

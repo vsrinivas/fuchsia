@@ -10,6 +10,7 @@ rustc_binary("stressor-bin") {
   name = "blobfs_stressor"
   edition = "2018"
   source_root = "main.rs"
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",

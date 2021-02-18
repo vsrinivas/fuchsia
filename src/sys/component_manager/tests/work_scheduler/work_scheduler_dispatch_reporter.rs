@@ -4,10 +4,10 @@
 
 use {
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl_fuchsia_test_workscheduler as fws,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::injectors::ProtocolInjector,
 };
 
 #[derive(Debug, Eq, PartialEq)]

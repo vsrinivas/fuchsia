@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{echo_capability::EchoCapability, injectors::ProtocolInjector},
-    anyhow::Error,
-    async_trait::async_trait,
-    fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
-    futures::StreamExt,
-    std::sync::Arc,
+    crate::echo_capability::EchoCapability, anyhow::Error, async_trait::async_trait,
+    component_events::injectors::ProtocolInjector, fidl_fuchsia_test_echofactory as fechofactory,
+    fuchsia_async as fasync, futures::StreamExt, std::sync::Arc,
 };
 
 /// Capability that serves the Echofactory FIDL protocol.

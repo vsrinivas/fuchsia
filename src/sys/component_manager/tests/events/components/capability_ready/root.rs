@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{
+        events::{CapabilityReady, Event, EventMode, EventSource, EventSubscription, Handler},
+        matcher::EventMatcher,
+    },
     fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd},
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
@@ -12,10 +16,6 @@ use {
     io_util,
     maplit::hashmap,
     std::collections::HashSet,
-    test_utils_lib::{
-        events::{CapabilityReady, Event, EventMode, EventSource, EventSubscription, Handler},
-        matcher::EventMatcher,
-    },
 };
 
 async fn list_entries(directory: &DirectoryProxy) -> Vec<String> {

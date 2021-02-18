@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
-    fuchsia_syslog::{self as fxlog},
-    test_utils_lib::{
+    component_events::{
         events::{Destroyed, Event, EventMode, EventSource, EventSubscription, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
+    fuchsia_async as fasync,
+    fuchsia_component::client::ScopedInstance,
+    fuchsia_syslog::{self as fxlog},
 };
 
 /// Test that a component tree which contains a root component with no program

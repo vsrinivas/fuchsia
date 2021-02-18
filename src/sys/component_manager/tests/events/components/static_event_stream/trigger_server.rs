@@ -4,20 +4,20 @@
 
 use {
     anyhow::Error,
+    component_events::{
+        events::{
+            CapabilityRequested, CapabilityRequestedError, Event, EventSource, EventStream,
+            Resolved,
+        },
+        matcher::EventMatcher,
+    },
     fidl::endpoints::ServiceMarker,
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::{
-        events::{
-            CapabilityRequested, CapabilityRequestedError, Event, EventSource, EventStream,
-            Resolved,
-        },
-        matcher::EventMatcher,
-        trigger_capability::{TriggerCapability, TriggerReceiver},
-    },
+    test_utils_lib::trigger_capability::{TriggerCapability, TriggerReceiver},
 };
 
 // `trigger_server` does the following:

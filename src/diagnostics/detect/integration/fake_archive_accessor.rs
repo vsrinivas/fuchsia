@@ -10,6 +10,7 @@ use {
     anyhow::{bail, format_err, Error},
     archivist_accessor::ArchiveAccessor,
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl_fuchsia_diagnostics as diagnostics,
     futures::{SinkExt, StreamExt},
     log::*,
@@ -17,7 +18,6 @@ use {
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    test_utils_lib::injectors::ProtocolInjector,
 };
 
 /// FakeArchiveAccessor can be injected to provide test Inspect data to Detect.

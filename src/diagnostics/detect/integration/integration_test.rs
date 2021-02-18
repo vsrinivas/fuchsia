@@ -25,6 +25,11 @@ mod fake_crash_reporting_product_register;
 
 use {
     anyhow::{bail, Error},
+    component_events::{
+        events::{Event, EventMode, EventStream, EventSubscription, Stopped},
+        injectors::{CapabilityInjector, DirectoryInjector},
+        matcher::EventMatcher,
+    },
     fake_archive_accessor::FakeArchiveAccessor,
     fake_crash_reporter::FakeCrashReporter,
     fake_crash_reporting_product_register::FakeCrashReportingProductRegister,
@@ -32,12 +37,7 @@ use {
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
-    test_utils_lib::{
-        events::{Event, EventMode, EventStream, EventSubscription, Stopped},
-        injectors::{CapabilityInjector, DirectoryInjector},
-        matcher::EventMatcher,
-        opaque_test::OpaqueTest,
-    },
+    test_utils_lib::opaque_test::OpaqueTest,
     vfs::{
         directory::{
             helper::DirectlyMutable, immutable::connection::io1::ImmutableConnection,

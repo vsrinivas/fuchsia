@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints::Proxy,
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
+    test_utils_lib::opaque_test::*,
 };
 
 #[fasync::run_singlethreaded(test)]

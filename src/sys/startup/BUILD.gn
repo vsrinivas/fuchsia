@@ -62,6 +62,7 @@ rustc_test("startup_integration_test_bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
   ]
 
   sources = [ "src/tests/integration_test.rs" ]

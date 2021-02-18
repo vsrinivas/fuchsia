@@ -4,16 +4,16 @@
 
 use {
     anyhow::Error,
+    component_events::events::{
+        CapabilityReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
+        Running, Started,
+    },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{self as component, ScopedInstance},
     fuchsia_syslog as syslog,
     log::*,
     regex::Regex,
     std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
-    test_utils_lib::events::{
-        CapabilityReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
-        Running, Started,
-    },
 };
 
 #[fasync::run_singlethreaded]

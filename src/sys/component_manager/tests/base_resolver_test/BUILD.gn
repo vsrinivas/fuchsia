@@ -20,6 +20,7 @@ rustc_test("base_resolver_disabled_test_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
 
@@ -39,6 +40,7 @@ rustc_test("base_resolver_appmgr_loader_test_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
 

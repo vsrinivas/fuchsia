@@ -8,6 +8,7 @@ rustc_library("utils") {
   name = "storage_stress_test_utils"
   edition = "2018"
   source_root = "mod.rs"
+  testonly = true
 
   deps = [
     "//garnet/lib/rust/files_async",
@@ -24,6 +25,7 @@ rustc_library("utils") {
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",

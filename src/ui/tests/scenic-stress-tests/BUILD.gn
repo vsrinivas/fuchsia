@@ -14,6 +14,7 @@ import("//src/ui/lib/escher/shaders/shaders.gni")
 rustc_library("scenic-stress-tests-lib") {
   edition = "2018"
   source_root = "lib/mod.rs"
+  testonly = true
   deps = [
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -22,6 +23,7 @@ rustc_library("scenic-stress-tests-lib") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
@@ -39,6 +41,7 @@ rustc_binary("input-stressor-bin") {
   name = "input_stressor"
   edition = "2018"
   source_root = "input_stressor.rs"
+  testonly = true
 
   deps = [
     ":scenic-stress-tests-lib",

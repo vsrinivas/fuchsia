@@ -8,6 +8,7 @@ rustc_binary("interpose_echo_looper_bin") {
   name = "interpose_echo_looper"
   edition = "2018"
   source_root = "interpose/echo_looper.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -26,6 +27,7 @@ rustc_binary("trigger_server_bin") {
   name = "static_event_stream_trigger_server"
   edition = "2018"
   source_root = "static_event_stream/trigger_server.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -35,6 +37,7 @@ rustc_binary("trigger_server_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -46,6 +49,7 @@ rustc_binary("trigger_client_bin") {
   name = "static_event_stream_trigger_client"
   edition = "2018"
   source_root = "static_event_stream/trigger_client.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia-async",
@@ -60,6 +64,7 @@ rustc_binary("echo_reporter_bin") {
   name = "scoped_echo_reporter"
   edition = "2018"
   source_root = "scoped/echo_reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -69,6 +74,7 @@ rustc_binary("echo_reporter_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -80,6 +86,7 @@ rustc_binary("chained_interpose_echo_client_bin") {
   name = "chained_interpose_echo_client"
   edition = "2018"
   source_root = "chained_interpose/echo_client.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -98,6 +105,7 @@ rustc_binary("chained_interpose_echo_factory_bin") {
   name = "chained_interpose_echo_factory"
   edition = "2018"
   source_root = "chained_interpose/echo_factory.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -116,6 +124,7 @@ rustc_binary("nested_reporter_bin") {
   name = "nested_reporter"
   edition = "2018"
   source_root = "nested/reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -123,8 +132,8 @@ rustc_binary("nested_reporter_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
 
@@ -135,6 +144,7 @@ rustc_binary("resolved_error_reporter_bin") {
   name = "resolved_error_reporter"
   edition = "2018"
   source_root = "resolved_error/reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -143,9 +153,9 @@ rustc_binary("resolved_error_reporter_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
   ]
@@ -157,6 +167,7 @@ rustc_binary("async_reporter_bin") {
   name = "async_reporter"
   edition = "2018"
   source_root = "async/reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -165,8 +176,8 @@ rustc_binary("async_reporter_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
 
@@ -177,6 +188,7 @@ rustc_binary("echo_client_for_events_bin") {
   name = "scoped_echo_client"
   edition = "2018"
   source_root = "scoped/echo_client.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -197,6 +209,7 @@ rustc_binary("echo_server_for_events_bin") {
   name = "scoped_echo_server"
   edition = "2018"
   source_root = "scoped/echo_server.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -213,6 +226,7 @@ rustc_binary("stub_component_bin") {
   name = "stub_component"
   edition = "2018"
   source_root = "stub/component.rs"
+  testonly = true
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -226,6 +240,7 @@ rustc_binary("realm_offered_nested") {
   name = "realm_offered_nested"
   edition = "2018"
   source_root = "realm_offered/nested.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -246,12 +261,13 @@ rustc_binary("realm_offered_bin") {
   name = "realm_offered_reporter"
   edition = "2018"
   source_root = "realm_offered/reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
 
@@ -262,6 +278,7 @@ rustc_binary("capability_ready_root_bin") {
   name = "capability_ready_root"
   edition = "2018"
   source_root = "capability_ready/root.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
@@ -271,8 +288,8 @@ rustc_binary("capability_ready_root_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
@@ -286,6 +303,7 @@ rustc_binary("capability_ready_child_bin") {
   name = "capability_ready_child"
   edition = "2018"
   source_root = "capability_ready/child.rs"
+  testonly = true
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -302,6 +320,7 @@ rustc_binary("synthesis_reporter_bin") {
   name = "synthesis_reporter"
   edition = "2018"
   source_root = "synthesis/reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -309,8 +328,8 @@ rustc_binary("synthesis_reporter_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
@@ -323,6 +342,7 @@ rustc_binary("file_contents_reporter_bin") {
   name = "file_contents_reporter"
   edition = "2018"
   source_root = "dir_capability_routed/reporter.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia-async",

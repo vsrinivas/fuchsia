@@ -4,6 +4,10 @@
 
 use {
     crate::io::Directory,
+    component_events::{
+        events::{Event, EventMode, EventSubscription, Started},
+        matcher::EventMatcher,
+    },
     fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::{
@@ -21,11 +25,7 @@ use {
         path::PathBuf,
         time::Duration,
     },
-    test_utils_lib::{
-        events::{Event, EventMode, EventSubscription, Started},
-        matcher::EventMatcher,
-        opaque_test::OpaqueTest,
-    },
+    test_utils_lib::opaque_test::OpaqueTest,
 };
 
 #[link(name = "fs-management")]

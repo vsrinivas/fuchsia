@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{events::*, matcher::EventMatcher},
     cs::{
         io::Directory,
         v2::{ElfRuntime, Execution, V2Component},
     },
-    test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
+    test_utils_lib::opaque_test::*,
 };
 
 fn validate_executions(actual: &Option<Execution>, expected: &Option<Execution>) {

@@ -4,14 +4,14 @@
 
 use {
     anyhow::Error,
-    fuchsia_async as fasync, fuchsia_syslog as syslog,
-    log::*,
-    test_utils_lib::{
+    component_events::{
         events::{Event, Stopped},
         matcher::EventMatcher,
-        opaque_test::OpaqueTest,
         sequence::{EventSequence, Ordering},
     },
+    fuchsia_async as fasync, fuchsia_syslog as syslog,
+    log::*,
+    test_utils_lib::opaque_test::OpaqueTest,
 };
 
 #[fasync::run_singlethreaded(test)]

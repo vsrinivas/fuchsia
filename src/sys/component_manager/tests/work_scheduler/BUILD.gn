@@ -10,14 +10,15 @@ rustc_library("work_scheduler_dispatch_reporter") {
   name = "work_scheduler_dispatch_reporter"
   edition = "2018"
   source_root = "work_scheduler_dispatch_reporter.rs"
+  testonly = true
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager:lib",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
@@ -39,6 +40,7 @@ rustc_test("work_scheduler_integration_test_bin") {
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
+    "//src/sys/lib/component-events",
   ]
 
   sources = [ "work_scheduler_integration_test.rs" ]

@@ -5,10 +5,10 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl_fuchsia_test_hub as fhub,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{collections::HashMap, sync::Arc},
-    test_utils_lib::injectors::ProtocolInjector,
 };
 
 #[derive(Debug)]

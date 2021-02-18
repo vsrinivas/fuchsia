@@ -9,6 +9,7 @@ rustc_binary("advanced_routing_reporter_bin") {
   name = "advanced_routing_reporter"
   edition = "2018"
   source_root = "advanced_routing/reporter.rs"
+  testonly = true
   deps = [
     ":hub_report_lib",
     "//src/lib/fuchsia-async",
@@ -22,6 +23,7 @@ rustc_binary("simple_component_bin") {
   name = "simple"
   edition = "2018"
   source_root = "simple_component/main.rs"
+  testonly = true
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
@@ -37,6 +39,7 @@ rustc_binary("dynamic_child_reporter_bin") {
   name = "dynamic_child_reporter"
   edition = "2018"
   source_root = "dynamic_child/reporter.rs"
+  testonly = true
   deps = [
     ":hub_report_lib",
     "//garnet/lib/rust/files_async",
@@ -46,7 +49,7 @@ rustc_binary("dynamic_child_reporter_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -58,6 +61,7 @@ rustc_binary("visibility_reporter_bin") {
   name = "visibility_reporter"
   edition = "2018"
   source_root = "visibility/reporter.rs"
+  testonly = true
   deps = [
     ":hub_report_lib",
     "//garnet/lib/rust/files_async",
@@ -77,6 +81,7 @@ rustc_library("hub_report_lib") {
   name = "hub_report"
   edition = "2018"
   source_root = "hub_report.rs"
+  testonly = true
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",

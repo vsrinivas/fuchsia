@@ -4,13 +4,13 @@
 
 use {
     anyhow::Context as _,
+    component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     futures::prelude::*,
     hub_report::HubReport,
-    test_utils_lib::{events::*, matcher::EventMatcher},
 };
 
 #[fasync::run_singlethreaded]

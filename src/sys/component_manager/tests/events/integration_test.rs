@@ -4,14 +4,14 @@
 
 use {
     anyhow::Error,
+    component_events::{
+        events::*, injectors::*, interposers::ProtocolInterposer, matcher::EventMatcher,
+    },
     echo_factory_interposer::EchoFactoryInterposer,
     echo_interposer::EchoInterposer,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::StreamExt,
-    test_utils_lib::{
-        echo_capability::EchoCapability, events::*, injectors::*, interposers::ProtocolInterposer,
-        matcher::EventMatcher, opaque_test::*,
-    },
+    test_utils_lib::{echo_capability::EchoCapability, opaque_test::*},
     vfs::{file::pcb::asynchronous::read_only_static, pseudo_directory},
 };
 

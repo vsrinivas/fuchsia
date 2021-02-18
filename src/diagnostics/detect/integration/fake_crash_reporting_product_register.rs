@@ -6,6 +6,7 @@ use {
     super::DoneSignaler,
     anyhow::{bail, Error},
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl_fuchsia_feedback as fcrash,
     futures::StreamExt,
     log::*,
@@ -13,7 +14,6 @@ use {
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    test_utils_lib::injectors::ProtocolInjector,
 };
 
 const REPORT_PROGRAM_NAME: &str = "triage_detect";

@@ -5,11 +5,11 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
+    component_events::interposers::ProtocolInterposer,
     echo_interposer::EchoInterposer,
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::interposers::ProtocolInterposer,
 };
 
 /// Client <---> EchoFactoryInterposer <---> EchoFactory service

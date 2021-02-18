@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::injectors::ProtocolInjector,
     anyhow::Error,
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,

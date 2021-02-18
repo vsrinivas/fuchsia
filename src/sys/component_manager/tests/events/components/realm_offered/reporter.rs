@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
-    fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    test_utils_lib::{
+    component_events::{
         events::{Event, EventMode, EventSource, EventSubscription, Handler, Started},
         matcher::EventMatcher,
     },
+    fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
 };
 
 #[fasync::run_singlethreaded]

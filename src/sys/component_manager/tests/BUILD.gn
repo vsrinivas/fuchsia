@@ -39,7 +39,6 @@ rustc_binary("trigger_bin") {
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

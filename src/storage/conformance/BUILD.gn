@@ -22,6 +22,7 @@ group("tests") {
 rustc_library("io_conformance") {
   name = "io_conformance"
   edition = "2018"
+  testonly = true
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",

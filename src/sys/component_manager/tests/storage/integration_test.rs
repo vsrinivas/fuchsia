@@ -5,13 +5,14 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
+    component_events::{events::*, injectors::*, matcher::EventMatcher},
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::StreamExt,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::{path::PathBuf, sync::Arc, sync::Mutex},
-    test_utils_lib::{events::*, injectors::*, matcher::EventMatcher, opaque_test::*},
+    test_utils_lib::opaque_test::*,
 };
 
 lazy_static! {

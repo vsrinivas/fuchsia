@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    component_events::{events::*, injectors::*, matcher::EventMatcher},
     fidl::endpoints::Proxy,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
@@ -12,7 +13,7 @@ use {
     hub_report_capability::*,
     io_util::*,
     std::{path::PathBuf, sync::Arc},
-    test_utils_lib::{events::*, injectors::*, matcher::EventMatcher, opaque_test::*},
+    test_utils_lib::opaque_test::*,
 };
 
 pub struct TestRunner {

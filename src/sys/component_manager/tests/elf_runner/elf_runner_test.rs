@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{injectors::CapabilityInjector, matcher::EventMatcher},
     fuchsia_async as fasync,
-    test_utils_lib::{
-        echo_capability::EchoCapability, injectors::CapabilityInjector, matcher::EventMatcher,
-        opaque_test::*,
-    },
+    test_utils_lib::{echo_capability::EchoCapability, opaque_test::*},
 };
 
 #[fasync::run_singlethreaded(test)]

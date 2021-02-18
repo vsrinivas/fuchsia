@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl::{
         endpoints::{RequestStream, ServerEnd},
         AsHandleRef, Event,
@@ -18,7 +19,6 @@ use {
         convert::TryInto,
         sync::{Arc, Mutex},
     },
-    test_utils_lib::injectors::ProtocolInjector,
 };
 
 /// Stores the state of the mock display, including

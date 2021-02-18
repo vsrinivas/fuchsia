@@ -6,18 +6,10 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
-# NOTE: Ensure that //src/sys/component_manager:component-manager is
-# also built as part of your test. Currently it is not possible to
-# create this dependency automatically.
-#
-# TODO(fxbug.dev/64460): Create a stronger dependency between test_utils_lib
-# and //src/sys/component_manager:component-manager
-
-rustc_library("test_utils_lib") {
-  name = "test_utils_lib"
+rustc_library("component-events") {
+  name = "component_events"
   edition = "2018"
-  source_root = "lib.rs"
-  testonly = true
+  with_unit_tests = true
 
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -34,7 +26,6 @@ rustc_library("test_utils_lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
-    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
@@ -47,10 +38,22 @@ rustc_library("test_utils_lib") {
   ]
 
   sources = [
-    "echo_capability.rs",
-    "echo_factory_capability.rs",
-    "lib.rs",
-    "opaque_test.rs",
-    "trigger_capability.rs",
+    "src/descriptor.rs",
+    "src/events.rs",
+    "src/injectors.rs",
+    "src/interposers.rs",
+    "src/lib.rs",
+    "src/log.rs",
+    "src/matcher.rs",
+    "src/sequence.rs",
   ]
+}
+
+fuchsia_unittest_package("component-events-unittests") {
+  deps = [ ":component-events_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":component-events-unittests" ]
 }

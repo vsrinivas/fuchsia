@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
+use component_events::{injectors::*, matcher::EventMatcher};
 use fidl::endpoints::ServerEnd;
 use fidl_componentmanager_test as ftest;
 use fidl_fuchsia_io as fio;
@@ -13,7 +14,7 @@ use futures::{channel::oneshot, lock::Mutex, prelude::*};
 use log::*;
 use std::sync::Arc;
 use test_util::assert_geq;
-use test_utils_lib::{injectors::*, matcher::EventMatcher, opaque_test::OpaqueTestBuilder};
+use test_utils_lib::opaque_test::OpaqueTestBuilder;
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
     pseudo_directory,

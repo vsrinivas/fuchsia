@@ -5,10 +5,10 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
+    component_events::interposers::ProtocolInterposer,
     fidl_fidl_examples_routing_echo as fecho,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::interposers::ProtocolInterposer,
 };
 
 /// Client <---> EchoInterposer <---> Echo service

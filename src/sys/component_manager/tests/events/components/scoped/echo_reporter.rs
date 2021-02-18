@@ -4,15 +4,15 @@
 
 use {
     anyhow::Error,
+    component_events::{
+        events::{CapabilityRouted, Event, EventSource, Started},
+        log::EventLog,
+    },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
     futures::StreamExt,
-    test_utils_lib::{
-        events::{CapabilityRouted, Event, EventSource, Started},
-        log::EventLog,
-        trigger_capability::{TriggerCapability, TriggerReceiver},
-    },
+    test_utils_lib::trigger_capability::{TriggerCapability, TriggerReceiver},
 };
 
 // `echo_reporter` does the following:

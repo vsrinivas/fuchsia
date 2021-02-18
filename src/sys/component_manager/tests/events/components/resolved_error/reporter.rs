@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{
+        events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
+        matcher::EventMatcher,
+    },
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
-    test_utils_lib::{
-        events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
-        matcher::EventMatcher,
-    },
 };
 
 #[fasync::run_singlethreaded]

@@ -6,11 +6,11 @@ mod events;
 
 use {
     crate::events::EventListener,
+    component_events::events::EventSource,
     fidl_fuchsia_sys::LoaderMarker,
     fuchsia_component::client::connect_to_service,
     rustyline::{Config, Editor},
     structopt::StructOpt,
-    test_utils_lib::events::EventSource,
 };
 
 #[derive(Clone, Debug, StructOpt)]

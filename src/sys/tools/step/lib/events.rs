@@ -4,9 +4,9 @@
 
 use {
     anyhow::{anyhow, Error},
+    component_events::events::{EventMode, EventSource, EventStream, EventSubscription, Handler},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     std::sync::{Arc, Mutex},
-    test_utils_lib::events::{EventMode, EventSource, EventStream, EventSubscription, Handler},
 };
 
 /// Prints detailed description of an `event`

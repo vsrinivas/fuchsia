@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    test_utils_lib::{events::*, injectors::*, matcher::EventMatcher, opaque_test::*},
+    component_events::{events::*, injectors::*, matcher::EventMatcher},
+    test_utils_lib::opaque_test::*,
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 

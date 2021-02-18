@@ -13,6 +13,7 @@ rustc_test("test-bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
   sources = [ "integration-test.rs" ]
@@ -30,6 +31,7 @@ rustc_test("e2e-bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
   sources = [ "e2e-test.rs" ]

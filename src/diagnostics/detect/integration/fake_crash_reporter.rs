@@ -6,11 +6,11 @@ use {
     super::{DoneSignaler, TestEvent, TestEventSender},
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
+    component_events::injectors::ProtocolInjector,
     fidl_fuchsia_feedback as fcrash,
     futures::{SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
-    test_utils_lib::injectors::ProtocolInjector,
 };
 
 const REPORT_PROGRAM_NAME: &str = "triage_detect";

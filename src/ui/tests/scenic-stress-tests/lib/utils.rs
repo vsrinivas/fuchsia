@@ -4,14 +4,14 @@
 
 use {
     crate::display_provider::{DisplayControllerProviderInjector, DisplayState},
-    log::info,
-    std::sync::Arc,
-    test_utils_lib::{
+    component_events::{
         events::EventSource,
         injectors::{CapabilityInjector, TestNamespaceInjector},
         matcher::EventMatcher,
-        opaque_test::OpaqueTest,
     },
+    log::info,
+    std::sync::Arc,
+    test_utils_lib::opaque_test::OpaqueTest,
 };
 
 const ROOT_URL: &str = "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/root.cm";

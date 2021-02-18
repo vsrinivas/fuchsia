@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync,
-    test_utils_lib::{
+    component_events::{
         events::{self, Event},
         matcher::{EventMatcher, ExitStatusMatcher},
-        opaque_test::OpaqueTestBuilder,
         sequence::{self, EventSequence},
     },
+    fuchsia_async as fasync,
+    test_utils_lib::opaque_test::OpaqueTestBuilder,
 };
 
 #[fasync::run_singlethreaded(test)]

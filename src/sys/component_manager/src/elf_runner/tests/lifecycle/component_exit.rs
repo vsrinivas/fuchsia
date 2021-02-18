@@ -5,17 +5,17 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
-    fuchsia_syslog::{self as fxlog, fx_log_info},
-    futures_util::stream::TryStreamExt,
-    std::sync::{Arc, Mutex},
-    test_utils_lib::{
+    component_events::{
         events::{self as events, Event, EventMode, EventSource, EventSubscription},
         injectors::*,
         matcher::EventMatcher,
         sequence::EventSequence,
     },
+    fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
+    fuchsia_component::client::ScopedInstance,
+    fuchsia_syslog::{self as fxlog, fx_log_info},
+    futures_util::stream::TryStreamExt,
+    std::sync::{Arc, Mutex},
 };
 
 #[fasync::run_singlethreaded(test)]

@@ -40,6 +40,7 @@ rustc_test("fuchsia-component-v2-test") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
@@ -51,6 +52,7 @@ rustc_test("fuchsia-component-v2-test") {
 rustc_binary("realm") {
   edition = "2018"
   source_root = "components_v2/realm.rs"
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",

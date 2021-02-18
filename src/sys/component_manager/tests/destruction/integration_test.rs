@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync,
-    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
-    test_utils_lib::{
+    component_events::{
         events::*,
         matcher::EventMatcher,
-        opaque_test::*,
         sequence::{EventSequence, Ordering},
     },
+    fuchsia_async as fasync,
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    test_utils_lib::opaque_test::*,
 };
 
 #[fasync::run_singlethreaded(test)]

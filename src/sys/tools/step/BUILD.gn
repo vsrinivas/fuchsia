@@ -9,6 +9,7 @@ import("//src/sys/build/components.gni")
 rustc_library("step_lib") {
   edition = "2018"
   source_root = "lib/mod.rs"
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -16,7 +17,7 @@ rustc_library("step_lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:structopt",
@@ -32,6 +33,7 @@ rustc_library("step_lib") {
 rustc_binary("bin") {
   edition = "2018"
   source_root = "main.rs"
+  testonly = true
 
   deps = [
     ":step_lib",
@@ -44,6 +46,8 @@ rustc_binary("bin") {
   sources = [ "main.rs" ]
 }
 
+# TODO(70264): Migrate this tool to ffx
 fuchsia_shell_package("step") {
   deps = [ ":bin" ]
+  testonly = true
 }
