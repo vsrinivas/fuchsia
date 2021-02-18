@@ -83,7 +83,7 @@ async fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
 
     // Initialize logging
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Debug));
+    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
 
     // Setup the fvm environment
     let env = FvmEnvironment::new(args).await;
