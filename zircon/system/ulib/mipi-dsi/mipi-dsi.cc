@@ -15,13 +15,12 @@
 namespace mipi_dsi {
 
 zx::status<llcpp::fuchsia::hardware::dsi::MipiDsiCmd> MipiDsi::CreateCommandFidl(
-    uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::Allocator* allocator) {
+    uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyAllocator& allocator) {
   // Create a command packet
   uint8_t ch_id = kMipiDsiVirtualChanId;
   uint8_t dsi_data_type = kMipiDsiDtUnknown;
   uint32_t flags = 0;
-  auto builder = ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd::Builder(
-      allocator->make<::llcpp::fuchsia::hardware::dsi::MipiDsiCmd::Frame>());
+  ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd command(allocator);
 
   switch (tlen) {
     case 0:
@@ -66,13 +65,13 @@ zx::status<llcpp::fuchsia::hardware::dsi::MipiDsiCmd> MipiDsi::CreateCommandFidl
       break;
   }
 
-  builder.set_virtual_channel_id(allocator->make<uint8_t>(ch_id));
-  builder.set_expected_read_length(allocator->make<uint32_t>(rlen));
-  builder.set_dsi_data_type(allocator->make<uint8_t>(dsi_data_type));
-  builder.set_write_length(allocator->make<uint32_t>(tlen));
-  builder.set_flags(allocator->make<uint32_t>(flags));
+  command.set_virtual_channel_id(allocator, ch_id);
+  command.set_expected_read_length(allocator, rlen);
+  command.set_dsi_data_type(allocator, dsi_data_type);
+  command.set_write_length(allocator, tlen);
+  command.set_flags(allocator, flags);
   // packet command has been created.
-  return zx::ok(builder.build());
+  return zx::ok(std::move(command));
 }
 
 zx_status_t MipiDsi::CreateCommand(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen,

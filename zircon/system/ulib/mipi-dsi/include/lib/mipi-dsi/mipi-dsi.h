@@ -79,7 +79,7 @@ class MipiDsi {
                                    bool is_dcs, mipi_dsi_cmd_t* cmd);
 
   static zx::status<llcpp::fuchsia::hardware::dsi::MipiDsiCmd> CreateCommandFidl(
-      uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::Allocator* allocator);
+      uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyAllocator& allocator);
 };
 
 }  // namespace mipi_dsi

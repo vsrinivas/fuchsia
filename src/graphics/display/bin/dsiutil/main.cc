@@ -69,8 +69,8 @@ int main(int argc, char* argv[]) {
   } else {
     tbuf[0] = 0x29;
   }
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = mipi_dsi::MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = mipi_dsi::MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   auto response = client.SendCmd(
       std::move(res.value()), fidl::VectorView<uint8_t>{fidl::unowned_ptr(tbuf), std::size(tbuf)});

@@ -159,8 +159,8 @@ TEST(CreateCommandFidl, CommandStructure) {
   uint8_t tbuf[2];
   uint8_t rbuf[2];
 
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_virtual_channel_id());
   ASSERT_TRUE(res->has_write_length());
@@ -176,8 +176,8 @@ TEST(CreateCommandFidl, CommandStructure) {
 }
 
 TEST(CreateCommandFidl, GenShortWrite0T1) {
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(0, 0, false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(0, 0, false, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -185,15 +185,15 @@ TEST(CreateCommandFidl, GenShortWrite0T1) {
 }
 
 TEST(CreateCommandFidl, GenShortWrite0T2) {
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(0, 0, true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(0, 0, true, allocator);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, res.status_value());
 }
 
 TEST(CreateCommandFidl, GenShortWrite1T1) {
   uint8_t tbuf[1];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -202,8 +202,8 @@ TEST(CreateCommandFidl, GenShortWrite1T1) {
 
 TEST(CreateCommandFidl, DcsShortWrite0T1) {
   uint8_t tbuf[1];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -212,8 +212,8 @@ TEST(CreateCommandFidl, DcsShortWrite0T1) {
 
 TEST(CreateCommandFidl, GenShortWrite2T1) {
   uint8_t tbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -222,8 +222,8 @@ TEST(CreateCommandFidl, GenShortWrite2T1) {
 
 TEST(CreateCommandFidl, DcsShortWrite1T1) {
   uint8_t tbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -232,8 +232,8 @@ TEST(CreateCommandFidl, DcsShortWrite1T1) {
 
 TEST(CreateCommandFidl, GenLongWriteT1) {
   uint8_t tbuf[4];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -242,8 +242,8 @@ TEST(CreateCommandFidl, GenLongWriteT1) {
 
 TEST(CreateCommandFidl, DcsLongWriteT1) {
   uint8_t tbuf[4];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -253,8 +253,8 @@ TEST(CreateCommandFidl, DcsLongWriteT1) {
 TEST(CreateCommandFidl, GenShortRead0T1) {
   ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
   uint8_t rbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(0, sizeof(rbuf), false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(0, sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
   EXPECT_EQ(kMipiDsiDtGenShortRead0, res->dsi_data_type());
@@ -266,8 +266,8 @@ TEST(CreateCommandFidl, GenShortRead1T1) {
   ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
   EXPECT_EQ(kMipiDsiDtGenShortRead1, res->dsi_data_type());
@@ -279,8 +279,8 @@ TEST(CreateCommandFidl, DcsShortRead0T1) {
   ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
   EXPECT_EQ(kMipiDsiDtDcsRead0, res->dsi_data_type());
@@ -292,8 +292,8 @@ TEST(CreateCommandFidl, GenShortRead2T1) {
   ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
   EXPECT_EQ(kMipiDsiDtGenShortRead2, res->dsi_data_type());
@@ -305,8 +305,8 @@ TEST(CreateCommandFidl, InvalidDcsReadT1) {
   ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, allocator);
   EXPECT_TRUE(res.status_value() == ZX_ERR_INVALID_ARGS);
 }
 
@@ -314,8 +314,8 @@ TEST(CreateCommandFidl, InvalidReadT1) {
   ::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd;
   uint8_t tbuf[3];
   uint8_t rbuf[2];
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, &allocator);
+  fidl::FidlAllocator<2048> allocator;
+  auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, allocator);
   EXPECT_TRUE(res.status_value() == ZX_ERR_INVALID_ARGS);
 }
 
