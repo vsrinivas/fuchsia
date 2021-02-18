@@ -87,11 +87,9 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
   std::vector<zx::event> last_release_fences;
 
   frame_scheduler->set_register_present_callback(
-      [&last_session_id, &last_release_fences](
-          scheduling::SessionId session_id,
-          std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info>
-              present_information,
-          std::vector<zx::event> release_fences, scheduling::PresentId present_id) {
+      [&last_session_id, &last_release_fences](scheduling::SessionId session_id,
+                                               std::vector<zx::event> release_fences,
+                                               scheduling::PresentId present_id) {
         last_session_id = session_id;
         last_release_fences = std::move(release_fences);
       });
@@ -193,11 +191,9 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   size_t function_count = 0;
 
   frame_scheduler->set_register_present_callback(
-      [&registered_presents, &function_count](
-          scheduling::SessionId session_id,
-          std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info>
-              present_information,
-          std::vector<zx::event> release_fences, scheduling::PresentId present_id) {
+      [&registered_presents, &function_count](scheduling::SessionId session_id,
+                                              std::vector<zx::event> release_fences,
+                                              scheduling::PresentId present_id) {
         registered_presents.insert({session_id, present_id});
         ++function_count;
       });
@@ -275,8 +271,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   for (uint64_t i = 0; i < kNumGfxPresents; ++i) {
     // RegisterPresent() is one of the two functions being tested.
     auto present_id = scheduling::GetNextPresentId();
-    present_id = frame_scheduler->RegisterPresent(
-        kGfxSessionId, /*present_information=*/[](auto...) {}, /*release_fences=*/{}, present_id);
+    present_id = frame_scheduler->RegisterPresent(kGfxSessionId, /*release_fences=*/{}, present_id);
     gfx_presents.push_back(present_id);
 
     // ScheduleUpdateForSession() is the other function being tested.

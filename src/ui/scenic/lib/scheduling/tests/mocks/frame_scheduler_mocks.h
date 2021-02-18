@@ -26,9 +26,8 @@ class MockFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override;
 
-  PresentId RegisterPresent(SessionId session_id,
-                            std::variant<OnPresentedCallback, Present2Info> present_information,
-                            std::vector<zx::event> release_fences, PresentId present_id) override;
+  PresentId RegisterPresent(SessionId session_id, std::vector<zx::event> release_fences,
+                            PresentId present_id) override;
 
   // |FrameScheduler|
   void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
@@ -39,10 +38,6 @@ class MockFrameScheduler : public FrameScheduler {
       FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
 
   // |FrameScheduler|
-  void SetOnFramePresentedCallbackForSession(
-      SessionId session, OnFramePresentedCallback frame_presented_callback) override;
-
-  // |FrameScheduler|
   void RemoveSession(SessionId session_id) override;
 
   // Testing only. Used for mock method callbacks.
@@ -51,11 +46,8 @@ class MockFrameScheduler : public FrameScheduler {
   using OnGetFuturePresentationInfosCallback =
       std::function<std::vector<fuchsia::scenic::scheduling::PresentationInfo>(
           zx::duration requested_prediction_span)>;
-  using OnSetOnFramePresentedCallbackForSessionCallback =
-      std::function<void(SessionId session, OnFramePresentedCallback callback)>;
   using RegisterPresentCallback = std::function<void(
-      SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
-      std::vector<zx::event> release_fences, PresentId present_id)>;
+      SessionId session_id, std::vector<zx::event> release_fences, PresentId present_id)>;
   using RemoveSessionCallback = std::function<void(SessionId session_id)>;
 
   // Testing only. Sets mock method callback.
@@ -71,12 +63,6 @@ class MockFrameScheduler : public FrameScheduler {
   // Testing only. Sets mock method callback.
   void set_get_future_presentation_infos_callback(OnGetFuturePresentationInfosCallback callback) {
     get_future_presentation_infos_callback_ = callback;
-  }
-
-  // Testing only. Sets mock method callback.
-  void set_set_on_frame_presented_callback_for_session_callback(
-      OnSetOnFramePresentedCallbackForSessionCallback callback) {
-    set_on_frame_presented_callback_for_session_callback_ = callback;
   }
 
   // Testing only. Sets mock method callback.
@@ -96,8 +82,6 @@ class MockFrameScheduler : public FrameScheduler {
   OnSetRenderContinuouslyCallback set_render_continuously_callback_;
   OnScheduleUpdateForSessionCallback schedule_update_for_session_callback_;
   OnGetFuturePresentationInfosCallback get_future_presentation_infos_callback_;
-  OnSetOnFramePresentedCallbackForSessionCallback
-      set_on_frame_presented_callback_for_session_callback_;
   RegisterPresentCallback register_present_callback_;
   RemoveSessionCallback remove_session_callback_;
 
@@ -125,6 +109,7 @@ class MockSessionUpdater : public SessionUpdater {
       scheduling::PresentTimestamps present_times) override {
     last_latched_times_ = latched_times;
     last_presented_time_ = present_times.presented_time;
+    on_frame_presented_call_count_++;
   }
 
   void SetUpdateSessionsReturnValue(SessionUpdater::UpdateResults new_value) {
@@ -132,11 +117,13 @@ class MockSessionUpdater : public SessionUpdater {
   }
 
   uint64_t update_sessions_call_count() { return update_sessions_call_count_; }
-  std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update() {
+  uint64_t on_frame_presented_call_count() { return on_frame_presented_call_count_; }
+  const std::unordered_map<scheduling::SessionId, scheduling::PresentId>&
+  last_sessions_to_update() {
     return last_sessions_to_update_;
   };
 
-  std::unordered_map<SessionId, std::map<PresentId, zx::time>> last_latched_times() const {
+  const std::unordered_map<SessionId, std::map<PresentId, zx::time>>& last_latched_times() const {
     return last_latched_times_;
   }
 
@@ -146,6 +133,7 @@ class MockSessionUpdater : public SessionUpdater {
   SessionUpdater::UpdateResults update_sessions_return_value_;
 
   uint64_t update_sessions_call_count_ = 0;
+  uint64_t on_frame_presented_call_count_ = 0;
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update_;
 
   std::unordered_map<scheduling::SessionId,

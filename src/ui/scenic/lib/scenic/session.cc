@@ -56,8 +56,7 @@ void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
 }
 
 void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
-                      std::vector<zx::event> release_fences,
-                      scheduling::OnPresentedCallback callback) {
+                      std::vector<zx::event> release_fences, PresentCallback callback) {
   TRACE_DURATION("gfx", "scenic_impl::Session::Present");
 
   if (std::holds_alternative<std::monostate>(present_helper_)) {
@@ -90,9 +89,8 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
 
   // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
   if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(fxbug.dev/47308): Delete |present_information| argument from signature entirely.
-    const scheduling::PresentId present_id = scheduler->RegisterPresent(
-        id_, /*present_information*/ [](auto...) {}, std::move(release_fences));
+    const scheduling::PresentId present_id =
+        scheduler->RegisterPresent(id_, std::move(release_fences));
     std::get<scheduling::Present1Helper>(present_helper_)
         .RegisterPresent(present_id, std::move(callback));
     SchedulePresentRequest(present_id, requested_presentation_time, std::move(acquire_fences));
@@ -151,9 +149,8 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
 
   // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
   if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(fxbug.dev/47308): Delete |present_information| argument from signature entirely.
-    const scheduling::PresentId present_id = scheduler->RegisterPresent(
-        id_, /*present_information*/ [](auto...) {}, std::move(*args.mutable_release_fences()));
+    const scheduling::PresentId present_id =
+        scheduler->RegisterPresent(id_, std::move(*args.mutable_release_fences()));
     std::get<scheduling::Present2Helper>(present_helper_)
         .RegisterPresent(present_id, /*present_received_time*/ zx::time(
                              async_now(async_get_default_dispatcher())));

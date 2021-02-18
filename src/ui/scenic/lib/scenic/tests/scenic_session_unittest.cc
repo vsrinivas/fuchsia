@@ -41,16 +41,9 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override {}
 
   // |FrameScheduler|
-  scheduling::PresentId RegisterPresent(
-      scheduling::SessionId session_id,
-      std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> present_information,
-      std::vector<zx::event> release_fences, scheduling::PresentId present_id = 0) override {
-    if (auto present1_callback =
-            std::get_if<scheduling::OnPresentedCallback>(&present_information)) {
-      present1_callbacks_.emplace_back(std::move(*present1_callback));
-    } else if (auto present2_info = std::get_if<scheduling::Present2Info>(&present_information)) {
-      last_present2_info_.emplace(std::move(*present2_info));
-    }
+  scheduling::PresentId RegisterPresent(scheduling::SessionId session_id,
+                                        std::vector<zx::event> release_fences,
+                                        scheduling::PresentId present_id = 0) override {
     return present_id_++;
   }
 
@@ -66,15 +59,7 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
       FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override {}
 
   // |FrameScheduler|
-  void SetOnFramePresentedCallbackForSession(
-      scheduling::SessionId session,
-      scheduling::OnFramePresentedCallback frame_presented_callback) override {}
-
-  // |FrameScheduler|
   void RemoveSession(SessionId session_id) override {}
-
-  std::vector<scheduling::OnPresentedCallback> present1_callbacks_;
-  std::optional<scheduling::Present2Info> last_present2_info_;
 
   int64_t schedule_called_count_ = 0;
   int64_t present_id_ = 0;

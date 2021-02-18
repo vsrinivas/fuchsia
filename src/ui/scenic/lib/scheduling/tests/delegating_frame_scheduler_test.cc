@@ -41,11 +41,10 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   uint32_t num_schedule_update_callbacks = 0;
   uint32_t num_set_render_continuosly_callbacks = 0;
   uint32_t num_get_future_presentation_infos_callbacks = 0;
-  uint32_t num_set_on_frame_presented_callback_for_session_callbacks = 0;
+
   {
     frame_scheduler1->set_register_present_callback(
-        [&](SessionId, std::variant<OnPresentedCallback, Present2Info>, std::vector<zx::event>,
-            PresentId present_id) {
+        [&](SessionId, std::vector<zx::event> release_fences, PresentId present_id) {
           num_register_present_callbacks++;
           last_present_id = present_id;
         });
@@ -58,8 +57,6 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
           num_get_future_presentation_infos_callbacks++;
           return {};
         });
-    frame_scheduler1->set_set_on_frame_presented_callback_for_session_callback(
-        [&](auto, auto) { num_set_on_frame_presented_callback_for_session_callbacks++; });
   }
 
   const scheduling::SessionId kSessionId = 1;
@@ -70,13 +67,11 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
       /*presentation_time=*/zx::time(0), {.session_id = kSessionId, .present_id = present_id1});
   delegating_frame_scheduler.SetRenderContinuously(true);
   delegating_frame_scheduler.GetFuturePresentationInfos(zx::duration(0), [](auto infos) {});
-  delegating_frame_scheduler.SetOnFramePresentedCallbackForSession(0, [](auto info) {});
 
   EXPECT_EQ(0u, num_register_present_callbacks);
   EXPECT_EQ(0u, num_schedule_update_callbacks);
   EXPECT_EQ(0u, num_set_render_continuosly_callbacks);
   EXPECT_EQ(0u, num_get_future_presentation_infos_callbacks);
-  EXPECT_EQ(0u, num_set_on_frame_presented_callback_for_session_callbacks);
 
   // Set a frame scheduler, mock method callbacks fired.
   delegating_frame_scheduler.SetFrameScheduler(frame_scheduler1);
@@ -86,7 +81,6 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   EXPECT_EQ(1u, num_schedule_update_callbacks);
   EXPECT_EQ(1u, num_set_render_continuosly_callbacks);
   EXPECT_EQ(1u, num_get_future_presentation_infos_callbacks);
-  EXPECT_EQ(1u, num_set_on_frame_presented_callback_for_session_callbacks);
 }
 
 }  // namespace test

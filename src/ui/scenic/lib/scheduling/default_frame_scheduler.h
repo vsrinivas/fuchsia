@@ -47,9 +47,7 @@ class DefaultFrameScheduler final : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
-  PresentId RegisterPresent(SessionId session_id,
-                            std::variant<OnPresentedCallback, Present2Info> present_information,
-                            std::vector<zx::event> release_fences,
+  PresentId RegisterPresent(SessionId session_id, std::vector<zx::event> release_fences,
                             PresentId present_id = kInvalidPresentId) override;
 
   // |FrameScheduler|
@@ -58,13 +56,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
                                 SchedulingIdPair id_pair) override;
-
-  // |FrameScheduler|
-  //
-  // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
-  // called once per session.
-  void SetOnFramePresentedCallbackForSession(
-      SessionId session, OnFramePresentedCallback frame_presented_callback) override;
 
   // |FrameScheduler|
   void GetFuturePresentationInfos(
@@ -115,16 +106,9 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // Return true if there are any scheduled session updates that have not yet been applied.
   bool HaveUpdatableSessions() const { return !pending_present_requests_.empty(); }
 
-  // Signal all callbacks prepared on frames up to |frame_number|.
-  void SignalPresentCallbacksUpTo(uint64_t frame_number,
-                                  fuchsia::images::PresentationInfo presentation_info);
-
-  // Signal all Present1 callbacks for |id_pair.session| up to |id_pair.present_id|.
-  void SignalPresent1CallbacksUpTo(SchedulingIdPair id_pair,
-                                   fuchsia::images::PresentationInfo presentation_info);
-
-  // Signal all Present2 callbacks for |id_pair.session| up to |id_pair.present_id|.
-  void SignalPresent2CallbackForInfosUpTo(SchedulingIdPair id_pair, zx::time presented_time);
+  // Signal all SessionUpdaters that frames up to |frame_number| have been presented.
+  void SignalPresentedUpTo(uint64_t frame_number,
+                           fuchsia::images::PresentationInfo presentation_info);
 
   // Get map of latch times for each present up to |id_pair.present_id| for |id_pair.session_id|.
   std::map<PresentId, zx::time> ExtractLatchTimestampsUpTo(SchedulingIdPair id_pair);
@@ -132,10 +116,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // Set all unset latched times for each registered present of |session_id|, up to and including
   // |present_id|.
   void SetLatchedTimeForPresentsUpTo(SchedulingIdPair id_pair, zx::time latched_time);
-
-  // Set all unset latched times for each Present2Info of |session_id|, up to and including
-  // |present_id|.
-  void SetLatchedTimeForPresent2Infos(SchedulingIdPair id_pair, zx::time latched_time);
 
   // Extracts all presents that should be updated this frame and returns them as a map of SessionIds
   // to the last PresentId that should be updated for that session.
@@ -157,32 +137,20 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // presentation time and the corresponding flow id for each present.
   std::map<SchedulingIdPair, std::pair<zx::time, trace_flow_id_t>> pending_present_requests_;
 
-  // TODO(fxbug.dev/47308): A lot of logic is temporarily duplicated while clients are being
-  // converted over. When both session and and image pipes have been converted to handling their own
-  // callbacks, delete unnecessary tracking state.
   struct FrameUpdate {
     uint64_t frame_number;
     std::unordered_map<SessionId, PresentId> updated_sessions;
     zx::time latched_time;
   };
-  // Queue of session updates mapped to frame numbers. Used when triggering callbacks in
-  // OnFramePresented.
+  // Queue of session updates mapped to frame numbers. Used in OnFramePresented.
   std::queue<FrameUpdate> latched_updates_;
 
   // All currently tracked presents and their associated latched_times.
   std::map<SchedulingIdPair, /*latched_time*/ std::optional<zx::time>> presents_;
 
-  // Ordered maps of per-present data ordered by SessionId and then PresentId.
-  // Per-present callbacks for Present1 and ImagePipe clients.
-  std::map<SchedulingIdPair, OnPresentedCallback> present1_callbacks_;
-  // Per-present info for Present2 clients, to be coalesced before used in callback.
-  std::map<SchedulingIdPair, Present2Info> present2_infos_;
   // Per-present release fences. To be released as each subsequent present for each session is
   // rendered.
   std::map<SchedulingIdPair, std::vector<zx::event>> release_fences_;
-
-  // Map of registered callbacks for Present2 sessions.
-  std::unordered_map<SessionId, OnFramePresentedCallback> present2_callback_map_;
 
   // Set of SessionUpdaters to update. Stored as a weak_ptr. When the updaters become
   // invalid, the weak_ptr is removed from this list.

@@ -39,9 +39,7 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
   image_pipes_[scheduling_id_] = std::move(image_pipe);
 
   if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(fxbug.dev/47308): Delete callback argument from signature entirely.
-    present_id = scheduler->RegisterPresent(
-        scheduling_id_, /*callback*/ [](auto...) {}, std::move(release_fences));
+    present_id = scheduler->RegisterPresent(scheduling_id_, std::move(release_fences));
     scheduling::SchedulingIdPair id_pair{scheduling_id_, present_id};
 
     present1_helper_.RegisterPresent(present_id, std::move(callback));

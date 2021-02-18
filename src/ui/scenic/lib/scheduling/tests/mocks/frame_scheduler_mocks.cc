@@ -21,12 +21,11 @@ zx::time Now() { return async::Now(async_get_default_dispatcher()); }
 namespace scheduling {
 namespace test {
 
-PresentId MockFrameScheduler::RegisterPresent(
-    SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
-    std::vector<zx::event> release_fences, PresentId present_id) {
+PresentId MockFrameScheduler::RegisterPresent(SessionId session_id,
+                                              std::vector<zx::event> release_fences,
+                                              PresentId present_id) {
   if (register_present_callback_) {
-    register_present_callback_(session_id, std::move(present_information),
-                               std::move(release_fences), present_id);
+    register_present_callback_(session_id, std::move(release_fences), present_id);
   }
 
   return present_id != 0 ? present_id : next_present_id_++;
@@ -52,14 +51,6 @@ void MockFrameScheduler::GetFuturePresentationInfos(
     presentation_infos_callback(get_future_presentation_infos_callback_(requested_prediction_span));
   }
   presentation_infos_callback({});
-}
-
-void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback frame_presented_callback) {
-  if (set_on_frame_presented_callback_for_session_callback_) {
-    set_on_frame_presented_callback_for_session_callback_(session,
-                                                          std::move(frame_presented_callback));
-  }
 }
 
 void MockFrameScheduler::RemoveSession(SessionId session_id) {

@@ -37,15 +37,13 @@ void DelegatingFrameScheduler::SetRenderContinuously(bool render_continuously) {
   });
 }
 
-PresentId DelegatingFrameScheduler::RegisterPresent(
-    SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
-    std::vector<zx::event> release_fences, PresentId present_id) {
+PresentId DelegatingFrameScheduler::RegisterPresent(SessionId session_id,
+                                                    std::vector<zx::event> release_fences,
+                                                    PresentId present_id) {
   present_id = present_id == kInvalidPresentId ? scheduling::GetNextPresentId() : present_id;
-  CallWhenFrameSchedulerAvailable([session_id, present_information = std::move(present_information),
-                                   release_fences = std::move(release_fences),
+  CallWhenFrameSchedulerAvailable([session_id, release_fences = std::move(release_fences),
                                    present_id](FrameScheduler* frame_scheduler) mutable {
-    frame_scheduler->RegisterPresent(session_id, std::move(present_information),
-                                     std::move(release_fences), present_id);
+    frame_scheduler->RegisterPresent(session_id, std::move(release_fences), present_id);
   });
   return present_id;
 }
@@ -64,16 +62,6 @@ void DelegatingFrameScheduler::GetFuturePresentationInfos(
                                       FrameScheduler* frame_scheduler) mutable {
     frame_scheduler->GetFuturePresentationInfos(requested_prediction_span, std::move(callback));
   });
-}
-
-void DelegatingFrameScheduler::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback callback) {
-  if (callback) {
-    CallWhenFrameSchedulerAvailable(
-        [session, callback = std::move(callback)](FrameScheduler* frame_scheduler) mutable {
-          frame_scheduler->SetOnFramePresentedCallbackForSession(session, std::move(callback));
-        });
-  }
 }
 
 void DelegatingFrameScheduler::RemoveSession(SessionId session_id) {

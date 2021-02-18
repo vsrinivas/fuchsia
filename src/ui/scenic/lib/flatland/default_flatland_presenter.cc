@@ -31,9 +31,7 @@ scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
     // task to the main thread, which is where GFX runs, to account for thread safety.
     async::PostTask(main_dispatcher_, [scheduler, present_id, session_id,
                                        release_fences = std::move(release_fences)]() mutable {
-      scheduler->RegisterPresent(
-          session_id, /*present_information=*/[](auto...) {}, std::move(release_fences),
-          present_id);
+      scheduler->RegisterPresent(session_id, std::move(release_fences), present_id);
     });
   } else {
     // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.

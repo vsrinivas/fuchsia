@@ -44,9 +44,7 @@ class DelegatingFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   // Calls RegisterPresent() immediately if a FrameScheduler has been set, otherwise defers the call
   // until one has been set. Returns a PresentId unique to the session.
-  PresentId RegisterPresent(SessionId session_id,
-                            std::variant<OnPresentedCallback, Present2Info> present_information,
-                            std::vector<zx::event> release_fences,
+  PresentId RegisterPresent(SessionId session_id, std::vector<zx::event> release_fences,
                             PresentId present_id = kInvalidPresentId) override;
 
   // |FrameScheduler|
@@ -60,12 +58,6 @@ class DelegatingFrameScheduler : public FrameScheduler {
   void GetFuturePresentationInfos(
       zx::duration requested_prediction_span,
       FrameScheduler::GetFuturePresentationInfosCallback callback) override;
-
-  // |FrameScheduler|
-  // Calls SetOnFramePresentedCallbackForSession() immediately if a FrameScheduler has been set;
-  // otherwise defers the call until one has been set.
-  void SetOnFramePresentedCallbackForSession(SessionId session,
-                                             OnFramePresentedCallback callback) override;
 
   // |FrameScheduler|
   // Calls RemoveSession() immediately if a FrameScheduler has been set;
