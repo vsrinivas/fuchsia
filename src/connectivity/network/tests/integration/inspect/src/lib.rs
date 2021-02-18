@@ -205,9 +205,7 @@ async fn inspect_nic() -> Result {
                     Bytes: 0u64,
                     Packets: 0u64,
                 },
-                Neighbor: contains {
-                    // TODO(https://fxbug.dev/66796): Remove "contains" after
-                    // https://gvisor.dev/issues/5463 resolves.
+                Neighbor: {
                     UnreachableEntryLookups: 0u64,
                 },
             },
@@ -246,9 +244,7 @@ async fn inspect_nic() -> Result {
                     Bytes: AnyProperty,
                     Packets: AnyProperty,
                 },
-                Neighbor: contains {
-                    // TODO(https://fxbug.dev/66796): Remove "contains" after
-                    // https://gvisor.dev/issues/5463 resolves.
+                Neighbor: {
                     UnreachableEntryLookups: AnyProperty,
                 },
             },
@@ -309,9 +305,7 @@ async fn inspect_nic() -> Result {
                     Bytes: AnyProperty,
                     Packets: AnyProperty,
                 },
-                Neighbor: contains {
-                    // TODO(https://fxbug.dev/66796): Remove "contains" after
-                    // https://gvisor.dev/issues/5463 resolves.
+                Neighbor: {
                     UnreachableEntryLookups: AnyProperty,
                 },
             },
