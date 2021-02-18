@@ -34,6 +34,10 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
 void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz,
                            const uint8_t* guid_value, const char* guid_name);
 
+// Returns true if the disk device that was used to load the bootloader
+// is connected via USB.
+bool is_booting_from_usb(efi_handle img, efi_system_table* sys);
+
 // Find the disk device that was used to load the boot loader.
 // Returns 0 on success and fills in the disk pointer, -1 otherwise.
 int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* disk);

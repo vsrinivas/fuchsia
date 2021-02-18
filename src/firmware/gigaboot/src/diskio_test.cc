@@ -14,6 +14,7 @@
 
 #include <efi/boot-services.h>
 #include <efi/protocol/block-io.h>
+#include <efi/protocol/device-path.h>
 #include <efi/protocol/disk-io.h>
 #include <efi/protocol/loaded-image.h>
 #include <gmock/gmock.h>
@@ -411,6 +412,55 @@ TEST(GuidValueFromName, KnownPartitionNames) {
 TEST(GuidValueFromName, UnknownPartitionName) {
   std::vector<uint8_t> guid(GPT_GUID_LEN);
   EXPECT_NE(0, guid_value_from_name("unknown_partition", guid.data()));
+}
+
+struct IsUsbBootState {
+  efi_device_path_protocol device_path[2] = {
+      {
+          .Type = DEVICE_PATH_MESSAGING,
+          .SubType = DEVICE_PATH_MESSAGING_USB,
+          .Length = {sizeof(efi_device_path_protocol), 0},
+      },
+      {
+          .Type = DEVICE_PATH_END,
+          .SubType = DEVICE_PATH_END,
+          .Length = {sizeof(efi_device_path_protocol), 0},
+      },
+  };
+
+  efi_loaded_image_protocol loaded_image = {
+      .DeviceHandle = kDeviceHandle,
+      .FilePath = device_path,
+  };
+};
+
+std::unique_ptr<IsUsbBootState> ExpectUsbBootState(MockBootServices& mock_services,
+                                                   efi_disk_io_protocol* disk_io_protocol) {
+  auto state = std::make_unique<IsUsbBootState>();
+
+  ExpectProtocol(mock_services, kImageHandle, EFI_LOADED_IMAGE_PROTOCOL_GUID, &state->loaded_image);
+  ExpectProtocol(mock_services, kDeviceHandle, EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
+
+  return state;
+}
+
+TEST(IsBootFromUsb, ReturnsTrue) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk;
+  auto state = ExpectUsbBootState(mock_services, fake_disk.protocol());
+
+  efi_system_table system_table = {.BootServices = mock_services.services()};
+  EXPECT_TRUE(is_booting_from_usb(kImageHandle, &system_table));
+}
+
+TEST(IsBootFromUsb, ReturnsFalse) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk;
+  auto state = ExpectUsbBootState(mock_services, fake_disk.protocol());
+  state->device_path[0].SubType = DEVICE_PATH_MESSAGING_ATAPI;
+
+  efi_system_table system_table = {.BootServices = mock_services.services()};
+  EXPECT_FALSE(is_booting_from_usb(kImageHandle, &system_table));
 }
 
 }  // namespace

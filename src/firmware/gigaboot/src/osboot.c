@@ -593,6 +593,13 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     }
   }
 
+  if (is_booting_from_usb(img, sys)) {
+    printf("booting from usb!\n");
+    // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver prioritisation exists.
+    static const char* usb_boot_args = "boot.usb=true devmgr.bind-eager=usb_composite";
+    cmdline_append(usb_boot_args, strlen(usb_boot_args));
+  }
+
   if (!have_network && zedboot_kernel == NULL && kernel == NULL && kernel_b == NULL) {
     printf("No valid kernel image found to load. Abort.\n");
     goto fail;
@@ -667,15 +674,13 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
     swap_to_head('f', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_NORMAL) {
-    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
-    // code.
-    // swap_to_head('m', valid_keys, key_idx);
+    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot
+    // selection code. swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
     swap_to_head('z', valid_keys, key_idx);
   } else if (!memcmp(defboot, "local", 5)) {
-    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
-    // code.
-    // swap_to_head('m', valid_keys, key_idx);
+    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot
+    // selection code. swap_to_head('m', valid_keys, key_idx);
   } else {
     swap_to_head('n', valid_keys, key_idx);
   }

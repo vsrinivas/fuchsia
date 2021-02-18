@@ -10,6 +10,7 @@
 #include <zircon/hw/gpt.h>
 #include <zircon/types.h>
 
+#include <efi/boot-services.h>
 #include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path-to-text.h>
 #include <efi/protocol/device-path.h>
@@ -113,6 +114,47 @@ efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length) {
 
 static void disk_close(disk_t* disk) {
   disk->bs->CloseProtocol(disk->h, &DiskIoProtocol, disk->img, NULL);
+}
+
+bool is_booting_from_usb(efi_handle img, efi_system_table* sys) {
+  bool result = false;
+  efi_boot_services* bs = sys->BootServices;
+  efi_status status;
+  efi_loaded_image_protocol* li;
+  status = bs->OpenProtocol(img, &LoadedImageProtocol, (void**)&li, img, NULL,
+                            EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+  if (status != EFI_SUCCESS) {
+    return -1;
+  }
+
+  efi_device_path_protocol* imgdevpath;
+  status = bs->OpenProtocol(li->DeviceHandle, &DevicePathProtocol, (void**)&imgdevpath, img, NULL,
+                            EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+  if (status != EFI_SUCCESS) {
+    goto fail_open_devpath;
+  }
+
+  while (imgdevpath != NULL) {
+    if (imgdevpath->Type == DEVICE_PATH_MESSAGING) {
+      switch (imgdevpath->SubType) {
+        case DEVICE_PATH_MESSAGING_USB:
+        case DEVICE_PATH_MESSAGING_USB_LUN:
+        case DEVICE_PATH_MESSAGING_USB_WWID:
+        case DEVICE_PATH_MESSAGING_USB_CLASS:
+          result = true;
+          break;
+      }
+    }
+
+    imgdevpath = path_node_next(imgdevpath);
+  }
+
+  bs->CloseProtocol(li->DeviceHandle, &DevicePathProtocol, img, NULL);
+
+fail_open_devpath:
+  bs->CloseProtocol(img, &LoadedImageProtocol, img, NULL);
+
+  return result;
 }
 
 int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* disk) {
