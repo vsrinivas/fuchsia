@@ -17,6 +17,7 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns-rustc",
@@ -32,6 +33,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/stdout-to-debuglog/rust:stdout-to-debuglog",
     "//third_party/rust-mirrors/quiche",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
@@ -59,9 +61,14 @@ resource("certificates") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_component("component") {
-  component_name = "overnetstack"
+# The v1-based components in this build file exist to support tests and
+# should not be added to.
+fuchsia_package("overnetstack_v1") {
+  deps = [ ":component_v1" ]
+}
 
+fuchsia_component("component_v1") {
+  component_name = "overnetstack_v1"
   deps = [
     ":bin",
     ":certificates",
@@ -83,12 +90,35 @@ fuchsia_component("component-with-udp") {
   manifest = "meta/overnetstack-with-udp.cmx"
 }
 
-fuchsia_unittest_package("overnetstack-tests") {
+fuchsia_component("component-with-udp-v2") {
+  component_name = "overnetstack-v2-with-udp"
+
   deps = [
-    ":bin_test",
+    ":bin",
     ":certificates",
   ]
-  manifest = "meta/overnetstack_bin_test.cmx"
+  manifest = "meta/overnetstack-with-udp.cml"
+}
+
+fuchsia_component("component") {
+  component_name = "overnetstack"
+  deps = [
+    ":bin",
+    ":certificates",
+  ]
+  manifest = "meta/overnetstack.cml"
+}
+
+fuchsia_component("bin-test") {
+  testonly = true
+  component_name = "overnetstack-bin-test"
+  deps = [ ":bin_test" ]
+  manifest = "meta/overnetstack-bin-test.cml"
+}
+
+fuchsia_test_package("overnetstack-tests") {
+  test_components = [ ":bin-test" ]
+  deps = [ ":certificates" ]
 }
 
 group("tests") {

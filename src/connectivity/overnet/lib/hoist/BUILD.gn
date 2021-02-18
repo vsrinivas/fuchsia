@@ -62,5 +62,6 @@ group("tests") {
   deps = [
     ":hoist_test($host_toolchain)",
     ":overnet-hoist-tests",
+    "//src/connectivity/overnet/overnetstack:overnetstack_v1",
   ]
 }

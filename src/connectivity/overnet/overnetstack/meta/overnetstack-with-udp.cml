@@ -1,0 +1,49 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/overnetstack",
+        args: [
+            "--udp",
+            "--mdns-connect",
+            "--mdns-publish",
+        ],
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.overnet.MeshController",
+                "fuchsia.overnet.ServiceConsumer",
+                "fuchsia.overnet.ServicePublisher",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+        {
+            directory: "dev-class-serial",
+            rights: [ "rw*" ],
+            path: "/dev/class/serial",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.overnet.MeshController" ],
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.overnet.ServiceConsumer",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.overnet.ServicePublisher",
+            from: "self",
+        },
+    ],
+}

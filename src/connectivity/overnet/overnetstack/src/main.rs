@@ -154,6 +154,13 @@ impl<T> Drop for Precious<T> {
 
 #[fuchsia::component]
 async fn main(opt: Opts) -> Result<(), Error> {
+    // Try to configure stdout/stderr so they appear in the debug/kernel log.
+    // This is a load bearing requirement to some tests. If the componet is
+    // running as a v2 component this initialization is required and should
+    // succeed. If this is running in a v1 environment this will likely fail,
+    // but v1 facilities will get stdout/stderr to an observable place. Things
+    // like println! and eprintln! go to the standard I/O channels.
+    let _ = stdout_to_debuglog::init().await;
     let mut fs = ServiceFs::new_local();
     let mut svc_dir = fs.dir("svc");
     svc_dir.add_fidl_service(IncomingService::ServiceConsumer);
