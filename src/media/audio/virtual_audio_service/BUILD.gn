@@ -3,44 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("virtual_audio_service") {
-  deps = [ ":virtual_audio_bin" ]
-
-  binaries = [
-    {
-      name = "virtual_audio_service"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/virtual_audio_service.cmx")
-      dest = "virtual_audio_service.cmx"
-    },
-  ]
-}
-
-# This package is to be used within hermetic testing environments with an isolated devmgr.
-package("virtual-audio-service-for-test") {
-  deps = [ ":virtual_audio_bin" ]
-
-  binaries = [
-    {
-      name = "virtual_audio_service"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/virtual_audio_service_nodevfs.cmx")
-      dest = "virtual_audio_service_nodevfs.cmx"
-    },
-  ]
-}
-
-executable("virtual_audio_bin") {
+executable("bin") {
   output_name = "virtual_audio_service"
 
   sources = [
@@ -59,6 +24,21 @@ executable("virtual_audio_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_package_with_single_component("virtual_audio_service") {
+  manifest = "meta/virtual_audio_service.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("virtual_audio_service_nodevfs") {
+  manifest = "meta/virtual_audio_service_nodevfs.cmx"
+  deps = [ ":bin" ]
+}
+
+# This package is to be used within hermetic testing environments with an isolated devmgr.
+fuchsia_package("virtual-audio-service-for-test") {
+  deps = [ ":virtual_audio_service_nodevfs" ]
 }
 
 config_data("virtual_audio_config") {

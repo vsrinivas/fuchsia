@@ -11,6 +11,15 @@ class FuzzedTest : public HermeticAudioTest {
  public:
   FuzzedTest(const uint8_t* data, size_t size) : data_(data, size) {}
 
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
+        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-fuzzers",
+        .devmgr_url = "fuchsia-pkg://fuchsia.com/audio-fuzzers#meta/audio-test-devmgr.cmx",
+        .virtual_audio_url =
+            "fuchsia-pkg://fuchsia.com/audio-fuzzers#meta/virtual_audio_service_nodevfs.cmx",
+    });
+  }
+
   void TestBody() {
     SetUp();
     bool all_done = false;
@@ -44,6 +53,7 @@ class FuzzedTest : public HermeticAudioTest {
   static const uint32_t kMaxCapturers = 3;
 
   void SetUp() {
+    SetUpTestSuite();
     HermeticAudioTest::SetUp();
     auto format = Format::Create<FuzzerConst::SampleFormat>(2, FuzzerConst::kFrameRate).value();
     // Setup output device.

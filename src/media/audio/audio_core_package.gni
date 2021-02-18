@@ -24,7 +24,10 @@ template("_audio_core_package") {
       forward_variables_from(invoker, [ "testonly" ])
       component_name = cmx_name
       manifest = invoker_manifest
-      visibility = [ ":*" ]
+      visibility = [
+        ":*",
+        "/*",
+      ]
 
       deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
       if (defined(manifest_merge_target)) {

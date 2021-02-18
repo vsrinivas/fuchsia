@@ -253,7 +253,6 @@ group("deprecated_package") {
     "//src/media/audio/tools/virtual_audio_util/*",
     "//src/media/audio/tools/vol/*",
     "//src/media/audio/tools/wav_recorder/*",
-    "//src/media/audio/virtual_audio_service/*",
     "//src/media/codec/*",
     "//src/media/codec/codecs/test/*",
     "//src/media/codec/examples/*",

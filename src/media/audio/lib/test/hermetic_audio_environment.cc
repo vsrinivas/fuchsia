@@ -159,10 +159,8 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   } else {
     audio_core_url += "#meta/audio_core_nodevfs.cmx";
   }
-  // clang-format off
-  std::string virtual_audio_url =
-      "fuchsia-pkg://fuchsia.com/virtual-audio-service-for-test#meta/virtual_audio_service_nodevfs.cmx";
-  // clang-format on
+
+  std::string virtual_audio_url = options_.virtual_audio_url;
 
   std::string thermal_test_control_url =
       "fuchsia-pkg://fuchsia.com/thermal-test-control#meta/thermal_test_control.cmx";
