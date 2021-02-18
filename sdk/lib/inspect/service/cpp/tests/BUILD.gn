@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 test("inspect_service_cpp_unittests") {
   sources = [
@@ -22,12 +21,7 @@ test("inspect_service_cpp_unittests") {
   ]
 }
 
-test_package("inspect_service_cpp_tests") {
+fuchsia_unittest_package("inspect_service_cpp_tests") {
   deps = [ ":inspect_service_cpp_unittests" ]
-
-  tests = [
-    {
-      name = "inspect_service_cpp_unittests"
-    },
-  ]
+  manifest = "meta/inspect_service_cpp_unittests.cmx"
 }

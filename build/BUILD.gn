@@ -124,7 +124,6 @@ group("deprecated_package") {
     "//sdk/lib/fuzzing/cpp/*",
     "//sdk/lib/inspect/contrib/cpp/*",
     "//sdk/lib/inspect/contrib/cpp/tests/*",
-    "//sdk/lib/inspect/service/cpp/tests/*",
     "//sdk/lib/media/cpp/*",
     "//sdk/lib/modular/cpp/*",
     "//sdk/lib/modular/testing/cpp/*",
