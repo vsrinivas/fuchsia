@@ -17,10 +17,11 @@ void main() {
         url: server, directoryRequest: incoming.request().passChannel());
     final launcherProxy = LauncherProxy();
 
-    StartupContext.fromStartupInfo().incoming.connectToService(launcherProxy);
+    final svc = Incoming.fromSvcPath()..connectToService(launcherProxy);
     await launcherProxy.createComponent(
         launchInfo, ComponentControllerProxy().ctrl.request());
     launcherProxy.ctrl.close();
+    await svc.close();
 
     final fooProxy = FooProxy();
     incoming.connectToService(fooProxy);
