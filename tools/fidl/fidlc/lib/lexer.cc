@@ -168,8 +168,8 @@ Token Lexer::LexIdentifier() {
   SourceSpan previous_end(previous, source_file_);
   std::string_view identifier_data = Reset(Token::Kind::kIdentifier);
   auto subkind = Token::Subkind::kNone;
-  auto lookup = keyword_table_.find(identifier_data);
-  if (lookup != keyword_table_.end())
+  auto lookup = token_subkinds.find(identifier_data);
+  if (lookup != token_subkinds.end())
     subkind = lookup->second;
   return Token(previous_end, SourceSpan(identifier_data, source_file_), Token::Kind::kIdentifier,
                subkind);

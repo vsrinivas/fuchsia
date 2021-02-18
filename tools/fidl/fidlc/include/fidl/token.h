@@ -26,11 +26,15 @@ class Token {
 #undef TOKEN
   };
 
+  // Each identifier token is assigned a subkind, which are defined below, or a sentinel value if
+  // the token does not match one of the subkinds, to make it simple for the parser to either
+  // consume a generic identifier or one that matches a specific subkind. This design makes it so
+  // that there are no "reserved keywords" and any identifier can be defined by the user.
   enum Subkind : uint8_t {
     kNone = 0,
-#define KEYWORD(Name, Spelling) k##Name,
+#define TOKEN_SUBKIND(Name, Spelling) k##Name,
 #include "fidl/token_definitions.inc"
-#undef KEYWORD
+#undef TOKEN_SUBKIND
   };
 
   class KindAndSubkind {
@@ -60,11 +64,11 @@ class Token {
     return #Name;
 #include "fidl/token_definitions.inc"
 #undef TOKEN
-#define KEYWORD(Name, Spelling)                                                             \
+#define TOKEN_SUBKIND(Name, Spelling)                                                       \
   case Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::k##Name).combined(): \
     return #Spelling;
 #include "fidl/token_definitions.inc"
-#undef KEYWORD
+#undef TOKEN_SUBKIND
       default:
         return "<unknown token>";
     }

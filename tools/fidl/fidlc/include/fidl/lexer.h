@@ -30,10 +30,10 @@ class Lexer {
   // simplifies advancing to the next character.
   Lexer(const SourceFile& source_file, Reporter* reporter)
       : source_file_(source_file), reporter_(reporter) {
-    keyword_table_ = {
-#define KEYWORD(Name, Spelling) {Spelling, Token::Subkind::k##Name},
+    token_subkinds = {
+#define TOKEN_SUBKIND(Name, Spelling) {Spelling, Token::Subkind::k##Name},
 #include "fidl/token_definitions.inc"
-#undef KEYWORD
+#undef TOKEN_SUBKIND
     };
     current_ = data().data();
     end_of_file_ = current_ + data().size();
@@ -63,7 +63,7 @@ class Lexer {
   Token LexCommentOrDocComment();
 
   const SourceFile& source_file_;
-  std::map<std::string_view, Token::Subkind> keyword_table_;
+  std::map<std::string_view, Token::Subkind> token_subkinds;
   Reporter* reporter_;
 
   const char* current_ = nullptr;

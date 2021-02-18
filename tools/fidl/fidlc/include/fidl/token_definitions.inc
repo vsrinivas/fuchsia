@@ -9,8 +9,8 @@
 #define TOKEN(Name)
 #endif
 
-#if !defined(KEYWORD)
-#define KEYWORD(Name, Spelling)
+#if !defined(TOKEN_SUBKIND)
+#define TOKEN_SUBKIND(Name, Spelling)
 #endif
 
 // Control and whitespace
@@ -44,44 +44,44 @@ TOKEN(Ampersand)
 TOKEN(Arrow)
 TOKEN(Pipe)
 
-// Keywords
-KEYWORD(As, "as")
-KEYWORD(Alias, "alias")
-KEYWORD(Library, "library")
-KEYWORD(Using, "using")
+// Token subkinds
+TOKEN_SUBKIND(As, "as")
+TOKEN_SUBKIND(Alias, "alias")
+TOKEN_SUBKIND(Library, "library")
+TOKEN_SUBKIND(Using, "using")
 
-KEYWORD(Array, "array")
-KEYWORD(Handle, "handle")
-KEYWORD(Request, "request")
-KEYWORD(String, "string")
-KEYWORD(Vector, "vector")
+TOKEN_SUBKIND(Array, "array")
+TOKEN_SUBKIND(Handle, "handle")
+TOKEN_SUBKIND(Request, "request")
+TOKEN_SUBKIND(String, "string")
+TOKEN_SUBKIND(Vector, "vector")
 
-// KEYWORD(Max, "MAX")
+// TOKEN_SUBKIND(Max, "MAX")
 // MAX is not a real keyword, but it effectively works like one. It can be used
 // as vector<T>:MAX or string:MAX. See Library::ResolveSizeBound in flat_ast.cc.
 
-KEYWORD(Bits, "bits")
-KEYWORD(Const, "const")
-KEYWORD(Enum, "enum")
-KEYWORD(Protocol, "protocol")
-KEYWORD(Resource, "resource")
-KEYWORD(ResourceDefinition, "resource_definition")
-KEYWORD(Service, "service")
-KEYWORD(Strict, "strict")
-KEYWORD(Struct, "struct")
-KEYWORD(Table, "table")
-KEYWORD(Flexible, "flexible")
-KEYWORD(Type, "type")
-KEYWORD(Union, "union")
-KEYWORD(XUnion, "xunion")
+TOKEN_SUBKIND(Bits, "bits")
+TOKEN_SUBKIND(Const, "const")
+TOKEN_SUBKIND(Enum, "enum")
+TOKEN_SUBKIND(Protocol, "protocol")
+TOKEN_SUBKIND(Resource, "resource")
+TOKEN_SUBKIND(ResourceDefinition, "resource_definition")
+TOKEN_SUBKIND(Service, "service")
+TOKEN_SUBKIND(Strict, "strict")
+TOKEN_SUBKIND(Struct, "struct")
+TOKEN_SUBKIND(Table, "table")
+TOKEN_SUBKIND(Flexible, "flexible")
+TOKEN_SUBKIND(Type, "type")
+TOKEN_SUBKIND(Union, "union")
+TOKEN_SUBKIND(XUnion, "xunion")
 
-KEYWORD(Error, "error")
+TOKEN_SUBKIND(Error, "error")
 
-KEYWORD(True, "true")
-KEYWORD(False, "false")
+TOKEN_SUBKIND(True, "true")
+TOKEN_SUBKIND(False, "false")
 
-KEYWORD(Reserved, "reserved")
-KEYWORD(Properties, "properties")
+TOKEN_SUBKIND(Reserved, "reserved")
+TOKEN_SUBKIND(Properties, "properties")
 
-#undef KEYWORD
+#undef TOKEN_SUBKIND
 #undef TOKEN
