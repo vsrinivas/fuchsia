@@ -201,6 +201,7 @@ walkdir = "2.2.7"
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }
 crossterm = "0.17.7"
+concurrent-queue = "1"
 handlebars = "2.0.0-beta.2"
 home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }

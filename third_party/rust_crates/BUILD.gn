@@ -72,6 +72,12 @@ group("clap") {
   deps = [ ":clap-v2_33_0" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("concurrent-queue") {
+    deps = [ ":concurrent-queue-v1_2_2" ]
+  }
+}
+
 group("crc") {
   deps = [ ":crc-v1_8_1" ]
 }
@@ -1708,6 +1714,27 @@ rust_library("c2-chacha-v0_2_3") {
   ]
 }
 
+rust_library("cache-padded-v1_1_1") {
+  crate_name = "cache_padded"
+  crate_root = "//third_party/rust_crates/vendor/cache-padded/src/lib.rs"
+  output_name = "cache_padded-d5ffac023176ef0c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=d5ffac023176ef0c",
+    "-Cextra-filename=-d5ffac023176ef0c",
+  ]
+}
+
 rust_library("cargo_metadata-v0_9_1") {
   crate_name = "cargo_metadata"
   crate_root = "//third_party/rust_crates/vendor/cargo_metadata/src/lib.rs"
@@ -1950,6 +1977,28 @@ rust_library("codespan-reporting-v0_9_5") {
     "--edition=2018",
     "-Cmetadata=32ae5083927f74fe",
     "-Cextra-filename=-32ae5083927f74fe",
+  ]
+}
+
+rust_library("concurrent-queue-v1_2_2") {
+  crate_name = "concurrent_queue"
+  crate_root = "//third_party/rust_crates/vendor/concurrent-queue/src/lib.rs"
+  output_name = "concurrent_queue-13df2ce2106c7e2c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cache-padded-v1_1_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=13df2ce2106c7e2c",
+    "-Cextra-filename=-13df2ce2106c7e2c",
   ]
 }
 
