@@ -226,6 +226,15 @@ required for the filesystem.
 
 From //build/images/fvm.gni:61
 
+### blobfs_enable_streaming_writes
+Set this to true when configuring gn args to enable blobfs streaming writes.
+This is a compile time argument which allows us to conditionally enable blobfs streaming writes
+only on specific configurations.
+
+**Current value (from the default):** `false`
+
+From //src/storage/blobfs/BUILD.gn:18
+
 ### blobfs_maximum_bytes
 
 **Current value (from the default):** `""`
