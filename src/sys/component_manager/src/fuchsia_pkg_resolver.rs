@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::resolver::{ResolvedComponent, Resolver, ResolverError, ResolverFut},
+    crate::model::resolver::{ResolvedComponent, Resolver, ResolverError},
     anyhow::format_err,
+    async_trait::async_trait,
     cm_fidl_validator,
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
@@ -94,9 +95,10 @@ impl FuchsiaPkgResolver {
     }
 }
 
+#[async_trait]
 impl Resolver for FuchsiaPkgResolver {
-    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut {
-        Box::pin(self.resolve_async(component_url))
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        self.resolve_async(component_url).await
     }
 }
 

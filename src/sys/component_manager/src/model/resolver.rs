@@ -9,11 +9,11 @@ use {
         routing,
     },
     anyhow::Error,
+    async_trait::async_trait,
     clonable_error::ClonableError,
     cm_rust::ResolverRegistration,
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
-    futures::future::{self, BoxFuture},
     std::{collections::HashMap, path::PathBuf, sync::Arc},
     thiserror::Error,
     url::Url,
@@ -22,11 +22,10 @@ use {
 /// Resolves a component URL to its content.
 /// TODO: Consider defining an internal representation for `fsys::Component` so as to
 /// further isolate the `Model` from FIDL interfacting concerns.
+#[async_trait]
 pub trait Resolver {
-    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a>;
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError>;
 }
-
-pub type ResolverFut<'a> = BoxFuture<'a, Result<ResolvedComponent, ResolverError>>;
 
 /// The response returned from a Resolver. This struct is derived from the FIDL
 /// [`fuchsia.sys2.Component`][fidl_fuchsia_sys2::Component] table, except that
@@ -75,17 +74,18 @@ impl ResolverRegistry {
     }
 }
 
+#[async_trait]
 impl Resolver for ResolverRegistry {
-    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
         match Url::parse(component_url) {
             Ok(parsed_url) => {
                 if let Some(ref resolver) = self.resolvers.get(parsed_url.scheme()) {
-                    resolver.resolve(component_url)
+                    resolver.resolve(component_url).await
                 } else {
-                    Box::pin(future::err(ResolverError::SchemeNotRegistered))
+                    Err(ResolverError::SchemeNotRegistered)
                 }
             }
-            Err(e) => Box::pin(future::err(ResolverError::url_parse_error(component_url, e))),
+            Err(e) => Err(ResolverError::url_parse_error(component_url, e)),
         }
     }
 }
@@ -105,53 +105,49 @@ impl RemoteResolver {
 
 // TODO(61288): Implement some sort of caching of the routed capability. Multiple
 // component URL resolutions should be possible on a single channel.
+#[async_trait]
 impl Resolver for RemoteResolver {
-    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
-        Box::pin(async move {
-            let (proxy, server_end) =
-                fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
-                    .map_err(ResolverError::unknown_resolver_error)?;
-            let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
-            let capability_source = routing::route_resolver(self.registration.clone(), &component)
-                .await
-                .map_err(ResolverError::routing_error)?;
-            routing::open_capability_at_source(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-                fio::MODE_TYPE_SERVICE,
-                PathBuf::new(),
-                capability_source,
-                &component,
-                &mut server_end.into_channel(),
-            )
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
+            .map_err(ResolverError::unknown_resolver_error)?;
+        let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
+        let capability_source = routing::route_resolver(self.registration.clone(), &component)
             .await
             .map_err(ResolverError::routing_error)?;
-            let (status, component) =
-                proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)?;
-            let status = Status::from_raw(status);
-            match status {
-                Status::OK => {
-                    let decl_buffer: fmem::Data =
-                        component.decl.ok_or(ResolverError::RemoteInvalidData)?;
-                    Ok(ResolvedComponent {
-                        resolved_url: component
-                            .resolved_url
-                            .ok_or(ResolverError::RemoteInvalidData)?,
-                        decl: read_and_validate_manifest(component_url, decl_buffer).await?,
-                        package: component.package,
-                    })
-                }
-                Status::INVALID_ARGS => {
-                    Err(ResolverError::url_parse_error(component_url, RemoteError(status)))
-                }
-                Status::NOT_FOUND => {
-                    Err(ResolverError::component_not_available(component_url, RemoteError(status)))
-                }
-                Status::UNAVAILABLE => {
-                    Err(ResolverError::manifest_invalid(component_url, RemoteError(status)))
-                }
-                _ => Err(ResolverError::unknown_resolver_error(RemoteError(status))),
+        routing::open_capability_at_source(
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
+            PathBuf::new(),
+            capability_source,
+            &component,
+            &mut server_end.into_channel(),
+        )
+        .await
+        .map_err(ResolverError::routing_error)?;
+        let (status, component) =
+            proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)?;
+        let status = Status::from_raw(status);
+        match status {
+            Status::OK => {
+                let decl_buffer: fmem::Data =
+                    component.decl.ok_or(ResolverError::RemoteInvalidData)?;
+                Ok(ResolvedComponent {
+                    resolved_url: component.resolved_url.ok_or(ResolverError::RemoteInvalidData)?,
+                    decl: read_and_validate_manifest(component_url, decl_buffer).await?,
+                    package: component.package,
+                })
             }
-        })
+            Status::INVALID_ARGS => {
+                Err(ResolverError::url_parse_error(component_url, RemoteError(status)))
+            }
+            Status::NOT_FOUND => {
+                Err(ResolverError::component_not_available(component_url, RemoteError(status)))
+            }
+            Status::UNAVAILABLE => {
+                Err(ResolverError::manifest_invalid(component_url, RemoteError(status)))
+            }
+            _ => Err(ResolverError::unknown_resolver_error(RemoteError(status))),
+        }
     }
 }
 
@@ -277,10 +273,11 @@ mod tests {
         pub resolved_url: String,
     }
 
+    #[async_trait]
     impl Resolver for MockOkResolver {
-        fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
+        async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
             assert_eq!(self.expected_url, component_url);
-            Box::pin(future::ok(ResolvedComponent {
+            Ok(ResolvedComponent {
                 resolved_url: self.resolved_url.clone(),
                 decl: fsys::ComponentDecl {
                     program: None,
@@ -295,7 +292,7 @@ mod tests {
                     ..fsys::ComponentDecl::EMPTY
                 },
                 package: None,
-            }))
+            })
         }
     }
 
@@ -304,10 +301,11 @@ mod tests {
         pub error: Box<dyn Fn(&str) -> ResolverError + Send + Sync + 'static>,
     }
 
+    #[async_trait]
     impl Resolver for MockErrorResolver {
-        fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
+        async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
             assert_eq!(self.expected_url, component_url);
-            Box::pin(future::err((self.error)(component_url)))
+            Err((self.error)(component_url))
         }
     }
 

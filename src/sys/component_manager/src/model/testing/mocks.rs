@@ -11,7 +11,7 @@ use {
             environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
             policy::ScopedPolicyChecker,
-            resolver::{ResolvedComponent, Resolver, ResolverError, ResolverFut, ResolverRegistry},
+            resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
             runner::{Runner, RunnerError},
         },
     },
@@ -169,9 +169,10 @@ impl MockResolver {
     }
 }
 
+#[async_trait]
 impl Resolver for MockResolver {
-    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
-        Box::pin(self.resolve_async(component_url.to_string()))
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        self.resolve_async(component_url.to_string()).await
     }
 }
 

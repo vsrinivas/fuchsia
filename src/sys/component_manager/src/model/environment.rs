@@ -6,8 +6,9 @@ use {
     crate::model::{
         component::{ComponentInstance, WeakComponentInstance},
         error::ModelError,
-        resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
+        resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
     },
+    async_trait::async_trait,
     cm_rust::{CapabilityName, EnvironmentDecl, RegistrationSource, RunnerRegistration},
     fidl_fuchsia_sys2 as fsys,
     std::{collections::HashMap, sync::Arc, time::Duration},
@@ -177,26 +178,25 @@ impl Environment {
     }
 }
 
+#[async_trait]
 impl Resolver for Environment {
-    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
-        Box::pin(async move {
-            match self.resolver_registry.resolve(component_url).await {
-                Err(ResolverError::SchemeNotRegistered) => match &self.extends {
-                    EnvironmentExtends::Realm => {
-                        self.parent
-                            .as_ref()
-                            .unwrap()
-                            .upgrade()
-                            .map_err(|_| ResolverError::SchemeNotRegistered)?
-                            .environment
-                            .resolve(component_url)
-                            .await
-                    }
-                    EnvironmentExtends::None => Err(ResolverError::SchemeNotRegistered),
-                },
-                result => result,
-            }
-        })
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        match self.resolver_registry.resolve(component_url).await {
+            Err(ResolverError::SchemeNotRegistered) => match &self.extends {
+                EnvironmentExtends::Realm => {
+                    self.parent
+                        .as_ref()
+                        .unwrap()
+                        .upgrade()
+                        .map_err(|_| ResolverError::SchemeNotRegistered)?
+                        .environment
+                        .resolve(component_url)
+                        .await
+                }
+                EnvironmentExtends::None => Err(ResolverError::SchemeNotRegistered),
+            },
+            result => result,
+        }
     }
 }
 
