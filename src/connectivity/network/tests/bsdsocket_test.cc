@@ -2989,9 +2989,15 @@ TEST(NetStreamTest, GetTcpInfo) {
 
   tcp_info info;
   socklen_t info_len = sizeof(tcp_info);
-  ASSERT_GE(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, (void*)&info, &info_len), 0)
-      << strerror(errno);
+  ASSERT_GE(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &info, &info_len), 0) << strerror(errno);
   ASSERT_EQ(sizeof(tcp_info), info_len);
+
+  // Test that we can partially retrieve TCP_INFO.
+  uint8_t tcpi_state;
+  info_len = sizeof(tcpi_state);
+  ASSERT_GE(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &tcpi_state, &info_len), 0)
+      << strerror(errno);
+  ASSERT_EQ(sizeof(tcpi_state), info_len);
 
   ASSERT_EQ(0, close(connfd.release()));
 }

@@ -262,6 +262,7 @@ void getsockopt_inner(const fidl::VectorView<uint8_t>& fidl_optval, int level, i
     case IPPROTO_TCP:
       switch (optname) {
         case TCP_CONGESTION:
+        case TCP_INFO:
           do_optlen_check = false;
           break;
         default:
