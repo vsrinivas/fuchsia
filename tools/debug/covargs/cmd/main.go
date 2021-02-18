@@ -15,7 +15,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs"
@@ -54,6 +56,7 @@ var (
 	diffMappingFile   string
 	pathRemapping     flagmisc.StringsValue
 	srcFiles          flagmisc.StringsValue
+	jobs              int
 )
 
 func init() {
@@ -80,6 +83,7 @@ func init() {
 	flag.Var(&pathRemapping, "path-equivalence", "<from>,<to> remapping of source file paths passed through to llvm-cov")
 	flag.Var(&srcFiles, "src-file", "path to a source file to generate coverage for. If provided, only coverage for these files will be generated.\n"+
 		"Multiple files can be specified with multiple instances of this flag.")
+	flag.IntVar(&jobs, "jobs", runtime.NumCPU(), "number of parallel jobs")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -266,24 +270,41 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	// Gather the set of modules and coverage files
 	modules := []symbolize.FileCloser{}
 	moduleSet := make(map[string]struct{})
+	files := make(chan symbolize.FileCloser)
+	s := make(chan struct{}, jobs)
+	var wg sync.WaitGroup
 	for _, entry := range entries {
 		for _, module := range entry.Modules {
 			if _, ok := moduleSet[module]; ok {
 				continue
 			}
 			moduleSet[module] = struct{}{}
-			file, err := repo.GetBuildObject(module)
-			if err != nil {
-				logger.Warningf(ctx, "module with build id %s not found\n", module)
-				continue
-			}
-			if isInstrumented(file.String()) {
-				modules = append(modules, file)
-				defer file.Close()
-			} else {
-				file.Close()
-			}
+			wg.Add(1)
+			go func(module string) {
+				defer wg.Done()
+				s <- struct{}{}
+				defer func() { <-s }()
+				file, err := repo.GetBuildObject(module)
+				if err != nil {
+					logger.Warningf(ctx, "module with build id %s not found\n", module)
+					return
+				}
+				if isInstrumented(file.String()) {
+					files <- file
+				} else {
+					file.Close()
+				}
+			}(module)
 		}
+	}
+	go func() {
+		wg.Wait()
+		close(files)
+	}()
+	for f := range files {
+		modules = append(modules, f)
+		// Make sure we close all modules in the case of error
+		defer f.Close()
 	}
 
 	// Make the llvm-cov response file
