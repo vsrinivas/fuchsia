@@ -24,6 +24,7 @@ test("zxcrypt") {
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/fvm",
+    "//src/storage/gpt",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
@@ -36,7 +37,6 @@ test("zxcrypt") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

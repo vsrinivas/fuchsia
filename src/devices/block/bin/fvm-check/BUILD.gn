@@ -15,12 +15,12 @@ executable("fvm-check") {
     "//sdk/lib/fdio",
     "//src/lib/digest",
     "//src/storage/fvm",
+    "//src/storage/gpt",
     "//third_party/boringssl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

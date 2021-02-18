@@ -39,8 +39,8 @@ static_library("fvm") {
   ]
   public_deps = [
     "//src/lib/digest",
+    "//src/storage/gpt",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/gpt",
     "//zircon/third_party/ulib/lz4",
   ]
 
@@ -52,11 +52,11 @@ static_library("fvm") {
 
     deps += [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//src/storage/gpt",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fzl",
-      "//zircon/system/ulib/gpt",
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.

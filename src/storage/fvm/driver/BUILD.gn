@@ -58,6 +58,7 @@ source_set("shared") {
     "//src/lib/digest",
     "//src/lib/uuid",
     "//src/storage/fvm",
+    "//src/storage/gpt",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
@@ -67,7 +68,6 @@ source_set("shared") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/inspect",
   ]
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GPT_GUID_H_
-#define GPT_GUID_H_
+#ifndef SRC_STORAGE_GPT_INCLUDE_GPT_GUID_H_
+#define SRC_STORAGE_GPT_INCLUDE_GPT_GUID_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -82,4 +82,4 @@ class KnownGuid {
 
 }  // namespace gpt
 
-#endif  // GPT_GUID_H_
+#endif  // SRC_STORAGE_GPT_INCLUDE_GPT_GUID_H_

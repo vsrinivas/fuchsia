@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GPT_C_GPT_H_
-#define GPT_C_GPT_H_
+#ifndef SRC_STORAGE_GPT_INCLUDE_GPT_C_GPT_H_
+#define SRC_STORAGE_GPT_INCLUDE_GPT_C_GPT_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -54,4 +54,4 @@ void gpt_set_debug_output_enabled(bool enabled);
 void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);
 
 __END_CDECLS
-#endif  // GPT_C_GPT_H_
+#endif  // SRC_STORAGE_GPT_INCLUDE_GPT_C_GPT_H_

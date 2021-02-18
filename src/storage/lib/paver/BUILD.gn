@@ -37,12 +37,12 @@ source_set("paver-core") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
     "//src/security/zxcrypt:zxcrypt-fdio",
+    "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
     "//zircon/system/ulib/service:service-llcpp",
   ]
@@ -73,10 +73,10 @@ source_set("gpt") {
   deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp" ]
   public_deps = [
     ":paver-core",
+    "//src/storage/gpt",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/gpt",
   ]
 }
 
@@ -86,8 +86,8 @@ source_set("skip-block") {
   public_deps = [
     ":paver-core",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
+    "//src/storage/gpt",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/gpt",
   ]
 }
 
@@ -106,7 +106,7 @@ source_set("as370") {
     ":paver-core",
     ":skip-block",
     "//src/lib/uuid",
-    "//zircon/system/ulib/gpt",
+    "//src/storage/gpt",
   ]
 }
 
@@ -118,7 +118,7 @@ source_set("astro") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
-    "//zircon/system/ulib/gpt",
+    "//src/storage/gpt",
     "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
@@ -145,7 +145,7 @@ source_set("sherlock") {
     ":sysconfig",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
-    "//zircon/system/ulib/gpt",
+    "//src/storage/gpt",
   ]
 }
 
@@ -157,7 +157,7 @@ source_set("nelson") {
     ":sysconfig",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
-    "//zircon/system/ulib/gpt",
+    "//src/storage/gpt",
   ]
 }
 
@@ -169,7 +169,7 @@ source_set("luis") {
     ":sysconfig",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
-    "//zircon/system/ulib/gpt",
+    "//src/storage/gpt",
   ]
 }
 
@@ -181,7 +181,7 @@ source_set("vim3") {
     ":sysconfig",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
-    "//zircon/system/ulib/gpt",
+    "//src/storage/gpt",
   ]
 }
 

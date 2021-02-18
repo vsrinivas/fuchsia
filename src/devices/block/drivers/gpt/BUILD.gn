@@ -37,10 +37,10 @@ driver_module("gpt") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/utf_conversion",
   ]
 }
@@ -59,13 +59,13 @@ test("gpt-device-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/utf_conversion",
   ]
 }

@@ -11,13 +11,13 @@ executable("lsblk") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//sdk/lib/fdio",
+    "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/storage-metrics",
   ]
 }

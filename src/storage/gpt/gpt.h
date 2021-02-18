@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_GPT_GPT_H_
-#define ZIRCON_SYSTEM_ULIB_GPT_GPT_H_
+#ifndef SRC_STORAGE_GPT_GPT_H_
+#define SRC_STORAGE_GPT_GPT_H_
 
 #include <gpt/gpt.h>
 #include <mbr/mbr.h>
@@ -20,4 +20,4 @@ mbr::Mbr MakeProtectiveMbr(uint64_t blocks_in_disk);
 
 }  // namespace gpt
 
-#endif  // ZIRCON_SYSTEM_ULIB_GPT_GPT_H_
+#endif  // SRC_STORAGE_GPT_GPT_H_

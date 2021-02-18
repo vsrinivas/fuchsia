@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_GPT_TEST_GPT_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_GPT_TEST_GPT_TESTS_H_
+#ifndef SRC_STORAGE_GPT_TEST_GPT_TESTS_H_
+#define SRC_STORAGE_GPT_TEST_GPT_TESTS_H_
 
 #include <fcntl.h>
 #include <limits.h>
@@ -186,4 +186,4 @@ class LibGptTest {
 }  // namespace
 }  // namespace gpt
 
-#endif  // ZIRCON_SYSTEM_ULIB_GPT_TEST_GPT_TESTS_H_
+#endif  // SRC_STORAGE_GPT_TEST_GPT_TESTS_H_

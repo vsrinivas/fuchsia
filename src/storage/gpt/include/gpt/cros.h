@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_GPT_INCLUDE_GPT_CROS_H_
+#define SRC_STORAGE_GPT_INCLUDE_GPT_CROS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <unistd.h>
-
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -52,3 +52,5 @@ uint8_t gpt_cros_attr_get_priority(uint64_t flags);
 int gpt_cros_attr_set_priority(uint64_t* flags, uint8_t priority);
 
 __END_CDECLS
+
+#endif  // SRC_STORAGE_GPT_INCLUDE_GPT_CROS_H_

@@ -11,6 +11,7 @@ test("partition-mapping") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
+    "//src/storage/gpt",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -19,7 +20,6 @@ test("partition-mapping") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/gpt",
   ]
 }
 

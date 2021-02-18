@@ -36,6 +36,7 @@ if (is_fuchsia) {
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//src/lib/digest",
       "//src/storage/fvm",
+      "//src/storage/gpt",
       "//third_party/boringssl",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/pretty",
@@ -44,7 +45,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fzl",
-      "//zircon/system/ulib/gpt",
     ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 

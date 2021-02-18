@@ -115,7 +115,7 @@ The superblock format is as follows, with each field described in turn:
 ```
 
 * _Type [GUID][guid]_: Identifies this as a zxcrypt device. Compatible with
-  [GPT](/zircon/system/ulib/gpt/include/gpt/gpt.h).
+  [GPT](/src/storage/gpt/include/gpt/gpt.h).
 * _Instance GUID_: Per-device identifier, used as the KDF salt as explained below.
 * _Version_: Used to indicate which cryptographic algorithms to use.
 * _Sealed Key_: The data key, encrypted by the wrap key as described below.

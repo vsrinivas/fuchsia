@@ -95,12 +95,12 @@ source_set("netsvc_common") {
     "//sdk/lib/fdio",
     "//src/bringup/lib/mexec",
     "//src/lib/bootfs",
+    "//src/storage/gpt",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
     "//zircon/system/ulib/zbitl",
   ]

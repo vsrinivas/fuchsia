@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gpt/cros.h>
+#include <string.h>
 
 #include <gpt/c/gpt.h>
-#include <string.h>
+#include <gpt/cros.h>
 
 namespace gpt {
 

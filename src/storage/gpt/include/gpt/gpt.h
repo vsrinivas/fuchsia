@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GPT_GPT_H_
-#define GPT_GPT_H_
+#ifndef SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
+#define SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 
 #include <lib/fit/result.h>
 
@@ -284,4 +284,4 @@ const char* HeaderStatusToCString(zx_status_t status);
 
 }  // namespace gpt
 
-#endif  // GPT_GPT_H_
+#endif  // SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
