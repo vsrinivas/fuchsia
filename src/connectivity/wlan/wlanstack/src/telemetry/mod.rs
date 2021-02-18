@@ -1253,6 +1253,53 @@ mod tests {
     }
 
     #[test]
+    fn test_inspect_log_disconnect_stats_disconnect_source_user() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let disconnect_source =
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::FailedToConnect);
+        let disconnect_info = DisconnectInfo {
+            connected_duration: 30.seconds(),
+            bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
+            channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+            last_rssi: -90,
+            last_snr: 1,
+            disconnect_source,
+            time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
+        };
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                disconnect: {
+                    "0": {
+                        "@time": AnyProperty,
+                        connected_duration: 30.seconds().into_nanos(),
+                        bssid: "01:01:01:01:01:01",
+                        bssid_hash: AnyProperty,
+                        ssid: "foo",
+                        ssid_hash: AnyProperty,
+                        channel: {
+                            primary: 1u64,
+                            cbw: "Cbw20",
+                            secondary80: 0u64,
+                        },
+                        last_rssi: -90i64,
+                        last_snr: 1i64,
+                        locally_initiated: true,
+                        reason_code: (1u64 << 16) + 1u64,
+                        disconnect_source: "user",
+                        disconnect_reason: "FailedToConnect",
+                        time_since_channel_switch: 1337i64,
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
     fn test_inspect_log_scan() {
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();

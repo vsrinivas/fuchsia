@@ -367,13 +367,14 @@ pub enum DisconnectSource {
 }
 
 impl DisconnectSource {
-    pub fn reason_code(&self) -> u16 {
+    /// Get the 802.11 reason code if disconnect comes from AP or MLME, or (1u32 << 16) plus the
+    /// corresponding enum value if it's a user disconnect reason.
+    /// This is mainly used for metric.
+    pub fn reason_code(&self) -> u32 {
         match self {
-            DisconnectSource::Ap(ap_reason_code) => *ap_reason_code,
-            DisconnectSource::Mlme(mlme_reason_code) => *mlme_reason_code,
-            DisconnectSource::User(_) => {
-                fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive()
-            }
+            DisconnectSource::Ap(ap_reason_code) => *ap_reason_code as u32,
+            DisconnectSource::Mlme(mlme_reason_code) => *mlme_reason_code as u32,
+            DisconnectSource::User(reason) => (1u32 << 16) + *reason as u32,
         }
     }
 
@@ -431,17 +432,63 @@ mod tests {
     #[test]
     fn test_disconnect_source_reason_code() {
         assert_eq!(
-            fidl_mlme::ReasonCode::NoMoreStas.into_primitive(),
+            fidl_mlme::ReasonCode::NoMoreStas.into_primitive() as u32,
             DisconnectSource::Ap(fidl_mlme::ReasonCode::NoMoreStas.into_primitive()).reason_code()
         );
         assert_eq!(
-            fidl_mlme::ReasonCode::ReasonInactivity.into_primitive(),
+            fidl_mlme::ReasonCode::ReasonInactivity.into_primitive() as u32,
             DisconnectSource::Mlme(fidl_mlme::ReasonCode::ReasonInactivity.into_primitive())
                 .reason_code()
         );
+
+        // These values are used in metrics, so making sure they don't change without us being
+        // aware of it.
         assert_eq!(
-            fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive(),
-            DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
+            65536u32,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::Unknown).reason_code()
+        );
+        assert_eq!(
+            65536u32 + 1,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::FailedToConnect).reason_code()
+        );
+        assert_eq!(
+            65536u32 + 2,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::FidlConnectRequest)
+                .reason_code()
+        );
+        assert_eq!(
+            65536u32 + 3,
+            DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest
+            )
+            .reason_code()
+        );
+        assert_eq!(
+            65536u32 + 4,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch)
+                .reason_code()
+        );
+        assert_eq!(
+            65536u32 + 5,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::DisconnectDetectedFromSme)
+                .reason_code()
+        );
+        assert_eq!(
+            65536u32 + 6,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::RegulatoryRegionChange)
+                .reason_code()
+        );
+        assert_eq!(
+            65536u32 + 7,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::Startup).reason_code()
+        );
+        assert_eq!(
+            65536u32 + 8,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::NetworkUnsaved).reason_code()
+        );
+        assert_eq!(
+            65536u32 + 9,
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::NetworkConfigUpdated)
                 .reason_code()
         );
     }

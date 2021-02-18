@@ -1199,7 +1199,7 @@ fn log_state_change(
                     to: new_state.state_name(),
                     ctx: msg,
                     disconnect_ctx: {
-                        reason_code: disconnect_source.reason_code(),
+                        reason_code: disconnect_source.reason_code() as u64,
                         locally_initiated: disconnect_source.locally_initiated(),
                     }
                 });
@@ -2029,7 +2029,7 @@ mod tests {
         let mut h = TestHelper::new();
         let state = link_up_state(connect_command_one().0.bss);
         let state =
-            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::FailedToConnect);
         let state = exchange_deauth(state, &mut h);
         assert_idle(state);
 
@@ -2037,7 +2037,7 @@ mod tests {
             state_events: {
                 "0": contains {
                     disconnect_ctx: {
-                        reason_code: 3u64,
+                        reason_code: (1u64 << 16) + 1,
                         locally_initiated: true,
                     }
                 }
