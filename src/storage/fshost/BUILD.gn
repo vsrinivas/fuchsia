@@ -74,6 +74,7 @@ source_set("fshost-registry") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/loader_service",
+    "//src/storage/memfs",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -81,15 +82,14 @@ source_set("fshost-registry") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/memfs",
   ]
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/files",
+    "//src/storage/memfs:memfs-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/memfs:memfs-cpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -108,9 +108,9 @@ source_set("inspect") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
+    "//src/storage/memfs",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/memfs",
   ]
 }
 
@@ -152,6 +152,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//src/storage/blobfs",
+    "//src/storage/memfs",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -159,7 +160,6 @@ source_set("block-watcher") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/memfs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",

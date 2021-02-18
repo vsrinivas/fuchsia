@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEMFS_MEMFS_H_
-#define LIB_MEMFS_MEMFS_H_
+#ifndef SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_MEMFS_H_
+#define SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_MEMFS_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/sync/completion.h>
@@ -68,4 +68,4 @@ __EXPORT zx_status_t memfs_uninstall_unsafe(memfs_filesystem_t* fs, const char* 
 
 __END_CDECLS
 
-#endif  // LIB_MEMFS_MEMFS_H_
+#endif  // SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_MEMFS_H_

@@ -57,11 +57,11 @@ executable("dir_service_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.io",
+    "//src/storage/memfs",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/svc",
   ]
 }

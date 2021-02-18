@@ -204,9 +204,9 @@ executable("unittest_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/memfs",
     "//src/testing/fidl:placeholders",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/memfs",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

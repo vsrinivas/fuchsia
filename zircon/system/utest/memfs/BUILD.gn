@@ -17,6 +17,8 @@ test("memfs") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//src/storage/memfs",
+    "//src/storage/memfs:memfs-cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -30,8 +32,6 @@ test("memfs") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/memfs",
-    "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/trace-engine",
   ]
 }

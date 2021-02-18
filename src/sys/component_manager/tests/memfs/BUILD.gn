@@ -5,10 +5,10 @@
 executable("memfs") {
   sources = [ "main.cc" ]
   public_deps = [
+    "//src/storage/memfs",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
-    "//zircon/system/ulib/memfs",
   ]
 }

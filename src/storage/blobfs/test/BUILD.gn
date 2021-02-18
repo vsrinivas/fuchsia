@@ -202,6 +202,7 @@ test("blobfs_integration") {
     "//src/storage/fs_test",
     "//src/storage/fvm",
     "//src/storage/lib/utils:topological_path",
+    "//src/storage/memfs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
@@ -213,7 +214,6 @@ test("blobfs_integration") {
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/id_allocator",
-    "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/ramdevice-client",
   ]
   public_deps = [ "//zircon/system/ulib/fidl-utils" ]
@@ -300,12 +300,12 @@ template("blobfs_large_integration_test") {
       "//src/storage/blobfs",
       "//src/storage/fs_test",
       "//src/storage/fvm",
+      "//src/storage/memfs",
       "//third_party/googletest:gtest",
       "//zircon/system/ulib/async-loop",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/fdio-caller",
-      "//zircon/system/ulib/memfs",
     ]
     if (defined(invoker.deps)) {
       deps += invoker.deps

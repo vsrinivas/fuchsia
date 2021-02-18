@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_MEMFS_DNODE_H_
-#define ZIRCON_SYSTEM_ULIB_MEMFS_DNODE_H_
+#ifndef SRC_STORAGE_MEMFS_DNODE_H_
+#define SRC_STORAGE_MEMFS_DNODE_H_
 
 #include <lib/fdio/vfs.h>
 #include <limits.h>
@@ -116,4 +116,4 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
 
 }  // namespace memfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_MEMFS_DNODE_H_
+#endif  // SRC_STORAGE_MEMFS_DNODE_H_

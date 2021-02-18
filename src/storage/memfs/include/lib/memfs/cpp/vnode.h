@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEMFS_CPP_VNODE_H_
-#define LIB_MEMFS_CPP_VNODE_H_
+#ifndef SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_CPP_VNODE_H_
+#define SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_CPP_VNODE_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
@@ -219,4 +219,4 @@ class Vfs : public fs::ManagedVfs {
 
 }  // namespace memfs
 
-#endif  // LIB_MEMFS_CPP_VNODE_H_
+#endif  // SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_CPP_VNODE_H_

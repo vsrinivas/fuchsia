@@ -30,6 +30,7 @@ test("fzl-zxtest") {
   deps = [
     "//sdk/lib/fdio",
     "//src/devices/testing/fake-bti",
+    "//src/storage/memfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -40,7 +41,6 @@ test("fzl-zxtest") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/memfs",
   ]
 }
 
@@ -56,6 +56,7 @@ test("fzl") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/storage/memfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -67,6 +68,5 @@ test("fzl") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/memfs",
   ]
 }

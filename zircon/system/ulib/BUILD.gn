@@ -56,7 +56,6 @@ group("tests") {
     "lazy_init:tests",
     "ldmsg:tests",
     "lockdep:tests",
-    "memfs/test:tests",
     "mipi-dsi:tests",
     "mmio-ptr/test:tests",
     "mock-function:tests",

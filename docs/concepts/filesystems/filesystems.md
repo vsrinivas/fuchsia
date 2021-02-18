@@ -225,7 +225,7 @@ intending to satisfy a variety of distinct needs.
 
 ### MemFS: An in-memory filesystem
 
-[MemFS](/zircon/system/ulib/memfs)
+[MemFS](/src/storage/memfs)
 is used to implement requests to temporary filesystems like `/tmp`, where files
 exist entirely in RAM, and are not transmitted to an underlying block device.
 This filesystem is also currently used for the “bootfs” protocol, where a

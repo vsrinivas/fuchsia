@@ -23,6 +23,7 @@ group("tests") {
     "fvm:tests",
     "host_fs_test:tests",
     "lib:tests",
+    "memfs/test:tests",
     "minfs:tests",
     "stress-tests",
     "tools/blobfs-compression/test:tests",

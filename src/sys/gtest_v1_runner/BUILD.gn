@@ -32,12 +32,12 @@ rustc_binary("bin") {
   ]
 
   non_rust_deps = [
+    "//src/storage/memfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/memfs",
   ]
 
   sources = [ "src/main.rs" ]

@@ -187,7 +187,7 @@ executable("linux_runner_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/memfs",
+    "//src/storage/memfs",
   ]
 }
 

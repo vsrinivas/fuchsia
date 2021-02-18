@@ -34,7 +34,7 @@ executable("memory_monitor_unittests") {
     "//src/developer/memory/metrics/tests:utils",
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/memfs",
+    "//src/storage/memfs",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

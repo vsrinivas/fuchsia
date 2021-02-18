@@ -95,6 +95,8 @@ source_set("lib") {
     "//src/lib/loader_service",
     "//src/lib/pkg_url",
     "//src/storage/deprecated-fs-fidl-handler",
+    "//src/storage/memfs",
+    "//src/storage/memfs:memfs-cpp",
     "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -114,8 +116,6 @@ source_set("lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/inspector",
-    "//zircon/system/ulib/memfs",
-    "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/svc",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below

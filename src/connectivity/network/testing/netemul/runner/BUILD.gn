@@ -67,6 +67,7 @@ source_set("src") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
+    "//src/storage/memfs:memfs-cpp",
     "//src/virtualization/lib/guest_config",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
@@ -76,7 +77,6 @@ source_set("src") {
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/syslog",
   ]
 
@@ -106,10 +106,10 @@ executable("bin") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/storage/memfs:memfs-cpp",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/memfs:memfs-cpp",
   ]
 }
 
@@ -138,10 +138,10 @@ executable("sandbox_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//src/lib/testing/predicates",
+    "//src/storage/memfs:memfs-cpp",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/syslog",
   ]
 }

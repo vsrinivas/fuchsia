@@ -80,13 +80,13 @@ executable("shell_mirror_tests_bin") {
     "//sdk/lib/fdio",
     "//src/developer/debug/ipc:client",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/memfs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/cmdline",
-    "//zircon/system/ulib/memfs",
   ]
 
   # TODO(fxbug.dev/46840): Fix the leaks and remove this.
