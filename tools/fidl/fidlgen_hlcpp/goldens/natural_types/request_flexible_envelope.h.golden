@@ -44,8 +44,8 @@ class StrictFoo final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictFoo* value, size_t offset);
   zx_status_t Clone(StrictFoo* result) const;
 
@@ -131,8 +131,8 @@ class FlexibleFoo final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, FlexibleFoo* value,
                      size_t offset);
   zx_status_t Clone(FlexibleFoo* result) const;
@@ -317,7 +317,7 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::fidl::test::requestflexibleenvelope::StrictFoo>* value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -389,7 +389,7 @@ struct CodingTraits<
       std::unique_ptr<::fidl::test::requestflexibleenvelope::FlexibleFoo>*
           value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

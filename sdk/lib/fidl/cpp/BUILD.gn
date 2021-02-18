@@ -54,6 +54,7 @@ sdk_source_set("cpp") {
 
   public_deps = [
     ":cpp_sync",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
@@ -127,6 +128,7 @@ sdk_source_set("cpp_base") {
   public_configs = [ "//sdk/config" ]
 
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/fit",
   ]

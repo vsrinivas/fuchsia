@@ -55,8 +55,8 @@ class ExampleOfUseOfAliases final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, ExampleOfUseOfAliases* value,
                      size_t _offset);
   zx_status_t Clone(ExampleOfUseOfAliases* result) const;
@@ -82,7 +82,7 @@ struct CodingTraits<::fidl::test::typealiases::obj_type> {
   static void Encode(
       Encoder* encoder, ::fidl::test::typealiases::obj_type* value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);

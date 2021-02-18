@@ -36,8 +36,8 @@ class NonInlineStructTestStruct final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      NonInlineStructTestStruct* value, size_t _offset);
   zx_status_t Clone(NonInlineStructTestStruct* result) const;
@@ -66,8 +66,8 @@ class Int8Int32 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Int8Int32* value,
                      size_t _offset);
   zx_status_t Clone(Int8Int32* result) const;
@@ -94,8 +94,8 @@ class Int16Int8 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Int16Int8* value,
                      size_t _offset);
   zx_status_t Clone(Int16Int8* result) const;
@@ -120,8 +120,8 @@ class ArrayInt16Int8 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, ArrayInt16Int8* value,
                      size_t _offset);
   zx_status_t Clone(ArrayInt16Int8* result) const;
@@ -150,8 +150,8 @@ class StructPaddingTestStruct final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructPaddingTestStruct* value,
                      size_t _offset);
   zx_status_t Clone(StructPaddingTestStruct* result) const;
@@ -179,8 +179,8 @@ class TopLevelStruct final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, TopLevelStruct* value,
                      size_t _offset);
   zx_status_t Clone(TopLevelStruct* result) const;

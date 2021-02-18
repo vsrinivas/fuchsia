@@ -17,7 +17,7 @@ const fidl_type_t* Handles::FidlType = &fidl_test_handles_HandlesTable;
 
 void Handles::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Handles>::value) {
     memcpy(_encoder->template GetPtr<Handles>(_offset), this, sizeof(Handles));
   } else {

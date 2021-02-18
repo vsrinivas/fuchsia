@@ -18,7 +18,7 @@ const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType =
 
 void WithErrorSyntax_ResponseAsStruct_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<
           WithErrorSyntax_ResponseAsStruct_Response>::value) {
     memcpy(_encoder->template GetPtr<WithErrorSyntax_ResponseAsStruct_Response>(
@@ -127,7 +127,7 @@ WithErrorSyntax_ResponseAsStruct_Result::WithErr(uint32_t&& val) {
 
 void WithErrorSyntax_ResponseAsStruct_Result::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -270,7 +270,7 @@ const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType =
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<
           WithErrorSyntax_ErrorAsPrimitive_Response>::value) {
     memcpy(_encoder->template GetPtr<WithErrorSyntax_ErrorAsPrimitive_Response>(
@@ -371,7 +371,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(uint32_t&& val) {
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -514,7 +514,7 @@ const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType =
 
 void WithErrorSyntax_ErrorAsEnum_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<WithErrorSyntax_ErrorAsEnum_Response>::value) {
     memcpy(_encoder->template GetPtr<WithErrorSyntax_ErrorAsEnum_Response>(
                _offset),
@@ -612,7 +612,7 @@ WithErrorSyntax_ErrorAsEnum_Result WithErrorSyntax_ErrorAsEnum_Result::WithErr(
 
 void WithErrorSyntax_ErrorAsEnum_Result::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 

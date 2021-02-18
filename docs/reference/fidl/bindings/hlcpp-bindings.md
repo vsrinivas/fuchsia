@@ -130,9 +130,9 @@ class`, with the following additional methods:
   bits set.
 * `constexpr FileMode(uint16_t)`: Constructs a value from an underlying
    primitive value, preserving any unknown bit members.
-* `constexpr fit::optional<FileMode> TryFrom(uint16_t value)`: Constructs an
+* `constexpr cpp17::optional<FileMode> TryFrom(uint16_t value)`: Constructs an
   instance of the bits from an underlying primitive value if the value does not
-  contain any unknown members, and returns `fit::nullopt` otherwise.
+  contain any unknown members, and returns `cpp17::nullopt` otherwise.
 * `constexpr FileMode TruncatingUnknown(uint16_t value)`: Constructs an instance
   of the bits from an underlying primitive value, clearing any unknown members.
 * `constexpr FileMode unknown_bits() const`: Returns a bits value that contains

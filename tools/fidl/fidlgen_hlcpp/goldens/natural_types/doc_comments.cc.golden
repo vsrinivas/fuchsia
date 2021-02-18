@@ -50,7 +50,7 @@ bool Table::IsEmpty() const {
 }
 
 void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -159,7 +159,7 @@ const fidl_type_t* Struct::FidlType = &fidl_test_doccomments_StructTable;
 
 void Struct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Struct>::value) {
     memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
   } else {
@@ -222,7 +222,7 @@ StrictUnion StrictUnion::WithField(int32_t&& val) {
 
 void StrictUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -389,7 +389,7 @@ FlexibleUnion FlexibleUnion::WithField(int32_t&& val) {
 
 void FlexibleUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 

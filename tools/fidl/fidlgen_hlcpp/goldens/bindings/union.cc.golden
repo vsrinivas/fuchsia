@@ -78,7 +78,7 @@ Union Union::WithVectorStringAlsoNeedsConstructor(
 }
 
 void Union::Encode(::fidl::Encoder* encoder, size_t offset,
-                   fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -241,7 +241,7 @@ const fidl_type_t* StructWithNullableXUnion::FidlType =
 
 void StructWithNullableXUnion::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableXUnion>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableXUnion>(_offset), this,
            sizeof(StructWithNullableXUnion));
@@ -337,7 +337,7 @@ StrictUnion StrictUnion::WithVectorStringAlsoNeedsConstructor(
 
 void StrictUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -561,7 +561,7 @@ StrictSimpleXUnion StrictSimpleXUnion::WithS(::std::string&& val) {
 
 void StrictSimpleXUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -760,7 +760,7 @@ StrictFoo StrictFoo::WithI(int32_t&& val) {
 
 void StrictFoo::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -929,7 +929,7 @@ StrictBoundedXUnion StrictBoundedXUnion::WithV(::std::vector<uint8_t>&& val) {
 
 void StrictBoundedXUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -1086,7 +1086,7 @@ ReverseOrdinalUnion ReverseOrdinalUnion::WithFirst(uint32_t&& val) {
 
 void ReverseOrdinalUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -1211,7 +1211,7 @@ extern "C" const fidl_type_t fidl_test_union_PizzaTable;
 const fidl_type_t* Pizza::FidlType = &fidl_test_union_PizzaTable;
 
 void Pizza::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Pizza>::value) {
     memcpy(_encoder->template GetPtr<Pizza>(_offset), this, sizeof(Pizza));
   } else {
@@ -1237,7 +1237,7 @@ extern "C" const fidl_type_t fidl_test_union_PastaTable;
 const fidl_type_t* Pasta::FidlType = &fidl_test_union_PastaTable;
 
 void Pasta::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Pasta>::value) {
     memcpy(_encoder->template GetPtr<Pasta>(_offset), this, sizeof(Pasta));
   } else {
@@ -1318,7 +1318,7 @@ StrictPizzaOrPasta StrictPizzaOrPasta::WithPasta(
 
 void StrictPizzaOrPasta::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -1504,7 +1504,7 @@ PizzaOrPasta PizzaOrPasta::WithPasta(::fidl::test::union_::Pasta&& val) {
 
 void PizzaOrPasta::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -1701,7 +1701,7 @@ FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPasta(
 
 void FlexiblePizzaOrPasta::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -1913,7 +1913,7 @@ ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPasta(
 
 void ExplicitPizzaOrPasta::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -2105,7 +2105,7 @@ OlderSimpleUnion OlderSimpleUnion::WithF(float&& val) {
 
 void OlderSimpleUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -2253,7 +2253,7 @@ const fidl_type_t* NullableUnionStruct::FidlType =
 
 void NullableUnionStruct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<NullableUnionStruct>::value) {
     memcpy(_encoder->template GetPtr<NullableUnionStruct>(_offset), this,
            sizeof(NullableUnionStruct));
@@ -2354,7 +2354,7 @@ NewerSimpleUnion NewerSimpleUnion::WithV(::std::vector<::std::string>&& val) {
 
 void NewerSimpleUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -2603,7 +2603,7 @@ FlexibleUnion FlexibleUnion::WithVectorStringAlsoNeedsConstructor(
 
 void FlexibleUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -2843,7 +2843,7 @@ FlexibleFoo FlexibleFoo::WithI(int32_t&& val) {
 
 void FlexibleFoo::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -3029,7 +3029,7 @@ FieldCollision FieldCollision::WithFieldCollisionTag(int32_t&& val) {
 
 void FieldCollision::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -3188,7 +3188,7 @@ ExplicitXUnion ExplicitXUnion::WithF(float&& val) {
 
 void ExplicitXUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -3384,7 +3384,7 @@ ExplicitUnion ExplicitUnion::WithStringNeedsConstructor(::std::string&& val) {
 
 void ExplicitUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -3564,7 +3564,7 @@ ExplicitStrictFoo ExplicitStrictFoo::WithI(int32_t&& val) {
 
 void ExplicitStrictFoo::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -3749,7 +3749,7 @@ ExplicitFoo ExplicitFoo::WithI(int32_t&& val) {
 
 void ExplicitFoo::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -3898,7 +3898,7 @@ extern "C" const fidl_type_t fidl_test_union_EmptyTable;
 const fidl_type_t* Empty::FidlType = &fidl_test_union_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
     memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
   } else {
@@ -3975,7 +3975,7 @@ XUnionContainingEmptyStruct XUnionContainingEmptyStruct::WithEmpty(
 
 void XUnionContainingEmptyStruct::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 

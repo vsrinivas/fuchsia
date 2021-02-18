@@ -94,8 +94,8 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ResponseAsStruct_Response* value,
                      size_t _offset);
@@ -142,8 +142,8 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      WithErrorSyntax_ResponseAsStruct_Result* value,
                      size_t offset);
@@ -256,8 +256,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ErrorAsPrimitive_Response* value,
                      size_t _offset);
@@ -304,8 +304,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      WithErrorSyntax_ErrorAsPrimitive_Result* value,
                      size_t offset);
@@ -412,8 +412,8 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ErrorAsEnum_Response* value,
                      size_t _offset);
@@ -912,8 +912,8 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      WithErrorSyntax_ErrorAsEnum_Result* value, size_t offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Result* result) const;
@@ -1130,7 +1130,7 @@ struct CodingTraits<::fidl::test::protocols::obj_type> {
       sizeof(::fidl::test::protocols::obj_type);
   static void Encode(
       Encoder* encoder, ::fidl::test::protocols::obj_type* value, size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
@@ -1221,7 +1221,7 @@ struct CodingTraits<std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
           value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1344,7 +1344,7 @@ struct CodingTraits<std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
           value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1448,7 +1448,7 @@ struct CodingTraits<::fidl::test::protocols::ErrorEnun> {
   static void Encode(
       Encoder* encoder, ::fidl::test::protocols::ErrorEnun* value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
@@ -1492,7 +1492,7 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

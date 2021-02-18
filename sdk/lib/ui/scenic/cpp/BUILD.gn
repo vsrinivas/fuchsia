@@ -36,6 +36,7 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/images/cpp",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/syslog",

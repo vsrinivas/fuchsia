@@ -53,7 +53,7 @@ UnionSize8Alignment4 UnionSize8Alignment4::WithVariant(uint32_t&& val) {
 
 void UnionSize8Alignment4::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -159,7 +159,7 @@ const fidl_type_t* SandwichUnionSize8Alignment4::FidlType =
 
 void SandwichUnionSize8Alignment4::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SandwichUnionSize8Alignment4>::value) {
     memcpy(_encoder->template GetPtr<SandwichUnionSize8Alignment4>(_offset),
            this, sizeof(SandwichUnionSize8Alignment4));
@@ -241,7 +241,7 @@ UnionSize36Alignment4 UnionSize36Alignment4::WithVariant(
 
 void UnionSize36Alignment4::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -353,7 +353,7 @@ const fidl_type_t* SandwichUnionSize36Alignment4::FidlType =
 
 void SandwichUnionSize36Alignment4::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SandwichUnionSize36Alignment4>::value) {
     memcpy(_encoder->template GetPtr<SandwichUnionSize36Alignment4>(_offset),
            this, sizeof(SandwichUnionSize36Alignment4));
@@ -435,7 +435,7 @@ UnionSize12Alignment4 UnionSize12Alignment4::WithVariant(
 
 void UnionSize12Alignment4::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -547,7 +547,7 @@ const fidl_type_t* SandwichUnionSize12Alignment4::FidlType =
 
 void SandwichUnionSize12Alignment4::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SandwichUnionSize12Alignment4>::value) {
     memcpy(_encoder->template GetPtr<SandwichUnionSize12Alignment4>(_offset),
            this, sizeof(SandwichUnionSize12Alignment4));
@@ -590,7 +590,7 @@ const fidl_type_t* StructSize16Alignment8::FidlType =
 
 void StructSize16Alignment8::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructSize16Alignment8>::value) {
     memcpy(_encoder->template GetPtr<StructSize16Alignment8>(_offset), this,
            sizeof(StructSize16Alignment8));
@@ -667,7 +667,7 @@ UnionSize24Alignment8 UnionSize24Alignment8::WithVariant(
 
 void UnionSize24Alignment8::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -784,7 +784,7 @@ const fidl_type_t* SandwichUnionSize24Alignment8::FidlType =
 
 void SandwichUnionSize24Alignment8::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SandwichUnionSize24Alignment8>::value) {
     memcpy(_encoder->template GetPtr<SandwichUnionSize24Alignment8>(_offset),
            this, sizeof(SandwichUnionSize24Alignment8));

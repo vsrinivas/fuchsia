@@ -1,19 +1,19 @@
 {
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "d3d680f96f3b8a8a003fe6fd0ddc05e6",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "614fe7a4d5ff81f94e1b4c9f26d2eb66",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "6f75747cbc4eaa090c272501c5aceda2",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "83af4784b1593fac21e25504f4309614",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "cd5ba3e6efb24f9b8efb1ee33d738248",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/encoder.h": "294b20973cfceba644c5394066600ddc",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/enum.h": "ad164c5cd66ea3db9d5df386b47755a4",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/interface_handle.h": "1438adc60acad2db3ae26641f76f5fa5",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/interface_request.h": "5a2c3e4db7839c72f498da2d9619acf6",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/interface_handle.h": "ce07185cf6d222d317d603a3ffc957d9",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/interface_request.h": "1f046f41f158d3c0624ec813d0dd0bc0",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/bitset.h": "112110f8080e0a5fa560f7e5403f2609",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_header.h": "306c8c6922a3bada2a9f62d782e99dfe",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_header.h": "693bb046740f37a8c2f6976fb8a3560b",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_implementation.h": "78b8e4dfcb074e5fcce2722506c3aaa9",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "654a2d9b39f18bb4e844362ba4dfc31d",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "800d3c4cf625f91ad88d38956518c513",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "ee31777efb9c3df14040049bbd7740f8",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "9a662d0b356f8ca126441598fbb7d169",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "ea5fd3c5abf19d39e0dda995f794d148",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/types.h": "56e709911f72250dfe5755dfcc2d1445",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "12e15f28cbef68e04558bdb45d9ecabc"
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "9b613baaca6343d66c6b39b0273ebfcb"
 }

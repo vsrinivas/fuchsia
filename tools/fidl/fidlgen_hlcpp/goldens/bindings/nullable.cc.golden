@@ -16,7 +16,7 @@ const fidl_type_t* StructWithNullableVector::FidlType =
 
 void StructWithNullableVector::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableVector>(_offset), this,
            sizeof(StructWithNullableVector));
@@ -49,7 +49,7 @@ const fidl_type_t* StructWithNullableUnion::FidlType =
 
 void StructWithNullableUnion::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableUnion>(_offset), this,
            sizeof(StructWithNullableUnion));
@@ -82,7 +82,7 @@ const fidl_type_t* StructWithNullableStruct::FidlType =
 
 void StructWithNullableStruct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableStruct>(_offset), this,
            sizeof(StructWithNullableStruct));
@@ -115,7 +115,7 @@ const fidl_type_t* StructWithNullableString::FidlType =
 
 void StructWithNullableString::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableString>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableString>(_offset), this,
            sizeof(StructWithNullableString));
@@ -149,7 +149,7 @@ const fidl_type_t* StructWithNullableRequest::FidlType =
 
 void StructWithNullableRequest::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableRequest>(_offset), this,
            sizeof(StructWithNullableRequest));
@@ -185,7 +185,7 @@ const fidl_type_t* StructWithNullableProtocol::FidlType =
 
 void StructWithNullableProtocol::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableProtocol>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableProtocol>(_offset), this,
            sizeof(StructWithNullableProtocol));
@@ -221,7 +221,7 @@ const fidl_type_t* StructWithNullableHandle::FidlType =
 
 void StructWithNullableHandle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
     memcpy(_encoder->template GetPtr<StructWithNullableHandle>(_offset), this,
            sizeof(StructWithNullableHandle));
@@ -304,7 +304,7 @@ SimpleUnion SimpleUnion::WithB(float&& val) {
 
 void SimpleUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -431,7 +431,7 @@ const fidl_type_t* Int32Wrapper::FidlType =
 
 void Int32Wrapper::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
     memcpy(_encoder->template GetPtr<Int32Wrapper>(_offset), this,
            sizeof(Int32Wrapper));

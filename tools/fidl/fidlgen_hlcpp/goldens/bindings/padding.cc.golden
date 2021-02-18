@@ -16,7 +16,7 @@ const fidl_type_t* Padding7ByteMiddle::FidlType =
 
 void Padding7ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding7ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding7ByteMiddle>(_offset), this,
            sizeof(Padding7ByteMiddle));
@@ -51,7 +51,7 @@ const fidl_type_t* Padding7ByteEnd::FidlType =
 
 void Padding7ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding7ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding7ByteEnd>(_offset), this,
            sizeof(Padding7ByteEnd));
@@ -86,7 +86,7 @@ const fidl_type_t* Padding6ByteMiddle::FidlType =
 
 void Padding6ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding6ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding6ByteMiddle>(_offset), this,
            sizeof(Padding6ByteMiddle));
@@ -121,7 +121,7 @@ const fidl_type_t* Padding6ByteEnd::FidlType =
 
 void Padding6ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding6ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding6ByteEnd>(_offset), this,
            sizeof(Padding6ByteEnd));
@@ -156,7 +156,7 @@ const fidl_type_t* Padding5ByteMiddle::FidlType =
 
 void Padding5ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding5ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding5ByteMiddle>(_offset), this,
            sizeof(Padding5ByteMiddle));
@@ -195,7 +195,7 @@ const fidl_type_t* Padding5ByteEnd::FidlType =
 
 void Padding5ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding5ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding5ByteEnd>(_offset), this,
            sizeof(Padding5ByteEnd));
@@ -234,7 +234,7 @@ const fidl_type_t* Padding4ByteMiddle::FidlType =
 
 void Padding4ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding4ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding4ByteMiddle>(_offset), this,
            sizeof(Padding4ByteMiddle));
@@ -269,7 +269,7 @@ const fidl_type_t* Padding4ByteEnd::FidlType =
 
 void Padding4ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding4ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding4ByteEnd>(_offset), this,
            sizeof(Padding4ByteEnd));
@@ -305,7 +305,7 @@ const fidl_type_t* Padding4ByteAlignmentLength12::FidlType =
 
 void Padding4ByteAlignmentLength12::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding4ByteAlignmentLength12>::value) {
     memcpy(_encoder->template GetPtr<Padding4ByteAlignmentLength12>(_offset),
            this, sizeof(Padding4ByteAlignmentLength12));
@@ -351,7 +351,7 @@ const fidl_type_t* Padding3ByteMiddle::FidlType =
 
 void Padding3ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding3ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding3ByteMiddle>(_offset), this,
            sizeof(Padding3ByteMiddle));
@@ -386,7 +386,7 @@ const fidl_type_t* Padding3ByteEnd::FidlType =
 
 void Padding3ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding3ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding3ByteEnd>(_offset), this,
            sizeof(Padding3ByteEnd));
@@ -421,7 +421,7 @@ const fidl_type_t* Padding2ByteMiddle::FidlType =
 
 void Padding2ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding2ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding2ByteMiddle>(_offset), this,
            sizeof(Padding2ByteMiddle));
@@ -456,7 +456,7 @@ const fidl_type_t* Padding2ByteEnd::FidlType =
 
 void Padding2ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding2ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding2ByteEnd>(_offset), this,
            sizeof(Padding2ByteEnd));
@@ -492,7 +492,7 @@ const fidl_type_t* Padding2ByteAlignmentLength6::FidlType =
 
 void Padding2ByteAlignmentLength6::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding2ByteAlignmentLength6>::value) {
     memcpy(_encoder->template GetPtr<Padding2ByteAlignmentLength6>(_offset),
            this, sizeof(Padding2ByteAlignmentLength6));
@@ -534,7 +534,7 @@ const fidl_type_t* Padding1ByteMiddle::FidlType =
 
 void Padding1ByteMiddle::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding1ByteMiddle>::value) {
     memcpy(_encoder->template GetPtr<Padding1ByteMiddle>(_offset), this,
            sizeof(Padding1ByteMiddle));
@@ -569,7 +569,7 @@ const fidl_type_t* Padding1ByteEnd::FidlType =
 
 void Padding1ByteEnd::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Padding1ByteEnd>::value) {
     memcpy(_encoder->template GetPtr<Padding1ByteEnd>(_offset), this,
            sizeof(Padding1ByteEnd));

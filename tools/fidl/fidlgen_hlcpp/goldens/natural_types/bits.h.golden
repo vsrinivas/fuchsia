@@ -138,10 +138,10 @@ class FlexibleBits final {
 
   // Constructs an instance of |FlexibleBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |fit::nullopt|.
-  constexpr inline static fit::optional<FlexibleBits> TryFrom(uint64_t value) {
+  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
+  constexpr inline static cpp17::optional<FlexibleBits> TryFrom(uint64_t value) {
     if (value & ~kMask.value_) {
-      return fit::nullopt;
+      return cpp17::nullopt;
     }
     return FlexibleBits(value & FlexibleBits::kMask.value_);
   }
@@ -252,7 +252,7 @@ struct CodingTraits<::fidl::test::bits::StrictBits> {
       sizeof(::fidl::test::bits::StrictBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::bits::StrictBits* value, size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint64_t underlying = static_cast<uint64_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
@@ -286,7 +286,7 @@ struct CodingTraits<::fidl::test::bits::MyBits> {
       sizeof(::fidl::test::bits::MyBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::bits::MyBits* value, size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
@@ -321,7 +321,7 @@ struct CodingTraits<::fidl::test::bits::FlexibleBits> {
       sizeof(::fidl::test::bits::FlexibleBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::bits::FlexibleBits* value, size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint64_t underlying = static_cast<uint64_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);

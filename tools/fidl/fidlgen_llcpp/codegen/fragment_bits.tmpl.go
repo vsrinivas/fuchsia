@@ -46,10 +46,10 @@ public:
 
   // Constructs an instance of |{{ .Name }}| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |fit::nullopt|.
-  constexpr inline static fit::optional<{{ .Name }}> TryFrom({{ .Type }} value) {
+  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
+  constexpr inline static cpp17::optional<{{ .Name }}> TryFrom({{ .Type }} value) {
     if (value & ~kMask.value_) {
-      return fit::nullopt;
+      return cpp17::nullopt;
     }
     return {{ .Name }}(value & {{ .Name }}::kMask.value_);
   }

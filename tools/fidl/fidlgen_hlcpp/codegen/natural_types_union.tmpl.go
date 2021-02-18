@@ -75,7 +75,7 @@ class {{ .Name }} final {
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info = fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
@@ -284,7 +284,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 {{ end }}
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
-                         fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -485,7 +485,7 @@ struct CodingTraits<std::unique_ptr<{{ . }}>> {
   static constexpr size_t inline_size_v1_no_ee = {{ .InlineSize }};
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ . }}>* value, size_t offset,
-                     fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     {{/* TODO(fxbug.dev/7805): Disallow empty xunions (but permit nullable/optional
          xunions). */ -}}
 

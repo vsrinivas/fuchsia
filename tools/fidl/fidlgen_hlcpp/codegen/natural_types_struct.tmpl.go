@@ -64,7 +64,7 @@ class {{ .Name }} final {
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-               fit::optional<::fidl::HandleInformation> maybe_handle_info = fit::nullopt);
+               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset);
   zx_status_t Clone({{ .Name }}* result) const;
 };
@@ -92,7 +92,7 @@ extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                         fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<{{ .Name }}>::value) {
     memcpy(_encoder->template GetPtr<{{ .Name }}>(_offset), this, sizeof({{ .Name }}));
   } else {

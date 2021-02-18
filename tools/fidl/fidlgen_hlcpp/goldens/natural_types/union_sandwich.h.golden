@@ -51,8 +51,8 @@ class UnionSize8Alignment4 final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, UnionSize8Alignment4* value,
                      size_t offset);
   zx_status_t Clone(UnionSize8Alignment4* result) const;
@@ -113,8 +113,8 @@ class SandwichUnionSize8Alignment4 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      SandwichUnionSize8Alignment4* value, size_t _offset);
   zx_status_t Clone(SandwichUnionSize8Alignment4* result) const;
@@ -152,8 +152,8 @@ class UnionSize36Alignment4 final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, UnionSize36Alignment4* value,
                      size_t offset);
   zx_status_t Clone(UnionSize36Alignment4* result) const;
@@ -214,8 +214,8 @@ class SandwichUnionSize36Alignment4 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      SandwichUnionSize36Alignment4* value, size_t _offset);
   zx_status_t Clone(SandwichUnionSize36Alignment4* result) const;
@@ -253,8 +253,8 @@ class UnionSize12Alignment4 final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, UnionSize12Alignment4* value,
                      size_t offset);
   zx_status_t Clone(UnionSize12Alignment4* result) const;
@@ -315,8 +315,8 @@ class SandwichUnionSize12Alignment4 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      SandwichUnionSize12Alignment4* value, size_t _offset);
   zx_status_t Clone(SandwichUnionSize12Alignment4* result) const;
@@ -344,8 +344,8 @@ class StructSize16Alignment8 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructSize16Alignment8* value,
                      size_t _offset);
   zx_status_t Clone(StructSize16Alignment8* result) const;
@@ -383,8 +383,8 @@ class UnionSize24Alignment8 final {
   }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* decoder, UnionSize24Alignment8* value,
                      size_t offset);
   zx_status_t Clone(UnionSize24Alignment8* result) const;
@@ -446,8 +446,8 @@ class SandwichUnionSize24Alignment8 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      SandwichUnionSize24Alignment8* value, size_t _offset);
   zx_status_t Clone(SandwichUnionSize24Alignment8* result) const;
@@ -482,7 +482,7 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::fidl::test::unionsandwich::UnionSize8Alignment4>* value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -595,7 +595,7 @@ struct CodingTraits<
       std::unique_ptr<::fidl::test::unionsandwich::UnionSize36Alignment4>*
           value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -709,7 +709,7 @@ struct CodingTraits<
       std::unique_ptr<::fidl::test::unionsandwich::UnionSize12Alignment4>*
           value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -856,7 +856,7 @@ struct CodingTraits<
       std::unique_ptr<::fidl::test::unionsandwich::UnionSize24Alignment8>*
           value,
       size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

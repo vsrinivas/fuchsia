@@ -18,7 +18,7 @@ const fidl_type_t* ExampleOfUseOfAliases::FidlType =
 
 void ExampleOfUseOfAliases::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleOfUseOfAliases>::value) {
     memcpy(_encoder->template GetPtr<ExampleOfUseOfAliases>(_offset), this,
            sizeof(ExampleOfUseOfAliases));

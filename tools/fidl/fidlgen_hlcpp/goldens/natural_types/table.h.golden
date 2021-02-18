@@ -106,8 +106,8 @@ class SimpleTable final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
                      size_t _offset);
   zx_status_t Clone(SimpleTable* _result) const;
@@ -280,8 +280,8 @@ class ReverseOrdinalTable final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value,
                      size_t _offset);
   zx_status_t Clone(ReverseOrdinalTable* _result) const;
@@ -402,8 +402,8 @@ class OlderSimpleTable final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value,
                      size_t _offset);
   zx_status_t Clone(OlderSimpleTable* _result) const;
@@ -568,8 +568,8 @@ class NewerSimpleTable final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value,
                      size_t _offset);
   zx_status_t Clone(NewerSimpleTable* _result) const;
@@ -660,8 +660,8 @@ class EmptyTable final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value,
                      size_t _offset);
   zx_status_t Clone(EmptyTable* _result) const;

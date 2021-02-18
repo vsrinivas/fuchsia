@@ -10,6 +10,7 @@
 
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
+#include <lib/stdcompat/optional.h>
 
 #include <array>
 #include <functional>

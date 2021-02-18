@@ -18,7 +18,7 @@ const fidl_type_t* NonInlineStructTestStruct::FidlType =
 
 void NonInlineStructTestStruct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<NonInlineStructTestStruct>::value) {
     memcpy(_encoder->template GetPtr<NonInlineStructTestStruct>(_offset), this,
            sizeof(NonInlineStructTestStruct));
@@ -62,7 +62,7 @@ const fidl_type_t* Int8Int32::FidlType =
 
 void Int8Int32::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Int8Int32>::value) {
     memcpy(_encoder->template GetPtr<Int8Int32>(_offset), this,
            sizeof(Int8Int32));
@@ -97,7 +97,7 @@ const fidl_type_t* Int16Int8::FidlType =
 
 void Int16Int8::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Int16Int8>::value) {
     memcpy(_encoder->template GetPtr<Int16Int8>(_offset), this,
            sizeof(Int16Int8));
@@ -132,7 +132,7 @@ const fidl_type_t* ArrayInt16Int8::FidlType =
 
 void ArrayInt16Int8::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ArrayInt16Int8>::value) {
     memcpy(_encoder->template GetPtr<ArrayInt16Int8>(_offset), this,
            sizeof(ArrayInt16Int8));
@@ -164,7 +164,7 @@ const fidl_type_t* StructPaddingTestStruct::FidlType =
 
 void StructPaddingTestStruct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructPaddingTestStruct>::value) {
     memcpy(_encoder->template GetPtr<StructPaddingTestStruct>(_offset), this,
            sizeof(StructPaddingTestStruct));
@@ -206,7 +206,7 @@ const fidl_type_t* TopLevelStruct::FidlType =
 
 void TopLevelStruct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<TopLevelStruct>::value) {
     memcpy(_encoder->template GetPtr<TopLevelStruct>(_offset), this,
            sizeof(TopLevelStruct));

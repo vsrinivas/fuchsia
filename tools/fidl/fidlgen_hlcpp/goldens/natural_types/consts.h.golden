@@ -132,7 +132,7 @@ struct CodingTraits<::fidl::test::consts::EnumType> {
       sizeof(::fidl::test::consts::EnumType);
   static void Encode(
       Encoder* encoder, ::fidl::test::consts::EnumType* value, size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     int32_t underlying = static_cast<int32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
@@ -165,7 +165,7 @@ struct CodingTraits<::fidl::test::consts::BitsType> {
       sizeof(::fidl::test::consts::BitsType);
   static void Encode(
       Encoder* encoder, ::fidl::test::consts::BitsType* value, size_t offset,
-      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);

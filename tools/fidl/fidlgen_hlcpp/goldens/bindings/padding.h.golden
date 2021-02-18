@@ -55,8 +55,8 @@ class Padding7ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding7ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding7ByteMiddle* result) const;
@@ -83,8 +83,8 @@ class Padding7ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding7ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding7ByteEnd* result) const;
@@ -110,8 +110,8 @@ class Padding6ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding6ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding6ByteMiddle* result) const;
@@ -138,8 +138,8 @@ class Padding6ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding6ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding6ByteEnd* result) const;
@@ -167,8 +167,8 @@ class Padding5ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding5ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding5ByteMiddle* result) const;
@@ -197,8 +197,8 @@ class Padding5ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding5ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding5ByteEnd* result) const;
@@ -224,8 +224,8 @@ class Padding4ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding4ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding4ByteMiddle* result) const;
@@ -252,8 +252,8 @@ class Padding4ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding4ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding4ByteEnd* result) const;
@@ -283,8 +283,8 @@ class Padding4ByteAlignmentLength12 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      Padding4ByteAlignmentLength12* value, size_t _offset);
   zx_status_t Clone(Padding4ByteAlignmentLength12* result) const;
@@ -312,8 +312,8 @@ class Padding3ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding3ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding3ByteMiddle* result) const;
@@ -340,8 +340,8 @@ class Padding3ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding3ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding3ByteEnd* result) const;
@@ -367,8 +367,8 @@ class Padding2ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding2ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding2ByteMiddle* result) const;
@@ -395,8 +395,8 @@ class Padding2ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding2ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding2ByteEnd* result) const;
@@ -424,8 +424,8 @@ class Padding2ByteAlignmentLength6 final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      Padding2ByteAlignmentLength6* value, size_t _offset);
   zx_status_t Clone(Padding2ByteAlignmentLength6* result) const;
@@ -453,8 +453,8 @@ class Padding1ByteMiddle final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding1ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding1ByteMiddle* result) const;
@@ -481,8 +481,8 @@ class Padding1ByteEnd final {
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info =
-                  fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding1ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding1ByteEnd* result) const;

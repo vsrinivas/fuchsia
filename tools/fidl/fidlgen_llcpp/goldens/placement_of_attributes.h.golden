@@ -18,7 +18,7 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -106,10 +106,10 @@ class ExampleBits final {
 
   // Constructs an instance of |ExampleBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |fit::nullopt|.
-  constexpr inline static fit::optional<ExampleBits> TryFrom(uint32_t value) {
+  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
+  constexpr inline static cpp17::optional<ExampleBits> TryFrom(uint32_t value) {
     if (value & ~kMask.value_) {
-      return fit::nullopt;
+      return cpp17::nullopt;
     }
     return ExampleBits(value & ExampleBits::kMask.value_);
   }

@@ -31,7 +31,7 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 #include <lib/fidl/llcpp/client.h>

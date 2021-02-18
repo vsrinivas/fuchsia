@@ -7,7 +7,7 @@
 
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/comparison.h>
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <zircon/assert.h>
 
 #include <utility>
@@ -21,12 +21,12 @@ namespace fidl {
 #if defined(FIDL_USE_FIT_OPTIONAL)
 
 template <typename T>
-class VectorPtr : public fit::optional<std::vector<T>> {
+class VectorPtr : public cpp17::optional<std::vector<T>> {
  public:
   constexpr VectorPtr() = default;
 
-  constexpr VectorPtr(fit::nullopt_t) noexcept {}
-  FIDL_FIT_OPTIONAL_DEPRECATED("Use fit::nullopt instead of nullptr")
+  constexpr VectorPtr(cpp17::nullopt_t) noexcept {}
+  FIDL_FIT_OPTIONAL_DEPRECATED("Use cpp17::nullopt instead of nullptr")
   constexpr VectorPtr(std::nullptr_t) noexcept {}
 
   VectorPtr(const VectorPtr&) = default;
@@ -36,33 +36,33 @@ class VectorPtr : public fit::optional<std::vector<T>> {
   VectorPtr& operator=(VectorPtr&&) noexcept = default;
 
   // Move construct and move assignment from the value type
-  constexpr VectorPtr(std::vector<T>&& value) : fit::optional<std::vector<T>>(std::move(value)) {}
+  constexpr VectorPtr(std::vector<T>&& value) : cpp17::optional<std::vector<T>>(std::move(value)) {}
   constexpr VectorPtr& operator=(std::vector<T>&& value) {
-    fit::optional<std::vector<T>>::operator=(std::move(value));
+    cpp17::optional<std::vector<T>>::operator=(std::move(value));
     return *this;
   }
 
   // Copy construct and copy assignment from the value type
-  constexpr VectorPtr(const std::vector<T>& value) : fit::optional<std::vector<T>>(value) {}
+  constexpr VectorPtr(const std::vector<T>& value) : cpp17::optional<std::vector<T>>(value) {}
   constexpr VectorPtr& operator=(const std::vector<T>& value) {
-    fit::optional<std::vector<T>>::operator=(value);
+    cpp17::optional<std::vector<T>>::operator=(value);
     return *this;
   }
 
-  explicit VectorPtr(size_t size) : fit::optional<std::vector<T>>(size) {}
+  explicit VectorPtr(size_t size) : cpp17::optional<std::vector<T>>(size) {}
 
   // Override unchecked accessors with versions that check.
   constexpr std::vector<T>* operator->() {
-    if (!fit::optional<std::vector<T>>::has_value()) {
+    if (!cpp17::optional<std::vector<T>>::has_value()) {
       __builtin_trap();
     }
-    return fit::optional<std::vector<T>>::operator->();
+    return cpp17::optional<std::vector<T>>::operator->();
   }
   constexpr const std::vector<T>* operator->() const {
-    if (!fit::optional<std::vector<T>>::has_value()) {
+    if (!cpp17::optional<std::vector<T>>::has_value()) {
       __builtin_trap();
     }
-    return fit::optional<std::vector<T>>::operator->();
+    return cpp17::optional<std::vector<T>>::operator->();
   }
 
   FIDL_FIT_OPTIONAL_DEPRECATED("Assign an empty std::vector")
@@ -244,7 +244,7 @@ class VectorPtr {
   // To mutate the vector, use operator* or operator-> or one of the mutation
   // functions.
   FIDL_FIT_OPTIONAL_DEPRECATED("use value_or()")
-  operator const std::vector<T> &() const { return vec_; }
+  operator const std::vector<T>&() const { return vec_; }
 
  private:
   std::vector<T> vec_;

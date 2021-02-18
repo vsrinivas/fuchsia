@@ -59,7 +59,7 @@ ExampleXUnion ExampleXUnion::WithVariant(uint32_t&& val) {
 
 void ExampleXUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -220,7 +220,7 @@ ExampleUnion ExampleUnion::WithVariant(uint32_t&& val) {
 
 void ExampleUnion::Encode(
     ::fidl::Encoder* encoder, size_t offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -361,7 +361,7 @@ bool ExampleTable::IsEmpty() const {
 
 void ExampleTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -472,7 +472,7 @@ const fidl_type_t* ExampleStruct::FidlType =
 
 void ExampleStruct::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
-    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
     memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this,
            sizeof(ExampleStruct));

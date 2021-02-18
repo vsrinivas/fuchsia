@@ -83,7 +83,7 @@ class {{ .Name }} final {
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              fit::optional<::fidl::HandleInformation> maybe_handle_info = fit::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   zx_status_t Clone({{ .Name }}* _result) const;
  private:
@@ -199,7 +199,7 @@ bool {{ .Name }}::IsEmpty() const {
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                         fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
