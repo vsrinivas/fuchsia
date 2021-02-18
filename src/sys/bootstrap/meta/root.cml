@@ -25,6 +25,11 @@
             from: "#core",
             to: [ "#startup" ],
         },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#bootstrap",
+            to: [ "#startup" ],
+        },
 
         // Capabilities routed from "parent" at the root are either provided by
         // bootsvc through component_manager's namespace or by component_manager
