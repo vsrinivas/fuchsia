@@ -13,13 +13,6 @@
 
 namespace media::audio::test {
 
-RendererShimImpl::~RendererShimImpl() { ResetEvents(); }
-
-void RendererShimImpl::ResetEvents() {
-  fidl_->EnableMinLeadTimeEvents(false);
-  fidl_.events().OnMinLeadTimeChanged = nullptr;
-}
-
 void RendererShimImpl::WatchEvents() {
   fidl_->EnableMinLeadTimeEvents(true);
   fidl_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {

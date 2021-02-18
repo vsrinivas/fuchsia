@@ -30,8 +30,6 @@ class RendererShimImpl {
  public:
   static constexpr uint32_t kPacketMs = 10;
 
-  ~RendererShimImpl();
-
   fuchsia::media::AudioRendererPtr& fidl() { return fidl_; }
   VmoBackedBuffer& payload() { return payload_buffer_; }
   const Format& format() const { return format_; }
