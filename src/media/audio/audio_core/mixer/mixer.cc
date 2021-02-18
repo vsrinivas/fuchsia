@@ -33,6 +33,48 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& sour
                                      const fuchsia::media::AudioStreamType& dest_format,
                                      Resampler resampler) {
   TRACE_DURATION("audio", "Mixer::Select");
+
+  if (source_format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND ||
+      dest_format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND) {
+    FX_LOGS(WARNING) << "Mixer frame rates (" << source_format.frames_per_second << ":"
+                     << dest_format.frames_per_second << ") cannot exceed "
+                     << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
+    return nullptr;
+  }
+
+  if (source_format.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND ||
+      dest_format.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) {
+    FX_LOGS(WARNING) << "Mixer frame rates (" << source_format.frames_per_second << ":"
+                     << dest_format.frames_per_second << ") must be at least "
+                     << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND;
+    return nullptr;
+  }
+
+  if (source_format.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT ||
+      dest_format.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT) {
+    FX_LOGS(WARNING) << "Mixer channel counts (" << source_format.channels << ":"
+                     << dest_format.channels << ") cannot exceed "
+                     << fuchsia::media::MAX_PCM_CHANNEL_COUNT;
+    return nullptr;
+  }
+
+  if (source_format.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT ||
+      dest_format.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) {
+    FX_LOGS(WARNING) << "Mixer frame rates (" << source_format.channels << ":"
+                     << dest_format.channels << ") must be at least "
+                     << fuchsia::media::MIN_PCM_CHANNEL_COUNT;
+    return nullptr;
+  }
+
+  if (source_format.sample_format != fuchsia::media::AudioSampleFormat::UNSIGNED_8 &&
+      source_format.sample_format != fuchsia::media::AudioSampleFormat::SIGNED_16 &&
+      source_format.sample_format != fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
+      source_format.sample_format != fuchsia::media::AudioSampleFormat::FLOAT) {
+    FX_LOGS(WARNING) << "Unsupported mixer sample format "
+                     << static_cast<uint64_t>(source_format.sample_format);
+    return nullptr;
+  }
+
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:

@@ -16,9 +16,8 @@ namespace media::audio::mixer {
 namespace {
 
 std::unique_ptr<Mixer> SelectSincSampler(
-    uint32_t source_channels, uint32_t source_frame_rate,
-    fuchsia::media::AudioSampleFormat source_format, uint32_t dest_channels,
-    uint32_t dest_frame_rate,
+    uint32_t source_channels, uint32_t dest_channels, uint32_t source_frame_rate,
+    uint32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
     fuchsia::media::AudioSampleFormat dest_format = fuchsia::media::AudioSampleFormat::FLOAT) {
   fuchsia::media::AudioStreamType source_stream_type;
   source_stream_type.channels = source_channels;
@@ -30,42 +29,140 @@ std::unique_ptr<Mixer> SelectSincSampler(
   dest_stream_type.frames_per_second = dest_frame_rate;
   dest_stream_type.sample_format = dest_format;
 
-  return mixer::SincSampler::Select(source_stream_type, dest_stream_type);
+  return Mixer::Select(source_stream_type, dest_stream_type, Mixer::Resampler::WindowedSinc);
 }
 
+// These are common frame rates, not the only supported rates
+const uint32_t kFrameRates[] = {8000,  11025, 16000, 22050, 24000,  32000,
+                                44100, 48000, 88200, 96000, 176400, 192000};
+
+const uint32_t kUnsupportedFrameRates[] = {fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1,
+                                           fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1};
+
+const std::pair<uint32_t, uint32_t> kChannelConfigs[] = {
+    {1, 1}, {1, 2}, {1, 3}, {1, 4},  // Valid channel
+    {2, 1}, {2, 2}, {2, 3}, {2, 4},  // configurations
+    {3, 1}, {3, 2}, {3, 3},          // for SincSampler
+    {4, 1}, {4, 2}, {4, 4},
+};
+
+const std::pair<uint32_t, uint32_t> kUnsupportedChannelConfigs[] = {
+    {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
+    {2, 5}, {2, 8}, {2, 9},  // channel
+    {3, 5}, {3, 8}, {3, 9},  // configurations --
+    {4, 5}, {4, 7}, {4, 9},  // maximum number of
+    {5, 1}, {5, 5},          // channels is 8.
+    {9, 1}, {9, 9},
+};
+
+const fuchsia::media::AudioSampleFormat kFormats[] = {
+    fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+    fuchsia::media::AudioSampleFormat::SIGNED_16,
+    fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32,
+    fuchsia::media::AudioSampleFormat::FLOAT,
+};
+
+const fuchsia::media::AudioSampleFormat kInvalidFormat =
+    static_cast<fuchsia::media::AudioSampleFormat>(
+        static_cast<uint64_t>(kFormats[std::size(kFormats) - 1]) + 1);
+
+// These formats are supported
 TEST(SincSamplerTest, Construction) {
-  //
-  // These formats are supported
-  auto mixer = SelectSincSampler(1, 48000, fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 96000);
-  EXPECT_NE(mixer, nullptr);
+  // Try every combination of the above
+  for (auto channel_config : kChannelConfigs) {
+    for (auto source_rate : kFrameRates) {
+      for (auto dest_rate : kFrameRates) {
+        for (auto format : kFormats) {
+          auto mixer = SelectSincSampler(channel_config.first, channel_config.second, source_rate,
+                                         dest_rate, format);
+          EXPECT_NE(mixer, nullptr);
+        }
+      }
+    }
+  }
+}
 
-  mixer = SelectSincSampler(2, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000);
-  EXPECT_NE(mixer, nullptr);
+// These formats are unsupported
+TEST(SincSamplerTest, Construction_UnsupportedRates) {
+  for (auto good_rate : kFrameRates) {
+    for (auto bad_rate : kUnsupportedFrameRates) {
+      // Use channel configs and formats that are known-good.
+      auto channel_config = kChannelConfigs[0];
+      auto format = kFormats[0];
 
-  mixer = SelectSincSampler(2, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 22050);
-  EXPECT_NE(mixer, nullptr);
+      SCOPED_TRACE(testing::Message()
+                   << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
+                   << good_rate << ":" << bad_rate << ", format " << static_cast<uint64_t>(format));
+      EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, good_rate,
+                                           bad_rate, format));
 
-  mixer = SelectSincSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000);
-  EXPECT_NE(mixer, nullptr);
+      SCOPED_TRACE(testing::Message()
+                   << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
+                   << bad_rate << ":" << good_rate << ", format " << static_cast<uint64_t>(format));
+      EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, bad_rate,
+                                           good_rate, format));
 
-  //
-  // These formats are not supported
-  mixer = SelectSincSampler(4, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 3, 48000);
-  EXPECT_EQ(mixer, nullptr);
+      channel_config = kChannelConfigs[std::size(kChannelConfigs) - 1];
+      format = kFormats[std::size(kFormats) - 1];
 
-  mixer = SelectSincSampler(3, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000);
-  EXPECT_EQ(mixer, nullptr);
+      SCOPED_TRACE(testing::Message()
+                   << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
+                   << good_rate << ":" << bad_rate << ", format " << static_cast<uint64_t>(format));
+      EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, good_rate,
+                                           bad_rate, format));
 
-  mixer = SelectSincSampler(5, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 22050);
-  EXPECT_EQ(mixer, nullptr);
+      SCOPED_TRACE(testing::Message()
+                   << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
+                   << bad_rate << ":" << good_rate << ", format " << static_cast<uint64_t>(format));
+      EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, bad_rate,
+                                           good_rate, format));
+    }
+  }
+}
 
-  mixer = SelectSincSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 9, 96000);
-  EXPECT_EQ(mixer, nullptr);
+TEST(SincSamplerTest, Construction_UnsupportedChannelConfig) {
+  for (auto bad_channel_config : kUnsupportedChannelConfigs) {
+    // Use rates and formats that are known-good.
+    auto source_rate = kFrameRates[0];
+    auto dest_rate = source_rate;
+    auto format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+
+    SCOPED_TRACE(testing::Message() << "Chans " << bad_channel_config.first << ">"
+                                    << bad_channel_config.second << ", rates " << source_rate << ":"
+                                    << dest_rate << ", format " << static_cast<uint64_t>(format));
+    EXPECT_EQ(nullptr, SelectSincSampler(bad_channel_config.first, bad_channel_config.second,
+                                         source_rate, dest_rate, format));
+
+    source_rate = kFrameRates[std::size(kFrameRates) - 1];
+    dest_rate = source_rate;
+    format = fuchsia::media::AudioSampleFormat::FLOAT;
+
+    SCOPED_TRACE(testing::Message() << "Chans " << bad_channel_config.first << ">"
+                                    << bad_channel_config.second << ", rates " << source_rate << ":"
+                                    << dest_rate << ", format " << static_cast<uint64_t>(format));
+    EXPECT_EQ(nullptr, SelectSincSampler(bad_channel_config.first, bad_channel_config.second,
+                                         source_rate, dest_rate, format));
+  }
+}
+
+TEST(SincSamplerTest, Construction_UnsupportedFormat) {
+  // Use channel configs and rates that are known-good.
+  auto channel_config = kChannelConfigs[0];
+  auto source_rate = kFrameRates[0];
+  auto dest_rate = source_rate;
+
+  // bad format: one more than the last enum
+  auto bad_format = kInvalidFormat;
+  SCOPED_TRACE(testing::Message() << "Chans " << channel_config.first << ">"
+                                  << channel_config.second << ", rates " << source_rate << ":"
+                                  << dest_rate << ", format " << static_cast<uint64_t>(bad_format));
+  EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, source_rate,
+                                       dest_rate, bad_format));
 }
 
 // Test that position advances as it should
 TEST(SincSamplerTest, SamplingPosition_Basic) {
-  auto mixer = SelectSincSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000);
+  auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
 
   EXPECT_EQ(mixer->pos_filter_width().raw_value(), kSincFilterSideLength - 1u);
   EXPECT_EQ(mixer->neg_filter_width().raw_value(), kSincFilterSideLength - 1u);
@@ -95,7 +192,7 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   constexpr uint32_t kSourceRate = 44100;
   constexpr uint32_t kDestRate = 44100;
   auto mixer =
-      SelectSincSampler(1, kSourceRate, fuchsia::media::AudioSampleFormat::FLOAT, 1, kDestRate);
+      SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
   bool should_not_accum = false;
   bool source_is_consumed;
@@ -141,7 +238,7 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   constexpr uint32_t kSourceRate = 48000;
   constexpr uint32_t kDestRate = 44100;
   auto mixer =
-      SelectSincSampler(1, kSourceRate, fuchsia::media::AudioSampleFormat::FLOAT, 1, kDestRate);
+      SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
   bool should_not_accum = false;
   bool source_is_consumed;
@@ -189,7 +286,7 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   constexpr uint32_t kSourceRate = 12000;
   constexpr uint32_t kDestRate = 48000;
   auto mixer =
-      SelectSincSampler(1, kSourceRate, fuchsia::media::AudioSampleFormat::FLOAT, 1, kDestRate);
+      SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
   bool should_not_accum = false;
   bool source_is_consumed;
@@ -255,7 +352,8 @@ float MixOneFrame(std::unique_ptr<Mixer>& mixer, int32_t frac_source_offset) {
   auto neg_width = mixer->neg_filter_width().Floor();
   auto pos_width = mixer->pos_filter_width().Floor();
   EXPECT_NE(Fixed(pos_width).raw_value() + 1, mixer->neg_filter_width().raw_value())
-      << "This test assumes SincSampler is symmetric, and that negative width includes a fraction";
+      << "This test assumes SincSampler is symmetric, and that negative width includes a "
+         "fraction";
 
   float dest;
   uint32_t dest_offset = 0;
@@ -271,7 +369,7 @@ float MixOneFrame(std::unique_ptr<Mixer>& mixer, int32_t frac_source_offset) {
 
 // Mix a single frame, without any previously-cached data.
 TEST(SincSamplerTest, SamplingValues_MixOne_NoCache) {
-  auto mixer = SelectSincSampler(1, 44100, fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100);
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
 
   // Mix a single frame at approx position 0. (We use a slightly non-zero value because at true 0,
   // only source[0] itself is used anyway.) In this case we have not provided previous frames.
@@ -283,12 +381,12 @@ TEST(SincSamplerTest, SamplingValues_MixOne_NoCache) {
 
 // Mix a single frame, with previously-cached data.
 TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
-  auto mixer = SelectSincSampler(1, 44100, fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100);
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
   auto neg_width = mixer->neg_filter_width().Floor();
 
   // Now, populate the cache with previous frames, instead of using default (silence) values.
-  // The outparam value of frac_source_offset tells us the cache is populated with neg_width frames,
-  // which is ideal for mixing a subsequent source buffer starting at source position [0].
+  // The outparam value of frac_source_offset tells us the cache is populated with neg_width
+  // frames, which is ideal for mixing a subsequent source buffer starting at source position [0].
   float dest;
   uint32_t dest_offset = 0;
   uint32_t frac_source_frames = Fixed(neg_width).raw_value();
@@ -312,7 +410,7 @@ TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
 // Specifying frac_source_offset >= 0 guarantees that the cached source data will be shifted
 // appropriately, so that subsequent Mix() calls can correctly use that data.
 TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
-  auto mixer = SelectSincSampler(1, 44100, fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100);
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
   auto neg_width = mixer->neg_filter_width().Floor();
 
   // Now, populate the cache with previous data, one frame at a time.

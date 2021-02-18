@@ -24,7 +24,6 @@ executable("fidelity_test_bin") {
     "audio_result.cc",
     "audio_result.h",
     "fidelity_main.cc",
-    "mixer_bitwise_tests.cc",
     "mixer_gain_tests.cc",
     "mixer_position_tests.cc",
     "mixer_range_tests.cc",

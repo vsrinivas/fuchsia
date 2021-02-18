@@ -92,6 +92,7 @@ executable("unittest_bin") {
     "filter_unittest.cc",
     "gain_unittest.cc",
     "mixer_utils_unittest.cc",
+    "no_op_unittest.cc",
     "output_producer_unittest.cc",
     "point_sampler_unittest.cc",
     "position_manager_unittest.cc",
