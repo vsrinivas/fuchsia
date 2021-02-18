@@ -37,6 +37,13 @@ void main() {
           AddTabAction(tab: tab),
         ),
       );
+
+      // Enables the web console log only for debug.
+      assert(() {
+        webService.enableConsoleLog();
+        return true;
+      }());
+
       return WebPageBloc(
         webService: webService,
       );

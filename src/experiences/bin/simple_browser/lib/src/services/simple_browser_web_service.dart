@@ -75,6 +75,9 @@ class SimpleBrowserWebService {
     _childViewConnection = ChildViewConnection(_viewHolderToken);
   }
 
+  Future<void> enableConsoleLog() =>
+      _frame.setJavaScriptLogLevel(web.ConsoleLogLevel.debug);
+
   void dispose() {
     _navigationController.ctrl.close();
     _frame.ctrl.close();
