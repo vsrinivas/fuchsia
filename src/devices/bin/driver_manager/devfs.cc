@@ -71,26 +71,6 @@ struct OnOpenMsg {
   fuchsia_io_DirectoryObject directory;
 };
 
-// Sets |node_info| to be a Directory, in the encoded form. It is the caller's
-// responsibility to ensure that the directory object is zeroed out.
-void SetNodeInfoAsDirectory(fidl_xunion_t* node_info) {
-  // kNodeInfoTagDirectory below is intentionally hard-coded to the ordinal
-  // for NodeInfo.directory. We could also look this up in the coding
-  // tables, but doing that is arguably less performant and less safe, since
-  // we need to search the NodeInfo coding table's fields for the directory
-  // union member, and there's questions around what to do if the field
-  // isn't found. Given that a union member ordinal is part of its ABI, it's
-  // extremely unlikely to ever change, so it's safe enough to hard-code it
-  // here. See
-  // <https://fuchsia-review.googlesource.com/c/fuchsia/+/383902/2/src/devices/bin/driver_manager/devfs.cc#495>
-  // for more context.
-  constexpr fidl_xunion_tag_t kNodeInfoTagDirectory = 3ul;
-  node_info->tag = kNodeInfoTagDirectory;
-
-  node_info->envelope.num_bytes = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryObject));
-  node_info->envelope.presence = FIDL_ALLOC_PRESENT;
-}
-
 zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_disposition_t* handles,
                             uint32_t num_handles) {
   const bool contains_nodeinfo = msg.primary.node_info.tag != fidl_xunion_tag_t(0);
@@ -540,21 +520,14 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       return;
     }
     if (describe) {
-      OnOpenMsg msg;
-      memset(&msg, 0, sizeof(msg));
-      fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
-
-      msg.primary.s = ZX_OK;
-
-      SetNodeInfoAsDirectory(&msg.primary.node_info);
-
-      // We don't need to set the union member (i.e. the directory)'s data here,
-      // because Directory is an empty struct and has no data. The empty struct
-      // is zeroed out by the memset() earlier in this function.
+      fio::wire::NodeInfo node_info;
+      fidl::aligned<fio::DirectoryObject> directory;
+      node_info.set_directory(fidl::unowned_ptr(&directory));
+      fio::Node::OnOpenResponse::OwnedEncodedMessage response(ZX_OK, node_info);
 
       // Writing to unowned_ipc is safe because this is executing on the same
       // thread as the DcAsyncLoop(), so the handle can't be closed underneath us.
-      SendOnOpenEvent(unowned_ipc->get(), msg, nullptr, 0);
+      response.Write(unowned_ipc->get());
     }
     return;
   }
