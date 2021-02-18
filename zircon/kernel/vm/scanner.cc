@@ -64,7 +64,7 @@ enum class PageTableReclaim {
   OnRequest,
 };
 
-PageTableReclaim page_table_reclaim_policy = PageTableReclaim::OnRequest;
+PageTableReclaim page_table_reclaim_policy = PageTableReclaim::Always;
 
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;

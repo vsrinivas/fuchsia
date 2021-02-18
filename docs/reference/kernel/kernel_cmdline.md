@@ -567,10 +567,11 @@ remains free for longer, and can be more effective at relieving memory pressure.
 Sets the policy for what to do with user page tables that are not accessed
 between scanner runs. The following options are supported:
 
-*   `on_request`: (default) Only performs eviction on request, such as in
-    response to a low memory scenario.
+*   `on_request`: Only performs eviction on request, such as in response to a
+    low memory scenario.
 *   `never`: Page tables are never evicted.
-*   `always`: Unused page tables are always evicted every time the scanner runs.
+*   `always`: (default) Unused page tables are always evicted every time the
+    scanner runs.
 
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
