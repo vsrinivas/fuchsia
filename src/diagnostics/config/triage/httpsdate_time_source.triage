@@ -1,0 +1,196 @@
+{
+    select: {
+        network_available_monotonic: "INSPECT:httpsdate_time_source.cmx:root:network_check_time",
+
+        // TODO(fxbug.dev/70438): Timekeeper used to run the network check, this has been left here
+        // so triage continues to work for builds with old versions of timekeeper. Once we're
+        // confident we won't need to triage devices before the update we should remove this.
+        timekeeper_network_available_monotonic: "INSPECT:timekeeper.cmx:root:network_available_monotonic",
+        sample_0_counter: "INSPECT:httpsdate_time_source.cmx:root/sample_0:counter",
+        network_error_count: "INSPECT:httpsdate_time_source.cmx:root/failures:NetworkError_count",
+
+        // Configuration errors
+        invalid_hostname_count: "INSPECT:httpsdate_time_source.cmx:root/failures:InvalidHostname_count",
+        scheme_not_https_count: "INSPECT:httpsdate_time_source.cmx:root/failures:SchemeNotHttps_count",
+
+        // Bad response errors
+        no_certificates_presented_count: "INSPECT:httpsdate_time_source.cmx:root/failures:NoCertificatesPresented_count",
+        no_date_in_response_count: "INSPECT:httpsdate_time_source.cmx:root/failures:NoDateInResponse_count",
+        invalid_certificate_chain_count: "INSPECT:httpsdate_time_source.cmx:root/failures:InvalidCertificateChain_count",
+        corrupt_leaf_cert_count: "INSPECT:httpsdate_time_source.cmx:root/failures:CorruptLeafCertificate_count",
+        date_format_error_count: "INSPECT:httpsdate_time_source.cmx:root/failures:DateFormatError_count",
+    },
+    eval: {
+        network_unavailable: "And(Missing(network_available_monotonic), Missing(timekeeper_network_available_monotonic))",
+        sample_created: "sample_0_counter > 0",
+        excessive_network_errors: "Option(network_error_count, 0) / Max(Option(network_error_count, 0) + sample_0_counter, 1) > .2",
+        configuration_errors: "Option(invalid_hostname_count, scheme_not_https_count, 0) > 0",
+        bad_response_errors: "Option(no_certificates_presented_count, no_date_in_response_count, invalid_certificate_chain_count, corrupt_leaf_cert_count, date_format_error_count, 0) > 0",
+    },
+    act: {
+        network_unavailable_no_time: {
+            type: "Warning",
+            trigger: "And(Not(sample_created), network_unavailable)",
+            print: "UTC time has not been retrieved as the network is not yet available",
+        },
+        network_available_but_no_time: {
+            type: "Warning",
+            trigger: "And(Not(sample_created), Not(network_unavailable))",
+            print: "The network was declared reachable, but UTC time has not yet been retrieved",
+        },
+        excessive_network_errors_retrieving_time: {
+            type: "Warning",
+            trigger: "excessive_network_errors",
+            print: "An excessive number of attempts to retrieve UTC time have failed due to network errors",
+        },
+        configuration_issue: {
+            type: "Warning",
+            trigger: "configuration_errors",
+            print: "Retrieving UTC has failed due to misconfiguration. See httpsdate_time_source.cmx/failures",
+        },
+        bad_response_issue: {
+            type: "Warning",
+            trigger: "bad_response_errors",
+            print: "Retrieving UTC has failed due to an unexpected response from the server. See httpsdate_time_source.cmx/failures",
+        },
+    },
+    test: {
+        status_ok: {
+            yes: [],
+            no: [
+                "network_unavailable_no_time",
+                "network_available_but_no_time",
+                "excessive_network_errors_retrieving_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                network_available_monotonic: 30000,
+                sample_0_counter: 26,
+            },
+        },
+        timekeeper_network_check_ok: {
+            yes: [],
+            no: [
+                "network_unavailable_no_time",
+                "network_available_but_no_time",
+                "excessive_network_errors_retrieving_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                timekeeper_network_available_monotonic: 30000,
+                sample_0_counter: 26,
+            },
+        },
+        network_check_incomplete: {
+            yes: [
+                "network_unavailable_no_time",
+            ],
+            no: [
+                "network_available_but_no_time",
+                "excessive_network_errors_retrieving_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                sample_0_counter: 0,
+            },
+        },
+        network_check_complete_but_unreachable: {
+            yes: [
+                "network_available_but_no_time",
+                "excessive_network_errors_retrieving_time",
+            ],
+            no: [
+                "network_unavailable_no_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                network_available_monotonic: 30000,
+                sample_0_counter: 0,
+                network_error_count: 34,
+            },
+        },
+        timekeeper_network_check_complete_but_unreachable: {
+            yes: [
+                "network_available_but_no_time",
+                "excessive_network_errors_retrieving_time",
+            ],
+            no: [
+                "network_unavailable_no_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                timekeeper_network_available_monotonic: 30000,
+                sample_0_counter: 0,
+                network_error_count: 34,
+            },
+        },
+        excessive_network_errors: {
+            yes: [
+                "excessive_network_errors_retrieving_time",
+            ],
+            no: [
+                "network_unavailable_no_time",
+                "network_available_but_no_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                network_available_monotonic: 30000,
+                sample_0_counter: 29,
+                network_error_count: 16,
+            },
+        },
+        few_network_errors_allowed: {
+            yes: [],
+            no: [
+                "network_unavailable_no_time",
+                "network_available_but_no_time",
+                "excessive_network_errors_retrieving_time",
+                "configuration_issue",
+                "bad_response_issue",
+            ],
+            values: {
+                network_available_monotonic: 30000,
+                sample_0_counter: 65,
+                network_error_count: 3,
+            },
+        },
+        bad_response_from_server: {
+            yes: [
+                "bad_response_issue",
+            ],
+            no: [
+                "network_unavailable_no_time",
+                "excessive_network_errors_retrieving_time",
+                "network_available_but_no_time",
+                "configuration_issue",
+            ],
+            values: {
+                network_available_monotonic: 30000,
+                sample_0_counter: 1,
+                invalid_certificate_chain_count: 42,
+            },
+        },
+        misconfiguration: {
+            yes: [
+                "configuration_issue",
+            ],
+            no: [
+                "network_unavailable_no_time",
+                "excessive_network_errors_retrieving_time",
+                "network_available_but_no_time",
+                "bad_response_issue",
+            ],
+            values: {
+                network_available_monotonic: 30000,
+                sample_0_counter: 1,
+                scheme_not_https_count: 42,
+            },
+        },
+    },
+}

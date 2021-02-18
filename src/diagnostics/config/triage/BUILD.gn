@@ -13,6 +13,7 @@ triage_files = [
   "cpu.triage",
   "crashes.triage",
   "disk.triage",
+  "httpsdate_time_source.triage",
   "intl.dart_aot.triage",
   "intl.dart_aot_product.triage",
   "intl.dart_jit.triage",

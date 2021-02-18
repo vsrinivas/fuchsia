@@ -4,7 +4,6 @@
         current_mono: "INSPECT:timekeeper.cmx:root/current:monotonic",
         current_utc: "INSPECT:timekeeper.cmx:root/current:clock_utc",
         kernel_utc: "INSPECT:timekeeper.cmx:root/current:kernel_utc",
-        network_available_monotonic: "INSPECT:timekeeper.cmx:root:network_available_monotonic",
         primary_source_status: "INSPECT:timekeeper.cmx:root/primary_time_source:status",
         primary_estimate_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/estimate_0:counter",
         rtc_initialization: "INSPECT:timekeeper.cmx:root/real_time_clock:initialization",
@@ -13,27 +12,28 @@
         last_update_error: "INSPECT:timekeeper.cmx:root/primary_track/last_update:error_bounds",
     },
     eval: {
-        network_unavailable: "Missing(network_available_monotonic)",
-        primary_source_unhealthy: "And(primary_source_status != \"Launched\", primary_source_status != \"Ok\")",
+        primary_source_initializing: "Or(primary_source_status == \"Launched\", primary_source_status == \"Initializing\")",
+        primary_source_unhealthy: "And(primary_source_status != \"Launched\", primary_source_status != \"Ok\", primary_source_status != \"Initializing\")",
         primary_estimate_ok: "primary_estimate_0_counter > 0",
         clock_started: "current_utc > backstop",
         clock_difference: "current_utc - kernel_utc",
         rtc_present: "And(rtc_initialization != \"NoDevices\", rtc_initialization != \"InvalidBeforeBackstop\")",
         rtc_read_ok: "rtc_initialization == \"Succeeded\"",
+
         // Error bound is set to UINT64_MAX when the error is unknown but triage
         // tests fail to parse a value this large, use INT64_MAX instead.
         error_available: "And(Not(Missing(last_update_error)), last_update_error <  9223372036854775807)",
     },
     act: {
-        not_started_due_to_network: {
+        not_started_source_initializing: {
             type: "Warning",
-            trigger: "And(Not(clock_started), network_unavailable)",
-            print: "Time not yet available, network was not declared reachable",
+            trigger: "And(Not(clock_started), primary_source_initializing)",
+            print: "UTC time not yet available, the primary source is not ready. See timekeeper.cmx/primary_time_source",
         },
-        not_started_other_reason: {
+        not_started_source_unhealthy: {
             type: "Warning",
-            trigger: "And(Not(clock_started), Not(network_unavailable))",
-            print: "Time not yet available even though network was declared reachable",
+            trigger: "And(Not(clock_started), primary_source_unhealthy)",
+            print: "UTC time not yet available, the primary source is unhealthy. See timekeeper.cmx/primary_time_source",
         },
         rtc_time_only: {
             type: "Warning",
@@ -73,14 +73,13 @@
         utc_error_bound_ms: {
             type: "Gauge",
             value: "Option(last_update_error // Millis(1), \"unknown\")",
-        }
+        },
     },
     test: {
         status_ok: {
             yes: [],
             no: [
-                "not_started_due_to_network",
-                "not_started_other_reason",
+                "not_started_source_unhealthy",
                 "started_but_source_unhealthy",
                 "rtc_time_only",
             ],
@@ -92,35 +91,34 @@
                 primary_estimate_0_counter: 1,
             },
         },
-        no_time_network_problem: {
+        no_time_source_not_ready: {
             yes: [
-                "not_started_due_to_network",
+                "not_started_source_initializing",
             ],
             no: [
-                "not_started_other_reason",
+                "not_started_source_unhealthy",
                 "started_but_source_unhealthy",
                 "rtc_time_only",
             ],
             values: {
                 backstop: 33333,
                 current_utc: 33333,
+                primary_source_status: "Initializing",
                 primary_estimate_0_counter: 0,
             },
         },
-        no_time_other_problem: {
+        no_time_source_problem: {
             yes: [
-                "not_started_other_reason",
+                "not_started_source_unhealthy",
             ],
             no: [
-                "not_started_due_to_network",
                 "started_but_source_unhealthy",
                 "rtc_time_only",
             ],
             values: {
                 backstop: 33333,
                 current_utc: 33333,
-                network_available_monotonic: 4444444,
-                primary_source_status: "Ok",
+                primary_source_status: "Network",
                 primary_estimate_0_counter: 0,
             },
         },
@@ -129,8 +127,7 @@
                 "rtc_time_only",
             ],
             no: [
-                "not_started_due_to_network",
-                "not_started_other_reason",
+                "not_started_source_unhealthy",
                 "started_but_source_unhealthy",
             ],
             values: {
@@ -210,7 +207,7 @@
         },
         last_update_missing: {
             // Clock content warnings should not fire due to lack of time sync.
-            yes: [ ],
+            yes: [],
             no: [
                 "last_update_stale",
                 "error_too_high",
@@ -220,7 +217,7 @@
             },
         },
         last_update_valid: {
-            yes: [ ],
+            yes: [],
             no: [
                 "last_update_stale",
                 "error_too_high",
@@ -232,7 +229,7 @@
             },
         },
         last_update_valid_but_error_unknown: {
-            yes: [ ],
+            yes: [],
             no: [
                 "last_update_stale",
                 "error_too_high",
