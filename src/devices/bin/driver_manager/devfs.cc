@@ -71,19 +71,6 @@ struct OnOpenMsg {
   fuchsia_io_DirectoryObject directory;
 };
 
-// This is a hand-rolled FIDL struct, see OnOpenMsg
-struct DescribeMsg {
-  FIDL_ALIGNDECL
-
-  // This is the inline, or primary, part of the FIDL message.
-  struct {
-    fidl_message_header_t hdr;
-    fidl_xunion_t node_info;
-  } primary;
-
-  fuchsia_io_DirectoryObject directory;
-};
-
 // Sets |node_info| to be a Directory, in the encoded form. It is the caller's
 // responsibility to ensure that the directory object is zeroed out.
 void SetNodeInfoAsDirectory(fidl_xunion_t* node_info) {
@@ -813,19 +800,20 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
     case fuchsia_io_NodeDescribeOrdinal: {
       DECODE_REQUEST(msg, NodeDescribe);
 
-      DescribeMsg msg;
-      memset(&msg, 0, sizeof(msg));
-      fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeDescribeOrdinal);
-      SetNodeInfoAsDirectory(&msg.primary.node_info);
+      fio::wire::NodeInfo node_info;
+      fidl::aligned<fio::DirectoryObject> directory;
+      node_info.set_directory(fidl::unowned_ptr(&directory));
+      fio::Node::DescribeResponse::OwnedEncodedMessage response(node_info);
+      const auto& out = response.GetOutgoingMessage();
 
       fidl_outgoing_msg_t raw_msg = {
           .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
           .byte =
               {
-                  .bytes = reinterpret_cast<uint8_t*>(&msg),
-                  .handles = nullptr,
-                  .num_bytes = sizeof(msg),
-                  .num_handles = 0,
+                  .bytes = out.bytes(),
+                  .handles = out.handles(),
+                  .num_bytes = out.byte_actual(),
+                  .num_handles = out.handle_actual(),
               },
       };
       return txn->reply(txn, &raw_msg);
