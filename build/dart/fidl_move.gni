@@ -8,7 +8,7 @@
 dart_package_label = {
   fidl = "//sdk/dart/fidl/"
   fuchsia = "//sdk/dart/fuchsia/"
-  fuchsia_inspect = "//topaz/public/dart/fuchsia_inspect/"
+  fuchsia_inspect = "//sdk/dart/fuchsia_inspect/"
   fuchsia_logger = "//sdk/dart/fuchsia_logger/"
   fuchsia_scenic = "//sdk/dart/fuchsia_scenic/"
   fuchsia_scenic_flutter = "//sdk/dart/fuchsia_scenic_flutter/"
