@@ -6,7 +6,6 @@ import 'dart:math';
 import 'package:quiver/iterables.dart' show zip;
 
 import 'sl4f_client.dart';
-import 'ssh.dart';
 
 /// Clockwise rotation of the screen.
 enum Rotation {
@@ -23,16 +22,13 @@ enum Rotation {
 /// the screen rotated which will transform the coordinates so that the physical
 /// (0,0) is on the top left.
 class Input {
-  final Ssh ssh;
   final Rotation _screenRotation;
   final Sl4f _sl4f;
 
   /// Construct an [Input] object.
   ///
   /// You can change the default [screenRotation] to compensate for.
-  Input(Sl4f sl4f, [this._screenRotation = Rotation.degrees0])
-      : ssh = sl4f.ssh,
-        _sl4f = sl4f;
+  Input(Sl4f sl4f, [this._screenRotation = Rotation.degrees0]) : _sl4f = sl4f;
 
   /// Taps on the screen at coordinates ([coord.x], [coord.y]).
   ///
