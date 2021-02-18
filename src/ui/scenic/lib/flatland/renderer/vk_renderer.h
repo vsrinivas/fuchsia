@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_VK_RENDERER_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_VK_RENDERER_H_
 
+#include <set>
 #include <unordered_map>
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
@@ -61,16 +62,10 @@ class VkRenderer final : public Renderer {
                           vk::ImageUsageFlags usage);
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
-  escher::ImagePtr ExtractImage(escher::CommandBuffer* command_buffer, ImageMetadata metadata,
-                                vk::ImageUsageFlags usage, vk::ImageLayout layout);
+  escher::ImagePtr ExtractImage(ImageMetadata metadata, vk::ImageUsageFlags usage);
 
-  // ExtractRenderTarget() and ExtractTexture() are wrapper functions to ExtractImage()
-  // that provide specific usage flags for color attachments and shader textures
-  // respectively. All three functions are thread safe. Additionally, they only get
-  // called from Render() and by extension the render thread.
-  escher::TexturePtr ExtractTexture(escher::CommandBuffer* command_buffer, ImageMetadata metadata);
-  escher::ImagePtr ExtractRenderTarget(escher::CommandBuffer* command_buffer,
-                                       ImageMetadata metadata);
+  // ExtractTexture() is a wrapper function to ExtractImage().
+  escher::TexturePtr ExtractTexture(ImageMetadata metadata);
 
   // Escher is how we access Vulkan.
   escher::EscherWeakPtr escher_;
@@ -79,10 +74,16 @@ class VkRenderer final : public Renderer {
   escher::RectangleCompositor compositor_;
 
   // This mutex is used to protect access to |collection_map_| and |vk_collection_map_|.
-  std::mutex lock_;
+  mutable std::mutex lock_;
   std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
   std::unordered_map<sysmem_util::GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA>
       vk_collection_map_;
+
+  std::unordered_map<sysmem_util::GlobalImageId, escher::TexturePtr> texture_map_;
+  std::unordered_map<sysmem_util::GlobalImageId, escher::ImagePtr> render_target_map_;
+  std::unordered_map<sysmem_util::GlobalImageId, escher::TexturePtr> depth_target_map_;
+  std::set<sysmem_util::GlobalImageId> pending_textures_;
+  std::set<sysmem_util::GlobalImageId> pending_render_targets_;
 
   uint32_t frame_number_ = 0;
 };

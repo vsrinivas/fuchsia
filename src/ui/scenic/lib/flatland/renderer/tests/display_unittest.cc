@@ -121,7 +121,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Importing an image should fail at this point because we've only set the renderer constraints.
   auto import_result = renderer.ImportImage(
-      {.collection_id = renderer_collection_id, .vmo_idx = 0, .width = kWidth, .height = kHeight});
+      {.collection_id = renderer_collection_id, .vmo_index = 0, .width = kWidth, .height = kHeight});
   EXPECT_FALSE(import_result);
 
   // Set the display constraints on the display controller.
@@ -134,7 +134,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Importing should fail again, because we've only set 2 of the 3 constraints.
   import_result = renderer.ImportImage(
-      {.collection_id = renderer_collection_id, .vmo_idx = 0, .width = kWidth, .height = kHeight});
+      {.collection_id = renderer_collection_id, .vmo_index = 0, .width = kWidth, .height = kHeight});
   EXPECT_FALSE(import_result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
@@ -158,7 +158,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   // Now that the renderer, client, and the display have set their constraints, we import one last
   // time and this time it should return true.
   import_result = renderer.ImportImage(
-      {.collection_id = renderer_collection_id, .vmo_idx = 0, .width = kWidth, .height = kHeight});
+      {.collection_id = renderer_collection_id, .vmo_index = 0, .width = kWidth, .height = kHeight});
   EXPECT_TRUE(import_result);
 
   // We should now be able to also import an image to the display controller, using the
@@ -173,7 +173,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   zx_status_t import_image_status = ZX_OK;
   (*display_controller.get())
-      ->ImportImage(image_config, renderer_collection_id, /*vmo_idx*/ 0, &import_image_status,
+      ->ImportImage(image_config, renderer_collection_id, /*vmo_index*/ 0, &import_image_status,
                     &image_id);
   EXPECT_EQ(import_image_status, ZX_OK);
   EXPECT_NE(image_id, 0u);

@@ -165,7 +165,7 @@ TEST_F(EngineTest, ImportImageErrorCases) {
   ImageMetadata metadata = {
       .collection_id = kGlobalBufferCollectionId,
       .identifier = kImageId,
-      .vmo_idx = kVmoIdx,
+      .vmo_index = kVmoIdx,
       .width = 20,
       .height = 30,
   };
@@ -282,7 +282,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   ImageMetadata parent_image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
       .identifier = 1,
-      .vmo_idx = 0,
+      .vmo_index = 0,
       .width = 128,
       .height = 256,
   };
@@ -302,7 +302,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   ImageMetadata child_image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
       .identifier = 2,
-      .vmo_idx = 1,
+      .vmo_index = 1,
       .width = 512,
       .height = 1024,
   };

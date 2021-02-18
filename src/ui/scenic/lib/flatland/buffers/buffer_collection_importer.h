@@ -27,7 +27,7 @@ struct ImageMetadata {
   // which vmo in the collection specified by |collection_id| to use as the memory
   // for this image. This value must be less than the total number of vmos of the
   // buffer collection we are constructing the image from.
-  uint32_t vmo_idx;
+  uint32_t vmo_index;
 
   // The dimensions of the image in pixels.
   uint32_t width = 0;
@@ -38,9 +38,14 @@ struct ImageMetadata {
   // account during rendering.
   bool has_transparency = false;
 
+  // Images used as render targets require different usage flags and layouts from images
+  // used as textures - so this must be set set to true for render targets.
+  bool is_render_target = false;
+
   bool operator==(const ImageMetadata& meta) const {
-    return collection_id == meta.collection_id && vmo_idx == meta.vmo_idx && width == meta.width &&
-           height == meta.height && has_transparency == meta.has_transparency;
+    return collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
+           width == meta.width && height == meta.height &&
+           has_transparency == meta.has_transparency;
   }
 };
 

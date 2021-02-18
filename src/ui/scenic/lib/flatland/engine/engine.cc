@@ -96,7 +96,7 @@ bool Engine::ImportImage(const ImageMetadata& meta_data) {
   {
     std::unique_lock<std::mutex> lock(lock_);
     auto status = (*display_controller_.get())
-                      ->ImportImage(image_config, meta_data.collection_id, meta_data.vmo_idx,
+                      ->ImportImage(image_config, meta_data.collection_id, meta_data.vmo_index,
                                     &import_image_status, &display_image_id);
     FX_DCHECK(status == ZX_OK);
 
@@ -381,10 +381,11 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
   for (uint32_t i = 0; i < num_vmos; i++) {
     ImageMetadata target = {.collection_id = renderer_id,
                             .identifier = sysmem_util::GenerateUniqueImageId(),
-                            .vmo_idx = i,
+                            .vmo_index = i,
                             .width = kWidth,
                             .height = kHeight,
-                            .has_transparency = false};
+                            .has_transparency = false,
+                            .is_render_target = true};
 
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);

@@ -87,10 +87,16 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
                                           kNoneUsage, additional_format_modifiers);
 
   // Now check that both server ids are allocated.
-  bool res_1 =
-      renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
-  bool res_2 =
-      renderer->ImportImage({.collection_id = bcid2, .vmo_idx = 0, .width = 1, .height = 1});
+  bool res_1 = renderer->ImportImage({.collection_id = bcid,
+                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = 1,
+                                      .height = 1});
+  bool res_2 = renderer->ImportImage({.collection_id = bcid2,
+                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = 1,
+                                      .height = 1});
   EXPECT_TRUE(res_1);
   EXPECT_TRUE(res_2);
 }
@@ -128,8 +134,9 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
   EXPECT_TRUE(result);
 
   // The buffer collection should not be valid here.
-  EXPECT_FALSE(
-      renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1}));
+  auto image_id = sysmem_util::GenerateUniqueImageId();
+  EXPECT_FALSE(renderer->ImportImage(
+      {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
   std::vector<uint64_t> additional_format_modifiers;
   if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
@@ -140,7 +147,8 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
                                           kNoneUsage, additional_format_modifiers);
 
   // The buffer collection *should* be valid here.
-  auto res = renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
+  auto res = renderer->ImportImage(
+      {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
   EXPECT_TRUE(res);
 }
 
@@ -156,8 +164,9 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_TRUE(result);
 
   // The buffer collection should not be valid here.
-  EXPECT_FALSE(
-      renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1}));
+  auto image_id = sysmem_util::GenerateUniqueImageId();
+  EXPECT_FALSE(renderer->ImportImage(
+      {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
   std::vector<uint64_t> additional_format_modifiers;
   if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
@@ -168,16 +177,16 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
                                           kNoneUsage, additional_format_modifiers);
 
   // The buffer collection *should* be valid here.
-  auto import_result =
-      renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
+  auto import_result = renderer->ImportImage(
+      {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
   EXPECT_TRUE(import_result);
 
   // Now deregister the collection.
   renderer->DeregisterRenderTargetCollection(bcid);
 
   // After deregistration, calling ImportImage() should return false.
-  import_result =
-      renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
+  import_result = renderer->ImportImage(
+      {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
   EXPECT_FALSE(import_result);
 }
 
@@ -203,9 +212,9 @@ void MultithreadingTest(Renderer* renderer) {
 
     auto tokens = SysmemTokens::Create(sysmem_allocator.get());
     auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+    auto image_id = sysmem_util::GenerateUniqueImageId();
     bool result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator.get(),
                                                            std::move(tokens.local_token));
-
     EXPECT_TRUE(result);
 
     std::vector<uint64_t> additional_format_modifiers;
@@ -224,8 +233,8 @@ void MultithreadingTest(Renderer* renderer) {
     }
 
     // The buffer collection *should* be valid here.
-    auto import_result =
-        renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
+    auto import_result = renderer->ImportImage(
+        {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
     EXPECT_TRUE(import_result);
     loop.RunUntilIdle();
   };
@@ -247,8 +256,11 @@ void MultithreadingTest(Renderer* renderer) {
   EXPECT_EQ(bcid_set.size(), kNumThreads);
   for (const auto& bcid : bcid_set) {
     // The buffer collection *should* be valid here.
-    auto result =
-        renderer->ImportImage({.collection_id = bcid, .vmo_idx = 0, .width = 1, .height = 1});
+    auto result = renderer->ImportImage({.collection_id = bcid,
+                                         .identifier = sysmem_util::GenerateUniqueImageId(),
+                                         .vmo_index = 0,
+                                         .width = 1,
+                                         .height = 1});
     EXPECT_TRUE(result);
   }
 }
@@ -282,8 +294,12 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
 
   // Now that the renderer and client have set their contraints, we can import the render target.
   // Create the render_target image meta_data.
-  ImageMetadata render_target = {
-      .collection_id = target_id, .vmo_idx = 0, .width = kWidth, .height = kHeight};
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = sysmem_util::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kWidth,
+                                 .height = kHeight,
+                                 .is_render_target = true};
   auto target_import = renderer->ImportImage(render_target);
   EXPECT_TRUE(target_import);
 
@@ -490,14 +506,19 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   // Create the render_target image meta_data.
   ImageMetadata render_target = {
       .collection_id = target_id,
-      .vmo_idx = 0,
+      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .vmo_index = 0,
       .width = kTargetWidth,
       .height = kTargetHeight,
+      .is_render_target = true,
   };
 
   // Create the image meta data for the renderable.
-  ImageMetadata renderable_texture = {
-      .collection_id = collection_id, .vmo_idx = 0, .width = 2, .height = 1};
+  ImageMetadata renderable_texture = {.collection_id = collection_id,
+                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = 2,
+                                      .height = 1};
 
   auto import_res = renderer.ImportImage(render_target);
   EXPECT_TRUE(import_res);
@@ -512,7 +533,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Have the client write pixel values to the renderable's texture.
-  MapHostPointer(client_collection_info, renderable_texture.vmo_idx,
+  MapHostPointer(client_collection_info, renderable_texture.vmo_index,
                  [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
                    // The texture only has 2 pixels, so it needs 8 write values for 4 channels. We
                    // set the first pixel to red and the second pixel to green.
@@ -534,7 +555,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center
   // of the render target, with its associated texture.
-  MapHostPointer(client_target_info, render_target.vmo_idx,
+  MapHostPointer(client_target_info, render_target.vmo_index,
                  [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
                    // Flush the cache before reading back target image.
                    EXPECT_EQ(ZX_OK,
@@ -637,32 +658,38 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
     EXPECT_EQ(allocation_status, ZX_OK);
   }
 
-  // Now that the renderer and client have set their contraints, we import.
-  auto res = renderer.ImportImage({.collection_id = collection_id, .vmo_idx = 0});
-  res |= renderer.ImportImage({.collection_id = target_id, .vmo_idx = 0});
-  EXPECT_TRUE(res);
-
   const uint32_t kTargetWidth = 16;
   const uint32_t kTargetHeight = 8;
 
   // Create the render_target image meta_data.
   ImageMetadata render_target = {
       .collection_id = target_id,
-      .vmo_idx = 0,
+      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .vmo_index = 0,
       .width = kTargetWidth,
       .height = kTargetHeight,
+      .is_render_target = true,
   };
 
   // Create the image meta data for the renderable.
-  ImageMetadata renderable_texture = {
-      .collection_id = collection_id, .vmo_idx = 0, .width = 1, .height = 1};
+  ImageMetadata renderable_texture = {.collection_id = collection_id,
+                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = 1,
+                                      .height = 1};
 
   // Create the texture that will go on the transparent renderable.
   ImageMetadata transparent_texture = {.collection_id = collection_id,
-                                       .vmo_idx = 1,
+                                       .identifier = sysmem_util::GenerateUniqueImageId(),
+                                       .vmo_index = 1,
                                        .width = 1,
                                        .height = 1,
                                        .has_transparency = true};
+
+  // Import all the images.
+  renderer.ImportImage(render_target);
+  renderer.ImportImage(renderable_texture);
+  renderer.ImportImage(transparent_texture);
 
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
@@ -672,7 +699,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
                                      glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Have the client write pixel values to the renderable's texture.
-  MapHostPointer(client_collection_info, renderable_texture.vmo_idx,
+  MapHostPointer(client_collection_info, renderable_texture.vmo_index,
                  [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
                    // Create a red opaque pixel.
                    const uint8_t kNumWrites = 4;
@@ -685,7 +712,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
                                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
                  });
 
-  MapHostPointer(client_collection_info, transparent_texture.vmo_idx,
+  MapHostPointer(client_collection_info, transparent_texture.vmo_index,
                  [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
                    // Create a green pixel with an alpha of 0.5.
                    const uint8_t kNumWrites = 4;
@@ -706,7 +733,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center
   // of the render target, with its associated texture.
-  MapHostPointer(client_target_info, render_target.vmo_idx,
+  MapHostPointer(client_target_info, render_target.vmo_index,
                  [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
                    // Flush the cache before reading back target image.
                    EXPECT_EQ(ZX_OK,

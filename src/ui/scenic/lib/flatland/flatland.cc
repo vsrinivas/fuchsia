@@ -675,7 +675,7 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
   ImageMetadata metadata;
   metadata.identifier = sysmem_util::GenerateUniqueImageId();
   metadata.collection_id = global_collection_id;
-  metadata.vmo_idx = vmo_index;
+  metadata.vmo_index = vmo_index;
   metadata.width = properties.width();
   metadata.height = properties.height();
 

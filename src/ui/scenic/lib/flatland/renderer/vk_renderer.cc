@@ -137,17 +137,17 @@ bool VkRenderer::RegisterCollection(
   return true;
 }
 
-bool VkRenderer::ImportImage(const ImageMetadata& meta_data) {
+bool VkRenderer::ImportImage(const ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
-  const auto& collection_itr = collection_map_.find(meta_data.collection_id);
+  const auto& collection_itr = collection_map_.find(metadata.collection_id);
   if (collection_itr == collection_map_.end()) {
-    FX_LOGS(ERROR) << "Collection with id " << meta_data.collection_id << " does not exist.";
+    FX_LOGS(ERROR) << "Collection with id " << metadata.collection_id << " does not exist.";
     return false;
   }
 
   auto& collection = collection_itr->second;
   if (!collection.BuffersAreAllocated()) {
-    FX_LOGS(ERROR) << "Buffers for collection " << meta_data.collection_id
+    FX_LOGS(ERROR) << "Buffers for collection " << metadata.collection_id
                    << " have not been allocated.";
     return false;
   }
@@ -156,78 +156,81 @@ bool VkRenderer::ImportImage(const ImageMetadata& meta_data) {
   const auto vmo_count = sysmem_info.buffer_count;
   auto image_constraints = sysmem_info.settings.image_format_constraints;
 
-  if (meta_data.vmo_idx >= vmo_count) {
-    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << meta_data.vmo_idx
+  if (texture_map_.find(metadata.identifier) != texture_map_.end() ||
+      render_target_map_.find(metadata.identifier) != render_target_map_.end()) {
+    FX_LOGS(ERROR) << "An image with this identifier already exists.";
+    return false;
+  }
+
+  if (metadata.vmo_index >= vmo_count) {
+    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << metadata.vmo_index
                    << " must be less than vmo_count " << vmo_count;
     return false;
   }
 
-  if (meta_data.width < image_constraints.min_coded_width ||
-      meta_data.width > image_constraints.max_coded_width) {
-    FX_LOGS(ERROR) << "CreateImage failed, width " << meta_data.width
+  if (metadata.width < image_constraints.min_coded_width ||
+      metadata.width > image_constraints.max_coded_width) {
+    FX_LOGS(ERROR) << "CreateImage failed, width " << metadata.width
                    << " is not within valid range [" << image_constraints.min_coded_width << ","
                    << image_constraints.max_coded_width << "]";
     return false;
   }
 
-  if (meta_data.height < image_constraints.min_coded_height ||
-      meta_data.height > image_constraints.max_coded_height) {
-    FX_LOGS(ERROR) << "CreateImage failed, height " << meta_data.height
+  if (metadata.height < image_constraints.min_coded_height ||
+      metadata.height > image_constraints.max_coded_height) {
+    FX_LOGS(ERROR) << "CreateImage failed, height " << metadata.height
                    << " is not within valid range [" << image_constraints.min_coded_height << ","
                    << image_constraints.max_coded_height << "]";
     return false;
   }
 
-  // TODO(46708): Actually create and cache the image at this point. Currently we just recreate
-  // the images we need every time RenderFrame() is called, so there's nothing here to
-  // do at the moment other than return true since we have successfully validated the
-  // buffer collection and checked that the ImageMetatada struct has good data.
+  if (metadata.is_render_target) {
+    auto image = ExtractImage(metadata, escher::RectangleCompositor::kRenderTargetUsageFlags);
+    image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+    render_target_map_[metadata.identifier] = image;
+    depth_target_map_[metadata.identifier] = escher::CreateDepthTexture(escher_.get(), image);
+    pending_render_targets_.insert(metadata.identifier);
+  } else {
+    texture_map_[metadata.identifier] = ExtractTexture(metadata);
+    pending_textures_.insert(metadata.identifier);
+  }
   return true;
 }
 
 void VkRenderer::ReleaseImage(sysmem_util::GlobalImageId image_id) {
-  // TODO(46708): Fill out this function once we actually start caching images. Currently
-  // we just recreate them every time |RenderFrame| is called, and let them go out
-  // of scope afterwards, so there is nothing here to release.
+  std::unique_lock<std::mutex> lock(lock_);
+  if (texture_map_.find(image_id) != texture_map_.end()) {
+    texture_map_.erase(image_id);
+  } else if (render_target_map_.find(image_id) != render_target_map_.end()) {
+    render_target_map_.erase(image_id);
+    depth_target_map_.erase(image_id);
+  }
 }
 
-escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,
-                                          ImageMetadata metadata, vk::ImageUsageFlags usage,
-                                          vk::ImageLayout layout) {
+escher::ImagePtr VkRenderer::ExtractImage(ImageMetadata metadata, vk::ImageUsageFlags usage) {
   TRACE_DURATION("flatland", "VkRenderer::ExtractImage");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
 
   GpuImageInfo gpu_info;
-  {
-    // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
-    std::unique_lock<std::mutex> lock(lock_);
-    auto collection_itr = collection_map_.find(metadata.collection_id);
-    FX_DCHECK(collection_itr != collection_map_.end());
-    auto& collection = collection_itr->second;
+  auto collection_itr = collection_map_.find(metadata.collection_id);
+  FX_DCHECK(collection_itr != collection_map_.end());
+  auto& collection = collection_itr->second;
 
-    auto vk_itr = vk_collection_map_.find(metadata.collection_id);
-    FX_DCHECK(vk_itr != vk_collection_map_.end());
-    auto vk_collection = vk_itr->second;
+  auto vk_itr = vk_collection_map_.find(metadata.collection_id);
+  FX_DCHECK(vk_itr != vk_collection_map_.end());
+  auto vk_collection = vk_itr->second;
 
-    // Create the GPU info from the server side collection.
-    gpu_info = GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(), vk_collection,
-                                 metadata.vmo_idx);
-    FX_DCHECK(gpu_info.GetGpuMem());
-  }
+  // Create the GPU info from the server side collection.
+  gpu_info = GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(), vk_collection,
+                               metadata.vmo_index);
+  FX_DCHECK(gpu_info.GetGpuMem());
 
   // Create and return an escher image.
   auto image_ptr = escher::image_utils::NewImage(
       vk_device, gpu_info.NewVkImageCreateInfo(metadata.width, metadata.height, usage),
       gpu_info.GetGpuMem(), escher_->resource_recycler());
   FX_DCHECK(image_ptr);
-
-  // Transition the image to the provided layout.
-  // TODO(fxbug.dev/52196): The way we are transitioning image layouts here and in the rest of
-  // scenic is incorrect for "external" images. It just happens to be working by luck on our current
-  // hardware.
-  command_buffer->impl()->TransitionImageLayout(image_ptr, vk::ImageLayout::eUndefined, layout);
-
   return image_ptr;
 }
 
@@ -244,21 +247,8 @@ void VkRenderer::DeregisterRenderTargetCollection(
   ReleaseBufferCollection(collection_id);
 }
 
-escher::ImagePtr VkRenderer::ExtractRenderTarget(escher::CommandBuffer* command_buffer,
-                                                 ImageMetadata metadata) {
-  const vk::ImageLayout kRenderTargetLayout = vk::ImageLayout::eColorAttachmentOptimal;
-  auto render_target =
-      ExtractImage(command_buffer, metadata, escher::RectangleCompositor::kRenderTargetUsageFlags,
-                   kRenderTargetLayout);
-  render_target->set_swapchain_layout(kRenderTargetLayout);
-  return render_target;
-}
-
-escher::TexturePtr VkRenderer::ExtractTexture(escher::CommandBuffer* command_buffer,
-                                              ImageMetadata metadata) {
-  auto image =
-      ExtractImage(command_buffer, metadata, escher::RectangleCompositor::kTextureUsageFlags,
-                   vk::ImageLayout::eShaderReadOnlyOptimal);
+escher::TexturePtr VkRenderer::ExtractTexture(ImageMetadata metadata) {
+  auto image = ExtractImage(metadata, escher::RectangleCompositor::kTextureUsageFlags);
   auto texture = escher::Texture::New(escher_->resource_recycler(), image, vk::Filter::eNearest);
   FX_DCHECK(texture);
   return texture;
@@ -275,11 +265,43 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   auto frame = escher_->NewFrame("flatland::VkRenderer", ++frame_number_);
   auto command_buffer = frame->cmds();
 
+  // Copy over the texture and render target data to local containers that do not need
+  // to be accessed via a lock. We're just doing a shallow copy via the copy assignment
+  // operator since the texture and render target data is just referenced through pointers.
+  // We manually unlock the lock after copying over the data.
+  std::unique_lock<std::mutex> lock(lock_);
+  const auto local_texture_map = texture_map_;
+  const auto local_render_target_map = render_target_map_;
+  const auto local_depth_target_map = depth_target_map_;
+
+  // After moving, the original containers are emptied.
+  const auto local_pending_textures = std::move(pending_textures_);
+  const auto local_pending_render_targets = std::move(pending_render_targets_);
+  lock.unlock();
+
+  // Transition pending images to their correct layout
+  // TODO(fxbug.dev/52196): The way we are transitioning image layouts here and in the rest of
+  // scenic is incorrect for "external" images. It just happens to be working by luck on our current
+  // hardware.
+  for (auto texture_id : local_pending_textures) {
+    FX_DCHECK(local_texture_map.find(texture_id) != local_texture_map.end());
+    const auto texture = local_texture_map.at(texture_id);
+    command_buffer->impl()->TransitionImageLayout(texture->image(), vk::ImageLayout::eUndefined,
+                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
+  }
+  for (auto target_id : local_pending_render_targets) {
+    FX_DCHECK(local_render_target_map.find(target_id) != local_render_target_map.end());
+    const auto target = local_render_target_map.at(target_id);
+    command_buffer->impl()->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
+                                                  vk::ImageLayout::eColorAttachmentOptimal);
+  }
+
   std::vector<const escher::TexturePtr> textures;
   std::vector<escher::RectangleCompositor::ColorData> color_data;
   for (const auto& image : images) {
     // Pass the texture into the above vector to keep it alive outside of this loop.
-    textures.emplace_back(ExtractTexture(command_buffer, image));
+    FX_DCHECK(local_texture_map.find(image.identifier) != local_texture_map.end());
+    textures.emplace_back(local_texture_map.at(image.identifier));
 
     // TODO(fxbug.dev/52632): We are hardcoding the multiply color and transparency flag for now.
     // Eventually these will be exposed in the API.
@@ -289,8 +311,10 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 
   // Grab the output image and use it to generate a depth texture. The depth texture needs to
   // be the same width and height as the output image.
-  auto output_image = ExtractRenderTarget(command_buffer, render_target);
-  escher::TexturePtr depth_texture = escher::CreateDepthTexture(escher_.get(), output_image);
+  FX_DCHECK(local_render_target_map.find(render_target.identifier) !=
+            local_render_target_map.end());
+  const auto output_image = local_render_target_map.at(render_target.identifier);
+  const auto depth_texture = local_depth_target_map.at(render_target.identifier);
 
   // Now the compositor can finally draw.
   compositor_.DrawBatch(command_buffer, rectangles, textures, color_data, output_image,

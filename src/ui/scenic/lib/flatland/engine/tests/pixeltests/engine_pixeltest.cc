@@ -252,7 +252,7 @@ class EnginePixelTest : public EngineTestBase {
     EXPECT_EQ(status, ZX_OK);
 
     // Read the capture values back out.
-    MapHostPointer(collection_info, /*vmo_idx*/ 0,
+    MapHostPointer(collection_info, /*vmo_index*/ 0,
                    [read_values](uint8_t* vmo_host, uint32_t num_bytes) mutable {
                      read_values->resize(num_bytes);
                      memcpy(read_values->data(), vmo_host, num_bytes);
@@ -375,7 +375,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   uint32_t col = (255U << 24) | (255U << 8);
   std::vector<uint32_t> write_values;
   write_values.assign(kTextureWidth * kTextureHeight, col);
-  MapHostPointer(texture_collection_info, /*vmo_idx*/ 0,
+  MapHostPointer(texture_collection_info, /*vmo_index*/ 0,
                  [write_values](uint8_t* vmo_host, uint32_t num_bytes) {
                    EXPECT_TRUE(num_bytes >= sizeof(uint32_t) * write_values.size());
                    memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
@@ -384,7 +384,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   // Import the texture to the engine.
   auto image_metadata = ImageMetadata{.collection_id = kTextureCollectionId,
                                       .identifier = 1,
-                                      .vmo_idx = 0,
+                                      .vmo_index = 0,
                                       .width = kTextureWidth,
                                       .height = kTextureHeight,
                                       .has_transparency = false};
@@ -455,7 +455,7 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   for (uint32_t i = 0; i < 2; i++) {
     image_metadatas[i] = {.collection_id = kTextureCollectionId,
                           .identifier = sysmem_util::GenerateUniqueImageId(),
-                          .vmo_idx = i,
+                          .vmo_index = i,
                           .width = kTextureWidth,
                           .height = kTextureHeight,
                           .has_transparency = false};
@@ -491,7 +491,7 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   for (uint32_t i = 0; i < 2; i++) {
     std::vector<uint32_t> write_values;
     write_values.assign(kTextureWidth * kTextureHeight, cols[i]);
-    MapHostPointer(texture_collection_info, /*vmo_idx*/ i,
+    MapHostPointer(texture_collection_info, /*vmo_index*/ i,
                    [write_values](uint8_t* vmo_host, uint32_t num_bytes) {
                      EXPECT_TRUE(num_bytes >= sizeof(uint32_t) * write_values.size());
                      memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
@@ -518,7 +518,7 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.
-  MapHostPointer(render_target_info, /*vmo_idx*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
+  MapHostPointer(render_target_info, /*vmo_index*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
     // Grab the capture vmo data.
     std::vector<uint8_t> read_values;
     CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
@@ -584,7 +584,7 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
   for (uint32_t i = 0; i < 2; i++) {
     image_metadatas[i] = {.collection_id = kTextureCollectionId,
                           .identifier = sysmem_util::GenerateUniqueImageId(),
-                          .vmo_idx = i,
+                          .vmo_index = i,
                           .width = kTextureWidth,
                           .height = kTextureHeight,
                           .has_transparency = (i == 1)};
@@ -625,7 +625,7 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
   for (uint32_t i = 0; i < 2; i++) {
     std::vector<uint32_t> write_values;
     write_values.assign(kTextureWidth * kTextureHeight, cols[i]);
-    MapHostPointer(texture_collection_info, /*vmo_idx*/ i,
+    MapHostPointer(texture_collection_info, /*vmo_index*/ i,
                    [write_values](uint8_t* vmo_host, uint32_t num_bytes) {
                      EXPECT_TRUE(num_bytes >= sizeof(uint32_t) * write_values.size());
                      memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
@@ -652,7 +652,7 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.
-  MapHostPointer(render_target_info, /*vmo_idx*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
+  MapHostPointer(render_target_info, /*vmo_index*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
     // Grab the capture vmo data.
     std::vector<uint8_t> read_values;
     CaptureDisplayOutput(capture_info, capture_image_id, &read_values);

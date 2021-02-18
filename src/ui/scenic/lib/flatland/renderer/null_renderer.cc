@@ -90,8 +90,8 @@ bool NullRenderer::ImportImage(const ImageMetadata& meta_data) {
   const auto vmo_count = sysmem_info.buffer_count;
   auto image_constraints = sysmem_info.settings.image_format_constraints;
 
-  if (meta_data.vmo_idx >= vmo_count) {
-    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << meta_data.vmo_idx
+  if (meta_data.vmo_index >= vmo_count) {
+    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << meta_data.vmo_index
                    << " must be less than vmo_count " << vmo_count;
     return false;
   }
@@ -142,7 +142,7 @@ void NullRenderer::Render(const ImageMetadata& render_target,
     auto image_constraints = sysmem_info.settings.image_format_constraints;
 
     // Make sure the image conforms to the constraints of the collection.
-    FX_DCHECK(image.vmo_idx < vmo_count);
+    FX_DCHECK(image.vmo_index < vmo_count);
     FX_DCHECK(image.width <= image_constraints.max_coded_width);
     FX_DCHECK(image.height <= image_constraints.max_coded_height);
   }
