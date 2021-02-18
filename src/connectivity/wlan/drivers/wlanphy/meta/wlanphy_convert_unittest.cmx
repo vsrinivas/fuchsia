@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "tests/wlanphy_convert_unittest"
+        "binary": "test/wlanphy_convert_unittest"
     }
 }

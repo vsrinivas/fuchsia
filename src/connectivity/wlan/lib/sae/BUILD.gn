@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("wlan-sae") {
   with_unit_tests = true
@@ -31,12 +31,6 @@ rustc_library("wlan-sae") {
   ]
 }
 
-unittest_package("wlan-sae-tests") {
+fuchsia_unittest_package("wlan-sae-tests") {
   deps = [ ":wlan-sae_test" ]
-
-  tests = [
-    {
-      name = "wlan_sae_lib_test"
-    },
-  ]
 }

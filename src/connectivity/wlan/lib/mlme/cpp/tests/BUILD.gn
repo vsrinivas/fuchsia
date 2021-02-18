@@ -3,24 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
 config("wlan_mlme_tests_config") {
   include_dirs = [ "." ]
-}
-
-group("tests") {
-  testonly = true
-  public_deps = [
-    ":ap_mlme_tests",
-    ":buffer_utils_tests",
-    ":client_mlme_tests",
-    ":common_tests",
-    ":mac_tests",
-    ":mesh_tests",
-    ":service_tests",
-    ":timer_manager_tests",
-  ]
 }
 
 source_set("test_main") {
@@ -50,10 +37,8 @@ source_set("test_main") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-executable("ap_mlme_tests") {
+test("ap_mlme_tests") {
   output_name = "wlan_ap_mlme_unittest"
-
-  testonly = true
 
   sources = [ "ap_mlme_unittest.cc" ]
 
@@ -72,10 +57,8 @@ executable("ap_mlme_tests") {
   ]
 }
 
-executable("client_mlme_tests") {
+test("client_mlme_tests") {
   output_name = "wlan_client_mlme_unittest"
-
-  testonly = true
 
   sources = [ "client_mlme_unittest.cc" ]
 
@@ -94,10 +77,8 @@ executable("client_mlme_tests") {
   ]
 }
 
-executable("mac_tests") {
+test("mac_tests") {
   output_name = "wlan_mac_unittest"
-
-  testonly = true
 
   sources = [
     "channel_unittest.cc",
@@ -128,10 +109,8 @@ executable("mac_tests") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-executable("mesh_tests") {
+test("mesh_tests") {
   output_name = "wlan_mesh_unittest"
-
-  testonly = true
 
   sources = [
     "hwmp_unittest.cc",
@@ -154,10 +133,8 @@ executable("mesh_tests") {
   ]
 }
 
-executable("service_tests") {
+test("service_tests") {
   output_name = "wlan_service_unittest"
-
-  testonly = true
 
   sources = [ "service_unittest.cc" ]
 
@@ -173,10 +150,8 @@ executable("service_tests") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-executable("timer_manager_tests") {
+test("timer_manager_tests") {
   output_name = "wlan_timer_manager_unittest"
-
-  testonly = true
 
   sources = [ "timer_manager_unittest.cc" ]
 
@@ -191,10 +166,8 @@ executable("timer_manager_tests") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-executable("buffer_utils_tests") {
+test("buffer_utils_tests") {
   output_name = "wlan_buffer_utils_unittest"
-
-  testonly = true
 
   sources = [ "buffer_utils_unittest.cc" ]
 
@@ -208,10 +181,8 @@ executable("buffer_utils_tests") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-executable("common_tests") {
+test("common_tests") {
   output_name = "wlan_common_unittest"
-
-  testonly = true
 
   sources = [
     "device_caps_unittest.cc",
@@ -243,52 +214,39 @@ driver_package("wlanphy-testdev-driver") {
   deps = [ "//src/connectivity/wlan/drivers/testing:wlanphy-testdev" ]
 }
 
-test_package("wlan_tests") {
+tests = [
+  "ap_mlme",
+  "buffer_utils",
+  "client_mlme",
+  "common",
+  "mac",
+  "mesh",
+  "service",
+  "timer_manager",
+]
+
+foreach(test, tests) {
+  name = "${test}_test"
+  fuchsia_unittest_component("${name}_component") {
+    component_name = name
+    deps = [ ":${name}s" ]
+    manifest = "meta/wlan_${test}_unittest.cmx"
+  }
+}
+
+fuchsia_test_package("wlan_tests") {
   deps = [
-    ":tests",
+    ":wlanphy-testdev-driver",
     "//src/connectivity/wlan/drivers/testing",
   ]
 
-  data_deps = [ ":wlanphy-testdev-driver" ]
+  test_components = []
+  foreach(test, tests) {
+    test_components += [ ":${test}_test_component" ]
+  }
+}
 
-  binaries = [
-    {
-      name = "wlan_test_util"
-      dest = "wlan-test-util"
-    },
-  ]
-
-  tests = [
-    {
-      name = "wlan_ap_mlme_unittest"
-    },
-
-    {
-      name = "wlan_buffer_utils_unittest"
-    },
-
-    {
-      name = "wlan_client_mlme_unittest"
-    },
-
-    {
-      name = "wlan_mac_unittest"
-    },
-
-    {
-      name = "wlan_mesh_unittest"
-    },
-
-    {
-      name = "wlan_service_unittest"
-    },
-
-    {
-      name = "wlan_timer_manager_unittest"
-    },
-
-    {
-      name = "wlan_common_unittest"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":wlan_tests" ]
 }

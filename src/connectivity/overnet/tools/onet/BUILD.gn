@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "onet"
@@ -24,22 +24,9 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("onet") {
-  meta = [
-    {
-      path = "meta/onet.cmx"
-      dest = "onet.cmx"
-    },
-  ]
-
+fuchsia_shell_package("onet") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "onet"
-      shell = true
-    },
-  ]
+  manifest = "meta/onet.cmx"
 }
 
 group("tests") {

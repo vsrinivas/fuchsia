@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("wlan-span") {
   name = "wlan_span"
@@ -14,12 +14,6 @@ rustc_library("wlan-span") {
   sources = [ "src/lib.rs" ]
 }
 
-unittest_package("wlan-span-tests") {
+fuchsia_unittest_package("wlan-span-tests") {
   deps = [ ":wlan-span_test" ]
-
-  tests = [
-    {
-      name = "wlan_span_lib_test"
-    },
-  ]
 }

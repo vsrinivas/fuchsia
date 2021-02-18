@@ -5,7 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
 config("wlan_config") {
   include_dirs = [ "." ]
@@ -16,11 +17,6 @@ bind_rules("wlan_bind") {
   output = "wlan_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":wlan_bind_test" ]
 }
 
 driver_module("wlan_driver") {
@@ -50,8 +46,7 @@ driver_module("wlan_driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-executable("wlan_minstrel_unittest") {
-  testonly = true
+test("wlan_minstrel_unittest") {
   sources = [
     "minstrel.cc",
     "minstrel.h",
@@ -75,13 +70,9 @@ executable("wlan_minstrel_unittest") {
       [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
 }
 
-test_package("wlan_drivers_tests") {
+fuchsia_unittest_package("wlan_drivers_tests") {
   deps = [ ":wlan_minstrel_unittest" ]
-  tests = [
-    {
-      name = "wlan_minstrel_unittest"
-    },
-  ]
+  manifest = "meta/wlan_minstrel_unittest.cmx"
 }
 
 driver_package("wlan") {
@@ -93,5 +84,13 @@ driver_package("wlan") {
     {
       name = "wlan.so"
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":wlan_bind_test",
+    ":wlan_drivers_tests",
   ]
 }

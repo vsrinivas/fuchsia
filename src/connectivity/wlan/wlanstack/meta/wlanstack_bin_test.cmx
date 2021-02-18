@@ -12,7 +12,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/wlanstack_bin_test"
+        "binary": "bin/wlanstack_bin_test"
     },
     "sandbox": {
         "dev": [

@@ -4,7 +4,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/test/test_package.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
 bind_test("wlanif_bind_test") {
   rules = "//src/connectivity/wlan/drivers/wlanif/wlanif.bind"
@@ -12,10 +13,8 @@ bind_test("wlanif_bind_test") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-executable("convert_unittest") {
+test("convert_unittest") {
   output_name = "wlanif_convert_unittest"
-
-  testonly = true
 
   sources = [ "convert_unittest.cc" ]
 
@@ -28,10 +27,8 @@ executable("convert_unittest") {
   ]
 }
 
-executable("device_unittest") {
+test("device_unittest") {
   output_name = "wlanif_device_unittest"
-
-  testonly = true
 
   sources = [ "device_unittest.cc" ]
 
@@ -47,10 +44,8 @@ executable("device_unittest") {
   ]
 }
 
-executable("impl_unittest") {
+test("impl_unittest") {
   output_name = "wlanif_impl_unittest"
-
-  testonly = true
 
   sources = [ "impl_unittest.cc" ]
 
@@ -60,26 +55,31 @@ executable("impl_unittest") {
   ]
 }
 
-unittest_package("wlanif_unittest") {
-  deps = [
-    ":convert_unittest",
-    ":device_unittest",
-    ":impl_unittest",
-    ":wlanif_bind_test",
-  ]
+tests = [
+  "convert",
+  "device",
+  "impl",
+]
 
-  tests = [
-    {
-      name = "wlanif_device_unittest"
-      environments = basic_envs
-    },
-    {
-      name = "wlanif_impl_unittest"
-      environments = basic_envs
-    },
-    {
-      name = "wlanif_convert_unittest"
-      environments = basic_envs
-    },
+foreach(test, tests) {
+  name = "${test}_test"
+  fuchsia_unittest_component("${name}_component") {
+    component_name = name
+    deps = [ ":${test}_unittest" ]
+  }
+}
+
+fuchsia_test_package("wlanif_unittest") {
+  test_components = []
+  foreach(test, tests) {
+    test_components += [ ":${test}_test_component" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":wlanif_bind_test",
+    ":wlanif_unittest",
   ]
 }
