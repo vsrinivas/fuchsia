@@ -53,6 +53,11 @@ test("fs-vnode") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("fs-connection") {
@@ -80,6 +85,11 @@ test("fs-connection") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuzzer("vmo_file-fuzzer") {

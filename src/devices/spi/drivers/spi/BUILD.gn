@@ -47,6 +47,11 @@ driver_module("spi") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-utils",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("spi-test-bin") {
@@ -76,6 +81,11 @@ test("spi-test-bin") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/spi",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("spi-test") {

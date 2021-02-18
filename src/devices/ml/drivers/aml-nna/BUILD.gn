@@ -37,6 +37,11 @@ driver_module("aml-nna") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("aml-nna-test-bin") {
@@ -66,6 +71,11 @@ test("aml-nna-test-bin") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("aml-nna-test") {

@@ -131,6 +131,11 @@ test("usb-virtual-bus-test-bin") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_package("usb-virtual-bus-test") {

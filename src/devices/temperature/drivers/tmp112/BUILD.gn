@@ -51,6 +51,11 @@ test("tmp112-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("tmp112-test") {

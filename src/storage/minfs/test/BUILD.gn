@@ -86,6 +86,11 @@ test("minfs-integration") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("minfs_dirty_cache_integration") {
@@ -105,6 +110,11 @@ test("minfs_dirty_cache_integration") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("minfs-power") {
@@ -167,6 +177,11 @@ test("minfs_micro_benchmark") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuzzer("minfs-fuzzer") {

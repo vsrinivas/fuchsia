@@ -72,6 +72,11 @@ test("vs680-thermal-test-bin") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("vs680-thermal-test") {

@@ -46,6 +46,11 @@ static_library("fs_test") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs-management",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("access_tests") {
@@ -56,6 +61,11 @@ test("access_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fdio-caller",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("access-tests") {
@@ -139,6 +149,11 @@ test("corrupt_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("corrupt-tests") {
@@ -169,6 +184,11 @@ test("dot_dot_tests") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("dot-dot-tests") {
@@ -245,6 +265,11 @@ test("minfs_tests") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fdio-caller",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("minfs-tests") {
@@ -331,6 +356,11 @@ test("rename_tests") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("rename-tests") {
@@ -349,6 +379,11 @@ test("resize_tests") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("resize-tests") {
@@ -480,6 +515,11 @@ test("watcher_tests") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_v2_component("watcher-tests") {

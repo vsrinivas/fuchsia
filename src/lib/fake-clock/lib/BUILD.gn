@@ -15,6 +15,11 @@ shared_library("lib") {
     "//src/lib/fake-clock/fidl:fidl_llcpp",
     "//src/lib/fxl",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("test_bin") {

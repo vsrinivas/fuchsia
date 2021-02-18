@@ -156,6 +156,11 @@ source_set("connection_client") {
 
   # Fidl bindings should not introduce a dep on libasync-default.so
   assert_no_deps = [ "//zircon/system/ulib/async-default" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("connection") {
@@ -198,6 +203,11 @@ source_set("device_client") {
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("sysmem_connection") {
@@ -218,6 +228,11 @@ source_set("sysmem_connection") {
 
   # Fidl bindings should not introduce a dep on libasync-default.so
   assert_no_deps = [ "//zircon/system/ulib/async-default" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("thread") {
@@ -284,6 +299,11 @@ source_set("logger") {
     "$zircon_build_root/system/ulib/syslog:syslog-static",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("logger_for_system_drivers") {

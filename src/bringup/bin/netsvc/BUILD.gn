@@ -62,6 +62,11 @@ executable("netsvc") {
     "//zircon/third_party/uapp/dash",
   ]
   configs += [ ":netsvc_config" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("args") {
@@ -71,6 +76,11 @@ source_set("args") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("netsvc_common") {
@@ -116,6 +126,11 @@ source_set("netsvc_common") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("netsvc-test") {

@@ -43,6 +43,11 @@ source_set("cobalt-collector") {
   ]
   deps = [ "//sdk/lib/fdio" ]
   public_configs = [ ":includes" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("cobalt-metrics") {

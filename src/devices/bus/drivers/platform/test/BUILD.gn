@@ -24,6 +24,11 @@ test("platform-bus") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 bind_rules("test-board-bind") {
@@ -522,6 +527,11 @@ test("platform-bus-bti") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_package("platform-bus-bti-test") {

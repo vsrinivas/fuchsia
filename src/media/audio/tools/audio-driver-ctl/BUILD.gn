@@ -50,6 +50,11 @@ executable("bin") {
   output_dir = "$root_out_dir/zircon-migrated"
   sources = [ "audio.cc" ]
   deps = [ ":src" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("audio-driver-ctl-test") {

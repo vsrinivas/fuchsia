@@ -30,6 +30,11 @@ source_set("lib") {
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/cmdline",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("bin") {
@@ -60,6 +65,11 @@ executable("console_unittests_bin") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("shell-console-unittests") {

@@ -43,7 +43,8 @@ class ClientEnd final {
   // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
   // typed channels.
   // NOLINTNEXTLINE
-  ClientEnd(zx::channel channel) : channel_(std::move(channel)) {}
+  FIDL_CONDITIONALLY_EXPLICIT_CONVERSION ClientEnd(zx::channel channel)
+      : channel_(std::move(channel)) {}
 
   ClientEnd(ClientEnd&& other) noexcept = default;
   ClientEnd& operator=(ClientEnd&& other) noexcept = default;
@@ -111,7 +112,8 @@ class UnownedClientEnd final {
   // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
   // typed channels.
   // NOLINTNEXTLINE
-  UnownedClientEnd(const zx::unowned_channel& h) : channel_(h->get()) {}
+  FIDL_CONDITIONALLY_EXPLICIT_CONVERSION UnownedClientEnd(const zx::unowned_channel& h)
+      : channel_(h->get()) {}
 
   // The unowned client end is copyable - it simply copies the handle value.
   UnownedClientEnd(const UnownedClientEnd& other) = default;

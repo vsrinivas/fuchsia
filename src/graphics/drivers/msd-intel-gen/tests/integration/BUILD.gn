@@ -29,4 +29,9 @@ executable("msd_intel_gen_integration_tests") {
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }

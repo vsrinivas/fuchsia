@@ -27,6 +27,11 @@ executable("msd_img_rgx_integration_tests_executable") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("msd_img_rgx_no_hardware_integration_tests_executable") {
@@ -56,6 +61,11 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test_package("msd_img_rgx_integration_tests") {

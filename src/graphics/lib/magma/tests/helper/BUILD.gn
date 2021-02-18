@@ -41,6 +41,11 @@ source_set("test_device_helper") {
   ]
 
   sources = [ "test_device_helper.h" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  public_configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("logger_init_helper") {

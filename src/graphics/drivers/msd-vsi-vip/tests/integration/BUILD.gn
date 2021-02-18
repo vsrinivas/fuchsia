@@ -52,6 +52,11 @@ test("msd_vsi_vip_integration_tests") {
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test_package("msd-vsi-vip-integration-tests") {

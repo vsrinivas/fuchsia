@@ -40,7 +40,8 @@ class ServerEnd final {
   // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
   // typed channels.
   // NOLINTNEXTLINE
-  ServerEnd(zx::channel channel) : channel_(std::move(channel)) {}
+  FIDL_CONDITIONALLY_EXPLICIT_CONVERSION ServerEnd(zx::channel channel)
+      : channel_(std::move(channel)) {}
 
   ServerEnd(ServerEnd&& other) noexcept = default;
   ServerEnd& operator=(ServerEnd&& other) noexcept = default;

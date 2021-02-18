@@ -50,6 +50,11 @@ source_set("lib") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/zxc",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("bin") {
@@ -66,6 +71,11 @@ executable("bin") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 component_manifest_resources("meta") {
