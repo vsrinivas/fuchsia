@@ -58,7 +58,8 @@ The FIDL types are converted to C++ types based on the following table:
 |`array<T>:N`|`fidl::Array<T, N>`|
 |`vector<T>:N`|`fidl::VectorView<T>`|
 |`string`|`fidl::StringView`|
-|`request<P>`, `P` |`zx::channel`|
+|`P`, where `P` is a protocol |`fidl::ClientEnd<P>`|
+|`request<P>` |`fidl::ServerEnd<P>`|
 |`handle`|`zx::handle`|
 |`handle:S`|The corresponding zx type is used whenever possible. For example, `zx::vmo` or `zx::channel`.|
 
@@ -355,13 +356,49 @@ Given the [protocol][lang-protocols]:
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
-nullable response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
-instead.
+nullable response value. This is considered un-idiomatic, you should use an
+[error type](#protocols-results) instead.
 
 FIDL will generate a `TicTacToe` class, which acts as an entry point for types
 and classes that both clients and servers will use to interact with this
 service. The members of this class are described in individual subsections in
 the rest of this section.
+
+### Typed channel endpoints {#typed-channels}
+
+LLCPP sends and receives FIDL protocol messages over the
+[Zircon channel][zircon-channel] transport, which carry arbitrary blobs of bytes
+and handles. Rather than exposing raw endpoints, for instance `zx::channel`, the
+API exposes three templated endpoint classes:
+
+* `fidl::ClientEnd<TicTacToe>`: the client endpoint of the `TicTacToe` protocol;
+  it owns a `zx::channel`. Client bindings that require exclusive ownership of
+  the channel would consume this type. For example, a `fidl::Client<TicTacToe>`
+  may be constructed from a `fidl::ClientEnd<TicTacToe>`, also known as "binding
+  the channel to the message dispatcher".
+* `fidl::UnownedClientEnd<TicTacToe>`: an unowned value borrowing some client
+  endpoint of the `TicTacToe` protocol. Client APIs that do not require
+  exclusive ownership of the channel would take this type. An `UnownedClientEnd`
+  may be derived from a `ClientEnd` of the same protocol type by calling
+  `borrow()`. The borrowed-from endpoint may be `std::move`-ed within the same
+  process, but cannot be dropped or transferred out-of-process, while there are
+  unowned borrows to it.
+* `fidl::ServerEnd<TicTacToe>`: the server endpoint of the `TicTacToe` protocol;
+  it owns a `zx::channel`. Server bindings that require exclusive ownership of
+  the channel would consume this type. For example, a
+  `fidl::ServerEnd<TicTacToe>` may be provided to `fidl::BindServer<TicTacToe>`
+  among other parameters to create a server binding.
+
+There is no `UnownedServerEnd` as it is not yet needed to safely implement the
+current set of features.
+
+A pair of client and server endpoint may be created using the
+`::fidl::CreateEndpoints<TicTacToe>` library call. In a protocol request
+pipelining scenario, one can immediately start performing operations on the
+client endpoint after `std::move()`-ing the server endpoint to the remote
+server.
+
+See the class documentation on these types for more details.
 
 ### Request and response structs {#request-response-structs}
 
@@ -422,10 +459,11 @@ multi-threaded dispatcher.
 
 ##### Creation
 
-A client is created with a client-end `zx::channel`, an `async_dispatcher_t*` and an optional
-shared pointer on an [`AsyncEventHandler`](#async-event-handlers) that defines the methods to be
-called when a FIDL event is received or when the client is unbound. If the virtual for a particular
-event is not overriden, the event is ignored.
+A client is created with a client-end `fidl::ClientEnd<P>` to the protocol `P`,
+an `async_dispatcher_t*`, and an optional shared pointer on an
+[`AsyncEventHandler`](#async-event-handlers) that defines the methods to be
+called when a FIDL event is received or when the client is unbound. If the
+virtual for a particular event is not overridden, the event is ignored.
 
 ```cpp
 class EventHandler : public TicTacToe::AsyncEventHandler {
@@ -437,6 +475,7 @@ class EventHandler : public TicTacToe::AsyncEventHandler {
   void Unbound(fidl::UnbindInfo unbind_info) override { /* ... */ }
 };
 
+fidl::ClientEnd<TicTacToe> client_end = /* logic to connect to the protocol */;
 Client<TicTacToe> client;
 zx_status_t status = client.Bind(
     std::move(client_end), dispatcher, std::make_shared<EventHandler>());
@@ -504,11 +543,11 @@ methods, the behavior is identical.
 Each two way method has a response context that is used in the caller-allocated,
 asynchronous case. `TicTacToe` has only one response context,
 `TicTacToe::MakeMoveResponseContext`, which has pure virtual methods that
-should be overriden to handle responses:
+should be overridden to handle responses:
 
 ```c++
-virtual void OnReply(fidl::DecodedMessage<MakeMoveResponse> msg)
-virtual void OnError()
+virtual void OnReply(MakeMoveResponse* msg) = 0;
+virtual void OnError() = 0;
 ```
 
 Only one of the two methods is called for a single response: `OnReply()` is
@@ -526,12 +565,16 @@ Note: If the client is destroyed with outstanding asynchronous transactions,
 
 `TicTacToe::SyncClient` provides the following methods:
 
-* `explicit SyncClient(zx::channel)`: Constructor.
+* `explicit SyncClient(fidl::ClientEnd<TicTacToe>)`: Constructor.
 * `~SyncClient()`: Default destructor.
 * `SyncClient(&&)`: Default move constructor.
 * `SyncClient& operator=(SyncClient&&)`: Default move assignment.
+* `fidl::ClientEnd<TicTacToe>& client_end()`: Returns a mutable reference to
+  the underlying [client endpoint](#typed-channels).
+* `const fidl::ClientEnd<TicTacToe>& client_end() const`: Returns the underlying
+  client endpoint as a const.
 * `const zx::channel& channel() const`: Returns the underlying channel as a
-  const.
+  const. Prefer using the `client_end()` accessors for improved type-safety.
 * `zx::channel* mutable_channel()`: Returns the underlying channel as mutable.
 * `TicTacToe::ResultOf::StartGame StartGame(bool start_first)`: Owned variant of
   a fire and forget method call, which takes the parameters as arguments and
@@ -551,12 +594,12 @@ Note: If the client is destroyed with outstanding asynchronous transactions,
   two way method call, which takes the parameters as arguments and returns the
   `ResultOf` class.
 * `UnownedResultOf::MakeMove(fidl::BufferSpan _request_buffer, uint8_t row,
-  uint8_t col, fidl::BufferSpan _response_buffer)`: Caller-allocated variant of a
-  two way method, which takes in backing storage for the request buffer,
+  uint8_t col, fidl::BufferSpan _response_buffer)`: Caller-allocated variant of
+  a two way method, which takes in backing storage for the request buffer,
   followed by the request parameters, and finally backing storage for the
   response buffer, and returns an `UnownedResultOf`.
-* `fidl::Result HandleOneEvent(SyncEventHandler& event_handler)`: Blocks to consume
-  exactly one event from the channel. See [Events](#events)
+* `fidl::Result HandleOneEvent(SyncEventHandler& event_handler)`: Blocks to
+  consume exactly one event from the channel. See [Events](#events)
 
 Note that each method has both an owned and caller-allocated variant. In brief,
 the owned variant of each method handles memory allocation for requests and
@@ -567,20 +610,26 @@ allocation.
 #### Call {#client-call}
 
 `TicTacToe::Call` provides similar methods to those found in `SyncClient`, with
-the only difference being that they are all `static` and take an
-`unowned_channel` as the first parameter:
+the only difference being that they are all `static` and take a
+`fidl::UnownedClientEnd<TicTacToe>` as the first parameter:
 
-* `static ResultOf::StartGame StartGame(zx::unowned_channel _client_end, bool
-  start_first)`:
-* `static UnownedResultOf::StartGame StartGame(zx::unowned_channel _client_end,
-  fidl::BufferSpan _request_buffer, bool start_first)`:
-* `static ResultOf::MakeMove MakeMove(zx::unowned_channel _client_end, uint8_t
-  row, uint8_t col)`:
-* `static UnownedResultOf::MakeMove MakeMove(zx::unowned_channel _client_end,
-  fidl::BufferSpan _request_buffer, uint8_t row, uint8_t col, fidl::BufferSpan
-  _response_buffer);`:
+* `static ResultOf::StartGame StartGame(
+      fidl::UnownedClientEnd<TicTacToe> _client_end, bool start_first)`:
+  Owned variant of `StartGame`.
+* `static UnownedResultOf::StartGame StartGame(
+      fidl::UnownedClientEnd<TicTacToe> _client_end,
+      fidl::BufferSpan _request_buffer, bool start_first)`:
+  Caller-allocated variant of `StartGame`.
+* `static ResultOf::MakeMove MakeMove(
+      fidl::UnownedClientEnd<TicTacToe> _client_end, uint8_t row, uint8_t col)`:
+  Owned variant of `MakeMove`.
+* `static UnownedResultOf::MakeMove MakeMove(
+      fidl::UnownedClientEnd<TicTacToe> _client_end,
+      fidl::BufferSpan _request_buffer, uint8_t row, uint8_t col,
+      fidl::BufferSpan _response_buffer);`:
+  Caller-allocated variant of `MakeMove`.
 
-#### Result, ResultOf and UnownedResultOf [#resultof]
+#### Result, ResultOf and UnownedResultOf {#resultof}
 
 The managed variants of each method of `SyncClient` and `Call` all return a
 `ResultOf::` type, whereas the caller-allocating variants all return an
@@ -606,7 +655,7 @@ This allows code such as:
 ```cpp
 auto result = client->MakeMove_Sync(0, 0);
 auto response = result->Unwrap();
-bool success = response.success;
+bool success = response->success;
 ```
 
 To be simplified to:
@@ -663,7 +712,7 @@ implementation of `TicTacToe`.
 
 The generated `TicTacToe::Interface` class has pure virtual methods
 corresponding to the method calls defined in the FIDL protocol. Users implement
-a `TicTacToe` server by providing a concerete implementation of
+a `TicTacToe` server by providing a concrete implementation of
 `TicTacToe::Interface`, which has the following pure virtual methods:
 
 * `virtual void StartGame(bool start_first, StartGameCompleter::Sync
@@ -689,7 +738,7 @@ given an implementation, `TicTacToe::TryDispatch` and `TicTacToe::Dispatch`:
 
 #### Completers {#server-completers}
 
-A completer is provied as the last argument of each generated FIDL method
+A completer is provided as the last argument of each generated FIDL method
 handler, after all the FIDL request parameters for that method. The completer
 classes capture the various ways one can complete a FIDL transaction, e.g. by
 sending a reply, closing the channel with an epitaph, etc, and come in both
@@ -719,7 +768,7 @@ following `Reply` methods:
 Because the status returned by Reply is identical to the unbinding status, it
 can be safely ignored.
 
-Finally, sync completers for two way methods can be coverted to an async
+Finally, sync completers for two way methods can be converted to an async
 completer using the `ToAsync()` method. Async completers can out-live the scope
 of the handler by e.g. moving it into a lambda capture (see [LLCPP
 tutorial][llcpp-async-example] for example usage), allowing the server to
@@ -744,7 +793,7 @@ Note: This use-case is currently possible only using the
 [lib/fidl](/zircon/system/ulib/fidl) bindings.
 
 ```cpp
-void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) override {
+void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync& completer) override {
   // Suppose directed scans can be done in parallel. It would be suboptimal to block one scan until
   // another has completed.
   completer.EnableNextDispatch();
@@ -758,7 +807,7 @@ void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) over
 A number of the APIs above provide owned and caller-allocated variants of
 generated methods.
 
-The  caller-allocated variant defers all memory allocation responsibilities to
+The caller-allocated variant defers all memory allocation responsibilities to
 the caller. The type `fidl::BufferSpan` references a buffer address and size. It
 will be used by the bindings library to construct the FIDL request, hence it
 must be sufficiently large. The method parameters (e.g. `heading`) are
@@ -830,17 +879,21 @@ this example, it consists of the following member:
   The status to be returned by `HandleOneEvent` if an unknown event is found.
   This method should be overriden only if a specific status is needed.
 
-To be able to handle events, a class that inherits from `SyncEventHandler` must be
-defined. This class must define the virtual methods for the events it wants to handle. All the
-other events are ignored. Then an instance of this class must be allocated.
+To be able to handle events, a class that inherits from `SyncEventHandler` must
+be defined. This class must define the virtual methods for the events it wants
+to handle. All the other events are ignored. Then an instance of this class must
+be allocated.
 
 There are two ways to handle one event. Each one use an instance of the user
 defined event handler class:
 
-* `::fidl::Result TicTacToe::SyncClient::HandleOneEvent(SyncEventHandler& event_handler)`:
+* `::fidl::Result TicTacToe::SyncClient::HandleOneEvent(
+       SyncEventHandler& event_handler)`:
   A bound version for sync clients.
-* `::fidl::Result TicTacToe::SyncEventHandler::HandleOneEvent(zx::unowned_channel client_end)`:
-  An unbound version that uses an `unowned_channel` to handle one event for a
+* `::fidl::Result TicTacToe::SyncEventHandler::HandleOneEvent(
+       fidl::UnownedClientEnd<TicTacToe> client_end)`:
+  An unbound version that
+  uses an `fidl::UnownedClientEnd<TicTacToe>` to handle one event for a
   specific handler.
 
 For each call to `HandleOneEvent`, the method waits on the channel for exactly
@@ -880,25 +933,41 @@ following methods:
 * `zx_status_t OnOpponentMove(fidl::BufferSpan _buffer, GameState new_state)`:
   Caller allocated flavor.
 
-##### Sending events with a bare-metal channel
+##### Sending events with a ServerEnd object
 
-Note: [Sending events using a server binding object](#bound-event-sending)
-should be preferred whenever possible. Using the methods listed below may
-introduce a race condition between unbinding the server connection and sending
-some final events on the same channel.
+[Sending events using a server binding object](#bound-event-sending) is the
+standard approach to sending events while the server endpoint is bound to an
+implementation. However, there may be occasions which call for sending events
+on a `fidl::ServerEnd<TicTacToe>` object directly, without setting up a server
+binding.
 
-The `TicTacToe` class provides static methods for sending events on a channel.
-Like the client [Call](#client-call) APIs, these methods take an
-`unowned_channel` as the first argument, sending the event over this channel.
-Each event has managed and caller-allocating sender events, analogous to the
-[client API](#client) as well as the [server completers](#server-completers).
+The `TicTacToe` class contains an `EventSender` which provides methods for
+sending events on a channel. The `EventSender` may be constructed from a
+`fidl::ServerEnd<TicTacToe>`. Each event sending method has managed and
+caller-allocating variants, analogous to the [client API](#client) as well as
+the [server completers](#server-completers).
 
 The event sender methods are:
 
-* `static zx_status_t SendOnOpponentMoveEvent(zx::unowned_channel _chan,
-  GameState new_state)`
-* `static zx_status_t SendOnOpponentMoveEvent(zx::unowned_channel _chan,
-  fidl::BufferSpan _buffer, GameState new_state)`
+```c++
+class TicTacToe::EventSender {
+ public:
+  EventSender(fidl::ServerEnd<TicTacToe> server_end);
+
+  zx_status_t SendOnOpponentMoveEvent(
+      GameState new_state);
+  zx_status_t SendOnOpponentMoveEvent(
+      fidl::BufferSpan _buffer, GameState new_state);
+
+  const fidl::ServerEnd<TicTacToe>& server_end() const;
+  fidl::ServerEnd<TicTacToe>& server_end();
+};
+```
+
+`EventSender` consumes the server endpoint upon construction, to ensure that the
+channel stays alive while events are being written. After sending events, the
+user may deconstruct the `EventSender` by extracting the server endpoint via
+`server_end()`.
 
 ### Results {#protocols-results}
 
@@ -1114,3 +1183,4 @@ completer)`, respectively.
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
+[zircon-channel]: /docs/reference/kernel_objects/channel.md
