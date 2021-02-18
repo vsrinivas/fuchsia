@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/catapult_converter_tests"
+        "binary": "test/catapult_converter_unittest"
     },
     "sandbox": {
         "features": [

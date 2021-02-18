@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("converter") {
   sources = [ "converter.cc" ]
@@ -29,24 +28,12 @@ executable("converter_bin") {
   ]
 }
 
-package("catapult_converter") {
+# TODO(fxbug.dev/70300): consider deleting this fuchsia_package if it's unused.
+fuchsia_package_with_single_component("catapult_converter") {
+  manifest = "meta/catapult_converter.cmx"
   deps = [
     ":converter_bin",
     ":host_tools",
-  ]
-
-  meta = [
-    {
-      path = "meta/catapult_converter.cmx"
-      dest = "catapult_converter.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "catapult_converter"
-      shell = true
-    },
   ]
 }
 
@@ -65,15 +52,9 @@ test("catapult_converter_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("catapult_converter_tests") {
+fuchsia_unittest_package("catapult_converter_tests") {
+  manifest = "meta/catapult_converter_tests.cmx"
   deps = [ ":catapult_converter_unittest" ]
-
-  tests = [
-    {
-      name = "catapult_converter_unittest"
-      dest = "catapult_converter_tests"
-    },
-  ]
 }
 
 install_host_tools("host_tools") {
