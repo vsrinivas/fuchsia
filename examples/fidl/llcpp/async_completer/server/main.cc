@@ -50,7 +50,9 @@ struct ConnectRequestContext {
 static void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto context = static_cast<ConnectRequestContext*>(untyped_context);
   std::cout << "echo_server_llcpp: Incoming connection for " << service_name << std::endl;
-  fidl::BindServer(context->dispatcher, zx::channel(service_request), context->server.get());
+  fidl::BindServer(context->dispatcher,
+                   fidl::ServerEnd<llcpp::fuchsia::examples::Echo>(zx::channel(service_request)),
+                   context->server.get());
 }
 
 int main(int argc, char** argv) {
