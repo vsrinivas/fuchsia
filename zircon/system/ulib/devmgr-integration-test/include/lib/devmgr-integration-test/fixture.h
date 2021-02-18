@@ -82,7 +82,8 @@ class IsolatedDevmgr {
 
   // Opaque structure for the internal state used for serving /svc
   struct SvcLoopState;
-  zx_status_t SetupSvcLoop(zx::channel bootsvc_server, zx::channel fshost_outgoing_client,
+  zx_status_t SetupSvcLoop(fidl::ServerEnd<llcpp::fuchsia::io::Directory> bootsvc_server,
+                           fidl::ClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_client,
                            GetBootItemFunction get_boot_item,
                            std::map<std::string, std::string>&& boot_args);
 

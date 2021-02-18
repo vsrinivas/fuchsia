@@ -21,6 +21,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/exception.h>
 #include <stdint.h>
@@ -46,9 +47,10 @@ namespace {
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
-class FakeRealm : public llcpp::fuchsia::sys2::Realm::RawChannelInterface {
+class FakeRealm : public llcpp::fuchsia::sys2::Realm::Interface {
  public:
-  void BindChild(llcpp::fuchsia::sys2::ChildRef child, zx::channel exposed_dir,
+  void BindChild(llcpp::fuchsia::sys2::ChildRef child,
+                 fidl::ServerEnd<llcpp::fuchsia::io::Directory> exposed_dir,
                  BindChildCompleter::Sync& completer) override {
     exposed_dir_ = std::move(exposed_dir);
     completer.ReplySuccess();
@@ -63,17 +65,19 @@ class FakeRealm : public llcpp::fuchsia::sys2::Realm::RawChannelInterface {
   void DestroyChild(llcpp::fuchsia::sys2::ChildRef child,
                     DestroyChildCompleter::Sync& completer) override {}
 
-  void ListChildren(llcpp::fuchsia::sys2::CollectionRef collection, zx::channel iter,
+  void ListChildren(llcpp::fuchsia::sys2::CollectionRef collection,
+                    fidl::ServerEnd<llcpp::fuchsia::sys2::ChildIterator> iter,
                     ListChildrenCompleter::Sync& completer) override {}
 
  private:
-  zx::channel exposed_dir_;
+  fidl::ServerEnd<llcpp::fuchsia::io::Directory> exposed_dir_;
 };
 
 class FakePowerRegistration
-    : public llcpp::fuchsia::power::manager::DriverManagerRegistration::RawChannelInterface {
+    : public llcpp::fuchsia::power::manager::DriverManagerRegistration::Interface {
  public:
-  void Register(zx::channel transition, zx::channel dir,
+  void Register(fidl::ClientEnd<llcpp::fuchsia::device::manager::SystemStateTransition> transition,
+                fidl::ClientEnd<llcpp::fuchsia::io::Directory> dir,
                 RegisterCompleter::Sync& completer) override {
     // Store these so the other side doesn't see the channels close.
     transition_ = std::move(transition);
@@ -82,8 +86,8 @@ class FakePowerRegistration
   }
 
  private:
-  zx::channel transition_;
-  zx::channel dir_;
+  fidl::ClientEnd<llcpp::fuchsia::device::manager::SystemStateTransition> transition_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> dir_;
 };
 
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
@@ -117,14 +121,14 @@ constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
 
-template <class FidlInterface>
-void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
-                          async_dispatcher_t* dispatcher, std::unique_ptr<FidlInterface> server) {
+template <class Protocol>
+void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, async_dispatcher_t* dispatcher,
+                          std::unique_ptr<typename Protocol::Interface> server) {
   auto node = fbl::MakeRefCounted<fs::Service>(
-      [dispatcher, server{std::move(server)}](zx::channel channel) {
+      [dispatcher, server{std::move(server)}](fidl::ServerEnd<Protocol> channel) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), server.get());
       });
-  root->AddEntry(name, node);
+  root->AddEntry(Protocol::Name, node);
 }
 
 void CreateFakeService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
@@ -137,11 +141,19 @@ void CreateFakeService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
   root->AddEntry(name, node);
 }
 
-void ForwardService(fbl::RefPtr<fs::PseudoDir> root, const char* name, zx::channel svc_client) {
-  root->AddEntry(name, fbl::MakeRefCounted<fs::Service>([name, svc_client = std::move(svc_client)](
-                                                            zx::channel request) {
-                   return fdio_service_connect_at(svc_client.get(), name, request.release());
-                 }));
+void ForwardService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
+                    fidl::ClientEnd<llcpp::fuchsia::io::Directory> svc_client) {
+  root->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
+                           [name, svc_client = std::move(svc_client)](zx::channel request) {
+                             return fdio_service_connect_at(svc_client.channel().get(), name,
+                                                            request.release());
+                           }));
+}
+
+fidl::ClientEnd<llcpp::fuchsia::io::Directory> CloneDirectory(
+    fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> end) {
+  return fidl::ClientEnd<llcpp::fuchsia::io::Directory>(
+      zx::channel(fdio_service_clone(end.channel())));
 }
 
 }  // namespace
@@ -195,13 +207,11 @@ struct IsolatedDevmgr::ExceptionLoopState {
     }
 
     // Send exceptions to the ambient fuchsia.exception.Handler.
-    zx::channel local, remote;
-    status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
+    auto local = service::Connect<::llcpp::fuchsia::exception::Handler>();
+    if (!local.is_ok()) {
       return;
     }
-    status = fdio_service_connect(llcpp::fuchsia::exception::Handler::Name, remote.release());
-    ::llcpp::fuchsia::exception::Handler::SyncClient handler(std::move(local));
+    ::llcpp::fuchsia::exception::Handler::SyncClient handler(std::move(*local));
     ::llcpp::fuchsia::exception::ExceptionInfo einfo;
     einfo.process_koid = info.pid;
     einfo.thread_koid = info.tid;
@@ -247,56 +257,41 @@ zx_status_t IsolatedDevmgr::SetupExceptionLoop(async_dispatcher_t* dispatcher,
 // Components v2/Test Framework concepts as soon as those are ready enough. For now this has to be
 // manually kept in sync with devcoordinator's manifest in //src/sys/root/devcoordinator.cml
 // (although it already seems to be incomplete).
-zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
-                                         zx::channel fshost_outgoing_client,
-                                         GetBootItemFunction get_boot_item,
-                                         std::map<std::string, std::string>&& boot_args) {
+zx_status_t IsolatedDevmgr::SetupSvcLoop(
+    fidl::ServerEnd<llcpp::fuchsia::io::Directory> bootsvc_server,
+    fidl::ClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_client,
+    GetBootItemFunction get_boot_item, std::map<std::string, std::string>&& boot_args) {
   svc_loop_state_ = std::make_unique<SvcLoopState>();
   svc_loop_state_->get_boot_item = std::move(get_boot_item);
 
   // Quit the loop when the channel is closed.
-  svc_loop_state_->bootsvc_wait.set_object(bootsvc_server.get());
+  svc_loop_state_->bootsvc_wait.set_object(bootsvc_server.channel().get());
   svc_loop_state_->bootsvc_wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
   svc_loop_state_->bootsvc_wait.set_handler([loop = &svc_loop_state_->loop](...) { loop->Quit(); });
   svc_loop_state_->bootsvc_wait.Begin(svc_loop_state_->loop.dispatcher());
 
   // Connect to /svc in the current namespace.
-  zx::channel svc_client;
-  {
-    zx::channel svc_server;
-    zx_status_t status = zx::channel::create(0, &svc_client, &svc_server);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = fdio_service_connect("/svc", svc_server.release());
-
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
+  auto svc_client = *service::OpenServiceRoot();
 
   // Connect to /svc in fshost's outgoing directory
-  zx::channel fshost_svc_client;
-  {
-    zx::channel fshost_svc_server;
-    zx_status_t status = zx::channel::create(0, &fshost_svc_client, &fshost_svc_server);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = fdio_open_at(fshost_outgoing_client.get(), "svc",
-                          ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_DIRECTORY,
-                          fshost_svc_server.release());
-    if (status != ZX_OK) {
-      return status;
-    }
+  auto fshost_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  if (!fshost_endpoints.is_ok()) {
+    return fshost_endpoints.status_value();
+  }
+  auto [fshost_svc_client, fshost_svc_server] = *std::move(fshost_endpoints);
+
+  zx_status_t status =
+      fdio_open_at(fshost_outgoing_client.channel().get(), "svc",
+                   ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_DIRECTORY,
+                   fshost_svc_server.TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Forward required services from the current namespace.
-  zx::channel svc_client2(fdio_service_clone(svc_client.get()));
-  zx::channel svc_client3(fdio_service_clone(svc_client.get()));
-  ForwardService(svc_loop_state_->root, "fuchsia.process.Launcher", std::move(svc_client));
-  ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", std::move(svc_client2));
-  ForwardService(svc_loop_state_->root, "fuchsia.boot.RootResource", std::move(svc_client3));
+  ForwardService(svc_loop_state_->root, "fuchsia.process.Launcher", CloneDirectory(svc_client));
+  ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", CloneDirectory(svc_client));
+  ForwardService(svc_loop_state_->root, "fuchsia.boot.RootResource", std::move(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.fshost.Loader", std::move(fshost_svc_client));
 
   boot_args.try_emplace("virtcon.disable", "true");
@@ -315,17 +310,17 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
                     svc_loop_state_->loop.dispatcher(), root_job_dispatch, &job_, &kRootJobOps);
 
   // Create fake Boot Arguments.
-  CreateFakeCppService(svc_loop_state_->root, llcpp::fuchsia::boot::Arguments::Name,
-                       svc_loop_state_->loop.dispatcher(),
-                       std::make_unique<mock_boot_arguments::Server>(std::move(boot_args)));
+  CreateFakeCppService<llcpp::fuchsia::boot::Arguments>(
+      svc_loop_state_->root, svc_loop_state_->loop.dispatcher(),
+      std::make_unique<mock_boot_arguments::Server>(std::move(boot_args)));
 
   // Create fake Power Registration.
-  CreateFakeCppService(
-      svc_loop_state_->root, llcpp::fuchsia::power::manager::DriverManagerRegistration::Name,
-      svc_loop_state_->loop.dispatcher(), std::make_unique<FakePowerRegistration>());
+  CreateFakeCppService<llcpp::fuchsia::power::manager::DriverManagerRegistration>(
+      svc_loop_state_->root, svc_loop_state_->loop.dispatcher(),
+      std::make_unique<FakePowerRegistration>());
 
-  CreateFakeCppService(svc_loop_state_->root, llcpp::fuchsia::sys2::Realm::Name,
-                       svc_loop_state_->loop.dispatcher(), std::make_unique<FakeRealm>());
+  CreateFakeCppService<llcpp::fuchsia::sys2::Realm>(
+      svc_loop_state_->root, svc_loop_state_->loop.dispatcher(), std::make_unique<FakeRealm>());
 
   // Serve VFS on channel.
   svc_loop_state_->vfs.ServeDirectory(svc_loop_state_->root, std::move(bootsvc_server),
@@ -408,17 +403,17 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
 __EXPORT
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_t* dispatcher,
                                    IsolatedDevmgr* out) {
-  zx::channel svc_client, svc_server;
-  zx_status_t status = zx::channel::create(0, &svc_client, &svc_server);
-  if (status != ZX_OK) {
-    return status;
+  auto svc_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  if (!svc_endpoints.is_ok()) {
+    return svc_endpoints.status_value();
   }
+  auto [svc_client, svc_server] = *std::move(svc_endpoints);
 
-  zx::channel fshost_outgoing_client, fshost_outgoing_server;
-  status = zx::channel::create(0, &fshost_outgoing_client, &fshost_outgoing_server);
-  if (status != ZX_OK) {
-    return status;
+  auto fshost_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  if (!fshost_endpoints.is_ok()) {
+    return fshost_endpoints.status_value();
   }
+  auto [fshost_outgoing_client, fshost_outgoing_server] = *std::move(fshost_endpoints);
 
   GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
   auto component_lifecycle = fidl::CreateEndpoints<llcpp::fuchsia::process::lifecycle::Lifecycle>();
@@ -428,11 +423,12 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
 
   IsolatedDevmgr devmgr;
   zx::channel devfs;
-  zx::channel outgoing_svc_root;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> outgoing_svc_root;
   std::map<std::string, std::string> boot_args = std::move(args.boot_args);
-  status = devmgr_launcher::Launch(
-      std::move(args), std::move(svc_client), std::move(fshost_outgoing_server),
-      component_lifecycle->server.TakeChannel(), &devmgr.job_, &devfs, &outgoing_svc_root);
+  zx_status_t status = devmgr_launcher::Launch(std::move(args), svc_client.TakeChannel(),
+                                               fshost_outgoing_server.TakeChannel(),
+                                               component_lifecycle->server.TakeChannel(),
+                                               &devmgr.job_, &devfs, &outgoing_svc_root.channel());
   if (status != ZX_OK) {
     return status;
   }
@@ -445,8 +441,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
     return status;
   }
 
-  zx::channel fshost_client_dup(fdio_service_clone(fshost_outgoing_client.get()));
-  status = devmgr.SetupSvcLoop(std::move(svc_server), std::move(fshost_outgoing_client),
+  status = devmgr.SetupSvcLoop(std::move(svc_server), CloneDirectory(fshost_outgoing_client),
                                std::move(get_boot_item), std::move(boot_args));
   if (status != ZX_OK) {
     return status;
@@ -460,7 +455,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   devmgr.devfs_root_.reset(fd);
   devmgr.component_lifecycle_client_ = std::move(component_lifecycle->client);
   devmgr.svc_root_dir_ = std::move(outgoing_svc_root);
-  devmgr.fshost_outgoing_dir_ = std::move(fshost_client_dup);
+  devmgr.fshost_outgoing_dir_ = std::move(fshost_outgoing_client);
   *out = std::move(devmgr);
   return ZX_OK;
 }

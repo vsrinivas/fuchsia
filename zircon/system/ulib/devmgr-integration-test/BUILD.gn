@@ -61,14 +61,10 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 group("tests") {

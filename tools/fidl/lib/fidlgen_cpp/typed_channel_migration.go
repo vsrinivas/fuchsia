@@ -93,7 +93,6 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::llcpp::fuchsia::paver::Paver":                                    true,
 	"::llcpp::fuchsia::posix::socket::StreamSocket":                     true,
 	"::llcpp::fuchsia::pkg::LocalMirror":                                true,
-	"::llcpp::fuchsia::sys2::Realm":                                     true,
 	"::llcpp::fuchsia::sysmem::Allocator":                               true,
 	"::llcpp::fuchsia::sysmem::BufferCollection":                        true,
 	"::llcpp::fuchsia::sysmem::BufferCollectionToken":                   true,
