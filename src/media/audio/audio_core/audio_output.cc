@@ -63,13 +63,24 @@ void AudioOutput::Process() {
     cpu_timer_.Start();
 
     uint32_t frames_remaining;
+    uint32_t frames_mixed = 0;
+    uint32_t read_lock_calls = 0;
+    std::optional<Fixed> frame_start;
+    std::optional<Fixed> frame_end;
+
     do {
       float* payload = nullptr;
       auto mix_frames = StartMixJob(ref_now);
       // If we have frames to mix that are non-silent, we should do the mix now.
       if (mix_frames && !mix_frames->is_mute) {
+        ++read_lock_calls;
         auto buf = pipeline_->ReadLock(Fixed(mix_frames->start), mix_frames->length);
         if (buf) {
+          if (!frame_start) {
+            frame_start = buf->start();
+          }
+          frame_end = buf->end();
+
           // We have a buffer so call FinishMixJob on this region and perform another MixJob if
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
           // entire requested frame region in a single pass.
@@ -85,6 +96,7 @@ void AudioOutput::Process() {
           uint64_t valid_frames =
               std::min(mix_frames->length, static_cast<uint64_t>(buffer_length));
           frames_remaining = mix_frames->length - valid_frames;
+          frames_mixed += valid_frames;
           mix_frames->length = valid_frames;
         } else {
           // If the mix pipeline has no frames for this range, we treat this region as silence.
@@ -116,7 +128,10 @@ void AudioOutput::Process() {
           << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
           << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
           << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1) << " ms; thread spent "
-          << cpu_timer_.cpu().get() << " ns on CPU, " << cpu_timer_.queue().get() << " ns queued";
+          << cpu_timer_.cpu().get() << " ns on CPU, " << cpu_timer_.queue().get() << " ns queued; "
+          << "produced " << frames_mixed << " frames, advanced "
+          << ((frame_start && frame_end) ? Fixed(*frame_end - *frame_start).Floor() : 0)
+          << " frames, made " << read_lock_calls << " ReadLock calls";
 
       reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
     }
