@@ -167,6 +167,7 @@ type setArgs struct {
 	hostLabels       []string
 	variants         []string
 	fuzzSanitizers   []string
+	ideFiles         []string
 	gnArgs           []string
 }
 
@@ -214,6 +215,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	flagSet.StringSliceVar(&cmd.hostLabels, "with-host", []string{}, "")
 	flagSet.StringSliceVar(&cmd.variants, "variant", []string{}, "")
 	flagSet.StringSliceVar(&cmd.fuzzSanitizers, "fuzz-with", []string{}, "")
+	flagSet.StringSliceVar(&cmd.ideFiles, "ide", []string{}, "")
 	// Unlike StringSliceVar, StringArrayVar doesn't split flag values at
 	// commas. Commas are syntactically significant in GN, so they should be
 	// preserved rather than interpreting them as value separators.
@@ -363,6 +365,7 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 		Variants:         variants,
 		GnArgs:           gnArgs,
 		UseGoma:          useGomaFinal,
+		IdeFiles:         args.ideFiles,
 	}, nil
 }
 

@@ -207,6 +207,15 @@ func TestParseArgsAndEnv(t *testing.T) {
 				cargoTOMLGen: true,
 			},
 		},
+		{
+			name: "ide files",
+			args: []string{"core.x64", "--ide", "json,vs"},
+			expected: setArgs{
+				product:  "core",
+				board:    "x64",
+				ideFiles: []string{"json", "vs"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -271,6 +280,7 @@ func TestConstructStaticSpec(t *testing.T) {
 				universePackages: []string{"universe"},
 				hostLabels:       []string{"host"},
 				variants:         []string{"variant"},
+				ideFiles:         []string{"json"},
 				gnArgs:           []string{"args"},
 				noGoma:           true,
 			},
@@ -283,6 +293,7 @@ func TestConstructStaticSpec(t *testing.T) {
 				UniversePackages: []string{"universe"},
 				HostLabels:       []string{"host"},
 				Variants:         []string{"variant"},
+				IdeFiles:         []string{"json"},
 				GnArgs:           []string{"args"},
 				UseGoma:          false,
 			},
