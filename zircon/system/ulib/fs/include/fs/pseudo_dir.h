@@ -124,8 +124,6 @@ class PseudoDir : public Vnode {
   // Destroys the directory and releases the nodes it contains.
   ~PseudoDir() override;
 
-  mutable std::mutex mutex_;
-
   uint64_t next_node_id_ __TA_GUARDED(mutex_) = kDotId + 1;
   EntryByIdMap entries_by_id_ __TA_GUARDED(mutex_);
   EntryByNameMap entries_by_name_ __TA_GUARDED(mutex_);

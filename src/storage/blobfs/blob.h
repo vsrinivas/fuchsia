@@ -18,7 +18,6 @@
 #include <string.h>
 
 #include <memory>
-#include <mutex>
 
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -291,10 +290,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   SyncingState syncing_state_ __TA_GUARDED(mutex_) = SyncingState::kDataIncomplete;
 
   uint32_t map_index_ = 0;
-
-  // This object is not generally threadsafe but a few small things are done on the journal thread.
-  // This mutex protects such data.
-  std::mutex mutex_;
 
   // VMO mappings for the blob's merkle tree and data.
   // Data is stored in a separate VMO from the merkle tree for several reasons:

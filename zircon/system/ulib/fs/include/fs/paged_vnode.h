@@ -70,8 +70,6 @@ class PagedVnode : public Vnode {
   // are no more clones of the vmo_. The default implementation frees the vmo_.
   virtual void OnNoClones() FS_TA_REQUIRES(mutex_);
 
-  std::mutex mutex_;
-
  private:
   // Callback handler for the "no clones" message. Due to kernel message delivery race conditions
   // there might actually be clones. This checks and calls OnNoClones() when needed.

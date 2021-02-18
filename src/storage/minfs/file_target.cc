@@ -35,7 +35,7 @@ File::~File() {
 bool File::DirtyCacheEnabled() const { return Minfs::DirtyCacheEnabled(); }
 
 bool File::IsDirty() const {
-  std::lock_guard<std::mutex> lock(cached_transaction_lock_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return cached_transaction_ != nullptr;
 }
 
@@ -137,14 +137,14 @@ void File::DropCachedWrites() {
 
 zx::status<> File::FlushCachedWrites() {
   if (!DirtyCacheEnabled()) {
-    std::lock_guard<std::mutex> lock(cached_transaction_lock_);
+    std::lock_guard<std::mutex> lock(mutex_);
     ZX_DEBUG_ASSERT(cached_transaction_ == nullptr);
     return zx::ok();
   }
 
   std::unique_ptr<CachedBlockTransaction> cached_transaction;
   {
-    std::lock_guard<std::mutex> lock(cached_transaction_lock_);
+    std::lock_guard<std::mutex> lock(mutex_);
     cached_transaction = std::move(cached_transaction_);
   }
   if (cached_transaction == nullptr) {
@@ -168,7 +168,7 @@ zx::status<> File::FlushCachedWrites() {
 
 zx::status<bool> File::ShouldFlush(bool is_truncate, size_t length, size_t offset) {
   if (!DirtyCacheEnabled()) {
-    std::lock_guard<std::mutex> lock(cached_transaction_lock_);
+    std::lock_guard<std::mutex> lock(mutex_);
     ZX_DEBUG_ASSERT(cached_transaction_ == nullptr);
     return zx::ok(true);
   }
@@ -213,7 +213,7 @@ zx::status<> File::FlushTransaction(std::unique_ptr<Transaction> transaction, bo
 
   GetMutableInode()->size = allocation_state_.GetNodeSize();
   {
-    std::lock_guard<std::mutex> lock(cached_transaction_lock_);
+    std::lock_guard<std::mutex> lock(mutex_);
     ZX_ASSERT(cached_transaction_ == nullptr);
     cached_transaction_ = std::make_unique<CachedBlockTransaction>(
         Transaction::TakeBlockReservations(std::move(transaction)));

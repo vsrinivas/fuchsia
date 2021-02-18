@@ -17,6 +17,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <mutex>
 #include <type_traits>
 #include <utility>
 
@@ -26,6 +27,7 @@
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <fs/locking.h>
 #include <fs/ref_counted.h>
 #include <fs/vfs_types.h>
 
@@ -342,19 +344,23 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 #endif  // __Fuchsia__
 
   // Invoked by internal Connections to account transactions
-  void RegisterInflightTransaction() { inflight_transactions_++; }
-  void UnregisterInflightTransaction() { inflight_transactions_--; }
+  void RegisterInflightTransaction() FS_TA_EXCLUDES(mutex_);
+  void UnregisterInflightTransaction() FS_TA_EXCLUDES(mutex_);
 
   // Number of FIDL messages issued on this vnode that have been dispatched, but for which a reply
   // has not been made.
-  size_t inflight_transactions() const { return inflight_transactions_.load(); }
+  size_t GetInflightTransactions() const FS_TA_EXCLUDES(mutex_);
 
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
+
   Vnode();
 
+  // Mutex for the data of this vnode. This is also used to guard the data of derived classes.
+  mutable std::mutex mutex_;
+
  private:
-  std::atomic<size_t> inflight_transactions_ = 0;
+  size_t inflight_transactions_ FS_TA_GUARDED(mutex_) = 0;
 };
 
 // Opens a vnode by reference.

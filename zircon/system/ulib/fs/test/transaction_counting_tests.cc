@@ -87,7 +87,7 @@ class TransactionCountingTest : public zxtest::Test {
     return file_->GetNextInflightTransaction();
   }
 
-  size_t inflight_transactions() { return file_->inflight_transactions(); }
+  size_t inflight_transactions() { return file_->GetInflightTransactions(); }
 
  protected:
   void SetUp() override { loop_.StartThread(); }

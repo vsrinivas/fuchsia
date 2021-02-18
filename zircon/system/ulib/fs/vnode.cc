@@ -25,8 +25,9 @@ namespace fs {
 Vnode::Vnode() = default;
 
 Vnode::~Vnode() {
-  ZX_DEBUG_ASSERT_MSG(inflight_transactions_.load() == 0, "Inflight transactions in dtor %zu\n",
-                      inflight_transactions_.load());
+  std::lock_guard lock(mutex_);
+  ZX_DEBUG_ASSERT_MSG(inflight_transactions_ == 0, "Inflight transactions in dtor %zu\n",
+                      inflight_transactions_);
 }
 
 #ifdef __Fuchsia__
@@ -210,6 +211,21 @@ void Vnode::SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote) {
 }
 
 #endif  // __Fuchsia__
+
+void Vnode::RegisterInflightTransaction() {
+  std::lock_guard lock(mutex_);
+  inflight_transactions_++;
+}
+
+void Vnode::UnregisterInflightTransaction() {
+  std::lock_guard lock(mutex_);
+  inflight_transactions_--;
+}
+
+size_t Vnode::GetInflightTransactions() const {
+  std::lock_guard lock(mutex_);
+  return inflight_transactions_;
+}
 
 DirentFiller::DirentFiller(void* ptr, size_t len)
     : ptr_(static_cast<char*>(ptr)), pos_(0), len_(len) {}
