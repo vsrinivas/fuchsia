@@ -132,6 +132,7 @@ group("utils") {
     "//src/devices/i2c/bin:i2cutil",
     "//src/devices/i2c/bin/i2c",
     "//src/devices/power/bin/lspwr",
+    "//src/devices/ram/bin/ram-info",
     "//src/devices/spi/bin/spiutil",
     "//src/devices/thermal/bin/thermal-cli",
     "//zircon/system/ulib/driver-info/app:driverinfo",
