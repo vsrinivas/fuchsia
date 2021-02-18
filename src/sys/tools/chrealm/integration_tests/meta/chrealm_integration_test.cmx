@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/chrealm_integration_test"
+        "binary": "bin/chrealm_integration_test"
     },
     "sandbox": {
         "features": [
