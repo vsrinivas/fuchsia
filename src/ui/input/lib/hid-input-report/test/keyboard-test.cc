@@ -110,11 +110,9 @@ TEST(KeyboardTest, BootKeyboard) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            keyboard.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_keyboard());
   EXPECT_TRUE(descriptor.keyboard().has_input());
   EXPECT_TRUE(descriptor.keyboard().input().has_keys());
@@ -129,13 +127,11 @@ TEST(KeyboardTest, BootKeyboard) {
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
-                                      &report_allocator, &report_builder));
+                                      report_allocator, input_report));
 
-  fuchsia_input_report::InputReport input_report = report_builder.build();
   ASSERT_TRUE(input_report.has_keyboard());
 
   ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
@@ -169,11 +165,9 @@ TEST(KeyboardTest, OutputDescriptor) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
   ASSERT_EQ(descriptor.keyboard().output().leds().count(), 5);
   EXPECT_EQ(descriptor.keyboard().output().leds()[0],
@@ -203,11 +197,9 @@ TEST(KeyboardTest, DoubleCountingKeys) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
   EXPECT_EQ(descriptor.keyboard().input().keys().count(), 105U);
 }
@@ -257,11 +249,9 @@ TEST(KeyboardTest, FullKeysKeyboard) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            keyboard.CreateDescriptor(descriptor_allocator, descriptor));
 
   EXPECT_EQ(descriptor.keyboard().input().keys().count(), 107);
   EXPECT_EQ(descriptor.keyboard().input().keys3().count(), 107);
@@ -274,12 +264,10 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
-                                      &report_allocator, &report_builder));
-  fuchsia_input_report::InputReport input_report = report_builder.build();
+                                      report_allocator, input_report));
 
   ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);

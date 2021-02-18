@@ -38,8 +38,8 @@ class InputReportReader;
 //   struct TouchScreenReport {
 //      int64_t x;
 //      int64_t y;
-//      void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
-//                             fidl::Allocator& allocator);
+//      void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+//                             fidl::AnyAllocator& allocator);
 //   };
 //
 //   InputReportReaderManager<TouchScreenReport> input_report_readers_;
@@ -48,15 +48,14 @@ template <class Report>
 class InputReportReaderManager {
  public:
   // Assert that our template type `Report` has the following function:
-  //      void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
-  //                             fidl::Allocator& allocator);
-  DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(
-      has_to_fidl_input_report, ToFidlInputReport,
-      void (C::*)(fuchsia_input_report::InputReport::Builder& builder, fidl::Allocator& allocator));
-  static_assert(
-      has_to_fidl_input_report<Report>::value,
-      "Report must implement void ToFidlInputReport(fuchsia_input_report::InputReportBuilder& "
-      "builder, fidl::Allocator&);");
+  //      void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+  //                             fidl::AnyAllocator& allocator);
+  DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_to_fidl_input_report, ToFidlInputReport,
+                                       void (C::*)(fuchsia_input_report::InputReport& input_report,
+                                                   fidl::AnyAllocator& allocator));
+  static_assert(has_to_fidl_input_report<Report>::value,
+                "Report must implement void ToFidlInputReport(fuchsia_input_report::InputReport& "
+                "input_report, fidl::AnyAllocator& allocator);");
 
   // This class can't be moved because the InputReportReaders are pointing to the main class.
   DISALLOW_COPY_ASSIGN_AND_MOVE(InputReportReaderManager);
@@ -130,8 +129,7 @@ class InputReportReader : public fuchsia_input_report::InputReportsReader::Inter
 
   fbl::Mutex report_lock_;
   std::optional<ReadInputReportsCompleter::Async> completer_ TA_GUARDED(&report_lock_);
-  fidl::BufferThenHeapAllocator<kInputReportBufferSize> report_allocator_
-      __TA_GUARDED(report_lock_);
+  fidl::FidlAllocator<kInputReportBufferSize> report_allocator_ __TA_GUARDED(report_lock_);
   fbl::RingBuffer<Report, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT> reports_data_
       __TA_GUARDED(report_lock_);
 
@@ -201,21 +199,19 @@ void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& 
   TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", reader_id_);
   size_t num_reports = 0;
   for (; !reports_data_.empty() && num_reports < reports.size(); num_reports++) {
-    fidl::Allocator& allocator = report_allocator_;
     // Build the report.
-    auto builder = fuchsia_input_report::InputReport::Builder(
-        allocator.make<fuchsia_input_report::InputReport::Frame>());
-    reports_data_.front().ToFidlInputReport(builder, report_allocator_);
+    fuchsia_input_report::InputReport input_report(report_allocator_);
+    reports_data_.front().ToFidlInputReport(input_report, report_allocator_);
 
     // Add some common fields if they weren't already set.
-    if (!builder.has_trace_id()) {
-      builder.set_trace_id(allocator.make<uint64_t>(TRACE_NONCE()));
+    if (!input_report.has_trace_id()) {
+      input_report.set_trace_id(report_allocator_, TRACE_NONCE());
     }
-    if (!builder.has_event_time()) {
-      builder.set_event_time(allocator.make<zx_time_t>(zx_clock_get_monotonic()));
+    if (!input_report.has_event_time()) {
+      input_report.set_event_time(report_allocator_, zx_clock_get_monotonic());
     }
 
-    reports[num_reports] = builder.build();
+    reports[num_reports] = std::move(input_report);
 
     TRACE_FLOW_BEGIN("input", "input_report", reports[num_reports].trace_id());
     reports_data_.pop();
@@ -224,7 +220,7 @@ void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& 
   completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(reports.data()), num_reports));
 
   if (reports_data_.empty()) {
-    report_allocator_.inner_allocator().reset();
+    report_allocator_.Reset();
   }
 }
 

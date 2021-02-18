@@ -34,11 +34,9 @@ TEST(SensorTest, AmbientLight) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, sensor.ParseReportDescriptor(dev_desc->report[1]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            sensor.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            sensor.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_sensor());
   EXPECT_TRUE(descriptor.sensor().has_input());
 
@@ -80,14 +78,12 @@ TEST(SensorTest, AmbientLight) {
 
   // Parse the report.
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             sensor.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
-                                    &report_allocator, &report_builder));
+                                    report_allocator, input_report));
 
-  fuchsia_input_report::InputReport input_report = report_builder.build();
   ASSERT_TRUE(input_report.has_sensor());
   EXPECT_EQ(4, input_report.sensor().values().count());
 

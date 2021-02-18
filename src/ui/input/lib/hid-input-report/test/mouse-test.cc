@@ -86,11 +86,9 @@ TEST(MouseTest, BootMouse) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            mouse.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_mouse());
   EXPECT_TRUE(descriptor.mouse().has_input());
 
@@ -111,14 +109,12 @@ TEST(MouseTest, BootMouse) {
   report_data.buttons = 0xFF;
 
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
-                                   &report_allocator, &report_builder));
+                                   report_allocator, input_report));
 
-  fuchsia_input_report::InputReport input_report = report_builder.build();
   ASSERT_TRUE(input_report.has_mouse());
 
   EXPECT_TRUE(input_report.mouse().has_movement_x());
@@ -149,11 +145,9 @@ TEST(MouseTest, ScrollMouse) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            mouse.CreateDescriptor(descriptor_allocator, descriptor));
 
   EXPECT_TRUE(descriptor.has_mouse());
   EXPECT_TRUE(descriptor.mouse().has_input());
@@ -166,13 +160,10 @@ TEST(MouseTest, ScrollMouse) {
   report_data.scroll = 100;
 
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
-                                   &report_allocator, &report_builder));
-
-  fuchsia_input_report::InputReport input_report = report_builder.build();
+                                   report_allocator, input_report));
 
   ASSERT_TRUE(input_report.has_mouse());
   EXPECT_TRUE(input_report.mouse().has_scroll_v());
@@ -193,11 +184,9 @@ TEST(MouseTest, VncMouse) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            mouse.CreateDescriptor(descriptor_allocator, descriptor));
 
   EXPECT_TRUE(descriptor.has_mouse());
   EXPECT_TRUE(descriptor.mouse().has_input());
@@ -215,14 +204,11 @@ TEST(MouseTest, VncMouse) {
   report_data.position_y = 1000;
 
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
-                                   &report_allocator, &report_builder));
-
-  fuchsia_input_report::InputReport input_report = report_builder.build();
+                                   report_allocator, input_report));
 
   EXPECT_TRUE(input_report.mouse().has_position_x());
   EXPECT_EQ(report_data.position_x, input_report.mouse().position_x());

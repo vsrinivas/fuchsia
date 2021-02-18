@@ -128,42 +128,36 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
   return ParseOutputReportDescriptor(hid_report_descriptor);
 };
 
-ParseResult Keyboard::CreateDescriptor(
-    fidl::Allocator* allocator, fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
-  auto keyboard = fuchsia_input_report::KeyboardDescriptor::Builder(
-      allocator->make<fuchsia_input_report::KeyboardDescriptor::Frame>());
+ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
+                                       fuchsia_input_report::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::KeyboardDescriptor keyboard(allocator);
 
   // Input Descriptor parsing.
   if (input_report_size_ > 0) {
-    auto keyboard_input = fuchsia_input_report::KeyboardInputDescriptor::Builder(
-        allocator->make<fuchsia_input_report::KeyboardInputDescriptor::Frame>());
+    fuchsia_input_report::KeyboardInputDescriptor keyboard_input(allocator);
 
     size_t keys_index = 0;
-    auto keys = allocator->make<::llcpp::fuchsia::ui::input2::Key[]>(key_values_.size());
+    fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> keys(allocator, key_values_.size());
     for (auto& key : key_values_) {
       keys[keys_index++] = key;
     }
     size_t keys_3_index = 0;
-    auto keys_3 = allocator->make<::llcpp::fuchsia::input::Key[]>(key_3_values_.size());
+    fidl::VectorView<::llcpp::fuchsia::input::Key> keys_3(allocator, key_3_values_.size());
     for (auto& key : key_3_values_) {
       keys_3[keys_3_index++] = key;
     }
 
-    keyboard_input.set_keys(allocator->make<fidl::VectorView<::llcpp::fuchsia::ui::input2::Key>>(
-        std::move(keys), key_values_.size()));
-    keyboard_input.set_keys3(allocator->make<fidl::VectorView<::llcpp::fuchsia::input::Key>>(
-        std::move(keys_3), key_3_values_.size()));
-    keyboard.set_input(
-        allocator->make<fuchsia_input_report::KeyboardInputDescriptor>(keyboard_input.build()));
+    keyboard_input.set_keys(allocator, std::move(keys));
+    keyboard_input.set_keys3(allocator, std::move(keys_3));
+    keyboard.set_input(allocator, std::move(keyboard_input));
   }
 
   // Output Descriptor parsing.
   if (output_report_size_ > 0) {
-    auto keyboard_output = fuchsia_input_report::KeyboardOutputDescriptor::Builder(
-        allocator->make<fuchsia_input_report::KeyboardOutputDescriptor::Frame>());
+    fuchsia_input_report::KeyboardOutputDescriptor keyboard_output(allocator);
 
     size_t leds_index = 0;
-    auto leds = allocator->make<fuchsia_input_report::LedType[]>(num_leds_);
+    fidl::VectorView<fuchsia_input_report::LedType> leds(allocator, num_leds_);
     for (hid::ReportField& field : fbl::Span(led_fields_.data(), num_leds_)) {
       zx_status_t status = HidLedUsageToLlcppLedType(
           static_cast<hid::usage::LEDs>(field.attr.usage.usage), &leds[leds_index++]);
@@ -172,26 +166,22 @@ ParseResult Keyboard::CreateDescriptor(
       }
     }
 
-    auto leds_view = allocator->make<fidl::VectorView<fuchsia_input_report::LedType>>(
-        std::move(leds), num_leds_);
-    keyboard_output.set_leds(std::move(leds_view));
-    keyboard.set_output(
-        allocator->make<fuchsia_input_report::KeyboardOutputDescriptor>(keyboard_output.build()));
+    keyboard_output.set_leds(allocator, std::move(leds));
+    keyboard.set_output(allocator, std::move(keyboard_output));
   }
 
-  descriptor->set_keyboard(
-      allocator->make<fuchsia_input_report::KeyboardDescriptor>(keyboard.build()));
+  descriptor.set_keyboard(allocator, std::move(keyboard));
   return ParseResult::kOk;
 }
 
-ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
-                                       fuchsia_input_report::InputReport::Builder* report) {
+ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
+                                       fidl::AnyAllocator& allocator,
+                                       fuchsia_input_report::InputReport& input_report) {
   if (len != input_report_size_) {
     return ParseResult::kReportSizeMismatch;
   }
 
-  auto keyboard_report = fuchsia_input_report::KeyboardInputReport::Builder(
-      allocator->make<fuchsia_input_report::KeyboardInputReport::Frame>());
+  fuchsia_input_report::KeyboardInputReport keyboard_report(allocator);
 
   size_t num_pressed_keys = 0;
   size_t num_pressed_keys_3 = 0;
@@ -236,24 +226,21 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::Al
     }
   }
 
-  auto fidl_pressed_keys = allocator->make<::llcpp::fuchsia::ui::input2::Key[]>(num_pressed_keys);
+  fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> fidl_pressed_keys(allocator,
+                                                                        num_pressed_keys);
   for (size_t i = 0; i < num_pressed_keys; i++) {
     fidl_pressed_keys[i] = pressed_keys[i];
   }
 
-  auto fidl_pressed_keys_3 = allocator->make<::llcpp::fuchsia::input::Key[]>(num_pressed_keys_3);
+  fidl::VectorView<::llcpp::fuchsia::input::Key> fidl_pressed_keys_3(allocator, num_pressed_keys_3);
   for (size_t i = 0; i < num_pressed_keys_3; i++) {
     fidl_pressed_keys_3[i] = pressed_keys_3[i];
   }
 
-  keyboard_report.set_pressed_keys(
-      allocator->make<fidl::VectorView<::llcpp::fuchsia::ui::input2::Key>>(
-          std::move(fidl_pressed_keys), num_pressed_keys));
-  keyboard_report.set_pressed_keys3(allocator->make<fidl::VectorView<::llcpp::fuchsia::input::Key>>(
-      std::move(fidl_pressed_keys_3), num_pressed_keys_3));
+  keyboard_report.set_pressed_keys(allocator, std::move(fidl_pressed_keys));
+  keyboard_report.set_pressed_keys3(allocator, std::move(fidl_pressed_keys_3));
 
-  report->set_keyboard(
-      allocator->make<fuchsia_input_report::KeyboardInputReport>(keyboard_report.build()));
+  input_report.set_keyboard(allocator, std::move(keyboard_report));
   return ParseResult::kOk;
 }
 

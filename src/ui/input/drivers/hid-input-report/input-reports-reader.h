@@ -48,7 +48,7 @@ class InputReportsReader : public ::llcpp::fuchsia::input::report::InputReportsR
   // This is the static size that is used to allocate this instance's InputReports that
   // are stored in `reports_data`. This amount of memory is allocated with the driver
   // when the driver is initialized. If the `InputReports` go over this limit the
-  // rest of the memory will be heap allocated as unique pointers.
+  // rest of the memory will be heap allocated.
   static constexpr size_t kFidlReportBufferSize = 8192;
 
   void SendReportsToWaitingRead() __TA_REQUIRES(readers_lock_);
@@ -59,8 +59,7 @@ class InputReportsReader : public ::llcpp::fuchsia::input::report::InputReportsR
       __TA_GUARDED(readers_lock_);
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::input::report::InputReportsReader>> binding_
       __TA_GUARDED(readers_lock_);
-  fidl::BufferThenHeapAllocator<kFidlReportBufferSize> report_allocator_
-      __TA_GUARDED(readers_lock_);
+  fidl::FidlAllocator<kFidlReportBufferSize> report_allocator_ __TA_GUARDED(readers_lock_);
   fbl::RingBuffer<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports_data_ __TA_GUARDED(readers_lock_);
 

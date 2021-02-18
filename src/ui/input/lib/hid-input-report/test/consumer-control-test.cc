@@ -29,11 +29,9 @@ TEST(ConsumerControlTest, HidButtonsTest) {
             consumer_control.ParseReportDescriptor(dev_desc->report[0]));
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            consumer_control.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
-  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+            consumer_control.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_consumer_control());
   EXPECT_TRUE(descriptor.consumer_control().has_input());
 
@@ -58,13 +56,10 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   fill_button_in_report(BUTTONS_ID_MIC_MUTE, true, &report);
 
   hid_input_report::TestReportAllocator report_allocator;
-  auto report_builder = fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+  fuchsia_input_report::InputReport input_report(report_allocator);
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.ParseInputReport(reinterpret_cast<uint8_t*>(&report), sizeof(report),
-                                              &report_allocator, &report_builder));
-
-  fuchsia_input_report::InputReport input_report = report_builder.build();
+                                              report_allocator, input_report));
 
   EXPECT_EQ(input_report.consumer_control().pressed_buttons().count(), 3U);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[0],

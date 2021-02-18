@@ -41,8 +41,8 @@ struct Ft8201InputReport {
   Ft8201Contact contacts[kNumContacts];
   size_t num_contacts;
 
-  void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
-                         fidl::Allocator& allocator);
+  void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+                         fidl::AnyAllocator& allocator);
 };
 
 class Ft8201Device;

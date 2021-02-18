@@ -54,14 +54,13 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
   return ParseResult::kOk;
 }
 
-ParseResult Sensor::CreateDescriptor(fidl::Allocator* allocator,
-                                     fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
-  auto input = fuchsia_input_report::SensorInputDescriptor::Builder(
-      allocator->make<fuchsia_input_report::SensorInputDescriptor::Frame>());
+ParseResult Sensor::CreateDescriptor(fidl::AnyAllocator& allocator,
+                                     fuchsia_input_report::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::SensorInputDescriptor input(allocator);
 
   // Set the values array.
   {
-    auto values = allocator->make<fuchsia_input_report::SensorAxis[]>(num_values_);
+    fidl::VectorView<fuchsia_input_report::SensorAxis> values(allocator, num_values_);
     for (size_t i = 0; i < num_values_; i++) {
       if (HidSensorUsageToLlcppSensorType(static_cast<hid::usage::Sensor>(values_[i].usage.usage),
                                           &values[i].type) != ZX_OK) {
@@ -69,25 +68,21 @@ ParseResult Sensor::CreateDescriptor(fidl::Allocator* allocator,
       }
       values[i].axis = LlcppAxisFromAttribute(values_[i]);
     }
-    auto values_view = allocator->make<fidl::VectorView<fuchsia_input_report::SensorAxis>>(
-        std::move(values), num_values_);
-    input.set_values(std::move(values_view));
+    input.set_values(allocator, std::move(values));
   }
 
-  auto sensor = fuchsia_input_report::SensorDescriptor::Builder(
-      allocator->make<fuchsia_input_report::SensorDescriptor::Frame>());
-  sensor.set_input(allocator->make<fuchsia_input_report::SensorInputDescriptor>(input.build()));
-  descriptor->set_sensor(allocator->make<fuchsia_input_report::SensorDescriptor>(sensor.build()));
+  fuchsia_input_report::SensorDescriptor sensor(allocator);
+  sensor.set_input(allocator, std::move(input));
+  descriptor.set_sensor(allocator, std::move(sensor));
 
   return ParseResult::kOk;
 }
 
-ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
-                                     fuchsia_input_report::InputReport::Builder* report) {
-  auto sensor_report = fuchsia_input_report::SensorInputReport::Builder(
-      allocator->make<fuchsia_input_report::SensorInputReport::Frame>());
+ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+                                     fuchsia_input_report::InputReport& input_report) {
+  fuchsia_input_report::SensorInputReport sensor_report(allocator);
 
-  auto values = allocator->make<int64_t[]>(num_values_);
+  fidl::VectorView<int64_t> values(allocator, num_values_);
   for (size_t i = 0; i < num_values_; i++) {
     double value_out;
     if (hid::ExtractAsUnitType(data, len, values_[i], &value_out)) {
@@ -95,11 +90,9 @@ ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::Allo
     }
   }
 
-  sensor_report.set_values(
-      allocator->make<fidl::VectorView<int64_t>>(std::move(values), num_values_));
+  sensor_report.set_values(allocator, std::move(values));
 
-  report->set_sensor(
-      allocator->make<fuchsia_input_report::SensorInputReport>(sensor_report.build()));
+  input_report.set_sensor(allocator, std::move(sensor_report));
   return ParseResult::kOk;
 }
 

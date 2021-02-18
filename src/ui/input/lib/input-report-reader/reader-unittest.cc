@@ -14,14 +14,13 @@ namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 struct MouseReport {
   int64_t movement_x;
   int64_t movement_y;
-  void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
-                         fidl::Allocator& allocator) {
-    auto mouse = fuchsia_input_report::MouseInputReport::Builder(
-        allocator.make<fuchsia_input_report::MouseInputReport::Frame>());
-    mouse.set_movement_x(allocator.make<int64_t>(this->movement_x));
-    mouse.set_movement_y(allocator.make<int64_t>(this->movement_y));
+  void ToFidlInputReport(fuchsia_input_report::InputReport& input_report,
+                         fidl::AnyAllocator& allocator) {
+    fuchsia_input_report::MouseInputReport mouse(allocator);
+    mouse.set_movement_x(allocator, this->movement_x);
+    mouse.set_movement_y(allocator, this->movement_y);
 
-    builder.set_mouse(allocator.make<fuchsia_input_report::MouseInputReport>(mouse.build()));
+    input_report.set_mouse(allocator, std::move(mouse));
   }
 };
 
@@ -77,12 +76,9 @@ void MouseDevice::GetInputReportsReader(zx::channel server,
 }
 
 void MouseDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
-  constexpr size_t kDescriptorBufferSize = 512;
-  fidl::BufferThenHeapAllocator<kDescriptorBufferSize> allocator;
+  fidl::FidlAllocator allocator;
 
-  completer.Reply(fuchsia_input_report::DeviceDescriptor::Builder(
-                      allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>())
-                      .build());
+  completer.Reply(fuchsia_input_report::DeviceDescriptor(allocator));
 }
 
 void MouseDevice::SendOutputReport(fuchsia_input_report::OutputReport report,

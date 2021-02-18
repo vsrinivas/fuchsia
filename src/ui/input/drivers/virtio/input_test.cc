@@ -156,16 +156,16 @@ TEST_F(VirtioInputTest, MouseTest) {
   size_t report_size;
   const uint8_t* report = hid_mouse.GetReport(&report_size);
 
-  fidl::BufferThenHeapAllocator<2048> report_allocator;
-  auto report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
 
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  hid_input_report::fuchsia_input_report::InputReport input_report = report_builder.build();
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 1U);
-  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 1U);
+    ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 1U);
+    EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 1U);
+  }
 
   // ------------------------------------------------------------------
 
@@ -178,15 +178,16 @@ TEST_F(VirtioInputTest, MouseTest) {
 
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
-  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  input_report = report_builder.build();
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 2U);
-  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 1U);
-  EXPECT_EQ(input_report.mouse().pressed_buttons()[1], 2U);
+    ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 2U);
+    EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 1U);
+    EXPECT_EQ(input_report.mouse().pressed_buttons()[1], 2U);
+  }
 
   // ------------------------------------------------------------------
 
@@ -199,14 +200,15 @@ TEST_F(VirtioInputTest, MouseTest) {
 
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
-  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  input_report = report_builder.build();
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 1U);
-  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 2U);
+    ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 1U);
+    EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 2U);
+  }
 
   // ------------------------------------------------------------------
 
@@ -218,15 +220,16 @@ TEST_F(VirtioInputTest, MouseTest) {
 
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
-  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  input_report = report_builder.build();
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 2U);
-  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 2U);
-  EXPECT_EQ(input_report.mouse().pressed_buttons()[1], 3U);
+    ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 2U);
+    EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 2U);
+    EXPECT_EQ(input_report.mouse().pressed_buttons()[1], 3U);
+  }
 
   // ------------------------------------------------------------------
 
@@ -238,14 +241,15 @@ TEST_F(VirtioInputTest, MouseTest) {
 
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
-  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  input_report = report_builder.build();
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_TRUE(input_report.mouse().has_movement_x());
-  EXPECT_EQ(input_report.mouse().movement_x(), 0x0abc);
+    ASSERT_TRUE(input_report.mouse().has_movement_x());
+    EXPECT_EQ(input_report.mouse().movement_x(), 0x0abc);
+  }
 
   // ------------------------------------------------------------------
 
@@ -257,14 +261,15 @@ TEST_F(VirtioInputTest, MouseTest) {
 
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
-  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  input_report = report_builder.build();
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_TRUE(input_report.mouse().has_movement_y());
-  EXPECT_EQ(input_report.mouse().movement_y(), 0x0123);
+    ASSERT_TRUE(input_report.mouse().has_movement_y());
+    EXPECT_EQ(input_report.mouse().movement_y(), 0x0123);
+  }
 
   // ------------------------------------------------------------------
 
@@ -276,14 +281,15 @@ TEST_F(VirtioInputTest, MouseTest) {
 
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
-  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  input_report = report_builder.build();
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              mouse.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_TRUE(input_report.mouse().has_scroll_v());
-  EXPECT_EQ(input_report.mouse().scroll_v(), 0x0345);
+    ASSERT_TRUE(input_report.mouse().has_scroll_v());
+    EXPECT_EQ(input_report.mouse().scroll_v(), 0x0345);
+  }
 }
 
 TEST_F(VirtioInputTest, KeyboardTest) {
@@ -326,19 +332,21 @@ TEST_F(VirtioInputTest, KeyboardTest) {
   size_t report_size;
   const uint8_t* report = hid_keyboard.GetReport(&report_size);
 
-  fidl::BufferThenHeapAllocator<2048> report_allocator;
-  auto report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
-      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  {
+    fidl::FidlAllocator<2048> report_allocator;
+    hid_input_report::fuchsia_input_report::InputReport input_report(report_allocator);
 
-  EXPECT_EQ(hid_input_report::ParseResult::kOk,
-            keyboard.ParseInputReport(report, report_size, &report_allocator, &report_builder));
-  hid_input_report::fuchsia_input_report::InputReport input_report = report_builder.build();
+    EXPECT_EQ(hid_input_report::ParseResult::kOk,
+              keyboard.ParseInputReport(report, report_size, report_allocator, input_report));
 
-  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 4U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::A);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::Key::RIGHT_ALT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys()[3], llcpp::fuchsia::ui::input2::Key::DOWN);
+    ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 4U);
+    EXPECT_EQ(input_report.keyboard().pressed_keys()[0],
+              llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+    EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::A);
+    EXPECT_EQ(input_report.keyboard().pressed_keys()[2],
+              llcpp::fuchsia::ui::input2::Key::RIGHT_ALT);
+    EXPECT_EQ(input_report.keyboard().pressed_keys()[3], llcpp::fuchsia::ui::input2::Key::DOWN);
+  }
 }
 
 }  // namespace virtio

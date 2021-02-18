@@ -36,13 +36,13 @@ enum class DeviceType : uint32_t {
 };
 
 template <typename T>
-fidl::tracking_ptr<T> Extract(const uint8_t* data, size_t len, hid::Attributes attr,
-                              fidl::Allocator* allocator) {
+fidl::ObjectView<T> Extract(const uint8_t* data, size_t len, hid::Attributes attr,
+                            fidl::AnyAllocator& allocator) {
   double value;
   if (!hid::ExtractAsUnitType(data, len, attr, &value)) {
-    return nullptr;
+    return fidl::ObjectView<T>();
   }
-  return allocator->make<T>(value);
+  return fidl::ObjectView<T>(allocator, value);
 }
 
 class Device {
@@ -56,13 +56,14 @@ class Device {
     return ParseResult::kNotImplemented;
   }
 
-  virtual ParseResult CreateDescriptor(
-      fidl::Allocator* allocator, fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
+  virtual ParseResult CreateDescriptor(fidl::AnyAllocator& allocator,
+                                       fuchsia_input_report::DeviceDescriptor& descriptor) {
     return ParseResult::kNotImplemented;
   }
 
-  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
-                                       fuchsia_input_report::InputReport::Builder* report) {
+  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len,
+                                       fidl::AnyAllocator& allocator,
+                                       fuchsia_input_report::InputReport& input_report) {
     return ParseResult::kNotImplemented;
   }
 

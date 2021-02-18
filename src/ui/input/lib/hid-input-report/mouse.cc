@@ -79,64 +79,54 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   return ParseResult::kOk;
 }
 
-ParseResult Mouse::CreateDescriptor(fidl::Allocator* allocator,
-                                    fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
-  auto mouse_input = fuchsia_input_report::MouseInputDescriptor::Builder(
-      allocator->make<fuchsia_input_report::MouseInputDescriptor::Frame>());
+ParseResult Mouse::CreateDescriptor(fidl::AnyAllocator& allocator,
+                                    fuchsia_input_report::DeviceDescriptor& descriptor) {
+  fuchsia_input_report::MouseInputDescriptor mouse_input(allocator);
 
   if (movement_x_) {
-    mouse_input.set_movement_x(
-        allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*movement_x_)));
+    mouse_input.set_movement_x(allocator, LlcppAxisFromAttribute(*movement_x_));
   }
 
   if (movement_y_) {
-    mouse_input.set_movement_y(
-        allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*movement_y_)));
+    mouse_input.set_movement_y(allocator, LlcppAxisFromAttribute(*movement_y_));
   }
 
   if (position_x_) {
-    mouse_input.set_position_x(
-        allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*position_x_)));
+    mouse_input.set_position_x(allocator, LlcppAxisFromAttribute(*position_x_));
   }
 
   if (position_y_) {
-    mouse_input.set_position_y(
-        allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*position_y_)));
+    mouse_input.set_position_y(allocator, LlcppAxisFromAttribute(*position_y_));
   }
 
   if (scroll_v_) {
-    mouse_input.set_scroll_v(
-        allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*scroll_v_)));
+    mouse_input.set_scroll_v(allocator, LlcppAxisFromAttribute(*scroll_v_));
   }
 
   // Set the buttons array.
   {
-    auto buttons = allocator->make<uint8_t[]>(num_buttons_);
+    fidl::VectorView<uint8_t> buttons(allocator, num_buttons_);
     size_t index = 0;
     for (auto& button : buttons_) {
       buttons[index++] = button.usage.usage;
     }
-    auto buttons_view =
-        allocator->make<fidl::VectorView<uint8_t>>(std::move(buttons), num_buttons_);
-    mouse_input.set_buttons(std::move(buttons_view));
+    mouse_input.set_buttons(allocator, std::move(buttons));
   }
 
-  auto mouse = fuchsia_input_report::MouseDescriptor::Builder(
-      allocator->make<fuchsia_input_report::MouseDescriptor::Frame>());
-  mouse.set_input(allocator->make<fuchsia_input_report::MouseInputDescriptor>(mouse_input.build()));
-  descriptor->set_mouse(allocator->make<fuchsia_input_report::MouseDescriptor>(mouse.build()));
+  fuchsia_input_report::MouseDescriptor mouse(allocator);
+  mouse.set_input(allocator, std::move(mouse_input));
+  descriptor.set_mouse(allocator, std::move(mouse));
 
   return ParseResult::kOk;
 }
 
-ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
-                                    fuchsia_input_report::InputReport::Builder* report) {
+ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+                                    fuchsia_input_report::InputReport& input_report) {
   if (len != report_size_) {
     return ParseResult::kReportSizeMismatch;
   }
 
-  auto mouse_report = fuchsia_input_report::MouseInputReport::Builder(
-      allocator->make<fuchsia_input_report::MouseInputReport::Frame>());
+  fuchsia_input_report::MouseInputReport mouse_report(allocator);
 
   if (movement_x_) {
     mouse_report.set_movement_x(Extract<int64_t>(data, len, *movement_x_, allocator));
@@ -166,14 +156,13 @@ ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, fidl::Alloc
     }
   }
 
-  auto fidl_buttons = allocator->make<uint8_t[]>(buttons_size);
+  fidl::VectorView<uint8_t> fidl_buttons(allocator, buttons_size);
   for (size_t i = 0; i < buttons_size; i++) {
     fidl_buttons[i] = buttons[i];
   }
-  mouse_report.set_pressed_buttons(
-      allocator->make<fidl::VectorView<uint8_t>>(std::move(fidl_buttons), buttons_size));
+  mouse_report.set_pressed_buttons(allocator, std::move(fidl_buttons));
 
-  report->set_mouse(allocator->make<fuchsia_input_report::MouseInputReport>(mouse_report.build()));
+  input_report.set_mouse(allocator, std::move(mouse_report));
   return ParseResult::kOk;
 }
 

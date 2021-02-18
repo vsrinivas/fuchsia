@@ -13,14 +13,14 @@ namespace hid_input_report {
 // descriptors. This was chosen heuristically, a single descriptor shouldn't
 // really need to be larger than this size.
 static constexpr size_t kFidlDescriptorBufferSize = 4096 * 2;
-using TestDescriptorAllocator = fidl::BufferAllocator<kFidlDescriptorBufferSize>;
+using TestDescriptorAllocator = fidl::FidlAllocator<kFidlDescriptorBufferSize>;
 
 // This is the static size of the buffer to allocate test
 // reports. This was chosen heuristically, a single report shouldn't
 // really need to be larger than this size.
 static constexpr size_t kFidlReportBufferSize = 4096 * 2;
-using TestReportAllocator = fidl::BufferAllocator<kFidlReportBufferSize>;
+using TestReportAllocator = fidl::FidlAllocator<kFidlReportBufferSize>;
 
-}
+}  // namespace hid_input_report
 
 #endif  // SRC_UI_INPUT_LIB_HID_INPUT_REPORT_TEST_TEST_H_

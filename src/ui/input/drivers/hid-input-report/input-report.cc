@@ -105,9 +105,8 @@ void InputReport::GetInputReportsReader(zx::channel req,
 }
 
 void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
-  fidl::BufferThenHeapAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
-  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
-      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  fidl::FidlAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
+  fuchsia_input_report::DeviceDescriptor descriptor(descriptor_allocator);
 
   hid_device_info_t info;
   hiddev_.GetHidDeviceInfo(&info);
@@ -116,14 +115,13 @@ void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fidl_info.vendor_id = info.vendor_id;
   fidl_info.product_id = info.product_id;
   fidl_info.version = info.version;
-  descriptor_builder.set_device_info(
-      descriptor_allocator.make<fuchsia_input_report::DeviceInfo>(std::move(fidl_info)));
+  descriptor.set_device_info(descriptor_allocator, std::move(fidl_info));
 
   for (auto& device : devices_) {
-    device->CreateDescriptor(&descriptor_allocator, &descriptor_builder);
+    device->CreateDescriptor(descriptor_allocator, descriptor);
   }
 
-  fidl::Result result = completer.Reply(descriptor_builder.build());
+  fidl::Result result = completer.Reply(std::move(descriptor));
   if (result.status() != ZX_OK) {
     zxlogf(ERROR, "GetDescriptor: Failed to send descriptor (%s): %s\n", result.status_string(),
            result.error());

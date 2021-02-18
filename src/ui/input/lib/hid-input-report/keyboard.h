@@ -18,12 +18,11 @@ class Keyboard : public Device {
   ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report, uint8_t* data,
                               size_t data_size, size_t* data_out_size) override;
 
-  ParseResult CreateDescriptor(
-      fidl::Allocator* allocator,
-      fuchsia_input_report::DeviceDescriptor::Builder* descriptor) override;
+  ParseResult CreateDescriptor(fidl::AnyAllocator& allocator,
+                               fuchsia_input_report::DeviceDescriptor& descriptor) override;
 
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
-                               fuchsia_input_report::InputReport::Builder* report) override;
+  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+                               fuchsia_input_report::InputReport& input_report) override;
 
   uint8_t InputReportId() const override { return input_report_id_; }
 
