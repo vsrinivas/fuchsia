@@ -143,12 +143,17 @@ bool PointerEventIsValidTap(const GestureContext& gesture_context,
     return false;
   }
 
-  // Check if the new pointer event is under the threshold value for the move.
-  auto dx = pointer_event.ndc_point().x -
-            gesture_context.starting_pointer_locations.at(pointer_event.pointer_id()).ndc_point.x;
-  auto dy = pointer_event.ndc_point().y -
-            gesture_context.starting_pointer_locations.at(pointer_event.pointer_id()).ndc_point.y;
-  return dx * dx + dy * dy <= kGestureMoveThreshold * kGestureMoveThreshold;
+  return SquareDistanceBetweenPoints(
+             pointer_event.ndc_point(),
+             gesture_context.starting_pointer_locations.at(pointer_event.pointer_id()).ndc_point) <=
+         kGestureMoveThreshold * kGestureMoveThreshold;
+}
+
+float SquareDistanceBetweenPoints(::fuchsia::math::PointF a, ::fuchsia::math::PointF b) {
+  auto dx = a.x - b.x;
+  auto dy = a.y - b.y;
+
+  return dx * dx + dy * dy;
 }
 
 float SquareDistanceBetweenPoints(::fuchsia::math::PointF a, ::fuchsia::math::PointF b) {
