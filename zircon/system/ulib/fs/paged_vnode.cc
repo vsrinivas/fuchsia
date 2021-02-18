@@ -7,24 +7,17 @@
 
 namespace fs {
 
-PagedVnode::PagedVnode(PagedVfs* vfs) : vfs_(vfs), clone_watcher_(this) {}
+PagedVnode::PagedVnode(PagedVfs* vfs) : Vnode(vfs), clone_watcher_(this) {}
 
 PagedVnode::~PagedVnode() {}
-
-void PagedVnode::WillShutdown() {
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  ZX_DEBUG_ASSERT(vfs_);  // Shouldn't be shutting down more than once.
-  vfs_ = nullptr;
-}
 
 zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
   if (vmo_)
     return zx::ok();
-  if (!vfs_)
+  if (!paged_vfs())
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
 
-  auto vfs_or = vfs_->CreatePagedNodeVmo(fbl::RefPtr<PagedVnode>(this), size);
+  auto vfs_or = paged_vfs()->CreatePagedNodeVmo(fbl::RefPtr<PagedVnode>(this), size);
   if (vfs_or.is_error())
     return vfs_or.take_error();
   vmo_ = std::move(vfs_or).value();
@@ -46,7 +39,7 @@ void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBa
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  if (!vfs_)
+  if (!paged_vfs())
     return;  // Called during tear-down.
 
   // The kernel signal delivery could have raced with us creating a new clone. Validate that there
@@ -68,7 +61,7 @@ void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBa
 void PagedVnode::WatchForZeroVmoClones() {
   clone_watcher_.set_object(vmo_.get());
   clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
-  clone_watcher_.Begin(vfs_->dispatcher());
+  clone_watcher_.Begin(paged_vfs()->dispatcher());
 }
 
 }  // namespace fs

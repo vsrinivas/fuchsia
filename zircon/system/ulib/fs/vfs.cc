@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <fbl/auto_call.h>
 #include <fs/debug.h>
@@ -93,7 +94,23 @@ zx_status_t PrevalidateOptions(VnodeConnectionOptions options) {
 }  // namespace
 
 Vfs::Vfs() = default;
-Vfs::~Vfs() = default;
+
+Vfs::~Vfs() {
+  // Keep owning references to each vnode in case the callbacks cause any nodes to be deleted.
+  std::vector<fbl::RefPtr<Vnode>> nodes_to_notify;
+  {
+    // This lock should not be necessary since the destructor should be single-threaded but is
+    // good for completeness.
+    std::lock_guard<std::mutex> lock(vfs_lock_);
+    nodes_to_notify.reserve(live_nodes_.size());
+    for (auto& node_ptr : live_nodes_)
+      nodes_to_notify.push_back(fbl::RefPtr<Vnode>(node_ptr));
+  }
+
+  // Notify all nodes that we're getting deleted.
+  for (auto& node : nodes_to_notify)
+    node->WillDestroyVfs();
+}
 
 #ifdef __Fuchsia__
 
@@ -571,6 +588,22 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
 }
 
 #endif  // ifdef __Fuchsia__
+
+void Vfs::RegisterVnode(Vnode* vnode) {
+  std::lock_guard<std::mutex> lock(vfs_lock_);
+
+  // Should not be registered twice.
+  ZX_DEBUG_ASSERT(live_nodes_.find(vnode) == live_nodes_.end());
+  live_nodes_.insert(vnode);
+}
+
+void Vfs::UnregisterVnode(Vnode* vnode) {
+  std::lock_guard<std::mutex> lock(vfs_lock_);
+
+  auto found = live_nodes_.find(vnode);
+  ZX_DEBUG_ASSERT(found != live_nodes_.end());  // Should always be registered first.
+  live_nodes_.erase(found);
+}
 
 void Vfs::SetReadonly(bool value) {
   std::lock_guard<std::mutex> lock(vfs_lock_);

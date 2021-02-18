@@ -319,7 +319,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // Derived classes can implement this to do cleanup that requires the Vfs. Because Vnodes are
   // reference-counted, they can outlive their associated Vfs.
-  virtual void WillShutdown() {}
+  //
+  // The default implementation will clear the vfs_ back-pointer, it should always be called by
+  // overridden implementations.
+  virtual void WillDestroyVfs();
 
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
@@ -354,12 +357,22 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
 
+  // TODO(fxbug.dev/70397) Eliminate the 0-arg constructor so the Vfs is always known.
   Vnode();
+  explicit Vnode(Vfs* vfs);
 
-  // Mutex for the data of this vnode. This is also used to guard the data of derived classes.
+  // Mutex for the data of this vnode.
   mutable std::mutex mutex_;
 
+  // The Vfs associated with this node. This can be null if the Vfs is shutdown (since Vnodes are
+  // reference-counted they can outlive the Vfs). Uses should always be inside the mutex_.
+  //
+  // There are also some legacy code paths that never set this on construction.
+  // TODO(fxbug.dev/70397) make this always set on construction.
+  Vfs* vfs() FS_TA_REQUIRES(mutex_) { return vfs_; }
+
  private:
+  Vfs* vfs_ FS_TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ FS_TA_GUARDED(mutex_) = 0;
 };
 

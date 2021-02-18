@@ -82,12 +82,12 @@ class PagingTestFile : public PagedVnode {
 
     zx::vmo transfer;
     if (zx::vmo::create(length, 0, &transfer) != ZX_OK) {
-      ASSERT_TRUE(vfs()->ReportPagerError(vmo(), offset, length, 0).is_ok());
+      ASSERT_TRUE(paged_vfs()->ReportPagerError(vmo(), offset, length, 0).is_ok());
       return;
     }
 
     transfer.write(&data_[offset], 0, std::min(data_.size() - offset, length));
-    ASSERT_TRUE(vfs()->SupplyPages(vmo(), offset, length, transfer, 0).is_ok());
+    ASSERT_TRUE(paged_vfs()->SupplyPages(vmo(), offset, length, transfer, 0).is_ok());
   }
 
   // Vnode implementation:

@@ -26,9 +26,6 @@ class PagedVfs;
 //  - Implement VmoRead() to fill the VMO data when requested.
 class PagedVnode : public Vnode {
  public:
-  // fs::Vnode overrides:
-  void WillShutdown() override;
-
   // Called by the paging system in response to a kernel request to fill data into this node's VMO.
   //
   //  - On success, calls vfs()->SupplyPages() with the created data range.
@@ -51,7 +48,10 @@ class PagedVnode : public Vnode {
   // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
   // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
   // with this object, all operations are expected to fail.
-  PagedVfs* vfs() FS_TA_REQUIRES(mutex_) { return vfs_; }
+  PagedVfs* paged_vfs() FS_TA_REQUIRES(mutex_) {
+    // Since we were constructed with a PagedVfs, we know it's safe to up-cast back to that.
+    return static_cast<PagedVfs*>(vfs());
+  }
 
   // This will be a null handle if there is no VMO associated with this vnode.
   zx::vmo& vmo() FS_TA_REQUIRES(mutex_) { return vmo_; }
@@ -77,10 +77,10 @@ class PagedVnode : public Vnode {
                          const zx_packet_signal_t* signal) FS_TA_EXCLUDES(mutex_);
 
   // Starts the clone_watcher_ to observe the case of no vmo_ clones. The WaitMethod is called only
-  // once per "watch" call so this needs to be re-called after triggering. The vmo_ must exist.
+  // once per "watch" call so this needs to be re-called after triggering.
+  //
+  // The vmo_ and paged_vfs() must exist.
   void WatchForZeroVmoClones() FS_TA_REQUIRES(mutex_);
-
-  PagedVfs* vfs_ FS_TA_GUARDED(mutex_);  // Non-owning, null after WillShutdown().
 
   // The root VMO that paging happens out of for this vnode. VMOs that map the data into user
   // processes will be children of this VMO.

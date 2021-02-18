@@ -33,17 +33,16 @@ class ManagedVfs : public Vfs {
   ManagedVfs();
   explicit ManagedVfs(async_dispatcher_t* dispatcher);
 
-  // The ManagedVfs destructor is only safe to execute if
-  // no connections are actively registered.
+  // The ManagedVfs destructor is only safe to execute if no connections are actively registered.
   //
-  // To ensure that this state is achieved, it is recommended that
-  // clients issue a call to |Shutdown| before calling the destructor.
+  // To ensure that this state is achieved, it is recommended that clients issue a call to
+  // |Shutdown| before calling the destructor.
   ~ManagedVfs() override;
 
   // Asynchronously drop all connections managed by the VFS.
   //
-  // Invokes |handler| once when all connections are destroyed.
-  // It is safe to delete ManagedVfs from within the closure.
+  // Invokes |handler| once when all connections are destroyed. It is safe to delete ManagedVfs from
+  // within the closure.
   //
   // It is unsafe to call Shutdown multiple times.
   void Shutdown(ShutdownCallback handler) override __TA_EXCLUDES(lock_);
@@ -71,6 +70,8 @@ class ManagedVfs : public Vfs {
   bool IsTerminating() const final;
 
   std::mutex lock_;
+
+  // All live connections. There can be more than one connection per node.
   fbl::DoublyLinkedList<std::unique_ptr<internal::Connection>> connections_ __TA_GUARDED(lock_);
 
   std::atomic_bool is_shutting_down_;

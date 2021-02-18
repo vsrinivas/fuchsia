@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
@@ -22,12 +23,19 @@ namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
+// TODO(fxbug.dev/70397) Eliminate the 0-arg constructor so the Vfs is always known.
 Vnode::Vnode() = default;
+
+Vnode::Vnode(Vfs* vfs) : vfs_(vfs) { vfs_->RegisterVnode(this); }
 
 Vnode::~Vnode() {
   std::lock_guard lock(mutex_);
+
   ZX_DEBUG_ASSERT_MSG(inflight_transactions_ == 0, "Inflight transactions in dtor %zu\n",
                       inflight_transactions_);
+
+  if (vfs_)
+    vfs_->UnregisterVnode(this);
 }
 
 #ifdef __Fuchsia__
@@ -90,6 +98,13 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
 #endif  // __Fuchsia__
 
 void Vnode::Notify(fbl::StringPiece name, unsigned event) {}
+
+void Vnode::WillDestroyVfs() {
+  std::lock_guard lock(mutex_);
+
+  ZX_DEBUG_ASSERT(vfs_);  // Shouldn't be deleting more than once.
+  vfs_ = nullptr;
+}
 
 bool Vnode::Supports(VnodeProtocolSet protocols) const {
   return (GetProtocols() & protocols).any();

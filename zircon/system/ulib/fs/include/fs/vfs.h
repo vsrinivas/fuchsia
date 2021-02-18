@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <mutex>
+#include <set>
 
 #include <fs/locking.h>
 #include <fs/vfs_types.h>
@@ -191,6 +192,10 @@ class Vfs {
   bool IsTokenAssociatedWithVnode(zx::event token) FS_TA_EXCLUDES(vfs_lock_);
 #endif
 
+  // The VFS tracks all live Vnodes associated with it.
+  void RegisterVnode(Vnode* vnode);
+  void UnregisterVnode(Vnode* vnode);
+
  protected:
   // Whether this file system is read-only.
   bool ReadonlyLocked() const FS_TA_REQUIRES(vfs_lock_) { return readonly_; }
@@ -225,7 +230,11 @@ class Vfs {
                            fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                            uint32_t mode, bool* did_create) FS_TA_REQUIRES(vfs_lock_);
 
-  bool readonly_{};
+  bool readonly_ = false;
+
+  // The live Vnodes associated with this Vfs. Nodes (un)register using [Un]RegisterVnode(). This
+  // /list is cleared by ShutdownLiveNodes().
+  std::set<Vnode*> live_nodes_ FS_TA_GUARDED(vfs_lock_);
 
 #ifdef __Fuchsia__
   zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) FS_TA_REQUIRES(vfs_lock_);
@@ -256,7 +265,7 @@ class Vfs {
   // is empty; "remote_list" is a member of the bss section.
   MountNode::ListType remote_list_ FS_TA_GUARDED(vfs_lock_){};
 
-  async_dispatcher_t* dispatcher_{};
+  async_dispatcher_t* dispatcher_ = nullptr;
 
  protected:
   // Starts FIDL message dispatching on |channel|, at the same time starts to manage the lifetime of

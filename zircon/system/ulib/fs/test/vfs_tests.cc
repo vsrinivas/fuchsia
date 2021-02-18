@@ -12,6 +12,37 @@
 #include <fs/synchronous_vfs.h>
 #include <zxtest/zxtest.h>
 
+namespace {
+
+// Simple vnode implementation that provides a way to query whether the vfs pointer is set.
+class TestNode : public fs::Vnode {
+ public:
+  // Vnode implementation:
+  fs::VnodeProtocolSet GetProtocols() const override { return fs::VnodeProtocol::kFile; }
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights,
+                                     fs::VnodeRepresentation* info) final {
+    if (protocol == fs::VnodeProtocol::kFile) {
+      *info = fs::VnodeRepresentation::File();
+      return ZX_OK;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  bool HasVfsPointer() {
+    std::lock_guard lock(mutex_);
+    return !!vfs();
+  }
+
+ private:
+  friend fbl::internal::MakeRefCountedHelper<TestNode>;
+  friend fbl::RefPtr<TestNode>;
+
+  explicit TestNode(fs::Vfs* vfs) : Vnode(vfs) {}
+  ~TestNode() override {}
+};
+
+}  // namespace
+
 TEST(ManagedVfs, CanOnlySetDispatcherOnce) {
   fs::ManagedVfs vfs;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -113,4 +144,16 @@ TEST(SynchronousVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
   vfs.CloseAllConnectionsForVnode(*dir, [&closed]() { closed = true; });
   loop.RunUntilIdle();
   ASSERT_TRUE(closed);
+}
+
+TEST(SynchronousVfs, DeletesNodeVfsPointers) {
+  async::TestLoop loop;
+  auto vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
+
+  auto file = fbl::MakeRefCounted<TestNode>(vfs.get());
+  EXPECT_TRUE(file->HasVfsPointer());
+
+  // Delete the Vfs while keeping the file alive after it.
+  vfs.reset();
+  EXPECT_FALSE(file->HasVfsPointer());
 }
