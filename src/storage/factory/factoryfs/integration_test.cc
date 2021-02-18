@@ -40,7 +40,7 @@ TEST(FactoryFs, ExportedFilesystemIsMountable) {
   fd.reset();
 
   std::string ram_disk_path = ram_disk_or.value().path();
-  const char *argv[] = {"/pkg/bin/export_ffs", factoryfs.c_str(), ram_disk_path.c_str(), nullptr};
+  const char *argv[] = {"/pkg/bin/export-ffs", factoryfs.c_str(), ram_disk_path.c_str(), nullptr};
   zx::process process;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
                                   process.reset_and_get_address());

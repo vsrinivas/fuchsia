@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("blobfs-corrupt") {
   sources = [ "main.cc" ]
@@ -48,17 +48,13 @@ source_set("common") {
   ]
 }
 
-unittest_package("blobfs-corrupt-tests") {
+fuchsia_unittest_package("blobfs-corrupt-tests") {
   deps = [ ":blobfs-corrupt-test" ]
-
-  tests = [
-    {
-      name = "blobfs-corrupt-test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

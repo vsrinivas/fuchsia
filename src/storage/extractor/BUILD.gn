@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("disk_extractor_lib") {
   name = "disk_extractor_lib"
@@ -37,14 +35,9 @@ rustc_library("disk_extractor_lib") {
   ]
 }
 
-test_package("disk-extractor-lib-tests") {
+fuchsia_unittest_package("disk-extractor-lib-tests") {
   deps = [ ":disk_extractor_lib_test" ]
-  tests = [
-    {
-      name = "disk_extractor_lib_lib_test"
-      dest = "disk-extractor-lib-unit-tests"
-    },
-  ]
+  manifest = "meta/disk-extractor-lib-unit-tests.cmx"
 }
 
 group("tests") {

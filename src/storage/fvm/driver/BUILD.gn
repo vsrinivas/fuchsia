@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("fvm_bind") {
   disable_autobind = true
@@ -97,13 +97,7 @@ test("fvm-driver-unittests") {
   ]
 }
 
-unittest_package("fvm-driver-unittests-package") {
+fuchsia_unittest_package("fvm-driver-unittests-package") {
   package_name = "fvm-driver-unittests"
   deps = [ ":fvm-driver-unittests" ]
-
-  tests = [
-    {
-      name = "fvm-driver-unittests-test"
-    },
-  ]
 }

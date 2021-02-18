@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -76,14 +76,7 @@ test("install-disk-image-test") {
   ]
 }
 
-test_package("install-disk-image-test-package") {
+fuchsia_unittest_package("install-disk-image-test-package") {
   deps = [ ":install-disk-image-test" ]
-
-  tests = [
-    {
-      name = "install-disk-image-test"
-      dest = "install-disk-image-test"
-      environments = basic_envs
-    },
-  ]
+  manifest = "meta/install-disk-image-test.cmx"
 }
