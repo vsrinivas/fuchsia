@@ -1,11 +1,11 @@
-# Building and running a session
+# Building and running a session {#building-and-running-a-session} 
 
 A session is the first product-specific component started on boot. The session
 component is responsible for building a product's user experience. For more
 information on sessions, see
 [session framework](/docs/concepts/session/introduction.md).
 
-## Booting into a session
+## Booting into a session {#booting-into-a-session}
 
 To boot into a session, do the following:
 
@@ -53,7 +53,7 @@ component
 For a full explanation of building a session component, see [Writing a Hello
 World Session](/docs/development/sessions/writing-a-hello-world-session.md).
 
-## Launch a session from the command line
+## Launch a session from the command line {#launch-a-session-from-the-command-line}
 
 There are cases when you don't want your session to launch at boot but still
 want to be able to launch it from the command line. There still needs to be a

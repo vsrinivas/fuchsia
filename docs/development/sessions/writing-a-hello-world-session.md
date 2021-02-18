@@ -1,4 +1,4 @@
-# Writing a "Hello World" session
+# Writing a "Hello World" session {#writing-a-hello-world-session}
 
 Sessions are regular components that the `session_manager` can launch at
 startup. This means that creating a session component follows all of the same
@@ -6,7 +6,7 @@ steps as creating any other component. This document discusses creating an
 example session that launches at startup and prints "Hello World!" to the system
 log.
 
-## Create the directory structure
+## Create the directory structure {#create-the-directory-structure}
 
 Components require a specific directory structure. The `fx` tool provides a
 generator that creates this structure for you. It takes the name of the
@@ -34,7 +34,7 @@ hello-world-session
   |- BUILD.gn
 ```
 
-## Create a component manifest
+## Create a component manifest {#create-a-component-manifest}
 
 The component manifest file (`hello-world-session.cml` in this case) gives
 Fuchsia information about our component. The component manifest file has to have
@@ -77,7 +77,7 @@ The following lines of code are from `hello-world-session.cml`:
    ],
    ```
 
-## Create a session config
+## Create a session config {#create-a-session-config}
 
 `session_manager` needs to know to which session component to launch at startup.
 To do this create a session config JSON file in the `meta` directory that
@@ -103,7 +103,7 @@ The whole session config file looks like this:
 }
 ```
 
-## Writing a session in Rust
+## Writing a session in Rust {#writing-a-session-in-rust}
 
 Now you can write the actual code for the session component. Inside the
 `src/main.rs` file that was generated there is a lot of code that isn't needed
@@ -142,12 +142,12 @@ This code initializes the system log and then prints "Hello World!".
 system log with a level of `info`. There are similar marcros for `error` and
 `warn`.
 
-## Writing the `BUILD.gn`
+## Writing the `BUILD.gn` {#writing-the-build-gn}
 
 The last file to modify is the `BUILD.gn`. This tells the compiler how to build
 the the session component.
 
-### Imports
+### Imports {#imports}
 
 The file starts by importing GN templates that are used in this `BUILD.gn`. To
 build a session component you must import the `session_config.gni`.
@@ -156,7 +156,7 @@ build a session component you must import the `session_config.gni`.
 import("//src/session/build/session_config.gni")
 ```
 
-### Session config
+### Session config {#session-config}
 
 The added import statement gives the `BUILD.gn` access to the `session_config`
 command. This command tells the build where to find the `session_config.json`
@@ -169,7 +169,7 @@ session_config("hello-world-session-config.json") {
 }
 ```
 
-### Rust binary
+### Rust binary {#rust-binary}
 
 The next section describes the actual Rust binary. It tells the compiler what
 the name of the binary should be, that it includes unit tests, what dependencies
@@ -193,7 +193,7 @@ Everything else can stay as it is in the generated `BUILD.gn`. The
 component including what it is called, where to find the manifest, and what
 dependencies the package and component have.
 
-## Building the session
+## Building the session {#building-the-session}
 
 To build the session `fx set` must first be used to configure the build so that
 `session_manager`, your session component, and the session config are included
