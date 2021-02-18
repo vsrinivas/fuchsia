@@ -112,8 +112,8 @@ __attribute__((no_sanitize_address)) void PinExecutableMemory::Pin() {
   if (total_bytes != last_pinned_bytes_) {
     last_pinned_bytes_ = total_bytes;
     auto end_time = zx::clock::get_monotonic();
-    FX_LOGS(INFO) << "pinned " << total_bytes << " executable bytes in "
-                  << (end_time - start_time).to_nsecs() << " ns";
+    FX_LOGS(INFO) << "pinned " << total_bytes << " bytes (" << total_executable_bytes
+                  << " executable bytes) in " << (end_time - start_time).to_nsecs() << " ns";
   }
 }
 
