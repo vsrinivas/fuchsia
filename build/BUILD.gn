@@ -396,6 +396,7 @@ group("deprecated_package") {
     "//third_party/micro-ecc/*",
     "//third_party/openssh-portable/*",
     "//third_party/openssl-ecjpake/*",
+    "//third_party/protobuf/*",
     "//third_party/quickjs/*",
     "//third_party/sbase/*",
     "//topaz/public/dart/fuchsia_inspect/test/integration/*",
