@@ -50,6 +50,7 @@ constexpr char kDeviceInfoConfigKey_MfrDeviceCertAllowLocal[] = "mfr-device-cert
 constexpr char kDeviceInfoConfigKey_PrivateKeyPath[] = "mfr-private-key-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
 constexpr char kDeviceInfoConfigKey_SerialNumber[] = "serial-number";
+constexpr char kDeviceInfoConfigKey_ThreadJoinableDurationSec[] = "thread-joinable-duration-sec";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
 constexpr char kDeviceInfoConfigKey_AppletPaths[] = "applet-paths";
 
@@ -468,6 +469,10 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetPrimaryWiFiMACAddress(uint8_t* 
   // The best way to meet these requirements is to provide a faked-out MAC address instead.
   std::memcpy(mac_address, kFakeMacAddress, kWiFiMacAddressBufSize);
   return WEAVE_NO_ERROR;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetThreadJoinableDuration(uint32_t* duration) {
+  return device_info_->ReadConfigValue(kDeviceInfoConfigKey_ThreadJoinableDurationSec, duration);
 }
 
 }  // namespace DeviceLayer

@@ -150,6 +150,10 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // Reads the list of applets from the config file and populates |out| with the same.
     virtual zx_status_t GetAppletPathList(std::vector<std::string>& out) = 0;
 
+    // Gets the configured duration for Thread to remain joinable when asked to
+    // enter joinable mode (in seconds).
+    virtual WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) = 0;
+
    protected:
     ConfigurationManagerImpl* impl_;
   };
@@ -183,6 +187,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
 
   // Reads the list of applets from the config file and populates |out| with the same.
   zx_status_t GetAppletPathList(std::vector<std::string>& out);
+
+  // Returns the Thread joinable duration, see definition in delegate.
+  WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration);
 
  private:
   using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;

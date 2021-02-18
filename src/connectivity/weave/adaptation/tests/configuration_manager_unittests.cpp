@@ -627,5 +627,13 @@ TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
   EXPECT_EQ(0, std::memcmp(expected, mac_addr, kWiFiMacAddressBufSize));
 }
 
+TEST_F(ConfigurationManagerTest, GetThreadJoinableDuration) {
+  constexpr uint32_t expected = 1234;
+  uint32_t duration;
+
+  EXPECT_EQ(ConfigurationMgrImpl().GetThreadJoinableDuration(&duration), WEAVE_NO_ERROR);
+  EXPECT_EQ(duration, expected);
+}
+
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

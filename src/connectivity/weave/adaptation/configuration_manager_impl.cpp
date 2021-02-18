@@ -121,6 +121,10 @@ zx_status_t ConfigurationManagerImpl::GetAppletPathList(std::vector<std::string>
   return delegate_->GetAppletPathList(out);
 }
 
+WEAVE_ERROR ConfigurationManagerImpl::GetThreadJoinableDuration(uint32_t* duration) {
+  return delegate_->GetThreadJoinableDuration(duration);
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl
