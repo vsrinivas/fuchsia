@@ -85,12 +85,6 @@ class InputSystem : public System,
     return pointer_event_registry_->accessibility_pointer_event_listener();
   }
 
-  // Checks if an accessibility listener is intercepting pointer events.
-  bool IsA11yListenerEnabled() const {
-    return accessibility_pointer_event_listener() &&
-           accessibility_pointer_event_listener().is_bound();
-  }
-
   bool IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t koid) const;
 
   // |fuchsia.ui.pointercapture.ListenerRegistry|
