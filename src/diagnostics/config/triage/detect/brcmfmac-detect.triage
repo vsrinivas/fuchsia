@@ -1,6 +1,9 @@
 {
     select: {
         tx_qfull_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:tx_qfull_24hrs",
+        conn_no_network_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:no_network_fail_24hrs",
+        conn_auth_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:auth_fail_24hrs",
+        conn_other_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:other_fail_24hrs",
     },
     act: {
         excessive_tx_qfull: {
@@ -8,6 +11,24 @@
             trigger: "tx_qfull_24hrs > 512",
             repeat: "Hours(24)",
             signature: "excessive-tx-qfull-in-24hrs",
+        },
+        excessive_conn_no_network_fail: {
+            type: "Snapshot",
+            trigger: "conn_no_network_fail_24hrs >= 5",
+            repeat: "Hours(24)",
+            signature: "excessive-conn-no-network-fail",
+        },
+        excessive_conn_auth_fail: {
+            type: "Snapshot",
+            trigger: "conn_auth_fail_24hrs >= 5",
+            repeat: "Hours(24)",
+            signature: "excessive-conn-auth-fail",
+        },
+        excessive_conn_other_fail: {
+            type: "Snapshot",
+            trigger: "conn_other_fail_24hrs >= 5",
+            repeat: "Hours(24)",
+            signature: "excessive-conn-other-fail",
         },
     },
     test: {
@@ -27,6 +48,60 @@
             ],
             values: {
                 tx_qfull_24hrs: 256,
+            },
+        },
+        excessive_conn_no_network_fail: {
+            yes: [
+                "excessive_conn_no_network_fail",
+            ],
+            no: [],
+            values: {
+                conn_no_network_fail_24hrs: 5,
+            },
+        },
+        acceptable_conn_no_network_fail: {
+            yes: [],
+            no: [
+                "excessive_conn_no_network_fail",
+            ],
+            values: {
+                conn_no_network_fail_24hrs: 4,
+            },
+        },
+        excessive_conn_auth_fail: {
+            yes: [
+                "excessive_conn_auth_fail",
+            ],
+            no: [],
+            values: {
+                conn_auth_fail_24hrs: 5,
+            },
+        },
+        acceptable_conn_auth_fail: {
+            yes: [],
+            no: [
+                "excessive_conn_auth_fail",
+            ],
+            values: {
+                conn_auth_fail_24hrs: 4,
+            },
+        },
+        excessive_conn_other_fail: {
+            yes: [
+                "excessive_conn_other_fail",
+            ],
+            no: [],
+            values: {
+                conn_other_fail_24hrs: 5,
+            },
+        },
+        acceptable_conn_other_fail: {
+            yes: [],
+            no: [
+                "excessive_conn_other_fail",
+            ],
+            values: {
+                conn_other_fail_24hrs: 4,
             },
         },
     },
