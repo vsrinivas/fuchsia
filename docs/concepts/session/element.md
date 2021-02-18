@@ -15,8 +15,8 @@ much like an "app" would on other platforms.
 
 Since elements are components, they inherit all component properties, such as:
 
-* Being identifiable by their component URLs, and having [component
-manifests][doc-component-manifest].
+* Being identifiable by their component URLs, and having
+[component manifests][doc-component-manifest].
 * Participating in [capability routing][doc-capability-routing].
 
 Elements are typically instantiated in [component
