@@ -76,6 +76,16 @@ zx_library("zxtest") {
   }
 }
 
+config("prod_config") {
+  include_dirs = [ "include" ]
+}
+
+# Dependency for "production" callers who use zxtest_prod header, (see that file for more).
+source_set("prod") {
+  public = [ "include/zxtest/cpp/zxtest_prod.h" ]
+  public_configs = [ ":prod_config" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ "test:tests" ]

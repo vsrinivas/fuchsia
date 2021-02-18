@@ -28,6 +28,7 @@ test("zxtest") {
     "assertion_test.cc",
     "event-broadcaster_test.cc",
     "main.cc",
+    "prod_test.cc",
     "reporter_test.cc",
     "runner_test.cc",
     "test-case_test.cc",
@@ -38,6 +39,7 @@ test("zxtest") {
     "//src/zircon/lib/zircon:zircon-headers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest:prod",
   ]
   if (is_fuchsia) {
     sources += [ "death-statement_test.cc" ]
