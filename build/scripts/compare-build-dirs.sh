@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -28,6 +28,11 @@ EOF
 # Usage: json_format --format FILE
 readonly json_format=third_party/catapult/telemetry/json_format
 
+# GLOBAL MUTABLE
+# Accumulate paths to unexpected differences here.
+# bash: array variables are not POSIX
+unexpected_diffs=()
+
 function diff_json() {
   # json_format doesn't have an option to output to stdout,
   # so we must copy it to temporary files.
@@ -36,6 +41,7 @@ function diff_json() {
   "$json_format" --format "$1".formatted
   "$json_format" --format "$2".formatted
   diff -u "$1".formatted "$2".formatted
+  # return with the exit code of diff
 }
 
 function diff_text() {
@@ -53,7 +59,8 @@ function diff_file_relpath() {
   # one could also use an all-inclusive diff tool like https://diffoscope.org/
   local left="$1/$3"
   local right="$2/$3"
-  filebase="$(basename "$3")"
+  common_path="$3"
+  filebase="$(basename "$common_path")"
 
   # TODO(fangism): Some files are stored as blobs so content differences
   # appear as filename entry differences.  Skip these.  Perhaps silently?
@@ -71,6 +78,10 @@ function diff_file_relpath() {
   #   * Identify and classify known differences.
   #   * Gradually reduce sources of differences.
   case "$filebase" in
+    # The exit status of this case statement will be used
+    # to determine whether or not the given file is an
+    # erroneous diff.
+    #
     # Generally:
     #   diff_text for text files that are expected to match
     #   diff_binary for binaries or known large textual differences
@@ -81,21 +92,25 @@ function diff_file_relpath() {
     # C++ object files (binary)
     *.o) diff_binary "$left" "$right" ;;
     # TODO(fangism): compare objdumps for details
-    *.a) diff_binary "$left" "$right" ;;
+    # TODO(fangism): suppress known issues on a path-by-path basis
+
+    # Ignore .a differences until .o differences have been eliminated.
+    *.a) diff_binary "$left" "$right" || : ;;
 
     # Rust libraries (binary)
     *.rlib) diff_binary "$left" "$right" ;;
 
     # The following groups of files have known huge diffs,
     # so omit details from the general report, and diff_binary.
-    meta.far) diff_binary "$left" "$right" ;;
-    meta.far.merkle) diff_binary "$left" "$right" ;;
-    contents) diff_binary "$left" "$right" ;;
-    blobs.json) diff_binary "$left" "$right" ;;
-    blobs.manifest) diff_binary "$left" "$right" ;;
-    package_manifest.json) diff_binary "$left" "$right" ;;
-
-    targets.json) diff_binary "$left" "$right" ;;
+    # For now, ignore these differences (using || :) until their
+    # inputs' differences have been resolved and eliminated.
+    meta.far) diff_binary "$left" "$right" || : ;;
+    meta.far.merkle) diff_binary "$left" "$right" || : ;;
+    contents) diff_binary "$left" "$right" || : ;;
+    blobs.json) diff_binary "$left" "$right" || : ;;
+    blobs.manifest) diff_binary "$left" "$right" || : ;;
+    package_manifest.json) diff_binary "$left" "$right" || : ;;
+    targets.json) diff_binary "$left" "$right" || : ;;
 
     # Diff formatted JSON for readability.
     *.json) diff_json "$left" "$right" ;;
@@ -124,6 +139,8 @@ function diff_file_relpath() {
     # Binary files diffs will still only be reported tersely.
     *) diff_text "$left" "$right" ;;
   esac
+  # Record unexpected differences.
+  test "$?" = 0 || unexpected_diffs=("${unexpected_diffs[@]}" "$common_path")
 }
 
 function diff_dir_recursive() {
@@ -145,4 +162,15 @@ test "$#" = 2 || { usage; exit 2; }
 diff_dir_recursive "$1" "$2"
 
 # TODO(fangism): summarize findings in a report
-# TODO(fangism): return a meaningful exit status for use in testing
+
+if test "${#unexpected_diffs[@]}" != 0
+then
+  echo "UNEXPECTED DIFFS:"
+  for path in "${unexpected_diffs[@]}"
+  do echo "  $path"
+  done
+  exit 1
+fi
+
+# TODO(fangism): Track unexpected *matches* so that when differences
+# are eliminated, their suppressions get removed.
