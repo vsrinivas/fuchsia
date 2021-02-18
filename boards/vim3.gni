@@ -7,7 +7,8 @@ import("//boards/arm64.gni")
 board_name = "vim3"
 
 _common_bootfs_deps = [
-  "//boards/kernel_cmdline:vim3",
+  # TODO(fxb/70442): removed since USB CDC is disabled. After bug is fixed, check if this is still required.
+  # "//boards/kernel_cmdline:vim3",
   "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
   "//src/connectivity/ethernet/drivers/dwmac",
   "//src/connectivity/ethernet/drivers/ethernet",

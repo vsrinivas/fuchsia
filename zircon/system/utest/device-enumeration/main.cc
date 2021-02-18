@@ -201,8 +201,10 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "aml-nna",
       "sys/platform/00:00:29",  // registers device
+      /* TODO(fxb/70442): re-enable when USB is fixed
       "aml-usb-phy-v2",
       "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
+      */
       "mali/aml-gpu",
       "sys/platform/05:00:10/aml-canvas",
       "display/amlogic-display/display-controller",
@@ -304,15 +306,9 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
 
 TEST_F(DeviceEnumerationTest, NelsonTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/nelson",
-      "sys/platform/05:03:1/aml-axg-gpio",
-      "nelson-buttons/hid-buttons",
-      "class/bt-transport/000",
-      "class/bt-hci/000",
-      "sys/platform/05:00:2/aml-i2c",
-      "mali/aml-gpu",
-      "sys/platform/05:0a:21/nelson-usb-phy",
-      "nelson-audio-i2s-out",
+      "sys/platform/nelson", "sys/platform/05:03:1/aml-axg-gpio", "nelson-buttons/hid-buttons",
+      "class/bt-transport/000", "class/bt-hci/000", "sys/platform/05:00:2/aml-i2c", "mali/aml-gpu",
+      "sys/platform/05:0a:21/nelson-usb-phy", "nelson-audio-i2s-out",
       "sys/platform/05:05:13/nelson-audio-pdm-in",
       "sys/platform/00:00:29",  // registers device
 
@@ -323,11 +319,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       // so we can't just test that one of them is bound. That is why the
       // following test is disabled.
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
-      "backlight/ti-lp8556",
-      "sys/platform/05:00:10/aml-canvas",
-      "tee/optee",
-      "sys/platform/00:00:f/fallback-rtc",
-      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
+      "backlight/ti-lp8556", "sys/platform/05:00:10/aml-canvas", "tee/optee",
+      "sys/platform/00:00:f/fallback-rtc", "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/rpmb",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
@@ -348,38 +341,20 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-015/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-016/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
-      "tcs3400-light/tcs-3400/hid-device-000",
-      "aml-nna",
-      "sys/platform/05:05:22/clocks",
-      "aml-thermal-pll/thermal",
-      "class/thermal/000",
+      "tcs3400-light/tcs-3400/hid-device-000", "aml-nna", "sys/platform/05:05:22/clocks",
+      "aml-thermal-pll/thermal", "class/thermal/000",
       // "sys/platform/05:03:1e/cpu",
-      "aml-secure-mem/aml-securemem",
-      "class/pwm/000",
-      "class/pwm/001",
-      "class/pwm/002",
-      "class/pwm/003",
-      "class/pwm/004",
-      "class/pwm/005",
-      "class/pwm/006",
-      "class/pwm/007",
-      "class/pwm/008",
-      "class/pwm/009",
-      "aml-sdio/aml-sd-emmc/sdmmc",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "sys/platform/00:00:1e/dw-dsi",
-      "display/amlogic-display/display-controller",
-      "class/dsi-base/000",
-      "ti-ina231-mlb/ti-ina231",
-      "ti-ina231-speakers/ti-ina231",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
+      "aml-secure-mem/aml-securemem", "class/pwm/000", "class/pwm/001", "class/pwm/002",
+      "class/pwm/003", "class/pwm/004", "class/pwm/005", "class/pwm/006", "class/pwm/007",
+      "class/pwm/008", "class/pwm/009", "aml-sdio/aml-sd-emmc/sdmmc",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio", "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2", "sys/platform/00:00:1e/dw-dsi",
+      "display/amlogic-display/display-controller", "class/dsi-base/000", "ti-ina231-mlb/ti-ina231",
+      "ti-ina231-speakers/ti-ina231", "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
       "gt6853-touch/gt6853",
 
       // Amber LED.
-      "gpio-light",
-      "class/light/000",
+      "gpio-light", "class/light/000",
 
       "spi/aml-spi-1/spi/spi-1-0",
       // TODO(fxbug.dev/69587): Re-enable this check when the selina driver is stable.
