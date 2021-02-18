@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{ActionSet, DiscoverAction},
+        actions::{Action, ActionKey, ActionSet, DiscoverAction},
         component::{
             Component, ComponentInstance, InstanceState, ResolvedInstanceState,
             WeakComponentInstance,
@@ -13,13 +13,32 @@ use {
         hooks::{Event, EventError, EventErrorPayload, EventPayload},
         resolver::Resolver,
     },
+    async_trait::async_trait,
     std::convert::TryFrom,
     std::sync::Arc,
 };
 
-pub(super) async fn do_resolve(
-    component: &Arc<ComponentInstance>,
-) -> Result<Component, ModelError> {
+/// Resolves a component instance's declaration and initializes its state.
+pub struct ResolveAction {}
+
+impl ResolveAction {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl Action for ResolveAction {
+    type Output = Result<Component, ModelError>;
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_resolve(component).await
+    }
+    fn key(&self) -> ActionKey {
+        ActionKey::Resolve
+    }
+}
+
+async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, ModelError> {
     // Ensure `Resolved` is dispatched after `Discovered`.
     ActionSet::register(component.clone(), DiscoverAction::new()).await?;
     let result = async move {

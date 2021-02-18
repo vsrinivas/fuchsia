@@ -3,10 +3,31 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{component::ComponentInstance, error::ModelError},
+    crate::model::{
+        actions::{Action, ActionKey},
+        component::ComponentInstance,
+        error::ModelError,
+    },
+    async_trait::async_trait,
     std::sync::Arc,
 };
 
-pub(super) async fn do_stop(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
-    component.stop_instance(false).await
+/// Stops a component instance.
+pub struct StopAction {}
+
+impl StopAction {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl Action for StopAction {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        component.stop_instance(false).await
+    }
+    fn key(&self) -> ActionKey {
+        ActionKey::Stop
+    }
 }

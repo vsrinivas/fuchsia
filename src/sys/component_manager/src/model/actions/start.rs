@@ -4,6 +4,7 @@
 
 use {
     crate::model::{
+        actions::{Action, ActionKey},
         component::{
             BindReason, ComponentInstance, ExecutionState, InstanceState, Package, Runtime,
             WeakComponentInstance,
@@ -14,6 +15,7 @@ use {
         namespace::IncomingNamespace,
         runner::Runner,
     },
+    async_trait::async_trait,
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
@@ -24,7 +26,29 @@ use {
     vfs::execution_scope::ExecutionScope,
 };
 
-pub(super) async fn do_start(
+/// Starts a component instance.
+pub struct StartAction {
+    bind_reason: BindReason,
+}
+
+impl StartAction {
+    pub fn new(bind_reason: BindReason) -> Self {
+        Self { bind_reason }
+    }
+}
+
+#[async_trait]
+impl Action for StartAction {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_start(component, &self.bind_reason).await
+    }
+    fn key(&self) -> ActionKey {
+        ActionKey::Start
+    }
+}
+
+async fn do_start(
     component: &Arc<ComponentInstance>,
     bind_reason: &BindReason,
 ) -> Result<(), ModelError> {

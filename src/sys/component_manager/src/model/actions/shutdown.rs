@@ -4,10 +4,11 @@
 
 use {
     crate::model::{
-        actions::{ActionSet, ShutdownAction},
+        actions::{Action, ActionKey, ActionSet},
         component::{ComponentInstance, InstanceState, ResolvedInstanceState},
         error::ModelError,
     },
+    async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl, OfferSource,
         OfferTarget, RegistrationSource, StorageDirectorySource,
@@ -19,6 +20,27 @@ use {
     std::fmt,
     std::sync::Arc,
 };
+
+/// Shuts down all component instances in this component (stops them and guarantees they will never
+/// be started again).
+pub struct ShutdownAction {}
+
+impl ShutdownAction {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl Action for ShutdownAction {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_shutdown(component).await
+    }
+    fn key(&self) -> ActionKey {
+        ActionKey::Shutdown
+    }
+}
 
 /// A DependencyNode represents a provider or user of a capability. This
 /// may be either a component or a component collection.
@@ -219,7 +241,7 @@ impl ShutdownJob {
     }
 }
 
-pub async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
+async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
     {
         let state = component.lock_state().await;
         {
@@ -540,21 +562,37 @@ fn get_dependencies_from_environments(decl: &ComponentDecl, dependency_map: &mut
 
 #[cfg(test)]
 mod tests {
-    // Tests for ShutdownJob are found in actions.rs where we try to shutdown
-    // various component topologies.
     use {
         super::*,
-        crate::model::testing::test_helpers::{
-            default_component_decl, ChildDeclBuilder, CollectionDeclBuilder, EnvironmentDeclBuilder,
+        crate::model::{
+            actions::{
+                test_utils::{is_executing, is_unresolved},
+                StopAction,
+            },
+            binding::Binder,
+            component::BindReason,
+            hooks::{self, EventPayload, EventType, Hook, HooksRegistration},
+            testing::{
+                test_helpers::{
+                    component_decl_with_test_runner, default_component_decl,
+                    execution_is_shut_down, has_child, ActionsTest, ChildDeclBuilder,
+                    CollectionDeclBuilder, ComponentDeclBuilder, ComponentInfo,
+                    EnvironmentDeclBuilder,
+                },
+                test_hook::Lifecycle,
+            },
         },
-        anyhow::Error,
+        async_trait::async_trait,
         cm_rust::{
-            CapabilityName, ChildDecl, DependencyType, ExposeDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, OfferProtocolDecl, OfferResolverDecl, OfferTarget,
+            CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
+            OfferResolverDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
+            UseSource,
         },
         fidl_fuchsia_sys2 as fsys,
+        moniker::{AbsoluteMoniker, PartialMoniker},
         std::collections::HashMap,
-        std::convert::TryFrom,
+        std::{convert::TryFrom, sync::Weak},
     };
 
     // TODO(jmatt) Add tests for all capability types
@@ -580,7 +618,7 @@ mod tests {
     }
 
     #[test]
-    fn test_service_from_parent() -> Result<(), Error> {
+    fn test_service_from_parent() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
@@ -601,11 +639,10 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_weak_service_from_parent() -> Result<(), Error> {
+    fn test_weak_service_from_parent() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
@@ -626,11 +663,10 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_service_from_child() -> Result<(), Error> {
+    fn test_service_from_child() {
         let decl = ComponentDecl {
             exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
                 target: ExposeTarget::Parent,
@@ -650,11 +686,10 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_single_dependency() -> Result<(), Error> {
+    fn test_single_dependency() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -696,11 +731,10 @@ mod tests {
         expected.sort_unstable();
 
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_environment_with_runner_from_parent() -> Result<(), Error> {
+    fn test_environment_with_runner_from_parent() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
                 .name("env")
@@ -721,11 +755,10 @@ mod tests {
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_environment_with_runner_from_child() -> Result<(), Error> {
+    fn test_environment_with_runner_from_child() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
                 .name("env")
@@ -749,11 +782,10 @@ mod tests {
         ));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_environment_with_runner_from_child_to_collection() -> Result<(), Error> {
+    fn test_environment_with_runner_from_child_to_collection() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
                 .name("env")
@@ -774,11 +806,10 @@ mod tests {
         ));
         expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_chained_environments() -> Result<(), Error> {
+    fn test_chained_environments() {
         let decl = ComponentDecl {
             environments: vec![
                 EnvironmentDeclBuilder::new()
@@ -817,11 +848,10 @@ mod tests {
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_environment_and_offer() -> Result<(), Error> {
+    fn test_environment_and_offer() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Child("childB".to_string()),
@@ -857,11 +887,10 @@ mod tests {
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_single_weak_dependency() -> Result<(), Error> {
+    fn test_single_weak_dependency() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -901,11 +930,10 @@ mod tests {
         expected.sort_unstable();
 
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_multiple_dependencies_same_source() -> Result<(), Error> {
+    fn test_multiple_dependencies_same_source() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -954,11 +982,10 @@ mod tests {
         expected.sort_unstable();
 
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_multiple_dependents_same_source() -> Result<(), Error> {
+    fn test_multiple_dependents_same_source() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -1010,11 +1037,10 @@ mod tests {
         expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
         expected.sort_unstable();
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_multiple_dependencies() -> Result<(), Error> {
+    fn test_multiple_dependencies() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -1074,11 +1100,10 @@ mod tests {
         expected.sort_unstable();
 
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
-    fn test_component_is_source_and_target() -> Result<(), Error> {
+    fn test_component_is_source_and_target() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -1131,7 +1156,6 @@ mod tests {
         expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
         expected.sort_unstable();
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     /// Tests a graph that looks like the below, tildes indicate a
@@ -1144,7 +1168,7 @@ mod tests {
     ///     \      /
     ///      *>~~>*
     #[test]
-    fn test_complex_routing() -> Result<(), Error> {
+    fn test_complex_routing() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -1246,7 +1270,6 @@ mod tests {
         expected.push((DependencyNode::Child(child_e.name.clone()), vec![]));
         expected.sort_unstable();
         validate_results(expected, process_component_dependencies(&decl));
-        Ok(())
     }
 
     #[test]
@@ -1333,5 +1356,1214 @@ mod tests {
         ];
         expected.sort_unstable();
         validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn action_shutdown_blocks_stop() {
+        let test = ActionsTest::new("root", vec![], None).await;
+        let component = test.model.root.clone();
+        let mut action_set = component.lock_actions().await;
+
+        // Register some actions, and get notifications. Use `register_inner` so we can register
+        // the action without immediately running it.
+        let (task1, nf1) = action_set.register_inner(&component, ShutdownAction::new());
+        let (task2, nf2) = action_set.register_inner(&component, StopAction::new());
+
+        drop(action_set);
+
+        // Complete actions, while checking futures.
+        ActionSet::finish(&component, &ActionKey::Shutdown).await;
+
+        // nf2 should be blocked on task1 completing.
+        assert!(nf1.fut.peek().is_none());
+        assert!(nf2.fut.peek().is_none());
+        task1.unwrap().tx.send(Ok(())).unwrap();
+        task2.unwrap().spawn();
+        nf1.await.unwrap();
+        nf2.await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn action_shutdown_stop_stop() {
+        let test = ActionsTest::new("root", vec![], None).await;
+        let component = test.model.root.clone();
+        let mut action_set = component.lock_actions().await;
+
+        // Register some actions, and get notifications. Use `register_inner` so we can register
+        // the action without immediately running it.
+        let (task1, nf1) = action_set.register_inner(&component, ShutdownAction::new());
+        let (task2, nf2) = action_set.register_inner(&component, StopAction::new());
+        let (task3, nf3) = action_set.register_inner(&component, StopAction::new());
+
+        drop(action_set);
+
+        // Complete actions, while checking notifications.
+        ActionSet::finish(&component, &ActionKey::Shutdown).await;
+
+        // nf2 and nf3 should be blocked on task1 completing.
+        assert!(nf1.fut.peek().is_none());
+        assert!(nf2.fut.peek().is_none());
+        task1.unwrap().tx.send(Ok(())).unwrap();
+        task2.unwrap().spawn();
+        assert!(task3.is_none());
+        nf1.await.unwrap();
+        nf2.await.unwrap();
+        nf3.await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_one_component() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        // Bind to the component, causing it to start. This should cause the component to have an
+        // `Execution`.
+        let component = test.look_up(vec!["a:0"].into()).await;
+        test.model
+            .bind(&component.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component).await);
+        let a_info = ComponentInfo::new(component.clone()).await;
+
+        // Register shutdown action, and wait for it. Component should shut down (no more
+        // `Execution`).
+        ActionSet::register(a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        a_info.check_is_shut_down(&test.runner).await;
+
+        // Trying to bind to the component should fail because it's shut down.
+        test.model
+            .bind(&a_info.component.abs_moniker, &BindReason::Eager)
+            .await
+            .expect_err("successfully bound to a after shutdown");
+
+        // Shut down the component again. This succeeds, but has no additional effect.
+        ActionSet::register(a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        &a_info.check_is_shut_down(&test.runner).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_collection() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
+            (
+                "container",
+                ComponentDeclBuilder::new()
+                    .add_transient_collection("coll")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+            ("c", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
+
+        // Create dynamic instances in "coll".
+        test.create_dynamic_child("coll", "a").await;
+        test.create_dynamic_child("coll", "b").await;
+
+        // Bind to the components, causing them to start. This should cause them to have an
+        // `Execution`.
+        let component_container = test.look_up(vec!["container:0"].into()).await;
+        let component_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
+        let component_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
+        let component_c = test.look_up(vec!["container:0", "c:0"].into()).await;
+        test.model
+            .bind(&component_container.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to container");
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:a");
+        test.model
+            .bind(&component_b.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:b");
+        test.model
+            .bind(&component_c.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:b");
+        assert!(is_executing(&component_container).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(has_child(&component_container, "coll:a:1").await);
+        assert!(has_child(&component_container, "coll:b:2").await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_container_info = ComponentInfo::new(component_container).await;
+
+        // Register shutdown action, and wait for it. Components should shut down (no more
+        // `Execution`). Also, the instances in the collection should have been destroyed because
+        // they were transient.
+        ActionSet::register(component_container_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_container_info.check_is_shut_down(&test.runner).await;
+        assert!(!has_child(&component_container_info.component, "coll:a:1").await);
+        assert!(!has_child(&component_container_info.component, "coll:b:2").await);
+        assert!(has_child(&component_container_info.component, "c:0").await);
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+
+        // Verify events.
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut next: Vec<_> = events.drain(0..3).collect();
+            next.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["container:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["container:0", "coll:a:1"].into()),
+                Lifecycle::Stop(vec!["container:0", "coll:b:2"].into()),
+            ];
+            assert_eq!(next, expected);
+
+            // These components were destroyed because they lived in a transient collection.
+            let mut next: Vec<_> = events.drain(0..2).collect();
+            next.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Destroy(vec!["container:0", "coll:a:1"].into()),
+                Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
+            ];
+            assert_eq!(next, expected);
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_not_started() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        assert!(!is_executing(&component_a).await);
+        assert!(!is_executing(&component_b).await);
+
+        // Register shutdown action on "a", and wait for it.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a).await);
+        assert!(execution_is_shut_down(&component_b).await);
+
+        // Now "a" is shut down. There should be no events though because the component was
+        // never started.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a).await);
+        assert!(execution_is_shut_down(&component_b).await);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(events, Vec::<Lifecycle>::new());
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_not_resolved() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("c").build()),
+            ("c", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component_a).await);
+
+        // Register shutdown action on "a", and wait for it.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a).await);
+        // Get component without resolving it.
+        let component_b = {
+            let state = component_a.lock_state().await;
+            match *state {
+                InstanceState::Resolved(ref s) => {
+                    s.get_live_child(&PartialMoniker::from("b")).expect("child b not found")
+                }
+                _ => panic!("not resolved"),
+            }
+        };
+        assert!(execution_is_shut_down(&component_b).await);
+        assert!(is_unresolved(&component_b).await);
+
+        // Now "a" is shut down. There should be no event for "b" because it was never started
+        // (or resolved).
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0"].into())]);
+        }
+    }
+
+    /// Shut down `a`:
+    ///  a
+    ///   \
+    ///    b
+    ///   / \
+    ///  c   d
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_hierarchy() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+            ];
+            assert_eq!(first, expected);
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
+    /// Shut down `a`:
+    ///   a
+    ///    \
+    ///     b
+    ///   / | \
+    ///  c<-d->e
+    /// In this case C and E use a service provided by d
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_multiple_deps() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .add_eager_child("e")
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("e".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceD".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceD".into(),
+                        source_path: "/svc/serviceD".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            (
+                "e",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceD".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .build(),
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_e = test.look_up(vec!["a:0", "b:0", "e:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_e).await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+        let component_e_info = ComponentInfo::new(component_e).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        component_e_info.check_is_shut_down(&test.runner).await;
+
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let mut expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "e:0"].into()),
+            ];
+            assert_eq!(first, expected);
+
+            let next: Vec<_> = events.drain(0..1).collect();
+            expected = vec![Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into())];
+            assert_eq!(next, expected);
+
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
+    /// Shut down `a`:
+    ///    a
+    ///     \
+    ///      b
+    ///   / / \  \
+    ///  c<-d->e->f
+    /// In this case C and E use a service provided by D and
+    /// F uses a service provided by E, shutdown order should be
+    /// {F}, {C, E}, {D}, {B}, {A}
+    /// Note that C must stop before D, but may stop before or after
+    /// either of F and E.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_multiple_out_and_longer_chain() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .add_eager_child("e")
+                    .add_eager_child("f")
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("e".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("e".to_string()),
+                        source_name: "serviceE".into(),
+                        target_name: "serviceE".into(),
+                        target: OfferTarget::Child("f".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceD".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceD".into(),
+                        source_path: "/svc/serviceD".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            (
+                "e",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceE".into(),
+                        source_path: "/svc/serviceE".parse().unwrap(),
+                    })
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceD".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceE".into(),
+                        target_name: "serviceE".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            (
+                "f",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceE".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                    }))
+                    .build(),
+            ),
+        ];
+        let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
+        let moniker_b: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let moniker_c: AbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
+        let moniker_d: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(moniker_a.clone()).await;
+        let component_b = test.look_up(moniker_b.clone()).await;
+        let component_c = test.look_up(moniker_c.clone()).await;
+        let component_d = test.look_up(moniker_d.clone()).await;
+        let component_e = test.look_up(moniker_e.clone()).await;
+        let component_f = test.look_up(moniker_f.clone()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_e).await);
+        assert!(is_executing(&component_f).await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+        let component_e_info = ComponentInfo::new(component_e).await;
+        let component_f_info = ComponentInfo::new(component_f).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        component_e_info.check_is_shut_down(&test.runner).await;
+        component_f_info.check_is_shut_down(&test.runner).await;
+
+        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
+        comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
+        // technically we could just depend on 'D' since it is the last of b's
+        // children, but we add all the children for resilence against the
+        // future
+        comes_after.insert(
+            moniker_b.clone(),
+            vec![moniker_c.clone(), moniker_d.clone(), moniker_e.clone(), moniker_f.clone()],
+        );
+        comes_after.insert(moniker_d.clone(), vec![moniker_c.clone(), moniker_e.clone()]);
+        comes_after.insert(moniker_c.clone(), vec![]);
+        comes_after.insert(moniker_e.clone(), vec![moniker_f.clone()]);
+        comes_after.insert(moniker_f.clone(), vec![]);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+
+            for e in events {
+                match e {
+                    Lifecycle::Stop(moniker) => match comes_after.remove(&moniker) {
+                        Some(dependents) => {
+                            for d in dependents {
+                                if comes_after.contains_key(&d) {
+                                    panic!("{} stopped before its dependent {}", moniker, d);
+                                }
+                            }
+                        }
+                        None => {
+                            panic!("{} was unknown or shut down more than once", moniker);
+                        }
+                    },
+                    _ => {
+                        panic!("Unexpected lifecycle type");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Shut down `a`:
+    ///           a
+    ///
+    ///           |
+    ///
+    ///     +---- b ----+
+    ///    /             \
+    ///   /     /   \     \
+    ///
+    ///  c <~~ d ~~> e ~~> f
+    ///          \       /
+    ///           +~~>~~+
+    /// In this case C and E use a service provided by D and
+    /// F uses a services provided by E and D, shutdown order should be F must
+    /// stop before E and {C,E,F} must stop before D. C may stop before or
+    /// after either of {F, E}.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_multiple_out_multiple_in() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .add_eager_child("e")
+                    .add_eager_child("f")
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("e".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: OfferTarget::Child("f".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("e".to_string()),
+                        source_name: "serviceE".into(),
+                        target_name: "serviceE".into(),
+                        target: OfferTarget::Child("f".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceD".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceD".into(),
+                        source_path: "/svc/serviceD".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceD".into(),
+                        target_name: "serviceD".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            (
+                "e",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceE".into(),
+                        source_path: "/svc/serviceE".parse().unwrap(),
+                    })
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceE".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                    }))
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceE".into(),
+                        target_name: "serviceE".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            (
+                "f",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceE".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceD".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .build(),
+            ),
+        ];
+        let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
+        let moniker_b: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let moniker_c: AbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
+        let moniker_d: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(moniker_a.clone()).await;
+        let component_b = test.look_up(moniker_b.clone()).await;
+        let component_c = test.look_up(moniker_c.clone()).await;
+        let component_d = test.look_up(moniker_d.clone()).await;
+        let component_e = test.look_up(moniker_e.clone()).await;
+        let component_f = test.look_up(moniker_f.clone()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_e).await);
+        assert!(is_executing(&component_f).await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+        let component_e_info = ComponentInfo::new(component_e).await;
+        let component_f_info = ComponentInfo::new(component_f).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        component_e_info.check_is_shut_down(&test.runner).await;
+        component_f_info.check_is_shut_down(&test.runner).await;
+
+        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
+        comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
+        // technically we could just depend on 'D' since it is the last of b's
+        // children, but we add all the children for resilence against the
+        // future
+        comes_after.insert(
+            moniker_b.clone(),
+            vec![moniker_c.clone(), moniker_d.clone(), moniker_e.clone(), moniker_f.clone()],
+        );
+        comes_after.insert(
+            moniker_d.clone(),
+            vec![moniker_c.clone(), moniker_e.clone(), moniker_f.clone()],
+        );
+        comes_after.insert(moniker_c.clone(), vec![]);
+        comes_after.insert(moniker_e.clone(), vec![moniker_f.clone()]);
+        comes_after.insert(moniker_f.clone(), vec![]);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+
+            for e in events {
+                match e {
+                    Lifecycle::Stop(moniker) => {
+                        let dependents = comes_after.remove(&moniker).expect(&format!(
+                            "{} was unknown or shut down more than once",
+                            moniker
+                        ));
+                        for d in dependents {
+                            if comes_after.contains_key(&d) {
+                                panic!("{} stopped before its dependent {}", moniker, d);
+                            }
+                        }
+                    }
+                    _ => {
+                        panic!("Unexpected lifecycle type");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Shut down `a`:
+    ///  a
+    ///   \
+    ///    b
+    ///   / \
+    ///  c-->d
+    /// In this case D uses a resource exposed by C
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_dependency() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("c".to_string()),
+                        source_name: "serviceC".into(),
+                        target_name: "serviceC".into(),
+                        target: OfferTarget::Child("d".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceC".into(),
+                        source_path: "/svc/serviceC".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceC".into(),
+                        target_name: "serviceC".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceC".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                    }))
+                    .build(),
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up and dependency order.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                Lifecycle::Stop(vec!["a:0"].into()),
+            ];
+            assert_eq!(events, expected);
+        }
+    }
+
+    /// Shut down `b`:
+    ///  a
+    ///   \
+    ///    b
+    ///     \
+    ///      b
+    ///       \
+    ///      ...
+    ///
+    /// `b` is a child of itself, but shutdown should still be able to complete.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_self_referential() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
+
+        // Bind to second `b`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        test.model
+            .bind(&component_b.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        test.model
+            .bind(&component_b2.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_b2).await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_b2_info = ComponentInfo::new(component_b2).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up and dependency order.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_b2_info.check_is_shut_down(&test.runner).await;
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
+    /// Shut down `a`:
+    ///  a
+    ///   \
+    ///    b
+    ///   / \
+    ///  c   d
+    ///
+    /// `b` fails to finish shutdown the first time, but succeeds the second time.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_error() {
+        struct StopErrorHook {
+            moniker: AbsoluteMoniker,
+        }
+
+        impl StopErrorHook {
+            fn new(moniker: AbsoluteMoniker) -> Self {
+                Self { moniker }
+            }
+
+            fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+                vec![HooksRegistration::new(
+                    "StopErrorHook",
+                    vec![EventType::Stopped],
+                    Arc::downgrade(self) as Weak<dyn Hook>,
+                )]
+            }
+
+            async fn on_shutdown_instance_async(
+                &self,
+                target_moniker: &AbsoluteMoniker,
+            ) -> Result<(), ModelError> {
+                if *target_moniker == self.moniker {
+                    return Err(ModelError::unsupported("ouch"));
+                }
+                Ok(())
+            }
+        }
+
+        #[async_trait]
+        impl Hook for StopErrorHook {
+            async fn on(self: Arc<Self>, event: &hooks::Event) -> Result<(), ModelError> {
+                if let Ok(EventPayload::Stopped { .. }) = event.result {
+                    self.on_shutdown_instance_async(&event.target_moniker).await?;
+                }
+                Ok(())
+            }
+        }
+
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
+        ];
+        let error_hook = Arc::new(StopErrorHook::new(vec!["a:0", "b:0"].into()));
+        let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+
+        // Register shutdown action on "a", and wait for it. "b"'s component shuts down, but "b"
+        // returns an error so "a" does not.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect_err("shutdown succeeded unexpectedly");
+        component_a_info.check_not_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+            ];
+            assert_eq!(first, expected);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0", "b:0"].into())],);
+        }
+
+        // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
+        // "a" is allowed to shut down this time.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+            ];
+            assert_eq!(first, expected);
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
+            );
+        }
     }
 }
