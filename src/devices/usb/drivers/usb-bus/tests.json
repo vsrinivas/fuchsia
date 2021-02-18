@@ -1,0 +1,16 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.HCI"
+        },
+        "expected": "match",
+        "name": "MatchHCI"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DCI"
+        },
+        "expected": "abort",
+        "name": "AbortDCI"
+    }
+]

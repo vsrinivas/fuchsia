@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
+#include "src/devices/usb/drivers/usb-bus/usb_bus_bind.h"
 #include "usb-device.h"
 
 namespace usb_bus {
@@ -240,5 +240,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace usb_bus
 
-ZIRCON_DRIVER_BEGIN(usb_bus, usb_bus::driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_HCI), ZIRCON_DRIVER_END(usb_bus)
+ZIRCON_DRIVER(usb_bus, usb_bus::driver_ops, "zircon", "0.1");
