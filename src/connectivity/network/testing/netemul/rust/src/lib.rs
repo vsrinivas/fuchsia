@@ -301,7 +301,7 @@ impl<'a> TestEnvironment<'a> {
         self.install_endpoint(endpoint, if_config).await
     }
 
-    /// Installs and configures `endpoint` in this enviroment with `config`.
+    /// Installs and configures `endpoint` in this environment with `config`.
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,

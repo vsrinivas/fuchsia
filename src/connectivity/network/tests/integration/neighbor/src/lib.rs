@@ -14,8 +14,8 @@ use futures::{stream, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStre
 use net_declare::{fidl_ip, fidl_mac};
 use net_types::SpecifiedAddress;
 use netemul::{
-    Endpoint as _, EnvironmentUdpSocket as _, TestEnvironment, TestInterface, TestNetwork,
-    TestSandbox,
+    Endpoint as _, EnvironmentTcpStream, EnvironmentUdpSocket as _, TestEnvironment, TestInterface,
+    TestNetwork, TestSandbox,
 };
 use netstack_testing_common::environments::*;
 use netstack_testing_common::Result;
@@ -304,6 +304,26 @@ fn assert_stale_entry(
     );
 }
 
+/// Helper function to assert validity of an unreachable entry.
+fn assert_unreachable_entry(
+    entry: fidl_fuchsia_net_neighbor::Entry,
+    match_interface: u64,
+    match_neighbor: fidl_fuchsia_net::IpAddress,
+) {
+    matches::assert_matches!(
+        entry,
+        fidl_fuchsia_net_neighbor::Entry {
+            interface: Some(interface),
+            neighbor: Some(neighbor),
+            state: Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable(
+                fidl_fuchsia_net_neighbor::UnreachableState { .. },
+            )),
+            mac: None,
+            updated_at: Some(updated_at), ..
+        } if interface == match_interface && neighbor == match_neighbor && updated_at != 0
+    );
+}
+
 /// Helper function to assert validity of a static entry.
 fn assert_static_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
@@ -406,7 +426,7 @@ enum FrameMetadata {
     NeighborSolicitation(fidl_fuchsia_net::IpAddress),
     /// A UDP datagram destined to the address.
     Udp(fidl_fuchsia_net::IpAddress),
-    /// Any other succesfully parsed frame.
+    /// Any other successfully parsed frame.
     Other,
 }
 
@@ -610,48 +630,21 @@ async fn neigh_clear_entries() -> Result {
 
     let mut entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
-    // Ignore the updated at field when comparing the entries as we can't
-    // predict the exact time when neighbors are updated.
-    let () = entries.values_mut().for_each(|x| x.updated_at = None);
-    assert_eq!(
-        entries,
-        [
-            (
-                (alice.ep.id(), BOB_IP),
-                fidl_fuchsia_net_neighbor::Entry {
-                    interface: Some(alice.ep.id()),
-                    neighbor: Some(BOB_IP),
-                    state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
-                        fidl_fuchsia_net_neighbor::ReachableState {
-                            ..fidl_fuchsia_net_neighbor::ReachableState::EMPTY
-                        }
-                    )),
-                    mac: Some(BOB_MAC),
-                    updated_at: None,
-                    ..fidl_fuchsia_net_neighbor::Entry::EMPTY
-                }
-            ),
-            (
-                (alice.ep.id(), bob.ipv6),
-                fidl_fuchsia_net_neighbor::Entry {
-                    interface: Some(alice.ep.id()),
-                    neighbor: Some(bob.ipv6),
-                    state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
-                        fidl_fuchsia_net_neighbor::ReachableState {
-                            ..fidl_fuchsia_net_neighbor::ReachableState::EMPTY
-                        }
-                    )),
-                    mac: Some(BOB_MAC),
-                    updated_at: None,
-                    ..fidl_fuchsia_net_neighbor::Entry::EMPTY
-                }
-            ),
-        ]
-        // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
-        .iter()
-        .cloned()
-        .collect::<HashMap<_, _>>(),
+    // IPv4 entry.
+    let () = assert_reachable_entry(
+        entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
+        alice.ep.id(),
+        BOB_IP,
+        BOB_MAC,
     );
+    // IPv6 entry.
+    let () = assert_reachable_entry(
+        entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
+        alice.ep.id(),
+        bob.ipv6,
+        BOB_MAC,
+    );
+    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
 
     // Clear entries and verify they go away.
     let () = controller
@@ -662,30 +655,14 @@ async fn neigh_clear_entries() -> Result {
         .context("clear_entries failed")?;
     let mut entries =
         list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
-    // Ignore the updated at field when comparing the entries as we can't
-    // predict the exact time when neighbors are updated.
-    let () = entries.values_mut().for_each(|x| x.updated_at = None);
-    assert_eq!(
-        entries,
-        vec![(
-            (alice.ep.id(), bob.ipv6),
-            fidl_fuchsia_net_neighbor::Entry {
-                interface: Some(alice.ep.id()),
-                neighbor: Some(bob.ipv6),
-                state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
-                    fidl_fuchsia_net_neighbor::ReachableState {
-                        ..fidl_fuchsia_net_neighbor::ReachableState::EMPTY
-                    }
-                )),
-                mac: Some(BOB_MAC),
-                updated_at: None,
-                ..fidl_fuchsia_net_neighbor::Entry::EMPTY
-            }
-        ),]
-        .into_iter()
-        .collect::<HashMap<_, _>>(),
-        "IPv4 entries should have been emptied"
+    // IPv6 entry.
+    let () = assert_reachable_entry(
+        entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
+        alice.ep.id(),
+        bob.ipv6,
+        BOB_MAC,
     );
+    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
     let () = controller
         .clear_entries(alice.ep.id(), fidl_fuchsia_net::IpVersion::V6)
         .await
@@ -1046,6 +1023,54 @@ async fn neigh_unreachability_config() -> Result {
             })
         );
     }
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn neigh_unreachable_entries() -> Result {
+    // TODO(https://fxbug.dev/59425): Extend this test with hanging get.
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let network = sandbox.create_network("net").await.context("failed to create network")?;
+
+    let alice = create_environment(
+        &sandbox,
+        &network,
+        "neigh_unreachable_entries",
+        "alice",
+        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
+        ALICE_MAC,
+    )
+    .await
+    .context("failed to setup alice environment")?;
+
+    // No Neighbors should exist initially.
+    let initial_entries =
+        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+    assert!(initial_entries.is_empty(), "expected empty set of entries: {:?}", initial_entries);
+
+    // Intentionally fail to connect to bob so we can create a neighbor entry
+    // and have it go to UNREACHABLE state.
+    let fidl_fuchsia_net_ext::IpAddress(bob_addr) = BOB_IP.into();
+    let addr = std::net::SocketAddr::new(bob_addr, 8080);
+    assert_eq!(
+        fuchsia_async::net::TcpStream::connect_in_env(&alice.env, addr)
+            .await
+            .expect_err("expected TCP connect to fail")
+            .chain()
+            .find_map(|cause| cause.downcast_ref::<std::io::Error>())
+            .and_then(|io_error| io_error.raw_os_error()),
+        Some(libc::EHOSTUNREACH),
+    );
+
+    let mut entries =
+        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+    let () = assert_unreachable_entry(
+        entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
+        alice.ep.id(),
+        BOB_IP,
+    );
+    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
 
     Ok(())
 }

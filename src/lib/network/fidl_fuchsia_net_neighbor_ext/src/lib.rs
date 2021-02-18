@@ -49,7 +49,7 @@ impl std::fmt::Display for Entry {
         match state {
             None => write!(f, "?"),
             Some(fidl::EntryState::Incomplete(fidl::IncompleteState { .. })) => {
-                write!(f, "INCOMPETE")
+                write!(f, "INCOMPLETE")
             }
             Some(fidl::EntryState::Reachable(fidl::ReachableState { expires_at, .. })) => {
                 write!(f, "REACHABLE | ")?;
@@ -78,6 +78,9 @@ impl std::fmt::Display for Entry {
             Some(fidl::EntryState::Delay(fidl::DelayState { .. })) => write!(f, "DELAY"),
             Some(fidl::EntryState::Probe(fidl::ProbeState { .. })) => write!(f, "PROBE"),
             Some(fidl::EntryState::Static_(fidl::StaticState { .. })) => write!(f, "STATIC"),
+            Some(fidl::EntryState::Unreachable(fidl::UnreachableState { .. })) => {
+                write!(f, "UNREACHABLE")
+            }
         }
     }
 }

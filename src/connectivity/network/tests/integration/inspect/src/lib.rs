@@ -206,10 +206,9 @@ async fn inspect_nic() -> Result {
                     Packets: 0u64,
                 },
                 Neighbor: contains {
-                    // TODO(https://fxbug.dev/66796): Replace with
-                    // UnreachableEntryLookups and remove "contains" above after
-                    // https://gvisor.dev/issues/5462 resolves.
-                    FailedEntryLookups: 0u64,
+                    // TODO(https://fxbug.dev/66796): Remove "contains" after
+                    // https://gvisor.dev/issues/5463 resolves.
+                    UnreachableEntryLookups: 0u64,
                 },
             },
             "Network Endpoint Stats": {
@@ -248,10 +247,9 @@ async fn inspect_nic() -> Result {
                     Packets: AnyProperty,
                 },
                 Neighbor: contains {
-                    // TODO(https://fxbug.dev/66796): Replace with
-                    // UnreachableEntryLookups and remove "contains" above after
-                    // https://gvisor.dev/issues/5462 resolves.
-                    FailedEntryLookups: AnyProperty,
+                    // TODO(https://fxbug.dev/66796): Remove "contains" after
+                    // https://gvisor.dev/issues/5463 resolves.
+                    UnreachableEntryLookups: AnyProperty,
                 },
             },
             "Ethernet Info": {
@@ -312,10 +310,9 @@ async fn inspect_nic() -> Result {
                     Packets: AnyProperty,
                 },
                 Neighbor: contains {
-                    // TODO(https://fxbug.dev/66796): Replace with
-                    // UnreachableEntryLookups and remove "contains" above after
-                    // https://gvisor.dev/issues/5462 resolves.
-                    FailedEntryLookups: AnyProperty,
+                    // TODO(https://fxbug.dev/66796): Remove "contains" after
+                    // https://gvisor.dev/issues/5463 resolves.
+                    UnreachableEntryLookups: AnyProperty,
                 },
             },
             "Network Device Info": {

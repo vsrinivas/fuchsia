@@ -373,13 +373,8 @@ func toNeighborEntry(nicID tcpip.NICID, n stack.NeighborEntry) (neighbor.Entry, 
 		e.SetState(neighbor.EntryStateWithProbe(neighbor.ProbeState{}))
 	case stack.Static:
 		e.SetState(neighbor.EntryStateWithStatic(neighbor.StaticState{}))
-	case stack.Failed:
-		// Failed is an internal state used by the netstack to inform transport
-		// endpoints of a failure to resolve a link-layer address. Clients should
-		// not be concerned with this error, thus is not representable by the
-		// fuchsia.net.neighbor FIDL. When an entry with this state is received, the
-		// entry should be skipped.
-		return e, false
+	case stack.Unreachable:
+		e.SetState(neighbor.EntryStateWithUnreachable(neighbor.UnreachableState{}))
 	default:
 		panic(fmt.Sprintf("invalid NeighborState = %d: %#v", n.State, n))
 	}

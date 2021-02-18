@@ -44,13 +44,18 @@ union EntryState {
 
     /// A reachability confirmation is actively sought by periodically
     /// retransmitting reachability probes until a reachability confirmation is
-    /// received, or until the max amount of probes has been sent.
+    /// received, or until the maximum number of probes has been sent.
     5: ProbeState probe;
 
     /// Static entries are explicitly added with [`Controller.AddEntry`]. They
     /// do not expire and are not deleted until explicitly removed with
     /// [`Controller.RemoveEntry`].
     6: StaticState static;
+
+    /// Negative reachability has been confirmed; the path to the neighbor may
+    /// not be functioning properly. A reachability confirmation was not received
+    /// after transmitting the maximum number of reachability probes.
+    7: UnreachableState unreachable;
 };
 
 table IncompleteState {
@@ -77,4 +82,7 @@ table ProbeState {
 };
 
 table StaticState {
+};
+
+table UnreachableState {
 };
