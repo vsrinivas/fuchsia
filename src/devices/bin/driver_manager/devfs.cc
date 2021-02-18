@@ -521,8 +521,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     } else {
       dir_path = current_dir;
     }
-    fuchsia_io_DirectoryOpen(diagnostics_channel->get(), flags, 0, dir_path, strlen(dir_path),
-                             ipc.release());
+    fio::Directory::Call::Open(fidl::UnownedClientEnd<fio::Directory>(diagnostics_channel->get()),
+                               flags, 0, fidl::unowned_str(dir_path, strlen(dir_path)),
+                               fidl::ServerEnd<fio::Node>(std::move(ipc)));
     return;
   }
 
@@ -572,8 +573,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
   }
 
   // Otherwise we will pass the request on to the remote.
-  fuchsia_io_DirectoryOpen(dn->device->device_controller().channel().get(), flags, 0, ".", 1,
-                           ipc.release());
+  fio::Directory::Call::Open(
+      fidl::UnownedClientEnd<fio::Directory>(dn->device->device_controller().channel().get()),
+      flags, 0, ".", fidl::ServerEnd<fio::Node>(std::move(ipc)));
 }
 
 void devfs_remove(Devnode* dn) {
@@ -757,8 +759,9 @@ zx_status_t devfs_connect(const Device* dev, zx::channel client_remote) {
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  fuchsia_io_DirectoryOpen(dev->device_controller().channel().get(), 0 /* flags */, 0 /* mode */,
-                           ".", 1, client_remote.release());
+  fio::Directory::Call::Open(
+      fidl::UnownedClientEnd<fio::Directory>(dev->device_controller().channel().get()), 0, 0, ".",
+      fidl::ServerEnd<fio::Node>(std::move(client_remote)));
   return ZX_OK;
 }
 
