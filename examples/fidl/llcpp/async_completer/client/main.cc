@@ -7,7 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/client.h>
-#include <lib/zx/channel.h>
+#include <lib/service/llcpp/service.h>
 #include <time.h>
 #include <zircon/status.h>
 
@@ -15,26 +15,15 @@
 
 constexpr int kNumEchoes = 3;
 
-zx::channel get_svc_directory() {
-  zx::channel server_end, client_end;
-  ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
-  ZX_ASSERT(fdio_service_connect("/svc/.", server_end.release()) == ZX_OK);
-  return client_end;
-}
-
 // [START main]
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   int num_responses = 0;
 
-  auto svc = get_svc_directory();
-
-  zx::channel server_end, client_end;
-  ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
-  ZX_ASSERT(fdio_service_connect_at(svc.get(), "fuchsia.examples.Echo", server_end.release()) ==
-            ZX_OK);
-  fidl::Client<llcpp::fuchsia::examples::Echo> client(std::move(client_end), dispatcher);
+  auto client_end = service::Connect<llcpp::fuchsia::examples::Echo>();
+  ZX_ASSERT(client_end.is_ok());
+  fidl::Client client(std::move(*client_end), dispatcher);
 
   auto start = time(nullptr);
 
