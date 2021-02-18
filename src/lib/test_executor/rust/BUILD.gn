@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("test_executor") {
   with_unit_tests = true
@@ -40,14 +40,6 @@ group("tests") {
   deps = [ ":test_executor_unittests" ]
 }
 
-unittest_package("test_executor_unittests") {
+fuchsia_unittest_package("test_executor_unittests") {
   deps = [ ":test_executor_test" ]
-
-  tests = [
-    {
-      name = "test_executor_lib_test"
-      dest = "test_executor_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
