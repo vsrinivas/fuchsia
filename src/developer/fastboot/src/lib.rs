@@ -5,9 +5,12 @@
 use {
     anyhow::{bail, Result},
     command::Command,
+    futures::{
+        io::{AsyncRead, AsyncWrite},
+        AsyncReadExt, AsyncWriteExt,
+    },
     reply::Reply,
-    std::convert::TryFrom,
-    std::io::{Read, Write},
+    std::convert::{TryFrom, TryInto},
 };
 
 pub mod command;
@@ -16,17 +19,24 @@ pub mod reply;
 const MAX_PACKET_SIZE: usize = 64;
 const READ_RETRY_MAX: usize = 100;
 
-fn read_from_interface<T: Read>(interface: &mut T) -> Result<Reply> {
+pub trait UploadProgressListener {
+    fn on_started(&self, size: usize) -> Result<()>;
+    fn on_progress(&self, bytes_written: u64) -> Result<()>;
+    fn on_error(&self, error: &str) -> Result<()>;
+    fn on_finished(&self) -> Result<()>;
+}
+
+async fn read_from_interface<T: AsyncRead + Unpin>(interface: &mut T) -> Result<Reply> {
     let mut buf: [u8; MAX_PACKET_SIZE] = [0; MAX_PACKET_SIZE];
-    let size = interface.read(&mut buf)?;
+    let size = interface.read(&mut buf).await?;
     let (trimmed, _) = buf.split_at(size);
     Reply::try_from(trimmed.to_vec())
 }
 
-fn read_and_log_info<T: Read>(interface: &mut T) -> Result<Reply> {
+async fn read_and_log_info<T: AsyncRead + Unpin>(interface: &mut T) -> Result<Reply> {
     let mut retry = 0;
     loop {
-        match read_from_interface(interface) {
+        match read_from_interface(interface).await {
             Ok(reply) => match reply {
                 Reply::Info(msg) => log::info!("{}", msg),
                 _ => return Ok(reply),
@@ -43,42 +53,63 @@ fn read_and_log_info<T: Read>(interface: &mut T) -> Result<Reply> {
     }
 }
 
-pub fn send<T: Read + Write>(cmd: Command, interface: &mut T) -> Result<Reply> {
-    interface.write(&Vec::<u8>::try_from(cmd)?)?;
-    read_and_log_info(interface)
+pub async fn send<T: AsyncRead + AsyncWrite + Unpin>(
+    cmd: Command,
+    interface: &mut T,
+) -> Result<Reply> {
+    interface.write(&Vec::<u8>::try_from(cmd)?).await?;
+    read_and_log_info(interface).await
 }
 
-pub fn upload<T: Read + Write>(data: &[u8], interface: &mut T) -> Result<Reply> {
-    let reply = send(Command::Download(u32::try_from(data.len())?), interface)?;
+pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
+    data: &[u8],
+    interface: &mut T,
+    listener: &impl UploadProgressListener,
+) -> Result<Reply> {
+    let reply = send(Command::Download(u32::try_from(data.len())?), interface).await?;
     match reply {
         Reply::Data(s) => {
             if s != u32::try_from(data.len())? {
-                bail!(
+                let err = format!(
                     "Target responded with wrong data size - received:{} expected:{}",
                     s,
                     data.len()
                 );
+                log::error!("{}", err);
+                listener.on_error(&err)?;
+                bail!(err);
             }
-            // TODO - possibly split the data based on the speed of the USB connection.
-            // Max packet size must be 64 bytes for full-speed, 512 bytes for high-speed and
-            // 1024 bytes for Super Speed USB
-            // TODO (fxb/60416) - try to use BufWriter instead - currently the usb_bulk library
-            // does not support the Copy trait necessary to get that working.
-            let buffer_length = 64;
-            let upload_length = data.len();
-            let mut buffer: &[u8];
-            let mut cursor = 0;
-            while cursor < upload_length {
-                let remaining = upload_length - cursor;
-                buffer = if remaining < buffer_length {
-                    &data[cursor..]
-                } else {
-                    &data[cursor..cursor + buffer_length]
-                };
-                interface.write(&buffer)?;
-                cursor += buffer_length;
+            listener.on_started(data.len())?;
+            let mut t: usize = 0;
+            // Chunk into 1mb chunks so that progress can be reported during
+            // large writes.
+            for chunk in data.chunks(1<<20) {
+                match interface.write(&chunk).await {
+                    Ok(x) => {
+                        t += x;
+                        listener
+                            .on_progress(t.try_into().expect("usize should fit in u64"))?;
+                    }
+                    Err(e) => {
+                        let err = format!("Could not write to usb interface: {:?}", e);
+                        log::error!("{}", err);
+                        listener.on_error(&err)?;
+                        bail!(err);
+                    }
+                }
             }
-            read_and_log_info(interface)
+            match read_and_log_info(interface).await {
+                Ok(reply) => {
+                    listener.on_finished()?;
+                    Ok(reply)
+                }
+                Err(e) => {
+                    let err = format!("Could not verify upload: {:?}", e);
+                    log::error!("{}", err);
+                    listener.on_error(&err)?;
+                    bail!(err);
+                }
+            }
         }
         _ => bail!("Did not get expected Data reply: {:?}", reply),
     }
@@ -91,13 +122,19 @@ pub fn upload<T: Read + Write>(data: &[u8], interface: &mut T) -> Result<Reply> 
 mod test {
     use super::*;
     use command::ClientVariable;
+    use futures::io::task::{Context, Poll};
+    use std::pin::Pin;
 
     struct TestTransport {
         replies: Vec<Reply>,
     }
 
-    impl Read for TestTransport {
-        fn read(&mut self, buf: &mut [u8]) -> std::result::Result<usize, std::io::Error> {
+    impl AsyncRead for TestTransport {
+        fn poll_read(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &mut [u8],
+        ) -> Poll<std::io::Result<usize>> {
             match self.replies.pop() {
                 Some(r) => {
                     let reply = Vec::<u8>::from(r);
@@ -109,13 +146,21 @@ mod test {
         }
     }
 
-    impl Write for TestTransport {
-        fn write(&mut self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
+    impl AsyncWrite for TestTransport {
+        fn poll_write(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &[u8],
+        ) -> Poll<std::io::Result<usize>> {
             Ok(buf.len())
         }
 
-        fn flush(&mut self) -> std::result::Result<(), std::io::Error> {
-            unimplemented!()
+        fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+            unimplemented!();
+        }
+
+        fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+            unimplemented!();
         }
     }
 

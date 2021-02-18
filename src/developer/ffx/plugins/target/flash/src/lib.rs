@@ -60,10 +60,10 @@ mod test {
         (
             state.clone(),
             setup_fake_fastboot_proxy(move |req| match req {
-                FastbootRequest::Flash { partition_name: _, path: _, responder } => {
+                FastbootRequest::Flash { responder, .. } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
-                FastbootRequest::Erase { partition_name: _, responder } => {
+                FastbootRequest::Erase { responder, .. } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 FastbootRequest::Reboot { responder } => {
@@ -76,10 +76,10 @@ mod test {
                 FastbootRequest::ContinueBoot { responder } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
-                FastbootRequest::SetActive { slot: _, responder } => {
+                FastbootRequest::SetActive { responder, .. } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
-                FastbootRequest::Stage { path, responder } => {
+                FastbootRequest::Stage { path, responder, .. } => {
                     let mut state = state.lock().unwrap();
                     state.staged_files.push(path);
                     responder.send(&mut Ok(())).unwrap();

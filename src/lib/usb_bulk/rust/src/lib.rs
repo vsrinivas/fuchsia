@@ -12,9 +12,19 @@
 //!
 //! See tests for examples using the Zedmon power monitor.
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Result};
+use fuchsia_async::Task;
+use futures::{
+    io::{AsyncRead, AsyncWrite},
+    task::{Context, Poll},
+};
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::future::Future;
 use std::io::{ErrorKind, Read, Write};
 use std::os::raw::c_void;
+use std::pin::Pin;
+use std::sync::{Mutex, RwLock};
 
 mod usb;
 
@@ -28,7 +38,7 @@ pub type InterfaceInfo = usb::usb_ifc_info;
 /// `matcher` will be called on every discovered interface.  When `matcher` returns true, that
 /// interface will be opened.
 pub trait Open<T> {
-    fn open<F>(matcher: &mut F) -> Result<T, Error>
+    fn open<F>(matcher: &mut F) -> Result<T>
     where
         F: FnMut(&InterfaceInfo) -> bool;
 }
@@ -50,8 +60,29 @@ pub struct Interface {
 ///  argue that it would be "fine" for them to be marked as thread safe."
 unsafe impl Send for Interface {}
 
+lazy_static! {
+    static ref IFACE_REGISTRY: RwLock<HashMap<String, Mutex<Interface>>> =
+        RwLock::new(HashMap::new());
+}
+
+/// An Asynchronous USB Interface.  This wraps the synchronous calls to allow for yields between
+/// writing.
+pub struct AsyncInterface {
+    serial: String,
+    task: Option<Pin<Box<Task<std::io::Result<usize>>>>>,
+}
+
+impl Interface {
+    fn close(&mut self) {
+        // Foreign function call requires unsafe block.
+        unsafe {
+            usb::interface_close(self.interface);
+        }
+    }
+}
+
 impl Open<Interface> for Interface {
-    fn open<F>(matcher: &mut F) -> Result<Interface, Error>
+    fn open<F>(matcher: &mut F) -> Result<Interface>
     where
         F: FnMut(&InterfaceInfo) -> bool,
     {
@@ -87,10 +118,7 @@ impl Open<Interface> for Interface {
 
 impl Drop for Interface {
     fn drop(&mut self) {
-        // Foreign function call requires unsafe block.
-        unsafe {
-            usb::interface_close(self.interface);
-        }
+        self.close();
     }
 }
 
@@ -126,6 +154,122 @@ impl Write for Interface {
     fn flush(&mut self) -> std::io::Result<()> {
         // Do nothing as we're not buffered.
         Ok(())
+    }
+}
+
+impl Drop for AsyncInterface {
+    fn drop(&mut self) {
+        let mut write_guard =
+            IFACE_REGISTRY.write().expect("could not acquire write lock on interface registry");
+        if let Some(iface) = (*write_guard).remove(&self.serial) {
+            let mut iface = iface.lock().unwrap();
+            iface.close();
+        }
+    }
+}
+
+impl Open<AsyncInterface> for AsyncInterface {
+    fn open<F>(matcher: &mut F) -> Result<AsyncInterface>
+    where
+        F: FnMut(&InterfaceInfo) -> bool,
+    {
+        let mut serial = None;
+        let mut cb = |info: &InterfaceInfo| -> bool {
+            if matcher(info) {
+                let null_pos = match info.serial_number.iter().position(|&c| c == 0) {
+                    Some(p) => p,
+                    None => {
+                        return false;
+                    }
+                };
+                serial.replace(
+                    (*String::from_utf8_lossy(&info.serial_number[..null_pos])).to_string(),
+                );
+                return true;
+            }
+            false
+        };
+        Interface::open(&mut cb).and_then(|iface| match serial {
+            Some(s) => {
+                let mut write_guard = IFACE_REGISTRY
+                    .write()
+                    .expect("could not acquire write lock on interface registry");
+                (*write_guard).insert(s.clone(), Mutex::new(iface));
+                Ok(AsyncInterface { serial: s, task: None })
+            }
+            None => {
+                bail!("Serial number is missing");
+            }
+        })
+    }
+}
+
+impl AsyncWrite for AsyncInterface {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let buffer = buf[..].to_vec();
+        if self.task.is_none() {
+            let serial_clone = self.serial.clone();
+            self.task.replace(Box::pin(Task::blocking(async move {
+                let read_guard = IFACE_REGISTRY
+                    .read()
+                    .expect("could not acquire read lock on interface registry");
+                if let Some(iface_lock) = (*read_guard).get(&serial_clone) {
+                    iface_lock.lock().unwrap().write(&buffer)
+                } else {
+                    Err(std::io::Error::new(
+                        ErrorKind::Other,
+                        format!("Interface missing from registry"),
+                    ))
+                }
+            })));
+        }
+
+        if let Some(ref mut task) = self.task {
+            match task.as_mut().poll(cx) {
+                Poll::Ready(s) => {
+                    self.task = None;
+                    Poll::Ready(s)
+                }
+                Poll::Pending => Poll::Pending,
+            }
+        } else {
+            Poll::Ready(Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Could not add async task to write"),
+            )))
+        }
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        // Interface is closed in the drop method.
+        Poll::Ready(Ok(()))
+    }
+}
+
+impl AsyncRead for AsyncInterface {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let read_guard =
+            IFACE_REGISTRY.read().expect("could not acquire read lock on interface registry");
+        if let Some(iface_lock) = (*read_guard).get(&self.serial) {
+            Poll::Ready(iface_lock.lock().unwrap().read(buf))
+        } else {
+            Poll::Ready(Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Interface missing from registry"),
+            )))
+        }
     }
 }
 
@@ -168,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zedmon_read_parameter() -> Result<(), Error> {
+    fn test_zedmon_read_parameter() -> Result<()> {
         // Open USB interface.
         let mut matcher = |info: &InterfaceInfo| -> bool { zedmon_match(info) };
         let mut interface = Interface::open(&mut matcher)?;

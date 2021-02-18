@@ -12,6 +12,14 @@ enum FastbootError {
     NON_FASTBOOT_DEVICE = 5;
 };
 
+/// Callback event listener for upload progress.
+protocol UploadProgressListener {
+    OnError(string:MAX error);
+    OnStarted(uint64 size);
+    OnProgress(uint64 bytes_written);
+    OnFinished();
+};
+
 /// Callback event listener for when the device reboots to the
 /// bootloader.
 protocol RebootListener {
@@ -20,12 +28,12 @@ protocol RebootListener {
 
 [Discoverable]
 protocol Fastboot {
-    Flash(string:64 partition_name, string:256 path) -> () error FastbootError;
+    Flash(string:64 partition_name, string:256 path, UploadProgressListener listener) -> () error FastbootError;
     Erase(string:64 partition_name) -> () error FastbootError;
     Reboot() -> () error FastbootError;
     RebootBootloader(RebootListener listener) -> () error FastbootError;
     ContinueBoot() -> () error FastbootError;
-    Stage(string:256 path) -> () error FastbootError;
+    Stage(string:256 path, UploadProgressListener listener) -> () error FastbootError;
     SetActive(string:64 slot) -> () error FastbootError;
     Oem(string:64 command) -> () error FastbootError;
 };

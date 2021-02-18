@@ -5,10 +5,14 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
+    chrono::{DateTime, Duration, Utc},
     ffx_core::ffx_bail,
     ffx_flash_args::{FlashCommand, OemFile},
-    fidl::endpoints::create_endpoints,
-    fidl_fuchsia_developer_bridge::{FastbootProxy, RebootListenerMarker, RebootListenerRequest},
+    fidl::endpoints::{create_endpoints, ServerEnd},
+    fidl_fuchsia_developer_bridge::{
+        FastbootProxy, RebootListenerMarker, RebootListenerRequest, UploadProgressListenerMarker,
+        UploadProgressListenerRequest,
+    },
     futures::prelude::*,
     futures::try_join,
     serde::{Deserialize, Serialize},
@@ -101,6 +105,76 @@ impl Flash for FlashManifest {
     }
 }
 
+fn upload_time<W: Write + Send>(writer: &mut W, duration: Option<Duration>) -> std::io::Result<()> {
+    if let Some(d) = duration {
+        writeln!(writer, "Done [{:.2}s]", (d.num_milliseconds() as f32) / (1000 as f32))
+    } else {
+        Ok(())
+    }
+}
+
+async fn handle_upload_progress(
+    prog_server: ServerEnd<UploadProgressListenerMarker>,
+) -> Result<Option<Duration>> {
+    let mut stream = prog_server.into_stream()?;
+    let mut start_time: Option<DateTime<Utc>> = None;
+    let mut duration: Option<Duration> = None;
+    loop {
+        match stream.try_next().await? {
+            Some(UploadProgressListenerRequest::OnStarted { size, .. }) => {
+                start_time.replace(Utc::now());
+                log::debug!("Upload started: {}", size);
+            }
+            Some(UploadProgressListenerRequest::OnFinished { .. }) => {
+                if let Some(st) = start_time {
+                    let d = Utc::now().signed_duration_since(st);
+                    log::debug!("Upload duration: {:.2}s", (d.num_milliseconds() / 1000));
+                    duration.replace(d);
+                }
+                log::debug!("Upload finished");
+            }
+            Some(UploadProgressListenerRequest::OnError { error, .. }) => {
+                log::error!("{}", error);
+                bail!(error)
+            }
+            Some(UploadProgressListenerRequest::OnProgress { bytes_written, .. }) => {
+                log::debug!("Upload progress: {}", bytes_written);
+            }
+            None => return Ok(duration),
+        }
+    }
+}
+
+async fn stage_file(file: &str, fastboot_proxy: &FastbootProxy) -> Result<Option<Duration>> {
+    let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+    try_join!(
+        fastboot_proxy.stage(file, prog_client).map_err(|e| anyhow!(e)),
+        handle_upload_progress(prog_server),
+    )
+    .and_then(|(stage, progress)| {
+        stage
+            .map(|_| progress)
+            .map_err(|e| anyhow!("There was an error flashing {}: {:?}", file, e))
+    })
+}
+
+async fn flash_partition(
+    name: &str,
+    file: &str,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<Option<Duration>> {
+    let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+    try_join!(
+        fastboot_proxy.flash(name, file, prog_client).map_err(|e| anyhow!(e)),
+        handle_upload_progress(prog_server),
+    )
+    .and_then(|(flash, progress)| {
+        flash
+            .map(|_| progress)
+            .map_err(|e| anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file, e))
+    })
+}
+
 #[async_trait]
 impl Flash for FlashManifestV1 {
     async fn flash<W>(
@@ -130,14 +204,10 @@ impl Flash for FlashManifestV1 {
         };
         for partition in &product.bootloader_partitions {
             writeln!(writer, "Writing \"{}\" from {}", partition.name(), partition.file())?;
-            //TODO: better error handling when errors are well defined.
-            fastboot_proxy.flash(partition.name(), partition.file()).await?.map_err(|_| {
-                anyhow!(
-                    "There was an error flashing \"{}\" - {}",
-                    partition.name(),
-                    partition.file()
-                )
-            })?;
+            upload_time(
+                &mut writer,
+                flash_partition(partition.name(), partition.file(), &fastboot_proxy).await?,
+            )?;
         }
         if product.bootloader_partitions.len() > 0 {
             writeln!(writer, "Rebooting to bootloader")?;
@@ -164,21 +234,14 @@ impl Flash for FlashManifestV1 {
         }
         for partition in &product.partitions {
             writeln!(writer, "Writing \"{}\" from {}", partition.name(), partition.file())?;
-            //TODO: better error handling when errors are well defined.
-            fastboot_proxy.flash(partition.name(), partition.file()).await?.map_err(|_| {
-                anyhow!(
-                    "There was an error flashing \"{}\" - {}",
-                    partition.name(),
-                    partition.file()
-                )
-            })?;
+            upload_time(
+                &mut writer,
+                flash_partition(partition.name(), partition.file(), &fastboot_proxy).await?,
+            )?;
         }
         for oem_file in &product.oem_files {
             writeln!(writer, "Writing {}", oem_file.file())?;
-            fastboot_proxy
-                .stage(oem_file.file())
-                .await?
-                .map_err(|_| anyhow!("There was an error staging {}", oem_file.file()))?;
+            upload_time(&mut writer, stage_file(oem_file.file(), &fastboot_proxy).await?)?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
                 anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
@@ -186,10 +249,7 @@ impl Flash for FlashManifestV1 {
         }
         for oem_file in &cmd.oem_stage {
             writeln!(writer, "Writing {}", oem_file.file())?;
-            fastboot_proxy
-                .stage(oem_file.file())
-                .await?
-                .map_err(|_| anyhow!("There was an error staging {}", oem_file.file()))?;
+            upload_time(&mut writer, stage_file(oem_file.file(), &fastboot_proxy).await?)?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
                 anyhow!("There was an error sending oem command \"{}\"", oem_file.command())

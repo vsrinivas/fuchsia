@@ -5,16 +5,17 @@
 use {
     crate::fastboot::{
         continue_boot, erase, flash, oem, reboot, reboot_bootloader, set_active, stage,
+        UploadProgressListener,
     },
     crate::target::{Target, TargetEvent},
     anyhow::{bail, Context, Result},
     async_trait::async_trait,
     fidl_fuchsia_developer_bridge::{FastbootError, FastbootRequest, FastbootRequestStream},
+    futures::io::{AsyncRead, AsyncWrite},
     futures::prelude::*,
     futures::try_join,
-    std::io::{Read, Write},
     std::time::Duration,
-    usb_bulk::Interface,
+    usb_bulk::AsyncInterface as Interface,
 };
 
 pub(crate) struct Fastboot(pub(crate) FastbootImpl<Interface>);
@@ -26,7 +27,7 @@ impl Fastboot {
 }
 
 #[async_trait]
-pub(crate) trait InterfaceFactory<T: Read + Write + Send> {
+pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin + Send> {
     async fn interface(&self, target: &Target) -> Result<T>;
 }
 
@@ -42,13 +43,13 @@ impl InterfaceFactory<Interface> for UsbFactory {
     }
 }
 
-pub(crate) struct FastbootImpl<T: Read + Write + Send> {
+pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Send + Unpin> {
     pub(crate) target: Target,
     pub(crate) usb: Option<T>,
     pub(crate) usb_factory: Box<dyn InterfaceFactory<T> + Send + Sync>,
 }
 
-impl<T: Read + Write + Send> FastbootImpl<T> {
+impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
     pub(crate) fn new(
         target: Target,
         usb_factory: Box<dyn InterfaceFactory<T> + Send + Sync>,
@@ -81,8 +82,10 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
         log::debug!("fastboot - received req: {:?}", req);
         let usb = self.usb().await?;
         match req {
-            FastbootRequest::Flash { partition_name, path, responder } => {
-                match flash(usb, &path, &partition_name) {
+            FastbootRequest::Flash { partition_name, path, listener, responder } => {
+                match flash(usb, &path, &partition_name, UploadProgressListener::new(listener)?)
+                    .await
+                {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!(
@@ -98,7 +101,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 }
             }
             FastbootRequest::Erase { partition_name, responder } => {
-                match erase(usb, &partition_name) {
+                match erase(usb, &partition_name).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error erasing \"{}\": {:?}", partition_name, e);
@@ -108,7 +111,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                     }
                 }
             }
-            FastbootRequest::Reboot { responder } => match reboot(usb) {
+            FastbootRequest::Reboot { responder } => match reboot(usb).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
                     log::error!("Error rebooting: {:?}", e);
@@ -118,7 +121,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 }
             },
             FastbootRequest::RebootBootloader { listener, responder } => {
-                match reboot_bootloader(usb) {
+                match reboot_bootloader(usb).await {
                     Ok(_) => {
                         match try_join!(
                             self.target
@@ -157,7 +160,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                     }
                 }
             }
-            FastbootRequest::ContinueBoot { responder } => match continue_boot(usb) {
+            FastbootRequest::ContinueBoot { responder } => match continue_boot(usb).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
                     log::error!("Error continuing boot: {:?}", e);
@@ -166,7 +169,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                         .context("sending error response")?;
                 }
             },
-            FastbootRequest::SetActive { slot, responder } => match set_active(usb, &slot) {
+            FastbootRequest::SetActive { slot, responder } => match set_active(usb, &slot).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
                     log::error!("Error setting active: {:?}", e);
@@ -175,16 +178,18 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                         .context("sending error response")?;
                 }
             },
-            FastbootRequest::Stage { path, responder } => match stage(usb, &path) {
-                Ok(_) => responder.send(&mut Ok(()))?,
-                Err(e) => {
-                    log::error!("Error setting active: {:?}", e);
-                    responder
-                        .send(&mut Err(FastbootError::ProtocolError))
-                        .context("sending error response")?;
+            FastbootRequest::Stage { path, listener, responder } => {
+                match stage(usb, &path, UploadProgressListener::new(listener)?).await {
+                    Ok(_) => responder.send(&mut Ok(()))?,
+                    Err(e) => {
+                        log::error!("Error setting active: {:?}", e);
+                        responder
+                            .send(&mut Err(FastbootError::ProtocolError))
+                            .context("sending error response")?;
+                    }
                 }
-            },
-            FastbootRequest::Oem { command, responder } => match oem(usb, &command) {
+            }
+            FastbootRequest::Oem { command, responder } => match oem(usb, &command).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
                     log::error!("Error sending oem \"{}\": {:?}", command, e);
@@ -211,9 +216,11 @@ mod test {
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         fidl_fuchsia_developer_bridge::{
             FastbootError, FastbootMarker, FastbootProxy, RebootListenerMarker,
-            RebootListenerRequest,
+            RebootListenerRequest, UploadProgressListenerMarker,
         },
-        std::io::BufWriter,
+        futures::task::{Context as fContext, Poll},
+        std::io::{BufWriter, Write},
+        std::pin::Pin,
         std::sync::Arc,
         tempfile::NamedTempFile,
     };
@@ -222,26 +229,38 @@ mod test {
         replies: Vec<Reply>,
     }
 
-    impl Read for TestTransport {
-        fn read(&mut self, buf: &mut [u8]) -> std::result::Result<usize, std::io::Error> {
-            match self.replies.pop() {
+    impl AsyncRead for TestTransport {
+        fn poll_read(
+            self: Pin<&mut Self>,
+            _cx: &mut fContext<'_>,
+            buf: &mut [u8],
+        ) -> Poll<std::io::Result<usize>> {
+            match self.get_mut().replies.pop() {
                 Some(r) => {
                     let reply = Vec::<u8>::from(r);
                     buf[..reply.len()].copy_from_slice(&reply);
-                    Ok(reply.len())
+                    Poll::Ready(Ok(reply.len()))
                 }
-                None => Ok(0),
+                None => Poll::Ready(Ok(0)),
             }
         }
     }
 
-    impl Write for TestTransport {
-        fn write(&mut self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
-            Ok(buf.len())
+    impl AsyncWrite for TestTransport {
+        fn poll_write(
+            self: Pin<&mut Self>,
+            _cx: &mut fContext<'_>,
+            buf: &[u8],
+        ) -> Poll<std::io::Result<usize>> {
+            Poll::Ready(Ok(buf.len()))
         }
 
-        fn flush(&mut self) -> std::result::Result<(), std::io::Error> {
-            unimplemented!()
+        fn poll_flush(self: Pin<&mut Self>, _cx: &mut fContext<'_>) -> Poll<std::io::Result<()>> {
+            unimplemented!();
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _cx: &mut fContext<'_>) -> Poll<std::io::Result<()>> {
+            unimplemented!();
         }
     }
 
@@ -292,6 +311,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_flash() -> Result<()> {
+        let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+        let mut stream = prog_server.into_stream()?;
         let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
         let mut buffer = BufWriter::new(&file);
         buffer.write_all(b"Test")?;
@@ -303,20 +324,44 @@ mod test {
         ])
         .await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
-        proxy.flash("test", filepath).await?.map_err(|e| anyhow!("error flashing: {:?}", e))
+        try_join!(
+            async move {
+                while let Some(_) = stream.try_next().await? { /* do nothing */ }
+                Ok(())
+            },
+            proxy
+                .flash("test", filepath, prog_client)
+                .map_err(|e| anyhow!("error flashing: {:?}", e))
+        )
+        .and_then(|(_, flash)| {
+            assert!(flash.is_ok());
+            Ok(())
+        })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_flash_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+        let mut stream = prog_server.into_stream()?;
         let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
         let mut buffer = BufWriter::new(&file);
         buffer.write_all(b"Test")?;
         buffer.flush()?;
         let (_, proxy) = setup(vec![Reply::Data(6)]).await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
-        let res = proxy.flash("test", filepath).await?;
-        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
-        Ok(())
+        try_join!(
+            async move {
+                while let Some(_) = stream.try_next().await? { /* do nothing */ }
+                Ok(())
+            },
+            proxy
+                .flash("test", filepath, prog_client)
+                .map_err(|e| anyhow!("error flashing: {:?}", e))
+        )
+        .and_then(|(_, flash)| {
+            assert_eq!(flash.err(), Some(FastbootError::ProtocolError));
+            Ok(())
+        })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -446,6 +491,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_stage() -> Result<()> {
+        let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+        let mut stream = prog_server.into_stream()?;
         let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
         let mut buffer = BufWriter::new(&file);
         buffer.write_all(b"Test")?;
@@ -456,20 +503,40 @@ mod test {
         ])
         .await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
-        proxy.stage(filepath).await?.map_err(|e| anyhow!("error staging: {:?}", e))
+        try_join!(
+            async move {
+                while let Some(_) = stream.try_next().await? { /* do nothing */ }
+                Ok(())
+            },
+            proxy.stage(filepath, prog_client).map_err(|e| anyhow!("error staging: {:?}", e)),
+        )
+        .and_then(|(_, stage)| {
+            assert!(stage.is_ok());
+            Ok(())
+        })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_stage_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+        let mut stream = prog_server.into_stream()?;
         let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
         let mut buffer = BufWriter::new(&file);
         buffer.write_all(b"Test")?;
         buffer.flush()?;
         let (_, proxy) = setup(vec![Reply::Data(6)]).await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
-        let res = proxy.stage(filepath).await?;
-        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
-        Ok(())
+        try_join!(
+            async move {
+                while let Some(_) = stream.try_next().await? { /* do nothing */ }
+                Ok(())
+            },
+            proxy.stage(filepath, prog_client).map_err(|e| anyhow!("error staging: {:?}", e)),
+        )
+        .and_then(|(_, stage)| {
+            assert_eq!(stage.err(), Some(FastbootError::ProtocolError));
+            Ok(())
+        })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

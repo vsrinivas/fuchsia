@@ -5,19 +5,20 @@
 use {
     crate::constants::FASTBOOT_CHECK_INTERVAL_SECS,
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
-    anyhow::{bail, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
         send, upload,
     },
     ffx_daemon_core::events,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_developer_bridge::{UploadProgressListenerMarker, UploadProgressListenerProxy},
     fuchsia_async::Timer,
-    std::{
-        fs::read,
-        io::{Read, Write},
-    },
-    usb_bulk::{Interface, InterfaceInfo, Open},
+    futures::io::{AsyncRead, AsyncWrite},
+    std::convert::TryInto,
+    std::fs::read,
+    usb_bulk::{AsyncInterface as Interface, InterfaceInfo, Open},
 };
 
 pub mod client;
@@ -27,6 +28,32 @@ pub mod client;
 pub struct FastbootDevice {
     pub product: String,
     pub serial: String,
+}
+
+pub struct UploadProgressListener(UploadProgressListenerProxy);
+
+impl UploadProgressListener {
+    fn new(listener: ClientEnd<UploadProgressListenerMarker>) -> Result<Self> {
+        Ok(Self(listener.into_proxy().map_err(|e| anyhow!(e))?))
+    }
+}
+
+impl fastboot::UploadProgressListener for UploadProgressListener {
+    fn on_started(&self, size: usize) -> Result<()> {
+        self.0.on_started(size.try_into()?).map_err(|e| anyhow!(e))
+    }
+
+    fn on_progress(&self, bytes_written: u64) -> Result<()> {
+        self.0.on_progress(bytes_written).map_err(|e| anyhow!(e))
+    }
+
+    fn on_error(&self, error: &str) -> Result<()> {
+        self.0.on_error(error).map_err(|e| anyhow!(e))
+    }
+
+    fn on_finished(&self) -> Result<()> {
+        self.0.on_finished().map_err(|e| anyhow!(e))
+    }
 }
 
 fn is_fastboot_match(info: &InterfaceInfo) -> bool {
@@ -79,19 +106,19 @@ fn find_serial_numbers() -> Vec<String> {
     serials
 }
 
-pub fn find_devices() -> Vec<FastbootDevice> {
+pub async fn find_devices() -> Vec<FastbootDevice> {
     let mut products = Vec::new();
     let serials = find_serial_numbers();
     for serial in serials {
         match open_interface_with_serial(&serial) {
             Ok(mut usb_interface) => {
                 if let Ok(Reply::Okay(version)) =
-                    send(Command::GetVar(ClientVariable::Version), &mut usb_interface)
+                    send(Command::GetVar(ClientVariable::Version), &mut usb_interface).await
                 {
                     // Only support 0.4 right now.
                     if version == "0.4".to_string() {
                         if let Ok(Reply::Okay(product)) =
-                            send(Command::GetVar(ClientVariable::Product), &mut usb_interface)
+                            send(Command::GetVar(ClientVariable::Product), &mut usb_interface).await
                         {
                             products.push(FastbootDevice { product, serial })
                         }
@@ -108,10 +135,14 @@ pub fn open_interface_with_serial(serial: &String) -> Result<Interface> {
     open_interface(|info: &InterfaceInfo| -> bool { extract_serial_number(info) == *serial })
 }
 
-pub fn stage<T: Read + Write>(interface: &mut T, file: &String) -> Result<()> {
+pub async fn stage<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    file: &String,
+    listener: UploadProgressListener,
+) -> Result<()> {
     let bytes = read(file)?;
     log::debug!("uploading file size: {}", bytes.len());
-    match upload(&bytes[..], interface).context(format!("uploading {}", file))? {
+    match upload(&bytes[..], interface, &listener).await.context(format!("uploading {}", file))? {
         Reply::Okay(s) => {
             log::debug!("Received response from download command: {}", s);
             Ok(())
@@ -121,16 +152,23 @@ pub fn stage<T: Read + Write>(interface: &mut T, file: &String) -> Result<()> {
     }
 }
 
-pub fn flash<T: Read + Write>(interface: &mut T, file: &String, name: &String) -> Result<()> {
+pub async fn flash<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    file: &String,
+    name: &String,
+    listener: UploadProgressListener,
+) -> Result<()> {
     let bytes = read(file)?;
     log::debug!("uploading file size: {}", bytes.len());
-    let upload_reply = upload(&bytes[..], interface).context(format!("uploading {}", file))?;
+    let upload_reply =
+        upload(&bytes[..], interface, &listener).await.context(format!("uploading {}", file))?;
     match upload_reply {
         Reply::Okay(s) => log::debug!("Received response from download command: {}", s),
         Reply::Fail(s) => bail!("Failed to upload {}: {}", file, s),
         _ => bail!("Unexpected reply from fastboot device for download: {:?}", upload_reply),
     }
-    let send_reply = send(Command::Flash(name.to_string()), interface).context("sending flash")?;
+    let send_reply =
+        send(Command::Flash(name.to_string()), interface).await.context("sending flash")?;
     match send_reply {
         Reply::Okay(_) => {
             log::debug!("Successfully flashed parition: {}", name);
@@ -141,8 +179,11 @@ pub fn flash<T: Read + Write>(interface: &mut T, file: &String, name: &String) -
     }
 }
 
-pub fn erase<T: Read + Write>(interface: &mut T, name: &String) -> Result<()> {
-    let reply = send(Command::Erase(name.to_string()), interface).context("sending erase")?;
+pub async fn erase<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    name: &String,
+) -> Result<()> {
+    let reply = send(Command::Erase(name.to_string()), interface).await.context("sending erase")?;
     match reply {
         Reply::Okay(_) => {
             log::debug!("Successfully erased parition: {}", name);
@@ -153,8 +194,8 @@ pub fn erase<T: Read + Write>(interface: &mut T, name: &String) -> Result<()> {
     }
 }
 
-pub fn reboot<T: Read + Write>(interface: &mut T) -> Result<()> {
-    let reply = send(Command::Reboot, interface).context("sending reboot")?;
+pub async fn reboot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
+    let reply = send(Command::Reboot, interface).await.context("sending reboot")?;
     match reply {
         Reply::Okay(_) => {
             log::debug!("Successfully sent reboot");
@@ -165,8 +206,8 @@ pub fn reboot<T: Read + Write>(interface: &mut T) -> Result<()> {
     }
 }
 
-pub fn reboot_bootloader<T: Read + Write>(interface: &mut T) -> Result<()> {
-    match send(Command::RebootBootLoader, interface).context("sending reboot bootloader")? {
+pub async fn reboot_bootloader<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
+    match send(Command::RebootBootLoader, interface).await.context("sending reboot bootloader")? {
         Reply::Okay(_) => {
             log::debug!("Successfully sent reboot bootloader");
             Ok(())
@@ -176,8 +217,8 @@ pub fn reboot_bootloader<T: Read + Write>(interface: &mut T) -> Result<()> {
     }
 }
 
-pub fn continue_boot<T: Read + Write>(interface: &mut T) -> Result<()> {
-    match send(Command::Continue, interface).context("sending continue")? {
+pub async fn continue_boot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
+    match send(Command::Continue, interface).await.context("sending continue")? {
         Reply::Okay(_) => {
             log::debug!("Successfully sent continue");
             Ok(())
@@ -187,8 +228,14 @@ pub fn continue_boot<T: Read + Write>(interface: &mut T) -> Result<()> {
     }
 }
 
-pub fn set_active<T: Read + Write>(interface: &mut T, slot: &String) -> Result<()> {
-    match send(Command::SetActive(slot.to_string()), interface).context("sending set_active")? {
+pub async fn set_active<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    slot: &String,
+) -> Result<()> {
+    match send(Command::SetActive(slot.to_string()), interface)
+        .await
+        .context("sending set_active")?
+    {
         Reply::Okay(_) => {
             log::debug!("Successfully sent set_active");
             Ok(())
@@ -198,8 +245,8 @@ pub fn set_active<T: Read + Write>(interface: &mut T, slot: &String) -> Result<(
     }
 }
 
-pub fn oem<T: Read + Write>(interface: &mut T, cmd: &String) -> Result<()> {
-    match send(Command::Oem(cmd.to_string()), interface).context("sending oem")? {
+pub async fn oem<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T, cmd: &String) -> Result<()> {
+    match send(Command::Oem(cmd.to_string()), interface).await.context("sending oem")? {
         Reply::Okay(_) => {
             log::debug!("Successfully sent oem command \"{}\"", cmd);
             Ok(())
@@ -213,7 +260,7 @@ pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
     fuchsia_async::Task::spawn(async move {
         loop {
             log::trace!("Looking for fastboot devices");
-            let fastboot_devices = find_devices();
+            let fastboot_devices = find_devices().await;
             for dev in fastboot_devices {
                 // Add to target collection
                 let nodename = format!("{:?}", dev);

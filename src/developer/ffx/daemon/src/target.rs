@@ -46,7 +46,7 @@ use {
     std::net::{Ipv4Addr, Ipv6Addr},
     std::sync::{Arc, Weak},
     std::time::Duration,
-    usb_bulk::Interface,
+    usb_bulk::AsyncInterface as Interface,
 };
 
 pub use crate::target_task::*;
