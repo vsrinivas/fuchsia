@@ -6,6 +6,8 @@
 
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <string.h>
 
 #include <limits>
@@ -310,6 +312,22 @@ zx_status_t OpteeController::Bind() {
   if (status != ZX_OK) {
     LOG(ERROR, "could not initialize shared memory");
     return status;
+  }
+
+  // TODO(http://fxbug.dev/13562): The below deadline profile is currently defined by the strictest
+  // latency requirements of the trusted app workloads (media decryption). This is intended to be
+  // temporary, as it is not ideal for all trusted applications and we should revisit once the TA
+  // calls are dispatched on a separate thread pool.
+  zx::profile profile;
+  status = device_get_deadline_profile(parent(), ZX_USEC(2000), ZX_USEC(2500), ZX_USEC(2500),
+                                       "optee", profile.reset_and_get_address());
+  if (status != ZX_OK) {
+    LOG(WARNING, "could not get deadline profile");
+  } else {
+    status = zx::thread::self()->set_profile(std::move(profile), 0);
+    if (status != ZX_OK) {
+      LOG(WARNING, "could not set profile");
+    }
   }
 
   status = DdkAdd(kDeviceName.data(), DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
