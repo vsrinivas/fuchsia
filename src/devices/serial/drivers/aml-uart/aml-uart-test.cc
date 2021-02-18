@@ -160,25 +160,6 @@ class DeviceState {
 class Ddk : public fake_ddk::Bind {
  public:
   Ddk() {}
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                size_t* actual) override {
-    if (dev != fake_ddk::kFakeParent) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (type != DEVICE_METADATA_SERIAL_PORT_INFO) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (length != sizeof(serial_port_info_t)) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    serial_port_info_t info;
-    info.serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI;
-    info.serial_vid = PDEV_VID_BROADCOM;
-    info.serial_pid = PDEV_PID_BCM43458;
-    memcpy(data, &info, sizeof(info));
-    *actual = sizeof(info);
-    return ZX_OK;
-  }
   bool added() { return add_called_; }
   const device_add_args_t& args() { return add_args_; }
 
@@ -198,17 +179,21 @@ class Ddk : public fake_ddk::Bind {
 class AmlUartHarness : public zxtest::Test {
  public:
   void SetUp() override {
+    static constexpr serial_port_info_t kSerialInfo = {
+        .serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI,
+        .serial_vid = PDEV_VID_BROADCOM,
+        .serial_pid = PDEV_PID_BCM43458,
+    };
+    ddk_.SetMetadata(DEVICE_METADATA_SERIAL_PORT_INFO, &kSerialInfo, sizeof(kSerialInfo));
+
     state_.set_irq_signaller(pdev_.CreateVirtualInterrupt(0));
+
     {
       fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
       protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
       ddk_.SetProtocols(std::move(protocols));
     }
-    serial_port_info_t info;
-    info.serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI;
-    info.serial_vid = PDEV_VID_BROADCOM;
-    info.serial_pid = PDEV_PID_BCM43458;
-    auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, pdev_.proto(), info,
+    auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, pdev_.proto(), kSerialInfo,
                                                   state_.GetMmio());
     zx_status_t status = uart->Init();
     ASSERT_OK(status);
