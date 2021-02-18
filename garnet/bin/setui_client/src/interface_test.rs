@@ -57,6 +57,9 @@ macro_rules! assert_set {
             ::setui_client_lib::utils::Either::Watch(_) => {
                 panic!("Did not expect a watch result for a set call")
             }
+            ::setui_client_lib::utils::Either::Get(_) => {
+                panic!("Did not expect a get result for a set call")
+            }
         }
     };
 }
@@ -71,6 +74,24 @@ macro_rules! assert_watch {
             }
             ::setui_client_lib::utils::Either::Set(_) => {
                 panic!("Did not expect a set result for a watch call")
+            }
+            ::setui_client_lib::utils::Either::Get(_) => {
+                panic!("Did not expect a get result for a watch call")
+            }
+        }
+    };
+}
+
+/// Validate that the results of the call are a successful get and return the result.
+macro_rules! assert_get {
+    ($expr:expr) => {
+        match $expr.await? {
+            ::setui_client_lib::utils::Either::Get(output) => output,
+            ::setui_client_lib::utils::Either::Watch(_) => {
+                panic!("Did not expect a watch result for a get call")
+            }
+            ::setui_client_lib::utils::Either::Set(_) => {
+                panic!("Did not expect a set result for a get call")
             }
         }
     };
@@ -1302,7 +1323,7 @@ async fn validate_volume_policy_get() -> Result<(), Error> {
         .connect_to_service::<VolumePolicyControllerMarker>()
         .context("Failed to connect to volume policy service")?;
 
-    let output = assert_watch!(volume_policy::command(volume_policy_service, None, None));
+    let output = assert_get!(volume_policy::command(volume_policy_service, None, None));
     // Spot-check that the output contains the available transform in the data returned from the
     // fake service.
     assert!(output.contains("Max"));

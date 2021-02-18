@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::utils::{self, Either, WatchOrSetResult};
+use crate::utils::{Either, WatchOrSetResult};
 use crate::VolumePolicyCommands;
 use anyhow::format_err;
 use fidl_fuchsia_settings_policy::{PolicyParameters, Target, Volume, VolumePolicyControllerProxy};
@@ -46,8 +46,9 @@ pub async fn command(
             Err(err) => format!("{:#?}", err),
         }))
     } else {
-        // No values set, perform a get instead.
-        Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.get_properties())))
+        // No values set, perform a get instead. Since policy does not support hanging get, return
+        // a Get variant to just print once.
+        Ok(Either::Get(format!("{:#?}", proxy.get_properties().await)))
     }
 }
 

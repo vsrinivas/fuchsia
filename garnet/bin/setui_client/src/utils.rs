@@ -11,10 +11,11 @@ use std::fmt::Debug;
 use std::future::Future;
 
 /// An abstraction over a stream result from a watch, or the string output
-/// from a set call.
+/// from a get or set call.
 pub enum Either {
     Watch(StringTryStream),
     Set(String),
+    Get(String),
 }
 pub type StringTryStream =
     Box<dyn TryStream<Ok = String, Error = Error, Item = Result<String, Error>> + Unpin>;
@@ -77,6 +78,6 @@ pub(crate) async fn handle_mixed_result(
 ) -> Result<(), Error> {
     Ok(match result? {
         Either::Watch(stream) => print_results(label, stream).await?,
-        Either::Set(output) => println!("{}: {}", label, output),
+        Either::Set(output) | Either::Get(output) => println!("{}: {}", label, output),
     })
 }
