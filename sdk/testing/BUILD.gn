@@ -13,5 +13,5 @@ group("testing") {
 group("tests") {
   testonly = true
 
-  data_deps = []
+  deps = [ "sl4f/client:tests" ]
 }

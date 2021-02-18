@@ -5,12 +5,22 @@
 group("src") {
   testonly = true
   deps = [
-    ":tests",
+    ":e2e_tests",
+    ":src_no_e2e",
+    "connectivity",
+    "recovery",
+  ]
+}
+
+group("src_no_e2e") {
+  testonly = true
+  deps = [
+    ":tests_no_e2e",
     "camera",
     "cast",
     "chromium",
     "cobalt",
-    "connectivity",
+    "connectivity:connectivity_no_e2e",
     "dart",
     "developer",
     "devices",
@@ -26,7 +36,7 @@ group("src") {
     "media",
     "modular",
     "power",
-    "recovery",
+    "recovery:recovery_no_e2e",
     "security",
     "session",
     "speech",
@@ -40,13 +50,22 @@ group("src") {
 
 group("tests") {
   testonly = true
+  deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
+  ]
+}
+
+group("tests_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
 
   deps = [
     "bringup:tests",
     "camera:tests",
     "chromium:tests",
     "cobalt:tests",
-    "connectivity:tests",
+    "connectivity:tests_no_e2e",
     "developer:tests",
     "devices:tests",
     "diagnostics:tests",
@@ -63,14 +82,13 @@ group("tests") {
     "media:tests",
     "modular:tests",
     "power:tests",
-    "recovery:tests",
+    "recovery:tests_no_e2e",
     "security:tests",
     "session:tests",
     "speech:tests",
     "storage:tests",
     "sys:tests",
     "testing:tests",
-    "tests",
     "ui:tests",
     "virtualization:tests",
     "zircon:tests",
@@ -88,6 +106,9 @@ group("tests") {
 group("e2e_tests") {
   testonly = true
   deps = [
+    "connectivity:e2e_tests",
+    "recovery:e2e_tests",
+    "tests",
     "//src/storage/lib/paver/e2e_tests",
     "//src/sys/pkg:e2e_tests",
   ]

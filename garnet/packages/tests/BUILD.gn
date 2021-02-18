@@ -75,7 +75,6 @@ group("all") {
     "//sdk/lib/ui/scenic/cpp/tests:scenic_cpp_tests",
     "//sdk/lib/vfs/cpp:vfs_cpp_tests",
     "//sdk/lib/virtualization:virtualization_lib_tests",
-    "//sdk/testing/sl4f/client:tests",
     "//src/cobalt/bin:cobalt_tests",
     "//src/connectivity/bluetooth:tests",
     "//src/connectivity/network/netstack:tests",

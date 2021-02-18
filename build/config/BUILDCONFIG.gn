@@ -437,6 +437,19 @@ default_rust_proc_macro_configs = default_shared_library_configs + [
                                     "//build/config/lto:default",
                                   ]
 
+# Known e2e test libraries. Any tests that transitively depend on these
+# libraries are considered e2e tests.
+e2e_test_libs = [ "//sdk/testing/sl4f/client" ]
+if (is_linux) {
+  e2e_test_libs += [ "//tools/emulator($host_toolchain)" ]
+}
+
+# Known unit tests for e2e test libraries.
+e2e_lib_unit_tests = [
+  "//sdk/testing/sl4f/client:tests",
+  "//tools/emulator:tests",
+]
+
 # Apply that default list to the binary target types.
 set_defaults("source_set") {
   configs = default_common_binary_configs

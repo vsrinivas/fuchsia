@@ -5,18 +5,42 @@
 group("recovery") {
   testonly = true
   deps = [
-    ":tests",
+    ":e2e_tests",
+    ":recovery_no_e2e",
+  ]
+}
+
+group("recovery_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
+  deps = [
+    ":tests_no_e2e",
     "factory_reset",
     "system",
   ]
 }
 
-group("tests") {
+group("tests_no_e2e") {
   testonly = true
+  assert_no_deps = e2e_test_libs
+
   deps = [
     "factory_reset:tests",
     "integration:tests",
-    "simulator:tests",
     "system:tests",
+  ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  deps = [ "simulator:tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
   ]
 }

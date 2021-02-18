@@ -5,7 +5,17 @@
 group("connectivity") {
   testonly = true
   deps = [
-    ":tests",
+    ":connectivity_no_e2e",
+    ":e2e_tests",
+  ]
+}
+
+group("connectivity_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
+  deps = [
+    ":tests_no_e2e",
     "bluetooth",
     "location",
     "lowpan",
@@ -35,8 +45,15 @@ group("tools") {
   ]
 }
 
-group("tests") {
+group("e2e_tests") {
   testonly = true
+  deps = [ "overnet:e2e_tests" ]
+}
+
+group("tests_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
   deps = [
     "bluetooth:tests",
     "ethernet:tests",
@@ -46,10 +63,18 @@ group("tests") {
     "management:tests",
     "network:tests",
     "openthread:tests",
-    "overnet:tests",
+    "overnet:tests_no_e2e",
     "ppp:tests",
     "telephony:tests",
     "weave:tests",
     "wlan:tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
   ]
 }

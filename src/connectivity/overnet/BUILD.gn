@@ -19,10 +19,25 @@ group("runtime") {
 group("tests") {
   testonly = true
   deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
+  ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  deps = [ "tests:e2e_tests" ]
+}
+
+group("tests_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
+  deps = [
     "examples:tests",
     "lib:tests",
     "overnetstack:tests",
-    "tests",
+    "tests:tests_no_e2e",
     "tools:tests",
   ]
 }

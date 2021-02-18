@@ -107,8 +107,20 @@ group("test_infra") {
   }
 }
 
-group("tests") {
+group("e2e_tests") {
   testonly = true
+
+  deps = []
+
+  # TODO(fxbug.dev/63992): Temporarily disable bootserver_old tests on profile builders.
+  if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
+    deps += [ "//tools/bootserver_old/tests($host_toolchain)" ]
+  }
+}
+
+group("tests_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
 
   deps = [
     "//tools/artifactory:tests",
@@ -128,7 +140,6 @@ group("tests") {
     "//tools/debug:tests($host_toolchain)",
     "//tools/devshell:tests($host_toolchain)",
     "//tools/doc_checker:tests",
-    "//tools/emulator:tests",
     "//tools/femu-control:tests",
     "//tools/fidl:tests",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
@@ -151,9 +162,17 @@ group("tests") {
     "//tools/virtual_device:tests($host_toolchain)",
     "//tools/zedmon:tests",
   ]
+}
 
-  # TODO(fxbug.dev/63992): Temporarily disable bootserver_old tests on profile builders.
-  if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
-    deps += [ "//tools/bootserver_old/tests($host_toolchain)" ]
-  }
+group("tests") {
+  testonly = true
+  deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
+
+    # `emulator:tests` contains unit tests for emulator, which depend on
+    # emulator so we can't put it in `tests_no_e2e`, but it's not an e2e tests
+    # neither.
+    "//tools/emulator:tests",
+  ]
 }

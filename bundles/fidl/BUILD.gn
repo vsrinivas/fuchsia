@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
+group("tests_no_e2e") {
   testonly = true
+  assert_no_deps = e2e_test_libs
+
   deps = [
     ":tools",
     "//build/fidl:tests",
@@ -13,6 +15,17 @@ group("tests") {
     "//sdk/lib/fidl/cpp:tests",
     "//src/lib/fidl:tests",
     "//src/lib/fidl_table_validation/fidl_table_validation_tests",
+    "//third_party/go:fidl-tests",
+    "//tools/fidl:tests",
+    "//topaz/bundles/fidl:tests",
+    "//zircon/system/ulib/fidl-async-2/test",
+    "//zircon/system/utest/fidl-compiler($host_toolchain)",
+  ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  deps = [
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/fidl/compatibility",
     "//src/tests/fidl/dangerous_identifiers:tests",
@@ -20,11 +33,14 @@ group("tests") {
     "//src/tests/fidl/fidl_go_conformance:tests",
     "//src/tests/fidl/fuzzer:tests",
     "//src/tests/fidl/source_compatibility:tests",
-    "//third_party/go:fidl-tests",
-    "//tools/fidl:tests",
-    "//topaz/bundles/fidl:tests",
-    "//zircon/system/ulib/fidl-async-2/test",
-    "//zircon/system/utest/fidl-compiler($host_toolchain)",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
   ]
 }
 
