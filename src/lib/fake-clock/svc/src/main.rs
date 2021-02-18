@@ -269,12 +269,14 @@ fn start_free_running<T: FakeClockObserver>(
 }
 
 async fn stop_free_running<T: FakeClockObserver>(mock_clock: &FakeClockHandle<T>) {
-    let mut mc = mock_clock.lock().unwrap();
-    if mc.is_free_running() {
-        if let Some((s, r)) = mc.free_running.take() {
-            s.send(()).unwrap();
-            let () = r.into_stream().next().await.unwrap().unwrap();
-        }
+    let free_running = {
+        // Limit the lifetime of the MutexGuard to avoid holding it across the await.
+        let mut mc = mock_clock.lock().unwrap();
+        mc.free_running.take()
+    };
+    if let Some((s, r)) = free_running {
+        s.send(()).unwrap();
+        let () = r.into_stream().next().await.unwrap().unwrap();
     }
 }
 
