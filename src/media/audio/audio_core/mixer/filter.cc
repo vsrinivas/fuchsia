@@ -3,13 +3,14 @@
 
 #include "src/media/audio/audio_core/mixer/filter.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 #include <mutex>
 
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::mixer {
 

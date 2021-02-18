@@ -4,6 +4,7 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -19,7 +20,6 @@
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -165,7 +165,7 @@ zx_status_t AudioDriverV2::GetDriverInfo() {
     }
 
     clock_domain_ = props.clock_domain();
-    AUDIO_LOG(DEBUG) << "Received clock domain " << clock_domain_;
+    FX_LOGS(DEBUG) << "Received clock domain " << clock_domain_;
 
     // Now that we have our clock domain, we can establish our audio device clock
     SetUpClocks();
@@ -313,9 +313,9 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
   ring_buffer_fidl_->GetProperties([this](fuchsia::hardware::audio::RingBufferProperties props) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     external_delay_ = zx::nsec(props.external_delay());
-    AUDIO_LOG(DEBUG) << "Received external delay " << external_delay_.get();
+    FX_LOGS(DEBUG) << "Received external delay " << external_delay_.get();
     uint32_t fifo_depth_bytes = props.fifo_depth();
-    AUDIO_LOG(DEBUG) << "Received fifo depth " << fifo_depth_bytes;
+    FX_LOGS(DEBUG) << "Received fifo depth " << fifo_depth_bytes;
 
     auto format = GetFormat();
     auto bytes_per_frame = format->bytes_per_frame();
@@ -325,7 +325,7 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
     fifo_depth_duration_ =
         zx::nsec(TimelineRate(ZX_SEC(1), frames_per_second).Scale(fifo_depth_frames_));
 
-    AUDIO_LOG(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
+    FX_LOGS(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
 
     // Figure out how many frames we need in our ring buffer.
     TimelineRate bytes_per_nanosecond(bytes_per_frame * frames_per_second, ZX_SEC(1));
@@ -349,10 +349,10 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
       return;
     }
 
-    AUDIO_LOG_OBJ(DEBUG, this) << "for audio " << (owner_->is_input() ? "input" : "output")
-                               << " -- fifo_depth_bytes:" << fifo_depth_bytes
-                               << ", fifo_depth_frames:" << fifo_depth_frames_
-                               << ", bytes_per_frame:" << bytes_per_frame;
+    FX_LOGS(DEBUG) << "for audio " << (owner_->is_input() ? "input" : "output")
+                   << " -- fifo_depth_bytes:" << fifo_depth_bytes
+                   << ", fifo_depth_frames:" << fifo_depth_frames_
+                   << ", bytes_per_frame:" << bytes_per_frame;
 
     state_ = State::Configuring_GettingRingBuffer;
 

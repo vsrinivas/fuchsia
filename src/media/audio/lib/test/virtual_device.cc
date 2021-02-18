@@ -4,8 +4,9 @@
 
 #include "src/media/audio/lib/test/virtual_device.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/audio/lib/format/driver_format.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio::test {
@@ -87,16 +88,15 @@ void VirtualDevice<Iface>::WatchEvents() {
     EXPECT_EQ(fmt, driver_format_);
     EXPECT_EQ(num_chans, format_.channels());
     EXPECT_EQ(ext_delay, kExternalDelay.get());
-    AUDIO_LOG(DEBUG) << "OnSetFormat callback: " << fps << ", " << fmt << ", " << num_chans << ", "
-                     << ext_delay;
+    FX_LOGS(DEBUG) << "OnSetFormat callback: " << fps << ", " << fmt << ", " << num_chans << ", "
+                   << ext_delay;
   };
 
   fidl_.events().OnSetGain = [this](bool cur_mute, bool cur_agc, float cur_gain_db) {
     EXPECT_EQ(cur_gain_db, expected_gain_db_);
     EXPECT_FALSE(cur_mute);
     EXPECT_FALSE(cur_agc);
-    AUDIO_LOG(DEBUG) << "OnSetGain callback: " << cur_mute << ", " << cur_agc << ", "
-                     << cur_gain_db;
+    FX_LOGS(DEBUG) << "OnSetGain callback: " << cur_mute << ", " << cur_agc << ", " << cur_gain_db;
   };
 
   fidl_.events().OnBufferCreated = [this](zx::vmo ring_buffer_vmo,
@@ -106,8 +106,8 @@ void VirtualDevice<Iface>::WatchEvents() {
     ASSERT_TRUE(received_set_format_);
     rb_vmo_ = std::move(ring_buffer_vmo);
     rb_.MapVmo(rb_vmo_);
-    AUDIO_LOG(DEBUG) << "OnBufferCreated callback: " << driver_reported_frame_count << " frames, "
-                     << notifications_per_ring << " notifs/ring";
+    FX_LOGS(DEBUG) << "OnBufferCreated callback: " << driver_reported_frame_count << " frames, "
+                   << notifications_per_ring << " notifs/ring";
   };
 
   fidl_.events().OnStart = [this](zx_time_t start_time) {
@@ -119,14 +119,14 @@ void VirtualDevice<Iface>::WatchEvents() {
     auto ns_per_byte = TimelineRate::Product(format_.frames_per_ns().Inverse(),
                                              TimelineRate(1, format_.bytes_per_frame()));
     running_pos_to_ref_time_ = TimelineFunction(start_time_.get(), 0, ns_per_byte);
-    AUDIO_LOG(DEBUG) << "OnStart callback: " << start_time;
+    FX_LOGS(DEBUG) << "OnStart callback: " << start_time;
   };
 
   fidl_.events().OnStop = [this](zx_time_t stop_time, uint32_t ring_pos) {
     received_stop_ = true;
     stop_time_ = zx::time(stop_time);
     stop_pos_ = ring_pos;
-    AUDIO_LOG(DEBUG) << "OnStop callback: " << stop_time << ", " << ring_pos;
+    FX_LOGS(DEBUG) << "OnStop callback: " << stop_time << ", " << ring_pos;
   };
 
   fidl_.events().OnPositionNotify = [this](zx_time_t monotonic_time, uint32_t ring_pos) {
@@ -137,7 +137,7 @@ void VirtualDevice<Iface>::WatchEvents() {
     running_ring_pos_ += ring_pos;
     running_ring_pos_ -= ring_pos_;
     ring_pos_ = ring_pos;
-    AUDIO_LOG(TRACE) << "OnPositionNotify callback: " << monotonic_time << ", " << ring_pos;
+    FX_LOGS(TRACE) << "OnPositionNotify callback: " << monotonic_time << ", " << ring_pos;
   };
 }
 

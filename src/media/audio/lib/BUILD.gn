@@ -8,7 +8,6 @@ group("lib") {
     "analysis",
     "clock",
     "format",
-    "logging",
     "simple-codec",
     "test",
     "timeline",

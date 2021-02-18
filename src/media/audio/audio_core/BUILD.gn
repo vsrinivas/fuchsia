@@ -195,7 +195,6 @@ source_set("audio_core_lib") {
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/format",
-    "//src/media/audio/lib/logging",
     "//src/media/audio/lib/timeline",
     "//src/media/audio/lib/wav",
     "//zircon/public/lib/fbl",
@@ -218,7 +217,6 @@ executable("audio_core_bin") {
     ":audio_core_lib",
     "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fsl",
-    "//src/media/audio/lib/logging",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

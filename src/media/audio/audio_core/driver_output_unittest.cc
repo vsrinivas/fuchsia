@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/driver_output.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <fbl/ref_ptr.h>
@@ -19,7 +20,6 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects.h"
 #include "src/media/audio/lib/format/driver_format.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 using testing::Each;
 using testing::Eq;

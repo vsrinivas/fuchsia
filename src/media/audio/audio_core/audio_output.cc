@@ -4,9 +4,11 @@
 #include "src/media/audio/audio_core/audio_output.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
+#include <iomanip>
 #include <limits>
 
 #include "src/media/audio/audio_core/audio_driver.h"
@@ -14,7 +16,6 @@
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/pin_executable_memory.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 

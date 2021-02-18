@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/audio_core_impl.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_capturer.h"
@@ -14,7 +15,6 @@
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 
@@ -50,7 +50,7 @@ void AudioCoreImpl::Shutdown() {
 void AudioCoreImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioRenderer");
-  AUDIO_LOG(DEBUG);
+  FX_LOGS(DEBUG);
 
   context_.route_graph().AddRenderer(
       AudioRenderer::Create(std::move(audio_renderer_request), &context_));
@@ -73,7 +73,7 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioCapturer");
-  AUDIO_LOG(DEBUG);
+  FX_LOGS(DEBUG);
 
   auto configuration = loopback ? fuchsia::media::AudioCapturerConfiguration::WithLoopback(
                                       fuchsia::media::LoopbackAudioCapturerConfiguration())

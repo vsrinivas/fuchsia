@@ -5,6 +5,7 @@
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 #include <lib/inspect/cpp/hierarchy.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 
@@ -15,7 +16,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/capturer_shim.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/test/inspect.h"
@@ -287,19 +287,19 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
       FAIL() << "Device has not been added " << id;
     }
     devices_[id].info->gain_info = gain_info;
-    AUDIO_LOG(DEBUG) << "Our output device (" << id << ") changed gain: " << gain_info.gain_db
-                     << " dB, "
-                     << (((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
-                          fuchsia::media::AudioGainInfoFlags::MUTE)
-                             ? "MUTE"
-                             : "UNMUTE");
+    FX_LOGS(DEBUG) << "Our output device (" << id << ") changed gain: " << gain_info.gain_db
+                   << " dB, "
+                   << (((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                        fuchsia::media::AudioGainInfoFlags::MUTE)
+                           ? "MUTE"
+                           : "UNMUTE");
   };
 
   audio_dev_enum_.events().OnDefaultDeviceChanged = [this](uint64_t old_default_token,
                                                            uint64_t new_default_token) {
     OnDefaultDeviceChanged(old_default_token, new_default_token);
-    AUDIO_LOG(DEBUG) << "Default device changed (old_token = " << old_default_token
-                     << ", new_token = " << new_default_token << ")";
+    FX_LOGS(DEBUG) << "Default device changed (old_token = " << old_default_token
+                   << ", new_token = " << new_default_token << ")";
   };
 }
 
@@ -366,8 +366,8 @@ void HermeticAudioTest::OnDeviceAdded(fuchsia::media::AudioDeviceInfo info) {
   }
   token_to_unique_id_[info.token_id] = id;
   devices_[id].info = info;
-  AUDIO_LOG(DEBUG) << "Output device (token = " << info.token_id << ", id = " << id
-                   << ") has been added";
+  FX_LOGS(DEBUG) << "Output device (token = " << info.token_id << ", id = " << id
+                 << ") has been added";
 }
 
 void HermeticAudioTest::OnDefaultDeviceChanged(uint64_t old_default_token,
@@ -385,8 +385,8 @@ void HermeticAudioTest::OnDefaultDeviceChanged(uint64_t old_default_token,
       << "Default device changed from " << old_default_token << " to unknown device "
       << new_default_token;
 
-  AUDIO_LOG(DEBUG) << "Default output device changed from " << old_default_token << " to "
-                   << new_default_token;
+  FX_LOGS(DEBUG) << "Default output device changed from " << old_default_token << " to "
+                 << new_default_token;
 
   if (old_default_token != 0) {
     auto id = token_to_unique_id_[old_default_token];

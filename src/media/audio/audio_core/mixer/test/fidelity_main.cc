@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "lib/syslog/cpp/log_settings.h"
@@ -10,7 +12,6 @@
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_recap.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

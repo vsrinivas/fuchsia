@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/mix_stage.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -18,7 +19,6 @@
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {

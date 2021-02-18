@@ -4,6 +4,7 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -18,7 +19,6 @@
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -789,7 +789,7 @@ zx_status_t AudioDriverV1::ProcessGetClockDomainResponse(
   TRACE_DURATION("audio", "AudioDriverV1::ProcessGetClockDomainResponse");
   clock_domain_ = resp.clock_domain;
 
-  AUDIO_LOG(DEBUG) << "Received clock domain " << clock_domain_;
+  FX_LOGS(DEBUG) << "Received clock domain " << clock_domain_;
 
   // Now that we have our clock domain, we can establish our audio device clock
   SetUpClocks();
@@ -820,7 +820,7 @@ zx_status_t AudioDriverV1::ProcessGetFifoDepthResponse(
   fifo_depth_duration_ =
       zx::nsec(TimelineRate(ZX_SEC(1), frames_per_second).Scale(fifo_depth_frames_));
 
-  AUDIO_LOG(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
+  FX_LOGS(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
 
   // Figure out how many frames we need in our ring buffer.
   TimelineRate bytes_per_nanosecond(bytes_per_frame * frames_per_second, ZX_SEC(1));
@@ -844,10 +844,10 @@ zx_status_t AudioDriverV1::ProcessGetFifoDepthResponse(
     return ZX_ERR_INTERNAL;
   }
 
-  AUDIO_LOG_OBJ(DEBUG, this) << "for audio " << (owner_->is_input() ? "input" : "output")
-                             << " -- fifo_depth_bytes:" << fifo_depth_bytes
-                             << ", fifo_depth_frames:" << fifo_depth_frames_
-                             << ", bytes_per_frame:" << bytes_per_frame;
+  FX_LOGS(DEBUG) << "for audio " << (owner_->is_input() ? "input" : "output")
+                 << " -- fifo_depth_bytes:" << fifo_depth_bytes
+                 << ", fifo_depth_frames:" << fifo_depth_frames_
+                 << ", bytes_per_frame:" << bytes_per_frame;
 
   // Request the ring buffer.
   audio_rb_cmd_get_buffer_req_t req;

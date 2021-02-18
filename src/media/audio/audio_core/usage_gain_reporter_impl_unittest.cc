@@ -5,11 +5,11 @@
 #include "src/media/audio/audio_core/usage_gain_reporter_impl.h"
 
 #include <lib/fidl/cpp/binding.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {

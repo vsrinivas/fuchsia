@@ -6,10 +6,3 @@
 source_set("cli") {
   sources = [ "cli.h" ]
 }
-
-# Configurable logging, for audio tests or drivers
-source_set("logging") {
-  sources = [ "logging.h" ]
-
-  public_deps = [ "//sdk/lib/syslog/cpp" ]
-}

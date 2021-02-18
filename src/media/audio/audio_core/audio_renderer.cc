@@ -5,12 +5,12 @@
 #include "src/media/audio/audio_core/audio_renderer.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 
@@ -63,7 +63,6 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
 // if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
 void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   TRACE_DURATION("audio", "AudioRenderer::SetReferenceClock");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
 
@@ -91,7 +90,6 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
 
 void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetPcmStreamType");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
 
@@ -127,7 +125,6 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
 void AudioRenderer::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
   TRACE_DURATION("audio", "AudioRenderer::BindGainControl");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   gain_control_bindings_.AddBinding(GainControlBinding::Create(this), std::move(request));
 }
@@ -172,7 +169,7 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
 // master) gain is "dest" gain.
 void AudioRenderer::SetGain(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
-  AUDIO_LOG_OBJ(DEBUG, this) << " (" << gain_db << " dB)";
+  FX_LOGS(DEBUG) << " (" << gain_db << " dB)";
 
   // Anywhere we set stream_gain_db_, we should perform this range check.
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
@@ -200,7 +197,7 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
                                     fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetGainWithRamp");
   zx::duration duration = zx::nsec(duration_ns);
-  AUDIO_LOG_OBJ(DEBUG, this) << " (" << gain_db << " dB, " << duration.to_usecs() << " usec)";
+  FX_LOGS(DEBUG) << " (" << gain_db << " dB, " << duration.to_usecs() << " usec)";
 
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
@@ -225,7 +222,7 @@ void AudioRenderer::SetMute(bool mute) {
   if (mute_ == mute) {
     return;
   }
-  AUDIO_LOG_OBJ(DEBUG, this) << " (mute: " << mute << ")";
+  FX_LOGS(DEBUG) << " (mute: " << mute << ")";
 
   reporter().SetMute(mute);
   mute_ = mute;
@@ -237,7 +234,7 @@ void AudioRenderer::SetMute(bool mute) {
 void AudioRenderer::NotifyGainMuteChanged() {
   TRACE_DURATION("audio", "AudioRenderer::NotifyGainMuteChanged");
   // TODO(mpuryear): consider whether GainControl events should be disable-able, like MinLeadTime.
-  AUDIO_LOG_OBJ(DEBUG, this) << " (" << stream_gain_db_ << " dB, mute: " << mute_ << ")";
+  FX_LOGS(DEBUG) << " (" << stream_gain_db_ << " dB, mute: " << mute_ << ")";
 
   for (auto& gain_binding : gain_control_bindings_.bindings()) {
     gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);

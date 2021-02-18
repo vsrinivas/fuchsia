@@ -5,13 +5,13 @@
 #include "src/media/audio/audio_core/audio_capturer.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -88,7 +88,6 @@ constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | Z
 // if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
 void AudioCapturer::SetReferenceClock(zx::clock raw_clock) {
   TRACE_DURATION("audio", "AudioCapturer::SetReferenceClock");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 

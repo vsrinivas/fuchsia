@@ -3,7 +3,7 @@
 
 #include "src/media/audio/audio_core/mixer/position_manager.h"
 
-#include "src/media/audio/lib/logging/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media::audio::mixer {
 

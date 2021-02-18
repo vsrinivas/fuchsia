@@ -10,8 +10,6 @@
 #include <cstring>
 #include <vector>
 
-#include "src/media/audio/lib/logging/logging.h"
-
 namespace media::audio::mixer {
 
 // ChannelStrip lightly manages sections of single-channel audio, useful when processing audio one

@@ -4,11 +4,12 @@
 
 #include "src/media/audio/lib/test/renderer_shim.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "lib/zx/time.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/virtual_device.h"
 
 namespace media::audio::test {
@@ -16,7 +17,7 @@ namespace media::audio::test {
 void RendererShimImpl::WatchEvents() {
   fidl_->EnableMinLeadTimeEvents(true);
   fidl_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
-    AUDIO_LOG(DEBUG) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
+    FX_LOGS(DEBUG) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
     // Sometimes, this can be invoked before the Renderer is actually linked.
     // When that happens, the reported lead time is zero as it hasn't been computed yet.
     // Wait until the renderer is linked before updating our lead time.
@@ -129,10 +130,10 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
           .payload_size = num_frames * slice.format().bytes_per_frame(),
       };
 
-      AUDIO_LOG(TRACE) << " sending pkt at pts " << packet->start_pts << ", frame " << frame
-                       << " of slice";
+      FX_LOGS(TRACE) << " sending pkt at pts " << packet->start_pts << ", frame " << frame
+                     << " of slice";
       fidl_->SendPacket(stream_packet, [packet]() {
-        AUDIO_LOG(TRACE) << " return pkt at pts " << packet->start_pts;
+        FX_LOGS(TRACE) << " return pkt at pts " << packet->start_pts;
         packet->returned = true;
       });
 

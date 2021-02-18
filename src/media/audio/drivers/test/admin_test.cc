@@ -5,14 +5,13 @@
 #include "src/media/audio/drivers/test/admin_test.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 
 #include <algorithm>
 #include <cstring>
-
-#include "lib/zx/time.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::drivers::test {
 

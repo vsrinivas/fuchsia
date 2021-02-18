@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/logger.h>
 #include <lib/trace-provider/provider.h>
 
@@ -18,7 +20,6 @@
 #include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/ultrasound_factory.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 

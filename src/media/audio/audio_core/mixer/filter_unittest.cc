@@ -3,9 +3,9 @@
 
 #include "src/media/audio/audio_core/mixer/filter.h"
 
-#include <gtest/gtest.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/lib/logging/logging.h"
+#include <gtest/gtest.h>
 
 namespace media::audio::mixer {
 namespace {

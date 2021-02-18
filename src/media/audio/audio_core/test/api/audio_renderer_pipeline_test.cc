@@ -16,7 +16,6 @@
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/comparators.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
@@ -234,7 +233,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   renderer->WaitForPackets(this, {first_packets[0], first_packets[1]});
 
   renderer->fidl()->DiscardAllPackets(AddCallback(
-      "DiscardAllPackets", []() { AUDIO_LOG(DEBUG) << "DiscardAllPackets #1 complete"; }));
+      "DiscardAllPackets", []() { FX_LOGS(DEBUG) << "DiscardAllPackets #1 complete"; }));
   ExpectCallback();
 
   // The entire first two packets must have been written. Subsequent packets may have been partially

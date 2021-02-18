@@ -4,12 +4,14 @@
 #include "src/media/audio/audio_core/base_renderer.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
+
+#include <iomanip>
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -34,7 +36,6 @@ BaseRenderer::BaseRenderer(
       reporter_(Reporter::Singleton().CreateRenderer()) {
   TRACE_DURATION("audio", "BaseRenderer::BaseRenderer");
   FX_DCHECK(context);
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   // Our default clock starts as an adjustable clone of MONOTONIC, but ultimately it will track the
   // clock of the device where the renderer is routed.
@@ -43,21 +44,18 @@ BaseRenderer::BaseRenderer(
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "BaseRenderer::audio_renderer_binding_.error_handler", "zx_status",
                    status);
-    AUDIO_LOG(DEBUG) << "Client disconnected";
+    FX_LOGS(DEBUG) << "Client disconnected";
     context_.route_graph().RemoveRenderer(*this);
   });
 }
 
 BaseRenderer::~BaseRenderer() {
-  AUDIO_LOG_OBJ(DEBUG, this);
-
   wav_writer_.Close();
   payload_buffers_.clear();
 }
 
 void BaseRenderer::Shutdown() {
   TRACE_DURATION("audio", "BaseRenderer::Shutdown");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   ReportStop();
 
@@ -191,9 +189,9 @@ bool BaseRenderer::ValidateConfig() {
         Fixed::FromRaw(static_cast<double>(frac_fps.raw_value()) * pts_continuity_threshold_);
   }
 
-  AUDIO_LOG_OBJ(DEBUG, this) << " threshold_set_: " << pts_continuity_threshold_set_
-                             << ", thres_frac_frame_: " << std::hex
-                             << pts_continuity_threshold_frac_frame_.raw_value();
+  FX_LOGS(DEBUG) << " threshold_set_: " << pts_continuity_threshold_set_
+                 << ", thres_frac_frame_: " << std::hex
+                 << pts_continuity_threshold_frac_frame_.raw_value();
 
   // Compute the number of fractional frames per reference clock tick.
   // Later we reconcile the actual reference clock with CLOCK_MONOTONIC
@@ -222,18 +220,17 @@ void BaseRenderer::ComputePtsToFracFrames(int64_t first_pts) {
       TimelineFunction(next_frac_frame_pts_.raw_value(), first_pts, frac_frames_per_pts_tick_);
   pts_to_frac_frames_valid_ = true;
 
-  AUDIO_LOG_OBJ(DEBUG, this) << " (" << first_pts
-                             << ") => stime:" << pts_to_frac_frames_.subject_time()
-                             << ", rtime:" << pts_to_frac_frames_.reference_time()
-                             << ", sdelta:" << pts_to_frac_frames_.subject_delta()
-                             << ", rdelta:" << pts_to_frac_frames_.reference_delta();
+  FX_LOGS(DEBUG) << " (" << first_pts << ") => stime:" << pts_to_frac_frames_.subject_time()
+                 << ", rtime:" << pts_to_frac_frames_.reference_time()
+                 << ", sdelta:" << pts_to_frac_frames_.subject_delta()
+                 << ", rdelta:" << pts_to_frac_frames_.reference_delta();
 }
 
 void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "BaseRenderer::AddPayloadBuffer");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  AUDIO_LOG_OBJ(DEBUG, this) << " (id: " << id << ")";
+  FX_LOGS(DEBUG) << " (id: " << id << ")";
 
   // TODO(fxbug.dev/13655): Lift this restriction.
   if (IsOperating()) {
@@ -264,7 +261,7 @@ void BaseRenderer::RemovePayloadBuffer(uint32_t id) {
   TRACE_DURATION("audio", "BaseRenderer::RemovePayloadBuffer");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  AUDIO_LOG_OBJ(DEBUG, this) << " (id: " << id << ")";
+  FX_LOGS(DEBUG) << " (id: " << id << ")";
 
   // TODO(fxbug.dev/13655): Lift this restriction.
   if (IsOperating()) {
@@ -286,8 +283,8 @@ void BaseRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
   TRACE_DURATION("audio", "BaseRenderer::SetPtsUnits");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  AUDIO_LOG_OBJ(DEBUG, this) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator
-                             << " / " << tick_per_second_denominator << ")";
+  FX_LOGS(DEBUG) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator << " / "
+                 << tick_per_second_denominator << ")";
 
   if (IsOperating()) {
     FX_LOGS(ERROR) << "Attempted to set PTS units while in operational mode.";
@@ -327,7 +324,7 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   TRACE_DURATION("audio", "BaseRenderer::SetPtsContinuityThreshold");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  AUDIO_LOG_OBJ(DEBUG, this) << " (" << threshold_seconds << " sec)";
+  FX_LOGS(DEBUG) << " (" << threshold_seconds << " sec)";
 
   if (IsOperating()) {
     FX_LOGS(ERROR) << "Attempted to set PTS cont threshold while in operational mode.";
@@ -440,13 +437,11 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
   }
 
   uint32_t frame_offset = packet.payload_offset / frame_size;
-  AUDIO_LOG_OBJ(TRACE, this) << " [pkt " << std::hex << std::setw(8) << packet_ffpts.raw_value()
-                             << ", now " << std::setw(8) << next_frac_frame_pts_.raw_value()
-                             << "] => " << std::setw(8) << start_pts.raw_value() << " - "
-                             << std::setw(8)
-                             << start_pts.raw_value() + pts_to_frac_frames_.Apply(frame_count)
-                             << ", offset " << std::setw(7)
-                             << pts_to_frac_frames_.Apply(frame_offset);
+  FX_LOGS(TRACE) << " [pkt " << std::hex << std::setw(8) << packet_ffpts.raw_value() << ", now "
+                 << std::setw(8) << next_frac_frame_pts_.raw_value() << "] => " << std::setw(8)
+                 << start_pts.raw_value() << " - " << std::setw(8)
+                 << start_pts.raw_value() + pts_to_frac_frames_.Apply(frame_count) << ", offset "
+                 << std::setw(7) << pts_to_frac_frames_.Apply(frame_offset);
 
   // Regardless of timing, capture this data to file.
   auto packet_buff = reinterpret_cast<uint8_t*>(payload_buffer->start()) + packet.payload_offset;
@@ -487,22 +482,17 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
 
 void BaseRenderer::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
   TRACE_DURATION("audio", "BaseRenderer::SendPacketNoReply");
-  AUDIO_LOG_OBJ(TRACE, this);
-
   SendPacket(packet, nullptr);
 }
 
 void BaseRenderer::EndOfStream() {
   TRACE_DURATION("audio", "BaseRenderer::EndOfStream");
-  AUDIO_LOG_OBJ(DEBUG, this);
-
   ReportStop();
   // Does nothing.
 }
 
 void BaseRenderer::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::DiscardAllPackets");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   // If the user has requested a callback, create the flush token we will use to invoke the callback
   // at the proper time.
@@ -522,19 +512,15 @@ void BaseRenderer::DiscardAllPackets(DiscardAllPacketsCallback callback) {
 
 void BaseRenderer::DiscardAllPacketsNoReply() {
   TRACE_DURATION("audio", "BaseRenderer::DiscardAllPacketsNoReply");
-  AUDIO_LOG_OBJ(DEBUG, this);
-
   DiscardAllPackets(nullptr);
 }
 
 void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::Play");
-  AUDIO_LOG_OBJ(DEBUG, this) << "Request (ref: "
-                             << (_reference_time == fuchsia::media::NO_TIMESTAMP ? -1
-                                                                                 : _reference_time)
-                             << ", media: "
-                             << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time)
-                             << ")";
+  FX_LOGS(DEBUG) << "Request (ref: "
+                 << (_reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : _reference_time)
+                 << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time)
+                 << ")";
   zx::time reference_time(_reference_time);
 
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
@@ -655,8 +641,8 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     return;
   }
 
-  AUDIO_LOG(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time << ")";
-  AUDIO_LOG(DEBUG) << "frac_frame_media_time:" << std::hex << frac_frame_media_time.raw_value();
+  FX_LOGS(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time << ")";
+  FX_LOGS(DEBUG) << "frac_frame_media_time:" << std::hex << frac_frame_media_time.raw_value();
 
   // If the user requested a callback, invoke it now.
   if (callback != nullptr) {
@@ -671,9 +657,10 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
 
 void BaseRenderer::PlayNoReply(int64_t reference_time, int64_t media_time) {
   TRACE_DURATION("audio", "BaseRenderer::PlayNoReply");
-  AUDIO_LOG_OBJ(DEBUG, this)
-      << " (ref: " << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
-      << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
+  FX_LOGS(DEBUG) << " (ref: "
+                 << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
+                 << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time)
+                 << ")";
   Play(reference_time, media_time, nullptr);
 }
 
@@ -701,10 +688,8 @@ void BaseRenderer::Pause(PauseCallback callback) {
   }
 
   // If the user requested a callback, figure out the media time that we paused at and report back.
-  AUDIO_LOG_OBJ(DEBUG, this) << ". Actual (ref: " << ref_now << ", media: "
-                             << pts_to_frac_frames_.ApplyInverse(
-                                    pause_time_frac_frames_.raw_value())
-                             << ")";
+  FX_LOGS(DEBUG) << ". Actual (ref: " << ref_now << ", media: "
+                 << pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value()) << ")";
 
   if (callback != nullptr) {
     int64_t paused_media_time =
@@ -720,7 +705,6 @@ void BaseRenderer::Pause(PauseCallback callback) {
 
 void BaseRenderer::PauseNoReply() {
   TRACE_DURATION("audio", "BaseRenderer::PauseNoReply");
-  AUDIO_LOG_OBJ(DEBUG, this);
   Pause(nullptr);
 }
 
@@ -742,7 +726,6 @@ void BaseRenderer::OnLinkAdded() { RecomputeMinLeadTime(); }
 
 void BaseRenderer::EnableMinLeadTimeEvents(bool enabled) {
   TRACE_DURATION("audio", "BaseRenderer::EnableMinLeadTimeEvents");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   min_lead_time_events_enabled_ = enabled;
   if (enabled) {
@@ -752,7 +735,6 @@ void BaseRenderer::EnableMinLeadTimeEvents(bool enabled) {
 
 void BaseRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::GetMinLeadTime");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   callback(min_lead_time_.to_nsecs());
 }
@@ -760,8 +742,6 @@ void BaseRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) {
 void BaseRenderer::ReportNewMinLeadTime() {
   TRACE_DURATION("audio", "BaseRenderer::ReportNewMinLeadTime");
   if (min_lead_time_events_enabled_) {
-    AUDIO_LOG_OBJ(DEBUG, this);
-
     auto& lead_time_event = audio_renderer_binding_.events();
     lead_time_event.OnMinLeadTimeChanged(min_lead_time_.to_nsecs());
   }
@@ -794,7 +774,6 @@ zx_status_t BaseRenderer::SetCustomReferenceClock(zx::clock ref_clock) {
 // Regardless of the source of the reference clock, we can duplicate and return it here.
 void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::GetReferenceClock");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });

@@ -1,6 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iomanip>
 #include <ios>
 
@@ -8,7 +10,6 @@
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 #include "src/media/audio/lib/analysis/generators.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::test {
 
@@ -305,9 +306,9 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_source_frames, double*
 
     int32_t expected_frac_source_offset = frac_source_frames;
     if (dest_offset < dest_frames) {
-      AUDIO_LOG(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames
-                       << ", dest_offset " << dest_offset << ", frac_source_frames " << std::hex
-                       << frac_source_frames << ", frac_source_offset " << frac_source_offset;
+      FX_LOGS(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
+                     << dest_offset << ", frac_source_frames " << std::hex << frac_source_frames
+                     << ", frac_source_offset " << frac_source_offset;
       ASSERT_GE(frac_source_offset, 0);
       EXPECT_GE(static_cast<uint32_t>(frac_source_offset) + mixer->pos_filter_width().raw_value(),
                 frac_source_frames)
@@ -906,9 +907,9 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   int32_t expected_frac_source_offset = frac_source_frames;
   if (dest_offset < dest_frames) {
     // This is expected, for resamplers with width.
-    AUDIO_LOG(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
-                     << dest_offset << ", frac_source_frames " << std::hex << frac_source_frames
-                     << ", frac_source_offset " << frac_source_offset;
+    FX_LOGS(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
+                   << dest_offset << ", frac_source_frames " << std::hex << frac_source_frames
+                   << ", frac_source_offset " << frac_source_offset;
     ASSERT_GE(frac_source_offset, 0);
     EXPECT_GE(static_cast<uint32_t>(frac_source_offset) + mixer->pos_filter_width().raw_value(),
               frac_source_frames)

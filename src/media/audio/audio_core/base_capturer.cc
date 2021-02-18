@@ -7,8 +7,10 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 #include <lib/media/audio/cpp/types.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
+#include <iomanip>
 #include <memory>
 
 #include "src/media/audio/audio_core/audio_admin.h"
@@ -16,7 +18,6 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -225,9 +226,8 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   reporter_->AddPayloadBuffer(id, payload_buf_size);
 
   auto payload_buf_frames = static_cast<uint32_t>(payload_buf_size / format_.bytes_per_frame());
-  AUDIO_LOG_OBJ(DEBUG, this) << "payload buf -- size:" << payload_buf_size
-                             << ", frames:" << payload_buf_frames
-                             << ", bytes/frame:" << format_.bytes_per_frame();
+  FX_LOGS(DEBUG) << "payload buf -- size:" << payload_buf_size << ", frames:" << payload_buf_frames
+                 << ", bytes/frame:" << format_.bytes_per_frame();
 
   // Map the VMO into our process.
   res = payload_buf_.Map(payload_buf_vmo, /*offset=*/0, payload_buf_size,
@@ -747,15 +747,15 @@ void BaseCapturer::FinishBuffers() {
     reporter_->SendPacket(pkt);
 
     if (p->callback() != nullptr) {
-      AUDIO_LOG_OBJ(TRACE, this) << "Sync -mode -- payload size:" << pkt.payload_size
-                                 << " bytes, offset:" << pkt.payload_offset
-                                 << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
+      FX_LOGS(TRACE) << "Sync -mode -- payload size:" << pkt.payload_size
+                     << " bytes, offset:" << pkt.payload_offset << " bytes, flags:" << pkt.flags
+                     << ", pts:" << pkt.pts;
 
       p->callback()(pkt);
     } else {
-      AUDIO_LOG_OBJ(TRACE, this) << "Async-mode -- payload size:" << pkt.payload_size
-                                 << " bytes, offset:" << pkt.payload_offset
-                                 << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
+      FX_LOGS(TRACE) << "Async-mode -- payload size:" << pkt.payload_size
+                     << " bytes, offset:" << pkt.payload_offset << " bytes, flags:" << pkt.flags
+                     << ", pts:" << pkt.pts;
 
       binding_.events().OnPacketProduced(pkt);
     }
@@ -801,7 +801,6 @@ void BaseCapturer::UpdateFormat(Format format) {
 // Regardless of the source of the reference clock, we can duplicate and return it here.
 void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
   TRACE_DURATION("audio", "BaseCapturer::GetReferenceClock");
-  AUDIO_LOG_OBJ(DEBUG, this);
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 

@@ -4,6 +4,7 @@
 #include "src/media/audio/audio_core/audio_capturer.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
 #include <gtest/gtest.h>
@@ -17,7 +18,6 @@
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {

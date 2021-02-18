@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/audio_core/stream_usage.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {

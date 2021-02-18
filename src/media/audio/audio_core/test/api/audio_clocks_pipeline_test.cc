@@ -26,7 +26,6 @@
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/comparators.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 

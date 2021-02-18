@@ -6,11 +6,11 @@
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <cstring>
 
-#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/message_transceiver.h"
 
 namespace media::audio::drivers::test {
@@ -35,7 +35,7 @@ void BasicTest::RequestStreamProperties() {
                     stream_props_.unique_id()[10], stream_props_.unique_id()[11],
                     stream_props_.unique_id()[12], stream_props_.unique_id()[13],
                     stream_props_.unique_id()[14], stream_props_.unique_id()[15]);
-      AUDIO_LOG(DEBUG) << "Received unique_id " << id_buf;
+      FX_LOGS(DEBUG) << "Received unique_id " << id_buf;
     }
 
     ASSERT_TRUE(stream_props_.has_is_input());
@@ -66,10 +66,10 @@ void BasicTest::RequestStreamProperties() {
     ASSERT_TRUE(stream_props_.has_plug_detect_capabilities());
 
     if (stream_props_.has_manufacturer()) {
-      AUDIO_LOG(DEBUG) << "Received manufacturer " << stream_props_.manufacturer();
+      FX_LOGS(DEBUG) << "Received manufacturer " << stream_props_.manufacturer();
     }
     if (stream_props_.has_product()) {
-      AUDIO_LOG(DEBUG) << "Received product " << stream_props_.product();
+      FX_LOGS(DEBUG) << "Received product " << stream_props_.product();
     }
 
     ASSERT_TRUE(stream_props_.has_clock_domain());
@@ -86,7 +86,7 @@ void BasicTest::RequestGain() {
   // We reconnect the stream every time we run a test, and by driver interface definition the driver
   // must reply to the first watch request, so we get gain state by issuing a watch FIDL call.
   stream_config()->WatchGainState([this](fuchsia::hardware::audio::GainState gain_state) {
-    AUDIO_LOG(DEBUG) << "Received gain " << gain_state.gain_db();
+    FX_LOGS(DEBUG) << "Received gain " << gain_state.gain_db();
 
     gain_state_ = std::move(gain_state);
 
@@ -135,7 +135,7 @@ void BasicTest::RequestSetGain() {
 
   fuchsia::hardware::audio::GainState gain_state;
   EXPECT_EQ(set_gain_state_.Clone(&gain_state), ZX_OK);
-  AUDIO_LOG(DEBUG) << "Sent gain " << gain_state.gain_db();
+  FX_LOGS(DEBUG) << "Sent gain " << gain_state.gain_db();
   stream_config()->SetGain(std::move(gain_state));
   issued_set_gain_ = true;
 }
@@ -152,7 +152,7 @@ void BasicTest::RequestPlugDetect() {
     EXPECT_TRUE(plug_state_.has_plug_state_time());
     EXPECT_LT(plug_state_.plug_state_time(), zx::clock::get_monotonic().get());
 
-    AUDIO_LOG(DEBUG) << "Plug_state_time: " << plug_state_.plug_state_time();
+    FX_LOGS(DEBUG) << "Plug_state_time: " << plug_state_.plug_state_time();
     received_plug_detect_ = true;
   });
   RunLoopUntil([this]() { return received_plug_detect_ || failed(); });

@@ -6,6 +6,7 @@
 
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <string>
@@ -16,7 +17,6 @@
 #include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/reporter.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 

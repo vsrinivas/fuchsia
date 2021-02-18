@@ -15,7 +15,6 @@
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {

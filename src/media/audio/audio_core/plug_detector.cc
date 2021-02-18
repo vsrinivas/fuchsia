@@ -20,7 +20,6 @@
 
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/media/audio/audio_core/reporter.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -70,8 +69,8 @@ class PlugDetectorImpl : public PlugDetector {
       if (watcher != nullptr) {
         watchers_.emplace_back(std::move(watcher));
       } else {
-        AUDIO_LOG(DEBUG) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
-                         << "\".";
+        FX_LOGS(DEBUG) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
+                       << "\".";
       }
     }
 
