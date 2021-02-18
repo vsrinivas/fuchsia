@@ -26,9 +26,10 @@ void ExceptionHandler::SetUpClient() {
     return;
   }
 
-  zx::channel client_endpoint;
-  if (const zx_status_t status = zx::channel::create(0u, &server_endpoint_, &client_endpoint)) {
-    LogError("Failed to create channel for fuchsia.exception.Handler", status);
+  auto exception_handler_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::exception::Handler>();
+  if (!exception_handler_endpoints.is_ok()) {
+    LogError("Failed to create channel for fuchsia.exception.Handler",
+             exception_handler_endpoints.status_value());
     drop_exceptions_ = true;
     return;
   }
@@ -44,7 +45,9 @@ void ExceptionHandler::SetUpClient() {
   };
 
   connection_ = fidl::Client<llcpp::fuchsia::exception::Handler>();
-  connection_.Bind(std::move(client_endpoint), dispatcher_, std::make_shared<EventHandler>(this));
+  connection_.Bind(std::move(exception_handler_endpoints->client), dispatcher_,
+                   std::make_shared<EventHandler>(this));
+  server_endpoint_ = std::move(exception_handler_endpoints->server);
 }
 
 void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info) {
@@ -73,7 +76,7 @@ void ExceptionHandler::ConnectToServer() {
 
   if (const zx_status_t status =
           fdio_service_connect_at(exception_handler_svc_, llcpp::fuchsia::exception::Handler::Name,
-                                  server_endpoint_.release());
+                                  server_endpoint_.channel().release());
       status != ZX_OK) {
     LogError("unable to connect to fuchsia.exception.Handler", status);
     drop_exceptions_ = true;

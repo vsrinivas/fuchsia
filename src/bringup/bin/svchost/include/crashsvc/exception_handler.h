@@ -8,7 +8,7 @@
 #include <fuchsia/exception/llcpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/client.h>
-#include <lib/zx/channel.h>
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/handle.h>
 #include <zircon/syscalls/exception.h>
@@ -39,8 +39,8 @@ class ExceptionHandler {
   bool drop_exceptions_;
   fidl::Client<llcpp::fuchsia::exception::Handler> connection_;
 
-  // The other endpoint of the |connection_|'s channel before it has been sent to the server.
-  zx::channel server_endpoint_;
+  // The other endpoint of |connection_| before it has been sent to the server.
+  fidl::ServerEnd<llcpp::fuchsia::exception::Handler> server_endpoint_;
 };
 
 #endif  // SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_EXCEPTION_HANDLER_H_
