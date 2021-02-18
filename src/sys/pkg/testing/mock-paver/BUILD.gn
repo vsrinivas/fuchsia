@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mock-paver") {
   version = "0.1.0"
@@ -28,15 +27,8 @@ rustc_library("mock-paver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("mock-paver-tests") {
+fuchsia_unittest_package("mock-paver-tests") {
   deps = [ ":mock-paver_test" ]
-
-  tests = [
-    {
-      name = "mock_paver_lib_test"
-      dest = "mock-paver-lib-test"
-    },
-  ]
 }
 
 group("tests") {

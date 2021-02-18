@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mock-installer") {
   version = "0.0.1"
@@ -31,13 +30,6 @@ group("tests") {
   deps = [ ":mock-installer-tests" ]
 }
 
-unittest_package("mock-installer-tests") {
+fuchsia_unittest_package("mock-installer-tests") {
   deps = [ ":mock-installer_test" ]
-
-  tests = [
-    {
-      name = "mock_installer_lib_test"
-      dest = "mock-installer-lib-test"
-    },
-  ]
 }

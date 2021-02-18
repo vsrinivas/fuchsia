@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mock-reboot") {
   version = "0.0.1"
@@ -28,12 +27,6 @@ group("tests") {
   deps = [ ":mock-reboot-tests" ]
 }
 
-unittest_package("mock-reboot-tests") {
+fuchsia_unittest_package("mock-reboot-tests") {
   deps = [ ":mock-reboot_test" ]
-
-  tests = [
-    {
-      name = "mock_reboot_lib_test"
-    },
-  ]
 }
