@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1433
+From //build/config/BUILDCONFIG.gn:1446
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -578,7 +578,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:509
+From //build/config/BUILDCONFIG.gn:522
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -1086,7 +1086,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1212
+From //build/config/BUILDCONFIG.gn:1225
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1776,7 +1776,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1080
+From //build/config/BUILDCONFIG.gn:1093
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3003,7 +3003,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1423
+From //build/config/BUILDCONFIG.gn:1436
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3012,7 +3012,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1428
+From //build/config/BUILDCONFIG.gn:1441
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3044,7 +3044,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1258
+From //build/config/BUILDCONFIG.gn:1271
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3324,7 +3324,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1242
+From //build/config/BUILDCONFIG.gn:1255
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
