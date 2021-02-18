@@ -168,7 +168,9 @@ class AppModel {
     ]).addListener(onCancel);
 
     // Add inspect data when requested.
-    inspect.Inspect().onDemand('ermine', _onInspect);
+    inspect.Inspect()
+      ..serve(_startupContext.outgoing)
+      ..onDemand('ermine', _onInspect);
 
     // Handle commands from Flutter Driver.
     _flutterDriverHandler = MethodChannel('flutter_driver/handler');
