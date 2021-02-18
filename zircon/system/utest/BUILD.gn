@@ -13,7 +13,6 @@ group("tests") {
     "abi-type-validator",
     "cleanup:tests",
     "cmdline:tests",
-    "cmdline($host_toolchain)",
     "compiler:tests",
     "cprng:tests",
     "ctor:tests",

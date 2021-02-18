@@ -29,7 +29,10 @@ source_set("traits") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuzzing_traits_unittests" ]
+  deps = [
+    ":fuzz_input_unittests(${host_toolchain})",
+    ":fuzzing_traits_unittests",
+  ]
 }
 
 test("fuzzing_traits_unittests") {
@@ -56,10 +59,4 @@ test("fuzz_input_unittests") {
     ":cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
-}
-
-install_host_tools("host_tests") {
-  testonly = true
-  deps = [ ":fuzz_input_unittests" ]
-  outputs = [ "fuzz_input_unittests" ]
 }

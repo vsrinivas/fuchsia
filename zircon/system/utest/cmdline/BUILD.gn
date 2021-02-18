@@ -26,5 +26,8 @@ fuchsia_unittest_package("cmdline-test-pkg") {
 
 group("tests") {
   testonly = true
-  deps = [ ":cmdline-test-pkg" ]
+  deps = [
+    ":cmdline($host_toolchain)",
+    ":cmdline-test-pkg",
+  ]
 }
