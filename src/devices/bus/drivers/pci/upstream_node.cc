@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "upstream_node.h"
+#include "src/devices/bus/drivers/pci/upstream_node.h"
 
 #include <assert.h>
 #include <err.h>
@@ -12,7 +12,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
-#include "common.h"
+#include "src/devices/bus/drivers/pci/common.h"
 
 namespace pci {
 

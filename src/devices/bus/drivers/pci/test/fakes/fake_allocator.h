@@ -10,7 +10,7 @@
 #include <memory>
 #include <optional>
 
-#include "../../allocation.h"
+#include "src/devices/bus/drivers/pci/allocation.h"
 
 namespace pci {
 

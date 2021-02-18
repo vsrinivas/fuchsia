@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 
-#include "bus.h"
+#include "src/devices/bus/drivers/pci/bus.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
 
 static constexpr zx_driver_ops_t pci_driver_ops = []() {

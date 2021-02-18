@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bus.h"
+#include "src/devices/bus/drivers/pci/bus.h"
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/zx/time.h>
@@ -23,10 +23,10 @@
 #include <fbl/span.h>
 #include <fbl/vector.h>
 
-#include "bridge.h"
-#include "common.h"
-#include "config.h"
-#include "device.h"
+#include "src/devices/bus/drivers/pci/bridge.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device.h"
 
 namespace pci {
 

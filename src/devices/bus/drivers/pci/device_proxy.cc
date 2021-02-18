@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device_proxy.h"
+#include "src/devices/bus/drivers/pci/device_proxy.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
@@ -13,7 +13,7 @@
 
 #include <ddk/debug.h>
 
-#include "common.h"
+#include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"
 
 #define RPC_ENTRY zxlogf(TRACE, "[%s] %s: entry", cfg_->addr(), __func__)

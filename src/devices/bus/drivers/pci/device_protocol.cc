@@ -16,9 +16,9 @@
 #include <zircon/syscalls/pci.h>
 #include <zircon/types.h>
 
-#include "common.h"
-#include "device.h"
-#include "device_rpc.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/device.h"
+#include "src/devices/bus/drivers/pci/device_rpc.h"
 
 #define RPC_ENTRY zxlogf(DEBUG, "[%s] %s: entry", cfg_->addr(), __func__)
 

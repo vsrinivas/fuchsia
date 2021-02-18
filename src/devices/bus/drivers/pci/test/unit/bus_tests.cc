@@ -16,12 +16,12 @@
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
-#include "../..//upstream_node.h"
-#include "../../bus.h"
-#include "../../common.h"
-#include "../fakes/fake_ecam.h"
-#include "../fakes/fake_pciroot.h"
-#include "../fakes/fake_upstream_node.h"
+#include "src/devices/bus/drivers/pci/upstream_node.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_ecam.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_upstream_node.h"
+#include "src/devices/bus/drivers/pci/bus.h"
+#include "src/devices/bus/drivers/pci/common.h"
 
 namespace pci {
 

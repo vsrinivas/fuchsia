@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bridge.h"
+#include "src/devices/bus/drivers/pci/bridge.h"
 
 #include <assert.h>
 #include <err.h>
@@ -16,11 +16,11 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
-#include "allocation.h"
-#include "bus.h"
-#include "common.h"
-#include "config.h"
-#include "device.h"
+#include "src/devices/bus/drivers/pci/allocation.h"
+#include "src/devices/bus/drivers/pci/bus.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device.h"
 
 namespace pci {
 

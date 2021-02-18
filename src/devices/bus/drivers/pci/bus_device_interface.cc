@@ -4,7 +4,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
-#include "bus.h"
+#include "src/devices/bus/drivers/pci/bus.h"
 
 namespace pci {
 

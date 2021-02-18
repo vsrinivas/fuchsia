@@ -10,7 +10,7 @@
 
 #include <hwreg/bitfields.h>
 
-#include "../../common.h"
+#include "src/devices/bus/drivers/pci/common.h"
 
 struct IoBaseAddress {
   uint32_t value;

@@ -4,9 +4,9 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_UPSTREAM_NODE_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_UPSTREAM_NODE_H_
 
-#include "../../ref_counted.h"
-#include "../../upstream_node.h"
-#include "fake_allocator.h"
+#include "src/devices/bus/drivers/pci/ref_counted.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_allocator.h"
+#include "src/devices/bus/drivers/pci/upstream_node.h"
 
 namespace pci {
 

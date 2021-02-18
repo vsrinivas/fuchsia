@@ -12,9 +12,9 @@
 
 #include <fbl/algorithm.h>
 
-#include "../../common.h"
-#include "../../config.h"
-#include "test_device.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
 
 namespace pci {
 

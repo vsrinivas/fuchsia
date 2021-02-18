@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "src/devices/bus/drivers/pci/device.h"
 
 #include <assert.h>
 #include <err.h>
@@ -25,13 +25,13 @@
 #include <fbl/string_buffer.h>
 #include <pretty/sizes.h>
 
-#include "bus_device_interface.h"
-#include "capabilities/msi.h"
-#include "capabilities/msix.h"
-#include "common.h"
-#include "ref_counted.h"
+#include "src/devices/bus/drivers/pci/bus_device_interface.h"
+#include "src/devices/bus/drivers/pci/capabilities/msi.h"
+#include "src/devices/bus/drivers/pci/capabilities/msix.h"
+#include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
-#include "upstream_node.h"
+#include "src/devices/bus/drivers/pci/ref_counted.h"
+#include "src/devices/bus/drivers/pci/upstream_node.h"
 
 namespace pci {
 

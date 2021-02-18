@@ -6,11 +6,11 @@
 
 #include <ddktl/device.h>
 
-#include "../fakes/fake_bus.h"
-#include "../fakes/fake_config.h"
-#include "../fakes/fake_pciroot.h"
-#include "../fakes/fake_upstream_node.h"
-#include "driver_tests.h"
+#include "src/devices/bus/drivers/pci/test/driver/driver_tests.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_bus.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_config.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_upstream_node.h"
 
 namespace pci {
 

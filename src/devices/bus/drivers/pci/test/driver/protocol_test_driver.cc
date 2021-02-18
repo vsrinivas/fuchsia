@@ -21,11 +21,11 @@
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
-#include "../../capabilities/msi.h"
-#include "../../common.h"
-#include "../../config.h"
-#include "../fakes/test_device.h"
+#include "src/devices/bus/drivers/pci/capabilities/msi.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/test/driver/pci_protocol_test_driver_bind.h"
+#include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
 
 ProtocolTestDriver* ProtocolTestDriver::instance_;
 

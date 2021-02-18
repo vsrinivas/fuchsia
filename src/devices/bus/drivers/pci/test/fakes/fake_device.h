@@ -12,10 +12,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/ref_counted.h>
 
-#include "../../common.h"
-#include "../../config.h"
-#include "../../device.h"
-#include "../../ref_counted.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device.h"
+#include "src/devices/bus/drivers/pci/ref_counted.h"
 
 class FakeDevice final : public pci::Device {
  public:

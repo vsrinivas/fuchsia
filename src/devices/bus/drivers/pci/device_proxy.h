@@ -13,7 +13,7 @@
 
 #include <ddktl/device.h>
 
-#include "device_rpc.h"
+#include "src/devices/bus/drivers/pci/device_rpc.h"
 
 namespace pci {
 class DeviceProxy;

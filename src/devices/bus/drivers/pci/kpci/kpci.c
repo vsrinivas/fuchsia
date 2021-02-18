@@ -19,7 +19,7 @@
 #include <ddk/platform-defs.h>
 #include <hw/pci.h>
 
-#include "kpci-private.h"
+#include "src/devices/bus/drivers/pci/kpci/kpci-private.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
 
 #define KPCIDBG(f, ...) zxlogf(DEBUG, "%s: " f, __func__, ##__VA_ARGS__)

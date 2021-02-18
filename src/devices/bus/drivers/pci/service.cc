@@ -8,8 +8,8 @@
 
 #include <memory>
 
-#include "bus.h"
-#include "common.h"
+#include "src/devices/bus/drivers/pci/bus.h"
+#include "src/devices/bus/drivers/pci/common.h"
 
 namespace pci {
 

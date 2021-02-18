@@ -26,11 +26,11 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
 
-#include "bridge.h"
-#include "bus_device_interface.h"
-#include "config.h"
-#include "device.h"
-#include "root.h"
+#include "src/devices/bus/drivers/pci/bridge.h"
+#include "src/devices/bus/drivers/pci/bus_device_interface.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device.h"
+#include "src/devices/bus/drivers/pci/root.h"
 
 namespace pci {
 

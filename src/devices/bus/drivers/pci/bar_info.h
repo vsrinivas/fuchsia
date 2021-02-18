@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BAR_INFO_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BAR_INFO_H_
 
-#include "allocation.h"
+#include "src/devices/bus/drivers/pci/allocation.h"
 
 // The public facing type for passing out bar information.
 struct BarInfo {

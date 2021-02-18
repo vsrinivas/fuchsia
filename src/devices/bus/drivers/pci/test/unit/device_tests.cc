@@ -9,12 +9,12 @@
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
-#include "../../config.h"
-#include "../../device.h"
-#include "../fakes/fake_bus.h"
-#include "../fakes/fake_pciroot.h"
-#include "../fakes/fake_upstream_node.h"
-#include "../fakes/test_device.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_bus.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_upstream_node.h"
+#include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device.h"
 
 namespace pci {
 

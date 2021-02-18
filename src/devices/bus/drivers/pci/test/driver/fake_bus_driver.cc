@@ -6,11 +6,11 @@
 
 #include <ddk/platform-defs.h>
 
-#include "../../config.h"
-#include "../../device.h"
-#include "../fakes/test_device.h"
-#include "driver_tests.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device.h"
+#include "src/devices/bus/drivers/pci/test/driver/driver_tests.h"
 #include "src/devices/bus/drivers/pci/test/driver/fake_pci_bus_driver_bind.h"
+#include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
 
 namespace pci {
 

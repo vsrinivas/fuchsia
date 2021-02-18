@@ -11,9 +11,9 @@
 
 #include <hwreg/bitfields.h>
 
-#include "../bar_info.h"
-#include "../capabilities.h"
-#include "../common.h"
+#include "src/devices/bus/drivers/pci/bar_info.h"
+#include "src/devices/bus/drivers/pci/capabilities.h"
+#include "src/devices/bus/drivers/pci/common.h"
 
 namespace pci {
 

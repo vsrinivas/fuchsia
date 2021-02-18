@@ -11,9 +11,9 @@
 
 #include <fbl/algorithm.h>
 
-#include "capabilities/msi.h"
-#include "common.h"
-#include "device.h"
+#include "src/devices/bus/drivers/pci/capabilities/msi.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/device.h"
 
 namespace pci {
 

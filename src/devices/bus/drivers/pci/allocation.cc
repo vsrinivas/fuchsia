@@ -17,9 +17,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
-#include "common.h"
-#include "root.h"
-#include "upstream_node.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/root.h"
+#include "src/devices/bus/drivers/pci/upstream_node.h"
 
 namespace pci {
 

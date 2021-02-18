@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver_tests.h"
+#include "src/devices/bus/drivers/pci/test/driver/driver_tests.h"
 
 #include <fuchsia/device/test/c/fidl.h>
 #include <getopt.h>

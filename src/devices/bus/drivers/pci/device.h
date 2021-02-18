@@ -26,16 +26,16 @@
 #include <hw/pci.h>
 #include <region-alloc/region-alloc.h>
 
-#include "allocation.h"
-#include "bar_info.h"
-#include "bus_device_interface.h"
-#include "capabilities.h"
-#include "capabilities/msi.h"
-#include "capabilities/msix.h"
-#include "capabilities/pci_express.h"
-#include "config.h"
-#include "device_rpc.h"
-#include "ref_counted.h"
+#include "src/devices/bus/drivers/pci/allocation.h"
+#include "src/devices/bus/drivers/pci/bar_info.h"
+#include "src/devices/bus/drivers/pci/bus_device_interface.h"
+#include "src/devices/bus/drivers/pci/capabilities.h"
+#include "src/devices/bus/drivers/pci/capabilities/msi.h"
+#include "src/devices/bus/drivers/pci/capabilities/msix.h"
+#include "src/devices/bus/drivers/pci/capabilities/pci_express.h"
+#include "src/devices/bus/drivers/pci/config.h"
+#include "src/devices/bus/drivers/pci/device_rpc.h"
+#include "src/devices/bus/drivers/pci/ref_counted.h"
 
 namespace pci {
 

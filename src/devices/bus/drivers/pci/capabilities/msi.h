@@ -9,7 +9,7 @@
 
 #include <hwreg/bitfields.h>
 
-#include "../capabilities.h"
+#include "src/devices/bus/drivers/pci/capabilities.h"
 
 namespace pci {
 

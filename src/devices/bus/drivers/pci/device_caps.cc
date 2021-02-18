@@ -4,11 +4,12 @@
 #include <fbl/string_buffer.h>
 #include <hwreg/bitfields.h>
 
-#include "capabilities/msi.h"
-#include "capabilities/msix.h"
-#include "capabilities/pci_express.h"
-#include "common.h"
-#include "device.h"
+#include "src/devices/bus/drivers/pci/capabilities/msi.h"
+#include "src/devices/bus/drivers/pci/capabilities/msix.h"
+#include "src/devices/bus/drivers/pci/capabilities/pci_express.h"
+#include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/device.h"
+
 namespace pci {
 
 struct CapabilityHdr {

@@ -17,7 +17,7 @@
 #include <ddk/driver.h>
 #include <hw/pci.h>
 
-#include "kpci-private.h"
+#include "src/devices/bus/drivers/pci/kpci/kpci-private.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"
 
 zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle, pci_msg_t* req,

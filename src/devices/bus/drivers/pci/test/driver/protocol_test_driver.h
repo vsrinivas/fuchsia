@@ -13,7 +13,7 @@
 #include <zxtest/base/observer.h>
 #include <zxtest/zxtest.h>
 
-#include "driver_tests.h"
+#include "src/devices/bus/drivers/pci/test/driver/driver_tests.h"
 
 class TestObserver : public zxtest::LifecycleObserver {
  public:

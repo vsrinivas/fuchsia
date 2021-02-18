@@ -9,7 +9,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <hwreg/bitfields.h>
 
-#include "config.h"
+#include "src/devices/bus/drivers/pci/config.h"
 
 namespace pci {
 

@@ -15,7 +15,7 @@
 
 #include <fbl/array.h>
 
-#include "fake_ecam.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_ecam.h"
 
 // This FakePciroot class for the moment is a stub and test files
 // will specialize the methods they need. Eventually when more tests

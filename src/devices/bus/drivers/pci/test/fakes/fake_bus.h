@@ -12,8 +12,8 @@
 #include <ddk/mmio-buffer.h>
 #include <hwreg/bitfields.h>
 
-#include "../../bus.h"
-#include "fake_pciroot.h"
+#include "src/devices/bus/drivers/pci/bus.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
 
 namespace pci {
 

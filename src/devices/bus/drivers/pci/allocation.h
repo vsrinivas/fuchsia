@@ -16,7 +16,7 @@
 #include <fbl/macros.h>
 #include <region-alloc/region-alloc.h>
 
-#include "ref_counted.h"
+#include "src/devices/bus/drivers/pci/ref_counted.h"
 
 // PciAllocations and PciAllocators are concepts internal to UpstreamNodes which
 // track address space allocations across roots and bridges. PciAllocator is an
