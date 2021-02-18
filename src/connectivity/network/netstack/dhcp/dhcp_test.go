@@ -36,6 +36,7 @@ const (
 	defaultAcquireTimeout = 1000 * time.Millisecond
 	defaultBackoffTime    = 100 * time.Millisecond
 	defaultRetransTime    = 400 * time.Millisecond
+	largeTime             = 60 * time.Minute
 )
 
 var (
@@ -305,7 +306,9 @@ func TestDHCP(t *testing.T) {
 		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 
-	c0 := newZeroJitterClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+	// Avoid retransmissions by providing a large retransmit time, to make the
+	// counter checks deterministic in this test.
+	c0 := newZeroJitterClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, largeTime, nil)
 	info := c0.Info()
 	{
 		{
@@ -337,7 +340,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		c1 := newZeroJitterClient(clientStack, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+		c1 := newZeroJitterClient(clientStack, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, largeTime, nil)
 		info := c1.Info()
 		cfg, err := acquire(ctx, c1, t.Name(), &info)
 		if err != nil {
