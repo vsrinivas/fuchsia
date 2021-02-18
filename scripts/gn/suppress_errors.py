@@ -6,7 +6,7 @@
 Example usage:
 $ fx set ...
 $ scripts/gn/suppress_errors.py\
---error=-Wconversion
+--issue=-Wconversion
 --config="//build/config:Wno-conversion"
 """
 
@@ -16,7 +16,10 @@ import multiprocessing
 import os
 import re
 import subprocess
+import json
 import sys
+import functools
+from typing import List, Dict
 
 
 def run_command(command):
@@ -24,28 +27,97 @@ def run_command(command):
         command, stderr=subprocess.STDOUT, encoding="utf8")
 
 
+# functools.cache is more semantically accurate, but requires Python 3.9
+@functools.lru_cache
+def get_out_dir():
+    """Retrieve the build output directory"""
+
+    fx_status = run_command(["fx", "status", "--format=json"])
+    return json.loads(
+        fx_status)["environmentInfo"]["items"]["build_dir"]["value"]
+
+
 def get_common_gn_args():
     """Retrieve common GN args shared by several commands in this script.
     Returns:
       A list of GN command-line arguments (to be used after "gn <command>").
     """
-    return ["out/default"]
+
+    return [get_out_dir()]
+
+
+def gn_find_refs(files: List[str], raise_if_no_match: bool = True) -> List[str]:
+    """Wrapper around `fx gn refs`.
+
+    Returns the targets referencing any of the files in `error_files`.
+    """
+    refs_command = ["fx", "gn", "refs"]
+    refs_command += get_common_gn_args()
+    refs_command += sorted(files)
+    try:
+        refs_out = run_command(refs_command)
+    except subprocess.CalledProcessError as e:
+        if ("The input matches no targets, configs, or files." in e.output and
+                not raise_if_no_match):
+            return []
+        print(f"Failed to resolve references for {files}!", file=sys.stderr)
+        print(e.output, file=sys.stderr)
+        raise e
+    return refs_out.splitlines()
+
+
+def gn_find_refs_complete(
+        path: str, sources_that_include_header: Dict[str,
+                                                     List[str]]) -> List[str]:
+    """Returns the targets referencing a path.
+    If no targets refer to that path and the path is a header,
+    fallback to looking for the targets that reference the source files which
+    include that header.
+    If still no targets, return an empty list.
+
+    This function is module-level for reasons to do with how Python
+    multiprocessing works.
+
+    Args:
+      params: tuple of (path, dictionary from header to list of sources)
+    """
+
+    refs = gn_find_refs([path], raise_if_no_match=False)
+    if refs:
+        return refs
+
+    # If no direct reference, look for refs for the sources instead.
+    print(
+        f"Note: looking for source files which includes {path}, "
+        "because the path was not tracked by the build system",
+        file=sys.stderr)
+    sources = sources_that_include_header.get(path, [])
+    if not sources:
+        print(
+            f"Warning: {path} was not tracked by the build system, "
+            "and not included by any sources",
+            file=sys.stderr)
+        return []
+    return gn_find_refs(sources)
 
 
 def can_have_config(params):
     """Returns whether the given target can have a config.
     If not sure, returns True.
-    
+
     This function is module-level for reasons to do with how Python
     multiprocessing works.
-    
+
     Args:
-      params: tuple of target to examine, config to add, is target in Zircon.
+      params: tuple of target to examine, config to add.
               Packed in a single tuple for reasons to do with how Python
               multiprocessing works.
     """
 
-    target, config, _ = params
+    (
+        target,
+        config,
+    ) = params
 
     desc_command = ["fx", "gn", "desc"]
     desc_command += get_common_gn_args()
@@ -69,69 +141,147 @@ def can_have_config(params):
             raise e
 
 
+included_from_regex = re.compile("In file included from (.*?\.(cc|cpp)):\d*")
+
+
+def find_cc_file_using_included_from(prev_lines: str):
+    """Given the last lines of compiler output, find the first path that
+    is not of the 'In file included from ...' format, which is probably the
+    source file that led to the error by including a chain of headers.
+    """
+    # The last line should be a header file reference
+    assert "In file included from" not in prev_lines[
+        -1], f"unexpected {prev_lines}"
+    # Go backwards until we hit a '.cc' or '.cpp' file
+    for l in reversed(prev_lines[:-1]):
+        match = included_from_regex.match(l)
+        if match:
+            return os.path.normpath(os.path.join(get_out_dir(), match.group(1)))
+    raise RuntimeError(f"Cannot find .cc/.cpp file in {prev_lines}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Adds a given config to all compile targets with "
         "a given compiler error")
-    parser.add_argument("--error", required=True, help="Compiler error marker")
-    parser.add_argument("--config", required=True, help="Config to add")
+    parser.add_argument(
+        "--fx-build-log",
+        help="Captured output from a build invocation. "
+        "If not provided, the tool will invoke the build first.",
+    )
+    parser.add_argument(
+        "--confirm",
+        help="If true, pause after each step in the script to review changes",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--complete",
+        help=
+        "If true, attempt to produce a complete annotation by attributing errors "
+        "in unreferenced headers to source files that include that header.",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--issue",
+        required=True,
+        help="A regex matching the intended compiler error/warning. "
+        "E.g. --issue='error:.*-Wconversion'."
+        "Take care to avoid character expansion by the shell, for example "
+        "by using single quotation marks.")
+    parser.add_argument("--config", required=True, help="GN config to add")
     parser.add_argument("--comment", help="Comment to add before config")
     args = parser.parse_args()
-    error = args.error
+    fx_build_log = args.fx_build_log
+    confirm = args.confirm
+    complete = args.complete
+    issue = args.issue
     config = args.config
     comment = args.comment
 
-    # Harvest all compilation errors
-    print("Building...")
-    try:
-        # On error continue building to discover all failures
-        run_command(["fx", "build", "-k0"])
-        print("Build successful!")
-        return 0
-    except subprocess.CalledProcessError as e:
-        build_out = e.output
-    error_regex = re.compile(
-        "(?:../)*([^:]*):\d*:\d*: error: .*" + re.escape(error))
+    log_regex = re.compile(f"(?:\.\./)*([^:]*):\d*:\d*:.*({issue})")
+
+    if fx_build_log:
+        with open(fx_build_log, "r") as f:
+            build_out = f.readlines()
+    else:
+        # Harvest all compilation errors
+        print("Building...")
+        try:
+            # On error continue building to discover all failures
+            build_out = run_command(["fx", "build", "-k0"])
+        except subprocess.CalledProcessError as e:
+            build_out = e.output
+        build_out = build_out.splitlines()
+
+    sources_that_include_header = {}
     error_files = set()
-    for line in build_out.splitlines():
-        match = error_regex.match(line)
+    prev_lines = []
+    for line in build_out:
+        prev_lines.append(line)
+        # We probably won't have more than 30 layers of header inclusions.
+        prev_lines = prev_lines[-30:]
+        match = log_regex.match(line)
         if match:
             path = os.path.normpath(match.group(1))
+            if path.endswith(".h"):
+                # Trace back to a '.cc' file, and record on the side
+                sources = sources_that_include_header.get(path, [])
+                sources.append(find_cc_file_using_included_from(prev_lines))
+                sources_that_include_header[path] = sources
             error_files.add(path)
-    print("Sources with compilation errors:")
+    print("Sources with compilation issues:")
     print("\n".join(sorted(error_files)))
     print()
     if not error_files:
         return 0
+    if confirm:
+        input("Press Enter to continue...")
 
     # Collect all BUILD.gn files with targets referencing failing sources
     print("Resolving references...")
-    outdir = "out/default"
-    refs_command = ["fx", "gn", "refs"]
-    refs_command += get_common_gn_args(False)
-    refs_command += sorted(error_files)
-    try:
-        refs_out = run_command(refs_command)
-    except subprocess.CalledProcessError as e:
-        print("Failed to resolve references!")
-        print(e.output)
-        return 1
     target_no_toolchain = re.compile("(\/\/[^:]*:[^(]*)(?:\(.*\))?")
-    error_targets = {
-        target_no_toolchain.match(ref).group(1)
-        for ref in refs_out.splitlines()
-    }
+    if complete:
+        # Run `gn ref` on every error file individually. This is the only way
+        # we can determine if a certain file does not have a reference.
+        # Cap the max parallelism as the `gn refs` operation turned out very
+        # memory intensive.
+        with multiprocessing.Pool(min(multiprocessing.cpu_count(), 20)) as p:
+            refs_lists = p.starmap(
+                gn_find_refs_complete,
+                ((path, sources_that_include_header) for path in error_files),
+            )
+            error_targets = {
+                target_no_toolchain.match(ref).group(1)
+                for refs in refs_lists
+                for ref in refs
+            }
+    else:
+        # Use a single `gn refs` invocation to find all references.
+        # Note that this may silently omit files without references.
+        refs_out = gn_find_refs(error_files)
+        error_targets = {
+            target_no_toolchain.match(ref).group(1) for ref in refs_out
+        }
+    print("Targets with the error:")
+    print(error_targets)
+    print()
+    if confirm:
+        input("Press Enter to continue...")
 
     # Remove targets that already have the given config
     # or can't have a config in the first place
     print("Removing irrelevant targets...")
     # `gn desc` is slow so parallelize
-    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+    # cap the max parallelism as the `gn refs` operation turned out very
+    # memory intensive.
+    with multiprocessing.Pool(min(multiprocessing.cpu_count(), 20)) as p:
         target_can_have = zip(
             error_targets,
             p.map(
                 can_have_config,
-                ((target, config, False) for target in error_targets)),
+                ((target, config) for target in error_targets)),
         )
         error_targets = {
             target for target, can_have in target_can_have if can_have
@@ -140,6 +290,8 @@ def main():
     print("Failing targets:")
     print("\n".join(sorted(error_targets)))
     print()
+    if confirm:
+        input("Press Enter to continue...")
 
     # Fix failing targets
     ref_regex = re.compile("//([^:]*):([^.(]*).*")
