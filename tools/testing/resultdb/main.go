@@ -55,6 +55,11 @@ func mainImpl() error {
 	}
 
 	client := &http.Client{}
+	semaphore := make(chan struct{}, 64)
+	for i := 0; i < cap(semaphore); i++ {
+		semaphore <- struct{}{}
+	}
+
 	var eg errgroup.Group
 	m := jsonpb.Marshaler{}
 	ctx, err := resultSinkCtx()
@@ -67,7 +72,9 @@ func mainImpl() error {
 		if err != nil {
 			return err
 		}
+		<-semaphore
 		eg.Go(func() error {
+			defer func() { semaphore <- struct{}{} }()
 			return sendData(ctx, testResult, "ReportTestResults", client)
 		})
 	}
@@ -76,7 +83,10 @@ func mainImpl() error {
 	if err != nil {
 		return err
 	}
+
+	<-semaphore
 	eg.Go(func() error {
+		defer func() { semaphore <- struct{}{} }()
 		return sendData(ctx, testResult, "ReportInvocationLevelArtifacts", client)
 	})
 
