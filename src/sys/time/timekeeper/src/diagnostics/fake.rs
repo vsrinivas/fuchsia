@@ -130,13 +130,14 @@ impl EqWithAny for Event {
 mod test {
     use {
         super::*,
-        crate::enums::{InitialClockState, Track},
+        crate::enums::{InitialClockState, StartClockSource, Track},
     };
 
     const INITIALIZATION_EVENT: Event =
         Event::Initialized { clock_state: InitialClockState::NotSet };
 
-    const NETWORK_EVENT: Event = Event::NetworkAvailable;
+    const START_CLOCK_EVENT: Event =
+        Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc };
 
     #[test]
     fn log_and_reset_events() {
@@ -146,14 +147,14 @@ mod test {
         diagnostics.record(INITIALIZATION_EVENT);
         diagnostics.assert_events(&[INITIALIZATION_EVENT]);
 
-        diagnostics.record(NETWORK_EVENT);
-        diagnostics.assert_events(&[INITIALIZATION_EVENT, NETWORK_EVENT]);
+        diagnostics.record(START_CLOCK_EVENT);
+        diagnostics.assert_events(&[INITIALIZATION_EVENT, START_CLOCK_EVENT]);
 
         diagnostics.reset();
         diagnostics.assert_events(&[]);
 
-        diagnostics.record(NETWORK_EVENT);
-        diagnostics.assert_events(&[NETWORK_EVENT]);
+        diagnostics.record(START_CLOCK_EVENT);
+        diagnostics.assert_events(&[START_CLOCK_EVENT]);
     }
 
     #[test]

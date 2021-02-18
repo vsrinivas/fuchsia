@@ -36,8 +36,6 @@ pub const ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
 pub enum Event {
     /// Timekeeper has completed initialization.
     Initialized { clock_state: InitialClockState },
-    /// A network with Internet connectivity became available for the first time.
-    NetworkAvailable,
     /// An attempt was made to initialize and read from the real time clock.
     InitializeRtc { outcome: InitializeRtcOutcome, time: Option<zx::Time> },
     /// A time source failed, relaunch will be attempted.

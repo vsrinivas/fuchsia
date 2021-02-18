@@ -101,22 +101,6 @@ impl<T: TimeSource, D: Diagnostics> TimeSourceManager<T, D, KernelMonotonicProvi
 }
 
 impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D, M> {
-    /// Warms up the time source by launching the time source but does not yet pull any events.
-    /// TODO(jsankey): Remove this method when network availability checks are in the time sources
-    /// and Timekeeper can immediately start watching samples.
-    pub fn warm_up(&mut self) {
-        if self.event_stream.is_none() {
-            // Attempt to launch the time source if it is not yet running.
-            match self.time_source.launch() {
-                Err(err) => {
-                    warn!("Error warming up {:?} time source: {:?}", self.role, err);
-                    self.record_time_source_failure(TimeSourceError::LaunchFailed);
-                }
-                Ok(event_stream) => self.event_stream = Some(event_stream),
-            }
-        }
-    }
-
     /// Returns the `Role` of the time source being managed.
     ///
     /// Note: This method is viable while the `TimeSourceManager` is managing a single time source.
@@ -454,20 +438,6 @@ mod test {
             Event::TimeSourceFailed { role: TEST_ROLE, error: TSE::StreamFailed },
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
         ]);
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn warm_up() {
-        let time_source = FakeTimeSource::events(vec![
-            // State change is valid but shouldn't be recorded since we only warm up.
-            TimeSourceEvent::StatusChange { status: Status::Ok },
-        ]);
-        let diagnostics = Arc::new(FakeDiagnostics::new());
-        let mut manager = create_manager(time_source, Arc::clone(&diagnostics));
-
-        manager.warm_up();
-
-        diagnostics.assert_events(&[]);
     }
 
     #[fasync::run_singlethreaded(test)]

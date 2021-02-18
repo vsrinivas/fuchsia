@@ -347,8 +347,6 @@ impl TrackNode {
 
 /// The complete set of Timekeeper information exported through Inspect.
 pub struct InspectDiagnostics {
-    /// The monotonic time at which the network became available, in nanoseconds.
-    network_available_monotonic: Mutex<Option<IntProperty>>,
     /// Details of the health of time sources.
     time_sources: Mutex<HashMap<Role, TimeSourceNode>>,
     /// Details of the current state and history of time tracks.
@@ -395,7 +393,6 @@ impl InspectDiagnostics {
         }
 
         let diagnostics = InspectDiagnostics {
-            network_available_monotonic: Mutex::new(None),
             time_sources: Mutex::new(time_sources_hashmap),
             tracks: Mutex::new(tracks_hashmap),
             rtc: Mutex::new(None),
@@ -419,11 +416,6 @@ impl Diagnostics for InspectDiagnostics {
     fn record(&self, event: Event) {
         match event {
             Event::Initialized { .. } => {}
-            Event::NetworkAvailable => {
-                self.network_available_monotonic.lock().get_or_insert_with(|| {
-                    self.node.create_int("network_available_monotonic", monotonic_time())
-                });
-            }
             Event::InitializeRtc { outcome, time } => {
                 self.rtc.lock().get_or_insert_with(|| {
                     RealTimeClockNode::new(self.node.create_child("real_time_clock"), outcome, time)
@@ -607,9 +599,6 @@ mod tests {
         let inspector = &Inspector::new();
         let (inspect_diagnostics, clock) = create_test_object(&inspector, false);
 
-        // Record the time at which the network became available.
-        inspect_diagnostics.record(Event::NetworkAvailable);
-
         // Perform two updates to the clock. The inspect data should reflect the most recent.
         clock
             .update(
@@ -642,7 +631,6 @@ mod tests {
                     clock_utc: AnyProperty,
                 },
                 backstop: BACKSTOP_TIME,
-                network_available_monotonic: AnyProperty,
                 current: contains {
                     monotonic: AnyProperty,
                     kernel_utc: AnyProperty,

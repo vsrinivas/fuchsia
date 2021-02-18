@@ -11,9 +11,6 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.net.NameLookup",
-            "fuchsia.net.interfaces.State",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher",
             "fuchsia.time.Maintenance"
         ]

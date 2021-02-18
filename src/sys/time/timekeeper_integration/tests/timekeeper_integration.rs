@@ -9,7 +9,6 @@ use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProx
 use fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream};
 use fidl_fuchsia_io::{NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_logger::LogSinkMarker;
-use fidl_fuchsia_net_interfaces::{StateRequest, StateRequestStream};
 use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
 use fidl_fuchsia_time_external::{PushSourceMarker, Status, TimeSample};
 use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
@@ -71,7 +70,6 @@ struct NestedTimekeeper {
 enum InjectedServices {
     TimeSourceControl(TimeSourceControlRequestStream),
     Maintenance(MaintenanceRequestStream),
-    Network(StateRequestStream),
 }
 
 /// A `PushSource` that allows a single client and can be controlled by a test.
@@ -175,7 +173,6 @@ impl NestedTimekeeper {
         // Inject test control and maintenence services.
         service_fs.add_fidl_service(InjectedServices::TimeSourceControl);
         service_fs.add_fidl_service(InjectedServices::Maintenance);
-        service_fs.add_fidl_service(InjectedServices::Network);
         // Inject fake devfs.
         let rtc_updates = RtcUpdates(Arc::new(Mutex::new(vec![])));
         let rtc_update_clone = rtc_updates.clone();
@@ -226,22 +223,6 @@ impl NestedTimekeeper {
                         InjectedServices::Maintenance(stream) => {
                             debug!("Maintenance service connected.");
                             Self::serve_maintenance(Arc::clone(&clock), stream).await;
-                        }
-                        // Timekeeper uses the network state service to wait util the network is
-                        // available. Since this isn't a hard dependency, timekeeper continues on
-                        // to poll samples anyway even if the network service fails after
-                        // connecting. Therefore, the fake injected by the test accepts
-                        // connections, holds the stream long enough for the single required
-                        // request to occur, then drops the channel. This provides the minimal
-                        // implentation needed to bypass the network check.
-                        // This can be removed once timekeeper is not responsible for the network
-                        // check.
-                        InjectedServices::Network(mut stream) => {
-                            debug!("Network state service connected.");
-                            if let Some(req) = stream.try_next().await.unwrap() {
-                                let StateRequest::GetWatcher { watcher: _watcher, .. } = req;
-                                debug!("Network watcher service connected.");
-                            }
                         }
                     }
                 })

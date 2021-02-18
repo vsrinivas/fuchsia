@@ -152,7 +152,6 @@ impl Diagnostics for CobaltDiagnostics {
                 };
                 self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
             }
-            Event::NetworkAvailable => {}
             Event::InitializeRtc { outcome, .. } => {
                 self.sender
                     .lock()
