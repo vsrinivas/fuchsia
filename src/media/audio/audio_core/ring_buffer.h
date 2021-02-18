@@ -70,7 +70,7 @@ class BaseRingBuffer {
   BaseRingBuffer(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                  AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                 uint32_t frame_count, bool is_hardware_buffer);
+                 uint32_t frame_count);
   virtual ~BaseRingBuffer() = default;
 
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFixedImpl() const;
@@ -79,7 +79,6 @@ class BaseRingBuffer {
   const uint32_t frames_ = 0;
   const fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame_;
   AudioClock& audio_clock_;
-  const bool is_hardware_buffer_;
 };
 
 class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
@@ -89,8 +88,7 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   ReadableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     uint32_t frame_count, SafeReadWriteFrameFn safe_read_frame,
-                     bool is_hardware_buffer);
+                     uint32_t frame_count, SafeReadWriteFrameFn safe_read_frame);
 
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
@@ -111,8 +109,7 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   WritableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     uint32_t frame_count, SafeReadWriteFrameFn safe_write_frame,
-                     bool is_hardware_buffer);
+                     uint32_t frame_count, SafeReadWriteFrameFn safe_write_frame);
 
   // |media::audio::WritableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
