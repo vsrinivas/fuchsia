@@ -1,0 +1,27 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/stash",
+        args: [
+            "--secure",
+            "--backing_file",
+            "/data/stash_secure.store"
+        ],
+    },
+    capabilities: [
+        { protocol: "fuchsia.stash.SecureStore" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "self",
+        },
+    ],
+    use: [
+        {
+            storage: "data",
+            path: "/data"
+        }
+    ]
+}
