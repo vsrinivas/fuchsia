@@ -21,8 +21,8 @@ proto_library("vm_cc_proto") {
   cc_generator_options = "lite"
   generator_plugin_suffix = ".grpc.pb"
   generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+  import_protobuf_full = true
 
-  import_dirs = [ "//third_party/protobuf/src" ]
   deps = [
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
@@ -34,6 +34,5 @@ proto_library("vsh_cc_proto") {
 
   generate_python = false
   cc_generator_options = "lite"
-
-  import_dirs = [ "//third_party/protobuf/src" ]
+  import_protobuf_full = true
 }
