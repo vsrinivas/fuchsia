@@ -57,7 +57,10 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size,
       output_buffer_frames_(block_size),
       output_buffer_(block_size * output_format.channels()),
       output_ref_clock_(audio_clock),
-      output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame) {}
+      output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame) {
+  FX_CHECK(format().sample_format() == fuchsia::media::AudioSampleFormat::FLOAT)
+      << "MixStage must output FLOATs; got format = " << static_cast<int>(format().sample_format());
+}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
                                           std::optional<float> initial_dest_gain_db,

@@ -790,12 +790,21 @@ void BaseCapturer::UpdateFormat(Format format) {
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
   FX_DCHECK(max_frames_per_capture_ > 0);
 
+  // MixStage always emits floats.
+  auto mix_stage_format =
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = format_.channels(),
+                         .frames_per_second = format_.frames_per_second(),
+                     })
+          .take_value();
+
   // Allocate our MixStage for mixing.
   //
   // TODO(fxbug.dev/39886): Limit this to something smaller than one second of frames.
   uint32_t max_mix_frames = format_.frames_per_second();
-  mix_stage_ = std::make_shared<MixStage>(format_, max_mix_frames, ref_pts_to_fractional_frame_,
-                                          reference_clock());
+  mix_stage_ = std::make_shared<MixStage>(mix_stage_format, max_mix_frames,
+                                          ref_pts_to_fractional_frame_, reference_clock());
 }
 
 // Regardless of the source of the reference clock, we can duplicate and return it here.
