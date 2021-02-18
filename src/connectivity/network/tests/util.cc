@@ -74,7 +74,7 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
   // reach the blocking condition we can be reasonably sure that the intended amount of time truly
   // did elapse. Care is taken to reset the counter if data is written, as we are looking for a
   // streak of blocking condition observances.
-  for (int i = 0; i < 1 << 5; i++) {
+  for (int i = 0; i < 1 << 6; i++) {
     ssize_t size;
     while ((size = write(fd, buf.data(), buf.size())) > 0) {
       cnt += size;
@@ -82,7 +82,7 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
       i = 0;
     }
     EXPECT_EQ(size, -1);
-    EXPECT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
+    EXPECT_EQ(errno, EAGAIN) << strerror(errno);
   }
   EXPECT_GT(cnt, 0);
 #if defined(__linux__)
