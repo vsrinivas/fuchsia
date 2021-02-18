@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("sessions") {
   testonly = true
@@ -77,30 +77,14 @@ rustc_binary("bin") {
   ]
 }
 
-test_package("mediasession_tests") {
+fuchsia_unittest_package("mediasession_tests") {
+  manifest = "meta/mediasession_bin_test.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "mediasession_bin_test"
-    },
-  ]
 }
 
-package("mediasession") {
+fuchsia_package_with_single_component("mediasession") {
+  manifest = "meta/mediasession.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "mediasession"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/mediasession.cmx")
-      dest = "mediasession.cmx"
-    },
-  ]
 }
 
 config_data("mediasession_config") {

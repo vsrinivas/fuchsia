@@ -2,20 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//src/media/audio/hardware.gni")
+import("//src/sys/build/components.gni")
 
-test_package("audio_core_hardware_tests") {
+fuchsia_unittest_package("audio_core_hardware_tests") {
+  manifest = "meta/audio_core_hardware_tests.cmx"
   deps = [ ":audio_core_hardware_tests_bin" ]
-
-  tests = [
-    {
-      name = "audio_core_hardware_tests"
-
-      # By definition this validates software that requires real audio input hardware.
-      environments = built_in_input_hardware_envs
-    },
-  ]
+  test_specs = {
+    # By definition this validates software that requires real audio input hardware.
+    environments = built_in_input_hardware_envs
+  }
 }
 
 executable("audio_core_hardware_tests_bin") {

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("mpsc_queue") {
   public_deps = [ ":mpsc_queue_sources" ]
@@ -35,13 +35,9 @@ executable("mpsc_queue_unittest_bin") {
   ]
 }
 
-test_package("mpsc_queue_unittests") {
+fuchsia_unittest_package("mpsc_queue_unittests") {
   deps = [ ":mpsc_queue_unittest_bin" ]
-
-  tests = [
-    {
-      name = "mpsc_queue_unittests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

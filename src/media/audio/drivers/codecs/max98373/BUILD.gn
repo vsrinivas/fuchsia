@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("max98373-bind") {
   rules = "max98373.bind"
@@ -65,16 +65,13 @@ test("max98373-test") {
   ]
 }
 
-unittest_package("max98373-test-package") {
+fuchsia_unittest_package("max98373-test-package") {
   package_name = "max98373-test"
   deps = [ ":max98373-test" ]
 
-  tests = [
-    {
-      name = "max98373-test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

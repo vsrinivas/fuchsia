@@ -3,7 +3,7 @@
 
 # Clock-related utility functions, for audio tests, tools or drivers
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("clock") {
   public_deps = [
@@ -81,15 +81,11 @@ executable("unittest_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("audio-libclock-unittests") {
+fuchsia_unittest_package("audio-libclock-unittests") {
   deps = [ ":unittest_bin" ]
-
-  tests = [
-    {
-      name = "audio-libclock-unittests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

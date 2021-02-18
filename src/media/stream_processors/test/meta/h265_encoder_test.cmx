@@ -17,7 +17,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/h265_encoder_test"
+        "binary": "bin/h265_encoder_test"
     },
     "sandbox": {
         "features": [

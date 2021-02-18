@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   build_all_vp9_file_decoder_conformance_tests = false
@@ -14,839 +15,441 @@ declare_args() {
 # each example.
 
 # Test video encode of camera stream
-package("encode-camera") {
+fuchsia_shell_package("encode-camera") {
   testonly = true
-
+  manifest = "encode_camera/meta/encode_camera.cmx"
   deps = [ "//src/media/codec/examples/encode_camera" ]
-
-  binaries = [
-    {
-      name = "encode_camera"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("encode_camera/meta/encode_camera.cmx")
-      dest = "encode_camera.cmx"
-    },
-  ]
 }
 
 # Test video encode of from raw video file
-package("encode-file") {
+fuchsia_shell_package("encode-file") {
   testonly = true
-
+  manifest = "encode_file/meta/encode_file.cmx"
   deps = [ "//src/media/codec/examples/encode_file" ]
-
-  binaries = [
-    {
-      name = "encode_file"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("encode_file/meta/encode_file.cmx")
-      dest = "encode_file.cmx"
-    },
-  ]
 }
 
-package("use_media_decoder") {
+fuchsia_shell_package("use_media_decoder") {
   testonly = true
-
+  manifest = "use_media_decoder/meta/use_media_decoder.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder" ]
+}
 
-  binaries = [
-    {
-      name = "use_media_decoder"
-      shell = true
-    },
+resource("bear_h264") {
+  sources = [
+    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
   ]
+  outputs = [ "data/bear.h264" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/use_media_decoder.cmx")
-      dest = "use_media_decoder.cmx"
-    },
-  ]
+resource("bear_vp9") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf" ]
+  outputs = [ "data/bear-vp9.ivf" ]
+}
+
+resource("1080p_10_frames_h264") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/1080p_10_frames.h264" ]
+  outputs = [ "data/1080p_10_frames.h264" ]
+}
+
+resource("adts_audio_resource") {
+  sources = [ "use_media_decoder/test/test_audio.adts" ]
+  outputs = [ "data/media_test_data/test_audio.adts" ]
+}
+
+resource("bear-1280x546-vp9") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear-1280x546-vp9.ivf" ]
+  outputs = [ "data/bear-1280x546-vp9.ivf" ]
+}
+
+resource("test-25fps.vp9") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9" ]
+  outputs = [ "data/test-25fps.vp9.ivf" ]
 }
 
 # Test amlogic-video h264 decode.  Can also work in QEMU using SW decode, but
 # when decode HW is present we'll use that to decode.
-package("use_h264_decoder_test") {
-  testonly = true
-
-  deps =
-      [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test" ]
-
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/use_h264_decoder_test.cmx")
-      dest = "use_h264_decoder_test.cmx"
-    },
+fuchsia_unittest_package("use_h264_decoder_test") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test",
   ]
 
-  tests = [
-    {
-      # Should pass when run on VIM2, sherlock, or QEMU.
-      name = "use_h264_decoder_test"
-
-      environments = [
-        astro_env,
-        sherlock_env,
-        emu_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
+  test_specs = {
+    environments = [
+      astro_env,
+      sherlock_env,
+      emu_env,
+    ]
+  }
 }
 
 # Force SW decode.  Only run in environments where we include a SW h264 decoder.
-package("use-h264-sw-decoder-test") {
-  testonly = true
-
+fuchsia_unittest_package("use-h264-sw-decoder-test") {
+  manifest = "use_media_decoder/meta/use_h264_sw_decoder_test.cmx"
   deps = [
+    ":1080p_10_frames_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_sw_decoder_test",
   ]
 
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/use_h264_sw_decoder_test.cmx")
-      dest = "use_h264_sw_decoder_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      # Should pass when run on QEMU.
-      name = "use_h264_sw_decoder_test"
-
-      environments = [ emu_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/1080p_10_frames.h264")
-      dest = "1080p_10_frames.h264"
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
-package("use-h264-multi-decoder-test") {
-  testonly = true
-
+fuchsia_unittest_package("use-h264-multi-decoder-test") {
+  manifest = "use_media_decoder/meta/use_h264_multi_decoder_test.cmx"
   deps = [
+    ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_test",
   ]
 
-  meta = [
-    {
-      path =
-          rebase_path("use_media_decoder/meta/use_h264_multi_decoder_test.cmx")
-      dest = "use_h264_multi_decoder_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "use_h264_multi_decoder_test"
-
-      # Only works on amlogic hardware.
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
+  test_specs = {
+    # Only works on amlogic hardware.
+    environments = [
+      astro_env,
+      sherlock_env,
+    ]
+  }
 }
 
-package("use-h264-multi-decoder-flake-repro-test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_flake_repro_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_multi_decoder_flake_repro_test.cmx")
-      dest = "use_h264_multi_decoder_flake_repro_test.cmx"
-    },
+fuchsia_unittest_package("use-h264-multi-decoder-flake-repro-test") {
+  manifest =
+      "use_media_decoder/meta/use_h264_multi_decoder_flake_repro_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_flake_repro_test",
   ]
 
-  tests = [
-    {
-      name = "use_h264_multi_decoder_flake_repro_test"
-
-      # Only works on amlogic hardware.
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
+  test_specs = {
+    # Only works on amlogic hardware.
+    environments = [
+      astro_env,
+      sherlock_env,
+    ]
+  }
 }
 
 # Test amlogic-video h264 decode with stream switching.  Can also work in QEMU
 # using SW decode, but when decode HW is present we'll use that to decode.
-package("use_h264_decoder_stream_switching_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_stream_switching_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_decoder_stream_switching_test.cmx")
-      dest = "use_h264_decoder_stream_switching_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      # Should pass when run on VIM2, sherlock, or QEMU.
-      name = "use_h264_decoder_stream_switching_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
-      # astro_env.
-      #
-      # Disable on qemu because the test flakes so far. TODO(fxbug.dev/49932) Re-enable in emu_env.
-      environments = [
-        sherlock_env,
-        # emu_env,
-        # astro_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
-}
-
-# Test amlogic-video multi-instance h264 decode with stream switching.
-package("use-h264-multi-decoder-stream-switching-test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_stream_switching_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_multi_decoder_stream_switching_test.cmx")
-      dest = "use_h264_multi_decoder_stream_switching_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      # Should pass when run on VIM2, sherlock, or QEMU.
-      name = "use_h264_multi_decoder_stream_switching_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
-      # astro_env.
-      environments = [ sherlock_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
-}
-
-# Test amlogic-video multi-instance h264 decode with stream switching.
-package("use-h264-multi-decoder-concurrent-stream-switching-test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_concurrent_stream_switching_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cmx")
-      dest = "use_h264_multi_decoder_concurrent_stream_switching_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      # Should pass when run on VIM2, astro, sherlock, or QEMU.
-      name = "use_h264_multi_decoder_concurrent_stream_switching_test"
-
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
-}
-
-package("use_h264_decoder_secure_output_test") {
-  testonly = true
-
+fuchsia_unittest_package("use_h264_decoder_stream_switching_test") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_stream_switching_test.cmx"
   deps = [
-    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test",
-    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_secure_output_test",
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_stream_switching_test",
   ]
 
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx")
-      dest = "use_h264_decoder_secure_output_test.cmx"
-    },
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_multi_decoder_secure_output_test.cmx")
-      dest = "use_h264_multi_decoder_secure_output_test.cmx"
-    },
-  ]
+  test_specs = {
+    # Should pass when run on VIM2, sherlock, or QEMU.
 
-  tests = [
-    {
-      # Should pass when run on astro.
-      name = "use_h264_decoder_secure_output_test"
-
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-    {
-      # Should pass when run on astro.
-      name = "use_h264_multi_decoder_secure_output_test"
-
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
+    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
+    # astro_env.
+    #
+    # Disable on qemu because the test flakes so far. TODO(fxbug.dev/49932) Re-enable in emu_env.
+    environments = [
+      sherlock_env,
+      # emu_env,
+      # astro_env,
+    ]
+  }
 }
 
-package("use_h264_decoder_secure_input_output_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_input_output_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_h264_decoder_secure_input_output_test.cmx")
-      dest = "use_h264_decoder_secure_input_output_test.cmx"
-    },
+# Test amlogic-video multi-instance h264 decode with stream switching.
+fuchsia_unittest_package("use-h264-multi-decoder-stream-switching-test") {
+  manifest =
+      "use_media_decoder/meta/use_h264_multi_decoder_stream_switching_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_stream_switching_test",
   ]
 
-  tests = [
-    {
-      name = "use_h264_decoder_secure_input_output_test"
+  test_specs = {
+    # Should pass when run on VIM2, sherlock, or QEMU.
 
-      # Without ClearTVP, can't pass anywhere at the moment.
-      # TODO(fxbug.dev/42991): Re-enable.
-      disabled = true
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
+    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable in
+    # astro_env.
+    environments = [ sherlock_env ]
+  }
 }
 
-package("h264_decoder_fuzzer_test") {
-  testonly = true
+# Test amlogic-video multi-instance h264 decode with stream switching.
+fuchsia_unittest_package(
+    "use-h264-multi-decoder-concurrent-stream-switching-test") {
+  manifest = "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_concurrent_stream_switching_test",
+  ]
 
+  test_specs = {
+    # Should pass when run on VIM2, astro, sherlock, or QEMU.
+
+    environments = [
+      astro_env,
+      sherlock_env,
+    ]
+  }
+}
+
+fuchsia_unittest_component("use_h264_decoder_secure_output_test") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test" ]
+}
+
+fuchsia_unittest_component("use_h264_multi_decoder_secure_output_test") {
+  manifest =
+      "use_media_decoder/meta/use_h264_multi_decoder_secure_output_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_secure_output_test" ]
+}
+
+fuchsia_test_package("use_h264_decoder_secure_output_tests") {
+  test_components = [
+    ":use_h264_decoder_secure_output_test",
+    ":use_h264_multi_decoder_secure_output_test",
+  ]
+
+  deps = [ ":bear_h264" ]
+
+  test_specs = {
+    # Should pass when run on astro.
+    environments = [
+      astro_env,
+      sherlock_env,
+    ]
+  }
+}
+
+fuchsia_unittest_package("use_h264_decoder_secure_input_output_test") {
+  manifest =
+      "use_media_decoder/meta/use_h264_decoder_secure_input_output_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_input_output_test",
+  ]
+
+  test_specs = {
+    # Without ClearTVP, can't pass anywhere at the moment.
+    # TODO(fxbug.dev/42991): Re-enable.
+    environments = []
+  }
+}
+
+fuchsia_unittest_component("h264_decoder_fuzzer_test") {
+  manifest = "use_media_decoder/meta/h264_decoder_fuzzer_test.cmx"
   deps = [
     "//src/media/codec/examples/use_media_decoder:h264_decoder_fuzzer_test",
-    "//src/media/codec/examples/use_media_decoder:h264_decoder_malformed_stream_test",
-    "//src/media/codec/examples/use_media_decoder:h264_multi_decoder_fuzzer_test",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/h264_decoder_fuzzer_test.cmx")
-      dest = "h264_decoder_fuzzer_test.cmx"
-    },
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/h264_multi_decoder_fuzzer_test.cmx")
-      dest = "h264_multi_decoder_fuzzer_test.cmx"
-    },
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/h264_decoder_malformed_stream_test.cmx")
-      dest = "h264_decoder_malformed_stream_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      # Should pass when run on VIM2, sherlock, or QEMU.
-      name = "h264_decoder_fuzzer_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [
-        sherlock_env,
-        emu_env,
-      ]
-    },
-    {
-      # Should pass when run on VIM2, sherlock.
-      name = "h264_multi_decoder_fuzzer_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [ sherlock_env ]
-    },
-    {
-      # Should pass when run on VIM2, sherlock, or QEMU.
-      name = "h264_decoder_malformed_stream_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [
-        sherlock_env,
-        emu_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
   ]
 }
 
-package("vp9_decoder_fuzzer_test") {
-  testonly = true
+fuchsia_unittest_component("h264_decoder_malformed_stream_test") {
+  manifest = "use_media_decoder/meta/h264_decoder_malformed_stream_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_malformed_stream_test" ]
+}
 
-  deps =
-      [ "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test" ]
+fuchsia_unittest_component("h264_multi_decoder_fuzzer_test") {
+  manifest = "use_media_decoder/meta/h264_multi_decoder_fuzzer_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:h264_multi_decoder_fuzzer_test" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/vp9_decoder_fuzzer_test.cmx")
-      dest = "vp9_decoder_fuzzer_test.cmx"
-    },
+fuchsia_test_package("h264_decoder_fuzzer_tests") {
+  test_components = [
+    ":h264_decoder_fuzzer_test",
+    ":h264_decoder_malformed_stream_test",
+    ":h264_multi_decoder_fuzzer_test",
   ]
 
-  tests = [
-    {
-      name = "vp9_decoder_fuzzer_test"
+  deps = [ ":bear_h264" ]
 
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [ sherlock_env ]
-    },
+  test_specs = {
+    # Should pass when run on VIM2, sherlock.
+
+    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
+    environments = [ sherlock_env ]
+  }
+}
+
+fuchsia_unittest_package("vp9_decoder_fuzzer_test") {
+  manifest = "use_media_decoder/meta/vp9_decoder_fuzzer_test.cmx"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test",
   ]
 
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
-      dest = "bear-vp9.ivf"
-    },
-  ]
+  test_specs = {
+    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
+    environments = [ sherlock_env ]
+  }
 }
 
 #
 # Tests that don't run on CQ yet.
 #
 
-package("use_aac_decoder_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test" ]
-
-  tests = [
-    {
-      name = "use_aac_decoder_test"
-    },
+fuchsia_unittest_package("use_aac_decoder_test") {
+  manifest = "use_media_decoder/meta/use_aac_decoder_test.cmx"
+  deps = [
+    ":adts_audio_resource",
+    "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test",
   ]
+}
 
-  resources = [
-    {
-      path = rebase_path("use_media_decoder/test/test_audio.adts")
-      dest = "media_test_data/test_audio.adts"
-    },
-  ]
+fuchsia_unittest_component("use_vp9_decoder_test") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/use_aac_decoder_test.cmx")
-      dest = "use_aac_decoder_test.cmx"
-    },
-  ]
+fuchsia_unittest_component("use_vp9_decoder_1280x546_test") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_1280x546_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_1280x546_test" ]
 }
 
 # Test amlogic-video vp9 decode.
-package("use_vp9_decoder_test") {
-  testonly = true
+fuchsia_test_package("use_vp9_decoder_tests") {
+  test_components = [
+    ":use_vp9_decoder_1280x546_test",
+    ":use_vp9_decoder_test",
+  ]
 
   deps = [
-    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_1280x546_test",
-    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test",
+    ":bear-1280x546-vp9",
+    ":bear_vp9",
   ]
 
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/use_vp9_decoder_test.cmx")
-      dest = "use_vp9_decoder_test.cmx"
-    },
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_vp9_decoder_1280x546_test.cmx")
-      dest = "use_vp9_decoder_1280x546_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "use_vp9_decoder_test"
-
-      # Astro has enough contiguous memory for this.
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-    {
-      name = "use_vp9_decoder_1280x546_test"
-
-      # Astro has enough contiguous memory for this.
-      environments = [
-        astro_env,
-        sherlock_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear-1280x546-vp9.ivf")
-      dest = "bear-1280x546-vp9.ivf"
-    },
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
-      dest = "bear-vp9.ivf"
-    },
-  ]
+  test_specs = {
+    # Astro has enough contiguous memory for this.
+    environments = [
+      astro_env,
+      sherlock_env,
+    ]
+  }
 }
 
 # Test amlogic-video vp9 decode, with stream switching.
-package("use-vp9-decoder-stream-switching-test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_stream_switching_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_vp9_decoder_stream_switching_test.cmx")
-      dest = "use_vp9_decoder_stream_switching_test.cmx"
-    },
+fuchsia_unittest_package("use-vp9-decoder-stream-switching-test") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_stream_switching_test.cmx"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_stream_switching_test",
   ]
 
-  tests = [
-    {
-      name = "use_vp9_decoder_stream_switching_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [ sherlock_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
-      dest = "bear-vp9.ivf"
-    },
-  ]
+  test_specs = {
+    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
+    environments = [ sherlock_env ]
+  }
 }
 
 # Test amlogic-video vp9 decoder's ability to skip frames until keyframe when
 # input starts at non-keyframe.
-package("use_vp9_decoder_skip_first_frame_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_skip_first_frame_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_vp9_decoder_skip_first_frame_test.cmx")
-      dest = "use_vp9_decoder_skip_first_frame_test.cmx"
-    },
+fuchsia_unittest_package("use_vp9_decoder_skip_first_frame_test") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_skip_first_frame_test.cmx"
+  deps = [
+    ":test-25fps.vp9",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_skip_first_frame_test",
   ]
 
-  tests = [
-    {
-      name = "use_vp9_decoder_skip_first_frame_test"
-
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [ sherlock_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9")
-      dest = "test-25fps.vp9.ivf"
-    },
-  ]
+  test_specs = {
+    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
+    environments = [ sherlock_env ]
+  }
 }
 
 # Test amlogic-video vp9 decode with max output frame count, on environments
 # that have enough contiguous SYSTEM_RAM configured for sysmem.
-package("use_vp9_decoder_24_output_frames_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_24_output_frames_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_vp9_decoder_24_output_frames_test.cmx")
-      dest = "use_vp9_decoder_24_output_frames_test.cmx"
-    },
+fuchsia_unittest_package("use_vp9_decoder_24_output_frames_test") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_24_output_frames_test.cmx"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_24_output_frames_test",
   ]
 
-  tests = [
-    {
-      name = "use_vp9_decoder_24_output_frames_test"
-
-      # Should pass when run on VIM2, sherlock.  Astro may not have enough
-      # contiguous pool.
-      #
-      # TODO(fxbug.dev/41735): Depending on how we re-enable, maybe we can also enable
-      # this one.
-      environments = [ sherlock_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
-      dest = "bear-vp9.ivf"
-    },
-  ]
+  test_specs = {
+    # Should pass when run on VIM2, sherlock.  Astro may not have enough
+    # contiguous pool.
+    #
+    # TODO(fxbug.dev/41735): Depending on how we re-enable, maybe we can also enable
+    # this one.
+    environments = [ sherlock_env ]
+  }
 }
 
-package("use_vp9_decoder_secure_output_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_output_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_vp9_decoder_secure_output_test.cmx")
-      dest = "use_vp9_decoder_secure_output_test.cmx"
-    },
+fuchsia_unittest_package("use_vp9_decoder_secure_output_test") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_secure_output_test.cmx"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_output_test",
   ]
 
-  tests = [
-    {
-      name = "use_vp9_decoder_secure_output_test"
-
-      environments = [
-        sherlock_env,
-        astro_env,
-      ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
-      dest = "bear-vp9.ivf"
-    },
-  ]
+  test_specs = {
+    environments = [
+      sherlock_env,
+      astro_env,
+    ]
+  }
 }
 
-package("use_vp9_decoder_secure_input_output_test") {
-  testonly = true
-
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_input_output_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/use_vp9_decoder_secure_input_output_test.cmx")
-      dest = "use_vp9_decoder_secure_input_output_test.cmx"
-    },
+fuchsia_unittest_package("use_vp9_decoder_secure_input_output_test") {
+  manifest =
+      "use_media_decoder/meta/use_vp9_decoder_secure_input_output_test.cmx"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_input_output_test",
   ]
 
-  tests = [
-    {
-      name = "use_vp9_decoder_secure_input_output_test"
-
-      # Without ClearTVP, can't pass anywhere at the moment.
-      # TODO(fxbug.dev/42991): Re-enable.
-      disabled = true
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
-      dest = "bear-vp9.ivf"
-    },
-  ]
+  test_specs = {
+    # Without ClearTVP, can't pass anywhere at the moment.
+    # TODO(fxbug.dev/42991): Re-enable.
+    environments = []
+  }
 }
 
 template("vp9_file_decoder_conformance_test") {
-  package(target_name) {
-    testonly = true
+  ivf_resource_name = "${invoker.target_name}_ivf"
+  resource(ivf_resource_name) {
+    sources = [ invoker.ivf_file ]
+    outputs = [ "data/vp9.ivf" ]
+  }
 
-    deps = [ "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test" ]
+  md5_resource_name = "${invoker.target_name}_md5"
+  resource(md5_resource_name) {
+    sources = [ invoker.md5_file ]
+    outputs = [ "data/vp9.md5" ]
+  }
 
-    meta = [
-      {
-        path = rebase_path(
-                "use_media_decoder/meta/vp9_decoder_conformance_test.cmx")
-        dest = "vp9_decoder_conformance_test.cmx"
-      },
+  fuchsia_unittest_package(target_name) {
+    manifest = "use_media_decoder/meta/vp9_decoder_conformance_test.cmx"
+    deps = [
+      ":${ivf_resource_name}",
+      ":${md5_resource_name}",
+      "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
     ]
 
-    tests = [
-      {
-        name = "vp9_decoder_conformance_test"
-
-        # This should pass when run on VIM2 or astro, and will fail in any env
-        # that lacks VP9 decode.
-        # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-        environments = [ sherlock_env ]
-      },
-    ]
-
-    resources = [
-      {
-        path = rebase_path(invoker.ivf_file)
-        dest = "vp9.ivf"
-      },
-      {
-        path = rebase_path(invoker.md5_file)
-        dest = "vp9.md5"
-      },
-    ]
+    test_specs = {
+      # This should pass when run on VIM2 or astro, and will fail in any env
+      # that lacks VP9 decode.
+      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
+      environments = [ sherlock_env ]
+    }
   }
 }
 
 # Running this binary, the --http=<url> command-line parameter needs to be
 # passed, and the binary won't verify the MD5.  Instead it'll stream the URL
 # data in, parse it as ivf, decode it, compute MD5, and output the MD5.
-package("vp9_decoder_conformance_http") {
+fuchsia_package_with_single_component("vp9_decoder_conformance_http") {
   testonly = true
-
+  manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cmx"
   deps = [
     "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
-  ]
-
-  meta = [
-    {
-      path =
-          rebase_path("use_media_decoder/meta/vp9_decoder_conformance_http.cmx")
-      dest = "vp9_decoder_conformance_http.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "vp9_decoder_conformance_http"
-
-      # We share the binary for now, but this could change.
-      source = "$root_out_dir/vp9_decoder_conformance_test"
-    },
   ]
 }
 
 # Running this binary, the --http=<url> command-line parameter needs to be
 # passed, and the binary won't verify the MD5.  Instead it'll stream the URL
 # data in, parse it as h264, decode it, compute MD5, and output the MD5.
-package("h264-decoder-conformance-http") {
+fuchsia_package_with_single_component("h264-decoder-conformance-http") {
   testonly = true
-
+  manifest = "use_media_decoder/meta/h264_decoder_conformance_http.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test" ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "use_media_decoder/meta/h264_decoder_conformance_http.cmx")
-      dest = "h264_decoder_conformance_http.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "h264_decoder_conformance_http"
-
-      # We share the binary for now, but this could change.
-      source = "$root_out_dir/h264_decoder_conformance_test"
-    },
-  ]
 }
 
 # Put the below group of vp9 conformance tests last in the file.  Otherwise,

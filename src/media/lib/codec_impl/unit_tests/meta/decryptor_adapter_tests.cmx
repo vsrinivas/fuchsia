@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/decryptor_adapter_tests"
+        "binary": "bin/decryptor_adapter_tests"
     },
     "sandbox": {
         "services": [

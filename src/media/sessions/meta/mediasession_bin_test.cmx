@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/mediasession_bin_test"
+        "binary": "bin/mediasession_bin_test"
     },
     "sandbox": {
         "services": [

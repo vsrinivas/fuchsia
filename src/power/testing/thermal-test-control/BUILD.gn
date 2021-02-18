@@ -4,11 +4,7 @@
 
 import("//src/sys/build/components.gni")
 
-fuchsia_package("thermal-test-control") {
-  deps = [ ":thermal_test_control" ]
-}
-
-fuchsia_component("thermal_test_control") {
+fuchsia_package_with_single_component("thermal-test-control") {
   manifest = "meta/thermal_test_control.cmx"
   deps = [ ":thermal_test_control_bin" ]
 }

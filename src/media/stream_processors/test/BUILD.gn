@@ -5,8 +5,8 @@
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -64,14 +64,8 @@ rustc_library("stream_processor_test_lib") {
   ]
 }
 
-test_package("stream_processor_lib_test") {
+fuchsia_unittest_package("stream_processor_lib_test") {
   deps = [ ":stream_processor_test_lib_test" ]
-
-  tests = [
-    {
-      name = "stream_processor_test_lib_test"
-    },
-  ]
 }
 
 rustc_library("stream_processor_decoder_factory_lib") {
@@ -145,20 +139,16 @@ rustc_test("audio_decoder_test_bin") {
   ]
 }
 
-test_package("audio_decoder_test") {
-  deps = [ ":audio_decoder_test_bin" ]
+resource("sbc_file") {
+  sources = [ "audio_decoder_test/test_data/s16le44100mono.sbc" ]
+  outputs = [ "data/s16le44100mono.sbc" ]
+}
 
-  tests = [
-    {
-      name = "audio_decoder_test"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("audio_decoder_test/test_data/s16le44100mono.sbc")
-      dest = "s16le44100mono.sbc"
-    },
+fuchsia_unittest_package("audio_decoder_test") {
+  manifest = "meta/audio_decoder_test.cmx"
+  deps = [
+    ":audio_decoder_test_bin",
+    ":sbc_file",
   ]
 }
 
@@ -194,14 +184,9 @@ rustc_test("audio_encoder_test_bin") {
   ]
 }
 
-test_package("audio_encoder_test") {
+fuchsia_unittest_package("audio_encoder_test") {
+  manifest = "meta/audio_encoder_test.cmx"
   deps = [ ":audio_encoder_test_bin" ]
-
-  tests = [
-    {
-      name = "audio_encoder_test"
-    },
-  ]
 }
 
 rustc_library("video_frame_hasher_lib") {
@@ -228,14 +213,8 @@ rustc_library("video_frame_hasher_lib") {
   sources = [ "video_frame_hasher/lib.rs" ]
 }
 
-test_package("video_frame_hasher_test") {
+fuchsia_unittest_package("video_frame_hasher_test") {
   deps = [ ":video_frame_hasher_lib_test" ]
-
-  tests = [
-    {
-      name = "video_frame_hasher_lib_test"
-    },
-  ]
 }
 
 rustc_library("video_frame_stream_lib") {
@@ -260,13 +239,8 @@ rustc_library("video_frame_stream_lib") {
   sources = [ "video_frame_stream/lib.rs" ]
 }
 
-test_package("video-frame-stream-test") {
+fuchsia_unittest_package("video-frame-stream-test") {
   deps = [ ":video_frame_stream_lib_test" ]
-  tests = [
-    {
-      name = "video_frame_stream_lib_test"
-    },
-  ]
 }
 
 rustc_library("h264_stream_lib") {
@@ -289,13 +263,8 @@ rustc_library("h264_stream_lib") {
   sources = [ "h264_stream/lib.rs" ]
 }
 
-test_package("h264-stream-test") {
+fuchsia_unittest_package("h264-stream-test") {
   deps = [ ":h264_stream_lib_test" ]
-  tests = [
-    {
-      name = "h264_stream_lib_test"
-    },
-  ]
 }
 
 rustc_test("h264_decoder_test_bin") {
@@ -322,26 +291,26 @@ rustc_test("h264_decoder_test_bin") {
   sources = [ "h264_decoder_test/lib.rs" ]
 }
 
-test_package("h264_decoder_test") {
-  deps = [ ":h264_decoder_test_bin" ]
+resource("bear_video") {
+  sources = [
+    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+  ]
+  outputs = [ "data/bear.h264" ]
+}
 
-  tests = [
-    {
-      name = "h264_decoder_test"
-      environments = basic_envs + [
-                       sherlock_env,
-                       astro_env,
-                     ]
-    },
+fuchsia_unittest_package("h264_decoder_test") {
+  manifest = "meta/h264_decoder_test.cmx"
+  deps = [
+    ":bear_video",
+    ":h264_decoder_test_bin",
   ]
 
-  resources = [
-    {
-      path = rebase_path(
-              "../../../../garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
-      dest = "bear.h264"
-    },
-  ]
+  test_specs = {
+    environments = basic_envs + [
+                     sherlock_env,
+                     astro_env,
+                   ]
+  }
 }
 
 rustc_test("h264_encoder_test_bin") {
@@ -374,15 +343,13 @@ rustc_test("h264_encoder_test_bin") {
   ]
 }
 
-test_package("h264_encoder_test") {
+fuchsia_unittest_package("h264_encoder_test") {
+  manifest = "meta/h264_encoder_test.cmx"
   deps = [ ":h264_encoder_test_bin" ]
 
-  tests = [
-    {
-      name = "h264_encoder_test"
-      environments = [ sherlock_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ sherlock_env ]
+  }
 }
 
 rustc_test("h265_encoder_test_bin") {
@@ -415,13 +382,11 @@ rustc_test("h265_encoder_test_bin") {
   ]
 }
 
-test_package("h265-encoder-test") {
+fuchsia_unittest_package("h265-encoder-test") {
+  manifest = "meta/h265_encoder_test.cmx"
   deps = [ ":h265_encoder_test_bin" ]
 
-  tests = [
-    {
-      name = "h265_encoder_test"
-      environments = [ sherlock_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ sherlock_env ]
+  }
 }

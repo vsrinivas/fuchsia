@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("unit_tests") {
   testonly = true
@@ -26,15 +25,13 @@ executable("codec_impl_unit_tests_bin") {
   ]
 }
 
-test_package("codec_impl_unit_tests") {
+fuchsia_unittest_package("codec_impl_unit_tests") {
+  manifest = "meta/codec_impl_unit_tests.cmx"
   deps = [ ":codec_impl_unit_tests_bin" ]
 
-  tests = [
-    {
-      name = "codec_impl_unit_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 source_set("codec_impl_tests") {
@@ -82,13 +79,11 @@ executable("decryptor_adapter_tests_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("decryptor_adapter_tests") {
+fuchsia_unittest_package("decryptor_adapter_tests") {
+  manifest = "meta/decryptor_adapter_tests.cmx"
   deps = [ ":decryptor_adapter_tests_bin" ]
 
-  tests = [
-    {
-      name = "decryptor_adapter_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

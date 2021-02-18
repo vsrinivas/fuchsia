@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("ti_tas58xx-bind") {
   rules = "ti_tas58xx.bind"
@@ -63,16 +63,13 @@ test("tas58xx-test") {
   ]
 }
 
-unittest_package("tas58xx-test-package") {
+fuchsia_unittest_package("tas58xx-test-package") {
   package_name = "tas58xx-test"
   deps = [ ":tas58xx-test" ]
 
-  tests = [
-    {
-      name = "tas58xx-test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

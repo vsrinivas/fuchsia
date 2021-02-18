@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//src/media/audio/hardware.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -17,19 +17,16 @@ group("test") {
   }
 }
 
-test_package("audio_driver_tests") {
+fuchsia_unittest_package("audio_driver_tests") {
+  manifest = "meta/audio_driver_tests.cmx"
   deps = [ ":audio_driver_tests_bin" ]
 
-  tests = [
-    {
-      name = "audio_driver_tests"
-
-      # This test is intended to be run on real hardware, although it can also run on virtual_audio.
-      # virtual_audio is not automatically loaded (or involved in any way), but if loaded ahead of
-      # time, it successfully runs and passes, just like any other audio driver.
-      environments = hardware_envs
-    },
-  ]
+  test_specs = {
+    # This test is intended to be run on real hardware, although it can also run on virtual_audio.
+    # virtual_audio is not automatically loaded (or involved in any way), but if loaded ahead of
+    # time, it successfully runs and passes, just like any other audio driver.
+    environments = hardware_envs
+  }
 }
 
 executable("audio_driver_tests_bin") {

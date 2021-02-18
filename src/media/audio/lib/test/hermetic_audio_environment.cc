@@ -163,7 +163,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   std::string virtual_audio_url = options_.virtual_audio_url;
 
   std::string thermal_test_control_url =
-      "fuchsia-pkg://fuchsia.com/thermal-test-control#meta/thermal_test_control.cmx";
+      "fuchsia-pkg://fuchsia.com/thermal-test-control#meta/thermal-test-control.cmx";
 
   // Add in the services that will be available in our hermetic environment.
   struct ComponentLaunchInfo {

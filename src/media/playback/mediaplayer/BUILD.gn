@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -14,21 +14,9 @@ group("tests") {
   ]
 }
 
-package("mediaplayer") {
+fuchsia_package_with_single_component("mediaplayer") {
+  manifest = "meta/mediaplayer.cmx"
   deps = [ ":mediaplayer_bin" ]
-
-  binaries = [
-    {
-      name = "mediaplayer"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mediaplayer.cmx")
-      dest = "mediaplayer.cmx"
-    },
-  ]
 }
 
 executable("mediaplayer_bin") {
@@ -102,23 +90,10 @@ executable("mediaplayer_test_util_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("mediaplayer_test_util") {
-  binaries = [
-    {
-      name = "mediaplayer_test_util"
-    },
-  ]
-
+fuchsia_package_with_single_component("mediaplayer_test_util") {
+  manifest = "meta/mediaplayer_test_util.cmx"
   testonly = true
-
   deps = [ ":mediaplayer_test_util_bin" ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mediaplayer_test_util.cmx")
-      dest = "mediaplayer_test_util.cmx"
-    },
-  ]
 }
 
 executable("mediaplayer_tests_bin") {
@@ -173,58 +148,59 @@ executable("mediaplayer_tests_bin") {
   ]
 }
 
-test_package("mediaplayer_tests") {
+resource("mp4_resource") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4" ]
+  outputs = [ "data/media_test_data/bear.mp4" ]
+}
+
+resource("webm_resource") {
+  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/sfx-opus-441.webm" ]
+  outputs = [ "data/media_test_data/sfx-opus-441.webm" ]
+}
+
+fuchsia_unittest_component("mediaplayer_tests_component") {
+  manifest = "meta/mediaplayer_tests.cmx"
+  deps = [ ":mediaplayer_tests_bin" ]
+}
+
+fuchsia_unittest_component("core") {
+  deps = [ "//src/media/playback/mediaplayer/core:tests" ]
+}
+
+fuchsia_unittest_component("demux") {
+  deps = [ "//src/media/playback/mediaplayer/demux:tests" ]
+}
+
+fuchsia_unittest_component("ffmpeg") {
+  deps = [ "//src/media/playback/mediaplayer/ffmpeg:tests" ]
+}
+
+fuchsia_unittest_component("fidl") {
+  deps = [ "//src/media/playback/mediaplayer/fidl:tests" ]
+}
+
+fuchsia_unittest_component("graph") {
+  deps = [ "//src/media/playback/mediaplayer/graph:tests" ]
+}
+
+fuchsia_unittest_component("util") {
+  deps = [ "//src/media/playback/mediaplayer/util:tests" ]
+}
+
+fuchsia_test_package("mediaplayer_tests") {
+  test_components = [
+    ":core",
+    ":mediaplayer_tests_component",
+    ":demux",
+    ":fidl",
+    ":ffmpeg",
+    ":graph",
+    ":util",
+  ]
+
   deps = [
-    ":mediaplayer_tests_bin",
-    "//src/media/playback/mediaplayer/core:tests",
-    "//src/media/playback/mediaplayer/demux:tests",
-    "//src/media/playback/mediaplayer/ffmpeg:tests",
-    "//src/media/playback/mediaplayer/fidl:tests",
-    "//src/media/playback/mediaplayer/graph:tests",
-    "//src/media/playback/mediaplayer/util:tests",
-  ]
-
-  tests = [
-    {
-      name = "mediaplayer_tests"
-    },
-
-    {
-      name = "mediaplayer_core_tests"
-    },
-
-    {
-      name = "mediaplayer_demux_tests"
-    },
-
-    {
-      name = "mediaplayer_ffmpeg_tests"
-    },
-
-    {
-      name = "mediaplayer_fidl_tests"
-    },
-
-    {
-      name = "mediaplayer_graph_tests"
-    },
-
-    {
-      name = "mediaplayer_util_tests"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4")
-      dest = "media_test_data/bear.mp4"
-    },
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/sfx-opus-441.webm")
-      dest = "media_test_data/sfx-opus-441.webm"
-    },
+    ":mp4_resource",
+    ":webm_resource",
   ]
 
   # TODO(fxbug.dev/58495): Fix the leaks and remove this.

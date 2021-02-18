@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-stream-processors") {
   name = "fuchsia_stream_processors"
@@ -33,12 +33,6 @@ rustc_library("fuchsia-stream-processors") {
   ]
 }
 
-test_package("fuchsia-stream-processors-tests") {
+fuchsia_unittest_package("fuchsia-stream-processors-tests") {
   deps = [ ":fuchsia-stream-processors_test" ]
-
-  tests = [
-    {
-      name = "fuchsia_stream_processors_lib_test"
-    },
-  ]
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("timeline") {
   sources = [
@@ -37,17 +37,13 @@ executable("unittest_bin") {
   ]
 }
 
-test_package("audio-libtimeline-unittests") {
+fuchsia_unittest_package("audio-libtimeline-unittests") {
   deps = [ ":unittest_bin" ]
 
-  tests = [
-    {
-      name = "audio-libtimeline-unittests"
-
-      # This test does not require, nor behave differently on, a non-virtualized target
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    # This test does not require, nor behave differently on, a non-virtualized target
+    environments = basic_envs
+  }
 }
 
 group("tests") {

@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/audio_driver_tests"
+        "binary": "bin/audio_driver_tests"
     },
     "sandbox": {
         "dev": [

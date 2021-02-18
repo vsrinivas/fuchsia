@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("factory_source") {
   sources = [
@@ -58,17 +58,14 @@ executable("codec_detect_hw_encode_test_bin") {
   ]
 }
 
-test_package("codec_detect_hw_encode_test") {
+fuchsia_unittest_package("codec_detect_hw_encode_test") {
+  manifest = "meta/codec_detect_hw_encode_test.cmx"
   deps = [ ":codec_detect_hw_encode_test_bin" ]
 
-  tests = [
-    {
-      name = "codec_detect_hw_encode_test"
-
-      # test depends on hw encoder device being present
-      environments = [ sherlock_env ]
-    },
-  ]
+  test_specs = {
+    # test depends on hw encoder device being present
+    environments = [ sherlock_env ]
+  }
 }
 
 executable("codec_detect_hw_decode_test_bin") {
@@ -85,18 +82,15 @@ executable("codec_detect_hw_decode_test_bin") {
   ]
 }
 
-test_package("codec_detect_hw_decode_test") {
+fuchsia_unittest_package("codec_detect_hw_decode_test") {
+  manifest = "meta/codec_detect_hw_decode_test.cmx"
   deps = [ ":codec_detect_hw_decode_test_bin" ]
 
-  tests = [
-    {
-      name = "codec_detect_hw_decode_test"
-
-      # test depends on hw decoder device being present
-      environments = [
-        sherlock_env,
-        astro_env,
-      ]
-    },
-  ]
+  test_specs = {
+    # test depends on hw decoder device being present
+    environments = [
+      sherlock_env,
+      astro_env,
+    ]
+  }
 }

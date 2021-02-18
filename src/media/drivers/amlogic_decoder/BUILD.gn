@@ -5,7 +5,7 @@
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Path to the amlogic decoder firmware file. Overrides the default in the build.
@@ -323,18 +323,15 @@ if (target_cpu == "arm64") {
     ]
   }
 
-  test_package("test_amlogic_codec_factory_package") {
+  fuchsia_unittest_package("test_amlogic_codec_factory_package") {
     if (target_cpu == "arm64") {
       deps = [ ":test_amlogic_codec_factory" ]
-      tests = [
-        {
-          name = "test_amlogic_codec_factory"
-          environments = [ astro_env ]
-
-          # Manual only test; comment out to use `fx run-test`
-          disabled = true
-        },
-      ]
+      test_specs = {
+        environments = [
+          # Manual only test; uncomment out to use `fx run-test`
+          #astro_env
+        ]
+      }
     }
   }
 }

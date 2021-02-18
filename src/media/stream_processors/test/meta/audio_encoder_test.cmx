@@ -14,7 +14,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/audio_encoder_test"
+        "binary": "bin/audio_encoder_test"
     },
     "sandbox": {
         "features": [

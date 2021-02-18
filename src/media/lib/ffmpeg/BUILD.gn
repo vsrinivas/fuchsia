@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
+
 declare_args() {
   # Use a prebuilt ffmpeg binary rather than building it locally.  See
   # //src/media/lib/ffmpeg/README.md for details.  This is ignored when
@@ -58,10 +60,7 @@ if (use_prebuilt_ffmpeg) {
       "Set use_prebuilt_ffmpeg=false when selecting variants outside $ffmpeg_prebuilts for ffmpeg clients.")
 
   group("prebuilt_ffmpeg") {
-    deps = [
-      ":prebuilt_libffmpeg_copy",
-      ":prebuilt_libffmpeg_debug_copy",
-    ]
+    deps = [ ":prebuilt_ffmpeg_shared_library" ]
 
     public_configs = [ ":prebuilt_ffmpeg_config" ]
   }
@@ -75,19 +74,10 @@ if (use_prebuilt_ffmpeg) {
   }
 
   prebuilt_dir = "//prebuilt/third_party/ffmpeg/arch/$current_cpu"
-  libffmpeg = "$prebuilt_dir/lib/${variant_prefix}libffmpeg.so"
-  libffmpeg_debug = "$prebuilt_dir/debug/${variant_prefix}libffmpeg.so"
-
-  copy("prebuilt_libffmpeg_copy") {
-    visibility = [ ":prebuilt_ffmpeg" ]
-    sources = [ libffmpeg ]
-    outputs = [ "$root_out_dir/libffmpeg.so" ]
-  }
-
-  copy("prebuilt_libffmpeg_debug_copy") {
-    visibility = [ ":prebuilt_ffmpeg" ]
-    sources = [ libffmpeg_debug ]
-    outputs = [ "$root_out_dir/lib.unstripped/libffmpeg.so" ]
+  if (variant_prefix == "debug") {
+    lib_dir = "$prebuilt_dir/debug/"
+  } else {
+    lib_dir = "$prebuilt_dir/lib/"
   }
 
   config("prebuilt_ffmpeg_config") {
@@ -105,6 +95,12 @@ if (use_prebuilt_ffmpeg) {
       "$ffmpeg_include/fuchsia/config/$ffmpeg_config/$current_cpu",
     ]
 
-    libs = get_target_outputs(":prebuilt_libffmpeg_copy")
+    libs = [ "ffmpeg" ]
+    lib_dirs = [ lib_dir ]
+  }
+
+  resource("prebuilt_ffmpeg_shared_library") {
+    sources = [ "$lib_dir/${variant_prefix}libffmpeg.so" ]
+    outputs = [ "lib/libffmpeg.so" ]
   }
 }

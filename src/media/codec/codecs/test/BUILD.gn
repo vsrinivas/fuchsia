@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -27,13 +26,7 @@ executable("codec_adapter_sw_test_bin") {
   ]
 }
 
-test_package("codec_adapter_sw_test") {
-  tests = [
-    {
-      name = "codec_adapter_sw_test"
-    },
-  ]
-
+fuchsia_unittest_package("codec_adapter_sw_test") {
   deps = [ ":codec_adapter_sw_test_bin" ]
 }
 
@@ -50,14 +43,8 @@ executable("timestamp_extrapolator_test_bin") {
   ]
 }
 
-test_package("timestamp_extrapolator_tests") {
+fuchsia_unittest_package("timestamp_extrapolator_tests") {
   deps = [ ":timestamp_extrapolator_test_bin" ]
-
-  tests = [
-    {
-      name = "timestamp_extrapolator_tests"
-    },
-  ]
 }
 
 source_set("test_codec_packets") {
@@ -87,14 +74,8 @@ executable("chunk_input_stream_test_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("chunk_input_stream_tests") {
+fuchsia_unittest_package("chunk_input_stream_tests") {
   deps = [ ":chunk_input_stream_test_bin" ]
-
-  tests = [
-    {
-      name = "chunk_input_stream_tests"
-    },
-  ]
 }
 
 executable("output_sink_test_bin") {
@@ -114,12 +95,6 @@ executable("output_sink_test_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("output_sink_tests") {
+fuchsia_unittest_package("output_sink_tests") {
   deps = [ ":output_sink_test_bin" ]
-
-  tests = [
-    {
-      name = "output_sink_tests"
-    },
-  ]
 }

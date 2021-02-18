@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 group("examples") {
   testonly = true
@@ -31,18 +31,7 @@ rustc_binary("example_player_bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("example_player") {
+fuchsia_package_with_single_component("example_player") {
+  manifest = "meta/example_player.cmx"
   deps = [ ":example_player_bin" ]
-
-  binaries = [
-    {
-      name = "example_player"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/example_player.cmx")
-      dest = "example_player.cmx"
-    },
-  ]
 }

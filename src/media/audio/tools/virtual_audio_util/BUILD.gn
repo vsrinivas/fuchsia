@@ -1,35 +1,14 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 group("util") {
   testonly = true
-  deps = [
-    ":virtual_audio_bin",
-    ":virtual_audio_util",
-  ]
+  deps = [ ":virtual_audio_util" ]
 }
 
-package("virtual_audio_util") {
-  deps = [ ":virtual_audio_bin" ]
-
-  binaries = [
-    {
-      name = "virtual_audio"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/virtual_audio.cmx")
-      dest = "virtual_audio.cmx"
-    },
-  ]
-}
-
-executable("virtual_audio_bin") {
+executable("bin") {
   output_name = "virtual_audio"
 
   sources = [
@@ -47,4 +26,9 @@ executable("virtual_audio_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_shell_package("virtual_audio_util") {
+  manifest = "meta/virtual_audio.cmx"
+  deps = [ ":bin" ]
 }

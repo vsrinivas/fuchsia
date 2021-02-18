@@ -2,27 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("audio_player") {
-  deps = [ ":audio_player_bin" ]
-
-  binaries = [
-    {
-      name = "audio_player"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/audio_player.cmx")
-      dest = "audio_player.cmx"
-    },
-  ]
-}
-
-executable("audio_player_bin") {
+executable("bin") {
   output_name = "audio_player"
 
   sources = [
@@ -44,4 +26,9 @@ executable("audio_player_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_shell_package("audio_player") {
+  manifest = "meta/audio_player.cmx"
+  deps = [ ":bin" ]
 }
