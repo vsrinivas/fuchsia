@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
@@ -34,6 +35,8 @@
 #include "src/devices/lib/log/log.h"
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 // On OpenMsg and Describe Msg are hand-rolled structs to mirror the `OnOpen`
 // event and `Describe` method from fuchsia-io: see
@@ -295,13 +298,13 @@ bool devnode_is_local(Devnode* dn) {
 // been added to a Devnode's watchers list.
 void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& name, unsigned op) {
   size_t len = name.length();
-  if (!*watcher || len > fuchsia_io_MAX_FILENAME) {
+  if (!*watcher || len > fio::MAX_FILENAME) {
     return;
   }
 
   ZX_ASSERT(!(*watcher)->InContainer());
 
-  uint8_t msg[fuchsia_io_MAX_FILENAME + 2];
+  uint8_t msg[fio::MAX_FILENAME + 2];
   const uint32_t msg_len = static_cast<uint32_t>(len + 2);
   msg[0] = static_cast<uint8_t>(op);
   msg[1] = static_cast<uint8_t>(len);
@@ -325,11 +328,11 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
   }
 
   size_t len = name.length();
-  if (len > fuchsia_io_MAX_FILENAME) {
+  if (len > fio::MAX_FILENAME) {
     return;
   }
 
-  uint8_t msg[fuchsia_io_MAX_FILENAME + 2];
+  uint8_t msg[fio::MAX_FILENAME + 2];
   const uint32_t msg_len = static_cast<uint32_t>(len + 2);
   msg[0] = static_cast<uint8_t>(op);
   msg[1] = static_cast<uint8_t>(len);
@@ -365,15 +368,15 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
 
   // If the watcher has asked for all existing entries, send it all of them
   // followed by the end-of-existing marker (IDLE).
-  if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
+  if (mask & fio::WATCH_MASK_EXISTING) {
     for (const auto& child : dn->children) {
       if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
         continue;
       }
       // TODO: send multiple per write
-      devfs_notify_single(&watcher, child.name, fuchsia_io_WATCH_EVENT_EXISTING);
+      devfs_notify_single(&watcher, child.name, fio::WATCH_EVENT_EXISTING);
     }
-    devfs_notify_single(&watcher, "", fuchsia_io_WATCH_EVENT_IDLE);
+    devfs_notify_single(&watcher, "", fio::WATCH_EVENT_IDLE);
   }
 
   // Watcher may have been freed by devfs_notify_single, so check before
@@ -585,7 +588,7 @@ void devfs_remove(Devnode* dn) {
 
   // notify own file watcher
   if ((dn->device == nullptr) || !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-    devfs_notify(dn, "", fuchsia_io_WATCH_EVENT_DELETED);
+    devfs_notify(dn, "", fio::WATCH_EVENT_DELETED);
   }
 
   // disconnect from device and notify parent/link directory watchers
@@ -595,7 +598,7 @@ void devfs_remove(Devnode* dn) {
 
       if ((dn->device->parent() != nullptr) && (dn->device->parent()->self != nullptr) &&
           !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-        devfs_notify(dn->device->parent()->self, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
+        devfs_notify(dn->device->parent()->self, dn->name, fio::WATCH_EVENT_REMOVED);
       }
     }
     if (dn->device->link == dn) {
@@ -603,7 +606,7 @@ void devfs_remove(Devnode* dn) {
 
       if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
         Devnode* dir = proto_dir(dn->device->protocol_id());
-        devfs_notify(dir, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
+        devfs_notify(dir, dn->name, fio::WATCH_EVENT_REMOVED);
       }
     }
     dn->device = nullptr;
@@ -655,10 +658,10 @@ zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::c
 void devfs_advertise(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
     Devnode* dir = proto_dir(dev->protocol_id());
-    devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
+    devfs_notify(dir, dev->link->name, fio::WATCH_EVENT_ADDED);
   }
   if (dev->self->parent) {
-    devfs_notify(dev->self->parent, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
+    devfs_notify(dev->self->parent, dev->self->name, fio::WATCH_EVENT_ADDED);
   }
 }
 
@@ -666,12 +669,12 @@ void devfs_advertise(const fbl::RefPtr<Device>& dev) {
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
     Devnode* dir = proto_dir(dev->protocol_id());
-    devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_REMOVED);
-    devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
+    devfs_notify(dir, dev->link->name, fio::WATCH_EVENT_REMOVED);
+    devfs_notify(dir, dev->link->name, fio::WATCH_EVENT_ADDED);
   }
   if (dev->self->parent) {
-    devfs_notify(dev->self->parent, dev->self->name, fuchsia_io_WATCH_EVENT_REMOVED);
-    devfs_notify(dev->self->parent, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
+    devfs_notify(dev->self->parent, dev->self->name, fio::WATCH_EVENT_REMOVED);
+    devfs_notify(dev->self->parent, dev->self->name, fio::WATCH_EVENT_ADDED);
   }
 }
 
@@ -830,10 +833,10 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       uint32_t len = static_cast<uint32_t>(request->path.size);
       zx_handle_t h = request->object;
       uint32_t flags = request->flags;
-      if (len == 0 || len > fuchsia_io_MAX_PATH) {
+      if (len == 0 || len > fio::MAX_PATH) {
         zx_handle_close(h);
       } else {
-        char path[fuchsia_io_MAX_PATH + 1];
+        char path[fio::MAX_PATH + 1];
         memcpy(path, request->path.data, len);
         path[len] = 0;
         devfs_open(dn, dispatcher, h, path, flags);
@@ -866,11 +869,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       DECODE_REQUEST(msg, DirectoryReadDirents);
       DEFINE_REQUEST(msg, DirectoryReadDirents);
 
-      if (request->max_bytes > fuchsia_io_MAX_BUF) {
+      if (request->max_bytes > fio::MAX_BUF) {
         return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
       }
 
-      uint8_t data[fuchsia_io_MAX_BUF];
+      uint8_t data[fio::MAX_BUF];
       size_t actual = 0;
       r = devfs_readdir(dn, &ios->readdir_ino_, data, request->max_bytes);
       if (r >= 0) {
@@ -885,7 +888,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       zx::channel watcher(request->watcher);
 
       request->watcher = ZX_HANDLE_INVALID;
-      if (request->mask & (~fuchsia_io_WATCH_MASK_ALL) || request->options != 0) {
+      if (request->mask & (~fio::WATCH_MASK_ALL) || request->options != 0) {
         return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
       }
       r = devfs_watch(dn, std::move(watcher), request->mask);
@@ -895,7 +898,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       DECODE_REQUEST(msg, DirectoryAdminQueryFilesystem);
       fuchsia_io_FilesystemInfo info;
       memset(&info, 0, sizeof(info));
-      strlcpy((char*)info.name, "devfs", fuchsia_io_MAX_FS_NAME_BUFFER);
+      strlcpy((char*)info.name, "devfs", fio::MAX_FS_NAME_BUFFER);
       return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
     }
   }  // switch
