@@ -23,6 +23,8 @@ class DriverComponent : public llcpp::fuchsia::component::runner::ComponentContr
   DriverComponent(fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir,
                   fidl::ClientEnd<llcpp::fuchsia::driver::framework::Driver> driver);
 
+  void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node> binding);
+
  private:
   // llcpp::fuchsia::component::runner::ComponentController::Interface
   void Stop(StopCompleter::Sync& completer) override;
@@ -30,6 +32,7 @@ class DriverComponent : public llcpp::fuchsia::component::runner::ComponentContr
 
   fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir_;
   fidl::ClientEnd<llcpp::fuchsia::driver::framework::Driver> driver_;
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node>> binding_;
 };
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
@@ -75,6 +78,9 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols();
   DriverHostComponent* parent_driver_host() const;
   void set_driver_host(DriverHostComponent* driver_host);
+  void set_driver_binding(
+      fidl::ServerBindingRef<llcpp::fuchsia::component::runner::ComponentController>
+          driver_binding);
   void set_controller_binding(
       fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::NodeController> controller_binding);
   void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node> binding);
@@ -83,6 +89,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   void Remove();
 
  private:
+  void Unbind();
   // llcpp::fuchsia::driver::framework::NodeController::Interface
   void Remove(RemoveCompleter::Sync& completer) override;
   // llcpp::fuchsia::driver::framework::Node::Interface
@@ -100,6 +107,8 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   Symbols symbols_;
 
   DriverHostComponent* driver_host_ = nullptr;
+  std::optional<fidl::ServerBindingRef<llcpp::fuchsia::component::runner::ComponentController>>
+      driver_binding_;
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::NodeController>>
       controller_binding_;
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Node>> binding_;

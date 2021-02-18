@@ -63,6 +63,14 @@ void InspectNode(inspect::Inspector* inspector, InspectStack* stack) {
   }
 }
 
+template <typename T>
+void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& binding) {
+  if (binding.has_value()) {
+    binding->Unbind();
+    binding.reset();
+  }
+}
+
 }  // namespace
 
 class EventHandler : public fdf::DriverHost::AsyncEventHandler {
@@ -82,7 +90,13 @@ DriverComponent::DriverComponent(fidl::ClientEnd<fio::Directory> exposed_dir,
                                  fidl::ClientEnd<fdf::Driver> driver)
     : exposed_dir_(std::move(exposed_dir)), driver_(std::move(driver)) {}
 
-void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) { driver_.reset(); }
+void DriverComponent::set_binding(fidl::ServerBindingRef<fdf::Node> binding) {
+  binding_.emplace(std::move(binding));
+}
+
+void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) {
+  UnbindAndReset(binding_);
+}
 
 void DriverComponent::Kill(DriverComponent::KillCompleter::Sync& completer) {}
 
@@ -128,14 +142,7 @@ Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispat
       offers_(std::move(offers)),
       symbols_(std::move(symbols)) {}
 
-Node::~Node() {
-  if (controller_binding_.has_value()) {
-    controller_binding_->Unbind();
-  }
-  if (binding_.has_value()) {
-    binding_->Unbind();
-  }
-}
+Node::~Node() { Unbind(); }
 
 const std::string& Node::name() const { return name_; }
 
@@ -147,17 +154,49 @@ DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_h
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
+void Node::set_driver_binding(fidl::ServerBindingRef<frunner::ComponentController> driver_binding) {
+  driver_binding_.emplace(std::move(driver_binding));
+}
+
 void Node::set_controller_binding(fidl::ServerBindingRef<fdf::NodeController> controller_binding) {
-  controller_binding_ = std::make_optional(std::move(controller_binding));
+  controller_binding_.emplace(std::move(controller_binding));
 }
 
 void Node::set_binding(fidl::ServerBindingRef<fdf::Node> binding) {
-  binding_ = std::make_optional(std::move(binding));
+  binding_.emplace(std::move(binding));
 }
 
 fbl::DoublyLinkedList<std::unique_ptr<Node>>& Node::children() { return children_; }
 
+void Node::Unbind() {
+  UnbindAndReset(driver_binding_);
+  UnbindAndReset(controller_binding_);
+  UnbindAndReset(binding_);
+}
+
 void Node::Remove() {
+  // Create list of nodes to iterate.
+  std::stack<Node*> stack{{this}};
+  std::vector<Node*> nodes;
+  std::unordered_set<Node*> unique_nodes;
+  while (!stack.empty()) {
+    auto node = stack.top();
+    stack.pop();
+    auto [_, inserted] = unique_nodes.emplace(node);
+    if (!inserted) {
+      // Only insert unique nodes from the DAG.
+      continue;
+    }
+    nodes.emplace_back(node);
+    for (auto& child : node->children_) {
+      stack.emplace(&child);
+    }
+  }
+
+  // Traverse list of nodes in reverse order in order to unbind depth-first.
+  for (auto node = nodes.rbegin(), end = nodes.rend(); node != end; ++node) {
+    (*node)->Unbind();
+  }
   if (parent_ != nullptr) {
     parent_->children_.erase(*this);
   }
@@ -170,10 +209,7 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
   // We take this approach to avoid a use-after-free, where calling
   // Node::Remove() directly would then cause the the Node binding to do the
   // same, after the Node has already been freed.
-  if (binding_.has_value()) {
-    binding_->Unbind();
-    binding_.reset();
-  }
+  UnbindAndReset(binding_);
 }
 
 void Node::AddChild(fdf::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
@@ -265,9 +301,8 @@ zx::status<MatchResult> DriverIndex::Match(fdf::NodeAddArgs args) {
   return match_callback_(std::move(args));
 }
 
-DriverRunner::DriverRunner(fidl::ClientEnd<llcpp::fuchsia::sys2::Realm> realm,
-                           DriverIndex* driver_index, inspect::Inspector* inspector,
-                           async_dispatcher_t* dispatcher)
+DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm, DriverIndex* driver_index,
+                           inspect::Inspector* inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
       driver_index_(driver_index),
       dispatcher_(dispatcher),
@@ -382,21 +417,20 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info,
     completer.Close(bind_driver.error());
     return;
   }
+  driver_args.node->set_driver_binding(bind_driver.take_value());
 
   // Bind the Node associated with the driver.
   auto bind_node = fidl::BindServer<fdf::Node::Interface>(
       dispatcher_, std::move(endpoints->server), driver_args.node,
-      [driver_binding = bind_driver.take_value()](fdf::Node::Interface* node, auto, auto) mutable {
-        driver_binding.Unbind();
-        static_cast<Node*>(node)->Remove();
-      });
+      [](fdf::Node::Interface* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
   if (bind_node.is_error()) {
     LOGF(ERROR, "Failed to bind channel to Node for driver '%.*s': %s", url.size(), url.data(),
          zx_status_get_string(bind_node.error()));
     completer.Close(bind_node.error());
     return;
   }
-  driver_args.node->set_binding(bind_node.take_value());
+  driver_args.node->set_binding(bind_node.value());
+  driver->set_binding(bind_node.take_value());
   drivers_.push_back(std::move(driver));
 }
 
