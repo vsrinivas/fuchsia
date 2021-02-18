@@ -1,4 +1,4 @@
-# Elements
+# Elements {#elements}
 
 *tl;dr:* Elements are components added to a session as a result of user
 interaction, similar to "apps" on other platforms.
@@ -6,19 +6,18 @@ interaction, similar to "apps" on other platforms.
 This document provides a brief conceptual overview of elements, element
 annotations, and their relationship to [components][doc-component].
 
-## Elements are components
+## Elements are components {#elements-are-components}
 
-Elements are [components][doc-component] with key-value annotations. All
-elements are implemented as components. While any component could hypothetically
-be instantiated as an element, elements [contribute more directly](#element-ui)
-to the user experience of a product, much like an "app" would on other
-platforms.
+Elements are [components][doc-component] with key-value annotations. While any
+component could hypothetically be instantiated as an element, elements
+[contribute more directly](#element-ui) to the user experience of a product,
+much like an "app" would on other platforms.
 
 Since elements are components, they inherit all component properties, such as:
 
-* Elements are identified by their component URL, and have a [component
-  manifest][doc-component-manfest].
-* Elements participate in [capability routing][doc-capability-routing].
+* Being identifiable by their component URLs, and having [component
+manifests][doc-component-manifest].
+* Participating in [capability routing][doc-capability-routing].
 
 Elements are typically instantiated in [component
 collections][doc-component-collection] within the session component.
@@ -32,14 +31,14 @@ product and its configuration. The most common mode of output is graphical.
 
 ## Elements have annotations {#element-annotations}
 
-Every element has an associated list of mutable key-value annotations, set first
-when the element instance is added to a product experience at runtime. Element
-annotations are used by the product's "user experience presenter" to control
-details of the element's presentation. For example, for graphical elements
-annotations may specify if presentation should hide system chrome, allow for
-certain types of gestures, and so on.
+Every element has an associated list of mutable key-value annotations. These
+annotations are first set when the element instance is added to a product
+experience at runtime. Element annotations are used by the product's "user
+experience presenter" to control details of the element's presentation. For
+example, a for graphical element's annotations may specify if the presentation
+should hide system chrome, allow for certain types of gestures, and so on.
 
-## Elements are portable across products
+## Elements are portable across products {#elements-are-portable-across-products}
 
 Elements are an abstraction intended to make it easier to interactively run
 components on many different Fuchsia products and varying product
@@ -56,11 +55,11 @@ Although none of these mechanisms are strictly defined by the Fuchsia platform,
 some are standardized and intended to be re-used across all products built with
 Fuchsia.
 
-For example, the specific meanings of different annotation keys and their
-respective values are not prescribed by the Fuchsia platform. Some keys
-have recommended meanings, with recommended standard schemas.
+While the specific meanings of different annotation keys and their
+respective values are not prescribed by the Fuchsia platform, some keys do
+have recommended meanings with recommended standard schemas.
 
-## Further reading
+## Further reading {#further-reading}
 
 * [Graphical Presenter][doc-graphical-presenter]: a component role and protocol
   for presenting elements using Fuchsia's graphical compositor,
