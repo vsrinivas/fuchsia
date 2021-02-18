@@ -35,8 +35,6 @@ const (
 	middleLifetimeTimeout = middleLifetime * time.Second
 	incrementalTimeout    = 100 * time.Millisecond
 	defaultLifetime       = time.Hour
-
-	onInterfacesChangedEventTimeout = time.Second
 )
 
 var (
@@ -53,13 +51,6 @@ var (
 		Protocol: ipv6.ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
 			Address:   util.Parse("abcd:ef00::1"),
-			PrefixLen: 64,
-		},
-	}
-	testProtocolAddr3 = tcpip.ProtocolAddress{
-		Protocol: ipv6.ProtocolNumber,
-		AddressWithPrefix: tcpip.AddressWithPrefix{
-			Address:   util.Parse("abcd:ff00::1"),
 			PrefixLen: 64,
 		},
 	}
