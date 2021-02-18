@@ -20,7 +20,6 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
   static_assert(__cpp_lib_string_view == 201606L,
                 "'__cpp_lib_string_view' should be using draft 201606L for c++20.");
 #endif
-
   static_assert(__cpp_lib_logical_traits == 201510L,
                 "'__cpp_lib_logical_traits' should be using draft 201510L.");
   static_assert(__cpp_lib_void_t ==

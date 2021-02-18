@@ -25,6 +25,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/optional.h",
     "lib/stdcompat/source_location.h",
     "lib/stdcompat/string_view.h",
+    "lib/stdcompat/span.h",
     "lib/stdcompat/type_traits.h",
     "lib/stdcompat/utility.h",
     "lib/stdcompat/variant.h",
@@ -36,6 +37,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/internal/bit.h",
     "lib/stdcompat/internal/constructors.h",
     "lib/stdcompat/internal/exception.h",
+    "lib/stdcompat/internal/span.h",
     "lib/stdcompat/internal/storage.h",
     "lib/stdcompat/internal/utility.h",
   ]
