@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "account_handler"
@@ -64,22 +64,20 @@ rustc_binary("bin") {
   ]
 }
 
-package("account_handler") {
+fuchsia_component("account_handler_cmp") {
   deps = [ ":bin" ]
+  component_name = "account_handler"
+  manifest = "meta/account_handler.cmx"
+}
 
-  binaries = [
-    {
-      name = "account_handler"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/account_handler.cmx")
-      dest = "account_handler.cmx"
-    },
-    {
-      path = rebase_path("meta/account_handler_ephemeral.cmx")
-      dest = "account_handler_ephemeral.cmx"
-    },
+fuchsia_component("account_handler_ephemeral") {
+  deps = [ ":bin" ]
+  manifest = "meta/account_handler_ephemeral.cmx"
+}
+
+fuchsia_package("account_handler") {
+  deps = [
+    ":account_handler_cmp",
+    ":account_handler_ephemeral",
   ]
 }

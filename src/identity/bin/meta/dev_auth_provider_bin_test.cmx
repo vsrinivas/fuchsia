@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/dev_auth_provider_bin_test"
+        "binary": "bin/dev_auth_provider_bin_test"
     }
 }

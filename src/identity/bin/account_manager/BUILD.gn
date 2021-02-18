@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Whether or not prototype account transfer is enabled.
@@ -67,24 +67,13 @@ rustc_binary("bin") {
   ]
 }
 
-package("account_manager") {
+fuchsia_package_with_single_component("account_manager") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "account_manager"
-    },
-  ]
-  meta = [
-    {
-      if (prototype_account_transfer) {
-        path = rebase_path("meta/account_manager_prototype.cmx")
-      } else {
-        path = rebase_path("meta/account_manager.cmx")
-      }
-      dest = "account_manager.cmx"
-    },
-  ]
+  if (prototype_account_transfer) {
+    manifest = "meta/account_manager_prototype.cmx"
+  } else {
+    manifest = "meta/account_manager.cmx"
+  }
 }
 
 group("account_manager_auth_providers") {

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tools") {
   testonly = true
@@ -17,12 +17,6 @@ group("tests") {
   deps = [ ":identity_tools_unittests" ]
 }
 
-test_package("identity_tools_unittests") {
+fuchsia_unittest_package("identity_tools_unittests") {
   deps = [ "sktool:bin_test" ]
-
-  tests = [
-    {
-      name = "sktool_bin_test"
-    },
-  ]
 }

@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/google_auth_provider_unittests"
+        "binary": "bin/google_auth_provider_unittests"
     }
 }

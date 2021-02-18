@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("lib") {
   testonly = true
@@ -14,38 +14,45 @@ group("tests") {
   deps = [ ":identity_lib_unittests" ]
 }
 
-test_package("identity_lib_unittests") {
-  deps = [
-    "account_common:account_common_test",
-    "identity_common:identity_common_test",
-    "identity_key_manager:identity_key_manager_test",
-    "storage_manager:storage_manager_test",
-    "token_cache:token_cache_test",
-    "token_manager:token_manager_test",
-    "token_store:token_store_test",
-  ]
+fuchsia_unittest_component("account_common_test") {
+  deps = [ "account_common:account_common_test" ]
+}
 
-  tests = [
-    {
-      name = "account_common_lib_test"
-    },
-    {
-      name = "identity_common_lib_test"
-    },
-    {
-      name = "identity_key_manager_lib_test"
-    },
-    {
-      name = "storage_manager_lib_test"
-    },
-    {
-      name = "token_cache_lib_test"
-    },
-    {
-      name = "token_store_lib_test"
-    },
-    {
-      name = "token_manager_lib_test"
-    },
+fuchsia_unittest_component("identity_common_test") {
+  deps = [ "identity_common:identity_common_test" ]
+}
+
+fuchsia_unittest_component("identity_key_manager_test") {
+  deps = [ "identity_key_manager:identity_key_manager_test" ]
+}
+
+fuchsia_unittest_component("storage_manager_test") {
+  deps = [ "storage_manager:storage_manager_test" ]
+  manifest = "meta/storage_manager_lib_test.cmx"
+}
+
+fuchsia_unittest_component("token_cache_test") {
+  deps = [ "token_cache:token_cache_test" ]
+}
+
+fuchsia_unittest_component("token_manager_test") {
+  deps = [ "token_manager:token_manager_test" ]
+  manifest = "meta/token_manager_lib_test.cmx"
+}
+
+fuchsia_unittest_component("token_store_test") {
+  deps = [ "token_store:token_store_test" ]
+  manifest = "meta/token_store_lib_test.cmx"
+}
+
+fuchsia_test_package("identity_lib_unittests") {
+  test_components = [
+    ":account_common_test",
+    ":identity_common_test",
+    ":identity_key_manager_test",
+    ":storage_manager_test",
+    ":token_cache_test",
+    ":token_manager_test",
+    ":token_store_test",
   ]
 }

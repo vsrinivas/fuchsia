@@ -3,12 +3,12 @@
 # found in the LICENSE file.
 #
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("token_manager_integration") {
   testonly = true
   deps = [
-    ":token_manager_integration_test_pkg",
+    ":token_manager_integration_test",
     "//src/identity/bin/dev_auth_provider",
   ]
 }
@@ -33,12 +33,7 @@ executable("bin") {
   ]
 }
 
-test_package("token_manager_integration_test_pkg") {
+fuchsia_unittest_package("token_manager_integration_test") {
   deps = [ ":bin" ]
-
-  tests = [
-    {
-      name = "token_manager_integration_test"
-    },
-  ]
+  manifest = "meta/token_manager_integration_test.cmx"
 }

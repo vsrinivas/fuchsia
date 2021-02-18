@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "dev_authenticator"
@@ -32,23 +32,19 @@ rustc_binary("bin") {
   ]
 }
 
-package("dev_authenticator") {
+fuchsia_component("dev_authenticator_always_succeed") {
   deps = [ ":bin" ]
+  manifest = "meta/dev_authenticator_always_succeed.cmx"
+}
 
-  binaries = [
-    {
-      name = "dev_authenticator"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/dev_authenticator_always_succeed.cmx")
-      dest = "dev_authenticator_always_succeed.cmx"
-    },
-    {
-      path =
-          rebase_path("meta/dev_authenticator_always_fail_authentication.cmx")
-      dest = "dev_authenticator_always_fail_authentication.cmx"
-    },
+fuchsia_component("dev_authenticator_always_fail_authentication") {
+  deps = [ ":bin" ]
+  manifest = "meta/dev_authenticator_always_fail_authentication.cmx"
+}
+
+fuchsia_package("dev_authenticator") {
+  deps = [
+    ":dev_authenticator_always_fail_authentication",
+    ":dev_authenticator_always_succeed",
   ]
 }

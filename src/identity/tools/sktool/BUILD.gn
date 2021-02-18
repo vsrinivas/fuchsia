@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "sktool"
@@ -41,18 +41,7 @@ rustc_binary("bin") {
   ]
 }
 
-package("sktool") {
+fuchsia_package_with_single_component("sktool") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "sktool"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/sktool.cmx")
-      dest = "sktool.cmx"
-    },
-  ]
+  manifest = "meta/sktool.cmx"
 }
