@@ -91,7 +91,7 @@ The following capabilities can be routed:
 -   `runner`: A capability that allows a component to use a particular
     [runner][doc-runners].
 -   `resolver`: A capability that, when registered in an
-    [environment](#environment), causes a component with a particular URL scheme
+    [environment](#environments), causes a component with a particular URL scheme
     to be resolved with that [resolver][doc-resolvers].
 
 `protocol`, `directory` and `storage` capabilities are routed to components that
@@ -332,7 +332,7 @@ The `children` section declares child component instances as described in
         soon as its parent starts.
 -   `environment` _(optional)_: If present, the name of the environment to be
     assigned to the child component instance, one of
-    [`environments`](#environment). If omitted, the child will inherit the same
+    [`environments`](#environments). If omitted, the child will inherit the same
     environment assigned to this component.
 
 Example:
@@ -367,7 +367,7 @@ The `collections` section declares collections as described in
         mode is not yet supported.
 -   `environment` _(optional)_: If present, the environment that will be
     assigned to instances in this collection, one of
-    [`environments`](#environment). If omitted, instances in this collection
+    [`environments`](#environments). If omitted, instances in this collection
     will inherit the same environment assigned to this component.
 
 Example:
@@ -468,7 +468,7 @@ A definition of a [protocol capability][doc-protocol].
 
 A definition of a [directory capability][doc-directory].
 
--   `protocol`: The [name](#capability-names) for this directory capability.
+-   `directory`: The [name](#capability-names) for this directory capability.
 -   `path`: The path in the component's outgoing directory from which this
     directory is served.
 -   `rights`: The maximum [directory rights](#directory-rights) that may be set
@@ -707,10 +707,10 @@ This section may be omitted.
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
-[doc-eager]: lifecycle.md#eager-binding
+[doc-eager]: lifecycle.md#eager_binding
 [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
-[doc-resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
+[doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-legacy-manifest]: /docs/concepts/components/v1/component_manifests.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
