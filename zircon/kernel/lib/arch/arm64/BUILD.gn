@@ -11,7 +11,10 @@ zx_library("arm64") {
   host = true
   static = true
   visibility = [ "../*" ]
-  sources = []
+  sources = [ "cache.cc" ]
+
+  include_dirs = [ "../include" ]
+  public_deps = [ "//zircon/system/ulib/hwreg:headers" ]
 
   sdk = "source"
   sdk_headers = [

@@ -6,7 +6,7 @@
 
 #include "test.h"
 
-#include <lib/arch/self-modification.h>
+#include <lib/arch/cache.h>
 #include <lib/code-patching/code-patching.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/view.h>
@@ -100,8 +100,9 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
 
   // After patching (and synchronizing the instruction and data caches), we
   // expect AddOne() to be the identity function.
-  code_patching::NopFill(GetInstructionRange(patches[0].range_start, patches[0].range_size));
-  arch::PostSelfModificationCacheSync();
+  auto instructions = GetInstructionRange(patches[0].range_start, patches[0].range_size);
+  code_patching::NopFill(instructions);
+  arch::CacheConsistencyContext().SyncRange(patches[0].range_start, patches[0].range_size);
 
   if (uint64_t result = AddOne(583); result != 583) {
     printf("Patched AddOne(583) returned %lu; expected 583.\n", result);
