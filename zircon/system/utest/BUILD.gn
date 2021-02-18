@@ -16,7 +16,7 @@ group("tests") {
     "compiler:tests",
     "cprng:tests",
     "ctor:tests",
-    "dash",
+    "dash:tests",
     "dlopen-indirect-deps:tests",
     "errno:tests",
     "exit:tests",
