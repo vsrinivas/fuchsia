@@ -822,6 +822,12 @@ if (current_os == "fuchsia") {
   }
 }
 
+if (!(current_os == "fuchsia")) {
+  group("waker-fn") {
+    deps = [ ":waker-fn-v1_1_0" ]
+  }
+}
+
 if (current_os == "fuchsia") {
   group("walkdir") {
     deps = [ ":walkdir-v2_3_1" ]
@@ -10236,6 +10242,27 @@ rust_library("wait-timeout-v0_1_5") {
     "--edition=2015",
     "-Cmetadata=6681f14e0f8d09c3",
     "-Cextra-filename=-6681f14e0f8d09c3",
+  ]
+}
+
+rust_library("waker-fn-v1_1_0") {
+  crate_name = "waker_fn"
+  crate_root = "//third_party/rust_crates/vendor/waker-fn/src/lib.rs"
+  output_name = "waker_fn-5c6a90a186ee2ada"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5c6a90a186ee2ada",
+    "-Cextra-filename=-5c6a90a186ee2ada",
   ]
 }
 

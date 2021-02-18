@@ -1059,6 +1059,7 @@ dependencies = [
  "vk-sys",
  "void",
  "vte",
+ "waker-fn",
  "walkdir",
  "wasm-bindgen",
  "webpki",
@@ -3872,6 +3873,12 @@ checksum = "b9f3bf741a801531993db6478b95682117471f76916f5e690dd8d45395b09349"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "waker-fn"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d5b2c62b4012a3e1eca5a7e077d13b3bf498c4073e33ccd58626607748ceeca"
 
 [[package]]
 name = "walkdir"
