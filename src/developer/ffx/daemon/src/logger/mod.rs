@@ -42,7 +42,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
         create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
 
     let listener_fut = async move {
-        let mut skip_timestamp = streamer.read_most_recent_timestamp().await?;
+        let mut skip_timestamp = streamer.read_most_recent_target_timestamp().await?;
         streamer
             .append_logs(vec![LogEntry {
                 data: LogData::FfxEvent(EventType::LoggingStarted),
@@ -286,7 +286,7 @@ mod test {
             Ok(())
         }
 
-        async fn read_most_recent_timestamp(&self) -> Result<Option<Timestamp>> {
+        async fn read_most_recent_target_timestamp(&self) -> Result<Option<Timestamp>> {
             let inner = self.inner.lock().await;
             Ok(Some(Timestamp::from(inner.most_recent_ts)))
         }

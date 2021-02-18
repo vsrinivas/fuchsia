@@ -16,7 +16,7 @@ use {
     async_trait::async_trait,
     diagnostics_data::Timestamp,
     ffx_config::get,
-    ffx_log_data::LogEntry,
+    ffx_log_data::{LogData, LogEntry},
     fidl_fuchsia_developer_bridge::StreamMode,
     futures::{FutureExt, TryStreamExt},
     std::convert::TryInto,
@@ -435,7 +435,7 @@ pub trait GenericDiagnosticsStreamer {
 
     async fn append_logs(&self, entries: Vec<LogEntry>) -> Result<()>;
 
-    async fn read_most_recent_timestamp(&self) -> Result<Option<Timestamp>>;
+    async fn read_most_recent_target_timestamp(&self) -> Result<Option<Timestamp>>;
 
     async fn clean_sessions_for_target(&self) -> Result<()>;
 
@@ -533,7 +533,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
         Ok(())
     }
 
-    async fn read_most_recent_timestamp(&self) -> Result<Option<Timestamp>> {
+    async fn read_most_recent_target_timestamp(&self) -> Result<Option<Timestamp>> {
         let inner = self.inner.read().await;
         let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
 
@@ -543,7 +543,10 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
                 .stream_entries()
                 .await?
                 .filter_map(|l| l.ok())
-                .map(|l| l.timestamp)
+                .filter_map(|l| match l.data {
+                    LogData::TargetLog(data) => Some(data.metadata.timestamp),
+                    _ => None,
+                })
                 .last()
                 .await;
             if entry.is_some() {
@@ -566,7 +569,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
 
     async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream> {
         let ts = if stream_mode == StreamMode::SnapshotAll {
-            Some(self.read_most_recent_timestamp().await?.unwrap_or(Timestamp::from(0u64)))
+            Some(self.read_most_recent_target_timestamp().await?.unwrap_or(Timestamp::from(0u64)))
         } else {
             None
         };
@@ -681,13 +684,13 @@ mod test {
         collect_logs(root).await
     }
 
-    fn make_target_log(msg: String) -> LogsData {
+    fn make_target_log(ts: u64, msg: String) -> LogsData {
         let hierarchy =
             DiagnosticsHierarchy::new("root", vec![Property::String(LogsField::Msg, msg)], vec![]);
         LogsData::for_logs(
             String::from("test/moniker"),
             Some(hierarchy),
-            Timestamp::from(0u64),
+            Timestamp::from(ts),
             String::from("fake-url"),
             Severity::Error,
             1,
@@ -705,9 +708,9 @@ mod test {
 
     fn make_valid_log(ts: u64, msg: String) -> LogEntry {
         LogEntry {
-            data: LogData::TargetLog(make_target_log(msg)),
+            data: LogData::TargetLog(make_target_log(ts, msg)),
             version: 1,
-            timestamp: ts.into(),
+            timestamp: Timestamp::from(0u64),
         }
     }
 
@@ -1152,7 +1155,7 @@ mod test {
 
         streamer.append_logs(vec![early_log, log]).await?;
 
-        assert_eq!(streamer.read_most_recent_timestamp().await?.unwrap(), TIMESTAMP.into());
+        assert_eq!(streamer.read_most_recent_target_timestamp().await?.unwrap(), TIMESTAMP.into());
         Ok(())
     }
 
@@ -1165,7 +1168,7 @@ mod test {
         )
         .await?;
 
-        assert!(streamer.read_most_recent_timestamp().await?.is_none());
+        assert!(streamer.read_most_recent_target_timestamp().await?.is_none());
         Ok(())
     }
 
