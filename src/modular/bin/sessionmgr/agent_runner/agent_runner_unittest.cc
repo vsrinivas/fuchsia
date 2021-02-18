@@ -25,6 +25,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
 namespace modular_testing {
@@ -36,7 +37,7 @@ using ::sys::testing::FakeLauncher;
 // ConnectToAgentService() tests require an existing service type.
 constexpr char kTestAgentUrl[] = "file:///my_agent";
 
-static zx_koid_t get_object_koid(zx_handle_t handle) {
+zx_koid_t get_object_koid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
   if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) != ZX_OK) {
     return 0;
@@ -144,7 +145,7 @@ class TestAgent : fuchsia::modular::Agent,
 
 class AgentRunnerTest : public gtest::RealLoopFixture {
  public:
-  AgentRunnerTest() = default;
+  AgentRunnerTest() : config_(modular::DefaultConfig()) {}
 
   void SetUp() override { gtest::RealLoopFixture::SetUp(); }
 
@@ -156,8 +157,10 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
  protected:
   modular::AgentRunner* GetOrCreateAgentRunner() {
     if (agent_runner_ == nullptr) {
+      config_accessor_ = std::make_unique<modular::ModularConfigAccessor>(std::move(config_));
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, /*agent_services_factory=*/nullptr, &node_, /*on_critical_agent_crash=*/
+          config_accessor_.get(), &launcher_, /*agent_services_factory=*/nullptr,
+          &node_, /*on_critical_agent_crash=*/
           [this] {
             if (on_session_restart_callback_) {
               on_session_restart_callback_();
@@ -169,6 +172,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
     }
     return agent_runner_.get();
   }
+
+  fuchsia::modular::session::ModularConfig& modular_config() { return config_; }
 
   void set_agent_service_index(std::map<std::string, std::string> agent_service_index) {
     agent_service_index_ = std::move(agent_service_index);
@@ -189,6 +194,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   inspect::Node node_;
 
   files::ScopedTempDir mq_data_dir_;
+  fuchsia::modular::session::ModularConfig config_;
+  std::unique_ptr<modular::ModularConfigAccessor> config_accessor_;
   std::unique_ptr<modular::AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;
   std::vector<std::string> restart_session_on_agent_crash_;
@@ -499,6 +506,44 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanBeCriticalAgent) {
   test_agent->KillApplication();
 
   RunLoopUntil([&is_restart_called] { return is_restart_called; });
+}
+
+// Test that the critical agent restart is short-circuited when using
+// AddRunningAgent if the behavior is disabled in the ModularConfig.
+TEST_F(AgentRunnerTest, AddRunningAgent_NotRestartedIfRestartDisabled) {
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent =
+            std::make_unique<TestAgent>(std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  set_restart_session_on_agent_crash({kTestAgentUrl});
+
+  auto is_restart_called = false;
+  set_on_session_restart_callback([&is_restart_called] { is_restart_called = true; });
+
+  modular_config().mutable_sessionmgr_config()->set_disable_agent_restart_on_crash(true);
+
+  auto agent_runner = GetOrCreateAgentRunner();
+
+  fuchsia::modular::session::AppConfig agent_app_config;
+  agent_app_config.set_url(kTestAgentUrl);
+  auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
+      launcher(), std::move(agent_app_config), /* data_origin = */ "");
+  agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
+  RunLoopUntil([&test_agent] { return !!test_agent; });
+
+  // The agent is now running, so the session should not have been restarted yet.
+  EXPECT_FALSE(is_restart_called);
+
+  // Terminate the agent.
+  test_agent->KillApplication();
+  
+  // Wait for a bit to ensuire that the session wasn't restarted.
+  sleep(3);
+  EXPECT_FALSE(is_restart_called);
 }
 
 // Tests that GetAgentOutgoingServices() return null for a non-existent agent, and returns

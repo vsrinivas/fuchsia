@@ -22,6 +22,7 @@
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace component {
 class ServiceProviderImpl;
@@ -39,8 +40,9 @@ class AgentRunner {
   // |on_critical_agent_crash| is called when a "critical agent" (all agents
   // with entries in |restart_session_on_agent_crash|). It is expected to
   // restart the session.
-  AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
-              inspect::Node* session_inspect_node, std::function<void()> on_critical_agent_crash,
+  AgentRunner(const ModularConfigAccessor* config_accessor, fuchsia::sys::Launcher* launcher,
+              AgentServicesFactory* agent_services_factory, inspect::Node* session_inspect_node,
+              std::function<void()> on_critical_agent_crash,
               std::map<std::string, std::string> agent_service_index = {},
               std::vector<std::string> session_agents = {},
               std::vector<std::string> restart_session_on_agent_crash = {},
@@ -121,6 +123,8 @@ class AgentRunner {
 
   // A set of all agents that are either running or scheduled to be run.
   std::vector<std::string> GetAllAgents();
+  
+  const ModularConfigAccessor* config_accessor_;
 
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a

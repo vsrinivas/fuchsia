@@ -285,7 +285,8 @@ void SessionmgrImpl::InitializeAgentRunner(std::string session_shell_url) {
   restart_session_on_agent_crash.push_back(session_shell_url);
 
   agent_runner_.reset(new AgentRunner(
-      agent_runner_launcher_.get(), startup_agent_launcher_.get(), &inspect_root_node_,
+      &config_accessor_, agent_runner_launcher_.get(), startup_agent_launcher_.get(),
+      &inspect_root_node_,
       /*on_critical_agent_crash=*/[this] { RestartDueToCriticalFailure(); },
       std::move(agent_service_index), config_accessor_.sessionmgr_config().session_agents(),
       restart_session_on_agent_crash, sessionmgr_context_));

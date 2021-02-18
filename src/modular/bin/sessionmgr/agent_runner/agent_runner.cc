@@ -23,7 +23,8 @@ namespace modular {
 
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
-AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
+AgentRunner::AgentRunner(const ModularConfigAccessor* config_accessor,
+                         fuchsia::sys::Launcher* const launcher,
                          AgentServicesFactory* const agent_services_factory,
                          inspect::Node* const session_inspect_node,
                          std::function<void()> on_critical_agent_crash,
@@ -31,7 +32,8 @@ AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
                          std::vector<std::string> session_agents,
                          std::vector<std::string> restart_session_on_agent_crash,
                          sys::ComponentContext* const sessionmgr_context)
-    : launcher_(launcher),
+    : config_accessor_(config_accessor),
+      launcher_(launcher),
       agent_services_factory_(agent_services_factory),
       terminating_(std::make_shared<bool>(false)),
       session_inspect_node_(session_inspect_node),
@@ -130,6 +132,7 @@ void AgentRunner::AddRunningAgent(
   // AgentContextImpl will call on_critical_agent_crash if this agent is listed
   // in |restart_session_on_agent_crash_| and terminates unexpectedly.
   bool restart_session_on_crash =
+      !config_accessor_->sessionmgr_config().disable_agent_restart_on_crash() ||
       std::find(restart_session_on_agent_crash_.begin(), restart_session_on_agent_crash_.end(),
                 agent_url) != restart_session_on_agent_crash_.end();
 
