@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("base_view") {
   sources = [
@@ -60,17 +60,17 @@ executable("math_unittest") {
   ]
 }
 
-unittest_package("base_view_unittests") {
-  deps = [
-    ":base_view_unittest",
-    ":math_unittest",
-  ]
-  tests = [
-    {
-      name = "base_view_unittest"
-    },
-    {
-      name = "math_unittest"
-    },
+fuchsia_unittest_component("base_view_unittest_component") {
+  deps = [ ":base_view_unittest" ]
+}
+
+fuchsia_unittest_component("math_unittest_component") {
+  deps = [ ":math_unittest" ]
+}
+
+fuchsia_test_package("base_view_unittests") {
+  test_components = [
+    ":base_view_unittest_component",
+    ":math_unittest_component",
   ]
 }
