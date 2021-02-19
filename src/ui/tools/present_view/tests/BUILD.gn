@@ -2,35 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
 
-  public_deps = [ ":present_view_tests" ]
-}
-
-test_package("present_view_tests") {
   deps = [
     ":present_view_apptests",
     ":present_view_integration_tests",
     ":present_view_unittests",
   ]
-
-  tests = [
-    {
-      name = "present_view_apptests"
-    },
-    {
-      name = "present_view_unittests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
 }
 
-executable("present_view_unittests") {
+fuchsia_unittest_package("present_view_apptests") {
+  deps = [ ":present_view_apptests_bin" ]
+}
+
+fuchsia_unittest_package("present_view_integration_tests") {
+  manifest = "meta/present_view_integration_tests.cmx"
+  deps = [ ":present_view_integration_tests_bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("present_view_unittests") {
+  deps = [ ":present_view_unittests_bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+executable("present_view_unittests_bin") {
+  output_name = "present_view_unittests"
   testonly = true
 
   sources = [ "present_view_unittest.cc" ]
@@ -50,7 +58,8 @@ executable("present_view_unittests") {
   ]
 }
 
-executable("present_view_apptests") {
+executable("present_view_apptests_bin") {
+  output_name = "present_view_apptests"
   testonly = true
 
   sources = [ "present_view_apptest.cc" ]
@@ -69,7 +78,8 @@ executable("present_view_apptests") {
   ]
 }
 
-executable("present_view_integration_tests") {
+executable("present_view_integration_tests_bin") {
+  output_name = "present_view_integration_tests"
   testonly = true
 
   sources = [ "present_view_integration_test.cc" ]

@@ -1,9 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--locale=en-US"
         ],
-        "binary": "test/present_view_integration_tests"
+        "binary": "bin/present_view_integration_tests"
     },
     "sandbox": {
         "services": [
