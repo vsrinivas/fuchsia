@@ -61,10 +61,10 @@ protocol Directory {
     ///   have a different server end of the socket and there will be a single client end per
     ///   inotify instance on inotify init.
     ///
-    /// + `controller` is the server end of a channel and is per entry in the vnode so that
+    /// + `controller` is the server end of a channel and is per filter in the vnode so that
     ///   we can remove the specific inotify filter when the controller is closed by the server
     ///   or the client.
-    ///   controller helps to implement the "removeWatch" functionality of inotify.
+    ///   |controller| helps to implement the "removeWatch" functionality of inotify.
     ///   Additionally we send error back through |controller| as an event.
     ///
     ///   Errors are presented as an epitaph on the `controller` channel.
