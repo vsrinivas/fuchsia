@@ -4,6 +4,7 @@
 
 use {
     fidl_fuchsia_diagnostics::{ComponentSelector, Selector, StringSelector, TreeSelector},
+    lazy_static::lazy_static,
     proc_macro2::{Punct, Span, TokenStream},
     quote::quote,
     std::collections::HashMap,
@@ -11,7 +12,8 @@ use {
         parse::{Parse, ParseStream},
         punctuated::Punctuated,
         spanned::Spanned,
-        Error, FnArg, Ident, ItemFn, ItemStruct, Lit, LitStr, Pat, PatType, Token,
+        token::Comma,
+        Error, FnArg, Ident, ItemFn, ItemStruct, Lit, LitStr, Pat, PatType, PathSegment, Token,
         Type::Path,
         TypePath,
     },
@@ -23,6 +25,18 @@ const EXPECTED_SIGNATURE: &str = "ffx_plugin expects at least the command create
 
 const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the parameter's type matches \
 the mapping passed into the ffx_plugin attribute.";
+
+const REMOTE_CONTROL_PROXY: &str = "RemoteControlProxy";
+const REMOTE_CONTROL_INDEX: usize = 0;
+
+lazy_static! {
+    static ref KNOWN_PROXIES: Vec<(&'static str, &'static str, &'static str)> = vec![
+        // If this order changes, change the REMOTE_CONTROL_INDEX const.
+        ("RemoteControlProxy", "remote_proxy", "remote_factory"),
+        ("DaemonProxy", "daemon_proxy", "daemon_factory"),
+        ("FastbootProxy", "fastboot_proxy", "fastboot_factory"),
+    ];
+}
 
 pub fn ffx_command(input: ItemStruct) -> TokenStream {
     let cmd = input.ident.clone();
@@ -90,24 +104,27 @@ fn generate_fake_test_proxy_method(
     }
 }
 
-// TODO(boetger): break this up to make testing easier.
-pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error> {
-    let mut uses_daemon = false;
-    let mut uses_remote = false;
-    let mut uses_fastboot = false;
-    let mut uses_map = false;
-    let mut args: Punctuated<Ident, Token!(,)> = Punctuated::new();
+struct GeneratedCodeParts {
+    preamble: TokenStream,
+    args: Punctuated<Ident, Token!(,)>,
+    futures: Punctuated<Ident, Token!(,)>,
+    proxies_to_generate: Vec<TokenStream>,
+    test_fake_methods_to_generate: Vec<TokenStream>,
+    cmd: FnArg,
+}
+
+fn parse_arguments(
+    args: Punctuated<FnArg, Comma>,
+    proxies: &ProxyMap,
+) -> Result<GeneratedCodeParts, Error> {
+    let mut preamble = quote! {};
+    let mut inner_args: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut futures: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut proxies_to_generate = Vec::new();
     let mut test_fake_methods_to_generate = Vec::<TokenStream>::new();
-    let mut cmd_arg = None;
-    let method = input.sig.ident.clone();
-    let asyncness = if let Some(_) = input.sig.asyncness {
-        quote! {.await}
-    } else {
-        quote! {}
-    };
-    for arg in input.sig.inputs.clone() {
+    let mut cmd: Option<FnArg> = None;
+    let mut remote_used = false;
+    for arg in &args {
         match arg.clone() {
             FnArg::Receiver(_) => {
                 return Err(Error::new(
@@ -115,186 +132,265 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                     "ffx plugin method signature cannot contain self",
                 ))
             }
-            FnArg::Typed(PatType { ty, pat, .. }) => {
-                match ty.as_ref() {
-                    Path(TypePath { path, .. }) => match path.segments.last() {
-                        Some(t) => {
-                            if t.ident == Ident::new("RemoteControlProxy", Span::call_site()) {
-                                args.push(Ident::new("remote_proxy", Span::call_site()));
-                                uses_remote = true;
-                                if let Pat::Ident(pat_ident) = pat.as_ref() {
-                                    test_fake_methods_to_generate.push(
-                                        generate_fake_test_proxy_method(
-                                            pat_ident.ident.clone(),
-                                            path,
-                                        ),
-                                    );
-                                }
-                            } else if t.ident == Ident::new("DaemonProxy", Span::call_site()) {
-                                args.push(Ident::new("daemon_proxy", Span::call_site()));
-                                uses_daemon = true;
-                                if let Pat::Ident(pat_ident) = pat.as_ref() {
-                                    test_fake_methods_to_generate.push(
-                                        generate_fake_test_proxy_method(
-                                            pat_ident.ident.clone(),
-                                            path,
-                                        ),
-                                    );
-                                }
-                            } else if t.ident == Ident::new("FastbootProxy", Span::call_site()) {
-                                args.push(Ident::new("fastboot_proxy", Span::call_site()));
-                                uses_fastboot = true;
-                                if let Pat::Ident(pat_ident) = pat.as_ref() {
-                                    test_fake_methods_to_generate.push(
-                                        generate_fake_test_proxy_method(
-                                            pat_ident.ident.clone(),
-                                            path,
-                                        ),
-                                    );
-                                }
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => match path.segments.last() {
+                    Some(simple_proxy_type) => {
+                        if let Some(GeneratedKnownProxyParts {
+                            name,
+                            factory,
+                            testing,
+                            is_remote,
+                        }) = generate_known_proxy(simple_proxy_type, &pat, path)
+                        {
+                            preamble = quote! {
+                                #preamble
+                                let #name = #factory().await?;
+                            };
+                            inner_args.push(name);
+                            test_fake_methods_to_generate.push(testing);
+                            if is_remote {
+                                remote_used = true;
+                            }
+                        } else if let Some(GeneratedMappedProxyParts {
+                            name,
+                            fut,
+                            implementation,
+                            testing,
+                        }) = generate_mapped_proxy(proxies, &pat, path)
+                        {
+                            inner_args.push(name);
+                            futures.push(fut);
+                            proxies_to_generate.push(implementation);
+                            test_fake_methods_to_generate.push(testing);
+                        } else if let Some(command) = parse_argh_command(&pat) {
+                            // This SHOULD be the argh command - and there should only be one.
+                            if let Some(_) = cmd {
+                                return Err(Error::new(
+                                    arg.span(),
+                                    format!(
+                                        "ffx_plugin could not recognize the parameters: {} \n{}",
+                                        command.clone(),
+                                        UNRECOGNIZED_PARAMETER
+                                    ),
+                                ));
                             } else {
-                                // try to find ident in the proxy map
-                                let qualified_proxy_name = qualified_name(path);
-                                match proxies.map.get(&qualified_proxy_name) {
-                                    Some(mapping) => {
-                                        uses_map = true;
-                                        let mapping_lit = LitStr::new(mapping, Span::call_site());
-                                        if let Pat::Ident(pat_ident) = pat.as_ref() {
-                                            let output = pat_ident.ident.clone();
-                                            let output_fut = Ident::new(
-                                                &format!("{}_fut", output),
-                                                Span::call_site(),
-                                            );
-                                            let server_end = Ident::new(
-                                                &format!("{}_server_end", output),
-                                                Span::call_site(),
-                                            );
-                                            let selector = Ident::new(
-                                                &format!("{}_selector", output),
-                                                Span::call_site(),
-                                            );
-                                            proxies_to_generate.push(quote!{
-                                                let (#output, #server_end) =
-                                                    fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Service>()?;
-                                                let #selector =
-                                                    selectors::parse_selector(#mapping_lit)?;
-                                                let #output_fut;
-                                                {
-                                                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-                                                    use futures::TryFutureExt;
-                                                    #output_fut = remote_proxy
-                                                    .connect(#selector, #server_end.into_channel())
-                                                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-                                                        fidl_result
-                                                        .map(|_| ())
-                                                        .map_err(|e| {
-                                                            match e {
-                                                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                                                                    ffx_core::ffx_error!(format!(
+                                cmd = Some(arg.clone());
+                                inner_args.push(command.clone());
+                            }
+                        } else {
+                            if let Pat::Ident(pat_ident) = pat.as_ref() {
+                                return Err(Error::new(
+                                    arg.span(),
+                                    format!(
+                                        "ffx_plugin could not recognize the parameter: {}\n{}",
+                                        pat_ident.ident.clone(),
+                                        UNRECOGNIZED_PARAMETER
+                                    ),
+                                ));
+                            } else {
+                                return Err(Error::new(arg.span(), EXPECTED_SIGNATURE));
+                            }
+                        }
+                    }
+                    _ => return Err(Error::new(arg.span(), EXPECTED_SIGNATURE)),
+                },
+                _ => return Err(Error::new(arg.span(), EXPECTED_SIGNATURE)),
+            },
+        }
+    }
+
+    // Generated proxies need the remote_proxy. If the remote_proxy is not in the argument list and
+    // there are proxies to generate, we still need to add it to the preamble.
+    if proxies_to_generate.len() > 0 && !remote_used {
+        let (_, name, factory) = KNOWN_PROXIES[REMOTE_CONTROL_INDEX];
+        let name_ident = Ident::new(name, Span::call_site());
+        let factory_ident = Ident::new(factory, Span::call_site());
+        preamble = quote! {
+            #preamble
+            let #name_ident = #factory_ident().await?;
+        };
+    }
+
+    if let Some(cmd) = cmd {
+        Ok(GeneratedCodeParts {
+            preamble,
+            args: inner_args,
+            futures,
+            proxies_to_generate,
+            test_fake_methods_to_generate,
+            cmd,
+        })
+    } else {
+        Err(Error::new(args.span(), EXPECTED_SIGNATURE))
+    }
+}
+
+fn parse_argh_command(pattern_type: &Box<Pat>) -> Option<Ident> {
+    if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
+        Some(pat_ident.ident.clone())
+    } else {
+        None
+    }
+}
+
+struct GeneratedKnownProxyParts {
+    name: Ident,
+    factory: Ident,
+    testing: TokenStream,
+    is_remote: bool,
+}
+
+fn generate_known_proxy(
+    simple_proxy_type: &PathSegment,
+    pattern_type: &Box<Pat>,
+    path: &syn::Path,
+) -> Option<GeneratedKnownProxyParts> {
+    for known_proxy in KNOWN_PROXIES.iter() {
+        if simple_proxy_type.ident == Ident::new(known_proxy.0, Span::call_site()) {
+            let testing = if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
+                generate_fake_test_proxy_method(pat_ident.ident.clone(), path)
+            } else {
+                quote! {}
+            };
+            return Some(GeneratedKnownProxyParts {
+                name: Ident::new(known_proxy.1, Span::call_site()),
+                factory: Ident::new(known_proxy.2, Span::call_site()),
+                testing,
+                is_remote: known_proxy.0 == REMOTE_CONTROL_PROXY,
+            });
+        }
+    }
+    None
+}
+
+struct GeneratedMappedProxyParts {
+    name: Ident,
+    fut: Ident,
+    implementation: TokenStream,
+    testing: TokenStream,
+}
+
+fn generate_mapped_proxy(
+    proxies: &ProxyMap,
+    pattern_type: &Box<Pat>,
+    path: &syn::Path,
+) -> Option<GeneratedMappedProxyParts> {
+    let qualified_proxy_name = qualified_name(path);
+    if let Some(mapping) = proxies.map.get(&qualified_proxy_name) {
+        let mapping_lit = LitStr::new(mapping, Span::call_site());
+        if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
+            let output = pat_ident.ident.clone();
+            let output_fut = Ident::new(&format!("{}_fut", output), Span::call_site());
+            let server_end = Ident::new(&format!("{}_server_end", output), Span::call_site());
+            let selector = Ident::new(&format!("{}_selector", output), Span::call_site());
+            let implementation = generate_proxy_from_selector(
+                path,
+                mapping,
+                mapping_lit,
+                &output,
+                &output_fut,
+                server_end,
+                selector,
+            );
+            let testing = generate_fake_test_proxy_method(pat_ident.ident.clone(), path);
+            return Some(GeneratedMappedProxyParts {
+                name: output,
+                fut: output_fut,
+                implementation,
+                testing,
+            });
+        }
+    }
+    None
+}
+
+fn generate_proxy_from_selector(
+    path: &syn::Path,
+    mapping: &String,
+    mapping_lit: LitStr,
+    output: &Ident,
+    output_fut: &Ident,
+    server_end: Ident,
+    selector: Ident,
+) -> TokenStream {
+    quote! {
+        let (#output, #server_end) =
+            fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Service>()?;
+        let #selector =
+            selectors::parse_selector(#mapping_lit)?;
+        let #output_fut;
+        {
+            // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+            use futures::TryFutureExt;
+            #output_fut = remote_proxy
+            .connect(#selector, #server_end.into_channel())
+            .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                fidl_result
+                .map(|_| ())
+                .map_err(|e| {
+                    match e {
+                        fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                            ffx_core::ffx_error!(format!(
 "The plugin service selector '{}' did not match any services on the target.
 If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
 
 Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
-                                                                    #mapping)).into()
-                                                                }
-                                                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                                                                    ffx_core::ffx_error!(
-                                                                        format!(
+                            #mapping)).into()
+                        }
+                        fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                            ffx_core::ffx_error!(
+                                format!(
 "Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
 If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
 
 Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
-                                                                            #mapping, #mapping)).into()
-                                                                }
-                                                                _ => {
-                                                                    anyhow::anyhow!(
-                                                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, #mapping)
-                                                                    )
-                                                                }
-                                                            }
-                                                        })
-                                                    });
-                                                }
-                                            });
-                                            args.push(output);
-                                            futures.push(output_fut);
-                                            test_fake_methods_to_generate.push(
-                                                generate_fake_test_proxy_method(
-                                                    pat_ident.ident.clone(),
-                                                    path,
-                                                ),
-                                            );
-                                        }
-                                    }
-                                    None => {
-                                        // This SHOULD be the argh command.
-                                        if let Pat::Ident(pat_ident) = pat.as_ref() {
-                                            if let None = cmd_arg {
-                                                args.push(pat_ident.ident.clone());
-                                                cmd_arg = Some(arg);
-                                            } else {
-                                                return Err(Error::new(
-                                                    arg.span(),
-                                                    format!(
-                                                        "ffx_plugin could not recognize the\
-                                                               parameter: {}\n{}",
-                                                        pat_ident.ident.clone(),
-                                                        UNRECOGNIZED_PARAMETER
-                                                    ),
-                                                ));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                                    #mapping, #mapping)).into()
                         }
-                        _ => return Err(Error::new(arg.span(), EXPECTED_SIGNATURE)),
-                    },
-                    _ => return Err(Error::new(arg.span(), EXPECTED_SIGNATURE)),
-                };
-            }
+                        _ => {
+                            anyhow::anyhow!(
+                                format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, #mapping)
+                            )
+                        }
+                    }
+                })
+            });
         }
     }
+}
 
-    let mut preamble = quote! {};
+pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error> {
+    let method = input.sig.ident.clone();
+    let asyncness = if let Some(_) = input.sig.asyncness {
+        quote! {.await}
+    } else {
+        quote! {}
+    };
+
+    let GeneratedCodeParts {
+        mut preamble,
+        args,
+        futures,
+        proxies_to_generate,
+        test_fake_methods_to_generate,
+        cmd,
+    } = parse_arguments(input.sig.inputs.clone(), &proxies)?;
+
     let mut outer_args: Punctuated<_, Token!(,)> = Punctuated::new();
     outer_args.push(quote! {daemon_factory: D});
-    if uses_daemon {
-        preamble = quote! {
-            #preamble
-            let daemon_proxy = daemon_factory().await?;
-        };
-    }
-
     outer_args.push(quote! {remote_factory: R});
-    if uses_remote || uses_map {
-        preamble = quote! {
-            #preamble
-            let remote_proxy = remote_factory().await?;
-            #(#proxies_to_generate)*
-        };
-    }
-
     outer_args.push(quote! {fastboot_factory: F});
-    if uses_fastboot {
-        preamble = quote! {
-            #preamble
-            let fastboot_proxy = fastboot_factory().await?;
-        };
-    }
-
     outer_args.push(quote! {is_experiment: E});
+    outer_args.push(quote! {#cmd});
 
-    if let Some(c) = cmd_arg {
-        outer_args.push(quote! {#c});
-    } else {
-        return Err(Error::new(Span::call_site(), EXPECTED_SIGNATURE));
-    }
+    preamble = quote! {
+        #preamble
+        #(#proxies_to_generate)*
+    };
 
     let implementation = if proxies_to_generate.len() > 0 {
         quote! {
             #preamble
-                match futures::try_join!(#futures) {
+            match futures::try_join!(#futures) {
                 Ok(_) => {
                     #method(#args)#asyncness
                 },
@@ -992,8 +1088,8 @@ mod test {
                     Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
                 >,
             {
-                let daemon_proxy = daemon_factory().await?;
                 let remote_proxy = remote_factory().await?;
+                let daemon_proxy = daemon_factory().await?;
                 echo(remote_proxy, _cmd, daemon_proxy).await
             }
         };
