@@ -97,7 +97,6 @@ impl TryFrom<&str> for Condition {
 enum Library {
     Acpi,
     Bluetooth,
-    Composite,
     Pci,
     Platform,
     Serial,
