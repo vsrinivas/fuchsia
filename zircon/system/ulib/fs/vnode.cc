@@ -23,10 +23,10 @@ namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
-// TODO(fxbug.dev/70397) Eliminate the 0-arg constructor so the Vfs is always known.
-Vnode::Vnode() = default;
-
-Vnode::Vnode(Vfs* vfs) : vfs_(vfs) { vfs_->RegisterVnode(this); }
+Vnode::Vnode(Vfs* vfs) : vfs_(vfs) {
+  if (vfs_)  // Vfs pointer is optional.
+    vfs_->RegisterVnode(this);
+}
 
 Vnode::~Vnode() {
   std::lock_guard lock(mutex_);

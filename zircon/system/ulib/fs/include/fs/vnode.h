@@ -357,18 +357,21 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
 
-  // TODO(fxbug.dev/70397) Eliminate the 0-arg constructor so the Vfs is always known.
-  Vnode();
-  explicit Vnode(Vfs* vfs);
+  // The associated Vfs pointer is optional. Subclasses should require this if they need to access
+  // the Vfs, but can leave null if not. See vfs() getter for more.
+  explicit Vnode(Vfs* vfs = nullptr);
 
   // Mutex for the data of this vnode.
   mutable std::mutex mutex_;
 
-  // The Vfs associated with this node. This can be null if the Vfs is shutdown (since Vnodes are
-  // reference-counted they can outlive the Vfs). Uses should always be inside the mutex_.
+  // The Vfs associated with this node, if any.
   //
-  // There are also some legacy code paths that never set this on construction.
-  // TODO(fxbug.dev/70397) make this always set on construction.
+  // The Vfs doesn't need to be set. It is tracked on the Vnode because some subclasses need it,
+  // but it is not directly used by the Vnode. Therefore, subclasses should enforce through their
+  // own constructors whether the vfs_ is set or not during construction.
+  //
+  // Additionally, this will be null when the Vfs is destroyed (since Vnodes are reference-counted
+  // they can outlive the Vfs). Uses should always be inside the mutex_.
   Vfs* vfs() FS_TA_REQUIRES(mutex_) { return vfs_; }
 
  private:
