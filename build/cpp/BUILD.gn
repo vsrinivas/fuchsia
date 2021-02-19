@@ -57,7 +57,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/connectivity/network/drivers/network-device/mac:mac",
     "//src/connectivity/network/drivers/network-device/mac:mac_ddk",
     "//src/connectivity/network/drivers/network-device/mac:test_bin",
-    "//src/connectivity/network/testing/netemul/runner:src",
     "//src/connectivity/openthread/drivers/ot-radio:*",
     "//src/connectivity/openthread/ot-stack:app",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver",

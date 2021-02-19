@@ -27,7 +27,7 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   using FManagedEnvironment = fuchsia::netemul::environment::ManagedEnvironment;
   using Ptr = std::unique_ptr<ManagedEnvironment>;
 
-  ~ManagedEnvironment();
+  ~ManagedEnvironment() override;
 
   static Ptr CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
                         const SandboxEnv::Ptr& sandbox_env, Options options);
@@ -60,10 +60,11 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   // at the relative path |path| from the virtual devices directory.
   //
   // If the directory does not yet exist, it will be created.
-  zx::channel OpenVdevDirectory(std::string path);
+  zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> OpenVdevDirectory(
+      const std::string& path);
 
  private:
-  ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env);
+  explicit ManagedEnvironment(SandboxEnv::Ptr sandbox_env);
   void Create(const fuchsia::sys::EnvironmentPtr& parent, Options options,
               const ManagedEnvironment* managed_parent = nullptr);
 

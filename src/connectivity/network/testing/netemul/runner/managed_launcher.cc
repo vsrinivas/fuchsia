@@ -134,11 +134,16 @@ bool ManagedLauncher::UpdateLaunchInfo(fuchsia::sys::PackagePtr package,
   }
 
   // Provide the component with the requested device class directories.
-  for (auto path : cmx.sandbox_meta().dev()) {
+  for (const auto& path : cmx.sandbox_meta().dev()) {
     std::vector<std::string> parts = {kVdevRoot, path};
     std::string full_path = fxl::JoinStrings(parts, "/");
     launch_info->flat_namespace->paths.emplace_back(full_path);
-    launch_info->flat_namespace->directories.push_back(env_->OpenVdevDirectory(path));
+    auto directory = env_->OpenVdevDirectory(path);
+    if (directory.is_error()) {
+      FX_LOGS(ERROR) << "Can't open directory " << path << ": " << directory.status_string();
+      return false;
+    }
+    launch_info->flat_namespace->directories.push_back(directory.value().TakeChannel());
   }
 
   if (!launch_info->out) {

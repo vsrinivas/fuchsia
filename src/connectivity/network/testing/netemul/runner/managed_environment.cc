@@ -54,8 +54,8 @@ ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(const fuchsia::sys::Envir
   return ret;
 }
 
-ManagedEnvironment::ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env)
-    : sandbox_env_(sandbox_env), ready_(false) {}
+ManagedEnvironment::ManagedEnvironment(SandboxEnv::Ptr sandbox_env)
+    : sandbox_env_(std::move(sandbox_env)), ready_(false) {}
 
 sys::testing::EnclosingEnvironment& ManagedEnvironment::environment() { return *env_; }
 
@@ -252,8 +252,9 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 }
 
-zx::channel ManagedEnvironment::OpenVdevDirectory(std::string path) {
-  return virtual_devices_.OpenAsDirectory(std::move(path));
+zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> ManagedEnvironment::OpenVdevDirectory(
+    const std::string& path) {
+  return virtual_devices_.OpenAsDirectory(path);
 }
 
 void ManagedEnvironment::Bind(fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
@@ -276,11 +277,9 @@ void ManagedEnvironment::ConnectToService(std::string name, zx::channel req) {
 }
 
 void ManagedEnvironment::AddDevice(fuchsia::netemul::environment::VirtualDevice device) {
-  virtual_devices_.AddEntry(std::move(device.path), device.device.Bind());
+  virtual_devices_.AddEntry(device.path, device.device.Bind());
 }
 
-void ManagedEnvironment::RemoveDevice(std::string path) {
-  virtual_devices_.RemoveEntry(std::move(path));
-}
+void ManagedEnvironment::RemoveDevice(std::string path) { virtual_devices_.RemoveEntry(path); }
 
 }  // namespace netemul

@@ -25,28 +25,27 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
     return;
   }
 
-  auto filename = *(components.end() - 1);
+  fbl::String filename = *(components.end() - 1);
   components.pop_back();
-  fbl::RefPtr<fs::PseudoDir> dir = GetDirectory(std::move(components));
+  fbl::RefPtr<fs::PseudoDir> dir = GetDirectory(components);
 
-  dev.set_error_handler([this, path](zx_status_t status) mutable {
-    // when we get an error to the device server channel, we
-    // must remove it from vfs.
-    // NOTE(brunodalbo) When we call RemoveEntry, this lambda will get destroyed because `dev` is
-    // owned by the `fs::Service` that will get deallocated as a result of RemoveEntry. That means
-    // that `path` will also get deallocated, which can cause a use after free bug in RemoveEntry (a
-    // previous version of Remove Entry received `const string&` as opposed to string). Moving
-    // `path` into `RemoveEntry`, transfers ownership and avoids the use after free without having
-    // to copy `path`.
-    RemoveEntry(std::move(path));
+  // This lambda outlives the caller; it must take ownership of |path| to avoid use-after-free.
+  dev.set_error_handler([this, path = std::move(path)](zx_status_t status) mutable {
+    // The RemoveEntry call will destroy this lambda; we can't rely on |path| being kept alive by
+    // capture alone, so we move it into our stack frame here, which should survive past the
+    // destruction of the lambda.
+    std::string pathOnStack = std::move(path);
+
+    // When we get an error to the device server channel, we must remove it from vfs.
+    RemoveEntry(pathOnStack);
   });
 
   auto status = dir->AddEntry(
-      filename, fbl::MakeRefCounted<fs::Service>([dev = std::move(dev), path](zx::channel chann) {
+      filename, fbl::MakeRefCounted<fs::Service>([dev = std::move(dev)](zx::channel chan) {
         if (!dev.is_bound()) {
           return ZX_ERR_PEER_CLOSED;
         }
-        dev->ServeDevice(std::move(chann));
+        dev->ServeDevice(std::move(chan));
         return ZX_OK;
       }));
   if (status != ZX_OK) {
@@ -54,7 +53,7 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
   }
 }
 
-void VirtualDevices::RemoveEntry(std::string path) {
+void VirtualDevices::RemoveEntry(const std::string& path) {
   auto components = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                                      fxl::SplitResult::kSplitWantNonEmpty);
   if (components.empty()) {
@@ -62,9 +61,9 @@ void VirtualDevices::RemoveEntry(std::string path) {
     return;
   }
 
-  auto filename = *(components.end() - 1);
+  std::string_view filename = *(components.end() - 1);
   components.pop_back();
-  fbl::RefPtr<fs::PseudoDir> dir = GetDirectory(std::move(components));
+  fbl::RefPtr<fs::PseudoDir> dir = GetDirectory(components);
 
   auto status = dir->RemoveEntry(filename);
   if (status != ZX_OK) {
@@ -72,7 +71,8 @@ void VirtualDevices::RemoveEntry(std::string path) {
   }
 }
 
-fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(std::vector<std::string_view> parts) {
+fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(
+    const std::vector<std::string_view>& parts) {
   fbl::RefPtr<fs::PseudoDir> dir = dir_;
 
   if (parts.empty()) {
@@ -80,14 +80,14 @@ fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(std::vector<std::string_
     return dir;
   }
 
-  for (auto i = parts.begin(); i != parts.end(); i++) {
+  for (const auto& part : parts) {
     fbl::RefPtr<fs::Vnode> node;
-    if (dir->Lookup(*i, &node) == ZX_OK) {
+    if (dir->Lookup(part, &node) == ZX_OK) {
       dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
     } else {
       auto ndir = fbl::MakeRefCounted<fs::PseudoDir>();
-      auto status = dir->AddEntry(*i, ndir);
-      FX_CHECK(status == ZX_OK) << "Error creating mount path: " << *i << ": "
+      auto status = dir->AddEntry(part, ndir);
+      FX_CHECK(status == ZX_OK) << "Error creating mount path: " << part << ": "
                                 << zx_status_get_string(status);
       dir = ndir;
     }
@@ -96,18 +96,21 @@ fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(std::vector<std::string_
   return dir;
 }
 
-zx::channel VirtualDevices::OpenAsDirectory(std::string path) {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK) {
-    return zx::channel();
+zx::status<fidl::ClientEnd<llcpp::fuchsia::io::Directory>> VirtualDevices::OpenAsDirectory(
+    const std::string& path) {
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  if (endpoints.is_error()) {
+    return zx::error_status(endpoints.status_value());
   }
+  auto [client, server] = std::move(endpoints.value());
 
   auto parts = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                                 fxl::SplitResult::kSplitWantNonEmpty);
-  if (vdev_vfs_.ServeDirectory(GetDirectory(std::move(parts)), std::move(h1)) != ZX_OK) {
-    return zx::channel();
+  zx_status_t status = vdev_vfs_.ServeDirectory(GetDirectory(parts), std::move(server));
+  if (status != ZX_OK) {
+    return zx::error_status(status);
   }
-  return h2;
+  return zx::ok(std::move(client));
 }
 
 }  // namespace netemul
