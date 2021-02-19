@@ -71,7 +71,7 @@ source_set("lib") {
     "//garnet/lib/loader",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c_client",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.internal",

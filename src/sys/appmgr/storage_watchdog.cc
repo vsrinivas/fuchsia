@@ -6,7 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
@@ -19,6 +19,9 @@
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
+
 // Delete the given dirent inside the openend directory. If the dirent is a
 // directory itself, it will be recursively deleted.
 void DeleteDirentInFd(int dir_fd, struct dirent* ent) {
@@ -105,14 +108,14 @@ size_t StorageWatchdog::GetStorageUsage() {
     return 0;
   }
 
-  fuchsia_io_FilesystemInfo info;
+  fio::FilesystemInfo info;
   fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status = GetFilesystemInfo(caller.borrow_channel(), &info);
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
     return 0;
   }
-  info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
+  info.name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
 
   // The number of bytes which may be allocated plus the number of bytes which
   // have been allocated
@@ -167,8 +170,10 @@ void StorageWatchdog::PurgeCache() {
 }
 
 zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
-                                               fuchsia_io_FilesystemInfo* out_info) {
-  zx_status_t status = ZX_OK;
-  zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(directory, &status, out_info);
-  return io_status != ZX_OK ? io_status : status;
+                                               fio::FilesystemInfo* out_info) {
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(directory));
+  if (result.ok())
+    *out_info = *result->info;
+  return !result.ok() ? result.status() : result->s;
 }
