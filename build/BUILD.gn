@@ -133,7 +133,6 @@ group("deprecated_package") {
     "//sdk/lib/sys/service/cpp/*",
     "//sdk/lib/syslog/cpp/*",
     "//sdk/lib/syslog/streams/cpp/*",
-    "//sdk/lib/virtualization/*",
     "//src/bringup/bin/pwrbtn-monitor/test/*",
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k/*",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/test/*",

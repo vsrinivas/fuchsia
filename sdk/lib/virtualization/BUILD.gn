@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("virtualization") {
   sources = [
@@ -34,16 +33,12 @@ executable("virtualization_lib_unittests") {
   ]
 }
 
-test_package("virtualization_lib_tests") {
+fuchsia_unittest_package("virtualization_lib_tests") {
   deps = [ ":virtualization_lib_unittests" ]
-
-  tests = [
-    {
-      name = "virtualization_lib_unittests"
-      environments = basic_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  manifest = "meta/virtualization_lib_unittests.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
