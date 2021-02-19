@@ -17,7 +17,10 @@ async fn open_id_directories(id_dir: Directory) -> Vec<Directory> {
     let mut realms = vec![];
     for id in id_dir.entries().await {
         assert!(id.chars().all(char::is_numeric));
-        let realm = id_dir.open_dir(&id);
+        let realm = id_dir.open_dir(&id).expect(
+            format!("open_dir() failed: failed to open realm directory with id `{}`!", &id)
+                .as_str(),
+        );
         realms.push(realm);
     }
     realms
@@ -30,7 +33,13 @@ fn visit_child_realms(child_realms_dir: Directory) -> BoxFuture<'static, Vec<V1R
         // visit all entries within <realm id>/r/
         for realm_name in child_realms_dir.entries().await {
             // visit <realm id>/r/<child realm name>/<child realm id>/
-            let id_dir = child_realms_dir.open_dir(&realm_name);
+            let id_dir = child_realms_dir.open_dir(&realm_name).expect(
+                format!(
+                    "open_dir() failed: failed to open child realm directory with id `{}`!",
+                    &realm_name
+                )
+                .as_str(),
+            );
             for realm_dir in open_id_directories(id_dir).await.drain(..) {
                 child_realms.push(V1Realm::create(realm_dir).await);
             }
@@ -49,7 +58,10 @@ fn visit_child_components(child_components_dir: Directory) -> BoxFuture<'static,
 
         for component_name in child_components_dir.entries().await {
             // Visits */c/<component name>/<component instance id>.
-            let id_dir = child_components_dir.open_dir(&component_name);
+            let id_dir = child_components_dir.open_dir(&component_name).expect(
+                format!("open_dir() failed: failed to open `{}` directory!", &component_name)
+                    .as_str(),
+            );
             for component_dir in open_id_directories(id_dir).await.drain(..) {
                 child_components.push(V1Component::create(component_dir).await);
             }
@@ -70,10 +82,15 @@ pub struct V1Realm {
 
 impl V1Realm {
     pub async fn create(realm_dir: Directory) -> V1Realm {
-        let name = realm_dir.read_file("name").await.unwrap();
-        let job_id = realm_dir.read_file("job-id").await.unwrap().parse::<u32>().unwrap();
-        let child_realms_dir = realm_dir.open_dir("r");
-        let child_components_dir = realm_dir.open_dir("c");
+        let name = realm_dir.read_file("name").await.expect("read_file(`name`) failed!");
+        let job_id = realm_dir
+            .read_file("job-id")
+            .await
+            .expect("read_file(`job-id`) failed!")
+            .parse::<u32>()
+            .expect("parse(`job-id`) failed!");
+        let child_realms_dir = realm_dir.open_dir("r").expect("open_dir(`r`) failed!");
+        let child_components_dir = realm_dir.open_dir("c").expect("open_dir(`c`) failed!");
         V1Realm {
             name,
             job_id,
@@ -135,18 +152,30 @@ pub struct V1Component {
 
 impl V1Component {
     async fn create(component_dir: Directory) -> V1Component {
-        let job_id = component_dir.read_file("job-id").await.unwrap().parse::<u32>().unwrap();
+        let job_id = component_dir
+            .read_file("job-id")
+            .await
+            .expect("read_file(`job-id`) failed!")
+            .parse::<u32>()
+            .expect("parse(`job-id`) failed!");
         let process_id = if component_dir.exists("process-id").await {
-            Some(component_dir.read_file("process-id").await.unwrap().parse::<u32>().unwrap())
+            Some(
+                component_dir
+                    .read_file("process-id")
+                    .await
+                    .expect("read_file(`process-id`) failed!")
+                    .parse::<u32>()
+                    .expect("parse(`process-id`) failed!"),
+            )
         } else {
             None
         };
-        let url = component_dir.read_file("url").await.unwrap();
-        let name = component_dir.read_file("name").await.unwrap();
-        let in_dir = component_dir.open_dir("in");
+        let url = component_dir.read_file("url").await.expect("read_file(`url`) failed!");
+        let name = component_dir.read_file("name").await.expect("read_file(`name`) failed!");
+        let in_dir = component_dir.open_dir("in").expect("open_dir(`in`) failed!");
 
         let merkle_root = if in_dir.exists("pkg").await {
-            let pkg_dir = in_dir.open_dir("pkg");
+            let pkg_dir = in_dir.open_dir("pkg").expect("open_dir(`pkg`) failed!");
             if pkg_dir.exists("meta").await {
                 match pkg_dir.read_file("meta").await {
                     Ok(file) => Some(file),
@@ -160,7 +189,7 @@ impl V1Component {
         };
 
         let child_components = if component_dir.exists("c").await {
-            let child_components_dir = component_dir.open_dir("c");
+            let child_components_dir = component_dir.open_dir("c").expect("open_dir(`c`) failed!");
             visit_child_components(child_components_dir).await
         } else {
             vec![]
@@ -170,7 +199,7 @@ impl V1Component {
             get_capabilities(in_dir).await.expect("Failed to get incoming capabilities.");
 
         let outgoing_capabilities = if component_dir.exists("out").await {
-            get_capabilities(component_dir.open_dir("out")).await
+            get_capabilities(component_dir.open_dir("out").expect("open_dir(`out`) failed!")).await
         } else {
             // The directory doesn't exist. This is probably because
             // there is no runtime on the component.
@@ -268,7 +297,8 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root v1 hub directory!");
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.job_id, 12345);
@@ -296,7 +326,8 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root v1 hub directory!");
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.process_id, None);
@@ -329,7 +360,8 @@ mod tests {
         File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
         File::create(root.join("url")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root v1 hub directory!");
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(
@@ -362,7 +394,8 @@ mod tests {
         File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
         File::create(root.join("url")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root v1 hub directory!");
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.incoming_capabilities, vec!["fuchsia.logger.logSink".to_string()]);
@@ -410,10 +443,12 @@ mod tests {
         File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
         File::create(root.join("url")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root v1 hub directory!");
         let v1_component = V1Component::create(root_dir).await;
 
-        let child_dir = Directory::from_namespace(child_dir_name).unwrap();
+        let child_dir = Directory::from_namespace(child_dir_name)
+            .expect("from_namespace() failed: failed to open child_dir v1 hub directory!");
         assert_eq!(v1_component.child_components, vec![V1Component::create(child_dir).await]);
     }
 }

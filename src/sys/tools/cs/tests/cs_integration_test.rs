@@ -81,7 +81,8 @@ async fn empty_component() {
     event.resume().await.unwrap();
 
     let hub_v2_path = test.get_hub_v2_path();
-    let root_dir = Directory::from_namespace(hub_v2_path).unwrap();
+    let root_dir = Directory::from_namespace(hub_v2_path)
+        .expect("from_namespace() failed: could not open hub v2!");
     let actual_root_component = V2Component::explore(root_dir).await;
 
     let expected_root_component = V2Component {
@@ -128,7 +129,8 @@ async fn tree() {
     }
 
     let hub_v2_path = test.get_hub_v2_path();
-    let root_dir = Directory::from_namespace(hub_v2_path).unwrap();
+    let root_dir = Directory::from_namespace(hub_v2_path)
+        .expect("from_namespace() failed: could not open hub v2!");
     let actual_root_component = V2Component::explore(root_dir).await;
 
     let expected_root_component = V2Component {
@@ -263,7 +265,8 @@ async fn echo_realm() {
     }
 
     let hub_v2_path = test.get_hub_v2_path();
-    let root_dir = Directory::from_namespace(hub_v2_path).unwrap();
+    let root_dir = Directory::from_namespace(hub_v2_path)
+        .expect("from_namespace() failed: could not open hub v2!");
     let actual_root_component = V2Component::explore(root_dir).await;
 
     let expected_root_component = V2Component {

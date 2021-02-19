@@ -17,7 +17,7 @@ pub(crate) async fn get_capabilities(capability_dir: Directory) -> Option<Vec<St
         for (index, name) in entries.iter().enumerate() {
             if name == "svc" {
                 entries.remove(index);
-                let svc_dir = capability_dir.open_dir("svc");
+                let svc_dir = capability_dir.open_dir("svc").expect("open_dir(`svc`) failed!");
                 let mut svc_entries = svc_dir.entries().await;
                 entries.append(&mut svc_entries);
                 break;
@@ -57,7 +57,8 @@ mod tests {
         fs::create_dir(root.join("svc")).unwrap();
         File::create(root.join("svc/fuchsia.bar")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let capabilities = get_capabilities(root_dir).await;
         assert_eq!(
             capabilities,

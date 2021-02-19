@@ -13,13 +13,19 @@ static SPACER: &str = "  ";
 
 fn explore(name: String, hub_dir: Directory) -> BoxFuture<'static, V2Component> {
     async move {
-        let url = hub_dir.read_file("url").await.unwrap();
-        let id = hub_dir.read_file("id").await.unwrap().parse::<u32>().unwrap();
-        let component_type = hub_dir.read_file("component_type").await.unwrap();
+        let url = hub_dir.read_file("url").await.expect("read_file(`url`) failed!");
+        let id = hub_dir
+            .read_file("id")
+            .await
+            .expect("read_file(`id`) failed!")
+            .parse::<u32>()
+            .expect("parse(`id`) failed!");
+        let component_type =
+            hub_dir.read_file("component_type").await.expect("read_file(`component_type`) failed!");
 
         // Get the execution state
         let execution = if hub_dir.exists("exec").await {
-            let exec_dir = hub_dir.open_dir("exec");
+            let exec_dir = hub_dir.open_dir("exec").expect("open_dir(`exec`) failed!");
             Some(Execution::new(exec_dir).await)
         } else {
             None
@@ -27,9 +33,11 @@ fn explore(name: String, hub_dir: Directory) -> BoxFuture<'static, V2Component> 
 
         // Recurse on the children
         let mut future_children = vec![];
-        let children_dir = hub_dir.open_dir("children");
+        let children_dir = hub_dir.open_dir("children").expect("open_dir(`children`) failed!");
         for child_name in children_dir.entries().await {
-            let child_dir = children_dir.open_dir(&child_name);
+            let child_dir = children_dir
+                .open_dir(&child_name)
+                .expect(format!("open_dir(`{}`) failed!", child_name).as_str());
             let future_child = explore(child_name, child_dir);
             future_children.push(future_child);
         }
@@ -37,7 +45,9 @@ fn explore(name: String, hub_dir: Directory) -> BoxFuture<'static, V2Component> 
 
         // If this component is appmgr, use it to explore the v1 component world
         let appmgr_root_v1_realm = if name == "appmgr" {
-            let v1_hub_dir = hub_dir.open_dir("exec/out/hub");
+            let v1_hub_dir = hub_dir
+                .open_dir("exec/out/hub")
+                .expect("open_dir() failed: failed to open appmgr hub (`exec/out/hub`)!");
             Some(V1Realm::create(v1_hub_dir).await)
         } else {
             None
@@ -67,13 +77,21 @@ impl Execution {
     async fn new(exec_dir: Directory) -> Self {
         // Get the ELF runtime
         let elf_runtime = if exec_dir.exists("runtime").await {
-            let runtime_dir = exec_dir.open_dir("runtime");
+            let runtime_dir = exec_dir.open_dir("runtime").expect("open_dir(`runtime`) failed!");
             if runtime_dir.exists("elf").await {
-                let elf_runtime_dir = runtime_dir.open_dir("elf");
-                let job_id =
-                    elf_runtime_dir.read_file("job_id").await.unwrap().parse::<u32>().unwrap();
-                let process_id =
-                    elf_runtime_dir.read_file("process_id").await.unwrap().parse::<u32>().unwrap();
+                let elf_runtime_dir = runtime_dir.open_dir("elf").expect("open_dir(`elf`) failed!");
+                let job_id = elf_runtime_dir
+                    .read_file("job_id")
+                    .await
+                    .expect("read_file(`job_id`) failed!")
+                    .parse::<u32>()
+                    .expect("parse(`job_id`) failed!");
+                let process_id = elf_runtime_dir
+                    .read_file("process_id")
+                    .await
+                    .expect("read_file(`process_id`) failed!")
+                    .parse::<u32>()
+                    .expect("parse(`process_id`) failed!");
                 Some(ElfRuntime { job_id, process_id })
             } else {
                 None
@@ -82,10 +100,10 @@ impl Execution {
             None
         };
 
-        let in_dir = exec_dir.open_dir("in");
+        let in_dir = exec_dir.open_dir("in").expect("open_dir(`in`) failed!");
 
         let merkle_root = if in_dir.exists("pkg").await {
-            let pkg_dir = in_dir.open_dir("pkg");
+            let pkg_dir = in_dir.open_dir("pkg").expect("open_dir(`pkg`) failed!");
             if pkg_dir.exists("meta").await {
                 match pkg_dir.read_file("meta").await {
                     Ok(file) => Some(file),
@@ -102,14 +120,16 @@ impl Execution {
             get_capabilities(in_dir).await.expect("Failed to get incoming capabilities.");
 
         let outgoing_capabilities = if exec_dir.exists("out").await {
-            get_capabilities(exec_dir.open_dir("out")).await
+            let out_dir = exec_dir.open_dir("out").expect("open_dir(`out`) failed!");
+            get_capabilities(out_dir).await
         } else {
             // The directory doesn't exist. This is probably because
             // there is no runtime on the component.
             None
         };
 
-        let exposed_capabilities = exec_dir.open_dir("expose").entries().await;
+        let expose_dir = exec_dir.open_dir("expose").expect("open_dir(`expose`) failed!");
+        let exposed_capabilities = expose_dir.entries().await;
 
         Execution {
             elf_runtime,
@@ -253,7 +273,8 @@ mod tests {
         fs::create_dir(exec.join("out")).unwrap();
         fs::create_dir(exec.join("runtime")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert!(execution.elf_runtime.is_none());
@@ -278,7 +299,8 @@ mod tests {
         fs::create_dir(exec.join("expose")).unwrap();
         fs::create_dir(exec.join("in")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert!(execution.elf_runtime.is_none());
@@ -317,7 +339,8 @@ mod tests {
             .write_all("67890".as_bytes())
             .unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.elf_runtime.unwrap(), ElfRuntime { job_id: 12345, process_id: 67890 });
@@ -347,7 +370,8 @@ mod tests {
             )
             .unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(
@@ -371,7 +395,8 @@ mod tests {
         fs::create_dir(exec.join("expose")).unwrap();
         fs::create_dir(exec.join("in")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.merkle_root, None);
@@ -396,7 +421,8 @@ mod tests {
         fs::create_dir(exec.join("in/pkg")).unwrap();
         fs::create_dir(exec.join("in/pkg/meta")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.merkle_root, None);
@@ -419,7 +445,8 @@ mod tests {
         fs::create_dir(exec.join("in")).unwrap();
         fs::create_dir(exec.join("in/pkg")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.incoming_capabilities, vec!["pkg".to_string()]);
@@ -444,7 +471,8 @@ mod tests {
         fs::create_dir(exec.join("out")).unwrap();
         fs::create_dir(exec.join("out/fidl.examples.routing.echo.Echo")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(
@@ -472,7 +500,8 @@ mod tests {
         fs::create_dir(exec.join("in")).unwrap();
         fs::create_dir(exec.join("out")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
+        let exec_dir = Directory::from_namespace(exec.to_path_buf())
+            .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.exposed_capabilities, vec!["pkgfs".to_string()]);
@@ -497,7 +526,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
         assert!(v2_component.appmgr_root_v1_realm.is_none());
@@ -546,7 +576,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(
@@ -603,7 +634,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(
@@ -672,10 +704,12 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
-        let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub")).unwrap();
+        let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub"))
+            .expect("from_namespace() failed: failed to open appmgr v1 hub directory!");
         assert!(v2_component.appmgr_root_v1_realm.is_none());
 
         assert_eq!(
@@ -759,7 +793,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/archivist.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(v2_component.print_details("bootstrap"), true);
@@ -862,7 +897,8 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(v2_component.print_details("core"), true);
@@ -907,7 +943,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/bootstrap.cm".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(v2_component.print_details("asdfgh"), false);

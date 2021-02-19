@@ -25,8 +25,9 @@ impl File {
         Ok(read_to_string(&self.proxy).await?)
     }
 
-    async fn close(self) {
-        io_util::file::close(self.proxy).await.unwrap();
+    async fn close(self) -> Result<(), Error> {
+        io_util::file::close(self.proxy).await?;
+        Ok(())
     }
 }
 
@@ -40,7 +41,7 @@ impl Directory {
     // Create a Directory object from a path in the namespace
     #[cfg(target_os = "fuchsia")]
     pub fn from_namespace(path: PathBuf) -> Result<Directory, Error> {
-        let path_str = path.into_os_string().into_string().unwrap();
+        let path_str = path.into_os_string().into_string().expect("into_string() failed!");
         let proxy = io_util::directory::open_in_namespace(
             &path_str,
             fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
@@ -55,22 +56,21 @@ impl Directory {
 
     // Open a file that already exists in the directory with the given |filename|.
     fn open_file(&self, filename: &str) -> Result<File, Error> {
-        let proxy = open_file_no_describe(&self.proxy, filename, fio::OPEN_RIGHT_READABLE).unwrap();
+        let proxy = open_file_no_describe(&self.proxy, filename, fio::OPEN_RIGHT_READABLE)?;
         Ok(File { proxy })
     }
 
     // Open a directory that already exists in the directory with the given |filename|.
-    pub fn open_dir(&self, filename: &str) -> Directory {
-        let proxy =
-            open_directory_no_describe(&self.proxy, filename, fio::OPEN_RIGHT_READABLE).unwrap();
-        Directory { proxy }
+    pub fn open_dir(&self, filename: &str) -> Result<Directory, Error> {
+        let proxy = open_directory_no_describe(&self.proxy, filename, fio::OPEN_RIGHT_READABLE)?;
+        Ok(Directory { proxy })
     }
 
     // Returns the contents of a file in this directory as a string
     pub async fn read_file(&self, filename: &str) -> Result<String, Error> {
         let file = self.open_file(filename)?;
         let data = file.read_string().await?;
-        file.close().await;
+        file.close().await?;
         Ok(data)
     }
 
@@ -82,6 +82,11 @@ impl Directory {
 
     // Return a list of filenames in the directory
     pub async fn entries(&self) -> Vec<String> {
-        readdir(&self.proxy).await.unwrap().iter().map(|entry| entry.name.clone()).collect()
+        readdir(&self.proxy)
+            .await
+            .expect("readdir() failed!")
+            .iter()
+            .map(|entry| entry.name.clone())
+            .collect()
     }
 }
