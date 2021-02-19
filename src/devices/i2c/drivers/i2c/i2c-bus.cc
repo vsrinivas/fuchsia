@@ -225,6 +225,14 @@ void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count
   }
 
   list_add_tail(&queued_txns_, &txn->node);
+
+  // Make sure to release this lock before signaling the worker thread.  If we
+  // are still holding the lock when the signal is asserted, we will be racing
+  // with the worker thread to see if we can drop the lock before it attempts to
+  // acquire it.  In a uniprocessor system (or just a system where the worker
+  // thread gets scheduled on our core, preempting us) this produces unnecessary
+  // thrash which negatively impacts performance.
+  lock.release();
   sync_completion_signal(&txn_signal_);
 }
 
