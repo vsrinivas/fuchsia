@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "simple-touch"
@@ -23,13 +23,6 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("simple-touch") {
+fuchsia_shell_package("simple-touch") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "simple-touch"
-      shell = true
-    },
-  ]
 }

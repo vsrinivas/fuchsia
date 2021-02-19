@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "tiles_ctl"
@@ -23,20 +23,7 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("tiles_ctl") {
+fuchsia_shell_package("tiles_ctl") {
+  manifest = "meta/tiles_ctl.cmx"
   deps = [ ":bin" ]
-
-  meta = [
-    {
-      path = "meta/tiles_ctl.cmx"
-      dest = "tiles_ctl.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      shell = true
-      name = "tiles_ctl"
-    },
-  ]
 }

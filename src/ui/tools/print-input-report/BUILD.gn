@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "print-input-report"
@@ -34,15 +33,8 @@ executable("bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-package("print-input-report") {
+fuchsia_shell_package("print-input-report") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "print-input-report"
-      shell = true
-    },
-  ]
 }
 
 test("print-input-report-test-bin") {
@@ -75,13 +67,6 @@ test("print-input-report-test-bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-test_package("print-input-report-test") {
+fuchsia_unittest_package("print-input-report-test") {
   deps = [ ":print-input-report-test-bin" ]
-  tests = [
-    {
-      name = "print-input-report-test-bin"
-      dest = "print-input-report-test"
-      environments = basic_envs
-    },
-  ]
 }

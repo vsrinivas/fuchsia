@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("tiles_lib") {
   sources = [
@@ -45,19 +44,8 @@ executable("bin") {
   ]
 }
 
-package("tiles") {
-  meta = [
-    {
-      path = "meta/tiles.cmx"
-      dest = "tiles.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "tiles"
-    },
-  ]
+fuchsia_package_with_single_component("tiles") {
+  manifest = "meta/tiles.cmx"
   deps = [ ":bin" ]
 }
 
@@ -75,12 +63,6 @@ executable("tiles_unittests") {
   ]
 }
 
-test_package("tiles_tests") {
+fuchsia_unittest_package("tiles_tests") {
   deps = [ ":tiles_unittests" ]
-
-  tests = [
-    {
-      name = "tiles_unittests"
-    },
-  ]
 }

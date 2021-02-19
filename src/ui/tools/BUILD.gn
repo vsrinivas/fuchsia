@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 group("scenic") {
   deps = [
@@ -41,24 +41,9 @@ group("tests") {
   ]
 }
 
-package("scenic-snapshot-viewer") {
-  meta = [
-    {
-      path =
-          rebase_path("scenic_snapshot_viewer/meta/scenic_snapshot_viewer.cmx")
-      dest = "scenic_snapshot_viewer.cmx"
-    },
-  ]
-
+fuchsia_shell_package("scenic-snapshot-viewer") {
+  manifest = "scenic_snapshot_viewer/meta/scenic_snapshot_viewer.cmx"
   deps = [ "scenic_snapshot_viewer" ]
-
-  binaries = [
-    {
-      name = "scenic-snapshot-viewer"
-      source = "scenic_snapshot_viewer"
-      shell = true
-    },
-  ]
 }
 
 # Component shell tools can be run as shell command or as components via a
@@ -72,22 +57,9 @@ component_shell_tools = [
   "screencap",
 ]
 foreach(tool, component_shell_tools) {
-  package(tool) {
-    meta = [
-      {
-        path = rebase_path("$tool/meta/$tool.cmx")
-        dest = "$tool.cmx"
-      },
-    ]
-
+  fuchsia_shell_package(tool) {
+    manifest = "$tool/meta/$tool.cmx"
     deps = [ tool ]
-
-    binaries = [
-      {
-        name = tool
-        shell = true
-      },
-    ]
   }
 }
 
@@ -97,15 +69,8 @@ non_component_tools = [
   "input",
   "print_input",
 ]
-
 foreach(tool, non_component_tools) {
-  package(tool) {
+  fuchsia_shell_package(tool) {
     deps = [ tool ]
-    binaries = [
-      {
-        name = tool
-        shell = true
-      },
-    ]
   }
 }

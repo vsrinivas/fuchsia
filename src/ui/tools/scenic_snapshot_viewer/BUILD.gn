@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 executable("scenic_snapshot_viewer") {
+  output_name = "scenic-snapshot-viewer"
   sources = [
     "main.cc",
     "view.cc",
