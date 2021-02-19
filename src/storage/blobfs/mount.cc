@@ -16,7 +16,8 @@
 namespace blobfs {
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
-                  zx::channel root, ServeLayout layout, zx::resource vmex_resource) {
+                  fidl::ServerEnd<llcpp::fuchsia::io::Directory> root, ServeLayout layout,
+                  zx::resource vmex_resource) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 

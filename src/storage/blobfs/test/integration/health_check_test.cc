@@ -22,11 +22,13 @@ namespace fuv = ::llcpp::fuchsia::update::verify;
 class HealthCheckTest : public ParameterizedBlobfsTest {
  protected:
   fuv::BlobfsVerifier::SyncClient ConnectToHealthCheckService() {
-    zx::channel client_end, server_end;
-    EXPECT_EQ(zx::channel::create(0, &client_end, &server_end), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuv::BlobfsVerifier>();
+    EXPECT_EQ(endpoints.status_value(), ZX_OK);
+    auto [client_end, server_end] = *std::move(endpoints);
+
     std::string service_path = std::string("svc/") + fuv::BlobfsVerifier::Name;
     EXPECT_EQ(fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), service_path.c_str(),
-                                      server_end.release()),
+                                      server_end.TakeChannel().release()),
               ZX_OK);
     return fuv::BlobfsVerifier::SyncClient(std::move(client_end));
   }

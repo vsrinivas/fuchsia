@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_BLOB_CORRUPTION_NOTIFIER_H_
 #define SRC_STORAGE_BLOBFS_BLOB_CORRUPTION_NOTIFIER_H_
 
+#include <fuchsia/blobfs/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -26,7 +27,8 @@ class BlobCorruptionNotifier {
   // Creates a single instance of BlobCorruptionNotifier for all blobs.
   static zx_status_t Create(std::unique_ptr<BlobCorruptionNotifier>* out);
 
-  void SetCorruptBlobHandler(zx::channel blobfs_handler);
+  void SetCorruptBlobHandler(
+      fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> blobfs_handler);
 
   // Notifies corrupt blob to the corruption handler service.
   // If handler is not registered, simply ignore notifying and continue.
@@ -34,7 +36,7 @@ class BlobCorruptionNotifier {
 
  private:
   BlobCorruptionNotifier() {}
-  zx::channel corruption_handler_;
+  fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> corruption_handler_;
 };
 
 }  // namespace blobfs

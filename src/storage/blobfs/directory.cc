@@ -196,8 +196,9 @@ void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& complete
   }
 }
 
-void Directory::SetCorruptBlobHandler(zx::channel handler,
-                                      SetCorruptBlobHandlerCompleter::Sync& completer) {
+void Directory::SetCorruptBlobHandler(
+    fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> handler,
+    SetCorruptBlobHandlerCompleter::Sync& completer) {
   blobfs_->SetCorruptBlobHandler(std::move(handler));
   completer.Reply(ZX_OK);
 }

@@ -24,7 +24,8 @@ zx_status_t BlobCorruptionNotifier::Create(std::unique_ptr<BlobCorruptionNotifie
   return ZX_OK;
 }
 
-void BlobCorruptionNotifier::SetCorruptBlobHandler(zx::channel blobfs_handler) {
+void BlobCorruptionNotifier::SetCorruptBlobHandler(
+    fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> blobfs_handler) {
   corruption_handler_.reset();
   corruption_handler_ = std::move(blobfs_handler);
 }
@@ -35,7 +36,7 @@ zx_status_t BlobCorruptionNotifier::NotifyCorruptBlob(const uint8_t* blob_root_h
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (corruption_handler_.get() == ZX_HANDLE_INVALID) {
+  if (!corruption_handler_.is_valid()) {
     FX_LOGS(WARNING) << "Invalid corruption handler";
     // If the corruption handler has not been registered yet, we should not error out due to
     // unset corruption handler.
@@ -43,8 +44,11 @@ zx_status_t BlobCorruptionNotifier::NotifyCorruptBlob(const uint8_t* blob_root_h
   }
 
   FX_LOGS(INFO) << "Notifying corruption handler service";
-  return fuchsia_blobfs_CorruptBlobHandlerCorruptBlob(corruption_handler_.get(), blob_root_hash,
-                                                      blob_root_len);
+  auto result = llcpp::fuchsia::blobfs::CorruptBlobHandler::Call::CorruptBlob(
+      corruption_handler_,
+      fidl::VectorView<uint8_t>(fidl::unowned_ptr(const_cast<uint8_t*>(blob_root_hash)),
+                                blob_root_len));
+  return result.status();
 }
 
 }  // namespace blobfs

@@ -36,11 +36,12 @@ zx_rights_t get_rights(const zx::object_base& handle) {
 class ExecutableMountTest : public FdioTest {
  public:
   ExecutableMountTest() {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    ZX_ASSERT(status == ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::kernel::VmexResource>();
+    ZX_ASSERT(endpoints.status_value() == ZX_OK);
+    auto [local, remote] = *std::move(endpoints);
 
-    status = fdio_service_connect("/svc/fuchsia.kernel.VmexResource", remote.release());
+    zx_status_t status =
+        fdio_service_connect("/svc/fuchsia.kernel.VmexResource", remote.TakeChannel().release());
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to fuchsia.kernel.VmexResource: %u", status);
 
     auto client = llcpp::fuchsia::kernel::VmexResource::SyncClient{std::move(local)};

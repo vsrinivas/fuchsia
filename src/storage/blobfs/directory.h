@@ -29,7 +29,7 @@ class Blobfs;
 
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
 #ifdef __Fuchsia__
-class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::RawChannelInterface {
+class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::Interface {
 #else
 class Directory final : public fs::Vnode {
 #endif
@@ -58,7 +58,7 @@ class Directory final : public fs::Vnode {
 #ifdef __Fuchsia__
   void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) final;
   void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
-  void SetCorruptBlobHandler(zx::channel handler,
+  void SetCorruptBlobHandler(fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> handler,
                              SetCorruptBlobHandlerCompleter::Sync& completer) final;
 #endif
 

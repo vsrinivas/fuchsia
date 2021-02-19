@@ -5,8 +5,8 @@
 #ifndef SRC_STORAGE_BLOBFS_MOUNT_H_
 #define SRC_STORAGE_BLOBFS_MOUNT_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
-#include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 
 #include <optional>
@@ -86,7 +86,8 @@ struct MountOptions {
 //
 // This function blocks until the filesystem terminates.
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
-                  zx::channel root, ServeLayout layout, zx::resource vmex_resource);
+                  fidl::ServerEnd<llcpp::fuchsia::io::Directory> root, ServeLayout layout,
+                  zx::resource vmex_resource);
 
 }  // namespace blobfs
 

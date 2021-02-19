@@ -58,7 +58,8 @@ void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
   });
 }
 
-zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
+zx_status_t Runner::ServeRoot(fidl::ServerEnd<llcpp::fuchsia::io::Directory> root,
+                              ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = blobfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {

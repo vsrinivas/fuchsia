@@ -56,7 +56,6 @@ func (p *Protocol) ShouldEmitTypedChannelCascadingInheritance() bool {
 // channels, this list should shrink down to zero.
 // TODO(fxbug.dev/65212): We should remove all the entries here.
 var rawChannelInterfaceAllowed = map[string]bool{
-	"::llcpp::fuchsia::blobfs::Blobfs":                                  true,
 	"::llcpp::fuchsia::device::instancelifecycle::test::InstanceDevice": true,
 	"::llcpp::fuchsia::device::instancelifecycle::test::TestDevice":     true,
 	"::llcpp::fuchsia::device::lifecycle::test::TestDevice":             true,

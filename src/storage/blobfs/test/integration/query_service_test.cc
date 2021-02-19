@@ -30,12 +30,15 @@ namespace fuchsia_fs = ::llcpp::fuchsia::fs;
 class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
   fuchsia_fs::Query::SyncClient ConnectToQueryService() {
-    zx::channel query_client_end, query_server_end;
-    EXPECT_EQ(zx::channel::create(0, &query_client_end, &query_server_end), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_fs::Query>();
+    EXPECT_EQ(endpoints.status_value(), ZX_OK);
+    auto [query_client_end, query_server_end] = *std::move(endpoints);
+
     std::string query_service_path = std::string("svc/") + fuchsia_fs::Query::Name;
-    EXPECT_EQ(fdio_service_connect_at(fs().GetOutgoingDirectory()->get(),
-                                      query_service_path.c_str(), query_server_end.release()),
-              ZX_OK);
+    EXPECT_EQ(
+        fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), query_service_path.c_str(),
+                                query_server_end.TakeChannel().release()),
+        ZX_OK);
     return fuchsia_fs::Query::SyncClient(std::move(query_client_end));
   }
 
@@ -135,7 +138,8 @@ TEST_F(QueryServiceTest, SelectiveQueryInfoSingleField) {
 TEST_F(QueryServiceTest, IsNodeInFilesystemPositiveCase) {
   // Get a token corresponding to the root directory.
   fdio_cpp::UnownedFdioCaller caller(root_fd());
-  auto token_result = fio::Directory::Call::GetToken(caller.channel());
+  auto token_result =
+      fio::Directory::Call::GetToken(fidl::UnownedClientEnd<fio::Directory>(caller.channel()));
   ASSERT_EQ(token_result.status(), ZX_OK);
   ASSERT_EQ(token_result->s, ZX_OK);
   zx::handle token_raw = std::move(token_result->token);

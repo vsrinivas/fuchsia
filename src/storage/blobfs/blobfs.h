@@ -201,7 +201,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Corruption notifier related.
   const BlobCorruptionNotifier* GetCorruptBlobNotifier() { return blob_corruption_notifier_.get(); }
-  void SetCorruptBlobHandler(zx::channel blobfs_handler) {
+  void SetCorruptBlobHandler(
+      fidl::ClientEnd<llcpp::fuchsia::blobfs::CorruptBlobHandler> blobfs_handler) {
     blob_corruption_notifier_->SetCorruptBlobHandler(std::move(blobfs_handler));
   }
 

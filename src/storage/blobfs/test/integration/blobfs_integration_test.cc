@@ -458,8 +458,8 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto query_result =
-      fio::DirectoryAdmin::Call::QueryFilesystem(zx::unowned_channel(caller.borrow_channel()));
+  auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.channel()));
   ASSERT_EQ(query_result.status(), ZX_OK);
   ASSERT_EQ(query_result.value().s, ZX_OK);
   ASSERT_NE(query_result.value().info, nullptr);
@@ -990,7 +990,9 @@ TEST_P(BlobfsIntegrationTest, InvalidOperations) {
   zx::channel canary_channel;
   ASSERT_EQ(fdio_fd_clone(fd.get(), canary_channel.reset_and_get_address()), ZX_OK);
   ASSERT_EQ(ZX_ERR_PEER_CLOSED,
-            fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(canary_channel)).status());
+            fio::DirectoryAdmin::Call::Unmount(
+                fidl::UnownedClientEnd<fio::DirectoryAdmin>(zx::unowned_channel(canary_channel)))
+                .status());
   zx_signals_t pending;
   EXPECT_EQ(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending),
             ZX_OK);
@@ -1091,8 +1093,8 @@ TEST_P(BlobfsIntegrationTest, MultipleWrites) {
 
 zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
   fdio_cpp::FdioCaller caller(std::move(directory));
-  auto result =
-      fio::DirectoryAdmin::Call::GetDevicePath(zx::unowned_channel(caller.borrow_channel()));
+  auto result = fio::DirectoryAdmin::Call::GetDevicePath(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(zx::unowned_channel(caller.borrow_channel())));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -1151,14 +1153,17 @@ void OpenBlockDevice(const std::string& path,
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   ASSERT_TRUE(fd) << "Unable to open block device";
 
-  zx::channel channel, server;
-  ASSERT_EQ(zx::channel::create(0, &channel, &server), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Node>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
+  auto [channel, server] = *std::move(endpoints);
+
   fdio_cpp::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fio::Node::Call::Clone(zx::unowned_channel(caller.borrow_channel()),
-                                   fio::CLONE_FLAG_SAME_RIGHTS, std::move(server))
+  ASSERT_EQ(fio::Node::Call::Clone(
+                fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())),
+                fio::CLONE_FLAG_SAME_RIGHTS, std::move(server))
                 .status(),
             ZX_OK);
-  ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), block_device), ZX_OK);
+  ASSERT_EQ(block_client::RemoteBlockDevice::Create(channel.TakeChannel(), block_device), ZX_OK);
 }
 
 using SliceRange = fuchsia_hardware_block_volume_VsliceRange;

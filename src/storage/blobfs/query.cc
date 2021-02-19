@@ -17,7 +17,7 @@ namespace blobfs {
 constexpr const char kFsName[] = "blobfs";
 
 QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner)
-    : fs::Service([dispatcher, this](zx::channel server_end) {
+    : fs::Service([dispatcher, this](fidl::ServerEnd<llcpp::fuchsia::fs::Query> server_end) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }),
       blobfs_(blobfs),

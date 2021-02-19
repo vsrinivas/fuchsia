@@ -83,13 +83,13 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx::channel export_root;
+  fidl::ServerEnd<llcpp::fuchsia::io::Directory> export_root;
   blobfs::ServeLayout layout;
   if (outgoing_server.is_valid()) {
-    export_root = std::move(outgoing_server);
+    export_root = fidl::ServerEnd<llcpp::fuchsia::io::Directory>(std::move(outgoing_server));
     layout = blobfs::ServeLayout::kExportDirectory;
   } else if (root_server.is_valid()) {
-    export_root = std::move(root_server);
+    export_root = fidl::ServerEnd<llcpp::fuchsia::io::Directory>(std::move(root_server));
     layout = blobfs::ServeLayout::kDataRootOnly;
   } else {
     // neither provided? or we can't access them for some reason.

@@ -9,11 +9,13 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 
 #include <fs-management/admin.h>
 
+#include "lib/fidl/llcpp/connect_service.h"
 #include "src/storage/blobfs/mkfs.h"
 
 namespace blobfs {
@@ -33,8 +35,9 @@ void FdioTest::SetUp() {
                              }),
             ZX_OK);
 
-  zx::channel export_root_client, export_root_server;
-  ASSERT_EQ(zx::channel::create(0, &export_root_client, &export_root_server), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
+  auto [export_root_client, export_root_server] = *std::move(endpoints);
 
   std::unique_ptr<Runner> runner;
   ASSERT_EQ(Runner::Create(loop_.get(), std::move(device), mount_options_,
@@ -46,12 +49,14 @@ void FdioTest::SetUp() {
   runner_ = std::move(runner);
 
   zx::channel root_client;
-  ASSERT_EQ(fs_root_handle(export_root_client.get(), root_client.reset_and_get_address()), ZX_OK);
+  ASSERT_EQ(fs_root_handle(export_root_client.channel().get(), root_client.reset_and_get_address()),
+            ZX_OK);
 
   // FDIO serving the root directory.
   ASSERT_EQ(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()), ZX_OK);
   ASSERT_TRUE(root_fd_.is_valid());
-  ASSERT_EQ(fdio_fd_create(export_root_client.release(), export_root_fd_.reset_and_get_address()),
+  ASSERT_EQ(fdio_fd_create(export_root_client.TakeChannel().release(),
+                           export_root_fd_.reset_and_get_address()),
             ZX_OK);
   ASSERT_TRUE(export_root_fd_.is_valid());
 }
@@ -59,9 +64,10 @@ void FdioTest::SetUp() {
 void FdioTest::TearDown() {
   zx::channel root_client;
   ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(
-      llcpp::fuchsia::io::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client)).status(),
-      ZX_OK);
+  ASSERT_EQ(llcpp::fuchsia::io::DirectoryAdmin::Call::Unmount(
+                fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin>(std::move(root_client)))
+                .status(),
+            ZX_OK);
 }
 
 zx_handle_t FdioTest::export_root() {
