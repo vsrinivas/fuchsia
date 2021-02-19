@@ -153,7 +153,7 @@ func (l *Match) GetText() string {
 		texts = append(texts, key)
 	}
 	sort.Strings(texts)
-	return texts[0]
+	return strings.Join(texts, "\n")
 }
 
 func (l *License) Equal(other *License) bool {

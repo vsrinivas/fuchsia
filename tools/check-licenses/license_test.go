@@ -54,10 +54,21 @@ func TestLicenseGetAuthorMatches(t *testing.T) {
 // Successfully choose the same variation of a copyright blurb regardless of the order
 // in which they are added.
 func TestConsistentText(t *testing.T) {
-	consistentText := "Copyright 2001 author\n bodyA aaaaaaaaaaa"
+	consistentText := `Copyright 2001 author
+ bodyA aaaaaaaaaaa
+Copyright 2002 author
+ bodyB bbbbbbbbbbb
+Copyright 2003 author
+ bodyC shortest
+Copyright 2004 author
+ bodyD dddddddddddd
+Copyright 2005 author
+ bodyE eeeeeeeeeee
+Copyright 2006 author
+ bodyF longestttttttttttttt`
 
 	l, _ := setupLicenseTest("consistency", t)
-	l.Search([]byte(consistentText), "pathA")
+	l.Search([]byte("Copyright 2001 author\n bodyA aaaaaaaaaaa"), "pathA")
 	l.Search([]byte("Copyright 2002 author\n bodyB bbbbbbbbbbb"), "pathB")
 	l.Search([]byte("Copyright 2003 author\n bodyC shortest"), "pathC")
 	l.Search([]byte("* Copyright 2004 author\n bodyD dddddddddddd"), "pathD")
@@ -72,7 +83,7 @@ func TestConsistentText(t *testing.T) {
 	l.Search([]byte("Copyright 2003 author\n bodyC shortest"), "pathC")
 	l.Search([]byte("Copyright 2002 author\n bodyB bbbbbbbbbbb"), "pathB")
 	l.Search([]byte("Copyright 2005 author\n bodyE eeeeeeeeeee"), "pathE")
-	l.Search([]byte(consistentText), "pathA")
+	l.Search([]byte("Copyright 2001 author\n bodyA aaaaaaaaaaa"), "pathA")
 	l.Search([]byte("* Copyright 2004 author\n bodyD dddddddddddd"), "pathD")
 	l.Search([]byte("// Copyright 2006 author\n bodyF longestttttttttttttt"), "pathF")
 
@@ -86,7 +97,7 @@ func TestConsistentText(t *testing.T) {
 	l.Search([]byte("Copyright 2003 author\n bodyC shortest"), "pathC")
 	l.Search([]byte("Copyright 2005 author\n bodyE eeeeeeeeeee"), "pathE")
 	l.Search([]byte("Copyright 2002 author\n bodyB bbbbbbbbbbb"), "pathB")
-	l.Search([]byte(consistentText), "pathA")
+	l.Search([]byte("Copyright 2001 author\n bodyA aaaaaaaaaaa"), "pathA")
 
 	if l.matches["author"].GetText() != consistentText {
 		t.Errorf("Last: Got %s, want %s", l.matches["author"].GetText(), consistentText)
