@@ -6,6 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/vmar.h>
 
 #include <condition_variable>
@@ -150,6 +151,16 @@ class PagingTest : public zxtest::Test {
   }
 
   ~PagingTest() {
+    // Tear down the VFS asynchronously.
+    if (vfs_) {
+      sync_completion_t completion;
+      vfs_->Shutdown([&completion](zx_status_t status) {
+        EXPECT_EQ(status, ZX_OK);
+        sync_completion_signal(&completion);
+      });
+      sync_completion_wait(&completion, zx::time::infinite().get());
+    }
+
     if (vfs_thread_) {
       vfs_loop_.Quit();
       vfs_thread_->join();
