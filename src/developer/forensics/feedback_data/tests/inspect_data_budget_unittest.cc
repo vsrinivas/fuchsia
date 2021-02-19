@@ -16,8 +16,6 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
-const size_t kOneKb = 1024;
-
 class InspectDataBudgetTest : public UnitTestFixture {
  public:
   void MakeUnlimitedBudget() {
@@ -30,14 +28,12 @@ class InspectDataBudgetTest : public UnitTestFixture {
     inspect_data_budget_ = std::make_unique<InspectDataBudget>(limit_data_flag_path.c_str());
   }
 
-  void SetBudget(size_t zip_file_kb, size_t inspect_raw_size_kb) {
+  void SetBudget(size_t zip_file_kb) {
     std::map<std::string, ArchiveFileStats> file_size_stats;
 
-    // Shift right by one for compression ratio = 2.
-    size_t inspect_compressed_size_kb = inspect_raw_size_kb >> 1;
-    file_size_stats["inspect.json"] = {inspect_raw_size_kb * kOneKb,
-                                       inspect_compressed_size_kb * kOneKb};
-    file_size_stats["other"] = {0, (zip_file_kb - inspect_compressed_size_kb) * kOneKb};
+    // The Inspect file must exists or else the inspect budget is disabled.
+    file_size_stats["inspect.json"] = {0, 0};
+    file_size_stats["other"] = {0, zip_file_kb * 1024};
 
     inspect_data_budget_->UpdateBudget(file_size_stats);
   }
@@ -58,7 +54,7 @@ TEST_F(InspectDataBudgetTest, TestUnlimitedBudget) {
   ASSERT_FALSE(GetSizeInBytes());
 
   // setting a budget should not do anything.
-  SetBudget(1024, 100);
+  SetBudget(1024);
   ASSERT_FALSE(GetSizeInBytes());
 }
 
@@ -75,30 +71,58 @@ TEST_F(InspectDataBudgetTest, TestForCrash_MissingSizeStats) {
 
 TEST_F(InspectDataBudgetTest, TestSizeBudget_Maintain) {
   MakeLimitedBudget();
-  SetBudget(1024, 100);
   ASSERT_TRUE(GetSizeInBytes());
-  ASSERT_EQ(GetSizeInBytes().value(), static_cast<size_t>(100 * 1024));
+  size_t initial_budget = GetSizeInBytes().value();
+
+  SetBudget(2048);
+  ASSERT_TRUE(GetSizeInBytes());
+  ASSERT_EQ(GetSizeInBytes().value(), initial_budget);
 }
 
-TEST_F(InspectDataBudgetTest, TestSizeBudget_Increase) {
+TEST_F(InspectDataBudgetTest, TestSizeBudget_UpperLimit) {
   MakeLimitedBudget();
-  SetBudget(724, 100);
   ASSERT_TRUE(GetSizeInBytes());
-  ASSERT_EQ(GetSizeInBytes().value(), static_cast<size_t>(500 * 1024));
+  size_t initial_budget = GetSizeInBytes().value();
+  SetBudget(724);
+
+  ASSERT_TRUE(GetSizeInBytes());
+  ASSERT_EQ(GetSizeInBytes().value(), initial_budget);
 }
 
-TEST_F(InspectDataBudgetTest, TestSizeBudget_Reduce) {
+TEST_F(InspectDataBudgetTest, TestSizeBudget_LowerLimit) {
+  // Arrive at the lower limit by making the zip size 2 GB twice (this should reduce the initial
+  // budget at most by 2^16 times).
   MakeLimitedBudget();
-  SetBudget(1054, 100);
+  SetBudget(2 * 1024 * 1024);
+  SetBudget(2 * 1024 * 1024);
   ASSERT_TRUE(GetSizeInBytes());
-  ASSERT_EQ(GetSizeInBytes().value(), static_cast<size_t>(60 * 1024));
+  size_t lower_limit = GetSizeInBytes().value();
+
+  SetBudget(1024 * 1024);
+  ASSERT_TRUE(GetSizeInBytes());
+  size_t new_budget = GetSizeInBytes().value();
+
+  ASSERT_TRUE(GetSizeInBytes());
+  ASSERT_EQ(lower_limit, new_budget);
 }
 
-TEST_F(InspectDataBudgetTest, TestSizeBudget_Underflow) {
+TEST_F(InspectDataBudgetTest, TestSizeBudget_Reduce_Increase) {
   MakeLimitedBudget();
-  SetBudget(1324, 100);
   ASSERT_TRUE(GetSizeInBytes());
-  ASSERT_EQ(GetSizeInBytes().value(), static_cast<size_t>(0));
+  size_t initial_budget = GetSizeInBytes().value();
+  size_t budget = (initial_budget * 1024) / 1500;
+
+  SetBudget(3000);
+  ASSERT_TRUE(GetSizeInBytes());
+  ASSERT_EQ(GetSizeInBytes().value(), budget);
+
+  // Note: Make sure that the geometric mean of the last zip size and the new zip size > 2MB.
+  // Otherwise the resulting budget might be lower than our calculated value due to upper limit
+  // restrictions.
+  budget = (budget * 1024) / 800;
+  SetBudget(1600);
+  ASSERT_TRUE(GetSizeInBytes());
+  ASSERT_EQ(GetSizeInBytes().value(), budget);
 }
 
 }  // namespace
