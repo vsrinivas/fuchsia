@@ -39,6 +39,14 @@ fuchsia_unittest_package("test_manager_test") {
     ":test_manager_test_bin",
     "test_data",
   ]
+
+  # There's expected error logs that happen during the test such as not resolving an instance when
+  # testing that we fail to execute a test with an unknown URL.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

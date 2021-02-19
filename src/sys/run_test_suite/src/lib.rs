@@ -382,13 +382,30 @@ pub async fn run_tests_and_get_outcome(
     let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs, log_opts);
     let results_collection_fut = collect_results(&test_url, count, result_stream);
 
-    let (log_collection_result, test_outcome) = join!(log_collection_fut, results_collection_fut);
-    if let Err(e) = log_collection_result {
-        println!("Failed to collect logs: {:?}", e);
-    }
+    let (log_collection_result, mut test_outcome) =
+        join!(log_collection_fut, results_collection_fut);
 
     if count.get() > 1 && test_outcome != Outcome::Passed {
         println!("One or more test runs failed.");
+    }
+
+    match log_collection_result {
+        Err(e) => {
+            println!("Failed to collect logs: {:?}", e);
+        }
+        Ok(outcome) => match outcome {
+            diagnostics::LogCollectionOutcome::Passed => {}
+            diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
+                test_outcome = Outcome::Failed;
+                println!("Test {} produced unexpected high-severity logs:", test_url);
+                println!("----------------xxxxx----------------");
+                for log in restricted_logs {
+                    println!("{}", log);
+                }
+                println!("----------------xxxxx----------------");
+                println!("Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity");
+            }
+        },
     }
 
     test_outcome

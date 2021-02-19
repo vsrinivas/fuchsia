@@ -197,11 +197,18 @@ class TestBundle {
       return;
     }
     var flags = [...runnerFlags];
-    if (testType == TestType.component) {
-      // once we implement this feature fully we can remove --restrict-logs flag
-      // from fx test.
-      if (testDefinition.maxLogSeverity != null && shouldRestrictLogs) {
-        flags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
+    // once we implement this feature fully we can remove --restrict-logs flag
+    // from fx test.
+    if (testDefinition.maxLogSeverity != null && shouldRestrictLogs) {
+      switch (testType) {
+        case TestType.component:
+          flags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
+          break;
+        case TestType.suite:
+          flags.add('--max-severity-logs ${testDefinition.maxLogSeverity}');
+          break;
+        default:
+          break;
       }
     }
 

@@ -51,6 +51,10 @@ struct Args {
     #[argh(option)]
     min_severity_logs: Option<Severity>,
 
+    /// when set, the test will fail if any log with a higher severity is emitted.
+    #[argh(option)]
+    max_severity_logs: Option<Severity>,
+
     #[argh(positional)]
     /// arguments passed to tests following `--`.
     test_args: Vec<String>,
@@ -69,6 +73,7 @@ async fn main() {
         parallel,
         count,
         min_severity_logs,
+        max_severity_logs,
         test_args,
     } = args;
     let count = count.unwrap_or(1);
@@ -94,8 +99,10 @@ async fn main() {
             .expect("waiting for utc clock to start");
     }
 
-    let log_opts =
-        run_test_suite_lib::diagnostics::LogCollectionOptions { min_severity: min_severity_logs };
+    let log_opts = run_test_suite_lib::diagnostics::LogCollectionOptions {
+        min_severity: min_severity_logs,
+        max_severity: max_severity_logs,
+    };
 
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {

@@ -48,4 +48,8 @@ pub struct TestCommand {
     /// when set, only logs with a severity equal to the given one or higher will be printed.
     #[argh(option)]
     pub min_severity_logs: Option<Severity>,
+
+    /// when set, the test will fail if any log with a higher severity is emitted.
+    #[argh(option)]
+    pub max_severity_logs: Option<Severity>,
 }

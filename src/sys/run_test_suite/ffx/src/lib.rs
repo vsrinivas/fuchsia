@@ -36,7 +36,10 @@ pub async fn test(
                 test_args: vec![],
                 harness: harness_proxy,
             },
-            diagnostics::LogCollectionOptions { min_severity: cmd.min_severity_logs },
+            diagnostics::LogCollectionOptions {
+                min_severity: cmd.min_severity_logs,
+                max_severity: cmd.max_severity_logs,
+            },
             count,
         )
         .await
