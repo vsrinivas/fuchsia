@@ -11,13 +11,18 @@
 class TestLifecycleDriverChild;
 using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::Messageable,
                                ddk::Openable, ddk::Closable>;
+using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
 
 class TestLifecycleDriverChild : public DeviceType {
  public:
-  static zx_status_t Create(zx_device_t* parent, zx::channel lifecycle_client,
-                            zx::channel instance_client);
+  static zx_status_t Create(
+      zx_device_t* parent,
+      fidl::ServerEnd<llcpp::fuchsia::device::instancelifecycle::test::Lifecycle> lifecycle_client,
+      zx::channel instance_client);
 
-  explicit TestLifecycleDriverChild(zx_device_t* parent, zx::channel lifecycle_client)
+  explicit TestLifecycleDriverChild(
+      zx_device_t* parent,
+      fidl::ServerEnd<llcpp::fuchsia::device::instancelifecycle::test::Lifecycle> lifecycle_client)
       : DeviceType(parent), lifecycle_(std::move(lifecycle_client)) {}
   ~TestLifecycleDriverChild() = default;
 
@@ -44,7 +49,7 @@ using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Un
 using llcpp::fuchsia::device::instancelifecycle::test::InstanceDevice;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,
-                                         public InstanceDevice::RawChannelInterface {
+                                         public InstanceDevice::Interface {
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}
@@ -64,7 +69,7 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
 
   // Implementation of InstanceDevice protocol
   void RemoveDevice(RemoveDeviceCompleter::Sync& completer) override;
-  void SubscribeToLifecycle(zx::channel client,
+  void SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client,
                             SubscribeToLifecycleCompleter::Sync& completer) override;
 
  private:

@@ -27,7 +27,7 @@ class TestLifecycleDriver;
 using DeviceType =
     ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable, ddk::ChildPreReleaseable>;
 
-class TestLifecycleDriver : public DeviceType, public TestDevice::RawChannelInterface {
+class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
  public:
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}
@@ -40,7 +40,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::RawChannelInte
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void SubscribeToLifecycle(zx::channel client,
+  void SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client,
                             SubscribeToLifecycleCompleter::Sync& completer) override;
   void AddChild(bool complete_init, int32_t init_status,
                 AddChildCompleter::Sync& completer) override;
@@ -163,7 +163,7 @@ void TestLifecycleDriver::CompleteChildInit(uint64_t id,
   completer.ReplySuccess();
 }
 
-void TestLifecycleDriver::SubscribeToLifecycle(zx::channel client,
+void TestLifecycleDriver::SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client,
                                                SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
   if (lifecycle_event_sender_.is_valid()) {

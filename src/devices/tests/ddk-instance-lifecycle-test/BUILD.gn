@@ -42,11 +42,6 @@ driver_module("driver") {
     ":*",
     "//src/devices/bundles:drivers",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("tests") {
@@ -66,11 +61,6 @@ test("tests") {
     "//zircon/system/ulib/driver-integration-test",
   ]
   visibility = [ ":*" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_package("ddk-instance-lifecycle-test") {

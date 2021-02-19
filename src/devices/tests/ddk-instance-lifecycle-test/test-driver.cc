@@ -18,12 +18,13 @@
 
 namespace {
 
+using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
 using llcpp::fuchsia::device::instancelifecycle::test::TestDevice;
 
 class TestLifecycleDriver;
 using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestLifecycleDriver : public DeviceType, public TestDevice::RawChannelInterface {
+class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
  public:
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}
@@ -33,7 +34,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::RawChannelInte
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void CreateDevice(zx::channel lifecycle_client, zx::channel instance_client,
+  void CreateDevice(fidl::ServerEnd<Lifecycle> lifecycle_client, zx::channel instance_client,
                     CreateDeviceCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -43,7 +44,8 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::RawChannelInte
   }
 };
 
-void TestLifecycleDriver::CreateDevice(zx::channel lifecycle_client, zx::channel instance_client,
+void TestLifecycleDriver::CreateDevice(fidl::ServerEnd<Lifecycle> lifecycle_client,
+                                       zx::channel instance_client,
                                        CreateDeviceCompleter::Sync& completer) {
   zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), std::move(lifecycle_client),
                                                         std::move(instance_client));

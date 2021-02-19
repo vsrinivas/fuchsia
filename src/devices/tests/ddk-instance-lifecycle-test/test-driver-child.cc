@@ -18,7 +18,8 @@ void TestLifecycleDriverChild::DdkRelease() {
   delete this;
 }
 
-zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, zx::channel lifecycle_client,
+zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent,
+                                             fidl::ServerEnd<Lifecycle> lifecycle_client,
                                              zx::channel instance_client) {
   auto device = std::make_unique<TestLifecycleDriverChild>(parent, std::move(lifecycle_client));
 
@@ -76,7 +77,7 @@ void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync&
 }
 
 void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
-    zx::channel client, SubscribeToLifecycleCompleter::Sync& completer) {
+    fidl::ServerEnd<Lifecycle> client, SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
   if (lifecycle_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

@@ -9,6 +9,8 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -44,14 +46,16 @@ class LifecycleTest : public zxtest::Test {
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test", &fd));
     ASSERT_GT(fd.get(), 0);
-    ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
-    ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);
+
+    ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.channel().reset_and_get_address()));
+    ASSERT_TRUE(chan_.is_valid());
 
     // Subscribe to the device lifecycle events.
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<Lifecycle>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-    auto result = TestDevice::Call::SubscribeToLifecycle(zx::unowned(chan_), std::move(remote));
+    auto result = TestDevice::Call::SubscribeToLifecycle(chan_, std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
     lifecycle_chan_ = std::move(local);
@@ -60,10 +64,10 @@ class LifecycleTest : public zxtest::Test {
  protected:
   void WaitPreRelease(uint64_t child_id);
 
-  zx::channel chan_;
+  fidl::ClientEnd<TestDevice> chan_;
   IsolatedDevmgr devmgr_;
 
-  zx::channel lifecycle_chan_;
+  fidl::ClientEnd<Lifecycle> lifecycle_chan_;
 };
 
 void LifecycleTest::WaitPreRelease(uint64_t child_id) {
@@ -88,7 +92,7 @@ void LifecycleTest::WaitPreRelease(uint64_t child_id) {
 
   EventHandler event_handler;
   while (!event_handler.removed()) {
-    ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(lifecycle_chan_)).status());
+    ASSERT_OK(event_handler.HandleOneEvent(lifecycle_chan_).status());
   }
   ASSERT_EQ(event_handler.device_id(), child_id);
 }
@@ -98,8 +102,8 @@ TEST_F(LifecycleTest, ChildPreRelease) {
   std::vector<uint64_t> child_ids;
   const uint32_t num_children = 10;
   for (unsigned int i = 0; i < num_children; i++) {
-    auto result = TestDevice::Call::AddChild(zx::unowned(chan_), true /* complete_init */,
-                                             ZX_OK /* init_status */);
+    auto result =
+        TestDevice::Call::AddChild(chan_, true /* complete_init */, ZX_OK /* init_status */);
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
     child_ids.push_back(result->result.response().child_id);
@@ -107,7 +111,7 @@ TEST_F(LifecycleTest, ChildPreRelease) {
 
   // Remove the child devices and check the test device received the pre-release notifications.
   for (auto child_id : child_ids) {
-    auto result = TestDevice::Call::RemoveChild(zx::unowned(chan_), child_id);
+    auto result = TestDevice::Call::RemoveChild(chan_, child_id);
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
 
@@ -119,17 +123,17 @@ TEST_F(LifecycleTest, ChildPreRelease) {
 TEST_F(LifecycleTest, Init) {
   // Add a child device that does not complete its init hook yet.
   uint64_t child_id;
-  auto result = TestDevice::Call::AddChild(zx::unowned(chan_), false /* complete_init */,
-                                           ZX_OK /* init_status */);
+  auto result =
+      TestDevice::Call::AddChild(chan_, false /* complete_init */, ZX_OK /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   child_id = result->result.response().child_id;
 
-  auto remove_result = TestDevice::Call::RemoveChild(zx::unowned(chan_), child_id);
+  auto remove_result = TestDevice::Call::RemoveChild(chan_, child_id);
   ASSERT_OK(remove_result.status());
   ASSERT_FALSE(remove_result->result.is_err());
 
-  auto init_result = TestDevice::Call::CompleteChildInit(zx::unowned(chan_), child_id);
+  auto init_result = TestDevice::Call::CompleteChildInit(chan_, child_id);
   ASSERT_OK(init_result.status());
   ASSERT_FALSE(init_result->result.is_err());
 
@@ -138,8 +142,8 @@ TEST_F(LifecycleTest, Init) {
 }
 
 TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
-  auto result = TestDevice::Call::AddChild(zx::unowned(chan_), true /* complete_init */,
-                                           ZX_OK /* init_status */);
+  auto result =
+      TestDevice::Call::AddChild(chan_, true /* complete_init */, ZX_OK /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   auto child_id = result->result.response().child_id;
@@ -150,7 +154,7 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
   ASSERT_TRUE(fd.get() > 0);
   zx::channel chan;
   fdio_get_service_handle(fd.get(), chan.reset_and_get_address());
-  ASSERT_TRUE(TestDevice::Call::RemoveChild(zx::unowned(chan_), child_id).ok());
+  ASSERT_TRUE(TestDevice::Call::RemoveChild(chan_, child_id).ok());
   zx_signals_t closed;
   ASSERT_OK(chan.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
@@ -159,8 +163,8 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
 }
 
 TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
-  auto result = TestDevice::Call::AddChild(zx::unowned(chan_), true /* complete_init */,
-                                           ZX_OK /* init_status */);
+  auto result =
+      TestDevice::Call::AddChild(chan_, true /* complete_init */, ZX_OK /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   auto child_id = result->result.response().child_id;
@@ -170,17 +174,18 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
       devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child",
       &fd));
   ASSERT_TRUE(fd.get() > 0);
-  zx::channel chan;
-  fdio_get_service_handle(fd.get(), chan.reset_and_get_address());
+  fidl::ClientEnd<File> chan;
+  fdio_get_service_handle(fd.get(), chan.channel().reset_and_get_address());
 
-  ASSERT_TRUE(TestDevice::Call::AsyncRemoveChild(zx::unowned(chan_), child_id).ok());
-  ASSERT_EQ(File::Call::Read(zx::unowned(chan), 10).value().s, ZX_ERR_IO_NOT_PRESENT);
+  ASSERT_TRUE(TestDevice::Call::AsyncRemoveChild(chan_, child_id).ok());
+  ASSERT_EQ(File::Call::Read(chan, 10).value().s, ZX_ERR_IO_NOT_PRESENT);
   fidl::Array<uint8_t, 5> array;
-  ASSERT_EQ(File::Call::Write(zx::unowned(chan), fidl::unowned_vec(array)).value().s,
-            ZX_ERR_IO_NOT_PRESENT);
+  ASSERT_EQ(File::Call::Write(chan, fidl::unowned_vec(array)).value().s, ZX_ERR_IO_NOT_PRESENT);
   int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child", O_RDWR);
   ASSERT_EQ(fd2, -1);
-  ASSERT_EQ(Device::Call::GetClass(zx::unowned(chan)).status(), ZX_ERR_PEER_CLOSED);
+  ASSERT_EQ(
+      Device::Call::GetClass(fidl::UnownedClientEnd<Device>(chan.channel().borrow())).status(),
+      ZX_ERR_PEER_CLOSED);
   struct Epitaph {
     zx_txid_t txid;
     uint8_t flags[3];
@@ -191,23 +196,24 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   constexpr auto kEpitaph = 0xFFFFFFFFFFFFFFFF;
   uint32_t actual_bytes = 0;
   uint32_t actual_handles = 0;
-  ASSERT_OK(chan.read(0, &epitaph, nullptr, sizeof(epitaph), 0, &actual_bytes, &actual_handles));
+  ASSERT_OK(chan.channel().read(0, &epitaph, nullptr, sizeof(epitaph), 0, &actual_bytes,
+                                &actual_handles));
   ASSERT_EQ(actual_bytes, sizeof(epitaph));
   ASSERT_EQ(epitaph.ordinal, kEpitaph);
   ASSERT_EQ(epitaph.error, ZX_ERR_IO_NOT_PRESENT);
 }
 
 TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
-  Controller::Call::ScheduleUnbind(zx::unowned(chan_));
+  Controller::Call::ScheduleUnbind(fidl::UnownedClientEnd<Controller>(chan_.channel().borrow()));
   zx_signals_t closed;
-  ASSERT_OK(chan_.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
+  ASSERT_OK(chan_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
 }
 
 // Tests that the child device is removed if init fails.
 TEST_F(LifecycleTest, FailedInit) {
   uint64_t child_id;
-  auto result = TestDevice::Call::AddChild(zx::unowned(chan_), true /* complete_init */,
+  auto result = TestDevice::Call::AddChild(chan_, true /* complete_init */,
                                            ZX_ERR_BAD_STATE /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());

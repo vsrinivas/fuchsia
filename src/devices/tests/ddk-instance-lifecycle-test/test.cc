@@ -39,31 +39,33 @@ class InstanceLifecycleTest : public zxtest::Test {
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:12:0/instance-test", &fd));
     ASSERT_GT(fd.get(), 0);
-    ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
-    ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);
+    ASSERT_OK(fdio_get_service_handle(fd.release(), device_.channel().reset_and_get_address()));
+    ASSERT_TRUE(device_.is_valid());
   }
 
  protected:
   enum class Event { Open, Close, Unbind, Release };
 
   // Remove the parent, and then close the instance
-  void VerifyPostOpenLifecycleViaRemove(const zx::channel& lifecycle_chan,
-                                        zx::channel instance_client);
+  void VerifyPostOpenLifecycleViaRemove(fidl::UnownedClientEnd<Lifecycle> lifecycle_chan,
+                                        fidl::ClientEnd<InstanceDevice> instance_client);
 
   // Close the instance
-  void VerifyPostOpenLifecycleViaClose(const zx::channel& lifecycle_chan,
-                                       zx::channel instance_client);
+  void VerifyPostOpenLifecycleViaClose(fidl::UnownedClientEnd<Lifecycle> lifecycle_chan,
+                                       fidl::ClientEnd<InstanceDevice> instance_client);
 
-  static void WaitForEvent(const zx::channel& channel, Event event);
-  static bool AreEventsPending(const zx::channel& channel) {
-    return channel.wait_one(ZX_CHANNEL_READABLE, zx::time{}, nullptr) == ZX_OK;
+  static void WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifecycle_client, Event event);
+  static bool AreEventsPending(fidl::UnownedClientEnd<Lifecycle> lifecycle_client) {
+    return zx::unowned_channel(lifecycle_client.channel())
+               ->wait_one(ZX_CHANNEL_READABLE, zx::time{}, nullptr) == ZX_OK;
   }
 
-  zx::channel chan_;
+  fidl::ClientEnd<TestDevice> device_;
   IsolatedDevmgr devmgr_;
 };
 
-void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event expected_event) {
+void InstanceLifecycleTest::WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifecycle_client,
+                                         Event expected_event) {
   class EventHandler : public Lifecycle::SyncEventHandler {
    public:
     explicit EventHandler(Event expected_event) : expected_event_(expected_event) {}
@@ -92,19 +94,20 @@ void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event expec
   };
 
   EventHandler event_handler(expected_event);
-  ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(channel)).status());
+  ASSERT_OK(event_handler.HandleOneEvent(lifecycle_client).status());
   ASSERT_TRUE(event_handler.ok());
 }
 
-void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(const zx::channel& lifecycle_chan,
-                                                             zx::channel instance_client) {
+void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(
+    fidl::UnownedClientEnd<Lifecycle> lifecycle_chan,
+    fidl::ClientEnd<InstanceDevice> instance_client) {
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Open));
 
-  zx::channel instance_lifecycle_chan, remote;
+  auto endpoints = fidl::CreateEndpoints<Lifecycle>();
+  ASSERT_OK(endpoints.status_value());
+  auto [instance_lifecycle_chan, remote] = *std::move(endpoints);
   {
-    ASSERT_OK(zx::channel::create(0, &instance_lifecycle_chan, &remote));
-    auto result =
-        InstanceDevice::Call::SubscribeToLifecycle(zx::unowned(instance_client), std::move(remote));
+    auto result = InstanceDevice::Call::SubscribeToLifecycle(instance_client, std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
   }
@@ -115,7 +118,7 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(const zx::channel& 
 
   // Request the device begin removal
   {
-    auto result = InstanceDevice::Call::RemoveDevice(zx::unowned(instance_client));
+    auto result = InstanceDevice::Call::RemoveDevice(instance_client);
     ASSERT_OK(result.status());
   }
 
@@ -126,15 +129,16 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(const zx::channel& 
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Release));
 }
 
-void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(const zx::channel& lifecycle_chan,
-                                                            zx::channel instance_client) {
+void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(
+    fidl::UnownedClientEnd<Lifecycle> lifecycle_chan,
+    fidl::ClientEnd<InstanceDevice> instance_client) {
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Open));
 
-  zx::channel instance_lifecycle_chan, remote;
+  auto endpoints = fidl::CreateEndpoints<Lifecycle>();
+  ASSERT_OK(endpoints.status_value());
+  auto [instance_lifecycle_chan, remote] = *std::move(endpoints);
   {
-    ASSERT_OK(zx::channel::create(0, &instance_lifecycle_chan, &remote));
-    auto result =
-        InstanceDevice::Call::SubscribeToLifecycle(zx::unowned(instance_client), std::move(remote));
+    auto result = InstanceDevice::Call::SubscribeToLifecycle(instance_client, std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
   }
@@ -153,24 +157,25 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(const zx::channel& l
 // Test the lifecycle of an instance device that's obtained via fuchsia.io/Open
 TEST_F(InstanceLifecycleTest, NonPipelinedClientClose) {
   // Subscribe to the device lifecycle events.
-  zx::channel lifecycle_chan, remote;
-  ASSERT_OK(zx::channel::create(0, &lifecycle_chan, &remote));
+  auto endpoints = fidl::CreateEndpoints<Lifecycle>();
+  ASSERT_OK(endpoints.status_value());
+  auto [lifecycle_chan, remote] = *std::move(endpoints);
 
-  auto result =
-      TestDevice::Call::CreateDevice(zx::unowned(chan_), std::move(remote), zx::channel{});
+  auto result = TestDevice::Call::CreateDevice(device_, std::move(remote), zx::channel{});
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
   // There shouldn't be any pending events yet
   ASSERT_FALSE(AreEventsPending(lifecycle_chan));
 
-  zx::channel instance_client;
+  fidl::ClientEnd<InstanceDevice> instance_client;
   {
     fbl::unique_fd fd;
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:12:0/instance-test/child", &fd));
     ASSERT_GT(fd.get(), 0);
-    ASSERT_OK(fdio_get_service_handle(fd.release(), instance_client.reset_and_get_address()));
+    ASSERT_OK(
+        fdio_get_service_handle(fd.release(), instance_client.channel().reset_and_get_address()));
   }
 
   ASSERT_NO_FATAL_FAILURES(
@@ -180,14 +185,16 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientClose) {
 // Test the lifecycle of an instance device that's obtained via device_add
 TEST_F(InstanceLifecycleTest, PipelinedClientClose) {
   // Subscribe to the device lifecycle events.
-  zx::channel lifecycle_chan, lifecycle_remote;
-  ASSERT_OK(zx::channel::create(0, &lifecycle_chan, &lifecycle_remote));
+  auto lifecycle_endpoints = fidl::CreateEndpoints<Lifecycle>();
+  ASSERT_OK(lifecycle_endpoints.status_value());
+  auto [lifecycle_chan, lifecycle_remote] = *std::move(lifecycle_endpoints);
 
-  zx::channel instance_client, instance_client_remote;
-  ASSERT_OK(zx::channel::create(0, &instance_client, &instance_client_remote));
+  auto instance_endpoints = fidl::CreateEndpoints<InstanceDevice>();
+  ASSERT_OK(instance_endpoints.status_value());
+  auto [instance_client, instance_client_remote] = *std::move(instance_endpoints);
 
-  auto result = TestDevice::Call::CreateDevice(zx::unowned(chan_), std::move(lifecycle_remote),
-                                               std::move(instance_client_remote));
+  auto result = TestDevice::Call::CreateDevice(device_, std::move(lifecycle_remote),
+                                               instance_client_remote.TakeChannel());
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -198,24 +205,25 @@ TEST_F(InstanceLifecycleTest, PipelinedClientClose) {
 // Test the lifecycle of an instance device that's obtained via fuchsia.io/Open
 TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
   // Subscribe to the device lifecycle events.
-  zx::channel lifecycle_chan, remote;
-  ASSERT_OK(zx::channel::create(0, &lifecycle_chan, &remote));
+  auto endpoints = fidl::CreateEndpoints<Lifecycle>();
+  ASSERT_OK(endpoints.status_value());
+  auto [lifecycle_chan, remote] = *std::move(endpoints);
 
-  auto result =
-      TestDevice::Call::CreateDevice(zx::unowned(chan_), std::move(remote), zx::channel{});
+  auto result = TestDevice::Call::CreateDevice(device_, std::move(remote), zx::channel{});
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
   // There shouldn't be any pending events yet
   ASSERT_FALSE(AreEventsPending(lifecycle_chan));
 
-  zx::channel instance_client;
+  fidl::ClientEnd<InstanceDevice> instance_client;
   {
     fbl::unique_fd fd;
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:12:0/instance-test/child", &fd));
     ASSERT_GT(fd.get(), 0);
-    ASSERT_OK(fdio_get_service_handle(fd.release(), instance_client.reset_and_get_address()));
+    ASSERT_OK(
+        fdio_get_service_handle(fd.release(), instance_client.channel().reset_and_get_address()));
   }
 
   ASSERT_NO_FATAL_FAILURES(
@@ -225,14 +233,16 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
 // Test the lifecycle of an instance device that's obtained via device_add
 TEST_F(InstanceLifecycleTest, PipelinedClientRemoveAndClose) {
   // Subscribe to the device lifecycle events.
-  zx::channel lifecycle_chan, lifecycle_remote;
-  ASSERT_OK(zx::channel::create(0, &lifecycle_chan, &lifecycle_remote));
+  auto lifecycle_endpoints = fidl::CreateEndpoints<Lifecycle>();
+  ASSERT_OK(lifecycle_endpoints.status_value());
+  auto [lifecycle_chan, lifecycle_remote] = *std::move(lifecycle_endpoints);
 
-  zx::channel instance_client, instance_client_remote;
-  ASSERT_OK(zx::channel::create(0, &instance_client, &instance_client_remote));
+  auto instance_endpoints = fidl::CreateEndpoints<InstanceDevice>();
+  ASSERT_OK(instance_endpoints.status_value());
+  auto [instance_client, instance_client_remote] = *std::move(instance_endpoints);
 
-  auto result = TestDevice::Call::CreateDevice(zx::unowned(chan_), std::move(lifecycle_remote),
-                                               std::move(instance_client_remote));
+  auto result = TestDevice::Call::CreateDevice(device_, std::move(lifecycle_remote),
+                                               instance_client_remote.TakeChannel());
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
