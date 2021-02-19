@@ -177,6 +177,19 @@ TEST_F(KernelStatsGetInfoTest, KmemStatsExtended) {
   zx_paddr_t addr;
   ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, zx_system_get_page_size(), &addr, 1, &pmt));
 
+  zx::vmo vmo_locked, vmo_unlocked;
+  const size_t kLockedSize = 3 * zx_system_get_page_size();
+  const size_t kUnlockedSize = 5 * zx_system_get_page_size();
+  ASSERT_OK(zx::vmo::create(kLockedSize, ZX_VMO_DISCARDABLE, &vmo_locked));
+  ASSERT_OK(zx::vmo::create(kUnlockedSize, ZX_VMO_DISCARDABLE, &vmo_unlocked));
+
+  EXPECT_OK(vmo_locked.op_range(ZX_VMO_OP_TRY_LOCK, 0, kLockedSize, nullptr, 0));
+  EXPECT_OK(vmo_locked.op_range(ZX_VMO_OP_COMMIT, 0, kLockedSize, nullptr, 0));
+
+  EXPECT_OK(vmo_unlocked.op_range(ZX_VMO_OP_TRY_LOCK, 0, kUnlockedSize, nullptr, 0));
+  EXPECT_OK(vmo_unlocked.op_range(ZX_VMO_OP_COMMIT, 0, kUnlockedSize, nullptr, 0));
+  EXPECT_OK(vmo_unlocked.op_range(ZX_VMO_OP_UNLOCK, 0, kUnlockedSize, nullptr, 0));
+
   zx_info_kmem_stats_extended_t buffer;
   size_t actual, avail;
 
@@ -209,9 +222,9 @@ TEST_F(KernelStatsGetInfoTest, KmemStatsExtended) {
   EXPECT_LE(buffer.vmo_pager_oldest_bytes, buffer.vmo_pager_total_bytes);
   EXPECT_LE(buffer.vmo_pager_oldest_bytes + buffer.vmo_pager_newest_bytes,
             buffer.vmo_pager_total_bytes);
-  // Discardable counters are currently unimplemented.
-  EXPECT_EQ(buffer.vmo_discardable_locked_bytes, 0);
-  EXPECT_EQ(buffer.vmo_discardable_unlocked_bytes, 0);
+  // We should see the locked and unlocked pages we created here. There could be more in the system.
+  EXPECT_GE(buffer.vmo_discardable_locked_bytes, kLockedSize);
+  EXPECT_GE(buffer.vmo_discardable_unlocked_bytes, kUnlockedSize);
 
   ASSERT_OK(pmt.unpin());
 }

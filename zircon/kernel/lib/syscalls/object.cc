@@ -718,14 +718,15 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // Populate additional stats for the ZX_INFO_KMEM_STATS_EXTENDED topic, that are more
       // expensive to compute than ZX_INFO_KMEM_STATS.
-      PageQueues::PagerCounts counts = pmm_page_queues()->GetPagerQueueCounts();
-      stats_ext.vmo_pager_total_bytes = counts.total * PAGE_SIZE;
-      stats_ext.vmo_pager_newest_bytes = counts.newest * PAGE_SIZE;
-      stats_ext.vmo_pager_oldest_bytes = counts.oldest * PAGE_SIZE;
+      PageQueues::PagerCounts pager_counts = pmm_page_queues()->GetPagerQueueCounts();
+      stats_ext.vmo_pager_total_bytes = pager_counts.total * PAGE_SIZE;
+      stats_ext.vmo_pager_newest_bytes = pager_counts.newest * PAGE_SIZE;
+      stats_ext.vmo_pager_oldest_bytes = pager_counts.oldest * PAGE_SIZE;
 
-      // Unimplemented.
-      stats_ext.vmo_discardable_locked_bytes = 0;
-      stats_ext.vmo_discardable_unlocked_bytes = 0;
+      VmCowPages::DiscardablePageCounts discardable_counts =
+          VmCowPages::DebugDiscardablePageCounts();
+      stats_ext.vmo_discardable_locked_bytes = discardable_counts.locked * PAGE_SIZE;
+      stats_ext.vmo_discardable_unlocked_bytes = discardable_counts.unlocked * PAGE_SIZE;
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, stats_ext);
     }
