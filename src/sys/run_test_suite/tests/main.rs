@@ -22,7 +22,13 @@ macro_rules! assert_output {
         let mut output = from_utf8(&$output)
             .expect("we should not get utf8 error.")
             .split("\n")
-            .filter(|x| !x.starts_with("[output - "))
+            .filter(|x| {
+                let is_output = x.starts_with("[output - ");
+                // TODO(fxbug.dev/61180): once debug data routing is fixed, this log should be gone.
+                let is_debug_data_error =
+                    x.contains("No capability available at path /svc/fuchsia.debugdata.DebugData");
+                !(is_output || is_debug_data_error)
+            })
             .map(|line| log_timestamp_re.replace_all(line, "[TIMESTAMP]"))
             .collect::<Vec<_>>();
 
