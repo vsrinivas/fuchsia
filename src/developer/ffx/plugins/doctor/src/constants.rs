@@ -26,7 +26,7 @@ pub const NO_TARGETS_FOUND_SHORT: &str = "No targets found. ";
 pub const NO_TARGETS_FOUND_EXTENDED: &str = "No targets found. Make sure your devices are connected and running and try again in a few seconds.
 If this persists after verifying your device's connection, please file a bug at the link below and include 1) all output above and 2) device syslog if available.";
 pub const TARGET_CHOICE_HELP: &str =
-    "To choose a different target, use `fx ffx --target \"<nodename>\" doctor`";
+    "To choose a different target, use `ffx --target \"<nodename>\" doctor`";
 pub const TARGET_SUMMARY: &str = "Target summary:";
 pub const CONNECTING_TO_RCS: &str = "Attempting to get an RCS connection...";
 pub const COMMUNICATING_WITH_RCS: &str = "Attempting to communicate with RCS...";

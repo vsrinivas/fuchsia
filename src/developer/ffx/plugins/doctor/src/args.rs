@@ -9,38 +9,48 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "doctor",
-    description = "Run common checks for the ffx tool and host environment"
+    description = "Run common checks for the ffx tool and host environment",
+    example = "To run diagnostics:
+
+    $ ffx doctor
+
+To capture the output and additional logs:
+
+    $ ffx doctor --record
+
+By default, this outputs the zip in the current directory.
+
+To override output dir:
+
+    $ ffx doctor --record --output-dir /tmp/ffx",
+    note = "The `doctor` subcommand automatically attempts to repair common target
+interaction issues and provides useful diagnostic information to the user.
+
+By default, running `ffx doctor` attempts to establish a connection with
+the daemon, and restarts the daemon if there is no connection. The default
+`retry_count` is '3' and the default 'retry_delay` is '2000' milliseconds."
 )]
 pub struct DoctorCommand {
+    #[argh(switch, description = "generates an output zip file with logs")]
+    pub record: bool,
+
     #[argh(
         option,
         default = "3",
-        description = "number of times to retry failed connection attempts."
+        description = "number of times to retry failed connection attempts"
     )]
     pub retry_count: usize,
 
     #[argh(
         option,
         default = "2000",
-        description = "timeout delay when attempting to connect to the daemon or RCS"
+        description = "timeout delay in ms during connection attempt"
     )]
     pub retry_delay: u64,
 
-    #[argh(
-        switch,
-        description = "if true, forces a daemon restart, even if the connection appears to be working"
-    )]
-    pub force_daemon_restart: bool,
+    #[argh(switch, description = "force restart the daemon, even if the connection is working")]
+    pub restart_daemon: bool,
 
-    #[argh(
-        switch,
-        description = "if true, generates an output zip file that can be attached to a monorail issue"
-    )]
-    pub record: bool,
-
-    #[argh(
-        option,
-        description = "sets the output directory for doctor records. Only valid when --record is provided. Defaults to the current directory"
-    )]
-    pub record_output: Option<String>,
+    #[argh(option, description = "override the default output directory for doctor records")]
+    pub output_dir: Option<String>,
 }

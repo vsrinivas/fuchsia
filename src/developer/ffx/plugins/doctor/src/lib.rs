@@ -268,13 +268,12 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         );
         println!("  ffx config set log.enabled true");
         println!("You will then need to restart the ffx daemon:");
-        println!("  ffx doctor --force-daemon-restart\n\n");
+        println!("  ffx doctor --force-restart\n\n");
         sleep(Duration::from_millis(10000)).await;
     }
 
     let log_root: PathBuf = get("log.dir").await?;
-    let output_dir =
-        cmd.record_output.map(|s| PathBuf::from(s)).unwrap_or(std::env::current_dir()?);
+    let output_dir = cmd.output_dir.map(|s| PathBuf::from(s)).unwrap_or(std::env::current_dir()?);
 
     if !output_dir.is_dir() {
         ffx_bail!(
@@ -292,7 +291,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         &target_str,
         cmd.retry_count,
         delay,
-        cmd.force_daemon_restart,
+        cmd.restart_daemon,
         build_info().build_version,
         DoctorRecorderParameters {
             record: cmd.record,
@@ -312,7 +311,7 @@ async fn doctor(
     target_str: &str,
     retry_count: usize,
     retry_delay: Duration,
-    force_daemon_restart: bool,
+    restart_daemon: bool,
     build_version_string: Option<String>,
     record_params: DoctorRecorderParameters,
 ) -> Result<()> {
@@ -322,7 +321,7 @@ async fn doctor(
         target_str,
         retry_count,
         retry_delay,
-        force_daemon_restart,
+        restart_daemon,
         build_version_string,
     )
     .await?;
@@ -353,7 +352,7 @@ async fn execute_steps(
     target_str: &str,
     retry_count: usize,
     retry_delay: Duration,
-    force_daemon_restart: bool,
+    restart_daemon: bool,
     build_version_string: Option<String>,
 ) -> Result<()> {
     step_handler.output_step(StepType::Started(build_version_string)).await?;
@@ -365,7 +364,7 @@ async fn execute_steps(
         if i > 0 {
             daemon_manager.kill_all().await?;
             step_handler.output_step(StepType::AttemptStarted(i, retry_count)).await?;
-        } else if force_daemon_restart {
+        } else if restart_daemon {
             step_handler.output_step(StepType::DaemonForceRestart).await?;
             daemon_manager.kill_all().await?;
         }
@@ -1385,7 +1384,7 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_single_try_daemon_running_force_restart() {
+    async fn test_single_try_daemon_running_restart_daemon() {
         let fake = FakeDaemonManager::new(
             vec![false],
             vec![Ok(true), Ok(false)],
