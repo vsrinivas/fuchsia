@@ -10,6 +10,7 @@ import 'package:ermine/src/utils/presenter.dart';
 import 'package:ermine/src/utils/suggestion.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
@@ -60,10 +61,12 @@ void main() {
     final viewRef = MockViewRef();
     final viewRefInstalled = MockViewRefInstalled();
     final childViewConnection = MockChildViewConnection();
+    final viewController = MockViewControllerImpl();
 
     when(viewRef.reference).thenReturn(eventPair);
     when(eventPair.duplicate(ZX.RIGHT_SAME_RIGHTS)).thenReturn(eventPairDup);
     when(eventPairDup.isValid).thenReturn(true);
+    when(viewController.stateChanged).thenReturn(ValueNotifier<bool>(true));
 
     bool onChangeCalled = false;
     final completer = Completer<bool>();
@@ -73,6 +76,7 @@ void main() {
     )
       ..viewRef = viewRef
       ..childViewConnectionNotifier.value = childViewConnection
+      ..viewController = viewController
       ..focus(viewRefInstalled);
 
     expect(onChangeCalled, true);

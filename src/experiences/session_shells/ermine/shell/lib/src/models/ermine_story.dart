@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:fidl_fuchsia_session/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
@@ -13,8 +15,6 @@ import 'package:zircon/zircon.dart';
 
 import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
-
-const double kFrameTime60FpsInMilliseconds = 16.3333;
 
 /// A function which can be used to launch the suggestion.
 typedef LaunchSuggestion = Future<void> Function(
@@ -178,27 +178,63 @@ class ErmineStory {
       return;
     }
 
-    // TODO(60528): Wait until child view is connected to view tree. Until the
-    // view connected event is plumbed to [ChildViewConnection], we use a flaky
-    // delay of 3 frames before attempting to request focus for the child view.
-    await Future.delayed(Duration(
-      milliseconds: (kFrameTime60FpsInMilliseconds * 3).toInt(),
-    ));
-
-    final viewRefService = viewRefInstalled ?? ViewRefInstalledProxy();
-    if (viewRefInstalled == null) {
-      StartupContext.fromStartupInfo()
-          .incoming
-          .connectToService(viewRefService);
+    if (!await _isInstalled(viewRefInstalled)) {
+      return;
     }
+
+    if (!await _isConnected()) {
+      return;
+    }
+
     try {
-      // Wait for [viewRef] to be attached to the view tree.
+      await childViewConnection.requestFocus();
+    } on Exception catch (e) {
+      log.shout('Failed to request focus for $url is installed: $e');
+    } on Error catch (e) {
+      log.shout('Failed to request focus for $url is installed: $e');
+    }
+  }
+
+  // Uses [ViewRefInstalled] service to check if child view is attached to the
+  // scene graph.
+  Future<bool> _isInstalled([ViewRefInstalledProxy viewRefInstalled]) async {
+    try {
+      final viewRefService = viewRefInstalled ?? ViewRefInstalledProxy();
+      if (viewRefInstalled == null) {
+        StartupContext.fromStartupInfo()
+            .incoming
+            .connectToService(viewRefService);
+      }
       final eventPair = viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS);
       assert(eventPair.isValid);
-
       await viewRefService.watch(ViewRef(reference: eventPair));
-      // ignore: unawaited_futures
-      childViewConnection.requestFocus();
-    } on Exception catch (_) {}
+      return true;
+    } on Exception catch (e) {
+      log.shout('Failed to check if viewRef for $url is installed: $e');
+    }
+    return false;
+  }
+
+  // Returns true if child view is connected to the scene graph and rendering.
+  Future<bool> _isConnected() async {
+    final completer = Completer<bool>();
+    void onChange() async {
+      viewController.stateChanged.removeListener(onChange);
+      if (!completer.isCompleted) {
+        completer.complete(true);
+      }
+    }
+
+    viewController.stateChanged.addListener(onChange);
+
+    // Some views (for ex: terminal) may not fire state change. In that case we
+    // fallback to timer.
+    Timer(Duration(milliseconds: 300), () {
+      if (!completer.isCompleted) {
+        completer.complete(true);
+      }
+    });
+
+    return completer.future;
   }
 }

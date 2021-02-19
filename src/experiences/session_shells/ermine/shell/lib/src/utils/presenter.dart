@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:fidl_fuchsia_session/fidl_async.dart' as fidl;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fidl/fidl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 
 import 'suggestion.dart';
@@ -67,6 +68,7 @@ class PresenterService extends fidl.GraphicalPresenter {
         viewHolderToken,
         viewRef: viewSpec.viewRef,
         usePlatformView: true,
+        onStateChanged: (_, state) => viewController.stateChanged.value = state,
       );
       onPresent(
         connection,
@@ -83,6 +85,9 @@ class PresenterService extends fidl.GraphicalPresenter {
 }
 
 class ViewControllerImpl extends fidl.ViewController {
+  /// Notifier for view state change callback.
+  ValueNotifier stateChanged = ValueNotifier(null);
+
   final _binding = fidl.ViewControllerBinding();
   final StreamController<void> _onPresentedStreamController =
       StreamController.broadcast();
