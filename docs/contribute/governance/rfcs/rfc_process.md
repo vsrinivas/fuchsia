@@ -1,10 +1,12 @@
-# Fuchsia RFC process
+# Fuchsia RFC Process
 
 The Fuchsia RFC process has evolved from the following RFCs:
 
 [RFC-0001: Fuchsia Request for Comments process](0001_rfc_process.md)
 
 [RFC-0006: Addendum of the RFC process for Zircon](0006_addendum_to_rfc_process_for_zircon.md)
+
+[RFC-0067: Additions to Fuchsia RFC process](0067_rfc_process_additions.md)
 
 This page collates the above RFCs and captures the current process.
 
@@ -158,6 +160,12 @@ working on the problem or might have some background or context about the
 problem that would be useful to you. The earlier you discover this information,
 the better.
 
+Please note that the idea does not need to be polished before starting this step.
+It’s best to start socializing as early as possible to receive feedback on
+whether the idea is feasible and if the direction is correct. This can potentially
+save the authors time and effort in case the idea does not materialize or if
+the direction needs to change significantly.
+
 Compared to the remaining steps in the process, this step is relatively
 informal. This document does not contain a rigorous description of how to
 socialize your idea. Socializing technical ideas is a skill unto itself.
@@ -176,6 +184,10 @@ able to point you in a good direction.
 > FTP and CTP process, who have good background and context about these
 > processes.
 
+*Exit criteria*: None specifically. This is per the author's discretion.
+This step is meant to help the author crystalize the goal(s) and potential solutions.
+If they feel that this is accomplished, then they can proceed to the next step.
+
 #### Step 2: Draft
 
 Once you have gathered all the background and context you can through
@@ -190,12 +202,19 @@ strictly required, the template is designed to guide you towards writing a
 high-quality RFC by prompting you to think through the problem you are trying to
 solve in a semi-structured way.
 
+Any other files that are part of the RFC, diagrams for example, can be added to
+the `resources` directory under a subfolder with the same name as the RFC itself.
+Example:`//docs/contribute/governance/rfcs/resources/<RFC_name>/diagram.png`.
+
 Do not worry about assigning a number to your RFC at this stage. Instead, use
 `NNNN` as a placeholder. For example, the file name should be something like
 `NNNN_my_idea.md`. The RFC will get a number shortly before landing.
 
+
 > *Suggestion.* Consider marking the CL containing your RFC as a
 > "work-in-progress" until you are ready for feedback.
+
+*Exit criteria*: CL containing your RFC is created.
 
 #### Step 3: Iterate
 
@@ -207,7 +226,9 @@ stage.
 
 Mechanically, you should invite stakeholders to provide feedback on your RFC by
 adding them to the "Reviewers" or "CC" fields in the CL, as you would for a
-normal code review. The stakeholders should provide you feedback by leaving
+normal code review. In addition, you may email your CL to
+eng-council-discuss@fuchsia.dev soliciting additional feedback.
+The stakeholders should provide you feedback by leaving
 comments on your RFC in the code review tool.
 
 If the discussion is too complex for the code review tool, consider scheduling a
@@ -231,16 +252,34 @@ withdrawn RFC as a starting point rather than `TEMPLATE.md`. Please confer with
 the original authors to determine whether they wish to continue to have their
 names associated with the new incarnation of the RFC.
 
+At the end of this step, provide a list of stakeholders and their roles to
+eng-council@fuchsia.dev. Eng Council will provide confirmation on the stakeholders
+identified, and will suggest any changes, if needed. Iterate with any new
+stakeholders identified.
+
+*Note to reviewers:* The RFC process is meant to encourage a variety of
+perspectives and vibrant discussions. Often, giving negative feedback in a public
+forum might be difficult. If needed, reviewers can reach out to their leads,
+peers or Eng Council to help them formulate the feedback so it can be delivered
+effectively in the CL.
+
 > *Suggestion.* If you are interested in RFCs, consider configuring the Gerrit
 > Code Review tool to [send you an email > notification](https://gerrit-review.googlesource.com/Documentation/user-notify.html)
 > when a CL modifies the `//docs/contribute/governance/rfcs` directory.
 
-#### Step 4: Approve
+*Exit criteria:* All stakeholders identified and approved by Eng Council; feedback
+solicited and incorporated.
 
-Once the iterations on the RFC are converging, you are ready to move to the
-approval stage, in which the stakeholders sign-off on the RFC by setting the
-Code-Review flag to either +1 or +2. Typically, stakeholders who need to approve
-a CL (i.e., whose sign-off is required for the RFC to move forward) should
+#### Step 4: Last call
+
+Once the iterations on the RFC are converging, the author must email
+eng-council@fuchsia.dev requesting them to move the RFC's status to last call.
+An Eng Council member will send an email to all stakeholders and
+eng-council-discuss@fuchsia.dev to solicit any final feedback before moving to
+the decision step. The RFC will be open for feedback for the next 7 calendar days.
+
+Typically, stakeholders who need to approve a CL (i.e., whose sign-off
+is required for the RFC to move forward) should
 sign-off with a +2 whereas stakeholders whose approval is not required should
 sign-off with a +1, but all stakeholders are welcome to sign-off with a +2 if
 they wish to express their enthusiasm for the RFC.
@@ -261,6 +300,8 @@ After all the stakeholders have weighed in with their Code-Review flags, send an
 email to eng-council@fuchsia.dev to prompt the Eng Council to decide whether to
 accept your RFC.
 
+*Exit criteria:* Feedback provided by all stakeholders; all feedback addressed.
+
 #### Step 5: Submit
 
 If the project decides to accept your RFC, a member of the Eng Council will
@@ -268,13 +309,15 @@ comment on your CL stating that the RFC is accepted and will assign the RFC a
 number, typically the next available number in the series. If there are any -1
 or -2 Code-Review flags, the Eng Council will explicitly clear each flag by
 summarizing the objection and by describing why the RFC is moving forward
-despite the objection.
+despite the objection. Eng Council will indicate if any additional information
+needs to be documented in your RFC, such as rationale for a different approach
+or tradeoffs being made.
 
 If the project decides to reject your RFC, a member of the Eng Council will
-comment on your CL stating that the RFC is rejected and providing a rationale
-for the rejection.  Rejected RFCs are valuable engineering artifacts. The Eng
-Council will work with the RFC Authors to land a version of the RFC that is
-marked as rejected and incorporates the rationale.
+comment on your CL stating that the RFC is rejected, provide a rationale
+for the rejection and will assign the RFC a number. Rejected RFCs are valuable
+engineering artifacts. The Eng Council will work with the RFC Authors to land
+a version of the RFC that is marked as rejected and incorporates the rationale.
 
 You should upload a new patchset of your RFC with the assigned number, both in
 the title of the RFC and in the filename. If your RFC is approved and requires
@@ -285,6 +328,9 @@ The Eng Council will then mark your CL Code-Review +2 and you can land your RFC!
 
 *Congratulations! You have contributed a valuable engineering artifact to the
 project!*
+
+*Exit criteria:* RFC number assigned; any applicable rationale, tradeoffs and
+Eng Council feedback incorporated; RFC merged.
 
 ### How decisions are made
 
@@ -305,6 +351,30 @@ following factors:
 
 Decisions made by the Eng Council can be escalated to the governing authority
 for the project.
+
+### Process to amend RFCs
+
+An existing RFC can be amended if the following criteria are met:
+
+ * Clarifications on what was already approved.
+ * Mechanical amendments such as updating links, documentation, usage, etc.
+ * Any improvement or minor changes in design discovered later, for example,
+ during implementation.
+
+For changes in design, please capture what the original design goals were, and why
+and how they changed.
+
+For any significant changes in design, please submit a new RFC.
+
+ * In the new RFC, please reference the original RFC(s) and explicitly call out the
+ type of change in the title, e.g., Addendum.
+ * If the design in the original RFC is being deprecated, amend the original RFC
+  to call this out and reference the new RFC.
+ * If there are multiple RFCs that make changes to the same area, create a new RFC
+ compiling the existing RFCs. Please also amend the existing RFCs to reference the new one.
+
+If the RFC process is being updated, please also update the [RFC process page]
+(rfc_process.md).
 
 ## Documentation
 

@@ -7,7 +7,7 @@ for making project-wide, technical decisions. For example, the RFC process can
 be used to evolve the project roadmap and the system architecture.
 
 The RFC process evolves over time, and can be read here in its [detailed current form]
-(current_rfc_process.md). It is also summarized below.
+(rfc_process.md). It is also summarized below.
 
 ## Summary of the process
 

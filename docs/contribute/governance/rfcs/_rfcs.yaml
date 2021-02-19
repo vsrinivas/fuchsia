@@ -249,6 +249,19 @@
   submitted: '2021-01-08'
   reviewed: '2021-02-10'
 
+- name: 'RFC-0067'
+  title: 'Additions to Fuchsia RFC process'
+  short_description: 'Introducing "Last Call" step; calling out exit criteria; adding process to amend an RFC.'
+  authors: ['vaas@google.com']
+  file: '0067_rfc_process_additions.md'
+  area: ['Governance']
+  issue: []
+  gerrit_change_id: ['458183']
+  status: 'Accepted'
+  reviewers: ['shayba@google.com', 'abarth@google.com', 'aaronwood@google.com', 'fmil@google.com', 'pascallouis@google.com', 'jamesr@google.com']
+  submitted: '2020-12-14'
+  reviewed: '2020-2-17'
+
 - name: 'RFC-0069'
   title: 'Standard I/O in ELF Runner'
   short_description: 'Mechanism for ELF components to forward stdout and stderr streams to the LogSink service.'

@@ -8,8 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/contribute/governance/rfcs
-- title: "Currrent RFC Process"
-  path: /docs/contribute/governance/rfcs/current_rfc_process.md
+- title: "RFC Process"
+  path: /docs/contribute/governance/rfcs/rfc_process.md
 - title: "Creating an RFC"
   path: /docs/contribute/governance/rfcs/create_rfc.md
 - title: "RFC template"
@@ -49,6 +49,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0016_boot_time_page_sizes.md
 - title: "RFC-0017 - The FTP Process is dead, long live the RFC Process!"
   path: /docs/contribute/governance/rfcs/0017_folding_ftp_into_rfc.md
+- title: "RFC-0067: Additions to Fuchsia RFC process"
+  path: /docs/contribute/governance/rfcs/0067_rfc_process_additions.md
 - title: "RFC-0068: Page Eviction Hints"
   path: /docs/contribute/governance/rfcs/0068_eviction_hints.md
 - title: "RFC-0069 - Standard I/O in ELF Runner"
