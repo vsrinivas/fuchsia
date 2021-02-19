@@ -6,7 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/io.h>
@@ -17,6 +17,8 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fsl {
 
@@ -51,14 +53,13 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
     return nullptr;
   }
   fdio_cpp::FdioCaller caller{std::move(dir_fd)};
-  uint32_t mask =
-      fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0, server.release(), &status);
-  if (io_status != ZX_OK || status != ZX_OK) {
+  uint32_t mask = fio::WATCH_MASK_ADDED | fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE;
+  auto result =
+      fio::Directory::Call::Watch(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()),
+                                  mask, 0, zx::channel(server.release()));
+  if (result.status() != ZX_OK || result->s != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create device watcher for " << directory_path
-                   << ", status=" << status;
+                   << ", status=" << result->s;
     return nullptr;
   }
 
@@ -77,7 +78,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;
-    uint8_t buf[fuchsia_io_MAX_BUF];
+    uint8_t buf[fio::MAX_BUF];
     zx_status_t status = dir_watch_.read(0, buf, nullptr, sizeof(buf), 0, &size, nullptr);
     FX_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
 
@@ -89,9 +90,9 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
       if (size < (namelen + 2u)) {
         break;
       }
-      if ((event == fuchsia_io_WATCH_EVENT_ADDED) || (event == fuchsia_io_WATCH_EVENT_EXISTING)) {
+      if ((event == fio::WATCH_EVENT_ADDED) || (event == fio::WATCH_EVENT_EXISTING)) {
         exists_callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg), namelen));
-      } else if (event == fuchsia_io_WATCH_EVENT_IDLE) {
+      } else if (event == fio::WATCH_EVENT_IDLE) {
         idle_callback_();
         // Only call the idle callback once.  In case there is some captured
         // context, remove the function, or rather set it to an empty function,
