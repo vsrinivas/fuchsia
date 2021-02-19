@@ -8,9 +8,9 @@ import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("test") {
-  output_name = "bind-debugger-test"
+  output_name = "bind-test"
 
-  sources = [ "bind-debugger-test.cc" ]
+  sources = [ "bind-test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -33,11 +33,11 @@ test("test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("bind-debugger-test") {
-  executable_path = "test/bind-debugger-test"
+isolated_devmgr_unittest_package("bind-test") {
+  executable_path = "test/bind-test"
 
   deps = [
-    ":bind-debugger-test-driver",
+    ":bind-test-driver",
     ":test",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
@@ -45,14 +45,14 @@ isolated_devmgr_unittest_package("bind-debugger-test") {
 }
 
 bind_rules("bind") {
-  rules = "bind-debugger-test.bind"
-  output = "bind-debugger-test-bind.h"
+  rules = "bind-test.bind"
+  output = "bind-test-bind.h"
   disable_autobind = true
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("bind-debugger-test-driver") {
-  output_name = "bind-debugger-test"
+driver_module("bind-test-driver") {
+  output_name = "bind-test"
   test = true
   configs += [
     "//build/config:all_source",
@@ -61,7 +61,7 @@ driver_module("bind-debugger-test-driver") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [ "bind-debugger-test-driver.cc" ]
+  sources = [ "bind-test-driver.cc" ]
   deps = [
     ":bind",
     "//src/devices/lib/driver",

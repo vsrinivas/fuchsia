@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
-use bind_debugger as bind;
-use bind_debugger::encode_bind_program_v1 as bind_v1;
-use bind_debugger::instruction::DeviceProperty;
+use bind::encode_bind_program_v1 as bind_v1;
+use bind::instruction::DeviceProperty;
 use fidl_fuchsia_driver_framework as fdf;
 use fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream};
 use fuchsia_async as fasync;

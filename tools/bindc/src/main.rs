@@ -5,12 +5,12 @@
 //! A Fuchsia Driver Bind Program compiler
 
 use anyhow::{anyhow, Context, Error};
-use bind_debugger::compiler::{
+use bind::compiler::{
     self, encode_to_bytecode, BindProgram, SymbolicInstruction, SymbolicInstructionInfo,
 };
-use bind_debugger::encode_bind_program_v1::encode_to_string_v1;
-use bind_debugger::encode_bind_program_v2::encode_to_string_v2;
-use bind_debugger::{bind_library, linter, offline_debugger, test};
+use bind::encode_bind_program_v1::encode_to_string_v1;
+use bind::encode_bind_program_v2::encode_to_string_v2;
+use bind::{bind_library, linter, offline_debugger, test};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt::Write;

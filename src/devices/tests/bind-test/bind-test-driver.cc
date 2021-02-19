@@ -5,7 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include "src/devices/tests/bind-debugger-test/bind-debugger-test-bind.h"
+#include "src/devices/tests/bind-test/bind-test-bind.h"
 
 static zx_device_t* dev = NULL;
 

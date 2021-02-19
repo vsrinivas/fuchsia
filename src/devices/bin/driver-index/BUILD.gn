@@ -24,7 +24,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
-    "//src/devices/bind/debugger:lib",
+    "//src/devices/lib/bind:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

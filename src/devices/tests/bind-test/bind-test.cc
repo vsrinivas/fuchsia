@@ -17,12 +17,12 @@
 
 const std::string kDevPrefix = "/dev/";
 const std::string kDriverTestDir = "/boot/driver/test";
-const std::string kDriverLibname = "bind-debugger-test.so";
+const std::string kDriverLibname = "bind-test.so";
 const std::string kChildDeviceName = "child";
 
 using devmgr_integration_test::IsolatedDevmgr;
 
-class BindDebuggerTest : public testing::Test {
+class BindCompilerTest : public testing::Test {
  protected:
   void SetUp() override {
     auto args = IsolatedDevmgr::DefaultArgs();
@@ -93,7 +93,7 @@ class BindDebuggerTest : public testing::Test {
 };
 
 // Check that calling GetBindProgram with an invalid driver path returns ZX_ERR_NOT_FOUND.
-TEST_F(BindDebuggerTest, InvalidDriver) {
+TEST_F(BindCompilerTest, InvalidDriver) {
   fuchsia::device::manager::BindDebugger_GetBindProgram_Result result;
   ASSERT_EQ(bind_debugger_->GetBindProgram("abc", &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
@@ -101,7 +101,7 @@ TEST_F(BindDebuggerTest, InvalidDriver) {
 }
 
 // Get the bind program of the test driver and check that it has the expected instructions.
-TEST_F(BindDebuggerTest, ValidDriver) {
+TEST_F(BindCompilerTest, ValidDriver) {
   fuchsia::device::manager::BindDebugger_GetBindProgram_Result result;
   ASSERT_EQ(bind_debugger_->GetBindProgram(driver_libpath_, &result), ZX_OK);
   ASSERT_TRUE(result.is_response());
@@ -121,7 +121,7 @@ TEST_F(BindDebuggerTest, ValidDriver) {
 }
 
 // Check that calling GetDeviceProperties with an invalid device path returns ZX_ERR_NOT_FOUND.
-TEST_F(BindDebuggerTest, InvalidDevice) {
+TEST_F(BindCompilerTest, InvalidDevice) {
   fuchsia::device::manager::BindDebugger_GetDeviceProperties_Result result;
   ASSERT_EQ(bind_debugger_->GetDeviceProperties("abc", &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
@@ -129,7 +129,7 @@ TEST_F(BindDebuggerTest, InvalidDevice) {
 }
 
 // Get the properties of the test driver's child device and check that they are as expected.
-TEST_F(BindDebuggerTest, ValidDevice) {
+TEST_F(BindCompilerTest, ValidDevice) {
   std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
 
   fuchsia::device::manager::BindDebugger_GetDeviceProperties_Result result;

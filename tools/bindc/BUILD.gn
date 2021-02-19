@@ -16,7 +16,7 @@ if (host_toolchain == current_toolchain) {
     test_environments = [ host_env ]
 
     deps = [
-      "//src/devices/bind/debugger:lib",
+      "//src/devices/lib/bind:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:structopt",
     ]

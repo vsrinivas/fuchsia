@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/bind_debugger"
+        "binary": "bin/bind"
     },
     "sandbox": {
         "services": [

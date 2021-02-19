@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 
 group("bind") {
-  deps = [ "debugger" ]
+  deps = [ "//src/devices/lib/bind:bind" ]
 }
