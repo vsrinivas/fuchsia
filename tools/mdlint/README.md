@@ -74,7 +74,7 @@ reference, both a link's test and its cross reference, or the start of a cross
 reference definition.
 
 Implementation wise, the recognition work is done in the `recognizer` which
-bridges the [`lintRuleOverTokens` rule](#rules) to a [`lintRuleOverEvents`
+bridges the [`LintRuleOverTokens` rule](#rules) to a [`LintRuleOverEvents`
 rule](#rule).
 
 ### Rules {#rules}
@@ -110,16 +110,30 @@ includes:
 
 ### Defining a new rule
 
-The convention to define a new rule is to follow the pattern:
+Each rule should be defined in its own file named `the_rule.go`. The convention
+is to follow the pattern:
 
 ```go
+package rules
+
+import (
+	"go.fuchsia.dev/fuchsia/tools/mdlint/core"
+)
+
+func init() {
+    // or core.RegisterLintRuleOverEvents(...)
+	core.RegisterLintRuleOverTokens(theRuleName, func(reporter core.Reporter) core.LintRuleOverTokens {
+		return &theRule{ ... }
+	})
+}
+
 const theRuleName = "the-rule-name"
 
 type theRule struct {
     ...
 }
 
-var _ lintRuleOverTokens = (*theRule)(nil) // or lintRuleOverEvents
+var _ core.LintRuleOverTokens = (*theRule)(nil) // or core.LintRuleOverEvents
 
 // followed by the implementation
 ```

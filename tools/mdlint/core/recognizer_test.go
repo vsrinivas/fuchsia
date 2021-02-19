@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package core
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ type recognizeLinksTestCase struct {
 }
 
 type recognizerAcc struct {
-	defaultLintRuleOverEvents
+	DefaultLintRuleOverEvents
 
 	xrefUses []string
 	hrefUses []string
@@ -32,22 +32,22 @@ type recognizerAcc struct {
 	tocs     []string
 }
 
-var _ lintRuleOverEvents = (*recognizerAcc)(nil)
+var _ LintRuleOverEvents = (*recognizerAcc)(nil)
 
-func (r *recognizerAcc) onLinkByXref(xref token) {
-	r.xrefUses = append(r.xrefUses, xref.content)
+func (r *recognizerAcc) OnLinkByXref(xref Token) {
+	r.xrefUses = append(r.xrefUses, xref.Content)
 }
 
-func (r *recognizerAcc) onLinkByURL(href token) {
-	r.hrefUses = append(r.hrefUses, href.content)
+func (r *recognizerAcc) OnLinkByURL(href Token) {
+	r.hrefUses = append(r.hrefUses, href.Content)
 }
 
-func (r *recognizerAcc) onXrefDefinition(xref, href token) {
-	r.xrefDefs = append(r.xrefDefs, xrefDef{xref.content, href.content})
+func (r *recognizerAcc) OnXrefDefinition(xref, href Token) {
+	r.xrefDefs = append(r.xrefDefs, xrefDef{xref.Content, href.Content})
 }
 
-func (r *recognizerAcc) onTableOfContents(toc token) {
-	r.tocs = append(r.tocs, toc.content)
+func (r *recognizerAcc) OnTableOfContents(toc Token) {
+	r.tocs = append(r.tocs, toc.Content)
 }
 
 func TestRecognizeLinks(t *testing.T) {
@@ -161,15 +161,15 @@ func TestRecognizeLinks(t *testing.T) {
 				acc       = &recognizerAcc{}
 				r         = recognizer{rule: acc}
 				tokenizer = newTokenizer(newDoc("filename", strings.NewReader(ex.input)))
-				tok       token
+				tok       Token
 				err       error
 			)
-			for tok.kind != tEOF {
+			for tok.Kind != EOF {
 				tok, err = tokenizer.next()
 				if err != nil {
 					t.Fatalf("unexpected tokenization error: %s", err)
 				}
-				r.onNext(tok)
+				r.OnNext(tok)
 			}
 			// xrefUses
 			if len(ex.xrefUses) != len(acc.xrefUses) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package core
 
 import (
 	"bufio"
@@ -13,37 +13,37 @@ import (
 	"unicode"
 )
 
-type tokenKind int
+type TokenKind int
 
 const (
-	_ tokenKind = iota
+	_ TokenKind = iota
 
-	tAnchor
-	tCode
-	tEOF
-	tHeader
-	tLink
-	tList
-	tNewline
-	tSpace
-	tText
-	tURL
+	Anchor
+	Code
+	EOF
+	Header
+	Link
+	List
+	Newline
+	Space
+	Text
+	URL
 )
 
-var tokenKindStrings = map[tokenKind]string{
-	tAnchor:  "tAnchor",
-	tCode:    "tCode",
-	tEOF:     "tEOF",
-	tHeader:  "tHeader",
-	tLink:    "tLink",
-	tList:    "tList",
-	tNewline: "tNewline",
-	tSpace:   "tSpace",
-	tText:    "tText",
-	tURL:     "tURL",
+var tokenKindStrings = map[TokenKind]string{
+	Anchor:  "Anchor",
+	Code:    "Code",
+	EOF:     "EOF",
+	Header:  "Header",
+	Link:    "Link",
+	List:    "List",
+	Newline: "Newline",
+	Space:   "Space",
+	Text:    "Text",
+	URL:     "URL",
 }
 
-func (kind tokenKind) String() string {
+func (kind TokenKind) String() string {
 	if fmt, ok := tokenKindStrings[kind]; ok {
 		return fmt
 	}
@@ -55,13 +55,13 @@ func (kind tokenKind) String() string {
 // the needs of the tokenizer.
 const runesBufLen = 8
 
-// A doc represents a Markdown document.
+// A Doc represents a Markdown document.
 //
 // TODO(fxbug.dev/62964): Avoid duplicating a document's content between the
 // content in the token, and the content in the doc. To support reading the
 // content of a token while a line is being read, we need to either lookup the
 // content in the accumulated lines, or in the accumulated line buffer.
-type doc struct {
+type Doc struct {
 	filename string
 
 	stream *bufio.Reader
@@ -72,15 +72,15 @@ type doc struct {
 	runesBuf           [runesBufLen]rune
 	head, tail, readAt uint
 
-	atEOF bool
+	aEOF bool
 
 	ln, col int
 	buf     bytes.Buffer
 	lines   []string
 }
 
-func newDoc(filename string, stream io.Reader) *doc {
-	return &doc{
+func newDoc(filename string, stream io.Reader) *Doc {
+	return &Doc{
 		filename: filename,
 		stream:   bufio.NewReader(stream),
 		ln:       1,
@@ -88,16 +88,16 @@ func newDoc(filename string, stream io.Reader) *doc {
 	}
 }
 
-func (doc *doc) readRune() (rune, error) {
+func (doc *Doc) readRune() (rune, error) {
 	r, err, fromStream := func() (rune, error, bool) {
 		if doc.readAt == doc.head {
-			if doc.atEOF {
+			if doc.aEOF {
 				return rune(0), io.EOF, false
 			}
 			r, _, err := doc.stream.ReadRune()
 			if err != nil {
 				if err == io.EOF {
-					doc.atEOF = true
+					doc.aEOF = true
 					return rune(0), io.EOF, true
 				}
 			}
@@ -136,7 +136,7 @@ func (doc *doc) readRune() (rune, error) {
 	return r, err
 }
 
-func (doc *doc) peekRune(n int) ([]rune, error) {
+func (doc *Doc) peekRune(n int) ([]rune, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("invalid peek n, was %d", n)
 	}
@@ -156,7 +156,7 @@ func (doc *doc) peekRune(n int) ([]rune, error) {
 	return peek, nil
 }
 
-func (doc *doc) unreadRune() error {
+func (doc *Doc) unreadRune() error {
 	if doc.tail == doc.readAt {
 		return fmt.Errorf("attempting to unread past end of the buffer")
 	}
@@ -172,37 +172,37 @@ func (doc *doc) unreadRune() error {
 	return nil
 }
 
-type token struct {
-	doc     *doc
-	kind    tokenKind
-	content string
+type Token struct {
+	Doc     *Doc
+	Kind    TokenKind
+	Content string
 
 	// ln, col are 1-based
 	ln, col int
 }
 
-func (tok token) String() string {
-	return fmt.Sprintf("%s(%d:%d:%s)", tok.kind, tok.ln, tok.col, strconv.Quote(tok.content))
+func (tok Token) String() string {
+	return fmt.Sprintf("%s(%d:%d:%s)", tok.Kind, tok.ln, tok.col, strconv.Quote(tok.Content))
 }
 
 type tokenizer struct {
-	doc *doc
+	doc *Doc
 
 	buf     bytes.Buffer
 	context struct {
 		ln, col               int
-		lastKind              tokenKind
+		lastKind              TokenKind
 		isHeaderLine          bool
 		onlySpaceSinceNewline bool
 		followingLink         bool
 	}
 }
 
-func newTokenizer(doc *doc) *tokenizer {
+func newTokenizer(doc *Doc) *tokenizer {
 	t := &tokenizer{
 		doc: doc,
 	}
-	t.updateContext(tNewline)
+	t.updateContext(Newline)
 	return t
 }
 
@@ -211,16 +211,16 @@ func (t *tokenizer) updateLnCol() {
 	t.context.col = t.doc.col
 }
 
-func (t *tokenizer) updateContext(kind tokenKind) {
+func (t *tokenizer) updateContext(kind TokenKind) {
 	switch kind {
-	case tNewline:
+	case Newline:
 		t.context.isHeaderLine = false
 		t.context.onlySpaceSinceNewline = true
-	case tHeader:
+	case Header:
 		t.context.isHeaderLine = true
-	case tSpace:
+	case Space:
 		// nothing
-	case tLink:
+	case Link:
 		t.context.followingLink = true
 	default:
 		t.context.onlySpaceSinceNewline = false
@@ -235,12 +235,12 @@ func (t *tokenizer) readBuf() string {
 	return t.buf.String()
 }
 
-func (t *tokenizer) newToken(kind tokenKind) token {
+func (t *tokenizer) newToken(kind TokenKind) Token {
 	content := t.readBuf()
-	tok := token{
-		doc:     t.doc,
-		kind:    kind,
-		content: content,
+	tok := Token{
+		Doc:     t.doc,
+		Kind:    kind,
+		Content: content,
 		ln:      t.context.ln,
 		col:     t.context.col,
 	}
@@ -248,57 +248,57 @@ func (t *tokenizer) newToken(kind tokenKind) token {
 	return tok
 }
 
-func (t *tokenizer) next() (token, error) {
+func (t *tokenizer) next() (Token, error) {
 	t.updateLnCol()
-	tok, err := func() (token, error) {
+	tok, err := func() (Token, error) {
 		r, err := t.doc.readRune()
 		if err != nil {
 			if err == io.EOF {
-				return t.newToken(tEOF), nil
+				return t.newToken(EOF), nil
 			}
-			return token{}, err
+			return Token{}, err
 		}
 		t.buf.WriteRune(r)
 		if r == '\n' {
-			return t.newToken(tNewline), nil
+			return t.newToken(Newline), nil
 		}
 		if r == '[' {
 			if err := t.readUntil(true, func(r rune) bool { return r != ']' }); err != nil {
-				return token{}, err
+				return Token{}, err
 			}
-			return t.newToken(tLink), nil
+			return t.newToken(Link), nil
 		}
 		if r == '(' && t.context.followingLink {
 			if err := t.readUntil(true, func(r rune) bool { return r != ')' }); err != nil {
-				return token{}, err
+				return Token{}, err
 			}
-			return t.newToken(tURL), nil
+			return t.newToken(URL), nil
 		}
-		if r == '#' && t.context.lastKind == tNewline {
+		if r == '#' && t.context.lastKind == Newline {
 			if err := t.readUntil(false, func(r rune) bool { return r == '#' }); err != nil {
-				return token{}, err
+				return Token{}, err
 			}
-			return t.newToken(tHeader), nil
+			return t.newToken(Header), nil
 		}
 		if (r == '*' || r == '-') && t.context.onlySpaceSinceNewline {
 			peek, err := t.doc.peekRune(1)
 			if err != nil {
-				return token{}, err
+				return Token{}, err
 			}
 			if isSeparatorSpace(peek[0]) {
-				return t.newToken(tList), nil
+				return t.newToken(List), nil
 			}
 		}
 		if r == '{' && t.context.isHeaderLine {
 			if err := t.readUntil(true, func(r rune) bool { return r != '}' }); err != nil {
-				return token{}, err
+				return Token{}, err
 			}
-			return t.newToken(tAnchor), nil
+			return t.newToken(Anchor), nil
 		}
 		if r == '`' {
 			peek, err := t.doc.peekRune(2)
 			if err != nil {
-				return token{}, err
+				return Token{}, err
 			}
 			if peek[0] == '`' && peek[1] == '`' {
 				t.buf.WriteString("``")
@@ -319,9 +319,9 @@ func (t *tokenizer) next() (token, error) {
 					}
 					return true
 				}); err != nil {
-					return token{}, err
+					return Token{}, err
 				}
-				return t.newToken(tCode), nil
+				return t.newToken(Code), nil
 			}
 			var nextStopDone bool
 			if err := t.readUntil(false, func(r rune) bool {
@@ -333,24 +333,24 @@ func (t *tokenizer) next() (token, error) {
 				}
 				return true
 			}); err != nil {
-				return token{}, err
+				return Token{}, err
 			}
-			return t.newToken(tCode), nil
+			return t.newToken(Code), nil
 		}
 		if isSeparatorSpace(r) {
 			if err := t.readUntil(false, isSeparatorSpace); err != nil {
-				return token{}, err
+				return Token{}, err
 			}
-			return t.newToken(tSpace), nil
+			return t.newToken(Space), nil
 		}
 
 		t.readUntil(false, func(r rune) bool { return !isSeparatorText(r) })
-		return t.newToken(tText), nil
+		return t.newToken(Text), nil
 	}()
 	if err != nil {
-		return token{}, err
+		return Token{}, err
 	}
-	t.updateContext(tok.kind)
+	t.updateContext(tok.Kind)
 	return tok, nil
 }
 

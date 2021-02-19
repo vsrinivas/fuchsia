@@ -8,28 +8,33 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("gopkg") {
-  name = "go.fuchsia.dev/tools/mdlint"
+  name = "go.fuchsia.dev/fuchsia/tools/mdlint/..."
   sources = [
+    "core/recognizer.go",
+    "core/recognizer_test.go",
+    "core/registry.go",
+    "core/reporter.go",
+    "core/reporter_test.go",
+    "core/rules.go",
+    "core/tokenizer.go",
+    "core/tokenizer_test.go",
     "main.go",
-    "mdhelpers.go",
-    "mdhelpers_test.go",
-    "recognizer.go",
-    "recognizer_test.go",
-    "reporter.go",
-    "reporter_test.go",
-    "rules.go",
-    "tokenizer.go",
-    "tokenizer_test.go",
+    "rules/bad_lists.go",
+    "rules/casing_of_anchors.go",
+    "rules/mdhelpers.go",
+    "rules/mdhelpers_test.go",
+    "rules/no_extra_space_on_right.go",
+    "rules/verify_internal_links.go",
   ]
 }
 
 go_binary("mdlint") {
-  gopackage = "go.fuchsia.dev/tools/mdlint"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/mdlint"
   deps = [ ":gopkg" ]
 }
 
-go_test("mdlint_tests") {
-  gopackages = [ "go.fuchsia.dev/tools/mdlint" ]
+go_test("mdlint_core_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/mdlint/core" ]
   deps = [
     ":gopkg",
     "//third_party/golibs:github.com/google/go-cmp",
@@ -43,5 +48,5 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":mdlint_tests($host_toolchain)" ]
+  deps = [ ":mdlint_core_tests($host_toolchain)" ]
 }

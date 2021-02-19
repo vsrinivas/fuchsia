@@ -7,197 +7,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/mdlint/core"
+	_ "go.fuchsia.dev/fuchsia/tools/mdlint/rules"
 )
-
-const noExtraSpaceOnRightName = "no-extra-space-on-right"
-
-type noExtraSpaceOnRight struct {
-	defaultLintRuleOverTokens
-	reporter Reporter
-
-	lastTok token
-}
-
-var _ lintRuleOverTokens = (*noExtraSpaceOnRight)(nil)
-
-func (rule *noExtraSpaceOnRight) onNext(tok token) {
-	if rule.lastTok.kind == tSpace && tok.kind == tNewline {
-		rule.reporter.Warnf(rule.lastTok, "extra whitespace")
-	}
-	rule.lastTok = tok
-}
-
-const casingOfAnchorsName = "casing-of-anchors"
-
-type casingOfAnchors struct {
-	defaultLintRuleOverTokens
-	reporter Reporter
-}
-
-var _ lintRuleOverTokens = (*casingOfAnchors)(nil)
-
-var casingOfAnchorsRe = regexp.MustCompile("{#[a-zA-Z0-9]+([a-zA-Z0-9-]*[a-zA-Z0-9])?}")
-
-func (rule *casingOfAnchors) onNext(tok token) {
-	if tok.kind == tAnchor {
-		if !casingOfAnchorsRe.MatchString(tok.content) {
-			rule.reporter.Warnf(tok, "poorly formated anchor")
-		}
-	}
-}
-
-const verifyInternalLinksName = "verify-internal-links"
-
-type verifyInternalLinks struct {
-	defaultLintRuleOverEvents
-
-	reporter Reporter
-
-	byXref []token
-	xrefs  map[string]string
-}
-
-var _ lintRuleOverEvents = (*verifyInternalLinks)(nil)
-
-func (rule *verifyInternalLinks) onDocStart(doc *doc) {
-	rule.byXref = nil
-	rule.xrefs = make(map[string]string)
-}
-
-func (rule *verifyInternalLinks) onLinkByXref(xref token) {
-	rule.byXref = append(rule.byXref, xref)
-}
-
-func (rule *verifyInternalLinks) onXrefDefinition(xref, url token) {
-	// TODO(fxbug.dev/62964): internal or external? if external, need to check presence
-	normalized := normalizeLinkLabel(xref.content)
-	if _, ok := rule.xrefs[normalized]; ok {
-		rule.reporter.Warnf(xref, "internal reference defined multiple times")
-	} else {
-		rule.xrefs[normalized] = url.content
-	}
-}
-
-func (rule *verifyInternalLinks) onDocEnd() {
-	for _, xref := range rule.byXref {
-		if _, ok := rule.xrefs[normalizeLinkLabel(xref.content)]; !ok {
-			rule.reporter.Warnf(xref, "internal reference not defined")
-		}
-	}
-	rule.byXref = nil
-	rule.xrefs = nil
-}
-
-const badListsName = "bad-lists"
-
-type badLists struct {
-	defaultLintRuleOverTokens
-	reporter Reporter
-
-	buf    [2]token
-	i      int
-	inList bool
-}
-
-var _ lintRuleOverTokens = (*badLists)(nil)
-
-func (rule *badLists) onDocStart(_ *doc) {
-	var defaultTok token
-	rule.buf[0] = defaultTok
-	rule.buf[1] = defaultTok
-	rule.inList = false
-}
-
-func (rule *badLists) onNext(tok token) {
-	switch tok.kind {
-	case tSpace:
-		return // ignore
-	case tList:
-		if !rule.inList && !(rule.buf[0].kind == tNewline && rule.buf[1].kind == tNewline) {
-			rule.reporter.Warnf(tok, "must have extra new line before a list")
-			var defaultTok token
-			rule.buf[0] = defaultTok
-			rule.buf[1] = defaultTok
-		}
-		rule.inList = true
-	case tNewline:
-		if rule.inList && rule.buf[rule.i].kind == tNewline {
-			rule.inList = false
-		}
-	}
-	rule.buf[rule.i] = tok
-	rule.i = (rule.i + 1) % 2
-}
-
-func processOnDoc(filename string, stream io.Reader, rule lintRuleOverTokens) error {
-	doc := newDoc(filename, stream)
-	rule.onDocStart(doc)
-	defer rule.onDocEnd()
-
-	tokenizer := newTokenizer(doc)
-	for {
-		tok, err := tokenizer.next()
-		if err != nil {
-			return err
-		}
-		rule.onNext(tok)
-		if tok.kind == tEOF {
-			return nil
-		}
-	}
-}
-
-var allRules = map[string]func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents){
-	noExtraSpaceOnRightName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return &noExtraSpaceOnRight{reporter: rootReporter.ForRule(noExtraSpaceOnRightName)}, nil
-	},
-	casingOfAnchorsName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return &casingOfAnchors{reporter: rootReporter.ForRule(casingOfAnchorsName)}, nil
-	},
-	badListsName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return &badLists{reporter: rootReporter.ForRule(badListsName)}, nil
-	},
-	verifyInternalLinksName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return nil, &verifyInternalLinks{reporter: rootReporter.ForRule(verifyInternalLinksName)}
-	},
-}
-
-func newLintRule(rootReporter *RootReporter) lintRuleOverTokens {
-	var (
-		rulesOverTokens []lintRuleOverTokens
-		rulesOverEvents []lintRuleOverEvents
-	)
-	for _, name := range enabledRules {
-		instantiator, ok := allRules[name]
-		if !ok {
-			panic(fmt.Sprintf("unknown rule '%s', should not happen", name))
-		}
-		overTokens, overEvents := instantiator(rootReporter)
-		if overTokens != nil {
-			rulesOverTokens = append(rulesOverTokens, overTokens)
-		}
-		if overEvents != nil {
-			rulesOverEvents = append(rulesOverEvents, overEvents)
-		}
-	}
-
-	// combining all rules into a single rule over tokens
-	//
-	// - oneToManyOverTokens rule over
-	//   - all rules over tokens
-	//   - a recognizer bridging to a
-	//     - oneToManyOverEvents rule over
-	//       - all rules over events
-	rulesOverTokens = append(rulesOverTokens, &recognizer{rule: oneToManyOverEvents(rulesOverEvents)})
-	return oneToManyOverTokens(rulesOverTokens)
-}
 
 type dirFlag string
 
@@ -224,8 +42,8 @@ func (flag *enabledRulesFlag) String() string {
 }
 
 func (flag *enabledRulesFlag) Set(name string) error {
-	if _, ok := allRules[name]; !ok {
-		return fmt.Errorf("unknown rule")
+	if !core.HasRule(name) {
+		return fmt.Errorf("unknown rule '%s'", name)
 	}
 	*flag = append(*flag, name)
 	return nil
@@ -242,7 +60,7 @@ func init() {
 	flag.BoolVar(&jsonOutput, "json", false, "Enable JSON output")
 
 	var names []string
-	for name := range allRules {
+	for _, name := range core.AllRuleNames() {
 		names = append(names, fmt.Sprintf("'%s'", name))
 	}
 	sort.Strings(names)
@@ -274,10 +92,10 @@ func main() {
 		os.Exit(exitOnError)
 	}
 
-	reporter := RootReporter{
+	reporter := core.RootReporter{
 		JSONOutput: jsonOutput,
 	}
-	rules := newLintRule(&reporter)
+	rules := core.InstantiateRules(&reporter, enabledRules)
 	filenames, err := filepath.Glob(filepath.Join(string(rootDir), "*/*/*.md"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -290,7 +108,7 @@ func main() {
 				return err
 			}
 			defer file.Close()
-			return processOnDoc(filename, file, rules)
+			return core.ProcessSingleDoc(filename, file, rules)
 		}(); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 			os.Exit(exitOnError)

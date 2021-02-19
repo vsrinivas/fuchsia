@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package core
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 // specific tokens, and to pretty print these aggregates messages.
 type Reporter interface {
 	// Warnf formats and adds warning message using the format specifier.
-	Warnf(tok token, format string, a ...interface{})
+	Warnf(tok Token, format string, a ...interface{})
 }
 
 // RootReporter is the linter wide reporter, and may be used to report general
@@ -53,7 +53,7 @@ var _ = []Reporter{
 
 type message struct {
 	category string
-	tok      token
+	tok      Token
 	content  string
 }
 
@@ -66,7 +66,7 @@ func (s sortableMessages) Len() int {
 }
 
 func (s sortableMessages) Less(i, j int) bool {
-	if byFilename := strings.Compare(s[i].tok.doc.filename, s[j].tok.doc.filename); byFilename < 0 {
+	if byFilename := strings.Compare(s[i].tok.Doc.filename, s[j].tok.Doc.filename); byFilename < 0 {
 		return true
 	} else if byFilename > 0 {
 		return false
@@ -92,15 +92,15 @@ func (s sortableMessages) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func (r *RootReporter) Warnf(tok token, format string, a ...interface{}) {
-	r.warnf("general", tok, format, a...)
+func (r *RootReporter) Warnf(tok Token, format string, a ...interface{}) {
+	r.warnf(generalName, tok, format, a...)
 }
 
-func (r *ruleReporter) Warnf(tok token, format string, a ...interface{}) {
+func (r *ruleReporter) Warnf(tok Token, format string, a ...interface{}) {
 	r.parent.warnf(r.rule, tok, format, a...)
 }
 
-func (r *RootReporter) warnf(category string, tok token, format string, a ...interface{}) {
+func (r *RootReporter) warnf(category string, tok Token, format string, a ...interface{}) {
 	r.messages = append(r.messages, message{
 		category: category,
 		tok:      tok,
@@ -137,7 +137,7 @@ func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
 		findings = append(findings, findingJSON{
 			Category:  fmt.Sprintf("mdlint/%s", msg.category),
 			Message:   msg.content,
-			Path:      msg.tok.doc.filename,
+			Path:      msg.tok.Doc.filename,
 			StartLine: msg.tok.ln,
 			StartChar: msg.tok.col - 1,
 			EndLine:   msg.tok.ln + numLines,
@@ -147,12 +147,12 @@ func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
 	return findings
 }
 
-func numLinesAndCharsOnLastLine(tok token) (int, int) {
+func numLinesAndCharsOnLastLine(tok Token) (int, int) {
 	var (
 		numLines           int
 		numCharsOnLastLine = tok.col - 1
 	)
-	for _, r := range tok.content {
+	for _, r := range tok.Content {
 		if r == '\n' {
 			numLines++
 			numCharsOnLastLine = 0
@@ -186,8 +186,8 @@ func (r *RootReporter) printAsPrettyPrint(writer io.Writer) error {
 			}
 		}
 		var (
-			explanation = fmt.Sprintf("%s:%d:%d: %s", msg.tok.doc.filename, msg.tok.ln, msg.tok.col, msg.content)
-			lineFromDoc = msg.tok.doc.lines[msg.tok.ln-1]
+			explanation = fmt.Sprintf("%s:%d:%d: %s", msg.tok.Doc.filename, msg.tok.ln, msg.tok.col, msg.content)
+			lineFromDoc = msg.tok.Doc.lines[msg.tok.ln-1]
 			squiggle    = makeSquiggle(lineFromDoc, msg.tok)
 		)
 		for _, line := range []string{explanation, "\n", lineFromDoc, "\n", squiggle, "\n"} {
@@ -209,7 +209,7 @@ func (r *RootReporter) Print(writer io.Writer) error {
 	return r.printAsPrettyPrint(writer)
 }
 
-func makeSquiggle(line string, tok token) string {
+func makeSquiggle(line string, tok Token) string {
 	var (
 		col      int = 1
 		squiggle bytes.Buffer
@@ -226,8 +226,8 @@ func makeSquiggle(line string, tok token) string {
 		col++
 	}
 	squiggle.WriteRune('^')
-	squiggleLen := len(tok.content) - 1
-	if index := strings.Index(tok.content, "\n"); index != -1 {
+	squiggleLen := len(tok.Content) - 1
+	if index := strings.Index(tok.Content, "\n"); index != -1 {
 		squiggleLen = index - 1
 	}
 	squiggle.WriteString(strings.Repeat("~", squiggleLen))
