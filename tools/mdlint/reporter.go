@@ -76,10 +76,9 @@ func (r *Reporter) HasMessages() bool {
 	return len(r.messages) != 0
 }
 
-// TODO(fxbug.dev/62964): Align to the specification needed by Tricium.
-//
-// e.g. First start_line at 0 or 1? First start_char at 0 or 1? Which categories
-// do we want to report?
+// findingJSON captures the information needed to emit a `message Comment` as
+// specified in
+// https://chromium.googlesource.com/infra/infra/+/refs/heads/master/go/src/infra/tricium/api/v1/data.proto
 type findingJSON struct {
 	Category  string `json:"category"`
 	Message   string `json:"message"`
@@ -90,22 +89,45 @@ type findingJSON struct {
 	EndChar   int    `json:"end_char"`
 }
 
-func (r *Reporter) printAsJSON(writer io.Writer) error {
+// messagesToFindingsJSON converts the reporter's messages to `findingJSON`.
+// This method is used to test the internals of the reporter, but should not be
+// used otherwise.
+func (r *Reporter) messagesToFindingsJSON() []findingJSON {
 	sort.Sort(r.messages)
 	var findings []findingJSON
 	for _, msg := range r.messages {
+		numLines, numCharsOnLastLine := numLinesAndCharsOnLastLine(msg.tok)
 		findings = append(findings, findingJSON{
-			Category:  "mdlint",
+			Category:  "mdlint/general",
 			Message:   msg.content,
 			Path:      msg.tok.doc.filename,
 			StartLine: msg.tok.ln,
-			StartChar: msg.tok.col,
-			// TODO(fxbug.dev/62964): some tokens can span lines, e.g. ``` sections
-			EndLine: msg.tok.ln,
-			EndChar: msg.tok.col + len(msg.tok.content),
+			StartChar: msg.tok.col - 1,
+			EndLine:   msg.tok.ln + numLines,
+			EndChar:   numCharsOnLastLine,
 		})
 	}
-	data, err := json.Marshal(findings)
+	return findings
+}
+
+func numLinesAndCharsOnLastLine(tok token) (int, int) {
+	var (
+		numLines           int
+		numCharsOnLastLine = tok.col - 1
+	)
+	for _, r := range tok.content {
+		if r == '\n' {
+			numLines++
+			numCharsOnLastLine = 0
+		} else {
+			numCharsOnLastLine++
+		}
+	}
+	return numLines, numCharsOnLastLine
+}
+
+func (r *Reporter) printAsJSON(writer io.Writer) error {
+	data, err := json.Marshal(r.messagesToFindingsJSON())
 	if err != nil {
 		return err
 	}

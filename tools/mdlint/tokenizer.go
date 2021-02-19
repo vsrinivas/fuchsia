@@ -176,6 +176,8 @@ type token struct {
 	doc     *doc
 	kind    tokenKind
 	content string
+
+	// ln, col are 1-based
 	ln, col int
 }
 
