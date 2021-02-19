@@ -24,7 +24,7 @@ async fn test_exit_detection() {
 
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
     event_source.start_component_tree().await;
@@ -59,7 +59,7 @@ async fn test_exit_after_rendezvous() {
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
     rendezvous_service.inject(&event_source, EventMatcher::ok()).await;
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
     event_source.start_component_tree().await;

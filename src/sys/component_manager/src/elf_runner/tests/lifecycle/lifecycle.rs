@@ -19,7 +19,7 @@ async fn test_normal_behavior() {
 
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
     event_source.start_component_tree().await;
