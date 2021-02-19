@@ -37,7 +37,7 @@ void main() {
 
     methodCallback(MethodCall('View.viewConnected'));
     methodCallback(MethodCall('View.viewDisconnected'));
-    methodCallback(MethodCall('View.viewStateChanged', _Args(state: true)));
+    methodCallback(MethodCall('View.viewStateChanged', {'state': true}));
 
     expect(connectedCalled, isTrue);
     expect(stateChangedCalled, isTrue);
@@ -77,11 +77,6 @@ void main() {
     await controller.dispatchPointerEvent(addedEvent);
     expect(event, equals(addedEvent));
   });
-}
-
-class _Args {
-  final bool? state;
-  _Args({this.state});
 }
 
 class TestFuchsiaViewController extends FuchsiaViewController {

@@ -85,7 +85,7 @@ class ChildViewConnection {
               onUnavailable?.call(this);
               break;
             case 'View.viewStateChanged':
-              onStateChanged?.call(this, call.arguments.state);
+              onStateChanged?.call(this, call.arguments['state'] ?? false);
               break;
             default:
               print('Unknown method call from platform view channel: $call');
