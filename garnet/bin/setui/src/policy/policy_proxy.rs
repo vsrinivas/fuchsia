@@ -92,10 +92,8 @@ impl PolicyProxy {
         .append(filter::Condition::Filter(request_audience_filter))
         .build();
 
-        let (_, service_proxy_receptor) = messenger_factory
-            .create(MessengerType::Broker(Some(service_proxy_filter)))
-            .await
-            .map_err(Error::new)?;
+        let (_, service_proxy_receptor) =
+            messenger_factory.create(MessengerType::Broker(Some(service_proxy_filter))).await?;
 
         let (_, proxy_receptor) = core_messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
@@ -108,15 +106,21 @@ impl PolicyProxy {
                         && matches!(message.get_type(), core::message::MessageType::Origin(_))
                 })),
             ))))
-            .await
-            .map_err(Error::new)?;
+            .await?;
 
         let (_, policy_receptor) = policy_messenger_factory
             .messenger_builder(MessengerType::Addressable(Address::Policy(policy_type)))
             .add_role(role::Signature::role(Role::PolicyHandler))
             .build()
-            .await
-            .map_err(Error::new)?;
+            .await?;
+
+        let (_, service_policy_receptor) = messenger_factory
+            .messenger_builder(MessengerType::Addressable(service::Address::PolicyHandler(
+                policy_type,
+            )))
+            .add_role(role::Signature::role(service::Role::Policy(Role::PolicyHandler)))
+            .build()
+            .await?;
 
         let (switchboard_handler_messenger, switchboard_handler_receptor) =
             core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
@@ -139,11 +143,13 @@ impl PolicyProxy {
         let mut proxy = Self { policy_handler };
 
         Task::spawn(async move {
+            let service_policy_fuse = service_policy_receptor.fuse();
             let policy_fuse = policy_receptor.fuse();
             let switchboard_fuse = switchboard_receptor.fuse();
             let proxy_fuse = proxy_receptor.fuse();
             let message_fuse = service_proxy_receptor.fuse();
-            futures::pin_mut!(policy_fuse, switchboard_fuse, proxy_fuse, message_fuse);
+            futures::pin_mut!(policy_fuse, switchboard_fuse, proxy_fuse, message_fuse,
+                service_policy_fuse);
             loop {
                 futures::select! {
                     // Handle policy messages.
@@ -154,6 +160,16 @@ impl PolicyProxy {
                         ) = policy_event
                         {
                             proxy.process_policy_request(request, message_client).await;
+                        }
+                    }
+
+                    service_policy_event = service_policy_fuse.select_next_some() => {
+                        if let MessageEvent::Message(
+                            service::Payload::Policy(policy_base::Payload::Request(request)),
+                            message_client,
+                        ) = service_policy_event
+                        {
+                            proxy.process_service_policy_request(request, message_client).await;
                         }
                     }
 
@@ -200,6 +216,17 @@ impl PolicyProxy {
         .detach();
 
         Ok(switchboard_handler_receptor.get_signature())
+    }
+
+    async fn process_service_policy_request(
+        &mut self,
+        request: PolicyRequest,
+        message_client: service::message::MessageClient,
+    ) {
+        let response = self.policy_handler.handle_policy_request(request).await;
+        message_client
+            .reply(service::Payload::Policy(policy_base::Payload::Response(response)))
+            .send();
     }
 
     async fn process_policy_request(

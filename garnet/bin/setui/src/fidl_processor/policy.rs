@@ -39,6 +39,7 @@ where
     R: base::Role + 'static,
 {
     messenger: crate::message::messenger::MessengerClient<P, A, R>,
+    service_messenger: service::message::Messenger,
 }
 
 impl RequestContext<Payload, Address, Role> {
@@ -48,12 +49,15 @@ impl RequestContext<Payload, Address, Role> {
         request: crate::policy::base::Request,
     ) -> crate::policy::base::response::Response {
         let mut receptor = self
-            .messenger
-            .message(Payload::Request(request), Audience::Address(Address::Policy(policy_type)))
+            .service_messenger
+            .message(
+                service::Payload::Policy(Payload::Request(request)),
+                Audience::Address(service::Address::PolicyHandler(policy_type)),
+            )
             .send();
 
         let response_payload = receptor.next_payload().await;
-        if let Ok((Payload::Response(result), _)) = response_payload {
+        if let Ok((service::Payload::Policy(Payload::Response(result)), _)) = response_payload {
             return result;
         } else if let Err(err) = response_payload {
             fx_log_err!("Failed to get policy response: {}", err);
@@ -99,12 +103,12 @@ where
     fn process(
         &self,
         messenger: crate::message::messenger::MessengerClient<P, A, R>,
-        _service_messenger: service::message::Messenger,
+        service_messenger: service::message::Messenger,
         request: Request<S>,
         // Policy requests don't use hanging gets, so the exit sender is unused.
         _exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
-        let context = RequestContext { messenger };
+        let context = RequestContext { messenger, service_messenger };
 
         return (self.callback)(context, request);
     }

@@ -70,7 +70,9 @@ pub trait TryFromWithClient<T>: Sized {
 /// for addressing a particular audience space. Similar to the other
 /// enumerations, details about each role should be defined near to the domain.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum Role {}
+pub enum Role {
+    Policy(policy::Role),
+}
 
 /// The payload_convert macro helps convert between the domain-specific payloads
 /// (variants of [`Payload`]) and the [`Payload`] container(to/from) & MessageHub
