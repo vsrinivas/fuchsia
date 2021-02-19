@@ -1,5 +1,6 @@
 {
   "pkg/stdcompat/include/lib/stdcompat/bit.h": "9a08b2c21b3863e4528279f282e8f03b",
+  "pkg/stdcompat/include/lib/stdcompat/cstddef.h": "555383442b1946dc6d958cf8b205fbb6",
   "pkg/stdcompat/include/lib/stdcompat/internal/bit.h": "7217ebfac7c95f27b6d5f5e4fd5c2e7a",
   "pkg/stdcompat/include/lib/stdcompat/internal/constructors.h": "664276aef7a6132071fbf93b5ee3fe75",
   "pkg/stdcompat/include/lib/stdcompat/internal/exception.h": "36e3245793a2229c969370af46d7f692",
@@ -15,5 +16,5 @@
   "pkg/stdcompat/include/lib/stdcompat/type_traits.h": "fb4df3d778bff8e650aae64ebafe6184",
   "pkg/stdcompat/include/lib/stdcompat/utility.h": "a70481792b0b4e8f416c79ca5e58338a",
   "pkg/stdcompat/include/lib/stdcompat/variant.h": "cd2bbb7b3999f7505ae18805e06adb71",
-  "pkg/stdcompat/include/lib/stdcompat/version.h": "6092d9c82702af8168ef8713c04ad541"
+  "pkg/stdcompat/include/lib/stdcompat/version.h": "bc4b85bc6700dcbc043df4e4bb091079"
 }

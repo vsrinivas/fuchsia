@@ -20,6 +20,7 @@ zx_library("stdcompat") {
 
   sdk_headers = [
     "lib/stdcompat/bit.h",
+    "lib/stdcompat/cstddef.h",
     "lib/stdcompat/iterator.h",
     "lib/stdcompat/memory.h",
     "lib/stdcompat/optional.h",

@@ -20,6 +20,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
   static_assert(__cpp_lib_string_view == 201606L,
                 "'__cpp_lib_string_view' should be using draft 201606L for c++20.");
 #endif
+  static_assert(__cpp_lib_byte == 201603L,
+                "'__cpp_lib_byte' should be using draft 201603L in c++20.");
   static_assert(__cpp_lib_logical_traits == 201510L,
                 "'__cpp_lib_logical_traits' should be using draft 201510L.");
   static_assert(__cpp_lib_void_t ==
@@ -38,6 +40,16 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
 #if __cplusplus >= 201606L
   static_assert(__cpp_lib_string_view == 201606L,
                 "'__cpp_lib_string_view' should be using draft for c++17.");
+  static_assert(__cpp_lib_optional == 201606L,
+                "'__cpp_lib_optional' should be using draft 201606L in c++17.");
+  static_assert(__cpp_lib_variant == 201606L,
+                "'__cpp_lib_variant' should be using draft 201606L in c++17.");
+#endif
+#if __cplusplus >= 201603L
+  static_assert(__cpp_lib_addressof_constexpr == 201603L,
+                "'__cpp_lib_addressof_constexpr' should be using draft 201603L for c++17.");
+  static_assert(__cpp_lib_byte == 201603L,
+                "'__cpp_lib_byte' should be using draft 201603L in c++17.");
 #endif
 #if __cplusplus >= 201510L
   static_assert(__cpp_lib_logical_traits == 201510L,
@@ -48,16 +60,6 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
                 "'__cpp_lib_void_t' should be using draft 201411L in c++17.");
   static_assert(__cpp_lib_nonmember_container_access == 201411L,
                 "'__cpp_lib_nonmember_container_access' should be using draft 201411L in c++17.");
-#endif
-#if __cplusplus >= 201603L
-  static_assert(__cpp_lib_addressof_constexpr == 201603L,
-                "'__cpp_lib_addressof_constexpr' should be using draft 201603L for c++17.");
-#endif
-#if __cplusplus >= 201606L
-  static_assert(__cpp_lib_optional == 201606L,
-                "'__cpp_lib_optional' should be using draft 201606L in c++17.");
-  static_assert(__cpp_lib_variant == 201606L,
-                "'__cpp_lib_variant' should be using draft 201606L in c++17.");
 #endif
 }
 
