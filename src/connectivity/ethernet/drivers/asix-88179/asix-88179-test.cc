@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/ax88179/llcpp/fidl.h>
 #include <fuchsia/hardware/ethernet/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
@@ -92,15 +89,14 @@ class UsbAx88179Test : public zxtest::Test {
 
   void ConnectEthernetClient() {
     fbl::unique_fd fd(openat(bus_.GetRootFd(), dev_path_.c_str(), O_RDWR));
-    zx::channel ethernet_handle;
-    ASSERT_OK(fdio_get_service_handle(fd.release(), ethernet_handle.reset_and_get_address()));
-    ethernet_client_.reset(new ethernet::Device::SyncClient(std::move(ethernet_handle)));
+    ASSERT_OK(fdio_get_service_handle(fd.release(),
+                                      ethernet_client_.mutable_channel()->reset_and_get_address()));
 
     // Get device information
-    auto get_info_result = ethernet_client_->GetInfo();
+    auto get_info_result = ethernet_client_.GetInfo();
     ASSERT_OK(get_info_result.status());
     auto info = get_info_result.Unwrap()->info;
-    auto get_fifos_result = ethernet_client_->GetFifos();
+    auto get_fifos_result = ethernet_client_.GetFifos();
     ASSERT_OK(get_fifos_result.status());
     auto fifos = get_fifos_result.Unwrap()->info.get();
     // Calculate optimal size of VMO, and set up RX and TX buffers.
@@ -109,11 +105,7 @@ class UsbAx88179Test : public zxtest::Test {
     fzl::VmoMapper mapper;
     ASSERT_OK(mapper.CreateAndMap(optimal_vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   nullptr, &vmo));
-    uint8_t* io_buffer = nullptr;
-    size_t io_buffer_size = 0;
-    io_buffer = static_cast<uint8_t*>(mapper.start());
-    io_buffer_size = optimal_vmo_size;
-    auto set_io_buffer_result = ethernet_client_->SetIOBuffer(std::move(vmo));
+    auto set_io_buffer_result = ethernet_client_.SetIOBuffer(std::move(vmo));
     ASSERT_OK(set_io_buffer_result.status());
 
     rx_fifo_ = std::move(fifos->rx);
@@ -121,29 +113,27 @@ class UsbAx88179Test : public zxtest::Test {
   }
 
   void StartDevice() {
-    auto start_result = ethernet_client_->Start();
+    auto start_result = ethernet_client_.Start();
     ASSERT_OK(start_result.status());
   }
 
   void SetDeviceOnline() {
     fbl::unique_fd fd(openat(bus_.GetRootFd(), test_function_path_.c_str(), O_RDWR));
-    zx::channel test_handle;
-    ASSERT_OK(fdio_get_service_handle(fd.release(), test_handle.reset_and_get_address()));
-
-    std::unique_ptr<ax88179::Hooks::SyncClient> test_client;
-    test_client.reset(new ax88179::Hooks::SyncClient(std::move(test_handle)));
+    ax88179::Hooks::SyncClient test_client;
+    ASSERT_OK(fdio_get_service_handle(fd.release(),
+                                      test_client.mutable_channel()->reset_and_get_address()));
 
     // Ensure SIGNAL_STATUS is de-asserted before we set it.
-    ASSERT_OK(ethernet_client_->GetStatus().status());
+    ASSERT_OK(ethernet_client_.GetStatus().status());
 
-    auto online_result = test_client->SetOnline(true);
+    auto online_result = test_client.SetOnline(true);
     ASSERT_OK(online_result.status());
     auto result = online_result.Unwrap()->status;
     ASSERT_OK(result);
   }
 
   ethernet::DeviceStatus GetDeviceStatus() {
-    auto status_result = ethernet_client_->GetStatus();
+    auto status_result = ethernet_client_.GetStatus();
     ZX_ASSERT(status_result.status() == ZX_OK);
     return status_result.Unwrap()->device_status;
   }
@@ -167,7 +157,7 @@ class UsbAx88179Test : public zxtest::Test {
   USBVirtualBus bus_;
   fbl::String dev_path_;
   fbl::String test_function_path_;
-  std::unique_ptr<ethernet::Device::SyncClient> ethernet_client_;
+  ethernet::Device::SyncClient ethernet_client_;
   zx::fifo rx_fifo_;
   zx::fifo tx_fifo_;
 };

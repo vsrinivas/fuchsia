@@ -2,22 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/ethernet/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
-#include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/hw/usb.h>
@@ -26,7 +22,6 @@
 
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <fbl/string.h>
 #include <hid/boot.h>
 #include <zxtest/zxtest.h>
@@ -38,12 +33,26 @@ constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "CDC Ethernet";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
 
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() = default;
-
-  void InitUsbCdcEcm(std::string* devpath, std::string* devpath1);
-};
+zx_status_t GetTopologicalPath(int fd, std::string* out) {
+  size_t path_len;
+  fdio_cpp::UnownedFdioCaller connection(fd);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+      ::fidl::UnownedClientEnd<::llcpp::fuchsia::device::Controller>(connection.borrow_channel()));
+  zx_status_t status = resp.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (resp->result.is_err()) {
+    return resp->result.err();
+  }
+  const auto& r = resp->result.response();
+  path_len = r.path.size();
+  if (path_len > PATH_MAX) {
+    return ZX_ERR_INTERNAL;
+  }
+  *out = std::string(r.path.data(), r.path.size());
+  return ZX_OK;
+}
 
 struct DevicePaths {
   std::string peripheral_path;
@@ -51,29 +60,8 @@ struct DevicePaths {
   int dirfd;
 };
 
-zx_status_t GetTopologicalPath(int fd, std::string* out) {
-  size_t path_len;
-  fdio_cpp::UnownedFdioCaller connection(fd);
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(connection.borrow_channel()));
-  zx_status_t status = resp.status();
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (resp->result.is_err()) {
-    return ZX_ERR_NOT_FOUND;
-  } else {
-    auto& r = resp->result.response();
-    path_len = r.path.size();
-    if (path_len > PATH_MAX) {
-      return ZX_ERR_INTERNAL;
-    }
-    *out = std::string(r.path.data(), r.path.size());
-  }
-  return ZX_OK;
-}
-
-zx_status_t WaitForHostAndPeripheral(int dirfd, int event, const char* name, void* cookie) {
+zx_status_t WaitForHostAndPeripheral([[maybe_unused]] int dirfd, int event, const char* name,
+                                     void* cookie) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
@@ -91,73 +79,78 @@ zx_status_t WaitForHostAndPeripheral(int dirfd, int event, const char* name, voi
   } else if (topological_path.find("/usb-bus/") != std::string::npos) {
     device_paths->host_path = path;
   }
-  if (device_paths->host_path.size() && device_paths->peripheral_path.size()) {
+  if (!device_paths->host_path.empty() && !device_paths->peripheral_path.empty()) {
     return ZX_ERR_STOP;
   }
   return ZX_OK;
 }
 
-void USBVirtualBus::InitUsbCdcEcm(std::string* peripheral_path, std::string* host_path) {
-  namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
-  using ConfigurationDescriptor =
-      ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
-  usb_peripheral::DeviceDescriptor device_desc = {};
-  device_desc.bcd_usb = htole16(0x0200);
-  device_desc.b_device_class = 0;
-  device_desc.b_device_sub_class = 0;
-  device_desc.b_device_protocol = 0;
-  device_desc.b_max_packet_size0 = 64;
-  device_desc.bcd_device = htole16(0x0100);
-  device_desc.b_num_configurations = 2;
+class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
+ public:
+  USBVirtualBus() = default;
 
-  device_desc.manufacturer = fidl::StringView(kManufacturer);
-  device_desc.product = fidl::StringView(kProduct);
-  device_desc.serial = fidl::StringView(kSerial);
+  void InitUsbCdcEcm(std::string* peripheral_path, std::string* host_path) {
+    namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+    using ConfigurationDescriptor =
+        ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor>;
+    usb_peripheral::DeviceDescriptor device_desc = {};
+    device_desc.bcd_usb = htole16(0x0200);
+    device_desc.b_device_class = 0;
+    device_desc.b_device_sub_class = 0;
+    device_desc.b_device_protocol = 0;
+    device_desc.b_max_packet_size0 = 64;
+    device_desc.bcd_device = htole16(0x0100);
+    device_desc.b_num_configurations = 2;
 
-  device_desc.id_vendor = htole16(0x0BDA);
-  device_desc.id_product = htole16(0x8152);
+    device_desc.manufacturer = fidl::StringView(kManufacturer);
+    device_desc.product = fidl::StringView(kProduct);
+    device_desc.serial = fidl::StringView(kSerial);
 
-  usb_peripheral::FunctionDescriptor usb_cdc_ecm_function_desc = {
-      .interface_class = USB_CLASS_COMM,
-      .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
-      .interface_protocol = 0,
-  };
+    device_desc.id_vendor = htole16(0x0BDA);
+    device_desc.id_product = htole16(0x8152);
 
-  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
-  function_descs.push_back(usb_cdc_ecm_function_desc);
-  std::vector<ConfigurationDescriptor> config_descs;
-  config_descs.emplace_back(fidl::unowned_vec(function_descs));
-  config_descs.emplace_back(fidl::unowned_vec(function_descs));
+    usb_peripheral::FunctionDescriptor usb_cdc_ecm_function_desc = {
+        .interface_class = USB_CLASS_COMM,
+        .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
+        .interface_protocol = 0,
+    };
 
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+    std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+    function_descs.push_back(usb_cdc_ecm_function_desc);
+    std::vector<ConfigurationDescriptor> config_descs;
+    config_descs.emplace_back(fidl::unowned_vec(function_descs));
+    config_descs.emplace_back(fidl::unowned_vec(function_descs));
 
-  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
-  DevicePaths device_paths;
-  device_paths.dirfd = devmgr_.devfs_root().get();
-  while (true) {
-    auto result =
-        fdio_watch_directory(fd.get(), WaitForHostAndPeripheral, ZX_TIME_INFINITE, &device_paths);
-    if (result == ZX_ERR_STOP) {
-      break;
+    ASSERT_NO_FATAL_FAILURES(
+        SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+
+    fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
+    DevicePaths device_paths;
+    device_paths.dirfd = devmgr_.devfs_root().get();
+    while (true) {
+      auto result =
+          fdio_watch_directory(fd.get(), WaitForHostAndPeripheral, ZX_TIME_INFINITE, &device_paths);
+      if (result == ZX_ERR_STOP) {
+        break;
+      }
+      // If we see ZX_ERR_INTERNAL, something wrong happens while waiting for devices.
+      ASSERT_NE(result, ZX_ERR_INTERNAL);
     }
-    // If we see ZX_ERR_INTERNAL, something wrong happens while waiting for devices.
-    ASSERT_NE(result, ZX_ERR_INTERNAL);
+    *peripheral_path = device_paths.peripheral_path;
+    *host_path = device_paths.host_path;
   }
-  *peripheral_path = device_paths.peripheral_path;
-  *host_path = device_paths.host_path;
-}
+};
 
 class EthernetInterface {
  public:
-  EthernetInterface(fbl::unique_fd fd) {
-    zx::channel ethernet_handle;
-    ASSERT_OK(fdio_get_service_handle(fd.release(), ethernet_handle.reset_and_get_address()));
-    ethernet_client_.reset(new ethernet::Device::SyncClient(std::move(ethernet_handle)));
+  explicit EthernetInterface(fbl::unique_fd fd) {
+    ASSERT_OK(fdio_get_service_handle(fd.release(),
+                                      ethernet_client_.mutable_channel()->reset_and_get_address()));
     // Get device information
-    auto get_info_result = ethernet_client_->GetInfo();
+    auto get_info_result = ethernet_client_.GetInfo();
     ASSERT_OK(get_info_result.status());
     auto info = get_info_result.Unwrap()->info;
-    auto get_fifos_result = ethernet_client_->GetFifos();
+    auto get_fifos_result = ethernet_client_.GetFifos();
     ASSERT_OK(get_fifos_result.status());
     auto fifos = get_fifos_result.Unwrap()->info.get();
     mtu_ = info.mtu;
@@ -168,9 +161,9 @@ class EthernetInterface {
                                    nullptr, &vmo));
     io_buffer_ = static_cast<uint8_t*>(mapper_.start());
     io_buffer_size_ = optimal_vmo_size;
-    auto set_io_buffer_result = ethernet_client_->SetIOBuffer(std::move(vmo));
+    auto set_io_buffer_result = ethernet_client_.SetIOBuffer(std::move(vmo));
     ASSERT_OK(set_io_buffer_result.status());
-    auto start_result = ethernet_client_->Start();
+    auto start_result = ethernet_client_.Start();
     ASSERT_OK(start_result.status());
     tx_fifo_ = std::move(fifos->tx);
     rx_fifo_ = std::move(fifos->rx);
@@ -239,12 +232,12 @@ class EthernetInterface {
     return tx_fifo_.write(sizeof(e), &e, 1, nullptr);
   }
 
-  size_t mtu() { return mtu_; }
+  size_t mtu() const { return mtu_; }
 
-  uint32_t tx_depth() { return tx_depth_; }
+  uint32_t tx_depth() const { return tx_depth_; }
 
  private:
-  std::unique_ptr<ethernet::Device::SyncClient> ethernet_client_;
+  ethernet::Device::SyncClient ethernet_client_;
   zx::fifo tx_fifo_;
   zx::fifo rx_fifo_;
   uint32_t tx_depth_;

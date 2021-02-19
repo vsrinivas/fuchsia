@@ -54,8 +54,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/bringup/lib/mexec:mexec",
     "//src/bringup/lib/mexec/testing:zbi-test-entry",
     "//src/cobalt/bin/system-metrics:system_metrics_daemon_lib",
-    "//src/connectivity/ethernet/drivers/asix-88179:asix-88179-integration",
-    "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-integration",
     "//src/connectivity/network/drivers/network-device:src",
     "//src/connectivity/network/drivers/network-device/mac:mac",
     "//src/connectivity/network/drivers/network-device/mac:mac_ddk",

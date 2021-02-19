@@ -102,11 +102,6 @@ test("asix-88179-integration") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_package("asix-88179-integration-test") {
