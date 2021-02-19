@@ -81,3 +81,6 @@ toc:
 - title: "Error Codes"
   section:
   - include: /docs/development/error_codes/_toc.yaml
+- title: "Settings"
+  section:
+  - include: /docs/development/settings/_toc.yaml
