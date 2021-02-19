@@ -11,6 +11,8 @@
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
 
+#include <utility>
+
 #include <ldmsg/ldmsg.h>
 
 #include "src/lib/loader_service/loader_service_test_fixture.h"
@@ -43,11 +45,12 @@ TEST_F(LoaderServiceTest, ConnectBindDone) {
 
   // Should be able to still make new connections.
   {
-    zx::channel client_chan, server_chan;
-    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-    auto status = loader->Bind(std::move(server_chan));
+    auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client_end, server_end] = *std::move(endpoints);
+    auto status = loader->Bind(std::move(server_end));
     ASSERT_TRUE(status.is_ok());
-    fldsvc::Loader::SyncClient client(std::move(client_chan));
+    fldsvc::Loader::SyncClient client(std::move(client_end));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("science")));
   }
 }
@@ -248,7 +251,8 @@ TEST_F(LoaderServiceTest, InvalidConfig) {
 // fuchsia.ldsvc.Loader is manually implemented in //zircon/system/ulib/ldmsg, and this
 // implementation is the one used by our musl-based ld.so dynamic linker/loader. In other words,
 // that implementation is used to send most Loader client requests. Test interop with it.
-void LoadObjectLdmsg(const zx::channel& client, const char* object_name, zx::status<> expected) {
+void LoadObjectLdmsg(fidl::UnownedClientEnd<fldsvc::Loader> client, const char* object_name,
+                     zx::status<> expected) {
   size_t req_len;
   ldmsg_req_t req = {};
   req.header.ordinal = LDMSG_OP_LOAD_OBJECT;
@@ -270,7 +274,8 @@ void LoadObjectLdmsg(const zx::channel& client, const char* object_name, zx::sta
   };
 
   uint32_t actual_bytes, actual_handles;
-  status = client.call(0, zx::time::infinite(), &call, &actual_bytes, &actual_handles);
+  status = zx::unowned_channel(client.channel())
+               ->call(0, zx::time::infinite(), &call, &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_EQ(actual_bytes, ldmsg_rsp_get_size(&rsp));
   ASSERT_EQ(rsp.header.ordinal, req.header.ordinal);
@@ -288,7 +293,7 @@ TEST_F(LoaderServiceTest, InteropWithLdmsg_LoadObject) {
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
-  zx::channel client = std::move(status).value();
+  auto client = std::move(status).value();
 
   EXPECT_NO_FATAL_FAILURE(LoadObjectLdmsg(client, "libfoo.so", zx::ok()));
   EXPECT_NO_FATAL_FAILURE(LoadObjectLdmsg(client, "libmissing.so", zx::error(ZX_ERR_NOT_FOUND)));

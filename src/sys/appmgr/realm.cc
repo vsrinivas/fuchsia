@@ -629,13 +629,13 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
     }
 
     // Start up the library loader.
-    zx::status<zx::channel> chan =
+    auto chan =
         DynamicLibraryLoader::Start(dirfd.get(), Util::GetLabelFromURL(package->resolved_url));
     if (chan.is_error()) {
       callback(chan.status_value(), std::move(binary), std::move(loader));
       return;
     }
-    loader.set_channel(std::move(chan).value());
+    loader.set_channel(std::move(chan)->TakeChannel());
     callback(ZX_OK, std::move(binary), std::move(loader));
   });
 }
@@ -925,14 +925,14 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
 
     {
-      zx::status<zx::channel> status =
+      auto status =
           DynamicLibraryLoader::Start(pkg_fd.get(), Util::GetLabelFromURL(launch_info.url));
       if (status.is_error()) {
         component_request.SetReturnValues(kComponentCreationFailed,
                                           TerminationReason::INTERNAL_ERROR);
         return;
       }
-      loader_service = std::move(status).value();
+      loader_service = status->TakeChannel();
     }
   } else {
     // Read 'data' path from cmx, or assume to be /pkg/data/<component-name>.

@@ -218,7 +218,7 @@ std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop&
     FX_LOGS(ERROR) << "failed to create loader connection: " << conn.status_string();
     return nullptr;
   }
-  zx_handle_close(dl_set_loader_service(std::move(conn).value().release()));
+  zx_handle_close(dl_set_loader_service(std::move(conn)->TakeChannel().release()));
   return loader;
 }
 

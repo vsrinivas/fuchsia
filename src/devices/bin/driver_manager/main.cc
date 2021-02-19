@@ -448,7 +448,7 @@ int main(int argc, char** argv) {
       if (conn.is_error()) {
         LOGF(ERROR, "Failed to add driver_host loader connection: %s", conn.status_string());
       } else {
-        *c = std::move(conn).value();
+        *c = conn->TakeChannel();
       }
       return conn.status_value();
     });

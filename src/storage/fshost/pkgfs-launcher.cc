@@ -142,7 +142,7 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   DevmgrLauncher launcher(&fs_provider);
   status = zx::make_status(
       launcher.LaunchWithLoader(*zx::job::default_job(), "pkgfs", std::move(executable).value(),
-                                std::move(loader_conn).value(), argv, nullptr, -1,
+                                loader_conn->TakeChannel(), argv, nullptr, -1,
                                 /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_types,
                                 hcount, &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC));
   if (status.is_error()) {

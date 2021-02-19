@@ -139,7 +139,7 @@ TEST(DlfcnTests, loader_service_test) {
   ASSERT_OK(loader_conn.status_value());
 
   // Install the service.
-  zx_handle_t old = dl_set_loader_service(loader_conn.value().release());
+  zx_handle_t old = dl_set_loader_service(loader_conn->TakeChannel().release());
   EXPECT_NE(old, ZX_HANDLE_INVALID, "dl_set_loader_service");
 
   // Now to a lookup that should go through our service.  It

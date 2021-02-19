@@ -246,10 +246,10 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   launchpad_create(0, next_program, &lp);
   {
     // Use the local loader service backed directly by the primary BOOTFS.
-    zx::status<zx::channel> loader_conn = loader_svc->Connect();
+    auto loader_conn = loader_svc->Connect();
     ZX_ASSERT_MSG(loader_conn.is_ok(), "failed to connect to BootfsLoaderService : %s\n",
                   loader_conn.status_string());
-    zx_handle_t old = launchpad_use_loader_service(lp, loader_conn.value().release());
+    zx_handle_t old = launchpad_use_loader_service(lp, loader_conn->TakeChannel().release());
     ZX_ASSERT(old == ZX_HANDLE_INVALID);
   }
   launchpad_load_from_vmo(lp, program.release());

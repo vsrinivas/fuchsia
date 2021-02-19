@@ -82,7 +82,6 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::llcpp::fuchsia::hardware::usb::peripheral::Device":               true,
 	"::llcpp::fuchsia::hardware::virtioconsole::Device":                 true,
 	"::llcpp::fuchsia::input::report::InputDevice":                      true,
-	"::llcpp::fuchsia::ldsvc::Loader":                                   true,
 	"::llcpp::fuchsia::io::File":                                        true,
 	"::llcpp::fuchsia::io::Directory":                                   true,
 	"::llcpp::fuchsia::io::Node":                                        true,

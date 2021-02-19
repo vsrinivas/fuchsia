@@ -19,7 +19,8 @@ namespace fio = ::llcpp::fuchsia::io;
 
 static async_loop_t* ld_loop = nullptr;
 
-zx::status<zx::channel> Start(int package_fd, std::string name) {
+zx::status<fidl::ClientEnd<::llcpp::fuchsia::ldsvc::Loader>> Start(int package_fd,
+                                                                   std::string name) {
   if (!ld_loop) {
     zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &ld_loop);
     if (status != ZX_OK) {

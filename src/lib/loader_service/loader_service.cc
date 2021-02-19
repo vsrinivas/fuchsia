@@ -27,20 +27,20 @@ const std::string& LoaderServiceBase::log_prefix() {
   return log_prefix_;
 }
 
-zx::status<zx::channel> LoaderServiceBase::Connect() {
-  zx::channel c1, c2;
-  auto status = zx::make_status(zx::channel::create(0, &c1, &c2));
+zx::status<fidl::ClientEnd<llcpp::fuchsia::ldsvc::Loader>> LoaderServiceBase::Connect() {
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::ldsvc::Loader>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto [client, server] = *std::move(endpoints);
+  auto status = Bind(std::move(server));
   if (status.is_error()) {
     return status.take_error();
   }
-  status = Bind(std::move(c1));
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return zx::ok(std::move(c2));
+  return zx::ok(std::move(client));
 }
 
-zx::status<> LoaderServiceBase::Bind(zx::channel channel) {
+zx::status<> LoaderServiceBase::Bind(fidl::ServerEnd<llcpp::fuchsia::ldsvc::Loader> channel) {
   // Each connection gets a strong (shared_ptr) reference to the server, which keeps the overall
   // service alive as long as there is one open connection even if the original reference is
   // dropped.
@@ -125,7 +125,8 @@ void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync& co
   reply(ZX_OK);
 }
 
-void LoaderConnection::Clone(zx::channel loader, CloneCompleter::Sync& completer) {
+void LoaderConnection::Clone(fidl::ServerEnd<llcpp::fuchsia::ldsvc::Loader> loader,
+                             CloneCompleter::Sync& completer) {
   completer.Reply(server_->Bind(std::move(loader)).status_value());
 }
 

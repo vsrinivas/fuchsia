@@ -46,11 +46,11 @@ class InspectManagerTest : public zxtest::Test {
 
  protected:
   fbl::RefPtr<fs::RemoteDir> GetRemoteDir() {
-    zx::channel client, server;
-    zx_status_t status = zx::channel::create(0, &client, &server);
-    EXPECT_EQ(status, ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+    EXPECT_TRUE(endpoints.is_ok());
+    auto [client, server] = *std::move(endpoints);
     EXPECT_EQ(ZX_OK, fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
-                               server.release()));
+                               server.TakeChannel().release()));
     return fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
   }
 
@@ -136,13 +136,13 @@ TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
       AddFile(fxl::Substitute("/iterator-test/file$0", std::to_string(i)), 10);
     }
   }
-  zx::channel root, server;
-  zx_status_t status = zx::channel::create(0, &root, &server);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(ZX_OK,
-            fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, server.release()));
+  auto endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_TRUE(endpoints.is_ok());
+  auto [root, server] = *std::move(endpoints);
+  ASSERT_EQ(ZX_OK, fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+                             server.TakeChannel().release()));
   fidl::ClientEnd<::llcpp::fuchsia::io::Node> test_dir_chan;
-  status = devmgr::OpenNode(zx::unowned_channel(root), "/iterator-test", S_IFDIR, &test_dir_chan);
+  auto status = devmgr::OpenNode(root, "/iterator-test", S_IFDIR, &test_dir_chan);
   ASSERT_EQ(status, ZX_OK);
 
   // The opened node must be a directory because of the |MakeDir| call above.

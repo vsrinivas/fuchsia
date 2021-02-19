@@ -41,6 +41,7 @@
 #include "admin-server.h"
 #include "block-watcher.h"
 #include "fshost-boot-args.h"
+#include "fuchsia/ldsvc/llcpp/fidl.h"
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
 #include "metrics.h"
@@ -100,14 +101,16 @@ zx_status_t FsManager::SetupOutgoingDirectory(
     // name matches the protocol name. This is an implementation of
     // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
     // this implementation comes from fshost.
-    svc_dir_->AddEntry(
-        "fuchsia.fshost.Loader", fbl::MakeRefCounted<fs::Service>([loader](zx::channel chan) {
-          auto status = loader->Bind(std::move(chan));
-          if (status.is_error()) {
-            FX_LOGS(ERROR) << "failed to attach loader service: " << status.status_string();
-          }
-          return status.status_value();
-        }));
+    svc_dir_->AddEntry("fuchsia.fshost.Loader",
+                       fbl::MakeRefCounted<fs::Service>(
+                           [loader](fidl::ServerEnd<::llcpp::fuchsia::ldsvc::Loader> chan) {
+                             auto status = loader->Bind(std::move(chan));
+                             if (status.is_error()) {
+                               FX_LOGS(ERROR)
+                                   << "failed to attach loader service: " << status.status_string();
+                             }
+                             return status.status_value();
+                           }));
   }
   svc_dir_->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
                      AdminServer::Create(this, global_loop_->dispatcher()));
