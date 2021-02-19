@@ -58,7 +58,9 @@ pub struct OpenCommand {
     note = "Example repository hostnames are:\n",
     note = "    fuchsia.com",
     note = "    mycorp.com\n",
-    note = "Without any arguments the command outputs the list of configured repository URLs."
+    note = "Without any arguments the command outputs the list of configured repository URLs.\n",
+    note = "Note that repo commands expect the full repository URL, not just the hostname, e.g:",
+    note = "$ pkgctl repo rm fuchsia-pkg://mycorp.com"
 )]
 /// Manage one or more known repositories.
 pub struct RepoCommand {
