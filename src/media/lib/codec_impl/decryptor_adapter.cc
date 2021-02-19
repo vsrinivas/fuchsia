@@ -578,12 +578,20 @@ void DecryptorAdapter::ProcessInput() {
 
     auto error = Decrypt(encryption_params_, input, output, output_packet);
     if (error) {
-      // Release IO buffers since they can be re-used later for a new stream.
+      // Release output buffer and packet since they can be re-used later for a new stream.
       free_output_packets_.Push(output_packet);
       free_output_buffers_.Push(output_buffer);
-      events_->onCoreCodecInputPacketDone(item.packet());
 
       OnCoreCodecFailStream(*error);
+
+      // Free the active packet.
+      // This is done after the OnStreamFailed event as a temporary kludge so that clients can
+      // identify that this packet failed to decrypt. If it was sent before the OnStreamFailed
+      // event, the client could assume that this input packet was successfully decrypted and would
+      // not make another attempt at decrypting it on subsequent attempts (like after the keys
+      // arrive). However, relying on this order of events is hazardous for other implementations of
+      // the StreamProcessor protocol.
+      events_->onCoreCodecInputPacketDone(std::move(item.packet()));
       return;
     }
 
@@ -648,5 +656,6 @@ void DecryptorAdapter::OnCoreCodecFailStream(fuchsia::media::StreamError error) 
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
+
   events_->onCoreCodecFailStream(error);
 }
