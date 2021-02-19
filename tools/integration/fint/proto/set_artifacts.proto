@@ -23,6 +23,9 @@ message SetArtifacts {
     // static spec's `skip_if_unaffected` field is set.
     bool skip_build = 3;
 
+    // Whether the caller should set up Goma before invoking `fint build`.
+    bool use_goma = 4;
+
     // Metadata contains `fint set` parameters that are needed for
     // post-processing steps by users of fint. We expose all of these values as
     // strings, even `optimize` and `target_arch` (which are enums in
@@ -35,5 +38,5 @@ message SetArtifacts {
         repeated string variants = 5;
     }
 
-    Metadata metadata = 4;
+    Metadata metadata = 5;
 }

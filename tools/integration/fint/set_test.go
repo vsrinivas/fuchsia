@@ -86,7 +86,9 @@ func TestRunSteps(t *testing.T) {
 		}
 	})
 
-	t.Run("populates the artifacts gn_trace_path field", func(t *testing.T) {
+	t.Run("populates the gn_trace_path and use_goma fields", func(t *testing.T) {
+		staticSpec := proto.Clone(staticSpec).(*fintpb.Static)
+		staticSpec.UseGoma = true
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
 		}
@@ -97,6 +99,9 @@ func TestRunSteps(t *testing.T) {
 		if !strings.HasPrefix(artifacts.GnTracePath, contextSpec.ArtifactDir) {
 			t.Errorf("Expected runSteps to set a gn_trace_path in the artifact dir (%q) but got: %q",
 				contextSpec.ArtifactDir, artifacts.GnTracePath)
+		}
+		if !artifacts.UseGoma {
+			t.Errorf("Expected runSteps to set use_goma")
 		}
 	})
 

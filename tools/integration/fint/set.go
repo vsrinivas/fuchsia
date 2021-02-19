@@ -54,6 +54,7 @@ func runSteps(
 	}
 
 	artifacts := &fintpb.SetArtifacts{
+		UseGoma: staticSpec.UseGoma,
 		Metadata: &fintpb.SetArtifacts_Metadata{
 			Board:      staticSpec.Board,
 			Optimize:   strings.ToLower(staticSpec.Optimize.String()),
