@@ -4,6 +4,7 @@
 
 use {
     argh::FromArgs,
+    diagnostics_data::Severity,
     fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_async::{self, TimeoutExt},
     fuchsia_zircon as zx,
@@ -46,6 +47,10 @@ struct Args {
     #[argh(option)]
     count: Option<u16>,
 
+    /// when set, only logs with a severity equal to the given one or higher will be printed.
+    #[argh(option)]
+    min_severity_logs: Option<Severity>,
+
     #[argh(positional)]
     /// arguments passed to tests following `--`.
     test_args: Vec<String>,
@@ -63,6 +68,7 @@ async fn main() {
         also_run_disabled_tests,
         parallel,
         count,
+        min_severity_logs,
         test_args,
     } = args;
     let count = count.unwrap_or(1);
@@ -88,6 +94,9 @@ async fn main() {
             .expect("waiting for utc clock to start");
     }
 
+    let log_opts =
+        run_test_suite_lib::diagnostics::LogCollectionOptions { min_severity: min_severity_logs };
+
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {
             test_url,
@@ -98,6 +107,7 @@ async fn main() {
             test_args: test_args,
             harness,
         },
+        log_opts,
         std::num::NonZeroU16::new(count).unwrap(),
     )
     .await

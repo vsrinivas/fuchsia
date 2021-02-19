@@ -326,7 +326,7 @@ pub struct LogsMetadata {
 
 /// Severities a log message can have, often called the log's "level".
 // NOTE: this is only duplicated because we can't get Serialize/Deserialize on the FIDL type
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum Severity {
     /// Trace records include detailed information about program execution.
     Trace,
@@ -358,6 +358,23 @@ impl fmt::Display for Severity {
             Severity::Fatal => "FATAL",
         };
         write!(f, "{}", repr)
+    }
+}
+
+impl FromStr for Severity {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_lowercase();
+        match s.as_str() {
+            "trace" => Ok(Severity::Trace),
+            "debug" => Ok(Severity::Debug),
+            "info" => Ok(Severity::Info),
+            "warn" => Ok(Severity::Warn),
+            "error" => Ok(Severity::Error),
+            "fatal" => Ok(Severity::Fatal),
+            other => Err(Error { message: format!("invalid severity: {}", other) }),
+        }
     }
 }
 

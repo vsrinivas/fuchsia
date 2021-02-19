@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, diagnostics_data::Severity, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -44,4 +44,8 @@ pub struct TestCommand {
     /// number of times to run the test [default = 1]
     #[argh(option)]
     pub count: Option<u16>,
+
+    /// when set, only logs with a severity equal to the given one or higher will be printed.
+    #[argh(option)]
+    pub min_severity_logs: Option<Severity>,
 }

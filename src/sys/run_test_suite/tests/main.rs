@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use diagnostics_data::Severity;
 use fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy};
 use futures::prelude::*;
 use regex::Regex;
@@ -47,6 +48,7 @@ fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
 /// run specified test once.
 async fn run_test_once<W: Write + Send>(
     test_params: TestParams,
+    log_opts: diagnostics::LogCollectionOptions,
     writer: &mut W,
 ) -> Result<RunResult, anyhow::Error> {
     let (log_stream, result) = {
@@ -55,7 +57,7 @@ async fn run_test_once<W: Write + Send>(
         assert_eq!(results.len(), 1, "{:?}", results);
         (streams.logs, results.pop().unwrap())
     };
-    diagnostics::collect_logs(log_stream, writer).await.unwrap();
+    diagnostics::collect_logs(log_stream, writer, log_opts).await.unwrap();
     result
 }
 
@@ -68,6 +70,7 @@ async fn launch_and_test_no_clean_exit() {
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
             harness),
+        diagnostics::LogCollectionOptions::default(),
         &mut output
     )
     .await
@@ -110,6 +113,7 @@ async fn launch_and_test_passing_v2_test() {
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 harness),
+            diagnostics::LogCollectionOptions::default(),
             &mut output
         )
     .await
@@ -182,7 +186,9 @@ async fn launch_and_test_with_filter() {
 
     test_params.test_filter = Some("*Test3".to_string());
     let run_result =
-        run_test_once(test_params, &mut output).await.expect("Running test should not fail");
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test3
 log1 for Example.Test3
@@ -212,6 +218,7 @@ async fn launch_and_test_empty_test() {
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
             harness,
         ),
+        diagnostics::LogCollectionOptions::default(),
         &mut output,
     )
     .await
@@ -234,6 +241,7 @@ async fn launch_and_test_huge_test() {
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
             harness,
         ),
+        diagnostics::LogCollectionOptions::default(),
         &mut output,
     )
     .await
@@ -255,6 +263,7 @@ async fn launch_and_test_disabled_test_exclude_disabled() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
                 harness,
             ),
+            diagnostics::LogCollectionOptions::default(),
             &mut output,
         )
     .await
@@ -295,7 +304,9 @@ async fn launch_and_test_disabled_test_include_disabled() {
     );
     test_params.also_run_disabled_tests = true;
     let run_result =
-        run_test_once(test_params, &mut output).await.expect("Running test should not fail");
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -338,6 +349,7 @@ async fn launch_and_test_failing_test() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 harness,
             ),
+            diagnostics::LogCollectionOptions::default(),
             &mut output,
         )
     .await
@@ -405,6 +417,7 @@ async fn launch_and_test_incomplete_test() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
                 harness,
             ),
+            diagnostics::LogCollectionOptions::default(),
             &mut output,
         )
     .await
@@ -449,6 +462,7 @@ async fn launch_and_test_invalid_test() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
                 harness,
             ),
+            diagnostics::LogCollectionOptions::default(),
             &mut output,
         )
     .await
@@ -493,6 +507,7 @@ async fn launch_and_run_echo_test() {
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
             harness,
         ),
+        diagnostics::LogCollectionOptions::default(),
         &mut output,
     )
     .await
@@ -522,7 +537,9 @@ async fn test_timeout() {
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
     let run_result =
-        run_test_once(test_params, &mut output).await.expect("Running test should not fail");
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .expect("Running test should not fail");
 
     assert_eq!(run_result.outcome, Outcome::Timedout);
 
@@ -565,7 +582,9 @@ async fn test_passes_with_large_timeout() {
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let run_result =
-        run_test_once(test_params, &mut output).await.expect("Running test should not fail");
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	EchoTest
 [PASSED]	EchoTest
@@ -591,10 +610,41 @@ async fn test_logging_component() {
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let run_result =
-        run_test_once(test_params, &mut output).await.expect("Running test should not fail");
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
 [TIMESTAMP][test_root] DEBUG: my debug message 
+[TIMESTAMP][test_root] INFO: my info message 
+[TIMESTAMP][test_root] WARN: my warn message 
+[PASSED]	log_and_exit
+";
+    assert_output!(output, expected_output);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_logging_component_min_severity() {
+    let mut output: Vec<u8> = vec![];
+    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+        .expect("connecting to HarnessProxy");
+
+    let mut test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+        harness,
+    );
+    test_params.timeout = std::num::NonZeroU32::new(600);
+    let log_opts = diagnostics::LogCollectionOptions {
+        min_severity: Some(Severity::Info),
+        ..diagnostics::LogCollectionOptions::default()
+    };
+    let run_result = run_test_once(test_params, log_opts, &mut output)
+        .await
+        .expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	log_and_exit
 [TIMESTAMP][test_root] INFO: my info message 
 [TIMESTAMP][test_root] WARN: my warn message 
 [PASSED]	log_and_exit

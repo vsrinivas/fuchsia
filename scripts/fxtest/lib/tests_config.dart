@@ -236,6 +236,11 @@ class TestsConfig {
     if (flags.timeout > 0) {
       v2runnerTokens..add('--timeout')..add(flags.timeout.toString());
     }
+    if (flags.minSeverityLogs != null) {
+      v2runnerTokens
+        ..add('--min-severity-logs')
+        ..add(flags.minSeverityLogs.toString());
+    }
 
     return TestsConfig(
       flags: flags,

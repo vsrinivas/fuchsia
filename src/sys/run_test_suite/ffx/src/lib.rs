@@ -9,6 +9,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,
+    run_test_suite_lib::diagnostics,
     std::io::{stdout, Write},
 };
 
@@ -35,6 +36,7 @@ pub async fn test(
                 test_args: vec![],
                 harness: harness_proxy,
             },
+            diagnostics::LogCollectionOptions { min_severity: cmd.min_severity_logs },
             count,
         )
         .await

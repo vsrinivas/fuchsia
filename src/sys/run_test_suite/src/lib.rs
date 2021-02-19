@@ -362,6 +362,7 @@ async fn collect_results(
 /// |count|: Number of times to run this test.
 pub async fn run_tests_and_get_outcome(
     test_params: TestParams,
+    log_opts: diagnostics::LogCollectionOptions,
     count: std::num::NonZeroU16,
 ) -> Outcome {
     let test_url = test_params.test_url.clone();
@@ -378,7 +379,7 @@ pub async fn run_tests_and_get_outcome(
 
     let (log_stream, result_stream) = (streams.logs, streams.results);
     let mut stdout_for_logs = io::stdout();
-    let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs);
+    let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs, log_opts);
     let results_collection_fut = collect_results(&test_url, count, result_stream);
 
     let (log_collection_result, test_outcome) = join!(log_collection_fut, results_collection_fut);
