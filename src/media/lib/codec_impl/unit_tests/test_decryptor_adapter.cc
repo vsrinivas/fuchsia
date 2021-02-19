@@ -241,6 +241,9 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
 
   void OnStreamFailed(uint64_t stream_lifetime_ordinal, fuchsia::media::StreamError error) {
     stream_error_ = std::move(error);
+    for (const auto& [packet_index, buffer_index] : used_packets_) {
+      failed_packets_.insert(packet_index);
+    }
   }
 
   void OnInputConstraints(fuchsia::media::StreamBufferConstraints ic) {
@@ -292,6 +295,11 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
   void OnFreeInputPacket(fuchsia::media::PacketHeader header) {
     ASSERT_TRUE(header.has_packet_index());
     FreePacket(header.packet_index());
+    if (stream_error_) {
+      freed_failed_packets_.insert(header.packet_index());
+      return;
+    }
+    successful_packet_count_++;
     if (end_of_stream_set_) {
       return;
     }
@@ -472,6 +480,10 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
   PacketMap free_packets_;
   PacketMap used_packets_;
 
+  unsigned int successful_packet_count_ = 0;
+  std::set<uint32_t> failed_packets_;
+  std::set<uint32_t> freed_failed_packets_;
+
   std::random_device random_device_;
   std::mt19937 prng_;
 };
@@ -494,7 +506,9 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
 
   PumpInput();
 
-  RunLoopUntil([this]() { return end_of_stream_reached_; });
+  RunLoopUntil([this]() {
+    return end_of_stream_reached_ && free_packets_.size() == input_buffer_info_->buffer_count;
+  });
 
   AssertNoChannelErrors();
 
@@ -505,6 +519,9 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
   ASSERT_TRUE(end_of_stream_reached_);
   // ClearText decryptor just copies data across
   EXPECT_EQ(output_data_, input_data_);
+
+  // Check that all input packets were returned
+  EXPECT_EQ(free_packets_.size(), input_buffer_info_->buffer_count);
 }
 
 TEST_F(ClearDecryptorAdapterTest, NoKeys) {
@@ -524,12 +541,26 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
 
   PumpInput();
 
-  RunLoopUntil([this]() { return stream_error_.has_value(); });
+  RunLoopUntil([this]() {
+    return stream_error_.has_value() && free_packets_.size() == input_buffer_info_->buffer_count;
+  });
 
   AssertNoChannelErrors();
 
   ASSERT_TRUE(stream_error_.has_value());
   EXPECT_EQ(*stream_error_, fuchsia::media::StreamError::DECRYPTOR_NO_KEY);
+
+  // Check that all input packets were returned
+  EXPECT_EQ(free_packets_.size(), input_buffer_info_->buffer_count);
+
+  // Check that no input packets were successfully completed.
+  EXPECT_EQ(successful_packet_count_, 0u);
+
+  // Check that all of the packets that were with the server at the time of the stream failure have
+  // been returned.
+  EXPECT_GT(failed_packets_.size(), 0u);
+  EXPECT_GT(freed_failed_packets_.size(), 0u);
+  EXPECT_EQ(failed_packets_, freed_failed_packets_);
 }
 
 TEST_F(ClearDecryptorAdapterTest, UnmappedOutputBuffers) {
