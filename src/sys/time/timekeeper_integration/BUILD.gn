@@ -22,9 +22,12 @@ rustc_test("test_bin") {
   name = "timekeeper_integration_test"
   edition = "2018"
 
-  sources = [ "tests/timekeeper_integration.rs" ]
+  sources = [
+    "tests/lib.rs",
+    "tests/timekeeper_integration.rs",
+  ]
 
-  source_root = "tests/timekeeper_integration.rs"
+  source_root = "tests/lib.rs"
 
   deps = [
     ":test.time-rustc",
