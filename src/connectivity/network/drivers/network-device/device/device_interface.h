@@ -24,7 +24,7 @@ enum class DeviceStatus { STARTING, STARTED, STOPPING, STOPPED };
 
 enum class PendingDeviceOperation { NONE, START, STOP };
 
-class DeviceInterface : public netdev::Device::RawChannelInterface,
+class DeviceInterface : public netdev::Device::Interface,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
                         public ::network::NetworkDeviceInterface {
  public:
@@ -35,7 +35,7 @@ class DeviceInterface : public netdev::Device::RawChannelInterface,
 
   // Public NetworkDevice API.
   void Teardown(fit::callback<void()> callback) override;
-  zx_status_t Bind(zx::channel req) override;
+  zx_status_t Bind(fidl::ServerEnd<netdev::Device> req) override;
 
   // NetworkDevice interface implementation.
   void NetworkDeviceIfcStatusChanged(const status_t* new_status);
@@ -106,7 +106,7 @@ class DeviceInterface : public netdev::Device::RawChannelInterface,
   void GetStatus(GetStatusCompleter::Sync& completer) override;
   void OpenSession(::fidl::StringView session_name, netdev::SessionInfo session_info,
                    OpenSessionCompleter::Sync& completer) override;
-  void GetStatusWatcher(zx::channel watcher, uint32_t buffer,
+  void GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher, uint32_t buffer,
                         GetStatusWatcherCompleter::Sync& completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.
@@ -117,7 +117,7 @@ class DeviceInterface : public netdev::Device::RawChannelInterface,
   // Helper class to keep track of clients bound to DeviceInterface.
   class Binding : public fbl::DoublyLinkedListable<std::unique_ptr<Binding>> {
    public:
-    static zx_status_t Bind(DeviceInterface* interface, zx::channel channel);
+    static zx_status_t Bind(DeviceInterface* interface, fidl::ServerEnd<netdev::Device> channel);
     void Unbind();
 
    private:
@@ -202,7 +202,6 @@ class DeviceInterface : public netdev::Device::RawChannelInterface,
   // We don't need to keep any data associated with the VMO ids, we use the slab to guarantee
   // non-overlapping unique identifiers within a set of valid IDs.
   DataVmoStore vmo_store_ __TA_GUARDED(vmos_lock_);
-  std::unique_ptr<IndexedSlab<nullptr_t>> vmo_ids_ __TA_GUARDED(vmos_lock_);
 
   fbl::Mutex bindings_lock_;
   BindingList bindings_ __TA_GUARDED(bindings_lock_);

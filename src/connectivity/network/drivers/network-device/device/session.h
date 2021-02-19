@@ -108,7 +108,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
     return rx_valid_;
   }
   inline void StopRx() { rx_valid_ = false; }
-  inline bool CanDestroy() { return in_flight_rx_ == 0 && in_flight_tx_ == 0; }
+  inline bool CanDestroy() const { return in_flight_rx_ == 0 && in_flight_tx_ == 0; }
   // Clears internal references to data VMO, returning the vmo_id that was associated with this
   // session.
   uint8_t ReleaseDataVmo();

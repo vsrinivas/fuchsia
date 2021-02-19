@@ -28,7 +28,9 @@ zx_status_t DeviceAdapter::Create(async_dispatcher_t* dispatcher, DeviceAdapterP
   return status;
 }
 
-zx_status_t DeviceAdapter::Bind(zx::channel req) { return device_->Bind(std::move(req)); }
+zx_status_t DeviceAdapter::Bind(fidl::ServerEnd<netdev::Device> req) {
+  return device_->Bind(std::move(req));
+}
 
 zx_status_t DeviceAdapter::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {
   device_iface_ = ddk::NetworkDeviceIfcProtocolClient(iface);

@@ -23,7 +23,7 @@ namespace testing {
 
 class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
  protected:
-  typedef void(ReleaseOp)(void* ctx);
+  using ReleaseOp = void(void*);
 
   void TearDown() override {
     if (device_created_) {
@@ -72,35 +72,36 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
   }
 
   fit::result<netdev::Device::SyncClient, zx_status_t> ConnectNetDevice() {
-    zx::channel client, req;
-    zx_status_t status;
-    if ((status = zx::channel::create(0, &client, &req)) != ZX_OK) {
-      return fit::error(status);
+    auto endpoints = fidl::CreateEndpoints<netdev::Device>();
+    if (endpoints.is_error()) {
+      return fit::error(endpoints.status_value());
     }
-
-    auto result =
-        netdev::DeviceInstance::Call::GetDevice(zx::unowned(FidlClient()), std::move(req));
+    auto [client_end, server_end] = std::move(*endpoints);
+    auto result = netdev::DeviceInstance::Call::GetDevice(
+        fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())),
+        std::move(server_end));
     if (!result.ok()) {
       return fit::error(result.status());
     }
 
-    return fit::ok(netdev::Device::SyncClient(std::move(client)));
+    return fit::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
   fit::result<netdev::MacAddressing::SyncClient, zx_status_t> ConnectMac() {
-    zx::channel client, req;
-    zx_status_t status;
-    if ((status = zx::channel::create(0, &client, &req)) != ZX_OK) {
-      return fit::error(status);
+    auto endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
+    if (endpoints.is_error()) {
+      return fit::error(endpoints.status_value());
     }
+    auto [client_end, server_end] = std::move(*endpoints);
 
-    auto result =
-        netdev::DeviceInstance::Call::GetMacAddressing(zx::unowned(FidlClient()), std::move(req));
+    auto result = netdev::DeviceInstance::Call::GetMacAddressing(
+        fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())),
+        std::move(server_end));
     if (!result.ok()) {
       return fit::error(result.status());
     }
 
-    return fit::ok(netdev::MacAddressing::SyncClient(std::move(client)));
+    return fit::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
   bool device_created_ = false;
@@ -118,7 +119,7 @@ TEST_F(NetDeviceDriverTest, TestOpenSession) {
   ASSERT_TRUE(connect_result.is_ok(), "Connect failed: %s",
               zx_status_get_string(connect_result.error()));
   auto netdevice = connect_result.take_value();
-  ASSERT_OK(session.Open(zx::unowned(netdevice.channel()), "test-session"));
+  ASSERT_OK(session.Open(netdevice, "test-session"));
   session.SetPaused(false);
   ASSERT_OK(device_impl_.events().wait_one(kEventStart, zx::deadline_after(kTestTimeout), nullptr));
   UnbindDeviceSync();
@@ -137,10 +138,11 @@ TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
               zx_status_get_string(connect_result.error()));
   auto netdevice = connect_result.take_value();
 
-  zx::channel req, watcher_channel;
-  ASSERT_OK(zx::channel::create(0, &req, &watcher_channel));
-  ASSERT_OK(netdevice.GetStatusWatcher(std::move(req), 1).status());
-  netdev::StatusWatcher::SyncClient watcher(std::move(watcher_channel));
+  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(*endpoints);
+  ASSERT_OK(netdevice.GetStatusWatcher(std::move(server_end), 1).status());
+  auto watcher = fidl::BindSyncClient(std::move(client_end));
   ASSERT_OK(watcher.WatchStatus().status());
   UnbindDeviceSync();
   ASSERT_OK(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout),

@@ -90,11 +90,12 @@ class NetworkDeviceTest : public zxtest::Test {
     return loop_->dispatcher();
   }
 
-  zx::channel OpenConnection() {
-    zx::channel server_end, client_end;
-    EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
+  netdev::Device::SyncClient OpenConnection() {
+    auto endpoints = fidl::CreateEndpoints<netdev::Device>();
+    EXPECT_OK(endpoints.status_value());
+    auto [client_end, server_end] = std::move(*endpoints);
     EXPECT_OK(device_->Bind(std::move(server_end)));
-    return client_end;
+    return fidl::BindSyncClient(std::move(client_end));
   }
 
   zx_status_t CreateDevice() {
@@ -115,7 +116,7 @@ class NetworkDeviceTest : public zxtest::Test {
     session_counter_++;
 
     auto connection = OpenConnection();
-    return session->Open(zx::unowned(connection), session_name, flags, num_descriptors, buffer_size,
+    return session->Open(connection, session_name, flags, num_descriptors, buffer_size,
                          std::move(frame_types));
   }
 
@@ -141,7 +142,7 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   impl_.info().min_tx_buffer_length = 60;
   ASSERT_OK(CreateDevice());
   auto connection = OpenConnection();
-  auto rsp = netdev::Device::Call::GetInfo(zx::unowned(connection));
+  auto rsp = connection.GetInfo();
   ASSERT_OK(rsp.status());
   auto& info = rsp.value().info;
   EXPECT_EQ(info.tx_depth, impl_.info().tx_depth * 2);
@@ -860,14 +861,13 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
 
 TEST_F(NetworkDeviceTest, ObserveStatus) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
-  zx::channel watcher, watcher_req;
-  ASSERT_OK(zx::channel::create(0, &watcher, &watcher_req));
-  ASSERT_TRUE(
-      netdev::Device::Call::GetStatusWatcher(zx::unowned(connection), std::move(watcher_req), 3)
-          .ok());
+  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(*endpoints);
+  auto watcher = fidl::BindSyncClient(std::move(client_end));
+  ASSERT_TRUE(OpenConnection().GetStatusWatcher(std::move(server_end), 3).ok());
   {
-    auto result = netdev::StatusWatcher::Call::WatchStatus(zx::unowned(watcher));
+    auto result = watcher.WatchStatus();
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
     ASSERT_TRUE(result.value().device_status.flags() & netdev::StatusFlags::ONLINE);
@@ -876,13 +876,13 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   impl_.SetOnline(false);
   impl_.SetOnline(true);
   {
-    auto result = netdev::StatusWatcher::Call::WatchStatus(zx::unowned(watcher));
+    auto result = watcher.WatchStatus();
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
     ASSERT_FALSE(result.value().device_status.flags() & netdev::StatusFlags::ONLINE);
   }
   {
-    auto result = netdev::StatusWatcher::Call::WatchStatus(zx::unowned(watcher));
+    auto result = watcher.WatchStatus();
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
     ASSERT_TRUE(result.value().device_status.flags() & netdev::StatusFlags::ONLINE);
@@ -891,7 +891,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   DiscardDeviceSync();
 
   // Watcher must be closed on teardown.
-  ASSERT_OK(watcher.wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
+  ASSERT_OK(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
 }
 
 // Test that returning tx buffers in the body of QueueTx is allowd and works.
@@ -938,9 +938,6 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   const char* name_str = "hello world";
   // String view only contains "hello".
   fidl::StringView name(fidl::unowned_ptr(name_str), 5u);
-
-  zx::channel req, ch;
-  ASSERT_OK(zx::channel::create(0, &req, &ch));
 
   netdev::Device_OpenSession_Response rsp;
   ASSERT_OK(dev->OpenSession(std::move(name), std::move(info), &rsp));

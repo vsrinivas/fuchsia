@@ -44,12 +44,13 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
   ~MacInterface() override;
 
   // MacAddrDevice implementation:
-  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel req) override;
+  zx_status_t Bind(async_dispatcher_t* dispatcher,
+                   fidl::ServerEnd<netdev::MacAddressing> req) override;
   void Teardown(fit::callback<void()> callback) override;
 
   // Converts a fuchsia.hardware.network.MacFilterMode to a valid mode to be communicated to the
   // device implementation, taking into consideration the device's available operating modes.
-  mode_t ConvertMode(const netdev::MacFilterMode& mode);
+  mode_t ConvertMode(const netdev::MacFilterMode& mode) const;
 
  protected:
   friend MacClientInstance;
@@ -122,7 +123,7 @@ class MacClientInstance : public netdev::MacAddressing::Interface,
                               RemoveMulticastAddressCompleter::Sync& _completer) override;
   // Binds the client instance to serve FIDL requests from the provided request channel.
   // All requests will be operated on the provided dispatcher.
-  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel req);
+  zx_status_t Bind(async_dispatcher_t* dispatcher, fidl::ServerEnd<netdev::MacAddressing> req);
   // Unbinds the client instance.
   // Once unbound it'll call `CloseClient` on its parent asynchronously.
   void Unbind();

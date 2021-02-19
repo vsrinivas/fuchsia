@@ -59,7 +59,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
                             bool online, std::unique_ptr<DeviceAdapter>* out);
 
   // Binds `req` to this adapter's `NetworkDeviceInterface`.
-  zx_status_t Bind(zx::channel req);
+  zx_status_t Bind(fidl::ServerEnd<netdev::Device> req);
 
   // Tears down this adapter and calls `callback` when teardown is finished.
   // Tearing down causes all client channels to be closed.

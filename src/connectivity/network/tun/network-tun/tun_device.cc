@@ -38,7 +38,7 @@ TunDevice::TunDevice(fit::callback<void(TunDevice*)> teardown,
       teardown_callback_(std::move(teardown)),
       config_(std::move(config)),
       binding_(this) {
-  binding_.set_error_handler([this](zx_status_t) { Teardown(); });
+  binding_.set_error_handler([this](zx_status_t /*unused*/) { Teardown(); });
 }
 
 zx_status_t TunDevice::Create(fit::callback<void(TunDevice*)> teardown,
@@ -163,11 +163,10 @@ void TunDevice::RunReadFrame() {
     if (!success) {
       if (IsBlocking()) {
         return;
-      } else {
-        auto& callback = pending_read_frame_.front();
-        callback(fuchsia::net::tun::Device_ReadFrame_Result::WithErr(ZX_ERR_SHOULD_WAIT));
-        pending_read_frame_.pop();
       }
+      auto& callback = pending_read_frame_.front();
+      callback(fuchsia::net::tun::Device_ReadFrame_Result::WithErr(ZX_ERR_SHOULD_WAIT));
+      pending_read_frame_.pop();
     }
   }
 }
@@ -267,13 +266,16 @@ void TunDevice::SetOnline(bool online, fuchsia::net::tun::Device::SetOnlineCallb
 
 void TunDevice::ConnectProtocols(fuchsia::net::tun::Protocols protos) {
   if (device_ && protos.has_network_device()) {
-    auto status = device_->Bind(protos.mutable_network_device()->TakeChannel());
+    auto status = device_->Bind(
+        fidl::ServerEnd<netdev::Device>(protos.mutable_network_device()->TakeChannel()));
     if (status != ZX_OK) {
       FX_LOGF(ERROR, "tun", "Failed to bind to network device: %s", zx_status_get_string(status));
     }
   }
   if (mac_ && protos.has_mac_addressing()) {
-    auto status = mac_->Bind(loop_.dispatcher(), protos.mutable_mac_addressing()->TakeChannel());
+    auto status = mac_->Bind(
+        loop_.dispatcher(),
+        fidl::ServerEnd<netdev::MacAddressing>(protos.mutable_mac_addressing()->TakeChannel()));
     if (status != ZX_OK) {
       FX_LOGF(ERROR, "tun", "Failed to bind to mac addressing: %s", zx_status_get_string(status));
     }

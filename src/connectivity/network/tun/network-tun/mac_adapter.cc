@@ -23,7 +23,8 @@ zx_status_t MacAdapter::Create(MacAdapterParent* parent, fuchsia::net::MacAddres
   return status;
 }
 
-zx_status_t MacAdapter::Bind(async_dispatcher_t* dispatcher, zx::channel req) {
+zx_status_t MacAdapter::Bind(async_dispatcher_t* dispatcher,
+                             fidl::ServerEnd<netdev::MacAddressing> req) {
   return device_->Bind(dispatcher, std::move(req));
 }
 
@@ -55,7 +56,7 @@ void MacAdapter::MacAddrImplGetFeatures(features_t* out_features) {
 void MacAdapter::MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
                                     size_t multicast_macs_count) {
   fbl::AutoLock lock(&state_lock_);
-  fuchsia::hardware::network::MacFilterMode filter_mode{};
+  fuchsia::hardware::network::MacFilterMode filter_mode;
   switch (mode) {
     case MODE_PROMISCUOUS:
       filter_mode = fuchsia::hardware::network::MacFilterMode::PROMISCUOUS;
@@ -68,7 +69,6 @@ void MacAdapter::MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_l
       break;
     default:
       ZX_ASSERT_MSG(false, "Unexpected filter mode %d", mode);
-      break;
   }
   mac_state_.set_mode(filter_mode);
   std::vector<fuchsia::net::MacAddress> filters;

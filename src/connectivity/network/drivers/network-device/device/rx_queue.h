@@ -23,8 +23,6 @@ class Session;
 
 class RxQueue {
  public:
-  class DeviceTransaction;
-
   static constexpr uint64_t kTriggerRxKey = 1;
   static constexpr uint64_t kSessionSwitchKey = 2;
   static constexpr uint64_t kFifoWatchKey = 3;

@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_PUBLIC_NETWORK_DEVICE_H_
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
+#include <fuchsia/hardware/network/llcpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
@@ -14,6 +15,8 @@
 #include <fbl/alloc_checker.h>
 
 namespace network {
+
+namespace netdev = llcpp::fuchsia::hardware::network;
 
 class NetworkDeviceInterface {
  public:
@@ -35,7 +38,7 @@ class NetworkDeviceInterface {
 
   // Binds the request channel req to this NetworkDeviceInterface. Requests will be handled on the
   // dispatcher given to the device on creation.
-  virtual zx_status_t Bind(zx::channel req) = 0;
+  virtual zx_status_t Bind(fidl::ServerEnd<netdev::Device> req) = 0;
 
  protected:
   NetworkDeviceInterface() = default;

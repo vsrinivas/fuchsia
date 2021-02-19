@@ -23,10 +23,9 @@ namespace network {
 class NetworkDevice;
 using DeviceType = ddk::Device<NetworkDevice, ddk::Messageable, ddk::Unbindable>;
 
-class NetworkDevice
-    : public DeviceType,
+class NetworkDevice : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE>,
-      public ::llcpp::fuchsia::hardware::network::DeviceInstance::RawChannelInterface {
+                      public llcpp::fuchsia::hardware::network::DeviceInstance::Interface {
  public:
   explicit NetworkDevice(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
@@ -40,8 +39,10 @@ class NetworkDevice
 
   void DdkRelease();
 
-  void GetDevice(zx::channel device, GetDeviceCompleter::Sync& _completer) override;
-  void GetMacAddressing(zx::channel mac, GetMacAddressingCompleter::Sync& _completer) override;
+  void GetDevice(fidl::ServerEnd<llcpp::fuchsia::hardware::network::Device> device,
+                 GetDeviceCompleter::Sync& _completer) override;
+  void GetMacAddressing(fidl::ServerEnd<llcpp::fuchsia::hardware::network::MacAddressing> mac,
+                        GetMacAddressingCompleter::Sync& _completer) override;
 
  private:
   cpp17::optional<thrd_t> loop_thread_;

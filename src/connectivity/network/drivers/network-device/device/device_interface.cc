@@ -168,7 +168,7 @@ void DeviceInterface::Teardown(fit::callback<void()> teardown_callback) {
   ContinueTeardown(TeardownState::RUNNING);
 }
 
-zx_status_t DeviceInterface::Bind(zx::channel req) {
+zx_status_t DeviceInterface::Bind(fidl::ServerEnd<netdev::Device> req) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
     // Don't attach new bindings if we're tearing down.
@@ -269,7 +269,8 @@ void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::Sessi
   completer.Reply(std::move(result));
 }
 
-void DeviceInterface::GetStatusWatcher(zx::channel watcher, uint32_t buffer,
+void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher,
+                                       uint32_t buffer,
                                        GetStatusWatcherCompleter::Sync& _completer) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
@@ -655,12 +656,11 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           rx_queue_->Unlock();
           tx_queue_->Unlock();
           return true;
-        } else {
-          rx_queue_->Unlock();
-          tx_queue_->Unlock();
-          LOG_TRACE("network-device: Teardown: Still pending sessions teardown");
-          return false;
         }
+        rx_queue_->Unlock();
+        tx_queue_->Unlock();
+        LOG_TRACE("network-device: Teardown: Still pending sessions teardown");
+        return false;
       }
       case TeardownState::FINISHED:
         ZX_PANIC("Nothing to do if the teardown state is finished.");
@@ -701,9 +701,8 @@ fbl::RefPtr<RefCountedFifo> DeviceInterface::primary_rx_fifo() {
   fbl::AutoLock lock(&sessions_lock_);
   if (primary_session_) {
     return primary_session_->rx_fifo();
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 void DeviceInterface::NotifyTxQueueAvailable() {
@@ -891,7 +890,8 @@ bool DeviceInterface::IsValidTxFrameType(uint8_t frame_type) const {
 
 bool DeviceInterface::IsDataPlaneOpen() { return device_status_ == DeviceStatus::STARTED; }
 
-zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface, zx::channel channel) {
+zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface,
+                                           fidl::ServerEnd<netdev::Device> channel) {
   fbl::AllocChecker ac;
   std::unique_ptr<Binding> binding(new (&ac) Binding);
   if (!ac.check()) {
@@ -901,8 +901,8 @@ zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface, zx::chann
   auto result = fidl::BindServer(
       interface->dispatcher_, std::move(channel), interface,
       fidl::OnUnboundFn<DeviceInterface>(
-          [binding_ptr](DeviceInterface* interface, fidl::UnbindInfo,
-                        fidl::ServerEnd<llcpp::fuchsia::hardware::network::Device>) {
+          [binding_ptr](DeviceInterface* interface, fidl::UnbindInfo /*unused*/,
+                        fidl::ServerEnd<llcpp::fuchsia::hardware::network::Device> /*unused*/) {
             bool bindings_empty;
             interface->teardown_lock_.Acquire();
             {
@@ -917,14 +917,13 @@ zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface, zx::chann
               interface->teardown_lock_.Release();
             }
           }));
-  if (result.is_ok()) {
-    binding->binding_ = result.take_value();
-    fbl::AutoLock lock(&interface->bindings_lock_);
-    interface->bindings_.push_front(std::move(binding));
-    return ZX_OK;
-  } else {
+  if (result.is_error()) {
     return result.error();
   }
+  binding->binding_ = result.take_value();
+  fbl::AutoLock lock(&interface->bindings_lock_);
+  interface->bindings_.push_front(std::move(binding));
+  return ZX_OK;
 }
 
 void DeviceInterface::Binding::Unbind() {

@@ -26,34 +26,34 @@ StatusWatcher::StatusWatcher(uint32_t max_queue) : max_queue_(max_queue) {
   }
 }
 
-zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher, zx::channel channel,
+zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher,
+                                fidl::ServerEnd<netdev::StatusWatcher> channel,
                                 fit::callback<void(StatusWatcher*)> closed_callback) {
   fbl::AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(!binding_.has_value());
-  auto result =
-      fidl::BindServer(dispatcher, std::move(channel), this,
-                       fidl::OnUnboundFn<StatusWatcher>(
-                           [](StatusWatcher* closed, fidl::UnbindInfo info,
-                              fidl::ServerEnd<llcpp::fuchsia::hardware::network::StatusWatcher>) {
-                             LOGF_TRACE("network-device: watcher closed, reason=%d", info.reason);
-                             fbl::AutoLock lock(&closed->lock_);
-                             closed->binding_.reset();
-                             if (closed->pending_txn_.has_value()) {
-                               closed->pending_txn_->Close(ZX_ERR_CANCELED);
-                               closed->pending_txn_.reset();
-                             }
-                             if (closed->closed_cb_) {
-                               lock.release();
-                               closed->closed_cb_(closed);
-                             }
-                           }));
-  if (result.is_ok()) {
-    binding_ = result.take_value();
-    closed_cb_ = std::move(closed_callback);
-    return ZX_OK;
-  } else {
+  auto result = fidl::BindServer(
+      dispatcher, std::move(channel), this,
+
+      [](StatusWatcher* closed, fidl::UnbindInfo info,
+         fidl::ServerEnd<llcpp::fuchsia::hardware::network::StatusWatcher> /*unused*/) {
+        LOGF_TRACE("network-device: watcher closed, reason=%d", info.reason);
+        fbl::AutoLock lock(&closed->lock_);
+        closed->binding_.reset();
+        if (closed->pending_txn_.has_value()) {
+          closed->pending_txn_->Close(ZX_ERR_CANCELED);
+          closed->pending_txn_.reset();
+        }
+        if (closed->closed_cb_) {
+          lock.release();
+          closed->closed_cb_(closed);
+        }
+      });
+  if (result.is_error()) {
     return result.error();
   }
+  binding_ = result.take_value();
+  closed_cb_ = std::move(closed_callback);
+  return ZX_OK;
 }
 
 void StatusWatcher::Unbind() {

@@ -171,9 +171,8 @@ bool FakeNetworkDeviceImpl::TriggerStart() {
     pending_start_callback_();
     pending_start_callback_ = nullptr;
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 bool FakeNetworkDeviceImpl::TriggerStop() {
@@ -181,9 +180,8 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
     pending_stop_callback_();
     pending_stop_callback_ = nullptr;
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 void FakeNetworkDeviceImpl::SetOnline(bool online) {
@@ -215,7 +213,7 @@ zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
   return status;
 }
 
-zx_status_t TestSession::Open(zx::unowned_channel netdevice, const char* name,
+zx_status_t TestSession::Open(netdev::Device::SyncClient& netdevice, const char* name,
                               netdev::SessionFlags flags, uint16_t num_descriptors,
                               uint64_t buffer_size,
                               fidl::VectorView<netdev::FrameType> frame_types) {
@@ -239,12 +237,12 @@ zx_status_t TestSession::Open(zx::unowned_channel netdevice, const char* name,
 
   auto session_name = fidl::unowned_str(name, strlen(name));
 
-  auto res = netdev::Device::Call::OpenSession(std::move(netdevice), std::move(session_name),
-                                               std::move(info));
+  auto res = netdevice.OpenSession(std::move(session_name), std::move(info));
   if (res.status() != ZX_OK) {
     printf("OpenSession FIDL failure: %s %s\n", zx_status_get_string(res.status()), res.error());
     return res.status();
-  } else if (res.value().result.is_err()) {
+  }
+  if (res.value().result.is_err()) {
     printf("OpenSession failed: %s\n", zx_status_get_string(res.status()));
     return res.value().result.err();
   }
@@ -333,28 +331,27 @@ buffer_descriptor_t* TestSession::descriptor(uint16_t index) {
   if (index < descriptors_count_) {
     return reinterpret_cast<buffer_descriptor_t*>(reinterpret_cast<uint8_t*>(descriptors_.start()) +
                                                   (index * sizeof(buffer_descriptor_t)));
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 uint8_t* TestSession::buffer(uint64_t offset) {
   return reinterpret_cast<uint8_t*>(data_.start()) + offset;
 }
 
-zx_status_t TestSession::FetchRx(uint16_t* descriptors, size_t count, size_t* actual) {
+zx_status_t TestSession::FetchRx(uint16_t* descriptors, size_t count, size_t* actual) const {
   return fifos_.rx.read(sizeof(uint16_t), descriptors, count, actual);
 }
 
-zx_status_t TestSession::FetchTx(uint16_t* descriptors, size_t count, size_t* actual) {
+zx_status_t TestSession::FetchTx(uint16_t* descriptors, size_t count, size_t* actual) const {
   return fifos_.tx.read(sizeof(uint16_t), descriptors, count, actual);
 }
 
-zx_status_t TestSession::SendRx(const uint16_t* descriptor, size_t count, size_t* actual) {
+zx_status_t TestSession::SendRx(const uint16_t* descriptor, size_t count, size_t* actual) const {
   return fifos_.rx.write(sizeof(uint16_t), descriptor, count, actual);
 }
 
-zx_status_t TestSession::SendTx(const uint16_t* descriptor, size_t count, size_t* actual) {
+zx_status_t TestSession::SendTx(const uint16_t* descriptor, size_t count, size_t* actual) const {
   return fifos_.tx.write(sizeof(uint16_t), descriptor, count, actual);
 }
 

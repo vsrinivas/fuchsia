@@ -19,7 +19,7 @@ TunPair::TunPair(fit::callback<void(TunPair*)> teardown, fuchsia::net::tun::Devi
       config_(std::move(config)),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       binding_(this) {
-  binding_.set_error_handler([this](zx_status_t) { Teardown(); });
+  binding_.set_error_handler([this](zx_status_t /*unused*/) { Teardown(); });
 }
 
 zx_status_t TunPair::Create(fit::callback<void(TunPair*)> teardown,
@@ -130,10 +130,11 @@ void TunPair::ConnectProtocols(const std::unique_ptr<DeviceAdapter>& device,
                                const std::unique_ptr<MacAdapter>& mac,
                                fuchsia::net::tun::Protocols protos) {
   if (device && protos.has_network_device()) {
-    device->Bind(protos.mutable_network_device()->TakeChannel());
+    device->Bind(fidl::ServerEnd<netdev::Device>(protos.mutable_network_device()->TakeChannel()));
   }
   if (mac && protos.has_mac_addressing()) {
-    mac->Bind(loop_.dispatcher(), protos.mutable_mac_addressing()->TakeChannel());
+    mac->Bind(loop_.dispatcher(), fidl::ServerEnd<netdev::MacAddressing>(
+                                      protos.mutable_mac_addressing()->TakeChannel()));
   }
 }
 

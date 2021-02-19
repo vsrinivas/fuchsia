@@ -43,10 +43,10 @@ class FidlStatus {
 class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWatcher>>,
                       public netdev::StatusWatcher::Interface {
  public:
-  StatusWatcher(uint32_t max_queue);
-  ~StatusWatcher();
+  explicit StatusWatcher(uint32_t max_queue);
+  ~StatusWatcher() override;
 
-  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel,
+  zx_status_t Bind(async_dispatcher_t* dispatcher, fidl::ServerEnd<netdev::StatusWatcher> channel,
                    fit::callback<void(StatusWatcher*)> closed_callback);
   void Unbind();
 

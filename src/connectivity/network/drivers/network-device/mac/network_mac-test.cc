@@ -44,23 +44,24 @@ class MacDeviceTest : public zxtest::Test {
   }
 
   fit::result<netdev::MacAddressing::SyncClient, zx_status_t> OpenInstance() {
-    zx::channel channel, req;
-    zx_status_t status;
-    if ((status = zx::channel::create(0, &channel, &req)) != ZX_OK) {
-      return fit::error(status);
+    auto endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
+    if (endpoints.is_error()) {
+      return fit::error(endpoints.status_value());
     }
+    auto [client_end, server_end] = std::move(*endpoints);
     // Create the loop with a test thread lazily.
     if (!loop_) {
       loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
-      if ((status = loop_->StartThread("test-thread", nullptr)) != ZX_OK) {
+      zx_status_t status = loop_->StartThread("test-thread", nullptr);
+      if (status != ZX_OK) {
         return fit::error(status);
       }
     }
-    status = device_->Bind(loop_->dispatcher(), std::move(req));
+    zx_status_t status = device_->Bind(loop_->dispatcher(), std::move(server_end));
     if (status != ZX_OK) {
       return fit::error(status);
     }
-    return fit::ok(netdev::MacAddressing::SyncClient(std::move(channel)));
+    return fit::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
  protected:

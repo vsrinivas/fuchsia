@@ -172,9 +172,7 @@ std::tuple<RxQueue::InFlightBuffer*, uint32_t> RxQueue::GetBuffer() {
 }
 
 zx_status_t RxQueue::PrepareBuff(rx_space_buffer_t* buff) {
-  auto res = GetBuffer();
-  auto session_buffer = std::get<0>(res);
-  auto index = std::get<1>(res);
+  auto [session_buffer, index] = GetBuffer();
   if (session_buffer == nullptr) {
     return ZX_ERR_NO_RESOURCES;
   }

@@ -44,13 +44,14 @@ class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDe
                             bool promisc_only, std::unique_ptr<MacAdapter>* out);
   // Binds the request channel to the MacAddrDeviceInterface. Requests will be served over the
   // provided `dispatcher`.
-  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel req);
+  zx_status_t Bind(async_dispatcher_t* dispatcher,
+                   fidl::ServerEnd<netdev::MacAddressing> req) override;
   // Tears down this adapter and calls `callback` when teardown is finished.
   // Tearing down causes all client channels to be closed.
   // There are no guarantees over which thread `callback` is called.
   // It is invalid to attempt to tear down an adapter that is already tearing down or is already
   // torn down.
-  void Teardown(fit::callback<void()> callback);
+  void Teardown(fit::callback<void()> callback) override;
   // Same as `Teardown`, but blocks until teardown is complete.
   void TeardownSync();
 

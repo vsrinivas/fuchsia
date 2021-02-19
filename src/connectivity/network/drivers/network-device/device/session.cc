@@ -35,18 +35,19 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
     // if we're not a primary session, or the primary is already ourselves, then we don't
     // want to take over.
     return false;
-  } else if (!current_primary) {
+  }
+  if (!current_primary) {
     // always request to take over if there is no current primary session.
     return true;
-  } else if (current_primary->IsPaused() && !IsPaused()) {
+  }
+  if (current_primary->IsPaused() && !IsPaused()) {
     // If the current primary session is paused, but we aren't we can take it over.
     return true;
-  } else {
-    // otherwise, the heuristic to apply here is that we want to use the
-    // session that has the largest number of descriptors defined, as that relates to having more
-    // buffers available for us.
-    return descriptor_count_ > current_primary->descriptor_count_;
   }
+  // otherwise, the heuristic to apply here is that we want to use the
+  // session that has the largest number of descriptors defined, as that relates to having more
+  // buffers available for us.
+  return descriptor_count_ > current_primary->descriptor_count_;
 }
 
 zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
@@ -155,7 +156,8 @@ zx_status_t Session::Init(netdev::Fifos* out) {
           ZX_OK) {
     LOGF_ERROR("network-device(%s): failed to create FIFOS", name());
     return ZX_ERR_NO_RESOURCES;
-  } else if (zx::port::create(0, &tx_port_) != ZX_OK) {
+  }
+  if (zx::port::create(0, &tx_port_) != ZX_OK) {
     LOGF_ERROR("network-device(%s): failed to create tx port", name());
     return ZX_ERR_NO_RESOURCES;
   }
@@ -202,12 +204,11 @@ zx_status_t Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
              fidl::ServerEnd<llcpp::fuchsia::hardware::network::Session> server_end) {
             self->OnUnbind(info.reason, std::move(server_end));
           }));
-  if (result.is_ok()) {
-    binding_ = result.take_value();
-    return ZX_OK;
-  } else {
+  if (result.is_error()) {
     return result.error();
   }
+  binding_ = result.take_value();
+  return ZX_OK;
 }
 
 void Session::OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel) {
@@ -409,7 +410,6 @@ zx_status_t Session::FetchTx() {
     auto expect_chain = desc->chain_length;
 
     bool add_head_space = buffer->head_length != 0;
-    uint16_t didx = *desc_idx;
     for (;;) {
       auto* cur = const_cast<buffer_region_t*>(&buffer->data.parts_list[buffer->data.parts_count]);
       if (add_head_space) {
@@ -429,7 +429,7 @@ zx_status_t Session::FetchTx() {
       if (expect_chain == 0) {
         break;
       }
-      didx = desc->nxt;
+      uint16_t didx = desc->nxt;
       desc = descriptor(didx);
       if (desc == nullptr) {
         LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
@@ -467,18 +467,16 @@ buffer_descriptor_t* Session::descriptor(uint16_t index) {
   if (index < descriptor_count_) {
     return reinterpret_cast<buffer_descriptor_t*>(static_cast<uint8_t*>(descriptors_.start()) +
                                                   (index * descriptor_length_));
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 const buffer_descriptor_t* Session::descriptor(uint16_t index) const {
   if (index < descriptor_count_) {
     return reinterpret_cast<buffer_descriptor_t*>(static_cast<uint8_t*>(descriptors_.start()) +
                                                   (index * descriptor_length_));
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 fbl::Span<uint8_t> Session::data_at(uint64_t offset, uint64_t len) const {
@@ -622,7 +620,6 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
   buff->data.vmo_id = vmo_id_;
 
   auto expect_chain = desc->chain_length;
-  uint16_t didx = descriptor_index;
   uint32_t total_length = 0;
   for (;;) {
     buffer_parts->offset = desc->offset + desc->head_length;
@@ -633,7 +630,7 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
     if (expect_chain == 0) {
       break;
     }
-    didx = desc->nxt;
+    uint16_t didx = desc->nxt;
     desc = descriptor(didx);
     if (desc == nullptr) {
       LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);

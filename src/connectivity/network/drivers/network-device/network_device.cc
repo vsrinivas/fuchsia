@@ -78,7 +78,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t NetworkDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::llcpp::fuchsia::hardware::network::DeviceInstance::Dispatch(this, msg, &transaction);
+  llcpp::fuchsia::hardware::network::DeviceInstance::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -98,12 +98,15 @@ void NetworkDevice::DdkRelease() {
   delete this;
 }
 
-void NetworkDevice::GetDevice(zx::channel device, GetDeviceCompleter::Sync& _completer) {
+void NetworkDevice::GetDevice(fidl::ServerEnd<llcpp::fuchsia::hardware::network::Device> device,
+                              GetDeviceCompleter::Sync& _completer) {
   ZX_ASSERT_MSG(device_, "Can't serve device if not bound to parent implementation");
   device_->Bind(std::move(device));
 }
 
-void NetworkDevice::GetMacAddressing(zx::channel mac, GetMacAddressingCompleter::Sync& _completer) {
+void NetworkDevice::GetMacAddressing(
+    fidl::ServerEnd<llcpp::fuchsia::hardware::network::MacAddressing> mac,
+    GetMacAddressingCompleter::Sync& _completer) {
   if (mac_) {
     mac_->Bind(loop_.dispatcher(), std::move(mac));
   }

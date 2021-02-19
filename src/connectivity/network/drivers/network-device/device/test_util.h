@@ -54,7 +54,7 @@ class TxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<TxBuffer>>,
  public:
   explicit TxBuffer(const tx_buffer_t* b) : AnyBuffer<tx_buffer_t>(b), status_(ZX_OK) {}
 
-  zx_status_t status() { return status_; }
+  zx_status_t status() const { return status_; }
 
   void set_status(zx_status_t status) { status_ = status; }
 
@@ -74,8 +74,6 @@ class RxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<RxBuffer>>,
   ~RxBuffer() { free(info_); }
 
   rx_buffer_t& return_buffer() { return return_; }
-
-  bool has_data() const { return return_.total_length != 0; }
 
   zx_status_t WriteData(const std::vector<uint8_t>& data, const VmoProvider& vmo_provider) {
     return WriteData(&data[0], data.size(), vmo_provider);
@@ -172,7 +170,7 @@ class TestSession {
   TestSession() = default;
 
   zx_status_t Open(
-      zx::unowned_channel netdevice, const char* name,
+      netdev::Device::SyncClient& netdevice, const char* name,
       netdev::SessionFlags flags = netdev::SessionFlags::PRIMARY,
       uint16_t num_descriptors = kDefaultDescriptorCount,
       uint64_t buffer_size = kDefaultBufferLength,
@@ -189,35 +187,35 @@ class TestSession {
   buffer_descriptor_t* descriptor(uint16_t index);
   uint8_t* buffer(uint64_t offset);
 
-  zx_status_t FetchRx(uint16_t* descriptors, size_t count, size_t* actual);
-  zx_status_t FetchTx(uint16_t* descriptors, size_t count, size_t* actual);
-  zx_status_t SendRx(const uint16_t* descriptor, size_t count, size_t* actual);
-  zx_status_t SendTx(const uint16_t* descriptor, size_t count, size_t* actual);
+  zx_status_t FetchRx(uint16_t* descriptors, size_t count, size_t* actual) const;
+  zx_status_t FetchTx(uint16_t* descriptors, size_t count, size_t* actual) const;
+  zx_status_t SendRx(const uint16_t* descriptor, size_t count, size_t* actual) const;
+  zx_status_t SendTx(const uint16_t* descriptor, size_t count, size_t* actual) const;
   zx_status_t SendTxData(uint16_t descriptor_index, const std::vector<uint8_t>& data);
 
-  zx_status_t FetchRx(uint16_t* descriptor) {
+  zx_status_t FetchRx(uint16_t* descriptor) const {
     size_t actual;
     return FetchRx(descriptor, 1, &actual);
   }
 
-  zx_status_t FetchTx(uint16_t* descriptor) {
+  zx_status_t FetchTx(uint16_t* descriptor) const {
     size_t actual;
     return FetchTx(descriptor, 1, &actual);
   }
 
-  zx_status_t SendRx(uint16_t descriptor) {
+  zx_status_t SendRx(uint16_t descriptor) const {
     size_t actual;
     return SendRx(&descriptor, 1, &actual);
   }
 
-  zx_status_t SendTx(uint16_t descriptor) {
+  zx_status_t SendTx(uint16_t descriptor) const {
     size_t actual;
     return SendTx(&descriptor, 1, &actual);
   }
 
   fidl::ClientEnd<netdev::Session>& session() { return session_; }
 
-  uint64_t canonical_offset(uint16_t index) { return buffer_length_ * index; }
+  uint64_t canonical_offset(uint16_t index) const { return buffer_length_ * index; }
 
  private:
   uint16_t descriptors_count_{};
@@ -231,7 +229,6 @@ class TestSession {
 };
 
 class RxReturnTransaction {
- public:
  public:
   explicit RxReturnTransaction(FakeNetworkDeviceImpl* impl) : client_(impl->client()) {}
 

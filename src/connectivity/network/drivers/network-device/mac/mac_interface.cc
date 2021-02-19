@@ -75,7 +75,8 @@ zx_status_t MacInterface::Create(ddk::MacAddrImplProtocolClient parent,
   return ZX_OK;
 }
 
-zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher, zx::channel req) {
+zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher,
+                               fidl::ServerEnd<netdev::MacAddressing> req) {
   fbl::AutoLock lock(&lock_);
   if (teardown_callback_) {
     // Don't allow new bindings if we're tearing down.
@@ -97,7 +98,7 @@ zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher, zx::channel req) 
   return status;
 }
 
-mode_t MacInterface::ConvertMode(const netdev::MacFilterMode& mode) {
+mode_t MacInterface::ConvertMode(const netdev::MacFilterMode& mode) const {
   mode_t check = 0;
   switch (mode) {
     case netdev::MacFilterMode::PROMISCUOUS:
@@ -245,20 +246,20 @@ void MacClientInstance::RemoveMulticastAddress(MacAddress address,
 MacClientInstance::MacClientInstance(MacInterface* parent, mode_t default_mode)
     : parent_(parent), state_(default_mode) {}
 
-zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher, zx::channel req) {
-  auto result =
-      fidl::BindServer(dispatcher, std::move(req), this,
-                       fidl::OnUnboundFn<MacClientInstance>(
-                           [](MacClientInstance* client_instance, fidl::UnbindInfo,
-                              fidl::ServerEnd<llcpp::fuchsia::hardware::network::MacAddressing>) {
-                             client_instance->parent_->CloseClient(client_instance);
-                           }));
-  if (result.is_ok()) {
-    binding_ = result.take_value();
-    return ZX_OK;
-  } else {
+zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher,
+                                    fidl::ServerEnd<netdev::MacAddressing> req) {
+  auto result = fidl::BindServer(
+      dispatcher, std::move(req), this,
+
+      [](MacClientInstance* client_instance, fidl::UnbindInfo /*unused*/,
+         fidl::ServerEnd<llcpp::fuchsia::hardware::network::MacAddressing> /*unused*/) {
+        client_instance->parent_->CloseClient(client_instance);
+      });
+  if (result.is_error()) {
     return result.error();
   }
+  binding_ = result.take_value();
+  return ZX_OK;
 }
 
 void MacClientInstance::Unbind() {
