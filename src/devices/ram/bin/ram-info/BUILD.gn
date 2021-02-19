@@ -6,6 +6,7 @@ import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
 executable("ram-info") {
+  testonly = true
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "main.cc",
