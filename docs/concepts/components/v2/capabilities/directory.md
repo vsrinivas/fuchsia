@@ -133,7 +133,7 @@ to the directory.
 See [`//examples/components/routing`][routing-example] for a working example of
 routing a directory capability from one component to another.
 
-## Directory capability rights
+## Directory capability rights {#directory-capability-rights}
 
 As directories are [offered][offer] and [exposed][expose] throughout the system
 a user may want to restrict what components who have access to this directory
