@@ -2,10 +2,6 @@
 {
     children: [
         {
-            name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cm",
-        },
-        {
             name: "driver",
             url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello-world-integration-test-driver.cm",
         },
@@ -16,7 +12,7 @@
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
             ],
-            from: "#archivist",
+            from: "parent",
             to: [ "#driver" ],
         },
     ],

@@ -6,18 +6,24 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
-rustc_binary("inspect_publisher_bin") {
-  name = "inspect_publisher"
-  source_root = "inspect_publisher.rs"
+rustc_binary("publisher_bin") {
+  name = "publisher"
+  source_root = "publisher.rs"
   deps = [
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
 
-  sources = [ "inspect_publisher.rs" ]
+  sources = [ "publisher.rs" ]
 }
 
 rustc_test("diagnostics_test_bin") {
@@ -28,37 +34,31 @@ rustc_test("diagnostics_test_bin") {
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "main.rs" ]
 }
 
-fuchsia_component("diagnostics-test-driver") {
+fuchsia_component("diagnostics-publisher") {
+  component_name = "diagnostics-publisher"
   testonly = true
-  manifest = "meta/driver.cml"
-  deps = [ ":diagnostics_test_bin" ]
-}
-
-fuchsia_component("inspect-publisher") {
-  component_name = "inspect-publisher"
-  testonly = true
-  manifest = "meta/inspect-publisher.cml"
-  deps = [ ":inspect_publisher_bin" ]
+  manifest = "meta/diagnostics-publisher.cml"
+  deps = [ ":publisher_bin" ]
 }
 
 fuchsia_component("test-root") {
   component_name = "test-root"
   testonly = true
   manifest = "meta/test-root.cml"
+  deps = [ ":diagnostics_test_bin" ]
 }
 
 fuchsia_test_package("test-manager-diagnostics-tests") {
   test_components = [ ":test-root" ]
 
-  deps = [
-    ":diagnostics-test-driver",
-    ":inspect-publisher",
-  ]
+  deps = [ ":diagnostics-publisher" ]
 }
 
 group("tests") {

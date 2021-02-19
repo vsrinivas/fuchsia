@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow, fidl_fuchsia_test_manager::LaunchError, thiserror::Error,
+    anyhow, fidl_fuchsia_developer_remotecontrol::StreamError,
+    fidl_fuchsia_test_manager::LaunchError, thiserror::Error,
     topology_builder::error::Error as TopologyBuilderError,
 };
 
@@ -36,6 +37,9 @@ pub enum LaunchTestError {
 
     #[error("Failed to connect to TestSuite")]
     ConnectToTestSuite(#[source] anyhow::Error),
+
+    #[error("Failed to stream logs from embedded Archivist: {0:?}")]
+    StreamIsolatedLogs(StreamError),
 }
 
 impl Into<LaunchError> for LaunchTestError {
@@ -43,7 +47,8 @@ impl Into<LaunchError> for LaunchTestError {
         match self {
             Self::CreateProxyForArchiveAccessor(_)
             | Self::InitializeTestTopology(_)
-            | Self::ConnectToArchiveAccessor(_) => LaunchError::InternalError,
+            | Self::ConnectToArchiveAccessor(_)
+            | Self::StreamIsolatedLogs(_) => LaunchError::InternalError,
             Self::CreateTestTopology(_) => LaunchError::InstanceCannotResolve,
             Self::ConnectToTestSuite(_) => LaunchError::FailedToConnectToTestSuite,
         }

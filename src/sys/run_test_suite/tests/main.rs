@@ -4,7 +4,8 @@
 
 use fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy};
 use futures::prelude::*;
-use run_test_suite_lib::{Outcome, RunResult, TestParams};
+use regex::Regex;
+use run_test_suite_lib::{diagnostics, Outcome, RunResult, TestParams};
 use std::io::Write;
 use std::str::from_utf8;
 
@@ -16,10 +17,12 @@ macro_rules! assert_output {
 
         // no need to check for lines starting with "[output - ". We just want to make sure that
         // we are printing important details.
+        let log_timestamp_re = Regex::new(r"^\[\d+\]").unwrap();
         let mut output = from_utf8(&$output)
             .expect("we should not get utf8 error.")
             .split("\n")
             .filter(|x| !x.starts_with("[output - "))
+            .map(|line| log_timestamp_re.replace_all(line, "[TIMESTAMP]"))
             .collect::<Vec<_>>();
 
         expected_output.sort();
@@ -42,14 +45,18 @@ fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
 }
 
 /// run specified test once.
-async fn run_test_once<W: Write>(
+async fn run_test_once<W: Write + Send>(
     test_params: TestParams,
     writer: &mut W,
 ) -> Result<RunResult, anyhow::Error> {
-    let mut results =
-        run_test_suite_lib::run_test(test_params, 1, writer).await.collect::<Vec<_>>().await;
-    assert_eq!(results.len(), 1, "{:?}", results);
-    return results.pop().unwrap();
+    let (log_stream, result) = {
+        let streams = run_test_suite_lib::run_test(test_params, 1, writer).await?;
+        let mut results = streams.results.collect::<Vec<_>>().await;
+        assert_eq!(results.len(), 1, "{:?}", results);
+        (streams.logs, results.pop().unwrap())
+    };
+    diagnostics::collect_logs(log_stream, writer).await.unwrap();
+    result
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -141,13 +148,14 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
-    let run_results = run_test_suite_lib::run_test(
+    let streams = run_test_suite_lib::run_test(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 harness),
             10, &mut output
         )
-    .await.collect::<Vec<_>>().await;
+    .await.expect("run test");
+    let run_results = streams.results.collect::<Vec<_>>().await;
 
     assert_eq!(run_results.len(), 10);
     for run_result in run_results {
@@ -367,13 +375,14 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
-    let run_results = run_test_suite_lib::run_test(
+    let streams = run_test_suite_lib::run_test(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 harness),
             10, &mut output
         )
-    .await.collect::<Vec<_>>().await;
+    .await.expect("run test");
+    let run_results = streams.results.collect::<Vec<_>>().await;
 
     assert_eq!(run_results.len(), 10);
     for run_result in run_results {
@@ -533,8 +542,9 @@ async fn test_timeout_multiple_times() {
         harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
-    let mut run_results =
-        run_test_suite_lib::run_test(test_params, 10, &mut output).await.collect::<Vec<_>>().await;
+    let streams =
+        run_test_suite_lib::run_test(test_params, 10, &mut output).await.expect("run test");
+    let mut run_results = streams.results.collect::<Vec<_>>().await;
     assert_eq!(run_results.len(), 1);
     let run_result = run_results.pop().unwrap().unwrap();
     assert_eq!(run_result.outcome, Outcome::Timedout);
@@ -566,5 +576,30 @@ async fn test_passes_with_large_timeout() {
 
     assert_eq!(run_result.executed, vec!["EchoTest"]);
     assert_eq!(run_result.passed, vec!["EchoTest"]);
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_logging_component() {
+    let mut output: Vec<u8> = vec![];
+    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+        .expect("connecting to HarnessProxy");
+
+    let mut test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+        harness,
+    );
+    test_params.timeout = std::num::NonZeroU32::new(600);
+    let run_result =
+        run_test_once(test_params, &mut output).await.expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	log_and_exit
+[TIMESTAMP][test_root] DEBUG: my debug message 
+[TIMESTAMP][test_root] INFO: my info message 
+[TIMESTAMP][test_root] WARN: my warn message 
+[PASSED]	log_and_exit
+";
+    assert_output!(output, expected_output);
+    assert_eq!(run_result.outcome, Outcome::Passed);
     assert!(run_result.successful_completion);
 }

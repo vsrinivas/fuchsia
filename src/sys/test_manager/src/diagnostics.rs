@@ -5,19 +5,79 @@
 use {
     crate::TEST_ROOT_REALM_NAME,
     anyhow::Error,
+    diagnostics_bridge::ArchiveReaderManager,
+    diagnostics_data::LogsData,
+    diagnostics_reader as reader,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_developer_remotecontrol::StreamError,
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorProxy, ArchiveAccessorRequest, ArchiveAccessorRequestStream,
         BatchIteratorMarker, BatchIteratorProxy, BatchIteratorRequest, ClientSelectorConfiguration,
-        ComponentSelector, FormattedContent, Selector, SelectorArgument, StreamParameters,
-        StringSelector,
+        ComponentSelector, DataType, Format, FormattedContent, Selector, SelectorArgument,
+        StreamMode, StreamParameters, StringSelector,
     },
     fidl_fuchsia_mem as fmem, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::TryStreamExt,
+    futures::{stream::FusedStream, TryStreamExt},
     serde_json::{self, Value as JsonValue},
-    std::sync::Arc,
-    tracing::error,
+    std::{ops::Deref, sync::Arc},
+    tracing::{error, warn},
 };
+
+pub struct IsolatedLogsProvider {
+    accessor: Arc<ArchiveAccessorProxy>,
+}
+
+impl IsolatedLogsProvider {
+    pub fn new(accessor: Arc<ArchiveAccessorProxy>) -> Self {
+        Self { accessor }
+    }
+
+    pub fn start_streaming_logs(
+        &self,
+        iterator: ServerEnd<BatchIteratorMarker>,
+    ) -> Result<(), StreamError> {
+        let stream_parameters = StreamParameters {
+            stream_mode: Some(StreamMode::SnapshotThenSubscribe),
+            data_type: Some(DataType::Logs),
+            format: Some(Format::Json),
+            client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
+            ..StreamParameters::EMPTY
+        };
+        self.accessor.stream_diagnostics(stream_parameters, iterator).map_err(|err| {
+            warn!(%err, "Failed to subscribe to isolated logs");
+            StreamError::SetupSubscriptionFailed
+        })?;
+        Ok(())
+    }
+}
+
+impl Deref for IsolatedLogsProvider {
+    type Target = Arc<ArchiveAccessorProxy>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.accessor
+    }
+}
+
+impl ArchiveReaderManager for IsolatedLogsProvider {
+    type Error = reader::Error;
+
+    fn start_log_stream(
+        &mut self,
+    ) -> Result<
+        Box<dyn FusedStream<Item = Result<LogsData, Self::Error>> + Unpin + Send>,
+        StreamError,
+    > {
+        let (proxy, batch_iterator_server) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
+            .map_err(|err| {
+                warn!(%err, "Fidl error while creating proxy");
+                StreamError::GenericError
+            })?;
+        self.start_streaming_logs(batch_iterator_server)?;
+        let subscription = reader::Subscription::new(proxy);
+        Ok(Box::new(subscription))
+    }
+}
 
 /// Runs an ArchiveAccessor to which test components connect.
 /// This will append the test realm name to all selectors coming from the component.

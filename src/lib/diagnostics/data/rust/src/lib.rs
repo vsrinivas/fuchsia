@@ -347,6 +347,20 @@ pub enum Severity {
     Fatal,
 }
 
+impl fmt::Display for Severity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let repr = match self {
+            Severity::Trace => "TRACE",
+            Severity::Debug => "DEBUG",
+            Severity::Info => "INFO",
+            Severity::Warn => "WARN",
+            Severity::Error => "ERROR",
+            Severity::Fatal => "FATAL",
+        };
+        write!(f, "{}", repr)
+    }
+}
+
 impl From<FidlSeverity> for Severity {
     fn from(severity: FidlSeverity) -> Self {
         match severity {

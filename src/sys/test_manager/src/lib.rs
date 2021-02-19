@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::*,
+    crate::{diagnostics::IsolatedLogsProvider, error::*},
     anyhow::Error,
     cm_rust,
+    diagnostics_bridge::ArchiveReaderManager,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest::SuiteMarker,
-    ftest_manager::{LaunchError, SuiteControllerRequestStream},
+    ftest_manager::{LaunchError, LaunchOptions, SuiteControllerRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -32,6 +33,7 @@ mod error;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
 pub const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
+pub const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
 
 lazy_static! {
     static ref ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
@@ -60,7 +62,7 @@ pub async fn run_test_manager(
         match event {
             ftest_manager::HarnessRequest::LaunchSuite {
                 test_url,
-                options: _,
+                options,
                 suite,
                 controller,
                 responder,
@@ -77,7 +79,7 @@ pub async fn run_test_manager(
                     Ok(c) => c,
                 };
 
-                match launch_test(&test_url, suite).await {
+                match launch_test(&test_url, suite, options).await {
                     Ok(test) => {
                         responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
                         fasync::Task::spawn(async move {
@@ -100,14 +102,13 @@ pub async fn run_test_manager(
 
 struct RunningTest {
     instance: TopologyInstance,
-    // TODO: use this archive accessor to fetch isolated logs.
-    _archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
+    _logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
 }
 
 impl RunningTest {
     async fn destroy(mut self) {
         let destroy_waiter = self.instance.root.take_destroy_waiter();
-        drop(self);
+        drop(self.instance);
         destroy_waiter.await;
     }
 
@@ -134,6 +135,7 @@ impl RunningTest {
 async fn launch_test(
     test_url: &str,
     suite_request: ServerEnd<SuiteMarker>,
+    options: LaunchOptions,
 ) -> Result<RunningTest, LaunchTestError> {
     // This archive accessor will be served by the embedded archivist.
     let (archive_accessor, archive_accessor_server_end) =
@@ -145,19 +147,38 @@ async fn launch_test(
         .await
         .map_err(LaunchTestError::InitializeTestTopology)?;
     topology.set_collection_name("tests");
-    let topology_instance = topology.create().await.map_err(LaunchTestError::CreateTestTopology)?;
-    topology_instance
+    let instance = topology.create().await.map_err(LaunchTestError::CreateTestTopology)?;
+    instance
         .root
         .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
             archive_accessor_server_end,
         )
         .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
-    topology_instance
+
+    let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc);
+    let _logs_iterator_task = match options.logs_iterator {
+        None => None,
+        Some(ftest_manager::LogsIterator::Archive(iterator)) => {
+            let task = isolated_logs_provider
+                .spawn_iterator_server(iterator)
+                .map_err(LaunchTestError::StreamIsolatedLogs)?;
+            Some(task)
+        }
+        Some(ftest_manager::LogsIterator::Batch(iterator)) => {
+            isolated_logs_provider
+                .start_streaming_logs(iterator)
+                .map_err(LaunchTestError::StreamIsolatedLogs)?;
+            None
+        }
+        Some(_) => None,
+    };
+
+    instance
         .root
         .connect_request_to_protocol_at_exposed_dir(suite_request)
         .map_err(LaunchTestError::ConnectToTestSuite)?;
 
-    Ok(RunningTest { instance: topology_instance, _archive_accessor: archive_accessor_arc })
+    Ok(RunningTest { instance, _logs_iterator_task })
 }
 
 async fn get_topology(
@@ -176,7 +197,10 @@ async fn get_topology(
             })),
         )
         .await?
-        .add_component("test_wrapper/archivist", ComponentSource::url(*ARCHIVIST_FOR_EMBEDDING_URL))
+        .add_eager_component(
+            ARCHIVIST_REALM_PATH,
+            ComponentSource::url(*ARCHIVIST_FOR_EMBEDDING_URL),
+        )
         .await?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.process.Launcher"),
@@ -193,7 +217,7 @@ async fn get_topology(
             source: RouteEndpoint::AboveRoot,
             targets: vec![
                 RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
-                RouteEndpoint::component("test_wrapper/archivist"),
+                RouteEndpoint::component(ARCHIVIST_REALM_PATH),
             ],
         })?
         .add_route(CapabilityRoute {
@@ -209,23 +233,18 @@ async fn get_topology(
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![
-                RouteEndpoint::component("test_wrapper/archivist"),
-                // TODO(fxbug.dev/67960): use embedded archivist LogSink)
-                RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
-            ],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
-        // TODO(fxbug.dev/67960): uncomment when fetching isolated logs is implemented.
-        // .add_route(CapabilityRoute {
-        //     capability: Capability::protocol("fuchsia.logger.LogSink"),
-        //     source: RouteEndpoint::component("test_wrapper/archivist"),
-        //     targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        // })?
-        // .add_route(CapabilityRoute {
-        //     capability: Capability::protocol("fuchsia.logger.Log"),
-        //     source: RouteEndpoint::component("test_wrapper/archivist"),
-        //     targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        // })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::component(ARCHIVIST_REALM_PATH),
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.Log"),
+            source: RouteEndpoint::component(ARCHIVIST_REALM_PATH),
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
             source: RouteEndpoint::component("mocks-server"),
@@ -233,23 +252,23 @@ async fn get_topology(
         })?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::component("test_wrapper/archivist"),
+            source: RouteEndpoint::component(ARCHIVIST_REALM_PATH),
             targets: vec![RouteEndpoint::AboveRoot],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
             source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Stopped, cm_rust::EventMode::Async),
             source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Running, cm_rust::EventMode::Async),
             source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(
@@ -257,7 +276,7 @@ async fn get_topology(
                 cm_rust::EventMode::Async,
             ),
             source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(
@@ -265,7 +284,7 @@ async fn get_topology(
                 cm_rust::EventMode::Async,
             ),
             source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.test.Suite"),

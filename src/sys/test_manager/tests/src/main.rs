@@ -52,22 +52,35 @@ async fn launch_test(
 async fn run_test(
     test_url: &str,
     test_run_options: TestRunOptions,
-) -> Result<Vec<TestEvent>, Error> {
+) -> Result<(Vec<TestEvent>, Vec<String>), Error> {
     let harness = connect_test_manager().await?;
-    let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
+    let mut suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
+
+    let log_stream = suite_instance.take_log_stream().expect("got log stream");
 
     let (sender, recv) = mpsc::channel(1);
 
-    let (events, ()) = futures::future::try_join(
+    let results_fut = async move {
+        suite_instance.run_and_collect_results(sender, None, test_run_options).await?;
+        suite_instance.kill()?;
+        Ok::<(), anyhow::Error>(())
+    };
+    let (events, logs, ()) = futures::try_join!(
         recv.collect::<Vec<_>>().map(Ok),
-        suite_instance.run_and_collect_results(sender, None, test_run_options),
+        log_stream.collect::<Vec<_>>().map(Ok),
+        results_fut,
     )
-    .await
     .context("running test")?;
+
+    let mut collected_logs = vec![];
+    for log_result in logs {
+        let log = log_result?;
+        collected_logs.push(log.msg().unwrap().to_string());
+    }
 
     let mut test_events = vec![];
 
-    // break logs as they can come in any order.
+    // break stdout messages as they can come in any order.
     for event in events {
         match event {
             TestEvent::StdoutMessage { test_case_name, mut msg } => {
@@ -88,7 +101,7 @@ async fn run_test(
         };
     }
 
-    Ok(test_events)
+    Ok((test_events, collected_logs))
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -124,7 +137,7 @@ async fn calling_kill_should_kill_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
-    let events = run_test(
+    let (events, logs) = run_test(
         test_url,
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
@@ -133,9 +146,8 @@ async fn launch_and_test_echo_test() {
         },
     )
     .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
+    .unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_events = hashmap! {
         Some("EchoTest".to_string()) => vec![
@@ -147,6 +159,7 @@ async fn launch_and_test_echo_test() {
         ]
     };
 
+    assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
 }
 
@@ -155,7 +168,7 @@ async fn launch_and_test_no_on_finished() {
     let test_url =
         "fuchsia-pkg://fuchsia.com/example-tests#meta/no-onfinished-after-test-example.cm";
 
-    let events = run_test(
+    let (events, logs) = run_test(
         test_url,
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
@@ -164,9 +177,8 @@ async fn launch_and_test_no_on_finished() {
         },
     )
     .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
+    .unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
     let test_cases = ["Example.Test1", "Example.Test2", "Example.Test3"];
     let mut expected_events = vec![];
@@ -181,13 +193,14 @@ async fn launch_and_test_no_on_finished() {
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
 
     assert_eq!(&expected_events, &events);
+    assert_eq!(logs, Vec::<String>::new());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_gtest_runner_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 
-    let events = run_test(
+    let (events, logs) = run_test(
         test_url,
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
@@ -196,13 +209,13 @@ async fn launch_and_test_gtest_runner_sample_test() {
         },
     )
     .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
+    .unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_events =
         include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf");
 
+    assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
 }
 
@@ -236,5 +249,25 @@ async fn test_not_resolved() {
             .await
             .unwrap(),
         Err(ftest_manager::LaunchError::InstanceCannotResolve)
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn collect_isolated_logs() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/test-root.cm";
+    let (_events, logs) = run_test(
+        test_url,
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: None,
+            arguments: vec![],
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        logs,
+        vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
     );
 }

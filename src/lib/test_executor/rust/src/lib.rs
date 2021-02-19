@@ -465,10 +465,17 @@ impl SuiteInstance {
             if chunk.is_empty() {
                 break;
             }
-            successful_completion &= self
+            let res = match self
                 .run_invocations(chunk, run_options.clone(), &mut sender)
                 .await
-                .context("Error running test cases")?;
+                .context("Error running test cases")
+            {
+                Ok(success) => success,
+                Err(e) => {
+                    return Err(e);
+                }
+            };
+            successful_completion &= res;
         }
         if successful_completion {
             sender.send(TestEvent::test_finished()).await.context("sending TestFinished event")?;

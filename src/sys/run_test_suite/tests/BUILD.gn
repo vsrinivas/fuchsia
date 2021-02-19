@@ -19,10 +19,21 @@ rustc_test("tests_bin") {
     "//src/sys/run_test_suite:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
   ]
 
   sources = [ "main.rs" ]
+}
+
+rustc_test("logging_test_bin") {
+  source_root = "logging_test.rs"
+  name = "logging_test"
+  deps = [
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "logging_test.rs" ]
 }
 
 executable("long_running_test_bin") {
@@ -42,9 +53,16 @@ fuchsia_component("long_running_test") {
   manifest = "meta/long_running_test.cml"
 }
 
+fuchsia_component("logging_test") {
+  testonly = true
+  deps = [ ":logging_test_bin" ]
+  manifest = "meta/logging_test.cml"
+}
+
 fuchsia_unittest_package("run_test_suite_integration_tests") {
   manifest = "meta/run_test_suite_integration_tests.cmx"
   deps = [
+    ":logging_test",
     ":long_running_test",
     ":tests_bin",
     "//examples/components/routing/echo_server:echo_server_component",

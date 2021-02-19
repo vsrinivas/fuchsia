@@ -7,9 +7,11 @@
             "--disable-klog",
             "--disable-log-connector",
             "--disable-component-event-provider",
+            "--listen-to-lifecycle",
             "--config-path",
             "/pkg/data/embedding-config.json",
         ],
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {

@@ -13,14 +13,16 @@ use {
     fidl_fuchsia_test::Invocation,
     fidl_fuchsia_test_manager::HarnessProxy,
     fuchsia_async as fasync,
-    futures::{channel::mpsc, prelude::*},
+    futures::{channel::mpsc, join, prelude::*, stream::BoxStream},
     std::collections::HashSet,
     std::fmt,
     std::io::{self, Write},
-    test_executor::{TestEvent, TestRunOptions},
+    test_executor::{LogStream, TestEvent, TestRunOptions},
 };
 
 pub use test_executor::DisabledTestHandling;
+
+pub mod diagnostics;
 
 #[derive(PartialEq, Debug)]
 pub enum Outcome {
@@ -230,12 +232,17 @@ async fn run_test_for_invocations<W: Write>(
     })
 }
 
+pub struct TestStreams<'a> {
+    pub results: BoxStream<'a, Result<RunResult, anyhow::Error>>,
+    pub logs: LogStream,
+}
+
 /// Runs the test `count` number of times, and writes logs to writer.
-pub async fn run_test<'a, W: Write>(
+pub async fn run_test<'a, W: Write + Send>(
     test_params: TestParams,
     count: u16,
     writer: &'a mut W,
-) -> impl Stream<Item = Result<RunResult, anyhow::Error>> + 'a {
+) -> Result<TestStreams<'a>, anyhow::Error> {
     let run_options = TestRunOptions {
         disabled_tests: test_params.disabled_tests(),
         parallel: test_params.parallel,
@@ -245,84 +252,79 @@ pub async fn run_test<'a, W: Write>(
     struct FoldArgs<'a, W: Write> {
         current_count: u16,
         count: u16,
-        suite_instance: Option<test_executor::SuiteInstance>,
+        suite_instance: test_executor::SuiteInstance,
         invocations: Option<Vec<fidl_fuchsia_test::Invocation>>,
         test_params: TestParams,
         run_options: TestRunOptions,
         writer: &'a mut W,
     }
 
+    let mut suite_instance =
+        test_executor::SuiteInstance::new(&test_params.harness, &test_params.test_url).await?;
+    let log_stream = suite_instance.take_log_stream().unwrap();
+
     let args = FoldArgs {
         current_count: 0,
         count,
-        suite_instance: None,
+        suite_instance,
         invocations: None,
         test_params,
         run_options,
         writer,
     };
 
-    stream::try_unfold(args, |mut args| async move {
+    let results = stream::try_unfold(args, |mut args| async move {
         if args.current_count >= args.count {
+            args.suite_instance.kill()?;
             return Ok(None);
         }
-        let suite_instance = match args.suite_instance {
-            Some(s) => s,
-            None => {
-                test_executor::SuiteInstance::new(
-                    &args.test_params.harness,
-                    &args.test_params.test_url,
-                )
-                .await?
-            }
-        };
 
         let invocations = match args.invocations {
-            Some(i) => i,
-            None => {
-                suite_instance
-                    .enumerate_tests(&args.test_params.test_filter.as_ref().map(String::as_str))
-                    .await?
-            }
+            Some(ref i) => i.clone(),
+            None => args
+                .suite_instance
+                .enumerate_tests(&args.test_params.test_filter.as_ref().map(String::as_str))
+                .await
+                .or_else(|err| {
+                    args.suite_instance.kill()?;
+                    Err(err)
+                })?,
         };
 
         let mut next_count = args.current_count + 1;
         let result = run_test_for_invocations(
-            &suite_instance,
+            &args.suite_instance,
             invocations.clone(),
             args.run_options.clone(),
             args.test_params.timeout,
             args.writer,
         )
-        .await?;
+        .await
+        .or_else(|err| {
+            args.suite_instance.kill()?;
+            Err(err)
+        })?;
         if result.outcome == Outcome::Timedout || result.outcome == Outcome::Error {
             // don't run test again
             next_count = args.count;
         }
 
-        args.suite_instance = Some(suite_instance);
         args.invocations = Some(invocations);
         args.current_count = next_count;
         Ok(Some((result, args)))
     })
+    .boxed();
+
+    Ok(TestStreams { logs: log_stream, results })
 }
 
-/// Runs the test and writes logs to stdout.
-/// |count|: Number of times to run this test.
-pub async fn run_tests_and_get_outcome(
-    test_params: TestParams,
+async fn collect_results(
+    test_url: &str,
     count: std::num::NonZeroU16,
+    mut stream: BoxStream<'_, Result<RunResult, anyhow::Error>>,
 ) -> Outcome {
-    let test_url = test_params.test_url.clone();
-    println!("\nRunning test '{}'", &test_url);
-
-    let mut stdout = io::stdout();
-
-    let mut final_outcome = Outcome::Passed;
-
-    let stream = run_test(test_params, count.get(), &mut stdout).await;
-    futures::pin_mut!(stream);
     let mut i: u16 = 1;
+    let mut final_outcome = Outcome::Passed;
 
     loop {
         match stream.try_next().await {
@@ -350,14 +352,43 @@ pub async fn run_tests_and_get_outcome(
                 }
             }
             Ok(None) => {
-                break;
+                return final_outcome;
             }
         }
     }
+}
 
-    if count.get() > 1 && final_outcome != Outcome::Passed {
+/// Runs the test and writes logs to stdout.
+/// |count|: Number of times to run this test.
+pub async fn run_tests_and_get_outcome(
+    test_params: TestParams,
+    count: std::num::NonZeroU16,
+) -> Outcome {
+    let test_url = test_params.test_url.clone();
+    println!("\nRunning test '{}'", &test_url);
+
+    let mut stdout_for_results = io::stdout();
+    let streams = match run_test(test_params, count.get(), &mut stdout_for_results).await {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Test suite encountered error trying to run tests: {:?}", e);
+            return Outcome::Error;
+        }
+    };
+
+    let (log_stream, result_stream) = (streams.logs, streams.results);
+    let mut stdout_for_logs = io::stdout();
+    let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs);
+    let results_collection_fut = collect_results(&test_url, count, result_stream);
+
+    let (log_collection_result, test_outcome) = join!(log_collection_fut, results_collection_fut);
+    if let Err(e) = log_collection_result {
+        println!("Failed to collect logs: {:?}", e);
+    }
+
+    if count.get() > 1 && test_outcome != Outcome::Passed {
         println!("One or more test runs failed.");
     }
 
-    final_outcome
+    test_outcome
 }

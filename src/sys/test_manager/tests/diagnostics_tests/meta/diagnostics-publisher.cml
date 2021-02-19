@@ -5,6 +5,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/inspect_publisher",
+        binary: "bin/publisher",
+        lifecycle: { stop_event: "notify" },
     },
 }
