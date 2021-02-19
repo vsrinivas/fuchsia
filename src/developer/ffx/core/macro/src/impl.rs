@@ -258,41 +258,32 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
 
     let mut preamble = quote! {};
     let mut outer_args: Punctuated<_, Token!(,)> = Punctuated::new();
+    outer_args.push(quote! {daemon_factory: D});
     if uses_daemon {
-        outer_args.push(quote! {daemon_factory: D});
         preamble = quote! {
             #preamble
             let daemon_proxy = daemon_factory().await?;
         };
-    } else {
-        outer_args.push(quote! {_daemon_factory: D});
     }
+
+    outer_args.push(quote! {remote_factory: R});
     if uses_remote || uses_map {
-        outer_args.push(quote! {remote_factory: R});
         preamble = quote! {
             #preamble
             let remote_proxy = remote_factory().await?;
             #(#proxies_to_generate)*
         };
-    } else {
-        outer_args.push(quote! {_remote_factory: R});
     }
 
+    outer_args.push(quote! {fastboot_factory: F});
     if uses_fastboot {
-        outer_args.push(quote! {fastboot_factory: F});
         preamble = quote! {
             #preamble
             let fastboot_proxy = fastboot_factory().await?;
         };
-    } else {
-        outer_args.push(quote! {_fastboot_factory: F});
     }
 
-    if let Some(_) = proxies.experiment_key {
-        outer_args.push(quote! {is_experiment: E});
-    } else {
-        outer_args.push(quote! {_is_experiment: E});
-    }
+    outer_args.push(quote! {is_experiment: E});
 
     if let Some(c) = cmd_arg {
         outer_args.push(quote! {#c});
@@ -581,10 +572,10 @@ mod test {
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
-                _remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                daemon_factory: D,
+                remote_factory: R,
+                fastboot_factory: F,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -623,10 +614,10 @@ mod test {
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
-                _remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                daemon_factory: D,
+                remote_factory: R,
+                fastboot_factory: F,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -668,9 +659,9 @@ mod test {
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 daemon_factory: D,
-                _remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                remote_factory: R,
+                fastboot_factory: F,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -748,10 +739,10 @@ mod test {
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
-                _remote_factory: R,
+                daemon_factory: D,
+                remote_factory: R,
                 fastboot_factory: F,
-                _is_experiment: E,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -829,10 +820,10 @@ mod test {
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
+                daemon_factory: D,
                 remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                fastboot_factory: F,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -895,8 +886,8 @@ mod test {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 daemon_factory: D,
                 remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                fastboot_factory: F,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -979,8 +970,8 @@ mod test {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
                 daemon_factory: D,
                 remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                fastboot_factory: F,
+                is_experiment: E,
                 _cmd: EchoCommand
             ) -> anyhow::Result<()>
                 where
@@ -1062,10 +1053,10 @@ mod test {
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
+                daemon_factory: D,
                 remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                fastboot_factory: F,
+                is_experiment: E,
                 cmd: WhateverCommand
             ) -> anyhow::Result<()>
                 where
@@ -1180,10 +1171,10 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
+                daemon_factory: D,
                 remote_factory: R,
-                _fastboot_factory: F,
-                _is_experiment: E,
+                fastboot_factory: F,
+                is_experiment: E,
                 cmd: WhateverCommand
             ) -> anyhow::Result<()>
                 where
@@ -1358,9 +1349,9 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
         };
         let plugin: ItemFn = parse_quote! {
             pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-                _daemon_factory: D,
+                daemon_factory: D,
                 remote_factory: R,
-                _fastboot_factory: F,
+                fastboot_factory: F,
                 is_experiment: E,
                 cmd: WhateverCommand
             ) -> anyhow::Result<()>
