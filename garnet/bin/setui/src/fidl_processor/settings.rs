@@ -10,9 +10,9 @@ use futures::lock::Mutex;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
-use crate::handler::base::{Error, Request as SettingRequest, Response};
+use crate::handler::base::{Error, Payload as HandlerPayload, Request as SettingRequest, Response};
 use crate::hanging_get_handler::{HangingGetHandler, Sender};
-use crate::internal::switchboard::{self, Action, Address, Payload};
+use crate::internal::switchboard::{self, Address, Payload};
 use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::{self, Audience};
 use crate::service;
@@ -65,6 +65,7 @@ where
     A: base::Address + 'static,
 {
     switchboard_messenger: crate::message::messenger::MessengerClient<P, A>,
+    service_messenger: crate::service::message::Messenger,
     hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST, K>>>,
     exit_tx: ExitSender,
 }
@@ -77,14 +78,16 @@ where
 {
     pub async fn request(&self, setting_type: SettingType, request: SettingRequest) -> Response {
         let mut receptor = self
-            .switchboard_messenger
+            .service_messenger
             .message(
-                Payload::Action(Action::Request(setting_type, request)),
-                Audience::Address(Address::Switchboard),
+                service::Payload::Setting(HandlerPayload::Request(request)),
+                Audience::Address(service::Address::Handler(setting_type)),
             )
             .send();
 
-        if let Ok((Payload::Action(Action::Response(result)), _)) = receptor.next_payload().await {
+        if let Ok((service::Payload::Setting(HandlerPayload::Response(result)), _)) =
+            receptor.next_payload().await
+        {
             return result;
         }
 
@@ -128,6 +131,7 @@ where
     fn clone(&self) -> RequestContext<T, ST, K, P, A> {
         RequestContext {
             switchboard_messenger: self.switchboard_messenger.clone(),
+            service_messenger: self.service_messenger.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
             exit_tx: self.exit_tx.clone(),
         }
@@ -204,11 +208,13 @@ where
     fn process(
         &self,
         switchboard_messenger: crate::message::messenger::MessengerClient<P, A>,
+        service_messenger: crate::service::message::Messenger,
         request: FidlRequest<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext {
             switchboard_messenger: switchboard_messenger.clone(),
+            service_messenger: service_messenger.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
             exit_tx: exit_tx.clone(),
         };

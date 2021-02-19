@@ -218,6 +218,13 @@ async fn get_and_check_camera_disable(
     input_proxy: &InputProxy,
     expected_camera_disabled_state: bool,
 ) {
+    // TODO(fxb/66313): The following call is a no-op and only meant to delay the following watch
+    // below, giving enough time for any change made before invoking this function to take effect.
+    // This time issue is caused by the number of messages necessary to get a change from the fake
+    // services to the setting service vs a fidl call into the service. The correct fix is to either
+    // wait on the setting service for a completion event or run tests on an executor until idle.
+    input_proxy.set_states(&mut Vec::new().into_iter()).await.ok();
+
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
     verify_muted_state(settings2, expected_camera_disabled_state, DeviceType::Camera);
 }
@@ -319,9 +326,6 @@ async fn test_set_watch_camera_disable() {
     // SW unmuted, HW unmuted.
     switch_hardware_camera_disable(&env, false).await;
 
-    // TODO(fxb/66313): We make a watch call here in order to force the previous
-    // operation (button change) through the setting service. The correct fix
-    // is to have an executor that we can loop until idle instead.
     let _ = input_proxy.watch().await.expect("watch completed");
     get_and_check_camera_disable(&input_proxy, false).await;
 }
@@ -348,6 +352,7 @@ async fn test_camera_input() {
         .await;
     let input_proxy = env.input_service.clone();
 
+    get_and_check_camera_disable(&input_proxy, false).await;
     switch_hardware_camera_disable(&env, true).await;
     get_and_check_camera_disable(&input_proxy, true).await;
 }

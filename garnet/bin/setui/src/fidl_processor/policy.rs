@@ -7,6 +7,7 @@ use fidl::endpoints::{Request, ServiceMarker};
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::message::base::{self, Audience};
 use crate::policy::base::{Address, Payload, PolicyType, Role};
+use crate::service;
 use crate::ExitSender;
 use fuchsia_syslog::fx_log_err;
 
@@ -98,6 +99,7 @@ where
     fn process(
         &self,
         messenger: crate::message::messenger::MessengerClient<P, A, R>,
+        _service_messenger: service::message::Messenger,
         request: Request<S>,
         // Policy requests don't use hanging gets, so the exit sender is unused.
         _exit_tx: ExitSender,

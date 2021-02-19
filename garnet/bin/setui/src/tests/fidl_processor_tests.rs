@@ -51,6 +51,7 @@ where
     fn process(
         &self,
         _messenger: MessengerClient<P, A, R>,
+        _service_messenger: service::message::Messenger,
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {

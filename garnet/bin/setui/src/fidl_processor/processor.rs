@@ -45,11 +45,13 @@ where
     ///
     /// Parameters:
     /// `messenger`: a message hub connection that can be used to send and receive messages
+    /// `service_messenger`: a MessageHub messenger to send messages.
     /// `request`: the request to process
     /// `exit_tx`: a channel to indicate that the connection is closed and for processing to stop
     fn process(
         &self,
         messenger: MessengerClient<P, A, R>,
+        service_messenger: service::message::Messenger,
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S>;
@@ -115,6 +117,7 @@ where
                             // unit
                             match processing_unit.process(
                                     self.messenger.clone(),
+                                    self.service_messenger.clone(),
                                     req, exit_tx.clone()).await {
                                 Ok(Some(return_request)) => {
                                     req = return_request;
