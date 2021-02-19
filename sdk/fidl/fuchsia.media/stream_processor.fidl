@@ -1349,7 +1349,8 @@ protocol StreamProcessor {
     QueueInputPacket(Packet packet);
 
     /// The server sends this message when the stream processor is done
-    /// consuming this packet and the packet can be re-filled by the client.
+    /// consuming the data in this packet (but not necessarily done processing
+    /// the data) and the packet can be re-filled by the client.
     ///
     /// This is not sent for all packets when a new buffer_lifetime_ordinal
     /// starts as in that case all the packets are initially free with the
@@ -1357,14 +1358,41 @@ protocol StreamProcessor {
     ///
     /// After receiving the available input buffer via this event, the stream
     /// processor client can call later call QueueInputBuffer with appropriate
-    /// offset and length set.
-    //
-    // TODO(dustingreen): At the moment, there is no guarantee re. the order of
-    // these messages with respect to the order of QueueInputPacket(), but at
-    // least for decoders, it might be worthwhile to require that servers
-    // preserve the order vs. QueueInputPacket(), to make it easier to feed
-    // input from a ring buffer or similar.  For audio encoders it might still
-    // make sense.  For video encoders probably not.
+    /// offset and length set, with the same packet_index, to re-use the
+    /// packet_index.
+    ///
+    /// OnFreeInputPacket() does _not_ imply that the data in the input packet
+    /// has been processed successfully, only that the input data is no longer
+    /// needed by the StreamProcessor.  If a client needs to know which input
+    /// data has generated corresponding output, using timestamp_ish values for
+    /// that is recommended.
+    ///
+    /// Any reliance on the relative order of OnFreeInputPacket() and
+    /// OnStreamFailed() is discouraged and deprecated.  Instead, use
+    /// timstamp_ish values to establish which input packets generated
+    /// corresponding output packets.  Note that even using timestamp_ish values
+    /// doesn't necessarily imply that the processing of input data with a given
+    /// timestamp_ish value is fully complete, as in some StreamProcessor(s) the
+    /// data derived from an input packet can be kept for reference purposes for
+    /// a long time (in general indefinitely) after the input data has generated
+    /// its primary output data (the output data to which the timestamp_ish
+    /// value is attached).  The StreamProcessor interface currently does not
+    /// provide any way to determine when all data derived from an input packet
+    /// has been discarded by the StreamProcessor, and if such a mechanism is
+    /// ever added to the StreamProcessor protocol, it would be an optional
+    /// StreamProcessor capability, since it would be infeasible to implement
+    /// for some StreamProcessor implementations that rely on external means to
+    /// process data, where the external means won't necessarily provide info
+    /// regarding when an input packet's derived data is fully discarded.  An
+    /// input packet's derived data will never generate or contribute to any
+    /// output data for a different stream.
+    ///
+    /// The order of OnFreeInputPacket() is not guaranteed to be the same as the
+    /// order of QueueInputPacket().  Any reliance on the order being the same
+    /// is strongly discouraged and deprecated.  Clients are expected to work
+    /// properly even if the order of OnFreeInputPacket() messages is
+    /// intentionally scrambled with respect to each other (but not scrambled
+    /// across OnStreamFailed(), for now).
     -> OnFreeInputPacket(PacketHeader free_input_packet);
 
     /// Inform the server that all QueueInputPacket() messages for this stream

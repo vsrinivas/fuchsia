@@ -555,6 +555,11 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
           "QueueInputEndOfStream()");
       return;
     }
+    auto ensure_closed = fit::defer([this, &lock] {
+      // Now that flush is done (or we noticed a stream failure), we close the current stream
+      // because there is not any subsequent message for the current stream that's valid.
+      EnsureStreamClosed(lock);
+    });
     while (!stream_->output_end_of_stream()) {
       if (stream_->failure_seen()) {
         return;
@@ -589,10 +594,6 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
         break;
       }
     }
-
-    // Now that flush is done, we close the current stream because there is not
-    // any subsequent message for the current stream that's valid.
-    EnsureStreamClosed(lock);
   }  // ~lock
   LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreFlushed);
 }
@@ -806,6 +807,10 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
     }
   }
   ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);
+  if (stream_->failure_seen()) {
+    // Already reported to client.
+    return;
+  }
   if (stream_->input_end_of_stream()) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("QueueInputFormatDetails() after QueueInputEndOfStream() unexpected");
@@ -993,6 +998,11 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       return;
     }
 
+    if (stream_->failure_seen()) {
+      // Already reported to client.
+      return;
+    }
+
     if (stream_->future_discarded()) {
       // Don't queue to core codec.  The stream_ may have never fully started,
       // or may have been future-discarded since.  Either way, skip queueing to
@@ -1115,6 +1125,11 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ord
       if (!StartNewStream(lock, stream_lifetime_ordinal)) {
         return;
       }
+    }
+
+    if (stream_->failure_seen()) {
+      // Already reported to client.
+      return;
     }
 
     if (stream_->input_end_of_stream()) {
@@ -2296,6 +2311,19 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
   VLOGF("EnsureStreamClosed()");
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+
+  // Ensure the old stream is closed at CodecAdapter layer.  The stream may already be closed at
+  // CodecAdapter layer, such as if the CodecAdapter previously used onCoreCodecFailStream() and the
+  // async work posted by that call has already completed.
+  EnsureCoreCodecStreamStopped(lock);
+
+  // Now close the old stream at the Codec layer.
+  EnsureCodecStreamClosedLockedInternal();
+
+  ZX_DEBUG_ASSERT(!IsStreamActiveLocked());
+}
+
+void CodecImpl::EnsureCoreCodecStreamStopped(std::unique_lock<std::mutex>& lock) {
   // Stop the core codec, by using this thread to directly drive the core codec
   // from running to stopped (if not already stopped).  We do this first so the
   // core codec won't try to send us output while we have no stream at the Codec
@@ -2309,11 +2337,6 @@ void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
     }
     is_core_codec_stream_started_ = false;
   }
-
-  // Now close the old stream at the Codec layer.
-  EnsureCodecStreamClosedLockedInternal();
-
-  ZX_DEBUG_ASSERT(!IsStreamActiveLocked());
 }
 
 // The only valid caller of this is EnsureStreamClosed().  We have this in a
@@ -3205,6 +3228,57 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
       LOG(ERROR, "Stream %lu failed: %s", stream_lifetime_ordinal_, ToString(error));
     }
 
+    PostToStreamControl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_] {
+      ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+      std::unique_lock<std::mutex> lock(lock_);
+      if (IsStoppingLocked()) {
+        return;
+      }
+      if (stream_lifetime_ordinal != stream_lifetime_ordinal_) {
+        ZX_DEBUG_ASSERT(stream_lifetime_ordinal_ > stream_lifetime_ordinal);
+        return;
+      }
+      // CodecImpl will preserve the ordering of onCoreCodecInputPacketDone() and
+      // onCoreCodecFailStream() when sending messages to the client.  Some CodecAdapter(s) _may_
+      // order these messages to free input packets which were successfully processed before stream
+      // failure, and free input packets which were not successfully processed after stream failure.
+      //
+      // Other CodecAdapter(s) may simply free all pending input packets, either before
+      // onCoreCodecFailStream() or after onCoreCodecFailStream(), without any particular ordering
+      // with respect to onCoreCodecFailStream().  In particular, a CodecAdapter may free an input
+      // packet before that input packet's data is fully processed so that the input packet can be
+      // re-filled with new data (a good thing for performance and efficiency), then later the data
+      // that was obtained from that input packet may turn out to cause a processing error later.
+      // In such a pipelined CodecAdapter, it's not really feasible or desireable for the
+      // CodecAdapter to free an input packet only when the input packet has been fully processed
+      // into any output it may generate.
+      //
+      // If a client needs to determine which input packets generated output packets, and possibly
+      // also which output packets those are, use of timstamp_ish values is recommended, as the
+      // timstamp_ish mechanism is designed to establish correspondence between input packets and
+      // output packets for all StreamProcessor implementations, without imposing any onerous
+      // requirement that the CodecAdapter hold onto an input packet until the input packet's data
+      // has been fully processed through a processing pipeline.  In short, the relative ordering of
+      // OnFreeInputPacket() and OnStreamFailed() varies among StreamProcessor implementations, and
+      // should not be relied on in general.  For some specific scenarios with specific known
+      // StreamProcessor implementations, a client _may_ be able to reason about their relative
+      // order without interference by CodecImpl, but any reliance on their relative order is
+      // discouraged and deprecated.
+      //
+      // To assist the CodecAdapter in freeing any remaining input packets back to the client after
+      // a stream failure, we call CoreCodecStopStream().  The CodecAdapter may choose to return any
+      // pending input packets during CoreCodecStopStream(), or it's also fine for the CodecAdapter
+      // to free any pending input packets after onCoreCodecFailStream() and before the CodecAdapter
+      // sees CoreCodecStopStream().  By the end of CoreCodecStopStream(), the CodecAdapter must
+      // have called onCoreCodecInputPacketDone() on all previously-pending input packets and must
+      // be holding zero pending input packets.
+      //
+      // For some CodecAdapter implementations, it is acceptable but not preferred for some of the
+      // input packets which led to stream failure to be freed before onCoreCodecFailStream(), but
+      // again this is not preferred and not recommended.
+      EnsureCoreCodecStreamStopped(lock);
+    });
+
     // We're failing the current stream.  We should still queue to the output
     // ordering domain to ensure ordering vs. any previously-sent output on this
     // stream that was sent directly from codec processing thread.
@@ -3231,9 +3305,14 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
           "EnableOnStreamFailed(), so closing the Codec channel instead.");
       return;
     }
-    // There's not actually any need to track that the stream failed anywhere
-    // in the CodecImpl.  The client needs to move on from the failed
-    // stream to a new stream, or close the Codec channel.
+
+    // The client needs to move on from the failed stream to a new stream, or close the Codec
+    // channel.
+    //
+    // Because we're holding lock continously to this point, we know that this message will be
+    // queued to the shared fidl thread before any returned input packets from CodecAdapter after
+    // onCoreCodecFailedStream(), and before any messages queued to the fidl thread by the post to
+    // StreamControl above.
     PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_, error] {
       // See "is_bound_checks" comment up top.
       if (binding_.is_bound()) {
