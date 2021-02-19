@@ -862,7 +862,9 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
 
     for (const auto& url : urls) {
       if (existing.find(url) == existing.end()) {
-        AddSymbolServer(SymbolServer::FromURL(session(), url));
+        if (auto symbol_server = SymbolServer::FromURL(session(), url)) {
+          AddSymbolServer(std::move(symbol_server));
+        }
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {

@@ -142,23 +142,20 @@ Err CloudStorageSymbolServer::HandleRequestResult(Curl::Error result, long respo
 
 std::string CloudStorageSymbolServer::AuthInfo() const {
   static std::string result;
-  static const std::string kEmpty;
 
   if (state() != SymbolServer::State::kAuth) {
-    return kEmpty;
+    return "";
   }
 
-  if (!result.empty()) {
-    return result;
+  if (result.empty()) {
+    result = kAuthServer;
+    result += "?client_id=";
+    result += Curl::Escape(kClientId);
+    result += "&redirect_uri=urn:ietf:wg:oauth:2.0:oob";
+    result += "&response_type=code";
+    result += "&scope=";
+    result += Curl::Escape(kScope);
   }
-
-  result = kAuthServer;
-  result += "?client_id=";
-  result += Curl::Escape(kClientId);
-  result += "&redirect_uri=urn:ietf:wg:oauth:2.0:oob";
-  result += "&response_type=code";
-  result += "&scope=";
-  result += Curl::Escape(kScope);
 
   return result;
 }
@@ -169,8 +166,16 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
 
   auto curl = fxl::MakeRefCounted<Curl>();
 
-  curl->SetURL(kTokenServer);
-  curl->set_post_data(post_data);
+  // When running on GCE, metadata server is used to get the access token and post_data is unused.
+  // https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances#applications
+  if (auto metadata_server = std::getenv("GCE_METADATA_HOST")) {
+    curl->SetURL("http://" + std::string(metadata_server) +
+                 "/computeMetadata/v1/instance/service-accounts/default/token");
+    curl->headers().push_back("Metadata-Flavor: Google");
+  } else {
+    curl->SetURL(kTokenServer);
+    curl->set_post_data(post_data);
+  }
 
   auto response = std::make_shared<std::string>();
   curl->set_data_callback([response](const std::string& data) {
@@ -282,7 +287,7 @@ void CloudStorageSymbolServer::DoInit() {
     return;
   }
 
-  if (LoadCachedAuth() || LoadGCloudAuth()) {
+  if (std::getenv("GCE_METADATA_HOST") || LoadCachedAuth() || LoadGCloudAuth()) {
     ChangeState(SymbolServer::State::kBusy);
     AuthRefresh();
   } else {
@@ -358,7 +363,7 @@ fxl::RefPtr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::string& b
   FX_DCHECK(curl);
 
   curl->SetURL(url);
-  curl->headers().push_back(std::string("Authorization: Bearer ") + access_token_);
+  curl->headers().push_back("Authorization: Bearer " + access_token_);
 
   return curl;
 }

@@ -27,6 +27,7 @@ class SymbolServerTest : public TestWithLoop {
         std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb" / "fake_home";
     setenv("HOME", fake_home.string().c_str(), true);
     unsetenv("XDG_CACHE_HOME");
+    unsetenv("GCE_METADATA_HOST");
 
     auto server = std::make_unique<MockCloudStorageSymbolServer>(&session_, "gs://fake-bucket");
     server_ = server.get();
