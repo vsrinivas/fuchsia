@@ -1,9 +1,9 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_NIX_INCLUDE_SYS_INOTIFY_H_
-#define SRC_LIB_NIX_INCLUDE_SYS_INOTIFY_H_
+#ifndef LIB_FDIO_INCLUDE_LIB_FDIO_INOTIFY_H_
+#define LIB_FDIO_INCLUDE_LIB_FDIO_INOTIFY_H_
 
 #include <fcntl.h>
 #include <stdint.h>
@@ -68,4 +68,4 @@ int inotify_rm_watch(int, int);
 }
 #endif
 
-#endif  // SRC_LIB_NIX_INCLUDE_SYS_INOTIFY_H_
+#endif  // LIB_FDIO_INCLUDE_LIB_FDIO_INOTIFY_H_

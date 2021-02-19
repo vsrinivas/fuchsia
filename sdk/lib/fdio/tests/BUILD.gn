@@ -63,6 +63,7 @@ test("fdio") {
     "fdio_fdio.cc",
     "fdio_get_vmo.cc",
     "fdio_handle_fd.c",
+    "fdio_inotify.cc",
     "fdio_io.cc",
     "fdio_memfd.cc",
     "fdio_null_namespace.cc",
