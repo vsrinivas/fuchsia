@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/fb_integration_test"
+        "binary": "bin/fb_integration_test"
     },
     "sandbox": {
         "dev": [
