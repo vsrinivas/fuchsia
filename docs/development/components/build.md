@@ -61,13 +61,13 @@ executable("my_program") {
   sources = [ "my_program.cc" ]
 }
 
-fuchsia_component("my-component") {
+fuchsia_component("my_component") {
   manifest = "meta/my_program.cmx"
   deps = [ ":my_program" ]
 }
 
-fuchsia_package("my-package") {
-  deps = [ ":my-component" ]
+fuchsia_package("my_package") {
+  deps = [ ":my_component" ]
 }
 ```
 
@@ -97,13 +97,13 @@ Note the following details:
     `.cml` file in [cml format][cml-format].
 *   The destination path for the manifest is not specified, but rather
     inferred from the component's name. In this example, the manifest path will
-    be `meta/my-component.cmx`.
+    be `meta/my_component.cmx`.
 *   Both the component and package names are derived from their target names.
     They both take an optional `component_name` and `package_name` parameter
     respectively as an override. \
     In the example above, these names come together to form the URL for
     launching the component:
-    `fuchsia-pkg://fuchsia.com/my-package#meta/my-component.cmx`.
+    `fuchsia-pkg://fuchsia.com/my_package#meta/my_component.cmx`.
 
 ### Language-specific component examples {#language-specific-component-examples}
 
@@ -122,13 +122,13 @@ paths.
      sources = [ "main.cc" ]
    }
 
-   fuchsia_component("my-component") {
+   fuchsia_component("my_component") {
      manifest = "meta/my_component.cmx"
      deps = [ ":bin" ]
    }
 
-   fuchsia_package("my-package") {
-     deps = [ ":my-component" ]
+   fuchsia_package("my_package") {
+     deps = [ ":my_component" ]
    }
    ```
 
@@ -153,13 +153,13 @@ paths.
      output_name = "my_program"
    }
 
-   fuchsia_component("my-component") {
+   fuchsia_component("my_component") {
      manifest = "meta/my_component.cmx"
      deps = [ ":bin" ]
    }
 
-   fuchsia_package("my-package") {
-     deps = [ ":my-component" ]
+   fuchsia_package("my_package") {
+     deps = [ ":my_component" ]
    }
    ```
 
@@ -184,13 +184,13 @@ paths.
      output_name = "my_program"
    }
 
-   fuchsia_component("my-component") {
+   fuchsia_component("my_component") {
      manifest = "meta/my_component.cmx"
      deps = [ ":bin" ]
    }
 
-   fuchsia_package("my-package") {
-     deps = [ ":my-component" ]
+   fuchsia_package("my_package") {
+     deps = [ ":my_component" ]
    }
    ```
 
@@ -217,13 +217,13 @@ paths.
      sources = [ "main.dart" ]
    }
 
-   dart_component("my-component") {
+   dart_component("my_component") {
      manifest = "meta/my_component.cmx"
      deps = [ ":lib" ]
    }
 
-   fuchsia_package("my-package") {
-     deps = [ ":my-component" ]
+   fuchsia_package("my_package") {
+     deps = [ ":my_component" ]
    }
    ```
 
@@ -250,13 +250,13 @@ paths.
      sources = [ "main.dart" ]
    }
 
-   flutter_component("my-component") {
+   flutter_component("my_component") {
      manifest = "meta/my_component.cmx"
      deps = [ ":lib" ]
    }
 
-   fuchsia_package("my-package") {
-     deps = [ ":my-component" ]
+   fuchsia_package("my_package") {
+     deps = [ ":my_component" ]
    }
    ```
 
@@ -293,7 +293,7 @@ executable("my_test") {
   ]
 }
 
-fuchsia_component("my-test-component") {
+fuchsia_component("my_test_component") {
   testonly = true
   manifest = "meta/my_test.cmx"
   deps = [ ":my_test" ]
@@ -303,33 +303,33 @@ executable("my_program_under_test") {
   sources = [ "my_program_under_test.cc" ]
 }
 
-fuchsia_component("my-other-component-under-test") {
+fuchsia_component("my_other_component_under_test") {
   manifest = "meta/my_component_under_test.cmx"
   deps = [ ":my_program_under_test" ]
 }
 
-fuchsia_test_package("my-integration-test") {
-  test_components = [ ":my-test-component" ]
-  deps = [ ":my-other-component-under-test" ]
+fuchsia_test_package("my_integration_test") {
+  test_components = [ ":my_test_component" ]
+  deps = [ ":my_other_component_under_test" ]
   test_specs = {
     environments = [ vim3_env ]
   }
 }
 
 group("tests") {
-  deps = [ ":my-integration-test" ]
+  deps = [ ":my_integration_test" ]
   testonly = true
 }
 ```
 
 Note the following details:
 
-*   This example defines `"my-test-component"`, which is assumed to implement a
+*   This example defines `"my_test_component"`, which is assumed to implement a
     test. Commonly this is done using some testing framework such as C++
     Googletest, Rust Cargo test, etc'.
 *   To launch this test, you can use [`fx test`][fx-test].
 *   The test is packaged with another component,
-    `"my-other-component-under-test"`. Presumably this component participates in
+    `"my_other_component_under_test"`. Presumably this component participates in
     the test. For instance, the component under test might implement a protocol,
     and the test launches it and connects to it as a client while asserting
     correct behavior from the client's perspective. \
@@ -368,15 +368,15 @@ executable("my_test") {
   ]
 }
 
-fuchsia_component("my-test-component") {
+fuchsia_component("my_test_component") {
   testonly = true
   manifest = "meta/my_test.cmx"
   deps = [ ":my_test" ]
 }
 
 fuchsia_test("my_test_component_test") {
-  package = "//bar:my-test-package"
-  component = ":my-test-component"
+  package = "//bar:my_test_package"
+  component = ":my_test_component"
 }
 
 group("tests") {
@@ -392,7 +392,7 @@ Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
 # Let this be //bar/BUILD.gn
 import("//src/sys/build/components.gni")
 
-fuchsia_package("my-test-package") {
+fuchsia_package("my_test_package") {
   testonly = true
   deps = [ "//foo:my_test_component" ]
 }
@@ -412,13 +412,13 @@ import("//build/dart/dart_test_component.gni")
 import("//build/flutter/flutter_test_component.gni")
 import("//src/sys/build/components.gni")
 
-flutter_test_component("my-flutter-test-component") {
+flutter_test_component("my_flutter_test_component") {
   testonly = true
   manifest = "meta/my_flutter_test_component.cmx"
   sources = [ "foo_flutter_test.dart" ]
 }
 
-dart_test_component("my-dart-test-component") {
+dart_test_component("my_dart_test_component") {
   testonly = true
   manifest = "meta/my_dart_test_component.cmx"
   sources = [ "foo_dart_test.dart" ]
@@ -426,8 +426,8 @@ dart_test_component("my-dart-test-component") {
 
 fuchsia_test("my_test_component_test") {
   test_components = [
-    ":my-dart-test-component",
-    ":my-flutter-test-component"
+    ":my_dart_test_component",
+    ":my_flutter_test_component"
   ]
 }
 ```
@@ -462,7 +462,7 @@ package and component for the test.
      testonly = true
    }
 
-   fuchsia_unittest_package("my-test") {
+   fuchsia_unittest_package("my_test") {
      manifest = "meta/my_test.cmx"
      deps = [ ":my_test" ]
    }
@@ -476,7 +476,7 @@ package and component for the test.
 
    rustc_test("my_test") {}
 
-   fuchsia_unittest_package("my-test") {
+   fuchsia_unittest_package("my_test") {
      manifest = "meta/my_test.cmx"
      deps = [ ":my_test" ]
    }
@@ -490,7 +490,7 @@ package and component for the test.
 
    go_test("my_test") {}
 
-   fuchsia_unittest_package("my-test") {
+   fuchsia_unittest_package("my_test") {
      manifest = "meta/my_test.cmx"
      deps = [ ":my_test" ]
    }
@@ -510,7 +510,7 @@ The above is a minimal valid manifest file for this test. In practice a test
 might require additional capabilities, to be specified in its manifest.
 
 The launch URL for the test is
-`fuchsia-pkg://fuchsia.com/my-test#meta/my-test.cmx`. It can be launched using
+`fuchsia-pkg://fuchsia.com/my_test#meta/my_test.cmx`. It can be launched using
 `fx test` followed by the launch URL, or followed by the GN target name.
 
 #### Unit tests with _generated_ manifests
@@ -539,7 +539,7 @@ for us.
      testonly = true
    }
 
-   fuchsia_unittest_package("rot13-test") {
+   fuchsia_unittest_package("rot13_test") {
      deps = [ ":rot13_test" ]
    }
    ```
@@ -552,7 +552,7 @@ for us.
 
    rustc_test("rot13_test") {}
 
-   fuchsia_unittest_package("rot13-test") {
+   fuchsia_unittest_package("rot13_test") {
      deps = [ ":rot13_test" ]
    }
    ```
@@ -565,7 +565,7 @@ for us.
 
    go_test("rot13_test") {}
 
-   fuchsia_unittest_package("rot13-test") {
+   fuchsia_unittest_package("rot13_test") {
      deps = [ ":rot13_test" ]
    }
    ```
@@ -576,18 +576,18 @@ a single package.
 ```gn
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_component("rot13-encrypt-test") {
+fuchsia_unittest_component("rot13_encrypt_test") {
   ...
 }
 
-fuchsia_unittest_component("rot13-decrypt-test") {
+fuchsia_unittest_component("rot13_decrypt_test") {
   ...
 }
 
-fuchsia_test_package("rot13-tests") {
+fuchsia_test_package("rot13_tests") {
   test_components = [
-    ":rot13-encrypt-test",
-    ":rot13-decrypt-test",
+    ":rot13_encrypt_test",
+    ":rot13_decrypt_test",
   ]
 }
 ```
@@ -611,9 +611,9 @@ To launch the test:
 
 ```bash
 # By launch URL
-fx test fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx
+fx test fuchsia-pkg://fuchsia.com/rot13_test#meta/rot13_test.cmx
 # By GN target name
-fx test rot13-test
+fx test rot13_test
 ```
 
 See also: [`fx test`][fx-test]
@@ -623,7 +623,7 @@ You can generate a [CFv2 test component][v2-test-component] by specifying:
 ```gn
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_package("rot13-test") {
+fuchsia_unittest_package("rot13_test") {
   v2 = true
   ...
 }
@@ -634,20 +634,20 @@ Or:
 ```gn
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_component("rot13-encrypt-test") {
+fuchsia_unittest_component("rot13_encrypt_test") {
   v2 = true
   ...
 }
 
-fuchsia_unittest_component("rot13-decrypt-test") {
+fuchsia_unittest_component("rot13_decrypt_test") {
   v2 = true
   ...
 }
 
-fuchsia_test_package("rot13-tests") {
+fuchsia_test_package("rot13_tests") {
   test_components = [
-    ":rot13-encrypt-test",
-    ":rot13-decrypt-test",
+    ":rot13_encrypt_test",
+    ":rot13_decrypt_test",
   ]
 }
 ```
@@ -660,11 +660,11 @@ The `fuchsia_unittest_component()` rule can be used instead of
 in a single package, e.g. with `fx test <package_name>`, rather than needing to
 type many separate package names.
 
-The example below creates a single test package `rot13-tests` that contains two
-separate test components, `rot13-decoder-test` and `rot13-encoder-test`.
-Both tests can be run using `fx test rot13-tests`, or individual tests can be run
-using either `fx test rot13-decoder-test` or the full URL
-`fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.cmx`.
+The example below creates a single test package `rot13_tests` that contains two
+separate test components, `rot13_decoder_test` and `rot13_encoder_test`.
+Both tests can be run using `fx test rot13_tests`, or individual tests can be run
+using either `fx test rot13_decoder_test` or the full URL
+`fx test fuchsia-pkg://fuchsia.com/rot13_tests#meta/rot13_decoder_test.cmx`.
 
    * {C++}
 
@@ -675,18 +675,18 @@ using either `fx test rot13-decoder-test` or the full URL
 
    executable("rot13_encoder_bin_test") {}
 
-   fuchsia_unittest_component("rot13-decoder-test") {
+   fuchsia_unittest_component("rot13_decoder_test") {
      deps = [ ":rot13_decoder_bin_test" ]
    }
 
-   fuchsia_unittest_component("rot13-encoder-test") {
+   fuchsia_unittest_component("rot13_encoder_test") {
      deps = [ ":rot13_encoder_bin_test" ]
    }
 
-   fuchsia_test_package("rot13-tests") {
+   fuchsia_test_package("rot13_tests") {
      test_components = [
-       ":rot13-decoder-test",
-       ":rot13-encoder-test",
+       ":rot13_decoder_test",
+       ":rot13_encoder_test",
      ]
    }
    ```
@@ -701,18 +701,18 @@ using either `fx test rot13-decoder-test` or the full URL
 
    rustc_test("rot13_encoder_bin_test") {}
 
-   fuchsia_unittest_component("rot13-decoder-test") {
+   fuchsia_unittest_component("rot13_decoder_test") {
      deps = [ ":rot13_decoder_bin_test" ]
    }
 
-   fuchsia_unittest_component("rot13-encoder-test") {
+   fuchsia_unittest_component("rot13_encoder_test") {
      deps = [ ":rot13_encoder_bin_test" ]
    }
 
-   fuchsia_test_package("rot13-tests") {
+   fuchsia_test_package("rot13_tests") {
      test_components = [
-       ":rot13-decoder-test",
-       ":rot13-encoder-test",
+       ":rot13_decoder_test",
+       ":rot13_encoder_test",
      ]
    }
    ```
@@ -727,18 +727,18 @@ using either `fx test rot13-decoder-test` or the full URL
 
    go_test("rot13_encoder_test") {}
 
-   fuchsia_unittest_component("rot13-decoder-test") {
+   fuchsia_unittest_component("rot13_decoder_test") {
      deps = [ ":rot13_decoder_bin_test" ]
    }
 
-   fuchsia_unittest_component("rot13-encoder-test") {
+   fuchsia_unittest_component("rot13_encoder_test") {
      deps = [ ":rot13_encoder_bin_test" ]
    }
 
-   fuchsia_test_package("rot13-tests") {
+   fuchsia_test_package("rot13_tests") {
      test_components = [
-       ":rot13-decoder-test",
-       ":rot13-encoder-test",
+       ":rot13_decoder_test",
+       ":rot13_encoder_test",
      ]
    }
    ```
@@ -855,7 +855,7 @@ resource("roboto_family") {
   outputs = [ "data/fonts/{{source_file_part}}" ]
 }
 
-fuchsia_component("text-viewer") {
+fuchsia_component("text_viewer") {
   ...
   deps = [
     ":roboto_family",
@@ -890,11 +890,11 @@ a known good result (or a "golden file").
 {% verbatim %}
 
 ```
-fuchsia_component("minifier-component") {
+fuchsia_component("minifier_component") {
   ...
 }
 
-fuchsia_package("minifier-package") {
+fuchsia_package("minifier_package") {
   ...
 }
 
@@ -906,7 +906,7 @@ resource("testdata") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_component("minifier-test-client") {
+fuchsia_component("minifier_test_client") {
   testonly = true
   deps = [
     ":testdata",
@@ -915,9 +915,9 @@ fuchsia_component("minifier-test-client") {
   ...
 }
 
-fuchsia_test_package("minifier-integration-test") {
-  test_components = [ ":minifier-test-client" ]
-  deps = [ ":minifier-component" ]
+fuchsia_test_package("minifier_integration_test") {
+  test_components = [ ":minifier_test_client" ]
+  deps = [ ":minifier_component" ]
 }
 ```
 
@@ -1220,7 +1220,7 @@ This example is adapted from
     outputs = [ "data/{{source_file_part}}" ]              # <4>
   }
 
-  fuchsia_unittest_package("timekeeper-unittests") {
+  fuchsia_unittest_package("timekeeper_unittests") {
     manifest = "meta/unittests.cmx"
     deps = [
       ":bin_test",
@@ -1391,7 +1391,7 @@ The example below highlights some key differences between the legacy
 
   executable("foo_bin_test") { ... }
 
-  test_package("foo-tests") {                              # <1>
+  test_package("foo_tests") {                              # <1>
     deps = [ ":foo_bin_test" ]                             # <2>
 
     tests = [                                              # <3>
@@ -1412,14 +1412,14 @@ The example below highlights some key differences between the legacy
 
   executable("foo_bin_test") { ... }
 
-  fuchsia_component("foo-test") {                          # <2>
+  fuchsia_component("foo_test") {                          # <2>
     testonly = true
     manifest = "meta/foo_test.cmx"
     deps = [ ":foo_bin_test" ]
   }
 
-  fuchsia_test_package("foo-tests") {                      # <1>
-    test_components = [ ":foo-test" ]                      # <2>
+  fuchsia_test_package("foo_tests") {                      # <1>
+    test_components = [ ":foo_test" ]                      # <2>
 
     test_specs = {                                         # <3>
       log_settings = {
@@ -1496,7 +1496,7 @@ For instance the `libraries` attribute installs resources in a special `lib/` di
 The legacy syntax looks like this:
 
 ```
-package("my-driver-package") {
+package("my_driver_package") {
   deps = [ ":my_driver" ]
 
   drivers = [
@@ -1511,13 +1511,13 @@ This special treatment is not necessary with the new templates. Simply add the
 necessary target to `deps = [ ... ]` and the packaging is done automatically.
 
 ```
-fuchsia_component("my-driver-component") {
+fuchsia_component("my_driver_component") {
   deps = [ ":my_driver" ]
   ...
 }
 
-fuchsia_package("my-driver-package") {
-  deps = [ ":my-driver-component" ]
+fuchsia_package("my_driver_package") {
+  deps = [ ":my_driver_component" ]
   ...
 }
 ```
@@ -1534,7 +1534,7 @@ See also:
 The legacy `package()` template allowed developers to rename certain files that
 are included in their package. For example, below we see an executable being
 built and then renamed before it's packaged so that it's packaged under the path
-`bin/foo-bin`.
+`bin/foo_bin`.
 
 ```gn
 import("//build/package.gni")
@@ -1543,7 +1543,7 @@ executable("bin") {
   ...
 }
 
-package("foo-pkg") {
+package("foo_pkg") {
   deps = [ ":bin" ]
   binaries = [
     {
@@ -1576,13 +1576,13 @@ executable("bin") {
   ...
 }
 
-fuchsia_component("foo-cmp") {
+fuchsia_component("foo_cmp") {
   deps = [ ":bin" ]
   manifest = "meta/foo_bin.cmx"
 }
 
-fuchsia_package("foo-pkg") {
-  deps = [ ":foo-cmp" ]
+fuchsia_package("foo_pkg") {
+  deps = [ ":foo_cmp" ]
 }
 ```
 
@@ -1690,7 +1690,7 @@ fuchsia_package("tools") {
 }
 ```
 
-### Legacy component index (aka `fx run my-package`)
+### Legacy component index (aka `fx run my_package`)
 
 The legacy `package()` template supported a short-form syntax for launching legacy
 v1 components in the legacy sys shell.

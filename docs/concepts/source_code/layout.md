@@ -186,8 +186,6 @@ top-level BUILD.gn file:
 Typically, when naming files and directories, the best practice is to use names
 that are short and clear. In those cases where a name is comprised of multiple
 words, those words should be separated by underscores .e.g `long_file_name`.
-However, package names should use dashes to separate words. For more information, see
-[package name](/docs/concepts/packages/package_url.md#package_name).
 
 #### Example
 
@@ -208,7 +206,7 @@ group("fortune") {
 group("tests") {
   testonly = true
   deps = [
-    ":fortune-tests"
+    ":fortune_tests"
   ]
 }
 
@@ -239,7 +237,7 @@ fuchsia_package("pkg") {
   deps = [ ":component" ]
 }
 
-fuchsia_unittest_package("fortune-tests") {
+fuchsia_unittest_package("fortune_tests") {
   deps = [ ":test" ]
 }
 ```
