@@ -127,7 +127,7 @@ RECOVERY_VBMETA="${RECOVERY_IMAGE%%.*}.vbmeta"
 # Support a single --recovery flag which flashes recovery to all slots even
 # if the full image is available.
 cat > "${OUTPUT}" << EOF
-#!/bin/sh
+#!/bin/bash
 DIR="\$(dirname "\$0")"
 set -e
 
