@@ -22,13 +22,13 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_worker_service(mut stream: fsys::WorkerRequestStream) {
-    let work_scheduler_dispath_reporter =
-        connect_to_service::<fws::WorkSchedulerDispatchReporterMarker>()
-            .context("error connecting to WorkSchedulerDispatchReporter")
-            .unwrap();
     if let Some(event) = stream.try_next().await.expect("failed to serve Worker service") {
         let fsys::WorkerRequest::DoWork { work_id, responder } = event;
         responder.send(&mut Ok(())).expect("failed to send DoWork response");
+        let work_scheduler_dispath_reporter =
+            connect_to_service::<fws::WorkSchedulerDispatchReporterMarker>()
+                .context("error connecting to WorkSchedulerDispatchReporter")
+                .unwrap();
         work_scheduler_dispath_reporter
             .on_do_work_called(&work_id)
             .await

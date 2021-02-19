@@ -41,22 +41,19 @@ async fn storage() {
 
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
 
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
     // Expect the 2 children to be bound to
-    let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
 
-    let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
 
     let component_manager_path = test.get_component_manager_path();
     let memfs_path =
@@ -79,8 +76,8 @@ async fn storage_from_collection() {
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Destroyed::NAME, CapabilityRouted::NAME],
-            EventMode::Sync,
+            vec![Started::NAME, Destroyed::NAME],
+            EventMode::Async,
         )])
         .await
         .unwrap();
@@ -99,16 +96,13 @@ async fn storage_from_collection() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be started
-    let event = EventMatcher::ok().moniker(".").wait::<Started>(&mut event_stream).await.unwrap();
-    event.resume().await.unwrap();
+    EventMatcher::ok().moniker(".").wait::<Started>(&mut event_stream).await.unwrap();
 
     // Expect 2 children to be started - one static and one dynamic
     // Order is irrelevant
-    let event = EventMatcher::ok().wait::<Started>(&mut event_stream).await.unwrap();
-    event.resume().await.unwrap();
+    EventMatcher::ok().wait::<Started>(&mut event_stream).await.unwrap();
 
-    let event = EventMatcher::ok().wait::<Started>(&mut event_stream).await.unwrap();
-    event.resume().await.unwrap();
+    EventMatcher::ok().wait::<Started>(&mut event_stream).await.unwrap();
 
     // With all children started, do the test
     let component_manager_path = test.get_component_manager_path();
@@ -123,7 +117,7 @@ async fn storage_from_collection() {
     drop(trigger_guard);
 
     // Expect the dynamic child to be destroyed
-    let event = EventMatcher::ok()
+    EventMatcher::ok()
         .moniker("./coll:storage_user:1")
         .wait::<Destroyed>(&mut event_stream)
         .await
@@ -136,8 +130,6 @@ async fn storage_from_collection() {
     )
     .expect("failed to open storage");
     assert_eq!(list_directory(&memfs_proxy).await.unwrap(), Vec::<String>::new());
-
-    event.resume().await.unwrap();
 }
 
 struct TriggerCapability {

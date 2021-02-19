@@ -54,7 +54,7 @@
             from: "framework",
             as: "started_nested",
             to: [ "#reporter" ],
-            modes: [ "sync" ],
+            modes: [ "async" ],
         },
     ],
 }

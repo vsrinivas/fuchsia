@@ -100,7 +100,7 @@ pub trait CapabilityInjector: 'static + Send + Sync {
             })) = provider_capability_stream.next().await
             {
                 // Unblock component manager
-                responder.send().expect("Failed to respond to CapabilityProvider Open");
+                let _ = responder.send();
 
                 // Spawn a task to serve the capability
                 let injector = self.clone();

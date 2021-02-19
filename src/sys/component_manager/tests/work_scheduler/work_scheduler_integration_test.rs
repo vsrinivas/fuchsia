@@ -16,7 +16,7 @@ async fn basic_work_scheduler_test() {
 
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
 
@@ -26,8 +26,7 @@ async fn basic_work_scheduler_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
     let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
     assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
@@ -41,7 +40,7 @@ async fn unbound_work_scheduler_test() {
 
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
 
@@ -51,15 +50,13 @@ async fn unbound_work_scheduler_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
     // `/worker_sibling:0` has started.
-    let event = EventMatcher::ok()
+    EventMatcher::ok()
         .moniker("./worker_sibling:0")
         .expect_match::<Started>(&mut event_stream)
         .await;
-    event.resume().await.unwrap();
 
     // We no longer need to track `StartInstance` events.
     drop(event_stream);

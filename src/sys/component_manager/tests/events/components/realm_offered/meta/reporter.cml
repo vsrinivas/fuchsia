@@ -23,7 +23,7 @@
         {
             event: "started_nested",
             from: "parent",
-            modes: [ "sync" ],
+            modes: [ "async" ],
         },
     ],
 }
