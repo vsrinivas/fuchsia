@@ -5,7 +5,7 @@
 use crate::base::{SettingInfo, SettingType};
 use crate::call_async;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -42,6 +42,10 @@ impl Into<SettingInfo> for IntlInfo {
 pub struct IntlController {
     client: ClientProxy,
     time_zone_ids: std::collections::HashSet<String>,
+}
+
+impl DeviceStorageAccess for IntlController {
+    const STORAGE_KEYS: &'static [&'static str] = &[IntlInfo::KEY];
 }
 
 #[async_trait]

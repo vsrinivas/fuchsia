@@ -4,7 +4,7 @@
 
 use crate::base::SettingInfo;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -28,6 +28,10 @@ impl Into<SettingInfo> for PrivacyInfo {
 
 pub struct PrivacyController {
     client: ClientProxy,
+}
+
+impl DeviceStorageAccess for PrivacyController {
+    const STORAGE_KEYS: &'static [&'static str] = &[PrivacyInfo::KEY];
 }
 
 #[async_trait]

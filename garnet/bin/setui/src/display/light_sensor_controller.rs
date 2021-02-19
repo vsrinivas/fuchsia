@@ -5,6 +5,7 @@ use crate::base::SettingInfo;
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
 use crate::display::types::LightData;
 use crate::handler::base::Request;
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
     controller, ClientProxy, ControllerError, Event, SettingHandlerResult, State,
 };
@@ -29,6 +30,10 @@ pub struct LightSensorController {
     sensor: Sensor,
     current_value: Arc<Mutex<LightData>>,
     notifier_abort: Option<AbortHandle>,
+}
+
+impl DeviceStorageAccess for LightSensorController {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 #[async_trait]

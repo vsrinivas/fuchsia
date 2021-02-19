@@ -5,7 +5,7 @@
 use crate::base::SettingInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -28,6 +28,10 @@ impl Into<SettingInfo> for DoNotDisturbInfo {
 
 pub struct DoNotDisturbController {
     client: ClientProxy,
+}
+
+impl DeviceStorageAccess for DoNotDisturbController {
+    const STORAGE_KEYS: &'static [&'static str] = &[DoNotDisturbInfo::KEY];
 }
 
 #[async_trait]

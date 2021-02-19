@@ -8,6 +8,7 @@ use crate::agent::base::{
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::Request;
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
 use crate::internal::agent::Payload;
@@ -35,6 +36,10 @@ pub struct MediaButtonsAgent {
 
     /// Settings to send media buttons events to.
     recipient_settings: HashSet<SettingType>,
+}
+
+impl DeviceStorageAccess for MediaButtonsAgent {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl MediaButtonsAgent {

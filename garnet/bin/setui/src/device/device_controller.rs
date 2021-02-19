@@ -5,6 +5,7 @@
 use crate::base::SettingInfo;
 use crate::device::types::DeviceInfo;
 use crate::handler::base::Request;
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
     controller, ClientProxy, ControllerError, SettingHandlerResult,
 };
@@ -14,6 +15,10 @@ use std::fs;
 const BUILD_TAG_FILE_PATH: &str = "/config/build-info/version";
 
 pub struct DeviceController;
+
+impl DeviceStorageAccess for DeviceController {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
+}
 
 #[async_trait]
 impl controller::Create for DeviceController {

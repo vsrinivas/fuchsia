@@ -6,7 +6,7 @@ use crate::base::{SettingInfo, SettingType};
 use crate::call;
 use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::controller::Handle;
 use crate::handler::setting_handler::persist::{controller, ClientProxy};
 use crate::handler::setting_handler::ControllerError;
@@ -44,6 +44,10 @@ type FactoryResetHandle = Arc<Mutex<FactoryResetManager>>;
 /// [`FactoryResetManager`]: crate::factory_reset::FactoryResetManager
 pub struct FactoryResetController {
     handle: FactoryResetHandle,
+}
+
+impl DeviceStorageAccess for FactoryResetController {
+    const STORAGE_KEYS: &'static [&'static str] = &[FactoryResetInfo::KEY];
 }
 
 /// Keeps track of the current state of factory reset, is responsible for persisting that state to

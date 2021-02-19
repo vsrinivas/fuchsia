@@ -13,6 +13,7 @@ use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as HandlerPayload, Request};
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::internal::agent::Payload;
 use crate::internal::switchboard::{Action, Payload as SwitchboardPayload};
 use crate::message::base::{filter, MessageEvent, MessengerType};
@@ -105,6 +106,10 @@ pub struct InspectAgent {
     inspect_node: inspect::Node,
     /// Last requests for inspect to save.
     last_requests: HashMap<SettingType, SettingTypeInfo>,
+}
+
+impl DeviceStorageAccess for InspectAgent {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl InspectAgent {

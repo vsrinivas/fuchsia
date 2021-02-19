@@ -8,6 +8,7 @@ use crate::agent::base::{
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::Request;
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::connect_to_camera;
 use crate::internal::agent::Payload;
 use crate::internal::event::{camera_watcher, Event, Publisher};
@@ -33,6 +34,10 @@ pub struct CameraWatcherAgent {
 
     /// Settings to send camera watcher events to.
     recipient_settings: HashSet<SettingType>,
+}
+
+impl DeviceStorageAccess for CameraWatcherAgent {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl CameraWatcherAgent {

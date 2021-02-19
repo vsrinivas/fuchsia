@@ -6,6 +6,7 @@ use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Life
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::{Error, Request};
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::internal::agent::Payload;
 use crate::internal::event::{restore, Event, Publisher};
 use crate::internal::switchboard;
@@ -24,6 +25,10 @@ pub struct RestoreAgent {
     switchboard_messenger: switchboard::message::Messenger,
     event_publisher: Publisher,
     available_components: HashSet<SettingType>,
+}
+
+impl DeviceStorageAccess for RestoreAgent {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl RestoreAgent {

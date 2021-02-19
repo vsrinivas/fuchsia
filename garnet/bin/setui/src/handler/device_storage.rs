@@ -96,6 +96,32 @@ pub trait DeviceStorageCompatible:
     const KEY: &'static str;
 }
 
+/// A trait for describing which storages an item needs access to.
+/// See [`ServiceConfiguration::storage_keys`] for usage.
+///
+/// [`ServiceConfiguration::storage_keys`]: crate::ServiceConfiguration::storage_keys
+pub trait DeviceStorageAccess {
+    /// This field should be populated by items that implement [`DeviceStorageCompatible`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # struct SomeItem;
+    /// # struct StorageItem;
+    ///
+    /// impl DeviceStorageCompatible for StorageItem {
+    ///    # fn default_value() -> Self { StorageItem }
+    ///    // ...
+    ///    const KEY: &'static str = "some_key";
+    /// }
+    ///
+    /// impl DeviceStorageAccess for SomeItem {
+    ///     const STORAGE_KEYS: &'static [&'static str] = &[StorageItem::KEY];
+    /// }
+    /// ```
+    const STORAGE_KEYS: &'static [&'static str];
+}
+
 impl DeviceStorage {
     // TODO(fxbug.dev/67371) Temporary constructor until we remove the factories and related typing.
     pub fn new<T>(stash_proxy: StoreAccessorProxy, current_data: Option<T>) -> Self

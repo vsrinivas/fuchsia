@@ -12,7 +12,7 @@ use crate::display::display_configuration::{
 };
 use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -179,6 +179,13 @@ where
 {
     client: ClientProxy,
     brightness_manager: T,
+}
+
+impl<T> DeviceStorageAccess for DisplayController<T>
+where
+    T: BrightnessManager,
+{
+    const STORAGE_KEYS: &'static [&'static str] = &[DisplayInfo::KEY];
 }
 
 #[async_trait]

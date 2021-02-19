@@ -5,6 +5,7 @@
 use crate::base::SettingType;
 use crate::call_async;
 use crate::handler::base::Request;
+use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
     controller, ClientProxy, ControllerError, SettingHandlerResult,
 };
@@ -15,6 +16,10 @@ const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
 pub struct AccountController {
     service_context: ServiceContextHandle,
+}
+
+impl DeviceStorageAccess for AccountController {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 #[async_trait]

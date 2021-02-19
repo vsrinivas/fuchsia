@@ -7,6 +7,7 @@ use crate::audio::{
 };
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::Request;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -204,6 +205,10 @@ impl VolumeController {
 
 pub struct AudioController {
     volume: VolumeControllerHandle,
+}
+
+impl DeviceStorageAccess for AudioController {
+    const STORAGE_KEYS: &'static [&'static str] = &[AudioInfo::KEY];
 }
 
 #[async_trait]

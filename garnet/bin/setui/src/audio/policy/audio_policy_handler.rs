@@ -65,6 +65,7 @@ use crate::audio::types::AudioInfo;
 use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Request as SettingRequest, Response as SettingResponse};
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::internal::core::Payload;
 use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
@@ -89,6 +90,10 @@ pub struct AudioPolicyHandler {
 
     /// Offers access to common functionality like messaging and storage.
     client_proxy: ClientProxy<State>,
+}
+
+impl DeviceStorageAccess for AudioPolicyHandler {
+    const STORAGE_KEYS: &'static [&'static str] = &[State::KEY];
 }
 
 /// Maximum allowed volume for an audio stream.

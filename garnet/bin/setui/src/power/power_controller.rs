@@ -6,6 +6,7 @@ use {
     crate::base::SettingType,
     crate::call_async,
     crate::handler::base::Request,
+    crate::handler::device_storage::DeviceStorageAccess,
     crate::handler::setting_handler::{
         controller, ClientProxy, ControllerError, SettingHandlerResult,
     },
@@ -50,6 +51,10 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Con
 
 pub struct PowerController {
     service_context: ServiceContextHandle,
+}
+
+impl DeviceStorageAccess for PowerController {
+    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 #[async_trait]

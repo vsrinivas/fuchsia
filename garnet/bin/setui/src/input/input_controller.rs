@@ -5,7 +5,7 @@
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -347,6 +347,10 @@ impl InputControllerInner {
 pub struct InputController {
     /// Handle so that a lock can be used in the Handle trait implementation.
     inner: InputControllerInnerHandle,
+}
+
+impl DeviceStorageAccess for InputController {
+    const STORAGE_KEYS: &'static [&'static str] = &[InputInfoSources::KEY];
 }
 
 impl InputController {
