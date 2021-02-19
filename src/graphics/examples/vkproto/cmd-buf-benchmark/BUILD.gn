@@ -112,6 +112,6 @@ group("cmd-buf-benchmark-glfw") {
 fuchsia_test_package("cmd-buf-benchmark") {
   test_components = [ ":cmd-buf-benchmark-component" ]
   test_specs = {
-    environments = magma_hardware_envs
+    environments = magma_libvulkan_hardware_envs
   }
 }

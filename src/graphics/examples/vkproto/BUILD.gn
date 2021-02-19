@@ -31,7 +31,7 @@ fuchsia_test_package("vkproto-pkg") {
   test_components = [ ":vkproto_cmp" ]
 
   test_specs = {
-    environments = magma_hardware_envs
+    environments = magma_libvulkan_hardware_envs
   }
 }
 

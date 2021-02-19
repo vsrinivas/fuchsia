@@ -107,7 +107,7 @@ fuchsia_test_package("vkproto-test") {
   package_name = "vkproto-test"
   test_components = [ ":vkproto_test" ]
   test_specs = {
-    environments = magma_hardware_envs
+    environments = magma_libvulkan_hardware_envs
   }
 }
 
