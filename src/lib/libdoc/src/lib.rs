@@ -2,40 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! Documentation library. Used by fidldoc.
-///!
-///! This library provide checks for the documentation.
-///
+//! Documentation library. Used by fidldoc.
+//!
+//! This library provide checks for the documentation.
+
+mod lexer;
+mod source;
+
 use std::cmp;
 use std::rc::Rc;
-
-/// Defines a documentation source.
-struct Source {
-    /// Name of the file which contains the documentation.
-    file_name: String,
-    /// Position in the file (line) of the first character of the documentation.
-    line: u32,
-    /// Position in the file (column) of the first character of the documentation.
-    column: u32,
-    /// Text of the documentation.
-    text: String,
-}
-
-impl Source {
-    pub fn new(file_name: String, line: u32, column: u32, text: String) -> Source {
-        Source { file_name, line, column, text }
-    }
-}
-
-/// Defines the location of an item within a documentation source.
-struct Location {
-    /// The source of the documentation.
-    source: Rc<Source>,
-    /// The offset of the first character of the item.
-    start: usize,
-    /// The offset of the first character following the item.
-    end: usize,
-}
 
 /// Defines a documentation compiler which is used to check some documentation.
 pub struct DocCompiler {
@@ -58,19 +33,22 @@ impl DocCompiler {
     /// - doc: the text of the documentation.
     /// Returns true in case of a successful check.
     pub fn parse_doc(&mut self, file_name: String, line: u32, column: u32, doc: String) -> bool {
-        let source = Rc::new(Source::new(file_name, line, column, doc));
+        let source = Rc::new(source::Source::new(file_name, line, column, doc));
         if source.text.is_empty() {
-            let location = Location { source, start: 0, end: 1 };
-            self.add_error(&location, "Documentation is empty");
+            let location = source::Location { source, start: 0, end: 1 };
+            self.add_error(&location, "Documentation is empty".to_owned());
             false
         } else {
-            let location = Location { source, start: 0, end: 1 };
-            self.add_error(&location, "Can't parse yet");
-            false
+            if let Some(_items) = lexer::reduce_lexems(self, &source) {
+                // The parser is not implemented yet. Just return true.
+                true
+            } else {
+                false
+            }
         }
     }
 
-    fn add_error(&mut self, location: &Location, message: &str) {
+    fn add_error(&mut self, location: &source::Location, message: String) {
         let mut line = 0;
         let mut column = 0;
         let mut start_of_line = 0;
@@ -78,8 +56,12 @@ impl DocCompiler {
 
         // Computes the line and column of start relative to the beginning of the text.
         // Remembers the index of the first character of the line.
+        let mut found_end_of_line = false;
         while let Some((index, character)) = current.next() {
             if index == location.start {
+                if character == '\n' {
+                    found_end_of_line = true;
+                }
                 break;
             }
             if character == '\n' {
@@ -92,15 +74,19 @@ impl DocCompiler {
         }
 
         // Computes the index of the last character of the line.
-        let end_of_line = loop {
-            match current.next() {
-                Some((index, character)) => {
-                    if character == '\n' {
-                        break index;
+        let end_of_line = if found_end_of_line {
+            location.start
+        } else {
+            loop {
+                match current.next() {
+                    Some((index, character)) => {
+                        if character == '\n' {
+                            break index;
+                        }
                     }
-                }
-                None => {
-                    break location.source.text.len();
+                    None => {
+                        break location.source.text.len();
+                    }
                 }
             }
         };
@@ -130,9 +116,9 @@ impl DocCompiler {
 
 #[cfg(test)]
 mod test {
+    use crate::source::Location;
+    use crate::source::Source;
     use crate::DocCompiler;
-    use crate::Location;
-    use crate::Source;
     use std::rc::Rc;
 
     #[test]
@@ -145,7 +131,7 @@ mod test {
             "Some documentation.\nSecond line.".to_owned(),
         ));
         let location = Location { source: source, start: 0, end: 4 };
-        compiler.add_error(&location, "Error here");
+        compiler.add_error(&location, "Error here".to_owned());
         assert_eq!(
             compiler.errors,
             "\
@@ -166,7 +152,7 @@ sdk/foo/foo.fidl: 10:4: Error here
             "Some documentation.\nSecond line.".to_owned(),
         ));
         let location = Location { source: source, start: 5, end: 18 };
-        compiler.add_error(&location, "Error here");
+        compiler.add_error(&location, "Error here".to_owned());
         assert_eq!(
             compiler.errors,
             "\
@@ -187,7 +173,7 @@ sdk/foo/foo.fidl: 10:9: Error here
             "Some documentation.\nSecond line.".to_owned(),
         ));
         let location = Location { source: source, start: 20, end: 26 };
-        compiler.add_error(&location, "Error here");
+        compiler.add_error(&location, "Error here".to_owned());
         assert_eq!(
             compiler.errors,
             "\
@@ -209,7 +195,7 @@ sdk/foo/foo.fidl: 11:4: Error here
             "Some documentation.\nSecond line.".to_owned(),
         ));
         let location = Location { source: source, start: 5, end: 26 };
-        compiler.add_error(&location, "Error here");
+        compiler.add_error(&location, "Error here".to_owned());
         assert_eq!(
             compiler.errors,
             "\
@@ -230,19 +216,12 @@ sdk/foo/foo.fidl: 10:9: Error here
     #[test]
     fn not_empty_test() {
         let mut compiler = DocCompiler::new();
-        assert!(!compiler.parse_doc(
+        assert!(compiler.parse_doc(
             "sdk/foo/foo.fidl".to_owned(),
             10,
             4,
-            "Some documentation.".to_owned()
+            "Some documentation.\n".to_owned()
         ));
-        assert_eq!(
-            compiler.errors,
-            "\
-Some documentation.
-^
-sdk/foo/foo.fidl: 10:4: Can\'t parse yet
-"
-        );
+        assert!(compiler.errors.is_empty());
     }
 }
