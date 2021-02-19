@@ -42,32 +42,36 @@ std::string_view CobaltLogger::GetServiceName() {
 }
 
 bool CobaltLogger::TryObtainLogger() {
-  if (logger_.is_valid()) {
+  if (logger_.client_end().is_valid()) {
     return true;
   }
 
-  zx::channel logger_factory_srv, logger_factory_client;
-
-  if (zx::channel::create(0, &logger_factory_client, &logger_factory_srv) != ZX_OK) {
+  auto factory_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::cobalt::LoggerFactory>();
+  if (factory_endpoints.is_error()) {
     return false;
   }
+  auto [logger_factory_client, logger_factory_srv] = *std::move(factory_endpoints);
 
-  if (options_.service_connect(options_.service_path.c_str(), std::move(logger_factory_srv)) !=
+  if (options_.service_connect(options_.service_path.c_str(), logger_factory_srv.TakeChannel()) !=
       ZX_OK) {
     return false;
   }
 
-  zx::channel logger_svr;
-  if (zx::channel::create(0, &logger_, &logger_svr) != ZX_OK) {
+  // Obtain a logger service for the project ID.
+  auto logger_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::cobalt::Logger>();
+  if (logger_endpoints.is_error()) {
     return false;
   }
-
-  // Obtain a logger service for the project ID.
+  auto [logger_client, logger_server] = *std::move(logger_endpoints);
   auto create_logger_result =
       ::llcpp::fuchsia::cobalt::LoggerFactory::Call::CreateLoggerFromProjectId(
-          zx::unowned_channel(logger_factory_client), options_.project_id, std::move(logger_svr));
-  return create_logger_result.status() == ZX_OK &&
-         create_logger_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
+          logger_factory_client, options_.project_id, std::move(logger_server));
+  if (create_logger_result.status() == ZX_OK &&
+      create_logger_result->status == ::llcpp::fuchsia::cobalt::Status::OK) {
+    logger_ = fidl::BindSyncClient(std::move(logger_client));
+    return true;
+  }
+  return false;
 }
 
 bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* buckets,
@@ -81,8 +85,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
       fidl::unowned_ptr(const_cast<HistogramBucket*>(buckets)), bucket_count);
   event.payload.set_int_histogram(fidl::unowned_ptr(&int_histogram));
 
-  auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
-      zx::unowned_channel(logger_), std::move(event));
+  auto log_result = logger_.LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
@@ -97,8 +100,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
   llcpp::fuchsia::cobalt::CountEvent event_count{.period_duration_micros = 0, .count = count};
   event.payload.set_event_count(fidl::unowned_ptr(&event_count));
 
-  auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
-      zx::unowned_channel(logger_), std::move(event));
+  auto log_result = logger_.LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
@@ -116,9 +118,8 @@ bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::T
   // Cobalt 1.0 does not support integer. The closest to integer is memory
   // usage. So, we use MemoryUsage until we have a better support for integer(in
   // version 1.1).
-  auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogMemoryUsage(
-      zx::unowned_channel(logger_), event.metric_id, event.event_codes[0],
-      fidl::unowned_str(event.component), value);
+  auto log_result = logger_.LogMemoryUsage(event.metric_id, event.event_codes[0],
+                                           fidl::unowned_str(event.component), value);
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }

@@ -40,7 +40,7 @@ class CobaltLogger final : public Logger {
 
   CobaltLogger() = delete;
   // instance from cobalt service;
-  explicit CobaltLogger(CobaltOptions options) : options_(std::move(options)) { logger_.reset(); }
+  explicit CobaltLogger(CobaltOptions options) : options_(std::move(options)) {}
   CobaltLogger(const CobaltLogger&) = delete;
   CobaltLogger(CobaltLogger&&) = delete;
   CobaltLogger& operator=(const CobaltLogger&) = delete;
@@ -62,12 +62,12 @@ class CobaltLogger final : public Logger {
   bool TryObtainLogger();
 
   // Cleans up the state of the logger.
-  void Reset() { logger_.reset(); }
+  void Reset() { logger_.client_end().reset(); }
 
   // Set of options for this logger.
   CobaltOptions options_;
 
-  zx::channel logger_;
+  llcpp::fuchsia::cobalt::Logger::SyncClient logger_;
 };
 
 }  // namespace internal

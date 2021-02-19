@@ -313,8 +313,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/ulib/audio-utils-legacy:audio-utils-legacy",
     "//zircon/system/ulib/block-client:block-client",
     "//zircon/system/ulib/c/test:cdebugdata-test",
-    "//zircon/system/ulib/cobalt-client:cobalt-collector",
-    "//zircon/system/ulib/cobalt-client/test:collector-test",
     "//zircon/system/ulib/debugdata/test:debugdata",
     "//zircon/system/ulib/fdio-caller/test:fdio-caller",
     "//zircon/system/ulib/fidl-async/test:fidl-async-test",

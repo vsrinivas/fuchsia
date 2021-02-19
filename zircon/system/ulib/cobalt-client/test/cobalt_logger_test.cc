@@ -38,31 +38,35 @@ using Status = ::llcpp::fuchsia::cobalt::Status;
 using EventData = ::llcpp::fuchsia::cobalt::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
-class FakeLoggerFactoryService
-    : public ::llcpp::fuchsia::cobalt::LoggerFactory::RawChannelInterface {
+class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory::Interface {
  public:
-  void CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger,
+  void CreateLoggerFromProjectId(uint32_t project_id,
+                                 ::fidl::ServerEnd<::llcpp::fuchsia::cobalt::Logger> logger,
                                  CreateLoggerFromProjectIdCompleter::Sync& completer) final {
     completer.Reply(create_logger_handler_(project_id, std::move(logger)));
   }
 
   void CreateLoggerSimpleFromProjectId(
-      uint32_t project_id, ::zx::channel logger,
+      uint32_t project_id, ::fidl::ServerEnd<::llcpp::fuchsia::cobalt::LoggerSimple> logger,
       CreateLoggerSimpleFromProjectIdCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id, ::zx::channel logger,
+  void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id,
+                                   ::fidl::ServerEnd<::llcpp::fuchsia::cobalt::Logger> logger,
                                    CreateLoggerFromProjectSpecCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void set_create_logger_handler(fit::function<Status(uint32_t, zx::channel)> handler) {
+  void set_create_logger_handler(
+      fit::function<Status(uint32_t, ::fidl::ServerEnd<::llcpp::fuchsia::cobalt::Logger>)>
+          handler) {
     create_logger_handler_ = std::move(handler);
   }
 
  private:
-  fit::function<Status(uint32_t, zx::channel)> create_logger_handler_;
+  fit::function<Status(uint32_t, ::fidl::ServerEnd<::llcpp::fuchsia::cobalt::Logger>)>
+      create_logger_handler_;
 };
 
 // Fake Implementation for fuchsia::cobalt::Logger.
@@ -187,7 +191,8 @@ struct CreateLoggerValidationArgs {
   bool is_channel_ok = false;
 };
 
-void BindLoggerFactoryService(FakeLoggerFactoryService* bindee, zx::channel channel,
+void BindLoggerFactoryService(FakeLoggerFactoryService* bindee,
+                              fidl::ServerEnd<llcpp::fuchsia::cobalt::LoggerFactory> channel,
                               async_dispatcher_t* dispatcher) {
   fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), bindee);
 }
@@ -196,7 +201,8 @@ void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLogg
                                       CreateLoggerValidationArgs* checker,
                                       async_dispatcher_t* dispatcher) {
   binder->set_create_logger_handler(
-      [bindee, checker, dispatcher](uint32_t project_id, zx::channel channel) {
+      [bindee, checker, dispatcher](uint32_t project_id,
+                                    ::fidl::ServerEnd<::llcpp::fuchsia::cobalt::Logger> channel) {
         fbl::AutoLock lock(&checker->result_lock_);
         checker->is_id_ok = (checker->project_id == project_id);
         checker->is_channel_ok = channel.is_valid();
@@ -227,8 +233,10 @@ class LoggerServiceFixture : public zxtest::Test {
     CobaltOptions options;
     options.project_id = kProjectId;
     options.service_connect = [this](const char* path, zx::channel service_channel) {
-      BindLoggerFactoryService(&logger_factory_impl_, std::move(service_channel),
-                               service_loop_->dispatcher());
+      BindLoggerFactoryService(
+          &logger_factory_impl_,
+          fidl::ServerEnd<llcpp::fuchsia::cobalt::LoggerFactory>(std::move(service_channel)),
+          service_loop_->dispatcher());
       return ZX_OK;
     };
     return options;
