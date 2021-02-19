@@ -38,8 +38,8 @@ fn format_version_info<O: Offset + Display>(
         "\
 {}:
   build-version: {}
-  commit-hash: {}
-  commit-time: {}",
+  integration-commit-hash: {}
+  integration-commit-time: {}",
         header, build_version, hash, timestamp_str
     );
 }
@@ -224,13 +224,13 @@ mod test {
             vec![
                 "ffx:".to_string(),
                 format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
-                format!("  commit-hash: {}", FAKE_FRONTEND_HASH),
-                format!("  commit-time: {}", TIMESTAMP_STR),
+                format!("  integration-commit-hash: {}", FAKE_FRONTEND_HASH),
+                format!("  integration-commit-time: {}", TIMESTAMP_STR),
                 String::default(),
                 "daemon:".to_string(),
                 format!("  build-version: {}", FAKE_DAEMON_BUILD_VERSION),
-                format!("  commit-hash: {}", FAKE_DAEMON_HASH),
-                format!("  commit-time: {}", TIMESTAMP_STR),
+                format!("  integration-commit-hash: {}", FAKE_DAEMON_HASH),
+                format!("  integration-commit-time: {}", TIMESTAMP_STR),
             ],
         );
         Ok(())
@@ -247,8 +247,8 @@ mod test {
             vec![
                 "ffx:".to_string(),
                 format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
-                format!("  commit-hash: {}", FAKE_FRONTEND_HASH),
-                format!("  commit-time: {}", TIMESTAMP_STR),
+                format!("  integration-commit-hash: {}", FAKE_FRONTEND_HASH),
+                format!("  integration-commit-time: {}", TIMESTAMP_STR),
                 "Failed to get daemon version info".to_string(),
                 "PEER_CLOSED".to_string(),
             ],
@@ -269,8 +269,8 @@ mod test {
             vec![
                 "ffx:".to_string(),
                 format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
-                format!("  commit-hash: {}", FAKE_FRONTEND_HASH),
-                format!("  commit-time: {}", TIMESTAMP_STR),
+                format!("  integration-commit-hash: {}", FAKE_FRONTEND_HASH),
+                format!("  integration-commit-time: {}", TIMESTAMP_STR),
                 "Timed out".to_string(),
             ],
         );
@@ -288,13 +288,13 @@ mod test {
             vec![
                 "ffx:".to_string(),
                 "  build-version: (unknown build version)".to_string(),
-                "  commit-hash: (unknown)".to_string(),
-                "  commit-time: (unknown commit time)".to_string(),
+                "  integration-commit-hash: (unknown)".to_string(),
+                "  integration-commit-time: (unknown commit time)".to_string(),
                 String::default(),
                 "daemon:".to_string(),
                 "  build-version: (unknown build version)".to_string(),
-                "  commit-hash: (unknown)".to_string(),
-                "  commit-time: (unknown commit time)".to_string(),
+                "  integration-commit-hash: (unknown)".to_string(),
+                "  integration-commit-time: (unknown commit time)".to_string(),
             ],
         );
         Ok(())
