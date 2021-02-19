@@ -182,11 +182,18 @@ impl V2Component {
         }
     }
 
-    pub fn print_details(&self, filter: &str) {
-        self.print_details_recursive("", filter)
+    pub fn print_details(&self, filter: &str) -> bool {
+        if !self.print_details_recursive("", filter) {
+            eprintln!(
+                "Error! Failed to get information about the component. The component may not exist."
+            );
+            return false;
+        }
+        true
     }
 
-    fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) {
+    fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) -> bool {
+        let mut did_print = false;
         let moniker = format!("{}{}:{}", moniker_prefix, self.name, self.id);
 
         // Print if the filter matches
@@ -200,18 +207,21 @@ impl V2Component {
             }
 
             println!("");
+            did_print = true;
         }
 
         // Recurse on children
         let moniker_prefix = format!("{}/", moniker);
         for child in &self.children {
-            child.print_details_recursive(&moniker_prefix, filter);
+            did_print |= child.print_details_recursive(&moniker_prefix, filter);
         }
 
         // If this component is appmgr, generate details for all v1 components
         if let Some(v1_realm) = &self.appmgr_root_v1_realm {
-            v1_realm.print_details_recursive(&moniker_prefix, filter);
+            did_print |= v1_realm.print_details_recursive(&moniker_prefix, filter);
         }
+
+        did_print
     }
 }
 
@@ -629,7 +639,7 @@ mod tests {
         // |- url
         fs::create_dir(root.join("children")).unwrap();
         let appmgr = root.join("children/appmgr");
-        fs::create_dir(root.join(&appmgr)).unwrap();
+        fs::create_dir(&appmgr).unwrap();
         File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
@@ -692,5 +702,214 @@ mod tests {
         assert_eq!(v2_component.id, 0);
         assert_eq!(v2_component.name, "<root>");
         assert_eq!(v2_component.url, "fuchsia-boot:///#meta/root.cm");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn print_details_recursive_finds_v2_filter() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        //    |- bootstrap
+        //       |- children
+        //          |- archivist
+        //              |- children
+        //              |- component_type
+        //              |- id
+        //              |- url
+        //       |- component_type
+        //       |- id
+        //       |- url
+        // |- component_type
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let bootstrap = root.join("children/bootstrap");
+        fs::create_dir(&bootstrap).unwrap();
+        fs::create_dir(bootstrap.join("children")).unwrap();
+        File::create(bootstrap.join("component_type"))
+            .unwrap()
+            .write_all("static".as_bytes())
+            .unwrap();
+        File::create(bootstrap.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(bootstrap.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/bootstrap.cm".as_bytes())
+            .unwrap();
+
+        let archivist = bootstrap.join("children/archivist");
+        fs::create_dir(&archivist).unwrap();
+        fs::create_dir(archivist.join("children")).unwrap();
+        File::create(archivist.join("component_type"))
+            .unwrap()
+            .write_all("static".as_bytes())
+            .unwrap();
+        File::create(archivist.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(archivist.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/archivist.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
+
+        assert_eq!(v2_component.print_details("bootstrap"), true);
+        assert_eq!(v2_component.print_details("archivist"), true);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn print_details_recursive_finds_v1_filter() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        //    |- core
+        //       |- children
+        //          |- appmgr
+        //             |- exec
+        //                |- expose
+        //                |- in
+        //                |- out
+        //                   |- hub
+        //                      |- c
+        //                         |- sysmgr.cmx
+        //                            |- 13579
+        //                               |- c
+        //                               |- job-id
+        //                               |- name
+        //                               |- r
+        //                               |- in
+        //                               |- url
+        //                      |- job-id
+        //                      |- name
+        //                      |- r
+        //             |- children
+        //             |- component_type
+        //             |- id
+        //             |- url
+        //       |- component_type
+        //       |- id
+        //       |- url
+        // |- component_type
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let core = root.join("children/core");
+        fs::create_dir(&core).unwrap();
+        fs::create_dir(core.join("children")).unwrap();
+        File::create(core.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(core.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(core.join("url"))
+            .unwrap()
+            .write_all("fuchsia-pkg://fuchsia.com/core#meta/core.cm".as_bytes())
+            .unwrap();
+
+        let appmgr = core.join("children/appmgr");
+        fs::create_dir(&appmgr).unwrap();
+        fs::create_dir(appmgr.join("children")).unwrap();
+        File::create(appmgr.join("component_type"))
+            .unwrap()
+            .write_all("static".as_bytes())
+            .unwrap();
+        File::create(appmgr.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(appmgr.join("url"))
+            .unwrap()
+            .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
+            .unwrap();
+
+        let exec = appmgr.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("out")).unwrap();
+
+        let hub = exec.join("out/hub");
+        fs::create_dir(&hub).unwrap();
+        fs::create_dir(hub.join("c")).unwrap();
+        File::create(hub.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(hub.join("name")).unwrap().write_all("sysmgr.cmx".as_bytes()).unwrap();
+        fs::create_dir(hub.join("r")).unwrap();
+
+        let sysmgr = hub.join("c/sysmgr");
+        fs::create_dir(&sysmgr).unwrap();
+        let child_dir_name = sysmgr.join("13579");
+        fs::create_dir(&child_dir_name).unwrap();
+        fs::create_dir(child_dir_name.join("c")).unwrap();
+        fs::create_dir(child_dir_name.join("in")).unwrap();
+        fs::create_dir(child_dir_name.join("r")).unwrap();
+        File::create(child_dir_name.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(child_dir_name.join("name")).unwrap().write_all("sysmgr".as_bytes()).unwrap();
+        File::create(child_dir_name.join("url"))
+            .unwrap()
+            .write_all("fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
+
+        assert_eq!(v2_component.print_details("core"), true);
+        assert_eq!(v2_component.print_details("appmgr"), true);
+        assert_eq!(v2_component.print_details("sysmgr"), true);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn print_details_recursive_cannot_find_the_filter() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        //    |- bootstrap
+        //       |- children
+        //       |- component_type
+        //       |- id
+        //       |- url
+        // |- component_type
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let bootstrap = root.join("children/bootstrap");
+        fs::create_dir(&bootstrap).unwrap();
+        fs::create_dir(bootstrap.join("children")).unwrap();
+        File::create(bootstrap.join("component_type"))
+            .unwrap()
+            .write_all("static".as_bytes())
+            .unwrap();
+        File::create(bootstrap.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(bootstrap.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/bootstrap.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
+
+        assert_eq!(v2_component.print_details("asdfgh"), false);
     }
 }

@@ -93,7 +93,8 @@ impl V1Realm {
         }
     }
 
-    pub fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) {
+    pub fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) -> bool {
+        let mut did_print = false;
         let moniker = format!("{}{}", moniker_prefix, self.name);
 
         // Print information about realms if there is no filter
@@ -102,18 +103,21 @@ impl V1Realm {
             println!("Job ID: {}", self.job_id);
             println!("Type: v1 realm");
             println!("");
+            did_print = true;
         }
 
         // Recurse on child components
         let moniker_prefix = format!("{}/", moniker);
         for child in &self.child_components {
-            child.print_details_recursive(&moniker_prefix, filter);
+            did_print |= child.print_details_recursive(&moniker_prefix, filter);
         }
 
         // Recurse on child realms
         for child in &self.child_realms {
-            child.print_details_recursive(&moniker_prefix, filter);
+            did_print |= child.print_details_recursive(&moniker_prefix, filter);
         }
+
+        did_print
     }
 }
 
@@ -193,7 +197,8 @@ impl V1Component {
         }
     }
 
-    fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) {
+    fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) -> bool {
+        let mut did_print = false;
         let moniker = format!("{}{}", moniker_prefix, self.name);
         let unknown_merkle = UNKNOWN.to_string();
         let merkle = self.merkle_root.as_ref().unwrap_or(&unknown_merkle);
@@ -221,13 +226,15 @@ impl V1Component {
             }
 
             println!("");
+            did_print = true;
         }
 
         // Recurse on children
         let moniker_prefix = format!("{}/", moniker);
         for child in &self.child_components {
-            child.print_details_recursive(&moniker_prefix, filter);
+            did_print |= child.print_details_recursive(&moniker_prefix, filter);
         }
+        did_print
     }
 }
 

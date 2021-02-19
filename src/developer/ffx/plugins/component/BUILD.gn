@@ -12,6 +12,7 @@ ffx_plugin("ffx_component") {
     "list:ffx_component_list",
     "run:ffx_component_run",
     "select:ffx_select",
+    "show:ffx_component_show",
     "//src/sys/run_test_suite/ffx:ffx_test",
   ]
 
@@ -27,5 +28,6 @@ group("tests") {
     "list:ffx_component_list_tests",
     "run:ffx_component_run_tests",
     "select:ffx_select_tests",
+    "show:ffx_component_show_tests",
   ]
 }
