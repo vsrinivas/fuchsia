@@ -41,6 +41,7 @@ const BRIGHTNESS_USER_MULTIPLIER_CENTER: f32 = 1.0;
 const BRIGHTNESS_USER_MULTIPLIER_MAX: f32 = 8.0;
 const BRIGHTNESS_USER_MULTIPLIER_MIN: f32 = 0.25;
 const BRIGHTNESS_TABLE_FILE_PATH: &str = "/data/brightness_table";
+const BRIGHTNESS_MINIMUM_CHANGE: f32 = 0.00001;
 
 // Gives pleasing, smooth brightness ramp up and down
 const BRIGHTNESS_STEP_SIZE: f32 = 0.001;
@@ -493,7 +494,7 @@ impl Control {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait(? Send)]
 pub trait ControlTrait {
     async fn handle_request(
         &mut self,
@@ -508,7 +509,7 @@ pub trait ControlTrait {
     fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool);
 }
 
-#[async_trait(?Send)]
+#[async_trait(? Send)]
 impl ControlTrait for Control {
     async fn handle_request(
         &mut self,
@@ -643,6 +644,8 @@ async fn set_brightness(
         )
         .detach();
         *set_brightness_abort_handle = Some(abort_handle);
+    } else if (current_value - value).abs() > BRIGHTNESS_MINIMUM_CHANGE {
+        set_brightness_impl(value, backlight, current_sender_channel).await;
     }
 }
 
@@ -707,7 +710,6 @@ async fn set_brightness_slowly(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 
@@ -786,8 +788,8 @@ mod tests {
         (sensor, backlight)
     }
 
-    async fn generate_control_struct() -> Control {
-        let (sensor, backlight) = set_mocks(400, 0.5);
+    async fn generate_control_struct(sensor: u16, backlight: f64) -> Control {
+        let (sensor, backlight) = set_mocks(sensor, backlight);
         let set_brightness_abort_handle = Arc::new(Mutex::new(None::<AbortHandle>));
         let auto_brightness_abort_handle = None::<AbortHandle>;
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
@@ -852,7 +854,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_table_valid() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let brightness_table = {
             let mut lux_to_nits = Vec::new();
             lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 50. });
@@ -881,7 +883,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_table_not_valid_negative_value() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let brightness_table = {
             let mut lux_to_nits = Vec::new();
             lux_to_nits.push(BrightnessPoint { ambient_lux: -10., display_nits: 50. });
@@ -893,7 +895,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_table_not_valid_lux_not_increasing() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let brightness_table = {
             let mut lux_to_nits = Vec::new();
             lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 50. });
@@ -907,7 +909,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_table_valid_but_empty() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let brightness_table = {
             let lux_to_nits = Vec::new();
             BrightnessTable { points: lux_to_nits }
@@ -917,77 +919,77 @@ mod tests {
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(0, old_curve).await,
-                brightness_curve_lux_to_nits(0, &control.spline).await
+                brightness_curve_lux_to_nits(0, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(1, old_curve).await,
-                brightness_curve_lux_to_nits(1, &control.spline).await
+                brightness_curve_lux_to_nits(1, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(2, old_curve).await,
-                brightness_curve_lux_to_nits(2, &control.spline).await
+                brightness_curve_lux_to_nits(2, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(15, old_curve).await,
-                brightness_curve_lux_to_nits(15, &control.spline).await
+                brightness_curve_lux_to_nits(15, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(16, old_curve).await,
-                brightness_curve_lux_to_nits(16, &control.spline).await
+                brightness_curve_lux_to_nits(16, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(100, old_curve).await,
-                brightness_curve_lux_to_nits(100, &control.spline).await
+                brightness_curve_lux_to_nits(100, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(150, old_curve).await,
-                brightness_curve_lux_to_nits(150, &control.spline).await
+                brightness_curve_lux_to_nits(150, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(200, old_curve).await,
-                brightness_curve_lux_to_nits(200, &control.spline).await
+                brightness_curve_lux_to_nits(200, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(240, old_curve).await,
-                brightness_curve_lux_to_nits(240, &control.spline).await
+                brightness_curve_lux_to_nits(240, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(300, old_curve).await,
-                brightness_curve_lux_to_nits(300, &control.spline).await
+                brightness_curve_lux_to_nits(300, &control.spline).await,
             ),
             true
         );
         assert_eq!(
             cmp_float(
                 brightness_curve_lux_to_nits(340, old_curve).await,
-                brightness_curve_lux_to_nits(340, &control.spline).await
+                brightness_curve_lux_to_nits(340, &control.spline).await,
             ),
             true
         );
@@ -995,7 +997,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_scale_new_adjustment() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let mut new_adjust = control.scale_new_adjustment(-1.0).await;
         assert_eq!(0.25, new_adjust);
         new_adjust = control.scale_new_adjustment(1.0).await;
@@ -1006,7 +1008,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_send_value() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let (channel_sender, mut channel_receiver) = futures::channel::mpsc::unbounded::<f32>();
         control.current_sender_channel.lock().await.add_sender_channel(channel_sender).await;
         let set_brightness = |_| {};
@@ -1035,7 +1037,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_in_range() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let mut result = Vec::new();
         let set_brightness = |nits| {
             result.push(nits as f32);
@@ -1059,7 +1061,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_min() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let mut result = Vec::new();
         let set_brightness = |nits| {
             result.push(nits as f32);
@@ -1083,7 +1085,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_max() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let mut result = Vec::new();
         let set_brightness = |nits| {
             result.push(nits as f32);
@@ -1127,7 +1129,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_is_abortable_with_auto_brightness_on() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let set_brightness_abort_handle = Arc::new(Mutex::new(None::<AbortHandle>));
         let (_sensor, backlight) = set_mocks(0, 0.0);
         let backlight = backlight.clone();
@@ -1153,7 +1155,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_impl() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let (_sensor, backlight) = set_mocks(0, 0.0);
         let backlight_clone = backlight.clone();
         set_brightness_impl(0.3, backlight_clone, control.current_sender_channel).await;
@@ -1163,7 +1165,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_manager_fail_gracefully() {
-        let control = generate_control_struct().await;
+        let control = generate_control_struct(400, 0.5).await;
         let (_sensor, backlight) = set_mocks_not_valid(0, 0.0);
         {
             let last_set_brightness = &*LAST_SET_BRIGHTNESS.lock().await;
@@ -1177,7 +1179,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_store_brightness_table() -> Result<(), Error> {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let brightness_table = BrightnessTable {
             points: vec![
                 BrightnessPoint { ambient_lux: 10., display_nits: 50. },
@@ -1223,7 +1225,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_manual_brightness_smooth_with_duration_got_set() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         control.set_manual_brightness_smooth(0.6, 4000000000).await;
         let duration = *BRIGHTNESS_CHANGE_DURATION.lock().await;
         assert_eq!(4000, duration.into_millis());
@@ -1233,7 +1235,7 @@ mod tests {
     fn test_set_manual_brightness_updates_brightness() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let func_fut1 = generate_control_struct();
+        let func_fut1 = generate_control_struct(400, 0.5);
         futures::pin_mut!(func_fut1);
         let mut control = exec.run_singlethreaded(&mut func_fut1);
         {
@@ -1251,9 +1253,36 @@ mod tests {
         assert_eq!(cmp_float(0.6, value.unwrap() as f32), true);
     }
 
+    #[test]
+    fn test_set_manual_brightness_updates_brightness_small_change() {
+        const TARGET_BRIGHTNESS: f32 = 0.0006;
+        const ORIGINAL_BRIGHTNESS: f32 = 0.001;
+        assert!((TARGET_BRIGHTNESS - ORIGINAL_BRIGHTNESS).abs() < BRIGHTNESS_STEP_SIZE);
+        assert!((TARGET_BRIGHTNESS - ORIGINAL_BRIGHTNESS).abs() > BRIGHTNESS_MINIMUM_CHANGE);
+
+        let mut exec = fasync::Executor::new().unwrap();
+        let func_fut1 = generate_control_struct(400, ORIGINAL_BRIGHTNESS as f64);
+        futures::pin_mut!(func_fut1);
+        let mut control = exec.run_singlethreaded(&mut func_fut1);
+        {
+            let func_fut2 = control.set_manual_brightness_smooth(0.0006, 4000);
+            futures::pin_mut!(func_fut2);
+            exec.run_singlethreaded(&mut func_fut2);
+        }
+        let _ = exec.run_until_stalled(&mut future::pending::<()>());
+        let func_fut3 = control.backlight.lock();
+        futures::pin_mut!(func_fut3);
+        let backlight = exec.run_singlethreaded(&mut func_fut3);
+        let func_fut4 = backlight.get_brightness();
+        futures::pin_mut!(func_fut4);
+        let value = exec.run_singlethreaded(&mut func_fut4);
+        let brightness_value = value.unwrap() as f32;
+        assert_eq!(TARGET_BRIGHTNESS, brightness_value);
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_get_max_absolute_brightness() {
-        let mut control = generate_control_struct().await;
+        let mut control = generate_control_struct(400, 0.5).await;
         let max_brightness = control.get_max_absolute_brightness().await;
         assert_eq!(250.0, max_brightness.unwrap());
     }
