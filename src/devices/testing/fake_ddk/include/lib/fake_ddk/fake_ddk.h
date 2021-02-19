@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_TESTING_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FAKE_DDK_H_
 #define SRC_DEVICES_TESTING_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FAKE_DDK_H_
 
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/logger.h>
 
@@ -117,6 +118,10 @@ class Bind {
   static Bind* Instance() { return instance_; }
 
   zx::channel& FidlClient() { return fidl_.local(); }
+  template <typename P>
+  fidl::ClientEnd<P> FidlClient() {
+    return fidl::ClientEnd<P>(std::move(fidl_.local()));
+  }
 
   bool remove_called() const { return remove_called_; }
 

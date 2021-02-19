@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
@@ -390,13 +391,14 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
       &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = *std::move(endpoints);
   audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
   fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
   auto builder = audio_fidl::Format::UnownedBuilder();
@@ -405,7 +407,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
 
   // To make sure we have initialized in the controller driver make a sync call
   // (we know the controller is single threaded, initialization is completed if received a reply).
-  auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_OK(props.status());
 
   // Wait until codecs have received a SetGainState call.
@@ -443,7 +445,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
@@ -473,8 +475,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
     // In this test we want to get the gain state anyways.
-    auto gain_state =
-        audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(client.channel()));
+    auto gain_state = client.WatchGainState();
     ASSERT_TRUE(gain_state->gain_state.has_agc_enabled());
     ASSERT_FALSE(gain_state->gain_state.agc_enabled());
     ASSERT_TRUE(gain_state->gain_state.muted());
@@ -506,8 +507,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
     // In this test we want to get the gain state anyways.
-    auto gain_state =
-        audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(client.channel()));
+    auto gain_state = client.WatchGainState();
 
     ASSERT_TRUE(gain_state->gain_state.has_agc_enabled());
     ASSERT_TRUE(gain_state->gain_state.agc_enabled());
@@ -522,16 +522,17 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
 
   {
     // Now we start the ring buffer so override_mute_ gets cleared.
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
     auto builder = audio_fidl::Format::UnownedBuilder();
     builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
     client.CreateRingBuffer(builder.build(), std::move(remote));
-    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(zx::unowned_channel(local), 8192, 0);
+    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, 8192, 0);
     ASSERT_OK(vmo.status());
-    auto start = audio_fidl::RingBuffer::Call::Start(zx::unowned_channel(local));
+    auto start = audio_fidl::RingBuffer::Call::Start(local);
     ASSERT_OK(start.status());
 
     // Wait until codecs have received a SetGainState call.
@@ -558,8 +559,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
     // In this test we want to get the gain state anyways.
-    auto gain_state =
-        audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(client.channel()));
+    auto gain_state = client.WatchGainState();
 
     ASSERT_TRUE(gain_state->gain_state.has_agc_enabled());
     ASSERT_FALSE(gain_state->gain_state.agc_enabled());
@@ -611,12 +611,12 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
       &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  auto props = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(client.channel()));
+  auto props = client.GetProperties();
   ASSERT_OK(props.status());
 
   EXPECT_TRUE(props->properties.can_mute());
@@ -658,12 +658,12 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
       &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  auto props = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(client.channel()));
+  auto props = client.GetProperties();
   ASSERT_OK(props.status());
 
   EXPECT_FALSE(props->properties.can_mute());
@@ -710,15 +710,16 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
       &codec1_proto, &codec2_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
   // Default sets 48'000.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
     auto builder = audio_fidl::Format::UnownedBuilder();
@@ -727,13 +728,14 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
   // Changes to 96'000.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = kTestFrameRate2;  // Change it from the default at 48kHz.
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
@@ -743,7 +745,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -780,7 +782,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
       &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
@@ -804,8 +806,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = 4;
     pcm_format.channels_to_use_bitmask = 0xf;
@@ -815,7 +818,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -838,8 +841,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     // TODO(andresoportus): Make AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED != 0, so bitmask could be 0.
     pcm_format.channels_to_use_bitmask = 0xe;
@@ -849,7 +853,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -891,7 +895,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
       &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
@@ -915,8 +919,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = 4;
     pcm_format.channels_to_use_bitmask = 0xf;
@@ -926,7 +931,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -949,8 +954,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = 1;
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
@@ -959,7 +965,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -982,8 +988,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = 0xa;
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
@@ -992,7 +999,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -1021,7 +1028,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
       &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
-  audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
@@ -1045,8 +1052,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = 4;
     pcm_format.channels_to_use_bitmask = 0xf;
@@ -1056,7 +1064,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -1079,8 +1087,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   mock[0x5b4].ExpectWrite(0);    // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);    // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = 1;
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
@@ -1089,7 +1098,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -1112,8 +1121,9 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = 0xa;
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
@@ -1122,7 +1132,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
   }
 
@@ -1326,19 +1336,20 @@ struct AmlG12TdmTest : public zxtest::Test {
 
     ddk::GpioProtocolClient unused_gpio;
     auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
-    audio_fidl::Device::SyncClient client_wrap(std::move(tester_.FidlClient()));
+    auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
     audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
     pcm_format.value.number_of_channels = number_of_channels;
     auto builder = audio_fidl::Format::UnownedBuilder();
     builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
     client.CreateRingBuffer(builder.build(), std::move(remote));
 
-    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(zx::unowned_channel(local), frames_req, 0);
+    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, frames_req, 0);
     ASSERT_OK(vmo.status());
     ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
 

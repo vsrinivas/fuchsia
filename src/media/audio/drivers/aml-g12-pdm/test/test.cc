@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/sync/completion.h>
 
 #include <ddk/metadata.h>
@@ -98,7 +99,7 @@ struct AudioStreamInTest : public zxtest::Test {
     auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
     ASSERT_NOT_NULL(server);
 
-    audio_fidl::Device::SyncClient client_wrap(std::move(tester_.FidlClient()));
+    audio_fidl::Device::SyncClient client_wrap(tester_.FidlClient<audio_fidl::Device>());
     audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
     ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
@@ -110,12 +111,13 @@ struct AudioStreamInTest : public zxtest::Test {
     fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
     auto builder = audio_fidl::Format::UnownedBuilder();
     builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     client.CreateRingBuffer(builder.build(), std::move(remote));
     // To make sure we have initialized in the server make a sync call
     // (we know the server is single threaded, initialization is completed if received a reply).
-    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
     ASSERT_OK(props.status());
 
     server->DdkAsyncRemove();
@@ -131,19 +133,20 @@ struct AudioStreamInTest : public zxtest::Test {
     tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     auto stream = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
-    audio_fidl::Device::SyncClient client_wrap(std::move(tester_.FidlClient()));
+    auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
     audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
     ASSERT_EQ(ch.status(), ZX_OK);
     audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
     fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
     pcm_format.value.number_of_channels = number_of_channels;
     auto builder = audio_fidl::Format::UnownedBuilder();
     builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
     client.CreateRingBuffer(builder.build(), std::move(remote));
 
-    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(zx::unowned_channel(local), frames_req, 0);
+    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, frames_req, 0);
     ASSERT_OK(vmo.status());
     ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
 

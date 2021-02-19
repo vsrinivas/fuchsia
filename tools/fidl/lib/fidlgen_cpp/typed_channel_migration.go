@@ -65,7 +65,6 @@ var rawChannelInterfaceAllowed = map[string]bool{
 	"::llcpp::fuchsia::examples::EchoLauncher":                          true,
 	"::llcpp::fuchsia::fshost::Registry":                                true,
 	"::llcpp::fuchsia::gpu::magma::Primary":                             true,
-	"::llcpp::fuchsia::hardware::audio::StreamConfig":                   true,
 	"::llcpp::fuchsia::hardware::camera::Device":                        true,
 	"::llcpp::fuchsia::hardware::display::Controller":                   true,
 	"::llcpp::fuchsia::hardware::display::Provider":                     true,

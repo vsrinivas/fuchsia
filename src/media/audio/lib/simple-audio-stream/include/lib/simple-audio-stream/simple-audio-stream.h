@@ -328,7 +328,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
   // All the StreamConfig::Interface methods are forwarded to SimpleAudioStream.
   class StreamChannel : public Channel,
-                        public audio_fidl::StreamConfig::RawChannelInterface,
+                        public audio_fidl::StreamConfig::Interface,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     // Does not take ownership of stream, which must refer to a valid SimpleAudioStream that
@@ -355,7 +355,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                          SetGainCompleter::Sync& completer) override {
       stream_.SetGain(std::move(target_state), completer);
     }
-    virtual void CreateRingBuffer(audio_fidl::Format format, zx::channel ring_buffer,
+    virtual void CreateRingBuffer(audio_fidl::Format format,
+                                  fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
                                   CreateRingBufferCompleter::Sync& completer) override {
       stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
     }
@@ -399,7 +400,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
   void GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer);
   void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
-  void CreateRingBuffer(StreamChannel* channel, audio_fidl::Format format, zx::channel ring_buffer,
+  void CreateRingBuffer(StreamChannel* channel, audio_fidl::Format format,
+                        fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
                         StreamChannel::CreateRingBufferCompleter::Sync& completer);
   void WatchGainState(StreamChannel* channel,
                       StreamChannel::WatchGainStateCompleter::Sync& completer);
