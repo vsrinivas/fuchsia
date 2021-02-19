@@ -79,6 +79,27 @@ std::unique_ptr<SuspendHandle> SyncSuspendThread(ThreadHandle& thread) {
   return suspend_handle;
 }
 
+bool FrameHasRegister(const debug_ipc::StackFrame& frame, debug_ipc::RegisterID id) {
+  for (const auto& reg : frame.regs) {
+    if (reg.id == id)
+      return true;
+  }
+  return false;
+}
+
+// Returns true if the given stack frame has values for the thread-specific registers for the
+// current platform. This does not validate the actual values.
+bool FrameHasThreadRegisters(const debug_ipc::StackFrame& frame) {
+#if defined(__x86_64__)
+  return FrameHasRegister(frame, debug_ipc::RegisterID::kX64_fsbase) &&
+         FrameHasRegister(frame, debug_ipc::RegisterID::kX64_gsbase);
+#elif defined(__aarch64__)
+  return FrameHasRegister(frame, debug_ipc::RegisterID::kARMv8_tpidr);
+#else
+#error Write for your platform
+#endif
+}
+
 void DoUnwindTest() {
   zx::process handle;
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
@@ -132,6 +153,9 @@ void DoUnwindTest() {
     EXPECT_TRUE(stack[i].ip != 0);
     EXPECT_TRUE(stack[i].regs.size() >= 8)
         << "Only got " << stack[i].regs.size() << " regs for frame " << i;
+
+    // Each stack frame should have the thread-specific registers that don't change across frames.
+    EXPECT_TRUE(FrameHasThreadRegisters(stack[i]));
   }
 
   // TODO: It might be nice to write the thread functions in assembly so we can know what the

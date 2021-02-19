@@ -32,6 +32,23 @@ using ModuleVector = std::vector<debug_ipc::Module>;
 // Default unwinder type to use.
 UnwinderType unwinder_type = UnwinderType::kNgUnwind;
 
+// The general registers include thread-specific information (fsbase/gsbase on x64, and tpidr on
+// ARM64). The unwinders don't deal with these registers because unwinding shouldn't affect them.
+// This function copies the current platform's thread-specific registers to the stack frame record
+// under the assumption that they never change across stack frames.
+void AddThreadRegs(const GeneralRegisters& source, debug_ipc::StackFrame* dest) {
+  const auto& native_regs = source.GetNativeRegisters();
+
+#if defined(__x86_64__)
+  dest->regs.emplace_back(RegisterID::kX64_fsbase, native_regs.fs_base);
+  dest->regs.emplace_back(RegisterID::kX64_gsbase, native_regs.gs_base);
+#elif defined(__aarch64__)
+  dest->regs.emplace_back(RegisterID::kARMv8_tpidr, native_regs.tpidr);
+#else
+#error Write for your platform
+#endif
+}
+
 // These are the registers we attempt to extract from stack frams from NGUnwind This does not
 // include the IP/SP which are specially handled separately.
 struct NGUnwindRegisterMap {
@@ -167,6 +184,7 @@ zx_status_t UnwindStackAndroid(const ProcessHandle& process, const ModuleList& m
         }
       });
     }
+    AddThreadRegs(regs, dest);
   }
 
   return 0;
@@ -256,6 +274,7 @@ zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, const ModuleList& 
       unw_get_reg(&cursor, ng_id, &val);
       frame.regs.emplace_back(reg_id, val);
     }
+    AddThreadRegs(regs, &frame);
 
     // This "if" statement prevents adding more than the max number of stack entries since we
     // requested one more from libunwind to get the CFA.

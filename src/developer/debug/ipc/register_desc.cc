@@ -238,7 +238,9 @@ const RegisterInfo kRegisterInfo[] = {
     {.id = RegisterID::kX64_rip, .name = "rip", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_rip, .bits = 64},
 
     {.id = RegisterID::kX64_rflags, .name = "rflags", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_rflags, .bits = 64, .dwarf_id = 49},
-    {.id = RegisterID::kX64_fsbase, .name = "fsbase", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_fsbase, .bits = 64, .dwarf_id = 58},
+    // See "DWARF notes" below on these weird segment registers.
+    {.id = RegisterID::kX64_fsbase, .name = "fs_base", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_fsbase, .bits = 64, .dwarf_id = 58},
+    {.id = RegisterID::kX64_gsbase, .name = "gs_base", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_gsbase, .bits = 64, .dwarf_id = 59},
 
     // General-purpose aliases.
 
@@ -427,11 +429,14 @@ const RegisterInfo kRegisterInfo[] = {
 //   http://infocenter.arm.com/help/topic/com.arm.doc.ecm0665627/abi_sve_aadwarf_100985_0000_00_en.pdf
 //        Page 6
 //
+// On segment registers, we don't define any accessors for the cs, ds, es, and ss segment registers
+// which must all be 0 on x64. We don't define anything for fs or gs either, these are magic
+// selectors into an internal table and aren't generally useful. When user-code uses fs-relative
+// addressing, this is implicitly using the fs selector to look up into a table to get "fs.base"
+// which is what people actually care about. The same goes for the gs register.
+//
 // We don't have definitions yet of the following x86 DWARF registers:
 //
-//   50-55 -> (%es, %cs, %ss, %ds, %fs, %gs)
-//   58 -> FS Base Address
-//   59 -> GS Base Address
 //   62 -> %ts (Task Register)
 //   63 -> %ldtr
 //   118-125 -> %k0–%k7 (Vector Mask Registers 0–7)
