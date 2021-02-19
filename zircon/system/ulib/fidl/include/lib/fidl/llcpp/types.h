@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_TYPES_H_
 #define LIB_FIDL_LLCPP_TYPES_H_
 
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
@@ -52,7 +53,8 @@ struct UnbindInfo {
 
 // Invoked from a dispatcher thread after the server end of a channel is unbound.
 template <typename ServerImpl>
-using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo, zx::channel)>;
+using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo,
+                                       fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>)>;
 
 // Invoked from a dispatcher thread after the client end of a channel is unbound.
 using OnClientUnboundFn = fit::callback<void(UnbindInfo)>;

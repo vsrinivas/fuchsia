@@ -40,23 +40,21 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 };
 
 bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
-  fidl::OnUnboundFn<llcpp::fuchsia::gpu::magma::Primary::RawChannelInterface> unbind_callback =
-      [](llcpp::fuchsia::gpu::magma::Primary::RawChannelInterface* interface,
-         fidl::UnbindInfo unbind_info, zx::channel server_channel) {
+  fidl::OnUnboundFn<ZirconPlatformConnection> unbind_callback =
+      [](ZirconPlatformConnection* self, fidl::UnbindInfo unbind_info,
+         fidl::ServerEnd<llcpp::fuchsia::gpu::magma::Primary> server_channel) {
         // |kDispatcherError| indicates the async loop itself is shutting down,
         // which could only happen when |interface| is being destructed.
         // Therefore, we must avoid using the same object.
         if (unbind_info.reason == fidl::UnbindInfo::Reason::kDispatcherError)
           return;
 
-        auto* self = static_cast<ZirconPlatformConnection*>(interface);
         self->server_binding_ = cpp17::nullopt;
         self->async_loop()->Quit();
       };
 
-  llcpp::fuchsia::gpu::magma::Primary::RawChannelInterface* interface = this;
   fit::result<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>, zx_status_t> result =
-      fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), interface,
+      fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), this,
                        std::move(unbind_callback));
 
   if (!result.is_ok())

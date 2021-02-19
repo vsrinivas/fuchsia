@@ -35,21 +35,23 @@ Heap::~Heap() { loop_.Shutdown(); }
 
 void Heap::BindWithHeapProperties(zx::channel server_request,
                                   llcpp::fuchsia::sysmem2::HeapProperties heap_properties) {
-  zx_handle_t server_handle = server_request.release();
-  async::PostTask(loop_.dispatcher(), [server_handle, heap_properties = std::move(heap_properties),
-                                       this]() mutable {
-    auto result = fidl::BindServer<HeapInterface>(
-        loop_.dispatcher(), zx::channel(server_handle), static_cast<HeapInterface*>(this),
-        [](HeapInterface* interface, fidl::UnbindInfo info, zx::channel channel) {
-          static_cast<Heap*>(interface)->OnClose(info, std::move(channel));
-        });
-    if (!result.is_ok()) {
-      zxlogf(ERROR, "[%s] Cannot bind to channel: status: %d", tag_.c_str(), result.error());
-      control_->RemoveHeap(this);
-      return;
-    }
-    result.value()->OnRegister(std::move(heap_properties));
-  });
+  async::PostTask(
+      loop_.dispatcher(),
+      [server_end = fidl::ServerEnd<::llcpp::fuchsia::sysmem2::Heap>(std::move(server_request)),
+       heap_properties = std::move(heap_properties), this]() mutable {
+        auto result =
+            fidl::BindServer(loop_.dispatcher(), std::move(server_end), this,
+                             [](Heap* self, fidl::UnbindInfo info,
+                                fidl::ServerEnd<::llcpp::fuchsia::sysmem2::Heap> server_end) {
+                               self->OnClose(info, server_end.TakeChannel());
+                             });
+        if (!result.is_ok()) {
+          zxlogf(ERROR, "[%s] Cannot bind to channel: status: %d", tag_.c_str(), result.error());
+          control_->RemoveHeap(this);
+          return;
+        }
+        result.value()->OnRegister(std::move(heap_properties));
+      });
 }
 
 void Heap::OnClose(fidl::UnbindInfo info, zx::channel channel) {

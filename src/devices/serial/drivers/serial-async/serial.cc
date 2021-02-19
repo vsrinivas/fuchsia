@@ -73,7 +73,7 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync& comple
   // Invoked when the channel is closed or on any binding-related error.
   fidl::OnUnboundFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> unbound_fn(
       [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev, fidl::UnbindInfo,
-         zx::channel) {
+         fidl::ServerEnd<llcpp::fuchsia::hardware::serial::NewDevice>) {
         auto* device = static_cast<SerialDevice*>(dev);
         device->loop_->Quit();
         // Unblock DdkRelease() if it was invoked.

@@ -1490,18 +1490,20 @@ Client::Init(zx::channel server_channel) {
 
   server_handle_ = server_channel.get();
 
-  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnbindInfo info, zx::channel ch) {
-    sync_completion_signal(client->fidl_unbound());
-    // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we should
-    // TearDown() so that no further tasks are scheduled on the controller loop.
-    switch (info.reason) {
-      case fidl::UnbindInfo::kUnbind:
-      case fidl::UnbindInfo::kClose:
-        break;
-      default:
-        client->TearDown();
-    }
-  };
+  fidl::OnUnboundFn<Client> cb =
+      [](Client* client, fidl::UnbindInfo info,
+         fidl::ServerEnd<llcpp::fuchsia::hardware::display::Controller> ch) {
+        sync_completion_signal(client->fidl_unbound());
+        // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we
+        // should TearDown() so that no further tasks are scheduled on the controller loop.
+        switch (info.reason) {
+          case fidl::UnbindInfo::kUnbind:
+          case fidl::UnbindInfo::kClose:
+            break;
+          default:
+            client->TearDown();
+        }
+      };
 
   auto res = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
                               std::move(cb));

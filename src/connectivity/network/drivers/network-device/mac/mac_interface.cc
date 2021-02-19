@@ -249,7 +249,8 @@ zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher, zx::channel 
   auto result =
       fidl::BindServer(dispatcher, std::move(req), this,
                        fidl::OnUnboundFn<MacClientInstance>(
-                           [](MacClientInstance* client_instance, fidl::UnbindInfo, zx::channel) {
+                           [](MacClientInstance* client_instance, fidl::UnbindInfo,
+                              fidl::ServerEnd<llcpp::fuchsia::hardware::network::MacAddressing>) {
                              client_instance->parent_->CloseClient(client_instance);
                            }));
   if (result.is_ok()) {

@@ -3121,15 +3121,16 @@ TEST(Sysmem, EventSink) {
                                                         event_channel_client.release()));
   EventSinkServer server(loop);
   bool was_unbound = false;
-  EXPECT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(event_channel_server), &server,
-                               fidl::OnUnboundFn<EventSinkServer>(
-                                   [&was_unbound, &loop](EventSinkServer* server,
-                                                         fidl::UnbindInfo info, zx::channel) {
-                                     was_unbound = true;
-                                     EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
-                                     loop.Quit();
-                                   }))
-                  .is_ok());
+  EXPECT_TRUE(
+      fidl::BindServer(
+          loop.dispatcher(), std::move(event_channel_server), &server,
+          [&was_unbound, &loop](EventSinkServer* server, fidl::UnbindInfo info,
+                                fidl::ServerEnd<llcpp::fuchsia::sysmem::BufferCollectionEvents>) {
+            was_unbound = true;
+            EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
+            loop.Quit();
+          })
+          .is_ok());
   loop.Run();
   EXPECT_TRUE(server.got_tokens_known());
   loop.ResetQuit();

@@ -15,11 +15,9 @@ std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* 
                                                                async_dispatcher_t* dispatcher,
                                                                zx::channel req) {
   // Invoked when the channel is closed or on any binding-related error.
-  fidl::OnUnboundFn<llcpp::fuchsia::input::report::InputReportsReader::Interface> unbound_fn(
-      [](llcpp::fuchsia::input::report::InputReportsReader::Interface* dev, fidl::UnbindInfo info,
-         zx::channel) {
-        auto* device = static_cast<InputReportsReader*>(dev);
-
+  fidl::OnUnboundFn<InputReportsReader> unbound_fn(
+      [](InputReportsReader* device, fidl::UnbindInfo info,
+         fidl::ServerEnd<llcpp::fuchsia::input::report::InputReportsReader>) {
         {
           fbl::AutoLock lock(&device->readers_lock_);
           // Any pending LLCPP completer must be either replied to or closed before we destroy it.
@@ -33,10 +31,7 @@ std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* 
       });
 
   auto reader = std::make_unique<InputReportsReader>(base, reader_id);
-  auto binding = fidl::BindServer(
-      dispatcher, std::move(req),
-      static_cast<llcpp::fuchsia::input::report::InputReportsReader::Interface*>(reader.get()),
-      std::move(unbound_fn));
+  auto binding = fidl::BindServer(dispatcher, std::move(req), reader.get(), std::move(unbound_fn));
   fbl::AutoLock lock(&reader->readers_lock_);
   if (binding.is_error()) {
     zxlogf(ERROR, "InputReportsReader::Create: Failed to BindServer %d\n", binding.error());

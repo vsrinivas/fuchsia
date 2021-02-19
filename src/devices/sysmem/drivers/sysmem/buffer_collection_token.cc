@@ -49,7 +49,8 @@ void BufferCollectionToken::Bind(zx::channel channel) {
       parent_device_->dispatcher(), std::move(channel), this,
       fidl::OnUnboundFn<BufferCollectionToken>(
           [this, this_ref = fbl::RefPtr<BufferCollectionToken>(this)](
-              BufferCollectionToken* token, fidl::UnbindInfo info, zx::channel channel) {
+              BufferCollectionToken* token, fidl::UnbindInfo info,
+              fidl::ServerEnd<llcpp::fuchsia::sysmem::BufferCollectionToken> channel) {
             // We need to keep a refptr to this class, since the unbind happens asynchronously and
             // can run after the parent closes a handle to this class.
             if (error_handler_)

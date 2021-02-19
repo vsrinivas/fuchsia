@@ -67,10 +67,11 @@ FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(
 
 zx_status_t FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher,
                                                                 zx::channel channel) {
-  fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound = [](LowpanSpinelDeviceFidlImpl* server,
-                                                                fidl::UnbindInfo, zx::channel) {
-    server->ot_radio_obj_.fidl_impl_obj_.release();
-  };
+  fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
+      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnbindInfo,
+         fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device>) {
+        server->ot_radio_obj_.fidl_impl_obj_.release();
+      };
   auto res = fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
   if (res.is_error())
     return res.error();

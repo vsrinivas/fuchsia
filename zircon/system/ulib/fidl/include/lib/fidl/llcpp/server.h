@@ -14,21 +14,6 @@ namespace fidl {
 template <typename Protocol>
 class ServerBindingRef;
 
-template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename Interface::_EnclosingProtocol> server_end, Interface* impl);
-template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename Interface::_EnclosingProtocol> server_end, Interface* impl,
-    OnUnboundFn<Interface> on_unbound);
-template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename Interface::_EnclosingProtocol> server_end,
-    std::unique_ptr<Interface> impl);
-
 namespace internal {
 
 // The interface for dispatching incoming FIDL messages. The code generator
@@ -198,6 +183,13 @@ class ServerBindingRef {
 //
 // The following |BindServer()| APIs infer the protocol type based on the server implementation
 // which must publicly inherit from the appropriate |<Protocol_Name>::Interface| class.
+// The following code would compile without explicitly specializing
+// |BindServer|:
+//
+//     // Suppose |this| is a server implementation class |Foo|, that
+//     // implements the |Bar| FIDL protocol.
+//     fidl:ServerEnd<Bar> server_end = ...;
+//     fidl::BindServer(dispatcher, std::move(server_end), this);
 //
 // TODO(fxbug.dev/67062): |fidl::BindServer| and associated API should return a |zx::status|.
 template <typename ServerImpl>
@@ -211,23 +203,55 @@ fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
 // error or an explicit |Close| or |Unbind|.
 //
-// NOTE: |on_unbound| will generally be executed from a |dispatcher| thread. However, on
-// |dispatcher| shutdown, any active bindings will be unbound, thus it may also be executed on the
-// thread invoking shutdown. The user must ensure that shutdown is never invoked while holding locks
-// which |on_unbound| may also take.
-template <typename ServerImpl>
+// |on_unbound| should be a callable of the following signature:
+//
+//     template <typename T, typename ProtocolType = typename T::_EnclosingProtocol>
+//     void(T*, fidl::UnbindInfo, fidl::ServerEnd<ProtocolType>)
+//
+// where |T| is the type of the server implementation and |ProtocolType| is the
+// type of the FIDL protocol.
+//
+// NOTE: |on_unbound| will generally be executed from a |dispatcher| thread.
+// However, on |dispatcher| shutdown, any active bindings will be unbound, thus
+// it may also be executed on the thread invoking shutdown. The user must ensure
+// that shutdown is never invoked while holding locks which |on_unbound| may
+// also take.
+//
+// This function is able to infer the type of |ServerImpl| and |OnUnbound| in
+// most cases. The following code would compile without explicitly specializing
+// |BindServer|:
+//
+//     // Suppose |this| is a server implementation class |Foo|, that
+//     // implements the |Bar| FIDL protocol.
+//     fidl:ServerEnd<Bar> server_end = ...;
+//     fidl::BindServer(dispatcher, std::move(server_end), this,
+//                      [](Foo*, fidl::UnbindInfo, fidl::ServerEnd<Bar>) { ... });
+//
+template <typename ServerImpl, typename OnUnbound,
+          // Here are some SFINAE machinery to help check if a |Callable| type has the
+          // signature of |OnUnboundFn<ServerImpl>|.
+          //
+          // Because C++ does not consider implicit conversions when performing template
+          // parameter deduction, using SFINAE is our next best option.
+          typename = std::enable_if_t<
+              std::is_invocable_v<OnUnbound, ServerImpl*, UnbindInfo,
+                                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>>>>
 fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher,
     fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
-    OnUnboundFn<ServerImpl> on_unbound) {
-  return internal::BindServerImpl<typename ServerImpl::_EnclosingProtocol>(
+    OnUnbound&& on_unbound) {
+  using ProtocolType = typename ServerImpl::_EnclosingProtocol;
+  return internal::BindServerImpl<ProtocolType>(
       dispatcher, std::move(server_end), impl,
-      [fn = std::move(on_unbound)](internal::IncomingMessageDispatcher* any_interface,
-                                   UnbindInfo info, zx::channel channel) mutable {
+      [fn = std::forward<OnUnbound>(on_unbound)](internal::IncomingMessageDispatcher* any_interface,
+                                                 UnbindInfo info, zx::channel channel) mutable {
         // Note: this cast may change the value of the pointer, due to how C++
         // implements classes with virtual tables.
         auto* impl = static_cast<ServerImpl*>(any_interface);
-        fn(impl, info, std::move(channel));
+        static_assert(
+            std::is_convertible_v<OnUnbound, OnUnboundFn<ServerImpl>>,
+            "|on_unbound| must have the same signature as fidl::OnUnboundFn<ServerImpl>.");
+        std::invoke(fn, impl, info, fidl::ServerEnd<ProtocolType>(std::move(channel)));
       });
 }
 

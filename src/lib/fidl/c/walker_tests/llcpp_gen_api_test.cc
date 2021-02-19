@@ -203,12 +203,13 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher());
 
   sync_completion_t done;
-  fidl::OnUnboundFn<ErrorServer> on_unbound = [&done](ErrorServer*, fidl::UnbindInfo info,
-                                                      zx::channel) {
-    EXPECT_EQ(fidl::UnbindInfo::kEncodeError, info.reason);
-    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status);
-    sync_completion_signal(&done);
-  };
+  fidl::OnUnboundFn<ErrorServer> on_unbound =
+      [&done](ErrorServer*, fidl::UnbindInfo info,
+              fidl::ServerEnd<llcpp::fidl::test::coding::fuchsia::Example>) {
+        EXPECT_EQ(fidl::UnbindInfo::kEncodeError, info.reason);
+        EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status);
+        sync_completion_signal(&done);
+      };
   auto server = std::make_unique<ErrorServer>();
   auto server_binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));

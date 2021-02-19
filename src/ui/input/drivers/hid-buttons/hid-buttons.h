@@ -220,10 +220,11 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   ~ButtonsNotifyInterface() = default;
 
   zx_status_t Init(async_dispatcher_t* dispatcher, zx::channel chan) {
-    fidl::OnUnboundFn<ButtonsNotifyInterface> unbound = [this](ButtonsNotifyInterface*,
-                                                               fidl::UnbindInfo, zx::channel) {
-      device_->ClosingChannel(this);
-    };
+    fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
+        [this](ButtonsNotifyInterface*, fidl::UnbindInfo,
+               fidl::ServerEnd<llcpp::fuchsia::buttons::Buttons>) {
+          device_->ClosingChannel(this);
+        };
     auto res = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
     if (res.is_error())
       return res.error();

@@ -142,19 +142,16 @@ template <class Report>
 std::unique_ptr<InputReportReader<Report>> InputReportReader<Report>::Create(
     InputReportReaderManager<Report>* manager, size_t reader_id, async_dispatcher_t* dispatcher,
     zx::channel server) {
-  fidl::OnUnboundFn<fuchsia_input_report::InputReportsReader::Interface> unbound_fn(
-      [](fuchsia_input_report::InputReportsReader::Interface* interface, fidl::UnbindInfo info,
-         zx::channel channel) {
-        auto* reader = static_cast<InputReportReader<Report>*>(interface);
+  fidl::OnUnboundFn<InputReportReader> unbound_fn(
+      [](InputReportReader* reader, fidl::UnbindInfo info,
+         fidl::ServerEnd<llcpp::fuchsia::input::report::InputReportsReader> channel) {
         reader->manager_->RemoveReaderFromList(reader);
       });
 
   auto reader = std::make_unique<InputReportReader<Report>>(manager, reader_id);
 
-  auto binding = fidl::BindServer(
-      dispatcher, std::move(server),
-      static_cast<fuchsia_input_report::InputReportsReader::Interface*>(reader.get()),
-      std::move(unbound_fn));
+  auto binding =
+      fidl::BindServer(dispatcher, std::move(server), reader.get(), std::move(unbound_fn));
   if (binding.is_error()) {
     return nullptr;
   }

@@ -110,8 +110,9 @@ void Pipe::Init() {
 }
 
 void Pipe::Bind(zx::channel server_request) {
-  using PipeInterface = llcpp::fuchsia::hardware::goldfish::Pipe::Interface;
-  auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, zx::channel) {
+  using PipeProtocol = llcpp::fuchsia::hardware::goldfish::Pipe;
+  using PipeInterface = PipeProtocol::Interface;
+  auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
     switch (info.reason) {
       case fidl::UnbindInfo::kUnbind:
       case fidl::UnbindInfo::kPeerClosed:
@@ -131,8 +132,7 @@ void Pipe::Bind(zx::channel server_request) {
   };
 
   auto result =
-      fidl::BindServer<PipeInterface>(dispatcher_, std::move(server_request),
-                                      static_cast<PipeInterface*>(this), std::move(on_unbound));
+      fidl::BindServer(dispatcher_, std::move(server_request), this, std::move(on_unbound));
   if (!result.is_ok()) {
     if (on_close_) {
       on_close_(this);
@@ -335,8 +335,7 @@ zx_status_t Pipe::SetBufferSizeLocked(size_t size) {
   return ZX_OK;
 }
 
-void Pipe::FailAsync(zx_status_t epitaph, const char* file, int line, const char* format,
-                     ...) {
+void Pipe::FailAsync(zx_status_t epitaph, const char* file, int line, const char* format, ...) {
   if (binding_ref_) {
     binding_ref_->Close(epitaph);
   }

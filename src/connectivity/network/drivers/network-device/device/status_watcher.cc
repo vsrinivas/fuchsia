@@ -33,7 +33,8 @@ zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher, zx::channel chan
   auto result =
       fidl::BindServer(dispatcher, std::move(channel), this,
                        fidl::OnUnboundFn<StatusWatcher>(
-                           [](StatusWatcher* closed, fidl::UnbindInfo info, zx::channel) {
+                           [](StatusWatcher* closed, fidl::UnbindInfo info,
+                              fidl::ServerEnd<llcpp::fuchsia::hardware::network::StatusWatcher>) {
                              LOGF_TRACE("network-device: watcher closed, reason=%d", info.reason);
                              fbl::AutoLock lock(&closed->lock_);
                              closed->binding_.reset();

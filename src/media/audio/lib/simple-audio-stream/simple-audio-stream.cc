@@ -198,7 +198,7 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   stream_channels_.push_back(stream_channel);
   fidl::OnUnboundFn<audio_fidl::StreamConfig::RawChannelInterface> on_unbound =
       [this, stream_channel](audio_fidl::StreamConfig::RawChannelInterface*, fidl::UnbindInfo,
-                             zx::channel) {
+                             fidl::ServerEnd<llcpp::fuchsia::hardware::audio::StreamConfig>) {
         ScopedToken t(domain_token());
         fbl::AutoLock channel_lock(&channel_lock_);
         this->DeactivateStreamChannel(stream_channel.get());
@@ -353,7 +353,8 @@ void SimpleAudioStream::CreateRingBuffer(
     rb_channel_ = Channel::Create<Channel>();
 
     fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
-        [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo, zx::channel) {
+        [this](audio_fidl::RingBuffer::Interface*, fidl::UnbindInfo,
+               fidl::ServerEnd<llcpp::fuchsia::hardware::audio::RingBuffer>) {
           ScopedToken t(domain_token());
           fbl::AutoLock channel_lock(&channel_lock_);
           this->DeactivateRingBufferChannel(rb_channel_.get());
