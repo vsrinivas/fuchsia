@@ -472,7 +472,7 @@ From //build/images/args.gni:14
 
 **Current value (from the default):** `false`
 
-From //src/media/codec/examples/BUILD.gn:10
+From //src/media/codec/examples/BUILD.gn:11
 
 ### build_id_format
 Build ID algorithm to use for Fuchsia-target code.  This does not apply
@@ -1841,7 +1841,7 @@ enable it.
 
 **Current value (from the default):** `false`
 
-From //src/developer/fuchsia-criterion/BUILD.gn:14
+From //src/developer/fuchsia-criterion/BUILD.gn:13
 
 ### log_startup_sleep
 
@@ -2851,7 +2851,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"3npWHcc6Oq8UJXs2GvTOUSB_oqUApJYi8IfQXWA3WIIC"`
+**Current value (from the default):** `"jYWJjRUNurht-4TulWMZPg1GsEiLkoX1UsHmPUGNBgcC"`
 
 From //build/rust/config.gni:32
 
@@ -3460,7 +3460,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:18
+From //src/media/lib/ffmpeg/BUILD.gn:20
 
 ### use_swiftshader_vulkan_icd_on_host
 
