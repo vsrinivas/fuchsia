@@ -3,7 +3,7 @@
 ## Meta
 
 Please copy this template, fill in the blanks, and delete this meta section.
-Everything you see here is just a suggestion. I'm a template, not a cop.
+Everything you see here is just a suggestion. Feel free to edit as needed.
 
 ## Goal & motivation
 

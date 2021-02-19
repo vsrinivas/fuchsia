@@ -215,10 +215,10 @@ action("foo") {
 }
 ```
 
-See also: [hermetic actions on Busy Beavers][hermetic-actions-bb]
+See also: [hermetic actions in open projects][hermetic-actions-bb]
 
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
 [action_foreach]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action_foreach
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
-[hermetic-actions-bb]: /docs/contribute/busy_beavers/build/hermetic_actions.md
+[hermetic-actions-bb]: /docs/contribute/open_projects/build/hermetic_actions.md
 [no_op]: /docs/development/build/ninja_no_op.md

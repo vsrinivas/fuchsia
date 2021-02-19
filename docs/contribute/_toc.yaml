@@ -22,8 +22,8 @@ toc:
 - title: "Documentation"
   section:
   - include: /docs/contribute/docs/_toc.yaml
-- title: "Busy Beavers"
+- title: "Open projects"
   section:
-  - include: /docs/contribute/busy_beavers/_toc.yaml
+  - include: /docs/contribute/open_projects/_toc.yaml
 - title: "Report an issue"
   path: /docs/contribute/report-issue.md

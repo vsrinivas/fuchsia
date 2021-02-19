@@ -7,34 +7,34 @@
 # team as reviewer.
 toc:
 - title: "Introduction"
-  path: /docs/contribute/busy_beavers/README.md
+  path: /docs/contribute/open_projects/README.md
 - title: "Project template"
-  path: /docs/contribute/busy_beavers/template.md
+  path: /docs/contribute/open_projects/template.md
 - title: "Build projects"
   section:
   - title: "package() migration"
-    path: /docs/contribute/busy_beavers/build/package_migration.md
+    path: /docs/contribute/open_projects/build/package_migration.md
   - title: "Bringup test modernization"
-    path: /docs/contribute/busy_beavers/build/bringup_test_modernization.md
+    path: /docs/contribute/open_projects/build/bringup_test_modernization.md
   - title: "zx_* wrappers deprecation"
-    path: /docs/contribute/busy_beavers/build/zx_wrappers_deprecation.md
+    path: /docs/contribute/open_projects/build/zx_wrappers_deprecation.md
   - title: "Hermetic actions"
-    path: /docs/contribute/busy_beavers/build/hermetic_actions.md
+    path: /docs/contribute/open_projects/build/hermetic_actions.md
 - title: "Source control projects"
   section:
   - title: "Layer Cake deprecation"
-    path: /docs/contribute/busy_beavers/srcs/layer_cake_deprecation.md
+    path: /docs/contribute/open_projects/srcs/layer_cake_deprecation.md
 - title: "C++ projects"
   section:
   - title: "Implicit conversions"
-    path: /docs/contribute/busy_beavers/cpp/wconversion.md
+    path: /docs/contribute/open_projects/cpp/wconversion.md
   - title: "Undefined behavior issues"
-    path: /docs/contribute/busy_beavers/cpp/ubsan.md
+    path: /docs/contribute/open_projects/cpp/ubsan.md
 - title: "Logging"
   section:
   - title: "Dismantle the global log severity file"
-    path: /docs/contribute/busy_beavers/logging/global_severity.md
+    path: /docs/contribute/open_projects/logging/global_severity.md
 - title: "Graduated projects"
   section:
   - title: "Overview"
-    path: /docs/contribute/busy_beavers/graduated/README.md
+    path: /docs/contribute/open_projects/graduated/README.md

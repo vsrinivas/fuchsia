@@ -33,7 +33,7 @@ You can explore Fuchsia further in the following guides:
  *   [Fuchsia workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
  *   [Configure editors](/docs/development/editors/)
  *   [Contribute to Fuchsia source code](/docs/development/source_code/contribute_changes.md)
- *   [Find a starter project](/docs/contribute/busy_beavers/)
+ *   [Find a starter project](/docs/contribute/open_projects/)
 
 ## Contribute to Zircon
 

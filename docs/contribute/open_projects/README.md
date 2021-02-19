@@ -1,4 +1,4 @@
-# Busy Beavers
+# Open projects
 
 This is a repository of projects that you can chip in on.
 These projects are all designed so you can get up and running quickly.
@@ -16,7 +16,7 @@ You could focus on an area that you're familiar with, or choose something that
 you'd like to learn more about.
 
 {% set tocmeta | yamlloads %}
-{% include "docs/contribute/busy_beavers/_toc.yaml" %}
+{% include "docs/contribute/open_projects/_toc.yaml" %}
 {% endset %}
 
 {% for item in tocmeta.toc %}
@@ -44,7 +44,7 @@ in.
 
 You'll have an easier time if you start by cloning the [template](template.md).
 
-## Becoming a Busy Beaver reviewer
+## Becoming a reviewer
 
 If you're like to help review new projects then please add yourself to the
 `OWNERS` file and send the change to one of the existing owners.
