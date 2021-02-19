@@ -595,6 +595,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT bool StartNewStream(std::unique_lock<std::mutex>& lock,
                                            uint64_t stream_lifetime_ordinal);
   void EnsureStreamClosed(std::unique_lock<std::mutex>& lock);
+  void EnsureCoreCodecStreamStopped(std::unique_lock<std::mutex>& lock);
   void EnsureCodecStreamClosedLockedInternal();
 
   // Run all items in the sysmem_completion_queue_.  The item itself is run
