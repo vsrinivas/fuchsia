@@ -3,33 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
-    fidl::endpoints,
-    fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
-    fuchsia_component::client,
-    fuchsia_component::client::connect_to_protocol_at_dir_root,
+    anyhow::{Context as _, Error},
     futures::{channel::mpsc, prelude::*},
     pretty_assertions::assert_eq,
     test_executor::GroupByTestCase,
     test_executor::{DisabledTestHandling, TestEvent, TestResult},
 };
-
-async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
-    let realm = client::connect_to_service::<fsys::RealmMarker>()
-        .context("could not connect to Realm service")?;
-
-    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
-    let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
-    realm
-        .bind_child(&mut child_ref, server_end)
-        .await
-        .context("bind_child fidl call failed for test manager")?
-        .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
-
-    connect_to_protocol_at_dir_root::<ftest_manager::HarnessMarker>(&dir)
-        .context("failed to open test suite service")
-}
 
 async fn run_test(
     test_url: &str,
@@ -37,7 +16,7 @@ async fn run_test(
     parallel: Option<u16>,
     arguments: Vec<String>,
 ) -> Result<Vec<TestEvent>, Error> {
-    let harness = connect_test_manager().await?;
+    let harness = test_runners_test_lib::connect_to_test_manager().await?;
     let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);

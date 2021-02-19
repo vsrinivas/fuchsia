@@ -3,15 +3,21 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context, Error},
+    fidl::endpoints,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_test::{
         CaseListenerRequest::Finished,
         Invocation, Result_ as TestResult,
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
         RunListenerRequestStream,
     },
+    fidl_fuchsia_test_manager as ftest_manager,
+    fuchsia_component::client::{self, connect_to_protocol_at_dir_root},
+    futures::prelude::*,
     std::collections::HashMap,
     test_executor::TestEvent,
-    {anyhow::Error, futures::prelude::*},
 };
 
 #[derive(PartialEq, Debug)]
@@ -203,6 +209,23 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
     }
 
     test_events
+}
+
+// Binds to test manager component and returns the test suite serivce.
+pub async fn connect_to_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
+    let realm = client::connect_to_service::<fsys::RealmMarker>()
+        .context("could not connect to Realm service")?;
+
+    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
+    let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
+    realm
+        .bind_child(&mut child_ref, server_end)
+        .await
+        .context("bind_child fidl call failed for test manager")?
+        .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
+
+    connect_to_protocol_at_dir_root::<ftest_manager::HarnessMarker>(&dir)
+        .context("failed to open test suite service")
 }
 
 #[cfg(test)]
