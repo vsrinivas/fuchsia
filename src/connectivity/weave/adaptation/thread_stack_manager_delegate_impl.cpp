@@ -394,14 +394,23 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
     identity.set_xpanid(std::vector<uint8_t>{
         netInfo.ThreadExtendedPANId,
         netInfo.ThreadExtendedPANId + DeviceNetworkInfo::kThreadExtendedPANIdLength});
+  } else {
+    FX_LOGS(ERROR) << "No XPAN ID provided to SetThreadProvision.";
+    return WEAVE_ERROR_INVALID_ARGUMENT;
   }
 
   if (netInfo.ThreadChannel != Profiles::NetworkProvisioning::kThreadChannel_NotSpecified) {
     identity.set_channel(netInfo.ThreadChannel);
+  } else {
+    FX_LOGS(ERROR) << "No channel provided to SetThreadProvision.";
+    return WEAVE_ERROR_INVALID_ARGUMENT;
   }
 
   if (netInfo.ThreadPANId != Profiles::NetworkProvisioning::kThreadPANId_NotSpecified) {
     identity.set_panid(netInfo.ThreadPANId);
+  } else {
+    FX_LOGS(ERROR) << "No PAN ID provided to SetThreadProvision.";
+    return WEAVE_ERROR_INVALID_ARGUMENT;
   }
 
   // Set up credential.
@@ -410,6 +419,9 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
     credential->set_master_key(std::vector<uint8_t>{
         netInfo.ThreadNetworkKey,
         netInfo.ThreadNetworkKey + DeviceNetworkInfo::kThreadNetworkKeyLength});
+  } else {
+    FX_LOGS(ERROR) << "No network key provided to SetThreadProvision.";
+    return WEAVE_ERROR_INVALID_ARGUMENT;
   }
 
   // Add identity and credential to provisioning params.

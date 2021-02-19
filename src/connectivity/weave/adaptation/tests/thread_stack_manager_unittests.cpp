@@ -569,6 +569,65 @@ TEST_F(ThreadStackManagerTest, SetProvision) {
   EXPECT_EQ(credential.master_key(), kFakeMasterKey);
 }
 
+TEST_F(ThreadStackManagerTest, SetProvisionMissingData) {
+  constexpr uint32_t kFakePANId = 12345;
+  constexpr uint8_t kFakeChannel = 12;
+  const std::string kFakeNetworkName = "fake-net-name";
+  const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
+  const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  // Set up provisioning info.
+  DeviceNetworkInfo net_info;
+  net_info.ThreadPANId = kFakePANId;
+  net_info.ThreadChannel = kFakeChannel;
+  std::memcpy(net_info.ThreadNetworkName, kFakeNetworkName.data(),
+              std::min<size_t>(kFakeNetworkName.size() + 1,
+                               DeviceNetworkInfo::kMaxThreadNetworkNameLength));
+  std::memcpy(
+      net_info.ThreadExtendedPANId, kFakeExtendedId.data(),
+      std::min<size_t>(kFakeExtendedId.size(), DeviceNetworkInfo::kThreadExtendedPANIdLength));
+  net_info.FieldPresent.ThreadExtendedPANId = true;
+  std::memcpy(net_info.ThreadNetworkKey, kFakeMasterKey.data(),
+              std::min<size_t>(kFakeMasterKey.size(), DeviceNetworkInfo::kThreadNetworkKeyLength));
+  net_info.FieldPresent.ThreadNetworkKey = true;
+
+  // Set provision with missing items.
+  net_info.FieldPresent.ThreadExtendedPANId = false;
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_INVALID_ARGUMENT);
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  net_info.FieldPresent.ThreadExtendedPANId = true;
+
+  net_info.ThreadChannel = Profiles::NetworkProvisioning::kThreadChannel_NotSpecified;
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_INVALID_ARGUMENT);
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  net_info.ThreadChannel = kFakeChannel;
+
+  net_info.ThreadPANId = Profiles::NetworkProvisioning::kThreadPANId_NotSpecified;
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_INVALID_ARGUMENT);
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  net_info.ThreadPANId = kFakePANId;
+
+  net_info.FieldPresent.ThreadNetworkKey = false;
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_INVALID_ARGUMENT);
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  net_info.FieldPresent.ThreadNetworkKey = true;
+
+  // Confirm identity has not been set.
+  auto& identity = fake_lookup_.device().identity();
+  EXPECT_FALSE(identity.has_raw_name());
+  EXPECT_FALSE(identity.has_xpanid());
+  EXPECT_FALSE(identity.has_panid());
+  EXPECT_FALSE(identity.has_channel());
+
+  // Confirm credential has not been set.
+  auto& credential = fake_lookup_.device().credential();
+  EXPECT_TRUE(credential.has_invalid_tag());
+}
+
 TEST_F(ThreadStackManagerTest, ClearProvision) {
   constexpr uint32_t kFakePANId = 12345;
   constexpr uint8_t kFakeChannel = 12;
