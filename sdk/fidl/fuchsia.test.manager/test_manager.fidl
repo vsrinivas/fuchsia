@@ -4,12 +4,23 @@
 
 library fuchsia.test.manager;
 
-using fuchsia.url;
+using fuchsia.developer.remotecontrol;
+using fuchsia.diagnostics;
 using fuchsia.test;
+using fuchsia.url;
+
+/// Holds the server end of an iterator over the isolated logs of a test.
+resource flexible union LogsIterator {
+    /// Server end of the iterator, when this protocol is used by host-side clients.
+    1: request<fuchsia.developer.remotecontrol.ArchiveIterator> archive;
+    /// Server end of the iterator, when this protocol is used by Fuchsia clients.
+    2: request<fuchsia.diagnostics.BatchIterator> batch;
+};
 
 /// Options to run particular test suite.
-/// Reserved for future
-table LaunchOptions {
+resource table LaunchOptions {
+    /// Isolated logs from the test component will be streamed through this iterator.
+    1: LogsIterator logs_iterator;
 };
 
 /// Error for `LaunchSuite` call.

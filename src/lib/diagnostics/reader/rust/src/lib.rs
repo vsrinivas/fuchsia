@@ -364,9 +364,10 @@ impl<M> Subscription<M>
 where
     M: DiagnosticsData + 'static,
 {
-    fn new(iterator: BatchIteratorProxy) -> Self {
+    /// Creates a new subscription stream to a batch iterator.
+    /// The stream will return diagnostics data structures.
+    pub fn new(iterator: BatchIteratorProxy) -> Self {
         let (mut sender, recv) = mpsc::channel(DATA_CHANNEL_SIZE);
-
         let _drain_task = Task::spawn(async move {
             let drain_result = drain_batch_iterator(iterator, |d| {
                 let mut sender = sender.clone();

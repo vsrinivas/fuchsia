@@ -5,39 +5,80 @@
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
+lib_sources = [
+  "src/diagnostics.rs",
+  "src/lib.rs",
+]
+
+lib_deps = [
+  "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+  "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+  "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+  "//src/lib/diagnostics/data/rust",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-async",
+  "//src/lib/zircon/rust:fuchsia-zircon-status",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:glob",
+  "//third_party/rust_crates:linked-hash-map",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:pin-project",
+  "//third_party/rust_crates:thiserror",
+]
+
+host_lib_deps = []
+if (!is_fuchsia) {
+  host_lib_deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
+shared_test_deps = [
+  "//third_party/rust_crates:maplit",
+  "//third_party/rust_crates:matches",
+  "//third_party/rust_crates:pretty_assertions",
+  "//third_party/rust_crates:serde_json",
+]
+
 rustc_library("test_executor") {
   with_unit_tests = true
   edition = "2018"
 
-  deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:glob",
-    "//third_party/rust_crates:linked-hash-map",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = lib_deps
+
   if (is_fuchsia) {
-    deps += [ "//src/lib/fuchsia-component" ]
+    deps += [
+      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+      "//src/lib/diagnostics/reader/rust",
+      "//src/lib/fuchsia-component",
+    ]
   }
 
-  test_deps = [
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:pretty_assertions",
-  ]
+  deps += host_lib_deps
 
-  sources = [ "src/lib.rs" ]
+  test_deps = shared_test_deps + [
+                "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+                "//src/lib/zircon/rust:fuchsia-zircon",
+              ]
+
+  sources = lib_sources
+}
+
+if (!is_fuchsia) {
+  rustc_test("test_executor_host_unittests") {
+    sources = lib_sources
+    deps = shared_test_deps + lib_deps + host_lib_deps
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":test_executor_unittests" ]
+  deps = [
+    ":test_executor_host_unittests($host_toolchain)",
+    ":test_executor_unittests",
+  ]
 }
 
 fuchsia_unittest_package("test_executor_unittests") {

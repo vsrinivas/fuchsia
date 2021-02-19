@@ -7,7 +7,6 @@
 //! This library contians the Diagnostics data schema used for inspect, logs and lifecycle. This is
 //! the data that the Archive returns on `fuchsia.diagnostics.ArchiveAccessor` reads.
 
-use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 use fidl_fuchsia_diagnostics::{DataType, Severity as FidlSeverity};
 use serde::{
     self,
@@ -22,7 +21,7 @@ use std::{
     str::FromStr,
 };
 
-pub use diagnostics_hierarchy::{assert_data_tree, tree_assertion};
+pub use diagnostics_hierarchy::{assert_data_tree, tree_assertion, DiagnosticsHierarchy, Property};
 
 const SCHEMA_VERSION: u64 = 1;
 

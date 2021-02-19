@@ -30,6 +30,10 @@ use {
     std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin},
 };
 
+pub use crate::diagnostics::LogStream;
+
+mod diagnostics;
+
 /// Options that apply when executing a test suite.
 ///
 /// For the FIDL equivalent, see [`fidl_fuchsia_test::RunOptions`].
@@ -342,6 +346,7 @@ pub struct SuiteInstance {
     suite: SuiteProxy,
     // For safekeeping so that running component remains alive.
     controller: SuiteControllerProxy,
+    log_stream: Option<LogStream>,
 }
 
 impl SuiteInstance {
@@ -353,27 +358,40 @@ impl SuiteInstance {
             ));
         }
 
-        let (suite, controller) = Self::launch_test_suite(harness, test_url).await?;
-        Ok(Self { suite, controller })
+        let (suite, controller, log_stream) = Self::launch_test_suite(harness, test_url).await?;
+        Ok(Self { suite, controller, log_stream: Some(log_stream) })
+    }
+
+    /// Kill the suite instance.
+    pub fn kill(&self) -> Result<(), fidl::Error> {
+        self.controller.kill()
+    }
+
+    /// Take the singleton log stream associated with the current instance.
+    pub fn take_log_stream(&mut self) -> Option<LogStream> {
+        self.log_stream.take()
     }
 
     async fn launch_test_suite(
         harness: &HarnessProxy,
         test_url: &str,
-    ) -> Result<(SuiteProxy, SuiteControllerProxy), anyhow::Error> {
+    ) -> Result<(SuiteProxy, SuiteControllerProxy, LogStream), anyhow::Error> {
         let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
         let (controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
         debug!("Launching test component `{}`", test_url);
+        let (log_stream, logs_iterator_server) = LogStream::new()?;
+        let options =
+            LaunchOptions { logs_iterator: Some(logs_iterator_server), ..LaunchOptions::EMPTY };
         harness
-            .launch_suite(&test_url, LaunchOptions::EMPTY, suite_server_end, controller_server_end)
+            .launch_suite(&test_url, options, suite_server_end, controller_server_end)
             .await
             .context("launch_test call failed")?
             .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {
                 anyhow::anyhow!("error launching test: {:?}", e)
             })?;
 
-        Ok((suite_proxy, controller_proxy))
+        Ok((suite_proxy, controller_proxy, log_stream))
     }
 
     /// Enumerates test and return invocations.
