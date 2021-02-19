@@ -75,12 +75,10 @@ impl DirTree {
         component: WeakComponentInstance,
         use_: &UseDecl,
     ) {
-        // Event, EventStream and Runner capabilities are used by the framework
-        // itself and not given to components directly.
+        // Event and EventStream capabilities are used by the framework itself and not given to
+        // components directly.
         match use_ {
-            cm_rust::UseDecl::Runner(_)
-            | cm_rust::UseDecl::Event(_)
-            | cm_rust::UseDecl::EventStream(_) => return,
+            cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStream(_) => return,
             _ => {}
         }
 
@@ -145,7 +143,7 @@ mod tests {
         cm_rust::{
             CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
             ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseProtocolDecl, UseRunnerDecl, UseSource, UseStorageDecl,
+            UseProtocolDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -185,7 +183,6 @@ mod tests {
                     source_name: "cache".into(),
                     target_path: "/in/data/cache".try_into().unwrap(),
                 }),
-                UseDecl::Runner(UseRunnerDecl { source_name: CapabilityName::from("elf") }),
             ],
             ..default_component_decl()
         };

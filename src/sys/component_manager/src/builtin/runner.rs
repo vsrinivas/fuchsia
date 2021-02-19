@@ -271,7 +271,7 @@ mod tests {
 
         let components = vec![(
             "a",
-            ComponentDeclBuilder::new_empty_component().use_runner("my_runner").build(),
+            ComponentDeclBuilder::new_empty_component().add_program("my_runner").build(),
         )];
 
         // Set up the system.
@@ -304,10 +304,10 @@ mod tests {
                 "a",
                 ComponentDeclBuilder::new_empty_component()
                     .add_lazy_child("b")
-                    .use_runner("elf")
+                    .add_program("elf")
                     .build(),
             ),
-            ("b", ComponentDeclBuilder::new_empty_component().use_runner("elf").build()),
+            ("b", ComponentDeclBuilder::new_empty_component().add_program("elf").build()),
         ];
 
         // Set up the system.

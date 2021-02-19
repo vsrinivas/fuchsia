@@ -169,12 +169,9 @@ pub const TEST_RUNNER_NAME: &str = "test_runner";
 pub fn component_decl_with_test_runner() -> ComponentDecl {
     ComponentDecl {
         program: Some(ProgramDecl {
-            runner: None,
+            runner: Some(TEST_RUNNER_NAME.into()),
             info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
         }),
-        uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
-            source_name: TEST_RUNNER_NAME.into(),
-        })],
         ..Default::default()
     }
 }
@@ -194,7 +191,7 @@ impl ComponentDeclBuilder {
     /// A ComponentDeclBuilder prefilled with a program and using a runner named "test_runner",
     /// which we assume is offered to us.
     pub fn new() -> Self {
-        Self::new_empty_component().use_runner(TEST_RUNNER_NAME)
+        Self::new_empty_component().add_program(TEST_RUNNER_NAME)
     }
 
     /// Add a child element.
@@ -227,19 +224,6 @@ impl ComponentDeclBuilder {
     /// Add a transient collection.
     pub fn add_transient_collection(self, name: &str) -> Self {
         self.add_collection(CollectionDeclBuilder::new_transient_collection(name))
-    }
-
-    /// Add a "use" clause, using the given runner.
-    pub fn use_runner(mut self, name: &str) -> Self {
-        assert!(self.result.program.is_none(), "tried to use runner twice");
-        self.result.program = Some(cm_rust::ProgramDecl {
-            runner: None,
-            info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
-        });
-        self.result
-            .uses
-            .push(cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl { source_name: name.into() }));
-        self
     }
 
     /// Add a "program" clause, using the given runner.

@@ -105,7 +105,7 @@ pub(super) async fn route_and_open_namespace_capability(
             .await
         }
         UseDecl::Service(_) => Err(ModelError::unsupported("service routing")),
-        UseDecl::Event(_) | UseDecl::EventStream(_) | UseDecl::Runner(_) => {
+        UseDecl::Event(_) | UseDecl::EventStream(_) => {
             // These capabilities are not representable on a VFS.
             Err(ModelError::unsupported(
                 "opening a capability that cannot be installed in a namespace",

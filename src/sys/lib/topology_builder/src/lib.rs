@@ -206,7 +206,7 @@ impl Topology {
         self.mocks_runner.register_mock(mock_id.clone(), mock).await;
         let decl = cm_rust::ComponentDecl {
             program: Some(cm_rust::ProgramDecl {
-                runner: None,
+                runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                 info: fdata::Dictionary {
                     entries: Some(vec![fdata::DictionaryEntry {
                         key: mock::MOCK_ID_KEY.to_string(),
@@ -215,9 +215,6 @@ impl Topology {
                     ..fdata::Dictionary::EMPTY
                 },
             }),
-            uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
-                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-            })],
             ..cm_rust::ComponentDecl::default()
         };
         self.add_component(moniker, decl)
@@ -545,7 +542,7 @@ mod tests {
             *topology.get_decl_mut(&"a".into()).unwrap(),
             ComponentDecl {
                 program: Some(cm_rust::ProgramDecl {
-                    runner: None,
+                    runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                     info: fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
                             key: mock::MOCK_ID_KEY.to_string(),
@@ -554,12 +551,7 @@ mod tests {
                         ..fdata::Dictionary::EMPTY
                     },
                 }),
-                uses: vec![
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                    }),
-                    use_echo_decl,
-                ],
+                uses: vec![use_echo_decl],
                 ..ComponentDecl::default()
             }
         );

@@ -51,12 +51,6 @@ pub enum Error {
     EventStreamEventNotFound(DeclField, String),
     #[error("Event \"{1}\" is referenced in {0} with unsupported mode \"{2}\"")]
     EventStreamUnsupportedMode(DeclField, String, String),
-    #[error("ComponentDecl specifies multiple runners")]
-    MultipleRunnersSpecified,
-    #[error("ComponentDecl specifies a program but no runner")]
-    NoRunnerSpecified,
-    #[error("ComponentDecl lacks a program block but uses a runner.")]
-    RunnerWithoutProgram,
     #[error("dependency cycle(s) exist: {0}")]
     DependencyCycle(String),
     #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
@@ -188,18 +182,6 @@ impl Error {
             event_name.into(),
             event_mode.into(),
         )
-    }
-
-    pub fn multiple_runners_specified() -> Self {
-        Error::MultipleRunnersSpecified
-    }
-
-    pub fn no_runner_specified() -> Self {
-        Error::NoRunnerSpecified
-    }
-
-    pub fn runner_without_program() -> Self {
-        Error::RunnerWithoutProgram
     }
 
     pub fn dependency_cycle(error: String) -> Self {
@@ -357,8 +339,10 @@ impl<'a> ValidationContext<'a> {
             self.collect_environment_names(&envs);
         }
 
-        // Validate the runner.
-        self.validate_runner(decl.program.as_ref(), decl.uses.as_ref());
+        // Validate "program".
+        if let Some(program) = decl.program.as_ref() {
+            self.validate_program(program);
+        }
 
         // Validate "children" and build the set of all children.
         if let Some(children) = decl.children.as_ref() {
@@ -526,14 +510,6 @@ impl<'a> ValidationContext<'a> {
                     &mut self.errors,
                 );
             }
-            fsys::UseDecl::Runner(r) => {
-                check_name(
-                    r.source_name.as_ref(),
-                    "UseRunnerDecl",
-                    "source_name",
-                    &mut self.errors,
-                );
-            }
             fsys::UseDecl::Event(e) => {
                 self.validate_event(e);
             }
@@ -546,35 +522,11 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// Validates that exactly one runner is specified, if there is a `program`.
-    fn validate_runner(
-        &mut self,
-        program: Option<&fsys::ProgramDecl>,
-        uses: Option<&Vec<fsys::UseDecl>>,
-    ) {
-        let mut runners_count: i32 = 0;
-        if let Some(uses) = uses {
-            for use_ in uses.iter() {
-                if let fsys::UseDecl::Runner(_) = use_ {
-                    runners_count += 1;
-                }
-            }
-        }
-        if let Some(_) = program.and_then(|p| p.runner.as_ref()) {
-            runners_count += 1;
-        }
-        match (runners_count, program.is_some()) {
-            (0, false) => {}
-            (_, false) => {
-                self.errors.push(Error::runner_without_program());
-            }
-            (0, true) => {
-                self.errors.push(Error::no_runner_specified());
-            }
-            (1, true) => {}
-            (_, true) => {
-                self.errors.push(Error::multiple_runners_specified());
-            }
+    /// Validates the "program" declaration. This does not check runner-specific properties
+    /// since those are checked by the runner.
+    fn validate_program(&mut self, program: &fsys::ProgramDecl) {
+        if program.runner.is_none() {
+            self.errors.push(Error::missing_field("ProgramDecl", "runner"));
         }
     }
 
@@ -2405,7 +2357,7 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.program = Some(ProgramDecl {
-                    runner: None,
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: None,
                         ..fdata::Dictionary::EMPTY
@@ -2443,10 +2395,6 @@ mod tests {
                         target_path: None,
                         ..UseStorageDecl::EMPTY
                     }),
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: None,
-                        ..UseRunnerDecl::EMPTY
-                    }),
                     UseDecl::Event(UseEventDecl {
                         source: None,
                         source_name: None,
@@ -2477,7 +2425,6 @@ mod tests {
                 Error::missing_field("UseStorageDecl", "source_name"),
                 Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseStorageDecl", "target_path"),
-                Error::missing_field("UseRunnerDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "source"),
                 Error::missing_field("UseEventDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "target_name"),
@@ -2641,33 +2588,6 @@ mod tests {
                 Error::empty_field("UseEventStreamDecl", "subscriptions"),
             ])),
         },
-        test_validate_uses_multiple_runners => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.program = Some(ProgramDecl {
-                    runner: None,
-                    info: Some(fdata::Dictionary {
-                        entries: None,
-                        ..fdata::Dictionary::EMPTY
-                    }),
-                    ..ProgramDecl::EMPTY
-                });
-                decl.uses = Some(vec![
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..UseRunnerDecl::EMPTY
-                    }),
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..UseRunnerDecl::EMPTY
-                    }),
-                ]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::multiple_runners_specified(),
-            ])),
-        },
         test_validate_uses_no_runner => {
             input = {
                 let mut decl = new_component_decl();
@@ -2682,52 +2602,14 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::no_runner_specified(),
-            ])),
-        },
-        test_validate_uses_runner_without_program => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.uses = Some(vec![
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..UseRunnerDecl::EMPTY
-                    }),
-                ]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::runner_without_program(),
-            ])),
-        },
-        test_validate_uses_multiple_runners_program => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.program = Some(ProgramDecl {
-                    runner: Some("elf".to_string()),
-                    info: Some(fdata::Dictionary {
-                        entries: None,
-                        ..fdata::Dictionary::EMPTY
-                    }),
-                    ..ProgramDecl::EMPTY
-                });
-                decl.uses = Some(vec![
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: Some("elf".to_string()),
-                        ..UseRunnerDecl::EMPTY
-                    }),
-                ]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::multiple_runners_specified(),
+                Error::missing_field("ProgramDecl", "runner"),
             ])),
         },
         test_validate_uses_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
                 decl.program = Some(ProgramDecl {
-                    runner: None,
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: None,
                         ..fdata::Dictionary::EMPTY
@@ -2760,10 +2642,6 @@ mod tests {
                         target_path: Some(format!("/{}", "e".repeat(1024))),
                         ..UseStorageDecl::EMPTY
                     }),
-                    UseDecl::Runner(UseRunnerDecl {
-                        source_name: Some(format!("{}", "a".repeat(101))),
-                        ..UseRunnerDecl::EMPTY
-                    }),
                     UseDecl::Event(UseEventDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
@@ -2783,7 +2661,6 @@ mod tests {
                 Error::field_too_long("UseDirectoryDecl", "source_name"),
                 Error::field_too_long("UseDirectoryDecl", "target_path"),
                 Error::field_too_long("UseStorageDecl", "target_path"),
-                Error::field_too_long("UseRunnerDecl", "source_name"),
                 Error::field_too_long("UseEventDecl", "source_name"),
                 Error::field_too_long("UseEventDecl", "target_name"),
             ])),

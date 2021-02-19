@@ -480,7 +480,7 @@ mod tests {
                         )
                         .build(),
                 ),
-                ("b", ComponentDeclBuilder::new_empty_component().use_runner("foo").build()),
+                ("b", ComponentDeclBuilder::new_empty_component().add_program("foo").build()),
             ],
             hook.hooks(),
         )

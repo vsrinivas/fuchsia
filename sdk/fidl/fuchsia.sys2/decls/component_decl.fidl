@@ -22,7 +22,7 @@ table ComponentDecl {
     2: vector<UseDecl> uses;
 
     /// List of capabilities exposed by the component. These consist of
-    /// capabilities that are made visible to the containing realm. The parent
+    /// capabilities that are made visible to the parent. The parent
     /// may `offer` these capabilities to its children, but not `use` them.
     ///
     /// The exposed capabilities must be unique and non-overlapping.
@@ -30,7 +30,7 @@ table ComponentDecl {
 
     /// List of capabilities offered to the component’s children. These consist
     /// of capabilities that the given children may `use`, which may come from a
-    /// child, the containing realm, or the component's own outgoing namespace.
+    /// child, the parent, or the component's own outgoing namespace.
     ///
     /// The offered capabilities must be unique and non-overlapping.
     4: vector<OfferDecl> offers;

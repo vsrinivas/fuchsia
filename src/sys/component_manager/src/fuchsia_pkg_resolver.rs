@@ -161,26 +161,20 @@ mod tests {
                     });
                 }
                 "invalid-cm" => {
-                    // Provide a cm that will fail due to multiple runners being configured.
+                    // Provide a cm that will fail due to a missing runner.
                     let sub_dir = pseudo_directory! {
                         "meta" => pseudo_directory! {
                             "invalid.cm" => read_only_static(
                                 encode_persistent(&mut fsys::ComponentDecl {
-                                    program: None,
-                                    uses: Some(vec![
-                                        fsys::UseDecl::Runner(
-                                            fsys::UseRunnerDecl {
-                                                source_name: Some("elf".to_string()),
-                                                ..fsys::UseRunnerDecl::EMPTY
-                                            }
-                                        ),
-                                        fsys::UseDecl::Runner (
-                                            fsys::UseRunnerDecl {
-                                                source_name: Some("web".to_string()),
-                                                ..fsys::UseRunnerDecl::EMPTY
-                                            }
-                                        )
-                                    ]),
+                                    program: Some(fsys::ProgramDecl {
+                                        runner: None,
+                                        info: Some(fdata::Dictionary {
+                                            entries: Some(vec![]),
+                                            ..fdata::Dictionary::EMPTY
+                                        }),
+                                        ..fsys::ProgramDecl::EMPTY
+                                    }),
+                                    uses: None,
                                     exposes: None,
                                     offers: None,
                                     capabilities: None,
@@ -237,14 +231,12 @@ mod tests {
                 info,
                 ..fsys::ProgramDecl::EMPTY
             }),
-            uses: Some(vec![
-                fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                    source_name: Some("fuchsia.logger.LogSink".to_string()),
-                    target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
-                    ..fsys::UseProtocolDecl::EMPTY
-                }),
-            ]),
+            uses: Some(vec![fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                source_name: Some("fuchsia.logger.LogSink".to_string()),
+                target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                ..fsys::UseProtocolDecl::EMPTY
+            })]),
             exposes: None,
             offers: None,
             facets: None,

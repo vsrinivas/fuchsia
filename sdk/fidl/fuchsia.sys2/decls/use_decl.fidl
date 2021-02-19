@@ -14,9 +14,8 @@ flexible union UseDecl {
     2: UseProtocolDecl protocol;
     3: UseDirectoryDecl directory;
     4: UseStorageDecl storage;
-    5: UseRunnerDecl runner;
-    6: UseEventDecl event;
-    7: UseEventStreamDecl event_stream;
+    5: UseEventDecl event;
+    6: UseEventStreamDecl event_stream;
 };
 
 /// Declares a service used by a component, which was offered to it.
@@ -93,14 +92,6 @@ table UseStorageDecl {
     ///
     /// Must be an absolute path starting with /.
     2: string:fuchsia.component.MAX_PATH_LENGTH target_path;
-};
-
-/// Declares a runner used by a component, which was present in its environment.
-// TODO(fxbug.dev/68827): Replace this with `ProgramDecl`.
-table UseRunnerDecl {
-    /// The name of the runner, as it was presented to this component by the
-    /// realm.
-    1: fuchsia.component.name source_name;
 };
 
 /// Declares an event used by a component, which was offered to it.

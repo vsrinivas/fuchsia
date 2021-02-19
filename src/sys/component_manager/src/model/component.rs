@@ -396,7 +396,7 @@ impl ComponentInstance {
             };
 
             // Find any explicit "use" runner declaration, resolve that.
-            if let Some(runner) = decl.get_used_runner() {
+            if let Some(runner) = decl.get_runner() {
                 // Open up a channel to the runner.
                 let (client_channel, server_channel) =
                     create_endpoints::<fcrunner::ComponentRunnerMarker>()

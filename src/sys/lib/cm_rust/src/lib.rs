@@ -277,14 +277,8 @@ fn native_into_fidl_vec<N: NativeIntoFidl<F>, F>(vec: Vec<N>) -> Option<Vec<F>> 
 
 impl ComponentDecl {
     /// Returns the runner used by this component, or `None` if this is a non-executable component.
-    pub fn get_used_runner(&self) -> Option<&CapabilityName> {
-        if let Some(runner) = self.program.as_ref().and_then(|p| p.runner.as_ref()) {
-            return Some(runner);
-        }
-        self.uses.iter().find_map(|u| match u {
-            UseDecl::Runner(runner) => Some(&runner.source_name),
-            _ => None,
-        })
+    pub fn get_runner(&self) -> Option<&CapabilityName> {
+        self.program.as_ref().and_then(|p| p.runner.as_ref())
     }
 
     /// Returns the `StorageDecl` corresponding to `storage_name`.
@@ -375,7 +369,6 @@ pub enum UseDecl {
     Protocol(UseProtocolDecl),
     Directory(UseDirectoryDecl),
     Storage(UseStorageDecl),
-    Runner(UseRunnerDecl),
     Event(UseEventDecl),
     EventStream(UseEventStreamDecl),
 }
@@ -420,24 +413,6 @@ impl SourceName for UseStorageDecl {
 }
 
 impl UseDeclCommon for UseStorageDecl {
-    fn source(&self) -> &UseSource {
-        &UseSource::Parent
-    }
-}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseRunnerDecl")]
-pub struct UseRunnerDecl {
-    pub source_name: CapabilityName,
-}
-
-impl SourceName for UseRunnerDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl UseDeclCommon for UseRunnerDecl {
     fn source(&self) -> &UseSource {
         &UseSource::Parent
     }
@@ -871,14 +846,13 @@ impl UseDecl {
             UseDecl::Protocol(d) => Some(&d.target_path),
             UseDecl::Directory(d) => Some(&d.target_path),
             UseDecl::Storage(d) => Some(&d.target_path),
-            UseDecl::Runner(_) | UseDecl::Event(_) | UseDecl::EventStream(_) => None,
+            UseDecl::Event(_) | UseDecl::EventStream(_) => None,
         }
     }
 
     pub fn name(&self) -> Option<&CapabilityName> {
         match self {
             UseDecl::Event(event_decl) => Some(&event_decl.source_name),
-            UseDecl::Runner(runner_decl) => Some(&runner_decl.source_name),
             UseDecl::Storage(storage_decl) => Some(&storage_decl.source_name),
             UseDecl::EventStream(event_stream_decl) => Some(&event_stream_decl.name),
             UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) => None,
@@ -1528,6 +1502,7 @@ mod tests {
         try_from_all => {
             input = fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
                     info: Some(fdata::Dictionary {
                         entries: Some(vec![
                             fdata::DictionaryEntry {
@@ -1573,10 +1548,6 @@ mod tests {
                         source_name: Some("temp".to_string()),
                         target_path: Some("/temp".to_string()),
                         ..fsys::UseStorageDecl::EMPTY
-                    }),
-                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                        source_name: Some("myrunner".to_string()),
-                        ..fsys::UseRunnerDecl::EMPTY
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1888,7 +1859,7 @@ mod tests {
             result = {
                 ComponentDecl {
                     program: Some(ProgramDecl {
-                        runner: None,
+                        runner: Some("elf".try_into().unwrap()),
                         info: fdata::Dictionary {
                             entries: Some(vec![
                                 fdata::DictionaryEntry {
@@ -1928,9 +1899,6 @@ mod tests {
                         UseDecl::Storage(UseStorageDecl {
                             source_name: "temp".into(),
                             target_path: "/temp".try_into().unwrap(),
-                        }),
-                        UseDecl::Runner(UseRunnerDecl {
-                            source_name: "myrunner".into(),
                         }),
                         UseDecl::Event(UseEventDecl {
                             source: UseSource::Parent,

@@ -223,7 +223,6 @@ impl ComponentCapability {
                 UseDecl::Directory(_) => CapabilityTypeName::Directory,
                 UseDecl::Service(_) => CapabilityTypeName::Service,
                 UseDecl::Storage(_) => CapabilityTypeName::Storage,
-                UseDecl::Runner(_) => CapabilityTypeName::Runner,
                 UseDecl::Event(_) => CapabilityTypeName::Event,
                 UseDecl::EventStream(_) => CapabilityTypeName::EventStream,
             },
@@ -279,7 +278,6 @@ impl ComponentCapability {
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),
-                UseDecl::Runner(UseRunnerDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Event(UseEventDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Storage(UseStorageDecl { source_name, .. }) => Some(source_name),
                 _ => None,

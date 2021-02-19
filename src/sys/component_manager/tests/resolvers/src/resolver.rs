@@ -68,6 +68,7 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
 fn build_decl() -> fmem::Data {
     let mut component_decl = fsys::ComponentDecl::EMPTY;
     component_decl.program = Some(fsys::ProgramDecl {
+        runner: Some("elf".to_string()),
         info: Some(fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
@@ -83,10 +84,6 @@ fn build_decl() -> fmem::Data {
         name: Some("fidl.test.components.Trigger".to_string()),
         source_path: Some("/svc/fidl.test.components.Trigger".to_string()),
         ..fsys::ProtocolDecl::EMPTY
-    })]);
-    component_decl.uses = Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-        source_name: Some("elf".to_string()),
-        ..fsys::UseRunnerDecl::EMPTY
     })]);
     component_decl.exposes = Some(vec![fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),

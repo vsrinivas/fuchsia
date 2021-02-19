@@ -1315,7 +1315,7 @@ mod tests {
                     "a",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1326,18 +1326,13 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             },
                         }),
-                        uses: vec![
-                            UseDecl::Runner(UseRunnerDecl {
-                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                            }),
-                            UseDecl::Event(UseEventDecl {
-                                source: UseSource::Parent,
-                                source_name: "started".into(),
-                                target_name: "started".into(),
-                                filter: None,
-                                mode: EventMode::Sync,
-                            }),
-                        ],
+                        uses: vec![UseDecl::Event(UseEventDecl {
+                            source: UseSource::Parent,
+                            source_name: "started".into(),
+                            target_name: "started".into(),
+                            filter: None,
+                            mode: EventMode::Sync,
+                        })],
                         offers: vec![
                             OfferDecl::Event(OfferEventDecl {
                                 source: cm_rust::OfferSource::Framework,
@@ -1372,7 +1367,7 @@ mod tests {
                     "a/b",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1384,9 +1379,6 @@ mod tests {
                             },
                         }),
                         uses: vec![
-                            UseDecl::Runner(UseRunnerDecl {
-                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                            }),
                             UseDecl::Event(UseEventDecl {
                                 source: UseSource::Parent,
                                 source_name: "capability_ready".into(),
@@ -1457,7 +1449,7 @@ mod tests {
                     "a",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1468,15 +1460,10 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             },
                         }),
-                        uses: vec![
-                            UseDecl::Runner(UseRunnerDecl {
-                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                            }),
-                            UseDecl::Storage(UseStorageDecl {
-                                source_name: "foo".into(),
-                                target_path: "/bar".try_into().unwrap(),
-                            }),
-                        ],
+                        uses: vec![UseDecl::Storage(UseStorageDecl {
+                            source_name: "foo".into(),
+                            target_path: "/bar".try_into().unwrap(),
+                        })],
                         ..ComponentDecl::default()
                     },
                 ),
@@ -1589,7 +1576,7 @@ mod tests {
                     "a",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1600,9 +1587,6 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             },
                         }),
-                        uses: vec![UseDecl::Runner(UseRunnerDecl {
-                            source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                        })],
                         capabilities: vec![CapabilityDecl::Protocol(ProtocolDecl {
                             name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -1620,7 +1604,7 @@ mod tests {
                     "b",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1631,18 +1615,11 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             },
                         }),
-                        uses: vec![
-                            UseDecl::Runner(UseRunnerDecl {
-                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                            }),
-                            UseDecl::Protocol(UseProtocolDecl {
-                                source: UseSource::Parent,
-                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                target_path: "/svc/fidl.examples.routing.echo.Echo"
-                                    .try_into()
-                                    .unwrap(),
-                            }),
-                        ],
+                        uses: vec![UseDecl::Protocol(UseProtocolDecl {
+                            source: UseSource::Parent,
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
                         ..ComponentDecl::default()
                     },
                 ),
@@ -1692,7 +1669,7 @@ mod tests {
                     "a",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1703,9 +1680,6 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             },
                         }),
-                        uses: vec![UseDecl::Runner(UseRunnerDecl {
-                            source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                        })],
                         capabilities: vec![CapabilityDecl::Protocol(ProtocolDecl {
                             name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -1815,7 +1789,7 @@ mod tests {
                     "b",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -1826,18 +1800,11 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             },
                         }),
-                        uses: vec![
-                            UseDecl::Runner(UseRunnerDecl {
-                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                            }),
-                            UseDecl::Protocol(UseProtocolDecl {
-                                source: UseSource::Parent,
-                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                target_path: "/svc/fidl.examples.routing.echo.Echo"
-                                    .try_into()
-                                    .unwrap(),
-                            }),
-                        ],
+                        uses: vec![UseDecl::Protocol(UseProtocolDecl {
+                            source: UseSource::Parent,
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
                         capabilities: vec![CapabilityDecl::Directory(DirectoryDecl {
                             name: "example-dir".try_into().unwrap(),
                             source_path: "/example".try_into().unwrap(),
@@ -2077,7 +2044,7 @@ mod tests {
                     "c/d",
                     ComponentDecl {
                         program: Some(ProgramDecl {
-                            runner: None,
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
                             info: fdata::Dictionary {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
@@ -2089,9 +2056,6 @@ mod tests {
                             },
                         }),
                         uses: vec![
-                            UseDecl::Runner(UseRunnerDecl {
-                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
-                            }),
                             UseDecl::Directory(UseDirectoryDecl {
                                 source: UseSource::Parent,
                                 source_name: "example-dir".try_into().unwrap(),

@@ -81,7 +81,6 @@ impl From<UseDecl> for CapabilityType {
             UseDecl::Protocol(_) => CapabilityType::Protocol,
             UseDecl::Directory(_) => CapabilityType::Directory,
             UseDecl::Storage(_) => CapabilityType::Storage,
-            UseDecl::Runner(_) => CapabilityType::Runner,
             UseDecl::Event(_) => CapabilityType::Event,
             UseDecl::EventStream(_) => CapabilityType::EventStream,
         }
