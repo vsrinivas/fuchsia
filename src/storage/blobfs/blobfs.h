@@ -233,7 +233,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
          std::optional<CachePolicy> pager_backed_cache_policy,
-         std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory);
+         std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
+         zx::duration metrics_flush_time);
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
@@ -310,7 +311,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void ComputeFragmentationMetrics();
 
   static std::shared_ptr<BlobfsMetrics> CreateMetrics(
-      std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory);
+      std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
+      zx::duration metrics_flush_time);
 
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;

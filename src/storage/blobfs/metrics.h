@@ -22,6 +22,7 @@
 #include <fs/vnode.h>
 
 #include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/read_metrics.h"
 #include "src/storage/blobfs/verification_metrics.h"
 
@@ -42,7 +43,7 @@ class BlobfsMetrics : public fs::MetricsTrait {
   explicit BlobfsMetrics(
       bool should_record_page_in,
       const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory = {},
-      zx::duration cobalt_flush_timer = zx::sec(5));
+      zx::duration cobalt_flush_time = kMetricsFlushTime);
   ~BlobfsMetrics() override;
 
   // Print information about metrics to stdout.
@@ -196,7 +197,7 @@ class BlobfsMetrics : public fs::MetricsTrait {
   async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Time between each Cobalt flush.
-  zx::duration cobalt_flush_timer_ = zx::sec(5);
+  zx::duration cobalt_flush_time_ = kMetricsFlushTime;
 };
 
 }  // namespace blobfs

@@ -44,6 +44,12 @@ enum class Writability {
   Writable,
 };
 
+// Time between each Cobalt flush.
+// Flushing data too frequently leads to collecting large amount of data in
+// cobalt.
+constexpr uint32_t kMetricsFlushTimeMinutes = 5;
+constexpr zx::duration kMetricsFlushTime = zx::min(kMetricsFlushTimeMinutes);
+
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
   Writability writability = Writability::Writable;
@@ -61,6 +67,9 @@ struct MountOptions {
 
   // Custom function to help install custom logger. Used during unit testing.
   std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory;
+
+  // Time between two metrics flushes.
+  zx::duration metrics_flush_time = kMetricsFlushTime;
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|. If

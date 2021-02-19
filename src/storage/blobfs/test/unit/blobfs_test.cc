@@ -474,9 +474,11 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
 
   std::unique_ptr<Logger> logger = std::make_unique<Logger>();
   auto* logger_ptr = logger.get();
-  MountOptions mount_options{.metrics = true, .collector_factory = [&logger] {
-                               return std::make_unique<cobalt_client::Collector>(std::move(logger));
-                             }};
+  MountOptions mount_options{
+      .metrics = true,
+      .collector_factory =
+          [&logger] { return std::make_unique<cobalt_client::Collector>(std::move(logger)); },
+      .metrics_flush_time = zx::sec(5)};
 
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<Blobfs> fs;

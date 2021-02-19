@@ -148,7 +148,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
       dispatcher, std::move(device), superblock, options.writability, options.compression_settings,
-      std::move(vmex_resource), options.pager_backed_cache_policy, options.collector_factory));
+      std::move(vmex_resource), options.pager_backed_cache_policy, options.collector_factory,
+      options.metrics_flush_time));
   fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
@@ -813,14 +814,15 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
                const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
                std::optional<CachePolicy> pager_backed_cache_policy,
-               std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory)
+               std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
+               zx::duration metrics_flush_time)
     : info_(*info),
       dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
-      metrics_(CreateMetrics(std::move(collector_factory))),
+      metrics_(CreateMetrics(std::move(collector_factory), metrics_flush_time)),
       pager_backed_cache_policy_(pager_backed_cache_policy) {}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
@@ -1164,12 +1166,14 @@ zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& o
 }
 
 std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics(
-    std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory) {
+    std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
+    zx::duration metrics_flush_time) {
   bool enable_page_in_metrics = false;
 #ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
   enable_page_in_metrics = true;
 #endif
-  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, collector_factory);
+  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, collector_factory,
+                                         metrics_flush_time);
 }
 
 zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {

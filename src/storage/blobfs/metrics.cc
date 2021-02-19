@@ -54,13 +54,13 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
 BlobfsMetrics::BlobfsMetrics(
     bool should_record_page_in,
     const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory,
-    zx::duration cobalt_flush_timer)
+    zx::duration cobalt_flush_time)
     : should_record_page_in(should_record_page_in),
       cobalt_metrics_(collector_factory ? collector_factory()
                                         : std::make_unique<cobalt_client::Collector>(
                                               fs_metrics::kCobaltProjectId),
                       fs_metrics::Component::kBlobfs, fs_metrics::CompressionSource::kBlobfs),
-      cobalt_flush_timer_(cobalt_flush_timer) {
+      cobalt_flush_time_(cobalt_flush_time) {
   // Add a node that allows querying the size of the Inspect VMO at runtime
   root_.CreateLazyNode(
       "inspect_vmo_stats",
@@ -165,7 +165,7 @@ void BlobfsMetrics::ScheduleMetricFlush() {
         cobalt_metrics_.Flush();
         ScheduleMetricFlush();
       },
-      cobalt_flush_timer_);
+      cobalt_flush_time_);
 }
 
 inspect::Inspector BlobfsMetrics::CreateInspector() {
