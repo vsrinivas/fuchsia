@@ -645,7 +645,7 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 			}
 			eps.incoming.mu.Unlock()
 			if err != nil {
-				if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrBadHandle {
+				if err, ok := err.(*zx.Error); ok && (err.Status == zx.ErrBadHandle || err.Status == zx.ErrPeerClosed) {
 					// The endpoint is closing -- this is possible when an incoming
 					// connection races with the listening endpoint being closed.
 					go eps.wq.EventUnregister(&entry)
