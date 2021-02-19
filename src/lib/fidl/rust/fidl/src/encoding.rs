@@ -3719,6 +3719,7 @@ pub struct UnknownData {
 
 /// Header for transactional FIDL messages
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(C)]
 pub struct TransactionHeader {
     /// Transaction ID which identifies a request-response pair
     tx_id: u32,
@@ -3740,7 +3741,7 @@ impl TransactionHeader {
     }
 }
 
-fidl_struct! {
+fidl_struct_copy! {
     name: TransactionHeader,
     members: [
         tx_id {
@@ -5740,6 +5741,34 @@ mod test {
             Decoder::decode_into(&header, out_buf, &mut to_handle_info(handles), &mut body_out)
                 .expect("Decoding body failed");
             assert_eq!(body, body_out);
+        }
+    }
+
+    #[test]
+    fn direct_encode_transaction_header() {
+        let bytes = &[
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, //
+            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+        ];
+        let mut header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
+
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, &mut header, bytes);
+        }
+    }
+
+    #[test]
+    fn direct_decode_transaction_header() {
+        let bytes = &[
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, //
+            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+        ];
+        let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
+
+        for ctx in CONTEXTS {
+            let mut out = TransactionHeader::new_empty();
+            Decoder::decode_with_context(ctx, bytes, &mut [], &mut out).expect("Decoding failed");
+            assert_eq!(out, header);
         }
     }
 
