@@ -149,6 +149,7 @@ impl PolicyHandler for AudioPolicyHandler {
                 for stream in streams.iter_mut() {
                     stream.user_volume_level = self
                         .calculate_internal_volume(stream.stream_type, stream.user_volume_level);
+                    stream.user_volume_muted &= self.calculate_can_mute(stream.stream_type);
                 }
 
                 Some(RequestTransform::Request(SettingRequest::SetVolume(streams)))
@@ -274,19 +275,25 @@ impl AudioPolicyHandler {
 
     /// Reverses the policy limits on internal volume for the given audio stream to their external
     /// levels.
-    fn calculate_external_volume(&mut self, target: PropertyTarget, internal_volume: f32) -> f32 {
+    fn calculate_external_volume(&self, target: PropertyTarget, internal_volume: f32) -> f32 {
         let VolumeLimits { max_volume, .. } = self.determine_volume_limits(target);
 
-        return round_volume_level(internal_volume / max_volume);
+        round_volume_level(internal_volume / max_volume)
     }
 
     /// Scales an external volume from client input for the given audio stream to the limits set by
     /// policies.
-    fn calculate_internal_volume(&mut self, target: PropertyTarget, external_volume: f32) -> f32 {
+    fn calculate_internal_volume(&self, target: PropertyTarget, external_volume: f32) -> f32 {
         let VolumeLimits { max_volume, min_volume } = self.determine_volume_limits(target);
 
         // We don't need to round this value as the audio setting internals will round it anyways.
-        return min_volume.max(external_volume * max_volume);
+        min_volume.max(external_volume * max_volume)
+    }
+
+    /// Determines whether or not the stream can be muted based on the policy state.
+    fn calculate_can_mute(&self, target: PropertyTarget) -> bool {
+        // Stream can only be muted if there's no min volume limit.
+        self.determine_volume_limits(target).min_volume == MIN_VOLUME
     }
 
     /// Clamps the volume of the given audio stream based on the limits set by policies.
@@ -294,11 +301,11 @@ impl AudioPolicyHandler {
     /// This function should only be used on internal volume levels since the policy limits only
     /// apply on the internal volume; external volume levels are purely calculated based on the
     /// internal levels which are already clamped.
-    fn clamp_internal_volume(&mut self, target: PropertyTarget, internal_volume: f32) -> f32 {
+    fn clamp_internal_volume(&self, target: PropertyTarget, internal_volume: f32) -> f32 {
         let VolumeLimits { max_volume, min_volume } = self.determine_volume_limits(target);
 
         // We don't need to round this value as the audio setting internals will round it anyways.
-        return internal_volume.max(min_volume).min(max_volume);
+        internal_volume.max(min_volume).min(max_volume)
     }
 
     /// Adds a transform to the given target.
@@ -397,26 +404,31 @@ impl AudioPolicyHandler {
         audio_info: AudioInfo,
         previous_external_volume: f32,
     ) -> Result<(), policy_base::response::Error> {
-        let mut stream = audio_info
+        let original = audio_info
             .streams
             .iter()
             .find(|stream| stream.stream_type == target)
             .ok_or_else(|| policy_base::response::Error::Unexpected)?
             .clone();
 
-        let internal_volume = stream.user_volume_level;
+        // Make a copy to apply policy transforms on.
+        let mut transformed = original.clone();
 
-        let new_internal_volume = self.clamp_internal_volume(target, internal_volume);
-        let new_external_volume = self.calculate_external_volume(target, new_internal_volume);
+        transformed.user_volume_level =
+            self.clamp_internal_volume(target, original.user_volume_level);
+        transformed.user_volume_muted =
+            original.user_volume_muted & self.calculate_can_mute(target);
 
-        // Set internal/external volume levels as needed.
-        if new_internal_volume != internal_volume {
+        let new_external_volume =
+            self.calculate_external_volume(target, transformed.user_volume_level);
+
+        // Set internal/external volume state as needed.
+        if transformed != original {
             // When the internal volume level should change, send a Set request to the audio
             // controller. If this would cause the external volume levels to change as well, that
             // will be handled automatically as a Changed event in handle_setting_event.
-            stream.user_volume_level = new_internal_volume;
 
-            self.client_proxy.send_setting_request(SettingRequest::SetVolume(vec![stream]));
+            self.client_proxy.send_setting_request(SettingRequest::SetVolume(vec![transformed]));
         } else if new_external_volume != previous_external_volume {
             // In some cases, such as when a max volume limit is removed, the internal volume may
             // not change but the external volume should still be updated. We send a Rebroadcast

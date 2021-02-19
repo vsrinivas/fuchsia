@@ -13,7 +13,7 @@ use crate::policy::base::{Address, Payload, PolicyInfo, PolicyType, Request};
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{internal, EnvironmentBuilder};
-use fidl_fuchsia_settings::{self as audio_fidl, AudioMarker, AudioProxy};
+use fidl_fuchsia_settings::{self as audio_fidl, AudioMarker, AudioProxy, AudioStreamSettings};
 use fidl_fuchsia_settings_policy::{
     self as policy_fidl, VolumePolicyControllerMarker, VolumePolicyControllerProxy,
 };
@@ -56,21 +56,26 @@ async fn create_test_environment() -> TestEnvironment {
     TestEnvironment { nested_environment: env, policy_service, setui_audio_service }
 }
 
-/// Sets the stream volume to the given volume level using the audio service.
-async fn set_stream_volume(env: &TestEnvironment, stream: AudioStreamType, volume_level: f32) {
+/// Sets the given stream value using the audio service.
+async fn set_stream(env: &TestEnvironment, stream: AudioStream) {
     let mut audio_settings = audio_fidl::AudioSettings::EMPTY;
-    audio_settings.streams = Some(vec![AudioStream {
-        stream_type: stream,
-        source: AudioSettingSource::User,
-        user_volume_level: volume_level,
-        user_volume_muted: false,
-    }
-    .into()]);
+    audio_settings.streams = Some(vec![stream.into()]);
     env.setui_audio_service
         .set(audio_settings)
         .await
         .expect("set call succeeded")
         .expect("set succeeded");
+}
+
+/// Sets the stream volume to the given volume level using the audio service.
+async fn set_stream_volume(env: &TestEnvironment, stream_type: AudioStreamType, volume_level: f32) {
+    let stream = AudioStream {
+        stream_type: stream_type,
+        source: AudioSettingSource::User,
+        user_volume_level: volume_level,
+        user_volume_muted: false,
+    };
+    set_stream(env, stream).await;
 }
 
 /// Get the volume of the given stream from the audio service in the given test environment.
@@ -87,17 +92,26 @@ async fn get_stream_volume_from_proxy(
     setui_audio_service: &AudioProxy,
     stream: AudioStreamType,
 ) -> f32 {
-    let audio_settings = setui_audio_service.watch().await.expect("failed to watch audio settings");
-
-    let stream = audio_settings
-        .streams
-        .expect("no streams in audio settings")
-        .iter()
-        .find(|stream_settings| stream_settings.stream == Some(stream.into()))
-        .expect("failed to find audio stream")
-        .clone();
+    let stream = get_stream_from_proxy(setui_audio_service, stream).await;
 
     stream.user_volume.as_ref().expect("no user volume").level.expect("no volume level")
+}
+
+/// Get the stream value of the given stream type from the given audio service proxy.
+///
+/// Panics for an unexpected result, such as the stream not being present.
+async fn get_stream_from_proxy(
+    setui_audio_service: &AudioProxy,
+    stream: AudioStreamType,
+) -> AudioStreamSettings {
+    let audio_settings = setui_audio_service.watch().await.expect("failed to watch audio settings");
+
+    audio_settings
+        .streams
+        .expect("no streams in audio settings")
+        .into_iter()
+        .find(|stream_settings| stream_settings.stream == Some(stream.into()))
+        .expect("failed to find audio stream")
 }
 
 async fn add_policy(env: &TestEnvironment, target: PropertyTarget, transform: Transform) -> u32 {
@@ -269,6 +283,30 @@ async fn test_policy_add_min_policy_adjusts_volume() {
     assert_eq!(expected_user_volume, get_stream_volume(&env, expected_policy_target).await);
 }
 
+// Tests that adding a new min policy transform unmutes a stream.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_add_min_policy_unmutes_stream() {
+    let policy_target = AudioStreamType::Media;
+    let starting_stream = AudioStream {
+        stream_type: policy_target,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: true,
+    };
+
+    let env = create_test_environment().await;
+
+    // Start with the stream muted.
+    set_stream(&env, starting_stream).await;
+
+    // Add a min policy transform to unmute the stream
+    add_policy(&env, policy_target, Transform::Min(0.1)).await;
+
+    // Verify the stream is unmuted.
+    let stream = get_stream_from_proxy(&env.setui_audio_service, policy_target).await;
+    assert_eq!(stream.user_volume.expect("no user volume").muted.expect("no muted state"), false);
+}
+
 // Tests that adding a new max policy transform does not initially affect the audio output from the
 // audio setting when at max, but does take effect after removal.
 #[fuchsia_async::run_until_stalled(test)]
@@ -320,6 +358,8 @@ async fn test_policy_min_policy_clamps_sets() {
     // Remove the min volume policy.
     remove_policy(&env, policy_id).await;
 
+    // Use a new connection to get the value. The original connection won't return the value again
+    // since it hasn't changed.
     let audio_connection = env.nested_environment.connect_to_service::<AudioMarker>().unwrap();
 
     // The volume remains at 20% after the policy is removed.

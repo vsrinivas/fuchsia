@@ -290,44 +290,66 @@ async fn get_and_verify_media_volume(
 }
 
 /// Asks the handler in the environment to handle a set request and verifies that the transformed
-/// request matches the given volume level.
-async fn set_and_verify_media_volume(
+/// request matches the given stream.
+async fn set_and_verify_stream(
     env: &mut TestEnvironment,
-    volume_level: f32,
-    expected_volume_level: f32,
+    request_stream: AudioStream,
+    expected_stream: AudioStream,
 ) {
-    let mut stream = AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: volume_level,
-        user_volume_muted: false,
-    };
-
     let request_transform =
-        env.handler.handle_setting_request(SettingRequest::SetVolume(vec![stream.clone()])).await;
+        env.handler.handle_setting_request(SettingRequest::SetVolume(vec![request_stream])).await;
 
-    stream.user_volume_level = expected_volume_level;
     assert_eq!(
         request_transform,
-        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![stream])))
+        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![expected_stream])))
     );
 }
 
-/// Verifies that the setting proxy in the test environment received a set request for media volume.
-async fn verify_media_volume_set(env: &mut TestEnvironment, volume_level: f32) {
+/// Asks the handler in the environment to handle a set request and verifies that the transformed
+/// request matches the given volume level.
+async fn set_and_verify_media_volume(
+    env: &mut TestEnvironment,
+    request_volume_level: f32,
+    expected_volume_level: f32,
+) {
+    let initial_stream = AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: request_volume_level,
+        user_volume_muted: false,
+    };
+
+    let mut expected_stream = initial_stream.clone();
+    expected_stream.user_volume_level = expected_volume_level;
+
+    set_and_verify_stream(env, initial_stream, expected_stream).await;
+}
+
+/// Verifies that the setting proxy in the test environment received a set request with the given
+/// [`AudioStream`].
+async fn verify_stream_set(env: &mut TestEnvironment, stream: AudioStream) {
     verify_payload(
         core::Payload::Action(SettingAction {
             id: 0,
             setting_type: SettingType::Audio,
-            data: SettingActionData::Request(SettingRequest::SetVolume(vec![AudioStream {
-                stream_type: AudioStreamType::Media,
-                source: AudioSettingSource::User,
-                user_volume_level: volume_level,
-                user_volume_muted: false,
-            }])),
+            data: SettingActionData::Request(SettingRequest::SetVolume(vec![stream])),
         }),
         env.setting_proxy_receptor.lock().await.borrow_mut(),
         None,
+    )
+    .await;
+}
+
+/// Verifies that the setting proxy in the test environment received a set request for media volume.
+async fn verify_media_volume_set(env: &mut TestEnvironment, volume_level: f32) {
+    verify_stream_set(
+        env,
+        AudioStream {
+            stream_type: AudioStreamType::Media,
+            source: AudioSettingSource::User,
+            user_volume_level: volume_level,
+            user_volume_muted: false,
+        },
     )
     .await;
 }
@@ -582,6 +604,37 @@ async fn test_handler_add_policy_modifies_internal_volume_below_min() {
     verify_media_volume_set(&mut env, min_volume).await;
 }
 
+// Verifies that adding a min volume policy unmutes the volume stream.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_add_min_limit_unmutes() {
+    let mut env = create_handler_test_environment().await;
+
+    let starting_volume_level = 0.8;
+    let mut starting_audio_info = default_audio_info();
+
+    let expected_stream = AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: starting_volume_level,
+        user_volume_muted: false,
+    };
+
+    // Starting audio info has media volume at max volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: starting_volume_level,
+        user_volume_muted: true,
+    });
+
+    // Set a min limit so that the stream is unmuted.
+    set_media_volume_limit(&mut env, Transform::Min(starting_volume_level), starting_audio_info)
+        .await;
+
+    // Handler requests that the setting handler set the volume to 60% (the max set by policy).
+    verify_stream_set(&mut env, expected_stream).await;
+}
+
 /// Verifies that the internal volume will not be adjusted when it's already within policy limits.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits() {
@@ -830,6 +883,31 @@ async fn test_handler_min_volume_policy_scales_external_sets() {
         // Set requests have the expected volume level after passing through the policy handler.
         set_and_verify_media_volume(&mut env, external_volume_level, expected_volume_level).await;
     }
+}
+
+// Verifies that adding a min volume policy prevents external sets from muting the stream.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_min_volume_policy_prevents_mute() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+    let starting_stream = AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: false,
+    };
+    starting_audio_info.replace_stream(starting_stream);
+
+    // Set a min volume limit so the stream can't be muted.
+    set_media_volume_limit(&mut env, Transform::Min(0.1), starting_audio_info).await;
+
+    // External client attempts to mute the volume.
+    let mut request = starting_stream.clone();
+    request.user_volume_muted = true;
+
+    // Mute state doesn't change
+    set_and_verify_stream(&mut env, request, starting_stream).await;
 }
 
 /// Verifies that adding both a max and a min volume policy scales external set requests to an
