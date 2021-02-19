@@ -107,3 +107,19 @@ includes:
 * When a link using a cross reference is used.
 * When a link using a URL is used.
 * On the definition of a cross reference.
+
+### Defining a new rule
+
+The convention to define a new rule is to follow the pattern:
+
+```go
+const theRuleName = "the-rule-name"
+
+type theRule struct {
+    ...
+}
+
+var _ lintRuleOverTokens = (*theRule)(nil) // or lintRuleOverEvents
+
+// followed by the implementation
+```

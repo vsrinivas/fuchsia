@@ -12,24 +12,32 @@ import (
 
 func TestMessagesToFindingsJSON(t *testing.T) {
 	var (
-		doc      = doc{filename: "path/to/the/file.md"}
-		reporter Reporter
+		doc          = doc{filename: "path/to/the/file.md"}
+		rootReporter RootReporter
+		ruleReporter = rootReporter.ForRule("some-rule")
 	)
 
-	reporter.Warnf(token{
+	rootReporter.Warnf(token{
 		doc:     &doc,
 		kind:    tText,
 		content: "1234",
 		ln:      10, // i.e. 10th line
 		col:     1,  // i.e. first character
 	}, "%s, %s!", "Hello", "World")
-	reporter.Warnf(token{
+	rootReporter.Warnf(token{
 		doc:     &doc,
 		kind:    tText,
 		content: "```this one\nspans\nmultiple lines\n123456```",
 		ln:      2, // i.e. 2nd line
 		col:     5, // i.e. fifth character
 	}, "%d%d!", 4, 2)
+	ruleReporter.Warnf(token{
+		doc:     &doc,
+		kind:    tText,
+		content: "1",
+		ln:      30, // i.e. 30th line
+		col:     17, // i.e. seventeeth character
+	}, "no format")
 
 	expected := []findingJSON{
 		{
@@ -50,9 +58,18 @@ func TestMessagesToFindingsJSON(t *testing.T) {
 			EndLine:   10,
 			EndChar:   4,
 		},
+		{
+			Category:  "mdlint/some-rule",
+			Message:   "no format",
+			Path:      "path/to/the/file.md",
+			StartLine: 30,
+			StartChar: 16,
+			EndLine:   30,
+			EndChar:   17,
+		},
 	}
 
-	actual := reporter.messagesToFindingsJSON()
+	actual := rootReporter.messagesToFindingsJSON()
 	if diff := cmp.Diff(expected, actual); diff != "" {
 		t.Errorf("expected != actual (-want +got)\n%s", diff)
 	}

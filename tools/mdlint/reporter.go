@@ -15,7 +15,17 @@ import (
 
 // A Reporter provides utilities to aggregate warning messages attached to
 // specific tokens, and to pretty print these aggregates messages.
-type Reporter struct {
+type Reporter interface {
+	// Warnf formats and adds warning message using the format specifier.
+	Warnf(tok token, format string, a ...interface{})
+}
+
+// RootReporter is the linter wide reporter, and may be used to report general
+// warnings. When reporting within rules, prefer creating rule reporters with:
+//
+//     rootReporter := ...
+//     ruleReporter := rootReporter.ForRule("name-of-rule")
+type RootReporter struct {
 	messages sortableMessages
 
 	// JSONOutput enables JSON output, instead of the pretty printed human
@@ -23,9 +33,28 @@ type Reporter struct {
 	JSONOutput bool
 }
 
+type ruleReporter struct {
+	parent *RootReporter
+	rule   string
+}
+
+// ForRule creates a reporter for a specific rule.
+func (r *RootReporter) ForRule(rule string) Reporter {
+	return &ruleReporter{
+		parent: r,
+		rule:   rule,
+	}
+}
+
+var _ = []Reporter{
+	(*RootReporter)(nil),
+	(*ruleReporter)(nil),
+}
+
 type message struct {
-	tok     token
-	content string
+	category string
+	tok      token
+	content  string
 }
 
 type sortableMessages []message
@@ -63,16 +92,24 @@ func (s sortableMessages) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-// Warnf formats and adds warning message using the format specifier.
-func (r *Reporter) Warnf(tok token, format string, a ...interface{}) {
+func (r *RootReporter) Warnf(tok token, format string, a ...interface{}) {
+	r.warnf("general", tok, format, a...)
+}
+
+func (r *ruleReporter) Warnf(tok token, format string, a ...interface{}) {
+	r.parent.warnf(r.rule, tok, format, a...)
+}
+
+func (r *RootReporter) warnf(category string, tok token, format string, a ...interface{}) {
 	r.messages = append(r.messages, message{
-		tok:     tok,
-		content: fmt.Sprintf(format, a...),
+		category: category,
+		tok:      tok,
+		content:  fmt.Sprintf(format, a...),
 	})
 }
 
 // HasMessages indicates whether any message was added to this reporter.
-func (r *Reporter) HasMessages() bool {
+func (r *RootReporter) HasMessages() bool {
 	return len(r.messages) != 0
 }
 
@@ -92,13 +129,13 @@ type findingJSON struct {
 // messagesToFindingsJSON converts the reporter's messages to `findingJSON`.
 // This method is used to test the internals of the reporter, but should not be
 // used otherwise.
-func (r *Reporter) messagesToFindingsJSON() []findingJSON {
+func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
 	sort.Sort(r.messages)
 	var findings []findingJSON
 	for _, msg := range r.messages {
 		numLines, numCharsOnLastLine := numLinesAndCharsOnLastLine(msg.tok)
 		findings = append(findings, findingJSON{
-			Category:  "mdlint/general",
+			Category:  fmt.Sprintf("mdlint/%s", msg.category),
 			Message:   msg.content,
 			Path:      msg.tok.doc.filename,
 			StartLine: msg.tok.ln,
@@ -126,7 +163,7 @@ func numLinesAndCharsOnLastLine(tok token) (int, int) {
 	return numLines, numCharsOnLastLine
 }
 
-func (r *Reporter) printAsJSON(writer io.Writer) error {
+func (r *RootReporter) printAsJSON(writer io.Writer) error {
 	data, err := json.Marshal(r.messagesToFindingsJSON())
 	if err != nil {
 		return err
@@ -137,7 +174,7 @@ func (r *Reporter) printAsJSON(writer io.Writer) error {
 	return nil
 }
 
-func (r *Reporter) printAsPrettyPrint(writer io.Writer) error {
+func (r *RootReporter) printAsPrettyPrint(writer io.Writer) error {
 	sort.Sort(r.messages)
 	isFirst := true
 	for _, msg := range r.messages {
@@ -165,7 +202,7 @@ func (r *Reporter) printAsPrettyPrint(writer io.Writer) error {
 // Print prints this report to the writer. For instance:
 //
 //     reporter.Print(os.Stderr)
-func (r *Reporter) Print(writer io.Writer) error {
+func (r *RootReporter) Print(writer io.Writer) error {
 	if r.JSONOutput {
 		return r.printAsJSON(writer)
 	}

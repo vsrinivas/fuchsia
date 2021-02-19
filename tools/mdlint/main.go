@@ -16,18 +16,16 @@ import (
 	"strings"
 )
 
-var _ = []lintRuleOverTokens{
-	(*noExtraSpaceOnRight)(nil),
-	(*casingOfAnchors)(nil),
-	(*identifyBadLists)(nil),
-}
+const noExtraSpaceOnRightName = "no-extra-space-on-right"
 
 type noExtraSpaceOnRight struct {
 	defaultLintRuleOverTokens
-	reporter *Reporter
+	reporter Reporter
 
 	lastTok token
 }
+
+var _ lintRuleOverTokens = (*noExtraSpaceOnRight)(nil)
 
 func (rule *noExtraSpaceOnRight) onNext(tok token) {
 	if rule.lastTok.kind == tSpace && tok.kind == tNewline {
@@ -36,10 +34,14 @@ func (rule *noExtraSpaceOnRight) onNext(tok token) {
 	rule.lastTok = tok
 }
 
+const casingOfAnchorsName = "casing-of-anchors"
+
 type casingOfAnchors struct {
 	defaultLintRuleOverTokens
-	reporter *Reporter
+	reporter Reporter
 }
+
+var _ lintRuleOverTokens = (*casingOfAnchors)(nil)
 
 var casingOfAnchorsRe = regexp.MustCompile("{#[a-zA-Z0-9]+([a-zA-Z0-9-]*[a-zA-Z0-9])?}")
 
@@ -51,10 +53,12 @@ func (rule *casingOfAnchors) onNext(tok token) {
 	}
 }
 
+const verifyInternalLinksName = "verify-internal-links"
+
 type verifyInternalLinks struct {
 	defaultLintRuleOverEvents
 
-	reporter *Reporter
+	reporter Reporter
 
 	byXref []token
 	xrefs  map[string]string
@@ -91,23 +95,27 @@ func (rule *verifyInternalLinks) onDocEnd() {
 	rule.xrefs = nil
 }
 
-type identifyBadLists struct {
+const badListsName = "bad-lists"
+
+type badLists struct {
 	defaultLintRuleOverTokens
-	reporter *Reporter
+	reporter Reporter
 
 	buf    [2]token
 	i      int
 	inList bool
 }
 
-func (rule *identifyBadLists) onDocStart(_ *doc) {
+var _ lintRuleOverTokens = (*badLists)(nil)
+
+func (rule *badLists) onDocStart(_ *doc) {
 	var defaultTok token
 	rule.buf[0] = defaultTok
 	rule.buf[1] = defaultTok
 	rule.inList = false
 }
 
-func (rule *identifyBadLists) onNext(tok token) {
+func (rule *badLists) onNext(tok token) {
 	switch tok.kind {
 	case tSpace:
 		return // ignore
@@ -146,22 +154,22 @@ func processOnDoc(filename string, stream io.Reader, rule lintRuleOverTokens) er
 	}
 }
 
-var allRules = map[string]func(reporter *Reporter) (lintRuleOverTokens, lintRuleOverEvents){
-	"no-extra-space-on-right": func(reporter *Reporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return &noExtraSpaceOnRight{reporter: reporter}, nil
+var allRules = map[string]func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents){
+	noExtraSpaceOnRightName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
+		return &noExtraSpaceOnRight{reporter: rootReporter.ForRule(noExtraSpaceOnRightName)}, nil
 	},
-	"casing-of-anchors": func(reporter *Reporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return &casingOfAnchors{reporter: reporter}, nil
+	casingOfAnchorsName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
+		return &casingOfAnchors{reporter: rootReporter.ForRule(casingOfAnchorsName)}, nil
 	},
-	"bad-lists": func(reporter *Reporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return &identifyBadLists{reporter: reporter}, nil
+	badListsName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
+		return &badLists{reporter: rootReporter.ForRule(badListsName)}, nil
 	},
-	"verify-internal-links": func(reporter *Reporter) (lintRuleOverTokens, lintRuleOverEvents) {
-		return nil, &verifyInternalLinks{reporter: reporter}
+	verifyInternalLinksName: func(rootReporter *RootReporter) (lintRuleOverTokens, lintRuleOverEvents) {
+		return nil, &verifyInternalLinks{reporter: rootReporter.ForRule(verifyInternalLinksName)}
 	},
 }
 
-func newLintRule(reporter *Reporter) lintRuleOverTokens {
+func newLintRule(rootReporter *RootReporter) lintRuleOverTokens {
 	var (
 		rulesOverTokens []lintRuleOverTokens
 		rulesOverEvents []lintRuleOverEvents
@@ -171,7 +179,7 @@ func newLintRule(reporter *Reporter) lintRuleOverTokens {
 		if !ok {
 			panic(fmt.Sprintf("unknown rule '%s', should not happen", name))
 		}
-		overTokens, overEvents := instantiator(reporter)
+		overTokens, overEvents := instantiator(rootReporter)
 		if overTokens != nil {
 			rulesOverTokens = append(rulesOverTokens, overTokens)
 		}
@@ -266,7 +274,7 @@ func main() {
 		os.Exit(exitOnError)
 	}
 
-	reporter := Reporter{
+	reporter := RootReporter{
 		JSONOutput: jsonOutput,
 	}
 	rules := newLintRule(&reporter)
