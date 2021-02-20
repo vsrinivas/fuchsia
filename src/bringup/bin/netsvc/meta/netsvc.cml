@@ -57,7 +57,6 @@
         },
         {
             protocol: [
-                "console",
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.Items",
@@ -69,7 +68,6 @@
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.NameProvider",
-                "fuchsia.devicesettings.DeviceSettingsManager",
                 "fuchsia.fshost.Filesystems",
                 "fuchsia.fshost.Registry",
                 "fuchsia.hardware.power.statecontrol.Admin",
@@ -81,7 +79,6 @@
                 "fuchsia.kernel.Stats",
                 "fuchsia.logger.Log",
                 "fuchsia.net.NameLookup",
-                "fuchsia.net.routing.Routing",
                 "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",
@@ -100,7 +97,6 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.update.Manager",
                 "fuchsia.virtualconsole.SessionManager",
             ],
         },
