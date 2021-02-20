@@ -68,6 +68,16 @@ fn get_default_state() -> State {
     state_builder.build()
 }
 
+/// Creates a media stream with the given volume and mute state.
+fn create_media_stream(volume_level: f32, muted: bool) -> AudioStream {
+    AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: volume_level,
+        user_volume_muted: muted,
+    }
+}
+
 /// Verifies that a given state contains only the expected transform in the given target.
 ///
 /// Since property IDs are globally unique and increasing, this is necessary since otherwise, two
@@ -265,24 +275,14 @@ async fn get_and_verify_media_volume(
     // Start task to provide audio info to the handler, which it requests when a get request is
     // received.
     let mut audio_info = default_audio_info();
-    audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: internal_volume_level,
-        user_volume_muted: false,
-    });
+    audio_info.replace_stream(create_media_stream(internal_volume_level, false));
     serve_audio_info_switchboard(env.setting_proxy_receptor.clone(), audio_info.clone());
 
     // Send the get request to the handler.
     let request_transform = env.handler.handle_setting_request(SettingRequest::Get).await;
 
     // Modify the audio info to contain the expected volume level.
-    audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: expected_volume_level,
-        user_volume_muted: false,
-    });
+    audio_info.replace_stream(create_media_stream(expected_volume_level, false));
     assert_eq!(
         request_transform,
         Some(RequestTransform::Result(Ok(Some(SettingInfo::Audio(audio_info)))))
@@ -312,17 +312,12 @@ async fn set_and_verify_media_volume(
     request_volume_level: f32,
     expected_volume_level: f32,
 ) {
-    let initial_stream = AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: request_volume_level,
-        user_volume_muted: false,
-    };
-
-    let mut expected_stream = initial_stream.clone();
-    expected_stream.user_volume_level = expected_volume_level;
-
-    set_and_verify_stream(env, initial_stream, expected_stream).await;
+    set_and_verify_stream(
+        env,
+        create_media_stream(request_volume_level, false),
+        create_media_stream(expected_volume_level, false),
+    )
+    .await;
 }
 
 /// Verifies that the setting proxy in the test environment received a set request with the given
@@ -342,16 +337,7 @@ async fn verify_stream_set(env: &mut TestEnvironment, stream: AudioStream) {
 
 /// Verifies that the setting proxy in the test environment received a set request for media volume.
 async fn verify_media_volume_set(env: &mut TestEnvironment, volume_level: f32) {
-    verify_stream_set(
-        env,
-        AudioStream {
-            stream_type: AudioStreamType::Media,
-            source: AudioSettingSource::User,
-            user_volume_level: volume_level,
-            user_volume_muted: false,
-        },
-    )
-    .await;
+    verify_stream_set(env, create_media_stream(volume_level, false)).await;
 }
 
 /// Verifies that the switchboard in the test environment received a changed notification with the
@@ -565,12 +551,7 @@ async fn test_handler_add_policy_modifies_internal_volume_above_max() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at max volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 1.0,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(1.0, false));
 
     // Set the max volume limit to 60%.
     let max_volume = 0.6;
@@ -589,12 +570,7 @@ async fn test_handler_add_policy_modifies_internal_volume_below_min() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 0%.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.0,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.0, false));
 
     // Set the min volume limit to 40%.
     let min_volume = 0.4;
@@ -612,20 +588,10 @@ async fn test_handler_add_min_limit_unmutes() {
     let starting_volume_level = 0.8;
     let mut starting_audio_info = default_audio_info();
 
-    let expected_stream = AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: starting_volume_level,
-        user_volume_muted: false,
-    };
+    let expected_stream = create_media_stream(starting_volume_level, false);
 
     // Starting audio info has media volume at max volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: starting_volume_level,
-        user_volume_muted: true,
-    });
+    starting_audio_info.replace_stream(create_media_stream(starting_volume_level, true));
 
     // Set a min limit so that the stream is unmuted.
     set_media_volume_limit(&mut env, Transform::Min(starting_volume_level), starting_audio_info)
@@ -643,12 +609,7 @@ async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits()
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 50%.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.5,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.5, false));
 
     // Set the min volume limit to 40%.
     set_media_volume_limit(&mut env, Transform::Min(0.4), starting_audio_info.clone()).await;
@@ -675,12 +636,7 @@ async fn test_handler_remove_policy_notifies_switchboard() {
     let max_volume = 0.6;
 
     // Starting audio info has media volume at 60% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: max_volume,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(max_volume, false));
 
     serve_audio_info(
         env.core_messenger_factory.clone(),
@@ -722,12 +678,7 @@ async fn test_handler_lowest_max_limit_applies_internally() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at max volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 1.0,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(1.0, false));
 
     // Add a policy transform to limit the max media volume to 60%.
     let max_volume = 0.6;
@@ -737,12 +688,7 @@ async fn test_handler_lowest_max_limit_applies_internally() {
     verify_media_volume_set(&mut env, max_volume).await;
 
     // Internal audio level should now be at 60%.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: max_volume,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(max_volume, false));
 
     // Add a higher limit, which won't result in a new set request.
     set_media_volume_limit(&mut env, Transform::Max(0.7), starting_audio_info.clone()).await;
@@ -764,12 +710,7 @@ async fn test_handler_highest_min_limit_applies_internally() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 0% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.0,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.0, false));
 
     // Add a policy transform to limit the min media volume to 30%.
     let min_volume = 0.3;
@@ -779,12 +720,7 @@ async fn test_handler_highest_min_limit_applies_internally() {
     verify_media_volume_set(&mut env, min_volume).await;
 
     // Internal audio level should now be at 30%.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: min_volume,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(min_volume, false));
 
     // Add a lower limit, which won't result in a new set request.
     set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info.clone()).await;
@@ -826,12 +762,7 @@ async fn test_handler_max_volume_policy_scales_external_sets() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at max volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 1.0,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(1.0, false));
 
     // Set the max volume limit to 60%.
     let max_volume = 0.6;
@@ -860,12 +791,7 @@ async fn test_handler_min_volume_policy_scales_external_sets() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 0% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.0,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.0, false));
 
     // Set the min volume limit to 60%.
     let min_volume = 0.2;
@@ -891,12 +817,7 @@ async fn test_handler_min_volume_policy_prevents_mute() {
     let mut env = create_handler_test_environment().await;
 
     let mut starting_audio_info = default_audio_info();
-    let starting_stream = AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.5,
-        user_volume_muted: false,
-    };
+    let starting_stream = create_media_stream(0.5, false);
     starting_audio_info.replace_stream(starting_stream);
 
     // Set a min volume limit so the stream can't be muted.
@@ -919,12 +840,7 @@ async fn test_handler_min_and_max_volume_policy_scales_external_volume() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 50% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.5,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.5, false));
 
     // Set the max volume limit to 80%.
     let max_volume = 0.8;
@@ -976,12 +892,7 @@ async fn test_handler_max_volume_policy_scales_gets() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 50% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.5,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.5, false));
 
     // Set the max volume limit to 60%.
     let max_volume = 0.6;
@@ -1011,12 +922,7 @@ async fn test_handler_min_volume_policy_scales_gets() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 50% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.5,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.5, false));
 
     // Set the max volume limit to 60%.
     set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
@@ -1040,12 +946,7 @@ async fn test_handler_min_and_max_volume_policy_scales_gets() {
     let mut starting_audio_info = default_audio_info();
 
     // Starting audio info has media volume at 50% volume.
-    starting_audio_info.replace_stream(AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: 0.5,
-        user_volume_muted: false,
-    });
+    starting_audio_info.replace_stream(create_media_stream(0.5, false));
 
     // Set the max volume limit to 80%.
     let max_volume = 0.8;
@@ -1079,13 +980,7 @@ async fn test_handler_transforms_setting_events() {
     let mut starting_audio_info = default_audio_info();
 
     let max_volume = 0.6;
-
-    let starting_audio_stream = AudioStream {
-        stream_type: AudioStreamType::Media,
-        source: AudioSettingSource::User,
-        user_volume_level: max_volume,
-        user_volume_muted: false,
-    };
+    let starting_audio_stream = create_media_stream(max_volume, false);
 
     // Starting audio info has user volume at 60% volume.
     starting_audio_info.replace_stream(starting_audio_stream.clone());
