@@ -20,7 +20,7 @@ struct syscall_result {
   uint64_t is_signaled;
 };
 
-struct syscall_result unknown_syscall(uint64_t ip, uint64_t syscall_num);
+struct syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip);
 
 __END_CDECLS
 

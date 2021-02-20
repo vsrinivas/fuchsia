@@ -334,9 +334,12 @@ FUNCTION_LABEL(x86_syscall)
     lfence
     jmp     *%r11
 .Lunknown_syscall:
-    pre_0_args
+    pre_push 0
+    mov %rax, %rdi // move the syscall number into the 0 arg slot
+    mov %rcx, %rsi // pc into arg 1
     call    unknown_syscall
-    post_0_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
 
 .Lcleanup_and_return:
 

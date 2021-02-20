@@ -127,7 +127,7 @@ void threads_bad_syscall_fn(void* arg_) {
 #if defined(__aarch64__)
   __asm__ volatile("mov x16, %0\nsvc #0" : : "r" (syscall_number));
 #elif defined(__x86_64__)
-  __asm__ volatile("mov %0, %%rax\nsyscall" : : "r" (syscall_number));
+  __asm__ volatile("syscall" : : "rax" (syscall_number));
 #else
 #error Not supported on this platform.
 #endif

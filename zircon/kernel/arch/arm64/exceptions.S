@@ -440,8 +440,8 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     SPECULATION_POSTFENCE
 
 .Lunknown_syscall:
-    mov x0, x10 // pc into arg 0
-    mov x1, x16 // move the syscall number into the 1 arg slot
+    mov x0, x16 // move the syscall number into the 0 arg slot
+    mov x1, x10 // pc into arg 1
     bl  unknown_syscall
     // fall through
 

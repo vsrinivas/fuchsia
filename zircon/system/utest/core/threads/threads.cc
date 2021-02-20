@@ -861,12 +861,9 @@ static void jump_to_thread_exit(zx_handle_t thread) {
             ZX_OK);
 }
 
-TEST(Threads, BadSyscall) {
+static void test_bad_syscall(bad_syscall_arg arg) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
-
-  bad_syscall_arg arg = {};
-  arg.syscall_number = 42;
 
   ASSERT_OK(zx_event_create(0, &arg.event));
   ASSERT_TRUE(start_thread(threads_bad_syscall_fn, &arg, &thread, &thread_h));
@@ -898,6 +895,16 @@ TEST(Threads, BadSyscall) {
   // Clean up.
   ASSERT_OK(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr));
   ASSERT_OK(zx_handle_close(thread_h));
+}
+
+TEST(Threads, BadSyscall) {
+  bad_syscall_arg arg = {};
+  // Test both valid and invalid syscall numbers. The invalid syscall number should fail anyway
+  // because the call is not made from the VDSO.
+  arg.syscall_number = 1;
+  test_bad_syscall(arg);
+  arg.syscall_number = 10000;
+  test_bad_syscall(arg);
 }
 
 static void port_wait_for_signal(zx_handle_t port, zx_handle_t thread, zx_time_t deadline,
