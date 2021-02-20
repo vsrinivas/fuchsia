@@ -44,7 +44,8 @@ int main(int argc, char** argv) {
   }
 
   if (argc < 3) {
-    FidlTemperature::Device::SyncClient client(std::move(local));
+    FidlTemperature::Device::SyncClient client(
+        fidl::ClientEnd<FidlTemperature::Device>(std::move(local)));
 
     auto response = client.GetTemperatureCelsius();
     if (response.ok()) {
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
       }
     }
   } else {
-    FidlAdc::Device::SyncClient client(std::move(local));
+    FidlAdc::Device::SyncClient client(fidl::ClientEnd<FidlAdc::Device>(std::move(local)));
     if (strcmp(argv[2], "resolution") == 0) {
       auto response = client.GetResolution();
       if (response.ok()) {
