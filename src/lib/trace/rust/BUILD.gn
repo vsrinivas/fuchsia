@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_staticlib.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("trace") {
   name = "fuchsia_trace"
@@ -65,21 +65,22 @@ test("rust_cpp_test") {
   ]
 }
 
-unittest_package("rust-trace-test") {
-  deps = [
-    ":rust_cpp_test",
-    ":trace_test",
+fuchsia_unittest_component("fuchsia_trace_lib_test_component") {
+  deps = [ ":trace_test" ]
+}
+
+fuchsia_unittest_component("rust_cpp_test_component") {
+  deps = [ ":rust_cpp_test" ]
+}
+
+fuchsia_test_package("rust-trace-test") {
+  test_components = [
+    ":rust_cpp_test_component",
+    ":fuchsia_trace_lib_test_component",
   ]
-  tests = [
-    {
-      name = "fuchsia_trace_lib_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "rust_cpp_test"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 group("tests") {

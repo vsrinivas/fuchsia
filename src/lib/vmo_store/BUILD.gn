@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("vmo_store") {
   sources = [
@@ -39,15 +39,11 @@ executable("test_bin") {
   ]
 }
 
-unittest_package("vmo-store-test") {
+fuchsia_unittest_package("vmo-store-test") {
   deps = [ ":test_bin" ]
-
-  tests = [
-    {
-      name = "vmo-store-test"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
 
 group("tests") {
