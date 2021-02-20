@@ -88,6 +88,16 @@ declare_args() {
 #      production_safe (optional, boolean, default: false)
 #        If not set to true, the flavor is marked with
 #        //build/validate:non_production_tag
+#      debug_archive (optional)
+#        Path to archive containing a .build-id directory for this flavor
+#
+#  package_name (optional)
+#    Name of the prebuilt package, defaults to template's target name
+#
+#  selections (optional; scope)
+#    The package_flavor_selections, if and only if the caller of the template
+#    has logic that attempts to change the flavor based on other build args.
+#    This is not the preferred mechanism, but may be used in some cases.
 #
 #  deps (optional)
 #  testonly (optional)
@@ -101,12 +111,19 @@ template("prebuilt_package_with_flavors") {
   assert(defined(invoker.default), "A default flavor must be specified")
   flavor_name_to_use = invoker.default
 
-  # Since we can't index into a scope by a variable, the
-  # package_flavor_selections build arg is a list that's walked,
-  # looking for an entry that matches this invocation of the
+  # If the invoker has modified and passed-in the package_flavor_selections
+  # list, use that instead of the one from GN args.
+  if (defined(invoker.selections)) {
+    flavor_selections = invoker.selections
+  } else {
+    flavor_selections = package_flavor_selections
+  }
+
+  # Since we can't index into a scope by a variable, flavor_selections is a list
+  # that's walked, looking for an entry that matches this invocation of the
   # template.  If multiple entries in the list match, the last one wins
   # (which is the same result as if it was key=value pairs in a scope).
-  foreach(selection, package_flavor_selections) {
+  foreach(selection, flavor_selections) {
     assert(defined(selection.name),
            "package flavor selections need to have a `name`")
     assert(
@@ -149,7 +166,9 @@ template("prebuilt_package_with_flavors") {
                              "deps",
                              "testonly",
                              "visibility",
+                             "package_name",
                            ])
+    forward_variables_from(flavor_to_use, [ "debug_archive" ])
 
     # setup the non-production-safe status of the package
     if (!production_safe) {
