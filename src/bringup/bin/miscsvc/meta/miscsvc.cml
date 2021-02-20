@@ -48,9 +48,6 @@
 
                 // Builtin service
                 "fuchsia.process.Launcher",
-
-                // Services from sysinfo
-                "fuchsia.sysinfo.SysInfo",
             ],
         },
     ],
