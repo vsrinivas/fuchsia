@@ -235,8 +235,8 @@ TEST(Index, FindFilePrefixes) {
 // Enable and substitute a path on your system to dump the index for a DWARF file.
 #if 0
 TEST(Index, DumpIndex) {
-  TestSymbolModule setup("chrome", "test");
-  ASSERT_TRUE(setup.Init(false).ok());
+  TestSymbolModule setup("/path/to/symbol/file/goes.here", "test");
+  ASSERT_TRUE(setup.Init("", false).ok());
 
   Index index;
   index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
@@ -244,7 +244,7 @@ TEST(Index, DumpIndex) {
   std::cout << index.main_functions().size() << " main function(s) found.\n\n";
 
   std::cout << "Symbol index dump:\n";
-  index.root().Dump(std::cout, module->symbol_factory(), 1);
+  index.root().Dump(std::cout, setup.symbols()->symbol_factory(), 1);
 
   std::cout << "File index dump:\n";
   index.DumpFileIndex(std::cout);
@@ -271,7 +271,7 @@ TEST(Index, BenchmarkIndexing) {
   int64_t begin_us = GetTickMicroseconds();
 
   TestSymbolModule setup(kFileName, "");
-  ASSERT_TRUE(setup.Init(false).ok());
+  ASSERT_TRUE(setup.Init("", false).ok());
 
   int64_t load_complete_us = GetTickMicroseconds();
 
