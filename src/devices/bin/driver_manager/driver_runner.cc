@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/status.h>
@@ -142,7 +143,7 @@ Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispat
       offers_(std::move(offers)),
       symbols_(std::move(symbols)) {}
 
-Node::~Node() { Unbind(); }
+Node::~Node() { UnbindAndReset(controller_binding_); }
 
 const std::string& Node::name() const { return name_; }
 
@@ -175,7 +176,7 @@ void Node::Unbind() {
 }
 
 void Node::Remove() {
-  // Create list of nodes to iterate.
+  // Create list of nodes to unbind.
   std::stack<Node*> stack{{this}};
   std::vector<Node*> nodes;
   std::unordered_set<Node*> unique_nodes;
@@ -193,12 +194,36 @@ void Node::Remove() {
     }
   }
 
+  bool is_bound = binding_.has_value();
   // Traverse list of nodes in reverse order in order to unbind depth-first.
+  // Note: Unbind() both unbinds and resets the optional binding value. This
+  // means that subsequent calls from children removing their own child nodes
+  // are no-ops.
   for (auto node = nodes.rbegin(), end = nodes.rend(); node != end; ++node) {
     (*node)->Unbind();
   }
   if (parent_ != nullptr) {
-    parent_->children_.erase(*this);
+    if (is_bound) {
+      // Remove() is only called in response to a FIDL server being unbound.
+      // This can happen implicitly, when the underlying channel is closed, or
+      // explicitly, through a call to Remove() over FIDL (see method below).
+      //
+      // When this occurs, the node that FIDL is operating on contains a valid
+      // server binding, and is therefore the root of a sub-tree being removed.
+      //
+      // To safely remove all of the children of the node, we need to tell all
+      // FIDL bindings to unbind themselves. However, this also means we need to
+      // delay erasing of the root node of a sub-tree until all of its children
+      // have erased themselves first, therefore avoiding a use-after-free.
+      //
+      // We can achieve this by delaying the removal of a node by posting it
+      // onto the dispatcher, where all the unbind operations are occuring in
+      // FIFO order.
+      async::PostTask(dispatcher_, [this] { parent_->children_.erase(*this); });
+    } else {
+      // Otherwise, we are free to erase this node from its parent.
+      parent_->children_.erase(*this);
+    }
   }
 }
 

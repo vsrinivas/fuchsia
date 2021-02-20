@@ -24,6 +24,7 @@ namespace fio = fuchsia::io;
 namespace frunner = llcpp::fuchsia::component::runner;
 namespace fsys = fuchsia::sys2;
 
+using namespace testing;
 using namespace inspect::testing;
 
 class fake_context : public fit::context {
@@ -39,19 +40,15 @@ class fake_context : public fit::context {
   }
 };
 
-template <size_t constant>
 class UnbindWatcher : public frunner::ComponentController::AsyncEventHandler {
  public:
-  UnbindWatcher(size_t* last, size_t* total) : last_(last), total_(total) {}
+  UnbindWatcher(size_t index, std::vector<size_t>& indices) : index_(index), indices_(indices) {}
 
-  void Unbound(fidl::UnbindInfo) override {
-    *last_ = constant;
-    *total_ += 1;
-  }
+  void Unbound(fidl::UnbindInfo) override { indices_.emplace_back(index_); }
 
  private:
-  size_t* const last_;
-  size_t* const total_;
+  const size_t index_;
+  std::vector<size_t>& indices_;
 };
 
 class TestRealm : public fsys::testing::Realm_TestBase {
@@ -679,6 +676,77 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
 }
 
+// Start a chain of drivers, and then unbind the second driver's node.
+TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
+  DriverIndex driver_index([](auto args) -> zx::status<MatchResult> {
+    std::string name(args.name().data(), args.name().size());
+    return zx::ok(MatchResult{
+        .url = "fuchsia-boot:///#meta/" + name + "-driver.cm",
+        .matched_args = std::move(args),
+    });
+  });
+  DriverRunner driver_runner(ConnectToRealm(), &driver_index, inspector(), loop().dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  fdf::NodePtr root_node;
+  driver_host().SetStartHandler([this, &root_node](fdf::DriverStartArgs start_args, auto driver) {
+    realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
+    realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
+      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+    });
+
+    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("node-0");
+    fdf::NodeControllerPtr node_controller;
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
+  });
+  auto root_driver = StartRootDriver("root", &driver_runner);
+  ASSERT_TRUE(root_driver.is_ok());
+
+  constexpr size_t kMaxNodes = 10;
+  std::vector<fdf::NodePtr> nodes;
+  std::vector<zx::channel> drivers;
+  for (size_t i = 1; i <= kMaxNodes; i++) {
+    driver_host().SetStartHandler([this, &nodes, i](fdf::DriverStartArgs start_args, auto driver) {
+      realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
+      realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      });
+
+      auto& node = nodes.emplace_back();
+      EXPECT_EQ(ZX_OK, node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+      // Only add a node that a driver will be bound to.
+      if (i != kMaxNodes) {
+        fdf::NodeAddArgs args;
+        args.set_name("node-" + std::to_string(i));
+        fdf::NodeControllerPtr node_controller;
+        node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
+      }
+    });
+
+    StartDriverHost("driver_hosts", "driver_host-" + std::to_string(i * 2 + 1));
+    drivers.emplace_back(
+        StartDriver(&driver_runner,
+                    {
+                        .url = "fuchsia-boot:///#meta/node-" + std::to_string(i - 1) + "-driver.cm",
+                        .binary = "driver/driver.so",
+                    }));
+  }
+
+  // Unbinding the second node stops all drivers bound in the sub-tree, in a
+  // depth-first order.
+  std::vector<size_t> indices;
+  std::vector<fidl::Client<frunner::ComponentController>> clients;
+  for (auto& driver : drivers) {
+    clients.emplace_back(std::move(driver), loop().dispatcher(),
+                         std::make_shared<UnbindWatcher>(clients.size() + 1, indices));
+  }
+  nodes.front().Unbind();
+  loop().RunUntilIdle();
+  EXPECT_THAT(indices, ElementsAre(10, 9, 8, 7, 6, 5, 4, 3, 2, 1));
+}
+
 // Start the second driver, and then unbind the root node.
 TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   auto driver_index = CreateDriverIndex();
@@ -715,17 +783,15 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
                                   });
 
   // Unbinding the root node stops all drivers.
-  size_t last = 0, total = 0;
+  std::vector<size_t> indices;
   fidl::Client<frunner::ComponentController> root_client(
       std::move(root_driver.value()), loop().dispatcher(),
-      std::make_shared<UnbindWatcher<1>>(&last, &total));
+      std::make_shared<UnbindWatcher>(0, indices));
   fidl::Client<frunner::ComponentController> second_client(
-      std::move(second_driver), loop().dispatcher(),
-      std::make_shared<UnbindWatcher<2>>(&last, &total));
+      std::move(second_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(1, indices));
   root_node.Unbind();
   loop().RunUntilIdle();
-  EXPECT_EQ(1u, last);
-  EXPECT_EQ(2u, total);
+  EXPECT_THAT(indices, ElementsAre(1, 0));
 }
 
 // Start the second driver, and then stop the root driver.
@@ -761,17 +827,15 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
                                   });
 
   // Stopping the root driver stops all drivers.
-  size_t last = 0, total = 0;
+  std::vector<size_t> indices;
   fidl::Client<frunner::ComponentController> root_client(
       std::move(root_driver.value()), loop().dispatcher(),
-      std::make_shared<UnbindWatcher<1>>(&last, &total));
+      std::make_shared<UnbindWatcher>(0, indices));
   fidl::Client<frunner::ComponentController> second_client(
-      std::move(second_driver), loop().dispatcher(),
-      std::make_shared<UnbindWatcher<2>>(&last, &total));
+      std::move(second_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(1, indices));
   root_client->Stop();
   loop().RunUntilIdle();
-  EXPECT_EQ(1u, last);
-  EXPECT_EQ(2u, total);
+  EXPECT_THAT(indices, ElementsAre(1, 0));
 }
 
 // Start a driver and inspect the driver runner.
