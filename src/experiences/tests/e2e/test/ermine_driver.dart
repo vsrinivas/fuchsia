@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -16,6 +17,9 @@ const _chromeDriverPath = 'runtime_deps/chromedriver';
 const ermineUrl = 'fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx';
 const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
+
+/// Defines a completion function that can be waited on with a timout.
+typedef WaitForCompletion<T> = Future<T> Function();
 
 /// Defines a test utility class to drive Ermine during integration test using
 /// Flutter Driver. This utility will grow with more convenience methods in the
@@ -350,5 +354,21 @@ class ErmineDriver {
     } else {
       return '$file.png';
     }
+  }
+
+  /// A helper function to wait for completion of a computation within timeout.
+  Future<T> waitFor<T>(WaitForCompletion<T> completion,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    final completer = Completer<T>();
+    final end = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(end)) {
+      final result = await completion();
+      if (result == null || result is bool && result == false) {
+        continue;
+      }
+      completer.complete(result);
+      break;
+    }
+    return completer.future;
   }
 }

@@ -49,15 +49,25 @@ void main() {
 
   Future<bool> _waitForInstances(String componentUrl, int instances,
       {Duration timeout = const Duration(seconds: 30)}) async {
-    final end = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(end)) {
+    return ermine.waitFor(() async {
       var components = await ermine.component.list();
-      if (components.where((e) => e.contains(componentUrl)).length ==
-          instances) {
-        return true;
+      return components.where((e) => e.contains(componentUrl)).length ==
+          instances;
+    }, timeout: timeout);
+  }
+
+  Future<List<Map<String, dynamic>>> _waitForViews(
+      String componentUrl, int instances,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    return ermine.waitFor(() async {
+      var views = (await ermine.launchedViews())
+          .where((view) => view['url'] == componentUrl)
+          .toList();
+      if (views.length == instances) {
+        return views;
       }
-    }
-    return false;
+      return null;
+    }, timeout: timeout);
   }
 
   test('Launch and close three terminal instances', () async {
@@ -71,18 +81,14 @@ void main() {
     // Close first instance using keyboard shortcut.
     // TODO(http://fxb/66076): Replace action with shortcut when implemented.
     await ermine.driver.requestData('close');
-    var views = await ermine.launchedViews();
-    var terminalViews = views.where((view) => view['url'] == componentUrl);
-    expect(terminalViews.length, 2);
-    expect(terminalViews.last['focused'], isTrue);
+    var views = await _waitForViews(componentUrl, 2);
+    expect(views.last['focused'], isTrue);
     expect(await _waitForInstances(componentUrl, 2), isTrue);
 
     // Close second instance clicking the close button on view title bar.
     await ermine.driver.tap(find.byValueKey('close'));
-    views = await ermine.launchedViews();
-    terminalViews = views.where((view) => view['url'] == componentUrl);
-    expect(terminalViews.length, 1);
-    expect(terminalViews.last['focused'], isTrue);
+    views = await _waitForViews(componentUrl, 1);
+    expect(views.last['focused'], isTrue);
     expect(await _waitForInstances(componentUrl, 1), isTrue);
 
     // Close the third instance by injecting 'exit\n'.
