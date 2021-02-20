@@ -2635,6 +2635,32 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 From //build/images/args.gni:122
 
+### package_flavor_selections
+Used to configure the set of package flavors desired.
+
+Usage:
+
+ package_flavor_selections = [
+   {
+     name = "snazzy"
+     flavor = "with_hooks"
+   },
+   {
+     name = "some_other_package"
+     flavor = "some_other_flavor"
+   },
+ ]
+
+The above specifies that the package "snazzy" should use the
+"with_hooks" flavor, and that "some_other_package" should use
+the "some_other_flavor" flavor instead of their default flavor
+all other packages using this template would use their default
+package flavors.
+
+**Current value (from the default):** `[]`
+
+From //build/packages/prebuilt_package_with_flavors.gni:29
+
 ### persist_logs
 
 **Current value (from the default):** `false`
