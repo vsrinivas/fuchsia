@@ -39,7 +39,7 @@ async fn base_resolver_appmgr_bridge_test() {
 
     // Subscribe to events and begin execution of component manager
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
 
@@ -47,13 +47,8 @@ async fn base_resolver_appmgr_bridge_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
     // // Expect start to succeed because we're using the appmgr loader
-    let event = EventMatcher::ok()
-        .moniker("./echo_server:0")
-        .expect_match::<Started>(&mut event_stream)
-        .await;
-    event.resume().await.unwrap();
+    EventMatcher::ok().moniker("./echo_server:0").expect_match::<Started>(&mut event_stream).await;
 }
