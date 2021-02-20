@@ -27,12 +27,7 @@ namespace pci {
 
 class PciBusTests : public zxtest::Test {
  public:
-  PciBusTests() : pciroot_(0, 1) {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_PCIROOT,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(pciroot_.proto())};
-    bind_.SetProtocols(std::move(protocols));
-  }
+  PciBusTests() : pciroot_(0, 1) { bind_.SetProtocol(ZX_PROTOCOL_PCIROOT, pciroot_.proto()); }
 
  protected:
   // Sets up 5 devices, including two under a bridge.

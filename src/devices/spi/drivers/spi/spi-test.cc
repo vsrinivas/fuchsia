@@ -25,11 +25,8 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
                        public ddk::SpiImplProtocol<FakeDdkSpiImpl, ddk::base_protocol> {
  public:
   explicit FakeDdkSpiImpl() {
-    fbl::AllocChecker ac;
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new (&ac) fake_ddk::ProtocolEntry[1](), 1);
-    ASSERT_TRUE(ac.check());
-    protocols[0] = {ZX_PROTOCOL_SPI_IMPL, {&spi_impl_protocol_ops_, this}};
-    SetProtocols(std::move(protocols));
+    fake_ddk::Protocol proto = {&spi_impl_protocol_ops_, this};
+    SetProtocol(ZX_PROTOCOL_SPI_IMPL, &proto);
     SetMetadata(DEVICE_METADATA_SPI_CHANNELS, &kSpiChannels, sizeof(kSpiChannels));
     SetMetadata(DEVICE_METADATA_PRIVATE, &kTestBusId, sizeof(kTestBusId));
   }

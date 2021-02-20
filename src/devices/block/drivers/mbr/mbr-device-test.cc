@@ -71,14 +71,7 @@ class MbrDeviceTest : public zxtest::Test {
  public:
   MbrDeviceTest() {}
 
-  void Init() {
-    fbl::AllocChecker ac;
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new (&ac) fake_ddk::ProtocolEntry[1](), 1);
-    ASSERT_TRUE(ac.check());
-    protocols[0] = {ZX_PROTOCOL_BLOCK,
-                    {fake_block_device_.proto()->ops, fake_block_device_.proto()->ctx}};
-    ddk_.SetProtocols(std::move(protocols));
-  }
+  void Init() { ddk_.SetProtocol(ZX_PROTOCOL_BLOCK, fake_block_device_.proto()); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(MbrDeviceTest);
 

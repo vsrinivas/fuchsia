@@ -161,9 +161,7 @@ class FakeDdkSysmem : public zxtest::Test {
  public:
   void SetUp() override {
     pdev_.UseFakeBti();
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
     EXPECT_EQ(sysmem_.Bind(), ZX_OK);
   }
 
@@ -203,10 +201,8 @@ class FakeDdkSysmemPbus : public FakeDdkSysmem {
  public:
   void SetUp() override {
     pdev_.UseFakeBti();
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
-    protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
+    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
     EXPECT_EQ(sysmem_.Bind(), ZX_OK);
   }
 

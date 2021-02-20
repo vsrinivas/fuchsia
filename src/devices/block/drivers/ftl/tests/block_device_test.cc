@@ -173,9 +173,7 @@ TEST(BlockDeviceTest, DdkLifetime) {
 
   FakeNand nand;
   fake_ddk::Bind ddk;
-  fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-  protocols[0] = {ZX_PROTOCOL_NAND, {nand.proto()->ops, nand.proto()->ctx}};
-  ddk.SetProtocols(std::move(protocols));
+  ddk.SetProtocol(ZX_PROTOCOL_NAND, nand.proto());
 
   ASSERT_OK(device->Bind());
   device->DdkAsyncRemove();

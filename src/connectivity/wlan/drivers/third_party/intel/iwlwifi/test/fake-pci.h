@@ -95,12 +95,8 @@ class FakePci {
 class FakePcieDdkTester : public fake_ddk::Bind {
  public:
   FakePcieDdkTester() : fake_ddk::Bind() {
-    // PCI is the only protocol of interest here, so we create and pass an
-    // fbl:Array of size 1.
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_PCI,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(fake_pci_.GetProto())};
-    SetProtocols(std::move(protocols));
+    // PCI is the only protocol of interest here.
+    SetProtocol(ZX_PROTOCOL_PCI, fake_pci_.GetProto());
   }
 
   wlan::iwlwifi::PcieDevice* dev() { return dev_; }

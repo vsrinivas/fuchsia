@@ -105,12 +105,7 @@ class FakeSerial : public ddk::SerialImplProtocol<FakeSerial> {
 
 class FtdiI2cTest : public zxtest::Test {
  public:
-  void SetUp() override {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_SERIAL_IMPL,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(serial_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
-  }
+  void SetUp() override { ddk_.SetProtocol(ZX_PROTOCOL_SERIAL_IMPL, serial_.proto()); }
 
  protected:
   FtdiI2c FtdiBasicInit(void) {

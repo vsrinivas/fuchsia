@@ -187,12 +187,7 @@ class AmlUartHarness : public zxtest::Test {
     ddk_.SetMetadata(DEVICE_METADATA_SERIAL_PORT_INFO, &kSerialInfo, sizeof(kSerialInfo));
 
     state_.set_irq_signaller(pdev_.CreateVirtualInterrupt(0));
-
-    {
-      fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-      protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
-      ddk_.SetProtocols(std::move(protocols));
-    }
+    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
     auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, pdev_.proto(), kSerialInfo,
                                                   state_.GetMmio());
     zx_status_t status = uart->Init();

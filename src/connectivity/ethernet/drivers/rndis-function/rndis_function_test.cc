@@ -160,16 +160,8 @@ class FakeEthernetInterface : public ddk::EthernetIfcProtocol<FakeEthernetInterf
 class RndisFunctionTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ddk_ = std::make_unique<fake_ddk::Bind>();
-
-    {
-      fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1](), 1);
-      protocols[0] = {ZX_PROTOCOL_USB_FUNCTION,
-                      {function_.Protocol()->ops, function_.Protocol()->ctx}};
-      ddk_->SetProtocols(std::move(protocols));
-    }
-
-    ddk_->SetMetadata(DEVICE_METADATA_MAC_ADDRESS, mac_addr_.data(), mac_addr_.size());
+    ddk_.SetProtocol(ZX_PROTOCOL_USB_FUNCTION, function_.Protocol());
+    ddk_.SetMetadata(DEVICE_METADATA_MAC_ADDRESS, mac_addr_.data(), mac_addr_.size());
 
     device_ = std::make_unique<RndisFunction>(/*parent=*/fake_ddk::FakeParent());
     device_->Bind();
@@ -178,9 +170,9 @@ class RndisFunctionTest : public zxtest::Test {
   void TearDown() override {
     auto device = device_.release();
     device->DdkAsyncRemove();
-    ASSERT_OK(ddk_->WaitUntilRemove());
+    ASSERT_OK(ddk_.WaitUntilRemove());
     device->DdkRelease();
-    EXPECT_TRUE(ddk_->Ok());
+    EXPECT_TRUE(ddk_.Ok());
   }
 
   static constexpr std::array<uint8_t, ETH_MAC_SIZE> mac_addr_ = {0x01, 0x23, 0x34,
@@ -289,7 +281,7 @@ class RndisFunctionTest : public zxtest::Test {
     ASSERT_EQ(status.status, expected_status);
   }
 
-  std::unique_ptr<fake_ddk::Bind> ddk_;
+  fake_ddk::Bind ddk_;
   std::unique_ptr<RndisFunction> device_;
   FakeFunction function_;
   FakeEthernetInterface ifc_;
@@ -298,7 +290,7 @@ class RndisFunctionTest : public zxtest::Test {
 TEST_F(RndisFunctionTest, Suspend) {
   ddk::SuspendTxn txn(device_->zxdev(), 0, 0, 0);
   device_->DdkSuspend(std::move(txn));
-  ddk_->WaitUntilSuspend();
+  ddk_.WaitUntilSuspend();
 }
 
 TEST_F(RndisFunctionTest, Configure) {

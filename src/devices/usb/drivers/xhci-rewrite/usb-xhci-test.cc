@@ -426,11 +426,9 @@ class XhciMmioHarness : public XhciHarness {
     pdev_.set_mmio(0, fake_device_.mmio_info());
     fake_device_.set_irq_signaller(pdev_.CreateVirtualInterrupt(0));
     pdev_.UseFakeBti();
-    {
-      fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-      protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
-      ddk_.SetProtocols(std::move(protocols));
-    }
+
+    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
+
     auto dev = std::make_unique<UsbXhci>(fake_ddk::kFakeParent, ddk_fake::CreateBufferFactory());
     dev->set_test_harness(this);
     dev->DdkAdd("xhci");  // This will also call DdkInit.

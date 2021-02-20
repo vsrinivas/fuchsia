@@ -173,12 +173,7 @@ class FakeImx227Device : public Imx227Device {
 
 class Imx227DeviceTest : public zxtest::Test {
  public:
-  Imx227DeviceTest() : dut_() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_CAMERA_SENSOR2,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(dut_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
-  }
+  Imx227DeviceTest() : dut_() { ddk_.SetProtocol(ZX_PROTOCOL_CAMERA_SENSOR2, dut_.proto()); }
 
   void SetUp() override {
     dut_.ExpectInit();

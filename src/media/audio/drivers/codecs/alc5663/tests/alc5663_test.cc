@@ -284,10 +284,8 @@ FakeAlc5663Hardware CreateFakeAlc5663() {
   //
   // Set up a fake parent I2C bus which exposes to the driver a way to talk to
   // the fake hardware.
-  i2c_protocol_t protocol = result.codec->GetProto();
-  fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-  protocols[0] = {ZX_PROTOCOL_I2C, {/*ops=*/protocol.ops, /*ctx=*/protocol.ctx}};
-  result.fake_ddk->SetProtocols(std::move(protocols));
+  auto proto = result.codec->GetProto();
+  result.fake_ddk->SetProtocol(ZX_PROTOCOL_I2C, &proto);
 
   // Expose the parent device.
   result.parent = fake_ddk::kFakeParent;

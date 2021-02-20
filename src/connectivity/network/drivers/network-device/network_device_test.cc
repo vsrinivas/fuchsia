@@ -58,16 +58,13 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
   }
 
   zx_status_t CreateDevice(bool with_mac = false) {
-    auto proto_count = with_mac ? 2 : 1;
-    auto protos = new fake_ddk::ProtocolEntry[proto_count];
-    auto device_proto = device_impl_.proto();
-    protos[0] = {ZX_PROTOCOL_NETWORK_DEVICE_IMPL, {device_proto.ops, device_proto.ctx}};
+    auto proto = device_impl_.proto();
+    SetProtocol(ZX_PROTOCOL_NETWORK_DEVICE_IMPL, &proto);
     if (with_mac) {
-      auto mac_proto = mac_impl_.proto();
-      protos[1] = {ZX_PROTOCOL_MAC_ADDR_IMPL, {mac_proto.ops, mac_proto.ctx}};
+      auto proto = mac_impl_.proto();
+      SetProtocol(ZX_PROTOCOL_MAC_ADDR_IMPL, &proto);
     }
 
-    SetProtocols(fbl::Array<fake_ddk::ProtocolEntry>(protos, proto_count));
     return NetworkDevice::Create(nullptr, fake_ddk::kFakeParent);
   }
 

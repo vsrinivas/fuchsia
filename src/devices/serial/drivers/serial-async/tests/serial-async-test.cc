@@ -127,12 +127,7 @@ class FakeSerialImpl : public ddk::SerialImplAsyncProtocol<FakeSerialImpl, ddk::
 
 class SerialTester {
  public:
-  SerialTester() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_SERIAL_IMPL_ASYNC,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(serial_impl_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
-  }
+  SerialTester() { ddk_.SetProtocol(ZX_PROTOCOL_SERIAL_IMPL_ASYNC, serial_impl_.proto()); }
 
   fake_ddk::Bind& ddk() { return ddk_; }
   FakeSerialImpl& serial_impl() { return serial_impl_; }

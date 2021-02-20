@@ -75,12 +75,9 @@ struct AudioStreamInTest : public zxtest::Test {
     pdev_.set_mmio(1, mmio_.mmio_info());
     pdev_.UseFakeBti();
 
-    static constexpr size_t kNumBindProtocols = 1;
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
-                                                  kNumBindProtocols);
-    protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    tester_.SetProtocols(std::move(protocols));
+    tester_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
   }
+
   void TestMasks(uint8_t number_of_channels, uint64_t channels_to_use_bitmask,
                  uint8_t channels_mask, uint8_t mute_mask) {
     auto metadata = GetDefaultMetadata();

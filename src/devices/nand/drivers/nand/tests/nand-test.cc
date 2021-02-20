@@ -124,10 +124,7 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
 class NandTest : public zxtest::Test {
  public:
   NandTest() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_RAW_NAND,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(raw_nand_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_RAW_NAND, raw_nand_.proto());
     ddk_.SetSize(kPageSize * kNumPages * kNumBlocks);
   }
 

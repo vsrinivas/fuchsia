@@ -96,9 +96,8 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
 class EthertapTests : public zxtest::Test {
  public:
   EthertapTests() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_MISC_PARENT, {nullptr, nullptr}};
-    ddk_.SetProtocols(std::move(protocols));
+    fake_ddk::Protocol proto = {};
+    ddk_.SetProtocol(ZX_PROTOCOL_MISC_PARENT, &proto);
   }
 
   void SetupTapCtlMessenger() {

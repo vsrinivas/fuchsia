@@ -222,11 +222,8 @@ class FakeBadBlock : public ddk::BadBlockProtocol<FakeBadBlock> {
 class SkipBlockTest : public zxtest::Test {
  protected:
   SkipBlockTest() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
-    protocols[0] = {ZX_PROTOCOL_NAND, *reinterpret_cast<const fake_ddk::Protocol*>(nand_.proto())};
-    protocols[1] = {ZX_PROTOCOL_BAD_BLOCK,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(bad_block_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_NAND, nand_.proto());
+    ddk_.SetProtocol(ZX_PROTOCOL_BAD_BLOCK, bad_block_.proto());
     ddk_.SetSize(kPageSize * kNumPages * kNumBlocks);
     ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   }

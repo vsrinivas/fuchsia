@@ -98,11 +98,7 @@ class SyncDeviceTest : public zxtest::Test {
         .ExpectGetMmio(ZX_OK, 0u, {.offset = 0u, .size = kCtrlSize, .vmo = vmo_control.release()})
         .ExpectMapInterrupt(ZX_OK, 0u, std::move(irq));
 
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_ACPI,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(mock_acpi_.GetProto())};
-
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto());
     dut_ = std::make_unique<TestDevice>(fake_ddk::FakeParent());
   }
 

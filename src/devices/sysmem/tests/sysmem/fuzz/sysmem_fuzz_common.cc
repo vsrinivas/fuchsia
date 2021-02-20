@@ -41,10 +41,8 @@ bool FakeDdkSysmem::Init() {
 
   pdev_.UseFakeBti();
 
-  fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
-  protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
-  protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-  ddk_.SetProtocols(std::move(protocols));
+  ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
+  ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
   if (ZX_OK == sysmem_.Bind()) {
     initialized_ = true;
   }

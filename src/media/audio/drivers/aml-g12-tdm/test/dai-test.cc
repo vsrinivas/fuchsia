@@ -69,11 +69,7 @@ class AmlG12TdmDaiTest : public zxtest::Test {
     pdev_.set_mmio(0, mmio_.mmio_info());
     pdev_.UseFakeBti();
 
-    static constexpr size_t kNumBindProtocols = 1;
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
-                                                  kNumBindProtocols);
-    protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    tester_.SetProtocols(std::move(protocols));
+    tester_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
   }
 
  protected:

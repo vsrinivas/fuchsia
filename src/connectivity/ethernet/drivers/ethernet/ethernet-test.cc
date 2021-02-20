@@ -109,12 +109,7 @@ class FakeEthernetImplProtocol
 
 class EthernetTester : fake_ddk::Bind {
  public:
-  EthernetTester() : fake_ddk::Bind() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_ETHERNET_IMPL,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(ethernet_.proto())};
-    SetProtocols(std::move(protocols));
-  }
+  EthernetTester() : fake_ddk::Bind() { SetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, ethernet_.proto()); }
 
   fake_ddk::Bind& ddk() { return *this; }
   FakeEthernetImplProtocol& ethmac() { return ethernet_; }

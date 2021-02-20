@@ -74,9 +74,7 @@ class AmlRamDeviceTest : public zxtest::Test {
 
     pdev_.set_mmio(0, mmio_.mmio_info());
 
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_PDEV, {pdev_.proto()->ops, pdev_.proto()->ctx}};
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
 
     EXPECT_OK(amlogic_ram::AmlRam::Create(nullptr, fake_ddk::FakeParent()));
   }

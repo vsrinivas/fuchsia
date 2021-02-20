@@ -77,11 +77,8 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   ddk_.SetMetadata(SYSMEM_METADATA, &sysmem_metadata_, sizeof(sysmem_metadata_));
 
   // Protocols for sysmem
-  fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
-  protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
-  protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-
-  ddk_.SetProtocols(std::move(protocols));
+  ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
+  ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
 
   EXPECT_OK(sysmem_->Bind());
 
@@ -98,13 +95,8 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   ASSERT_OK(display_->Bind(start_vsync));
 
   // Protocols for display controller.
-  protocols = fbl::Array<fake_ddk::ProtocolEntry>(new fake_ddk::ProtocolEntry[2], 2);
-  protocols[0] = {ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL,
-                  *reinterpret_cast<const fake_ddk::Protocol*>(display_->dcimpl_proto())};
-  protocols[1] = {ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL,
-                  *reinterpret_cast<const fake_ddk::Protocol*>(display_->clamp_rgbimpl_proto())};
-
-  ddk_.SetProtocols(std::move(protocols));
+  ddk_.SetProtocol(ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, display_->dcimpl_proto());
+  ddk_.SetProtocol(ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL, display_->clamp_rgbimpl_proto());
 
   std::unique_ptr<display::Controller> c(new Controller(fake_ddk::kFakeParent));
   // Save a copy for test cases.

@@ -210,11 +210,7 @@ class PipeDeviceTest : public zxtest::Test {
           });
     }
 
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_ACPI,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(mock_acpi_.GetProto())};
-
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto());
     dut_ = std::make_unique<PipeDevice>(fake_ddk::FakeParent());
   }
 
