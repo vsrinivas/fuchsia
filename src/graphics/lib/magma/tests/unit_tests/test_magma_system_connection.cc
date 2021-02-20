@@ -11,6 +11,8 @@
 
 namespace {
 
+inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
+
 class MsdMockConnection_ContextManagement : public MsdMockConnection {
  public:
   MsdMockConnection_ContextManagement() {}
@@ -239,6 +241,49 @@ TEST(MagmaSystemConnection, BadBufferImport) {
   ASSERT_TRUE(semaphore->duplicate_handle(&semaphore_handle));
 
   EXPECT_FALSE(connection.ImportBuffer(semaphore_handle, &id));
+}
+
+TEST(MagmaSystemConnection, MapBufferGpu) {
+  auto msd_dev = new MsdMockDevice();
+  auto dev =
+      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+
+  auto msd_connection = msd_device_open(msd_dev, 0);
+  ASSERT_TRUE(msd_connection);
+
+  MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
+
+  constexpr uint64_t kPageCount = 10;
+  auto buffer = magma::PlatformBuffer::Create(kPageCount * page_size(), "test");
+  ASSERT_TRUE(buffer);
+
+  constexpr uint64_t kBogusId = 0xabcd12345678cabd;
+  constexpr uint64_t kGpuVa = 0;  // arbitrary
+  constexpr uint64_t kFlags = 0;
+
+  // Bad id
+  EXPECT_FALSE(connection.MapBufferGpu(kBogusId, kGpuVa, 0 /*page_offset*/, kPageCount, kFlags));
+
+  uint32_t buffer_handle;
+  ASSERT_TRUE(buffer->duplicate_handle(&buffer_handle));
+
+  uint64_t buffer_id;
+  EXPECT_TRUE(connection.ImportBuffer(buffer_handle, &buffer_id));
+
+  // Bad page offset
+  EXPECT_FALSE(
+      connection.MapBufferGpu(buffer_id, kGpuVa, kPageCount /*page_offset*/, kPageCount, kFlags));
+
+  // Bad page count
+  EXPECT_FALSE(
+      connection.MapBufferGpu(buffer_id, kGpuVa, 0 /*page_offset*/, kPageCount + 1, kFlags));
+
+  // Page offset + page count overflows
+  EXPECT_FALSE(connection.MapBufferGpu(buffer_id, kGpuVa,
+                                       std::numeric_limits<uint64_t>::max() - 1 /* page_offset */,
+                                       kPageCount + 1, kFlags));
+
+  EXPECT_TRUE(connection.MapBufferGpu(buffer_id, kGpuVa, 0 /*page_offset*/, kPageCount, kFlags));
 }
 
 TEST(MagmaSystemConnection, PerformanceCounters) {

@@ -171,6 +171,13 @@ bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t 
   auto iter = buffer_map_.find(id);
   if (iter == buffer_map_.end())
     return DRETF(false, "Attempting to gpu map invalid buffer id %lu", id);
+
+  if (page_count + page_offset < page_count)
+    return DRETF(false, "Offset overflows");
+
+  if (page_count + page_offset > iter->second.buffer->size() / magma::page_size())
+    return DRETF(false, "Page offset + length too large for buffer");
+
   if (msd_connection_map_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va,
                                     page_offset, page_count, flags) != MAGMA_STATUS_OK)
     return DRETF(false, "msd_connection_map_buffer_gpu failed");
