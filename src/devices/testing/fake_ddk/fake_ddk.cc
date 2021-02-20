@@ -90,12 +90,6 @@ void Bind::GetMetadataInfo(int* num_calls, size_t* length) {
   *length = metadata_length_;
 }
 
-void Bind::SetProtocols(fbl::Array<ProtocolEntry>&& protocols) {
-  for (auto protocol : protocols) {
-    protocols_[protocol.id] = protocol.proto;
-  }
-}
-
 void Bind::SetProtocol(uint32_t id, const void* proto) {
   if (proto) {
     protocols_[id] = *static_cast<const Protocol*>(proto);

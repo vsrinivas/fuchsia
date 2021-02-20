@@ -98,10 +98,6 @@ class Bind {
   // Deprecated variant of above.
   void SetMetadata(const void* data, size_t data_length);
 
-  // Sets an optional list of protocols that the ddk should return for the
-  // parent device.
-  void SetProtocols(fbl::Array<ProtocolEntry>&& protocols);
-
   // Set a specific protocol. nullptr means the protocol should be removed.
   void SetProtocol(uint32_t id, const void* proto);
 
