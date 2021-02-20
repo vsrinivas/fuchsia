@@ -36,6 +36,7 @@ group("src_no_e2e") {
     "media",
     "modular",
     "power",
+    "proc",
     "recovery:recovery_no_e2e",
     "security",
     "session",
