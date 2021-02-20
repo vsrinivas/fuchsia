@@ -38,49 +38,6 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-// On OpenMsg and Describe Msg are hand-rolled structs to mirror the `OnOpen`
-// event and `Describe` method from fuchsia-io: see
-// zircon/system/fidl/fuchsia-io/io.fidl. We are hand-rolling this because these
-// methods contain NodeInfo unions which is not supported by the C FIDL
-// bindings, and migrating this code to LLCPP is out-of-scope for now.
-struct OnOpenMsg {
-  FIDL_ALIGNDECL
-
-  // This is the inline, or primary, part of the FIDL message.
-  struct {
-    fidl_message_header_t hdr;
-    int32_t s;
-    fidl_xunion_t node_info;
-  } primary;
-
-  // This is the out-of-line, or secondary, part of the FIDL message, which may
-  // or may not be present, depending on the value of .node_info's tag.
-  //
-  // Note that `directory` is the _only_ NodeInfo union member used in this
-  // file, whereas the actual definition of NodeInfo in io.fidl has many more
-  // members. Including the other members here would extend the size of the
-  // union beyond sizeof(fuchsia_io_DirectoryObject), which means that the
-  // outgoing FIDL message would contain extraneous zero bytes.
-  //
-  // For extra context: Remember that the old-wireformat static unions' payload
-  // size is the maximum of its union members' size, whereas the v1-wireformat
-  // extensible unions' payload size depends on the specific union member that's
-  // present. We are writing the v1 wire format, and this code only ever sets
-  // NodeInfo's union member to be a Directory, so `directory` is only NodeInfo
-  // union member needed in this definition.
-  fuchsia_io_DirectoryObject directory;
-};
-
-zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_disposition_t* handles,
-                            uint32_t num_handles) {
-  const bool contains_nodeinfo = msg.primary.node_info.tag != fidl_xunion_tag_t(0);
-  uint32_t msg_size = contains_nodeinfo ? sizeof(msg) : sizeof(msg.primary);
-  fidl::HLCPPOutgoingMessage fidl_msg(
-      fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
-      fidl::HandleDispositionPart(handles, num_handles, num_handles));
-  return fidl_msg.Write(ch, 0);
-}
-
 async_dispatcher_t* g_dispatcher = nullptr;
 uint64_t next_ino = 2;
 
@@ -227,11 +184,9 @@ void prepopulate_protocol_dirs() {
 }
 
 void describe_error(zx::channel h, zx_status_t status) {
-  OnOpenMsg msg;
-  memset(&msg, 0, sizeof(msg));
-  fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
-  msg.primary.s = status;
-  SendOnOpenEvent(h.get(), msg, nullptr, 0);
+  fio::wire::NodeInfo invalid_node_info;
+  fio::Node::OnOpenResponse::OwnedEncodedMessage response(status, invalid_node_info);
+  response.Write(h.get());
 }
 
 // A devnode is a directory (from stat's perspective) if
