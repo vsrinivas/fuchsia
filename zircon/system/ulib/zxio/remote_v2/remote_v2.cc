@@ -50,34 +50,34 @@ zxio_node_attributes_t ToZxioNodeAttributes(const fio2::NodeAttributes& attr) {
   return zxio_attr;
 }
 
-fio2::NodeAttributes ToIo2NodeAttributes(fidl::Allocator& allocator,
+fio2::NodeAttributes ToIo2NodeAttributes(fidl::AnyAllocator& allocator,
                                          const zxio_node_attributes_t& attr) {
-  fio2::NodeAttributes::Builder builder(allocator.make<fio2::NodeAttributes::Frame>());
+  fio2::NodeAttributes node_attributes(allocator);
   if (attr.has.protocols) {
-    builder.set_protocols(allocator.make<fio2::NodeProtocols>(ToIo2NodeProtocols(attr.protocols)));
+    node_attributes.set_protocols(allocator, ToIo2NodeProtocols(attr.protocols));
   }
   if (attr.has.abilities) {
-    builder.set_abilities(allocator.make<fio2::Operations>(ToIo2Abilities(attr.abilities)));
+    node_attributes.set_abilities(allocator, ToIo2Abilities(attr.abilities));
   }
   if (attr.has.id) {
-    builder.set_id(allocator.make<uint64_t>(attr.id));
+    node_attributes.set_id(allocator, attr.id);
   }
   if (attr.has.content_size) {
-    builder.set_content_size(allocator.make<uint64_t>(attr.content_size));
+    node_attributes.set_content_size(allocator, attr.content_size);
   }
   if (attr.has.storage_size) {
-    builder.set_storage_size(allocator.make<uint64_t>(attr.storage_size));
+    node_attributes.set_storage_size(allocator, attr.storage_size);
   }
   if (attr.has.link_count) {
-    builder.set_link_count(allocator.make<uint64_t>(attr.link_count));
+    node_attributes.set_link_count(allocator, attr.link_count);
   }
   if (attr.has.creation_time) {
-    builder.set_creation_time(allocator.make<uint64_t>(attr.creation_time));
+    node_attributes.set_creation_time(allocator, attr.creation_time);
   }
   if (attr.has.modification_time) {
-    builder.set_modification_time(allocator.make<uint64_t>(attr.modification_time));
+    node_attributes.set_modification_time(allocator, attr.modification_time);
   }
-  return builder.build();
+  return node_attributes;
 }
 
 // These functions are named with "v2" to avoid mixing up with fuchsia.io v1
@@ -203,7 +203,7 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
 }
 
 zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
-  fidl::BufferThenHeapAllocator<1024> allocator;
+  fidl::FidlAllocator<1024> allocator;
   auto attributes = ToIo2NodeAttributes(allocator, *attr);
   RemoteV2 rio(io);
   auto result = fio2::Node::Call::UpdateAttributes(rio.control(), std::move(attributes));
