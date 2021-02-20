@@ -162,11 +162,23 @@ impl ReaderServer {
                                 node_hierarchy,
                                 &static_matcher,
                             ) {
-                                Ok(filtered_hierarchy_opt) => NodeHierarchyData {
+                                Ok(Some(filtered_hierarchy)) => NodeHierarchyData {
                                     filename: node_hierarchy_data.filename,
                                     timestamp: node_hierarchy_data.timestamp,
                                     errors: node_hierarchy_data.errors,
-                                    hierarchy: filtered_hierarchy_opt,
+                                    hierarchy: Some(filtered_hierarchy),
+                                },
+                                Ok(None) => NodeHierarchyData {
+                                    filename: node_hierarchy_data.filename,
+                                    timestamp: node_hierarchy_data.timestamp,
+                                    errors: vec![schema::Error {
+                                        message: concat!(
+                                            "Inspect hierarchy was fully filtered",
+                                            " by static selectors. No data remaining."
+                                        )
+                                        .to_string(),
+                                    }],
+                                    hierarchy: None,
                                 },
                                 Err(e) => {
                                     error!(?e, "Failed to filter a node hierarchy");
@@ -210,11 +222,23 @@ impl ReaderServer {
                             node_hierarchy,
                             &dynamic_matcher,
                         ) {
-                            Ok(filtered_hierarchy_opt) => NodeHierarchyData {
+                            Ok(Some(filtered_hierarchy)) => NodeHierarchyData {
                                 filename: node_hierarchy_data.filename,
                                 timestamp: node_hierarchy_data.timestamp,
                                 errors: node_hierarchy_data.errors,
-                                hierarchy: filtered_hierarchy_opt,
+                                hierarchy: Some(filtered_hierarchy),
+                            },
+                            Ok(None) => NodeHierarchyData {
+                                filename: node_hierarchy_data.filename,
+                                timestamp: node_hierarchy_data.timestamp,
+                                errors: vec![schema::Error {
+                                    message: concat!(
+                                        "Inspect hierarchy was fully filtered",
+                                        " by client provided selectors. No data remaining."
+                                    )
+                                    .to_string(),
+                                }],
+                                hierarchy: None,
                             },
                             Err(e) => NodeHierarchyData {
                                 filename: node_hierarchy_data.filename,

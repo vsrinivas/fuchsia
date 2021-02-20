@@ -104,11 +104,8 @@ impl RebootSnapshotProcessor {
             let moniker = data_packet.moniker;
             match data_packet.payload {
                 None => {
-                    // TODO(66756): Shouldn't need to check for presence of errors if a payload
-                    // is None. We need to do this because empty root nodes are considered null
-                    // payloads.
                     if data_packet.metadata.errors.is_some() {
-                        warn!(
+                        info!(
                             "Encountered errors snapshotting for {:?}: {:?}",
                             moniker, data_packet.metadata.errors
                         );

@@ -28,6 +28,7 @@ const SERVICE_URL: &str =
 const ALL_GOLDEN_JSON: &[u8] = include_bytes!("../configs/all_golden.json");
 const SINGLE_VALUE_CLIENT_SELECTOR_JSON: &[u8] =
     include_bytes!("../configs/single_value_client_selector.json");
+const FULL_FILTER_JSON: &[u8] = include_bytes!("../configs/full_filter.json");
 
 // Number of seconds to wait before timing out polling the reader for pumped results.
 static READ_TIMEOUT_SECONDS: i64 = 10;
@@ -44,6 +45,7 @@ lazy_static! {
     static ref ALL_GOLDEN_JSON_PATH: PathBuf = CONFIG_PATH.join("all_golden.json");
     static ref SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH: PathBuf =
         CONFIG_PATH.join("single_value_client_selector.json");
+    static ref FULL_FILTER_PATH: PathBuf = CONFIG_PATH.join("full_filter.json");
     static ref SELECTORS_PATH: PathBuf = CONFIG_PATH.join("pipelines/all/all_selectors.txt");
     static ref ARCHIVE_PATH: &'static str = "/tmp/archive";
     static ref TEST_DATA_PATH: &'static str = "/tmp/test_data";
@@ -58,6 +60,7 @@ async fn setup_environment() -> Result<(App, App), Error> {
 
     write(&*ALL_GOLDEN_JSON_PATH, ALL_GOLDEN_JSON)?;
     write(&*SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH, SINGLE_VALUE_CLIENT_SELECTOR_JSON)?;
+    write(&*FULL_FILTER_PATH, FULL_FILTER_JSON)?;
 
     let to_write = vec!["first", "second", "third/fourth", "third/fifth"];
     for filename in &to_write {
@@ -268,6 +271,19 @@ async fn unified_reader() -> Result<(), Error> {
         &archivist_app,
         vec!["test_component.cmx:root"],
         &*ALL_GOLDEN_JSON_PATH,
+        3,
+    )
+    .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {
+        panic!("failed to get meaningful results from reader service.")
+    })
+    .await;
+
+    // Then verify that a selector with a correct moniker, but no resolved nodes
+    // produces an error schema.
+    retrieve_and_validate_results(
+        &archivist_app,
+        vec!["test_component.cmx:root/non-existent-node:bloop"],
+        &*FULL_FILTER_PATH,
         3,
     )
     .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {

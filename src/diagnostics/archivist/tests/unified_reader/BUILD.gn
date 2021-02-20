@@ -35,6 +35,7 @@ rustc_test("bin") {
     "configs/archivist_config.json",
     "configs/all_golden.json",
     "configs/single_value_client_selector.json",
+    "configs/full_filter.json",
   ]
 }
 
