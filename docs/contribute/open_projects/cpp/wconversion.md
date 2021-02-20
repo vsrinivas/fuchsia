@@ -65,6 +65,12 @@ referenced. Optionally browse
 [`//build/config/BUILD.gn`](/build/config/BUILD.gn) for references to any code
 that you're familiar with.
 
+You can ignore third party code (`third_party` in the directory path).
+The Fuchsia project doesn't own this code, so you can't fix it.
+That said if you'd like you could go to the upstream code location and contribute
+a fix there. That said, it's important for the upstream maintainers to also agree
+to enable the `-Wconversion` flag, otherwise they'll regress.
+
 ### Doing a task
 
 Remove the `-Wno-conversion` suppression, rebuild, and fix any errors.
@@ -81,6 +87,9 @@ then you're not wrong, just lucky.
 Example:
 
 *   [478402: [cleanup] Remove unused -Wno-conversions](https://fuchsia-review.googlesource.com/c/fuchsia/+/478402)
+*   [474400: [bt][common] Remove Wno-conversion suppression](https://fuchsia-review.googlesource.com/c/fuchsia/+/474400)
+*   [487186: [connectivity] Clean up Wno-conversion](https://fuchsia-review.googlesource.com/c/fuchsia/+/487186)
+*   [484416: [storage] Drop Wno-conversion](https://fuchsia-review.googlesource.com/c/fuchsia/+/484416)
 
 #### Simple downcasts
 
