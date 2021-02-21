@@ -1,65 +1,41 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/elf_runner_stdout",
+    },
     children: [
         {
-            name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/archivist-for-embedding.cm",
+            name: "prints_when_launched_cpp",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-cpp.cm",
         },
         {
-            name: "driver",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/driver.cm",
+            name: "prints_when_launched_go",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-go.cm",
+        },
+        {
+            name: "prints_when_launched_rust",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-rust.cm",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
         },
     ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
-            from: "#archivist",
-            to: [ "#driver" ],
-        },
-        {
-            protocol: "fuchsia.diagnostics.ArchiveAccessor",
-            from: "#archivist",
-            to: [ "#driver" ],
-        },
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
-            ],
             from: "parent",
-            to: [ "#archivist" ],
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: [ "#archivist" ],
-            filter: { name: "fuchsia.logger.LogSink" },
-        },
-
-        // These events are not needed for the test to pass, but including them
-        // reduces log noise.
-        {
-            event: [
-                "running",
-                "started",
-                "stopped",
+            to: [
+                "#prints_when_launched_cpp",
+                "#prints_when_launched_go",
+                "#prints_when_launched_rust",
             ],
-            from: "framework",
-            to: [ "#archivist" ],
-            modes: [ "async" ],
-        },
-        {
-            event: "capability_ready",
-            from: "framework",
-            to: [ "#archivist" ],
-            filter: { name: "diagnostics" },
-            modes: [ "async" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#driver",
         },
     ],
 }

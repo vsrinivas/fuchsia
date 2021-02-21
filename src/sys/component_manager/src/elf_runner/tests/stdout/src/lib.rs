@@ -34,7 +34,7 @@ const HELLO_WORLD_COMPONENTS: [Component; 2] = [
     // TODO(fxbug.dev/69588): Enable this when fix lands for Go runtime.
     Component {
         url: "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test#meta/prints-when-launched-go.cm",
-        moniker: "driver/prints_when_launched_go",
+        moniker: "prints_when_launched_go",
     },
     */
 ];
@@ -89,10 +89,7 @@ async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
 #[track_caller]
 fn assert_all_have_attribution(messages: &[Data<Logs>], component: &Component) {
     let check_attribution = |msg: &Data<Logs>| {
-        // We have to prefix moniker with `driver/` because that is the parent
-        // for the components.
-        msg.moniker == format!("driver/{}", component.moniker)
-            && msg.metadata.component_url == component.url
+        msg.moniker == component.moniker && msg.metadata.component_url == component.url
     };
 
     assert!(messages.iter().all(check_attribution));

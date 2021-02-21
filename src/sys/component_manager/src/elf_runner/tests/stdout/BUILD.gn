@@ -30,25 +30,18 @@ rustc_test("test") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("driver") {
-  testonly = true
-  manifest = "meta/driver.cml"
-  deps = [ ":test" ]
-}
-
 fuchsia_component("stdout_integration_test") {
   testonly = true
   manifest = "meta/stdout.cml"
+  deps = [ ":test" ]
 }
 
 fuchsia_test_package("elf_runner_stdout_test") {
   test_components = [ ":stdout_integration_test" ]
 
   deps = [
-    ":driver",
     "cpp:prints-when-launched-cpp-component",
     "go:prints-when-launched-go-component",
     "rust:prints-when-launched-rust-component",
-    "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
 }
