@@ -128,7 +128,6 @@ template("go_build") {
                            [
                              "testonly",
                              "visibility",
-                             "hermetic_deps",
                            ])
     forward_variables_from(concurrent_jobs.local, "*")
 

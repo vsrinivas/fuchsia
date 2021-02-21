@@ -88,8 +88,6 @@ template("go_test") {
   }
 
   go_build(_go_build_target_name) {
-    hermetic_deps = false
-
     test = true
     output_name = _output_name
     forward_variables_from(invoker,
