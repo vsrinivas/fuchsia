@@ -371,6 +371,7 @@ template("go_build") {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
         args += [ rebase_path("$gen_dir/$name.go_deps") ]
+        inputs += [ rebase_path("$gen_dir/$name.go_deps") ]
       }
     }
 
@@ -459,6 +460,11 @@ template("go_build") {
           ]
         }
       }
+    }
+    if (output_breakpad_syms && is_fuchsia) {
+      metadata_binaries = metadata.binaries
+      b = metadata_binaries[0]
+      outputs += [ root_out_dir + "/" + b.breakpad ]
     }
   }
 

@@ -30,8 +30,6 @@ import("//build/go/go_build.gni")
 
 template("go_binary") {
   go_build(target_name) {
-    hermetic_deps = false
-
     assert(defined(invoker.gopackage),
            "gopackage must be defined for $target_name")
     gopackages = [ invoker.gopackage ]
