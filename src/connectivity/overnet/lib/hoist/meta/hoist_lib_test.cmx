@@ -2,9 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.overnet.MeshController": "fuchsia-pkg://fuchsia.com/overnetstack_v1#meta/overnetstack_v1.cmx",
-                "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack_v1#meta/overnetstack_v1.cmx",
-                "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack_v1#meta/overnetstack_v1.cmx"
+                "fuchsia.overnet.MeshController": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx"
             }
         }
     },

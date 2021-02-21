@@ -77,10 +77,6 @@
             name: "pkg-cache",
             url: "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cm",
         },
-        {
-            name: "overnet",
-            url: "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cm",
-        },
     ],
     capabilities: [
         {
@@ -113,33 +109,6 @@
             to: [ "#debug_serial" ],
         },
         {
-            protocol: [
-                "fuchsia.overnet.MeshController",
-                "fuchsia.overnet.ServiceConsumer",
-                "fuchsia.overnet.ServicePublisher",
-            ],
-            from: "#overnet",
-            to: [ "#appmgr" ],
-        },
-        {
-            protocol: [
-                "fuchsia.net.mdns.Publisher",
-                "fuchsia.net.mdns.Subscriber",
-                "fuchsia.posix.socket.Provider",
-            ],
-            from: "#appmgr",
-            to: [ "#overnet" ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-class-serial",
-            to: [ "#overnet" ],
-            rights: [ "rw*" ],
-            subdir: "class/serial",
-        },
-        {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
             to: [ "#appmgr" ],
@@ -164,7 +133,7 @@
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
             from: "#debug_serial",
-            to: [ "#overnet" ],
+            to: [ "#appmgr" ],
         },
         {
             protocol: [ "fuchsia.pkg.FontResolver" ],
@@ -272,7 +241,6 @@
             from: "parent",
             to: [
                 "#appmgr",
-                "#overnet",
                 "#test_manager",
             ],
         },
@@ -311,7 +279,6 @@
                 "#detect",
                 "#font_provider",
                 "#log-stats",
-                "#overnet",
                 "#pkg-cache",
                 "#remote-control",
                 "#sampler",
@@ -364,17 +331,14 @@
         {
             protocol: [
                 "fuchsia.net.stack.Stack",
+                "fuchsia.overnet.Overnet",
+                "fuchsia.overnet.ServicePublisher",
                 "fuchsia.sys.Launcher",
                 "fuchsia.test.manager.Harness",
             ],
             from: "#appmgr",
             to: [ "#remote-control" ],
             dependency: "weak_for_migration",
-        },
-        {
-            protocol: [ "fuchsia.overnet.ServicePublisher" ],
-            from: "#overnet",
-            to: [ "#remote-control" ],
         },
         {
             protocol: [
