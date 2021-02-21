@@ -120,8 +120,10 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   EXPECT_TRUE(result);
 
   // Importing an image should fail at this point because we've only set the renderer constraints.
-  auto import_result = renderer.ImportImage(
-      {.collection_id = renderer_collection_id, .vmo_index = 0, .width = kWidth, .height = kHeight});
+  auto import_result = renderer.ImportBufferImage({.collection_id = renderer_collection_id,
+                                                   .vmo_index = 0,
+                                                   .width = kWidth,
+                                                   .height = kHeight});
   EXPECT_FALSE(import_result);
 
   // Set the display constraints on the display controller.
@@ -133,8 +135,10 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   ASSERT_TRUE(res);
 
   // Importing should fail again, because we've only set 2 of the 3 constraints.
-  import_result = renderer.ImportImage(
-      {.collection_id = renderer_collection_id, .vmo_index = 0, .width = kWidth, .height = kHeight});
+  import_result = renderer.ImportBufferImage({.collection_id = renderer_collection_id,
+                                              .vmo_index = 0,
+                                              .width = kWidth,
+                                              .height = kHeight});
   EXPECT_FALSE(import_result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
@@ -157,8 +161,10 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Now that the renderer, client, and the display have set their constraints, we import one last
   // time and this time it should return true.
-  import_result = renderer.ImportImage(
-      {.collection_id = renderer_collection_id, .vmo_index = 0, .width = kWidth, .height = kHeight});
+  import_result = renderer.ImportBufferImage({.collection_id = renderer_collection_id,
+                                              .vmo_index = 0,
+                                              .width = kWidth,
+                                              .height = kHeight});
   EXPECT_TRUE(import_result);
 
   // We should now be able to also import an image to the display controller, using the

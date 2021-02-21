@@ -30,7 +30,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   sysmem_allocator->BindSharedCollection(std::move(local_token), buffer_collection.NewRequest());
   zx_status_t status = buffer_collection->Sync();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not bind buffer collection.";
+    FX_LOGS(ERROR) << "Could not bind buffer collection. Status: " << status;
     return fitx::failed();
   }
 

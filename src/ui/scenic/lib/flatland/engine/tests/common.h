@@ -39,13 +39,6 @@ namespace flatland {
 
 class EngineTestBase : public gtest::RealLoopFixture {
  public:
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
-    zx::channel remote;
-    zx::channel::create(0, &local_, &remote);
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token{std::move(remote)};
-    return token;
-  }
-
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
     uber_struct_system_ = std::make_shared<UberStructSystem>();

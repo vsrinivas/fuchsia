@@ -20,9 +20,9 @@ class MockBufferCollectionImporter : public BufferCollectionImporter {
 
   MOCK_METHOD1(ReleaseBufferCollection, void(sysmem_util::GlobalBufferCollectionId));
 
-  MOCK_METHOD1(ImportImage, bool(const ImageMetadata&));
+  MOCK_METHOD1(ImportBufferImage, bool(const ImageMetadata&));
 
-  MOCK_METHOD1(ReleaseImage, void(sysmem_util::GlobalImageId));
+  MOCK_METHOD1(ReleaseBufferImage, void(sysmem_util::GlobalImageId));
 };
 
 }  // namespace flatland

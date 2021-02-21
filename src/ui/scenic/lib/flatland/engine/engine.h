@@ -11,6 +11,14 @@
 
 namespace flatland {
 
+// The engine is responsible for compositing Flatland render data onto the display(s).
+// It accomplishes this either by direct hardware compositing via the display controller
+// interface, or rendering on the GPU via a custom renderer API. It also handles the
+// registration of sysmem buffer collections and importation of images to both the
+// display controller and the renderer via the BufferCollectionImporter interface. The
+// BufferCollectionImporter interface is how Flatland instances communicate with the
+// Engine, providing it with the necessary data to render without exposing to Flatland
+// the DisplayController or other dependencies.
 class Engine final : public BufferCollectionImporter {
  public:
   // TODO(fxbug.dev/66807): The engine has multiple parts of its code where usage of the display
@@ -36,10 +44,10 @@ class Engine final : public BufferCollectionImporter {
   void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |BufferCollectionImporter|
-  bool ImportImage(const ImageMetadata& meta_data) override;
+  bool ImportBufferImage(const ImageMetadata& metadata) override;
 
   // |BufferCollectionImporter|
-  void ReleaseImage(sysmem_util::GlobalImageId image_id) override;
+  void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) override;
 
   // TODO(fxbug.dev/59646): Add in parameters for scheduling, etc. Right now we're just making sure
   // the data is processed correctly.

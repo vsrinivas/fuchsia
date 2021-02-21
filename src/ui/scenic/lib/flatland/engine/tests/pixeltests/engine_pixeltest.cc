@@ -187,24 +187,14 @@ class EnginePixelTest : public EngineTestBase {
   // Sets up the buffer collection information for collections that will be imported
   // into the engine.
   fuchsia::sysmem::BufferCollectionSyncPtr SetupTextures(
-      Engine* engine, Renderer* renderer, sysmem_util::GlobalBufferCollectionId collection_id,
-      uint32_t width, uint32_t height, uint32_t num_vmos,
+      Engine* engine, sysmem_util::GlobalBufferCollectionId collection_id, uint32_t width,
+      uint32_t height, uint32_t num_vmos,
       fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
     // Setup the buffer collection that will be used for the flatland rectangle's texture.
     auto texture_tokens = SysmemTokens::Create(sysmem_allocator_.get());
 
-    // Make a third token for the renderer.
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
-    zx_status_t status = texture_tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
-                                                               renderer_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
-
     auto result = engine->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
                                                  std::move(texture_tokens.dup_token));
-    EXPECT_TRUE(result);
-
-    result = renderer->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                              std::move(renderer_token));
     EXPECT_TRUE(result);
 
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
@@ -367,9 +357,8 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   const uint32_t kRectWidth = display->width_in_px(), kTextureWidth = display->width_in_px();
   const uint32_t kRectHeight = display->height_in_px(), kTextureHeight = display->height_in_px();
   fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
-  auto texture_collection =
-      SetupTextures(engine.get(), renderer.get(), kTextureCollectionId, kTextureWidth,
-                    kTextureHeight, 1, &texture_collection_info);
+  auto texture_collection = SetupTextures(engine.get(), kTextureCollectionId, kTextureWidth,
+                                          kTextureHeight, 1, &texture_collection_info);
 
   // Get a raw pointer for the texture's vmo and make it green. DC uses ARGB format.
   uint32_t col = (255U << 24) | (255U << 8);
@@ -388,7 +377,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
                                       .width = kTextureWidth,
                                       .height = kTextureHeight,
                                       .has_transparency = false};
-  auto result = engine->ImportImage(image_metadata);
+  auto result = engine->ImportBufferImage(image_metadata);
   EXPECT_TRUE(result);
 
   // Create a flatland session with a root and image handle. Import to the engine as display root.
@@ -482,9 +471,8 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
                                                    renderer, std::move(data_func));
 
-  auto texture_collection =
-      SetupTextures(engine.get(), renderer.get(), kTextureCollectionId, kTextureWidth,
-                    kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
+  auto texture_collection = SetupTextures(engine.get(), kTextureCollectionId, kTextureWidth,
+                                          kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
 
   // Write to the two textures. Make the first blue and the second red. Format is ARGB.
   uint32_t cols[] = {(255 << 24) | (255U << 0), (255U << 24) | (255U << 16)};
@@ -500,8 +488,7 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
 
   // We now have to import the textures to the engine and the renderer.
   for (uint32_t i = 0; i < 2; i++) {
-    auto result = engine->ImportImage(image_metadatas[i]);
-    renderer->ImportImage(image_metadatas[i]);
+    auto result = engine->ImportBufferImage(image_metadatas[i]);
     EXPECT_TRUE(result);
   }
 
@@ -615,9 +602,8 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
   auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
                                                    renderer, std::move(data_func));
 
-  auto texture_collection =
-      SetupTextures(engine.get(), renderer.get(), kTextureCollectionId, kTextureWidth,
-                    kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
+  auto texture_collection = SetupTextures(engine.get(), kTextureCollectionId, kTextureWidth,
+                                          kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
 
   // Write to the two textures. Make the first blue and opaque and the second red and
   // half transparent. Format is ARGB.
@@ -634,8 +620,7 @@ VK_TEST_F(EnginePixelTest, OverlappingTransparencyTest) {
 
   // We now have to import the textures to the engine and the renderer.
   for (uint32_t i = 0; i < 2; i++) {
-    auto result = engine->ImportImage(image_metadatas[i]);
-    renderer->ImportImage(image_metadatas[i]);
+    auto result = engine->ImportBufferImage(image_metadatas[i]);
     EXPECT_TRUE(result);
   }
 

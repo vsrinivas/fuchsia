@@ -158,7 +158,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
             // associated buffer collections.
             for (auto& image_id : images_to_release) {
               for (auto& importer : importer_ref) {
-                importer->ReleaseImage(image_id);
+                importer->ReleaseBufferImage(image_id);
               }
             }
 
@@ -683,14 +683,14 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
     auto& importer = buffer_collection_importers_[i];
 
     // TODO(62240): Give more detailed errors.
-    auto result = importer->ImportImage(metadata);
+    auto result = importer->ImportBufferImage(metadata);
     if (!result) {
       // If this importer fails, we need to release the image from
       // all of the importers that it passed on. Luckily we can do
       // this right here instead of waiting for a fence since we know
       // this image isn't being used by anything yet.
       for (uint32_t j = 0; j < i; j++) {
-        buffer_collection_importers_[j]->ReleaseImage(metadata.identifier);
+        buffer_collection_importers_[j]->ReleaseBufferImage(metadata.identifier);
       }
 
       FX_LOGS(ERROR) << "Importer could not import image.";

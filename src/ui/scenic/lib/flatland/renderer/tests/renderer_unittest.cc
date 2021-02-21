@@ -40,7 +40,6 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
 // Make sure a valid token can be used to register a buffer collection.
 void RegisterCollectionTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = SysmemTokens::Create(sysmem_allocator);
-  auto tokens2 = SysmemTokens::Create(sysmem_allocator);
 
   // First id should be valid.
   auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
@@ -87,16 +86,16 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
                                           kNoneUsage, additional_format_modifiers);
 
   // Now check that both server ids are allocated.
-  bool res_1 = renderer->ImportImage({.collection_id = bcid,
-                                      .identifier = sysmem_util::GenerateUniqueImageId(),
-                                      .vmo_index = 0,
-                                      .width = 1,
-                                      .height = 1});
-  bool res_2 = renderer->ImportImage({.collection_id = bcid2,
-                                      .identifier = sysmem_util::GenerateUniqueImageId(),
-                                      .vmo_index = 0,
-                                      .width = 1,
-                                      .height = 1});
+  bool res_1 = renderer->ImportBufferImage({.collection_id = bcid,
+                                            .identifier = sysmem_util::GenerateUniqueImageId(),
+                                            .vmo_index = 0,
+                                            .width = 1,
+                                            .height = 1});
+  bool res_2 = renderer->ImportBufferImage({.collection_id = bcid2,
+                                            .identifier = sysmem_util::GenerateUniqueImageId(),
+                                            .vmo_index = 0,
+                                            .width = 1,
+                                            .height = 1});
   EXPECT_TRUE(res_1);
   EXPECT_TRUE(res_2);
 }
@@ -122,7 +121,7 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
   EXPECT_FALSE(result);
 }
 
-// Test the ImportImage() function. First call ImportImage() without setting the client
+// Test the ImportBufferImage() function. First call ImportBufferImage() without setting the client
 // constraints, which should return false, and then set the client constraints which
 // should cause it to return true.
 void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
@@ -135,7 +134,7 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
 
   // The buffer collection should not be valid here.
   auto image_id = sysmem_util::GenerateUniqueImageId();
-  EXPECT_FALSE(renderer->ImportImage(
+  EXPECT_FALSE(renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
   std::vector<uint64_t> additional_format_modifiers;
@@ -147,7 +146,7 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
                                           kNoneUsage, additional_format_modifiers);
 
   // The buffer collection *should* be valid here.
-  auto res = renderer->ImportImage(
+  auto res = renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
   EXPECT_TRUE(res);
 }
@@ -165,7 +164,7 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 
   // The buffer collection should not be valid here.
   auto image_id = sysmem_util::GenerateUniqueImageId();
-  EXPECT_FALSE(renderer->ImportImage(
+  EXPECT_FALSE(renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
   std::vector<uint64_t> additional_format_modifiers;
@@ -177,21 +176,21 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
                                           kNoneUsage, additional_format_modifiers);
 
   // The buffer collection *should* be valid here.
-  auto import_result = renderer->ImportImage(
+  auto import_result = renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
   EXPECT_TRUE(import_result);
 
   // Now deregister the collection.
   renderer->DeregisterRenderTargetCollection(bcid);
 
-  // After deregistration, calling ImportImage() should return false.
-  import_result = renderer->ImportImage(
+  // After deregistration, calling ImportBufferImage() should return false.
+  import_result = renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
   EXPECT_FALSE(import_result);
 }
 
 // Test to make sure we can call the functions RegisterTextureCollection(),
-// RegisterRenderTargetCollection() and ImportIMage() simultaneously from
+// RegisterRenderTargetCollection() and ImportBufferImage() simultaneously from
 // multiple threads and have it work.
 void MultithreadingTest(Renderer* renderer) {
   const uint32_t kNumThreads = 50;
@@ -233,7 +232,7 @@ void MultithreadingTest(Renderer* renderer) {
     }
 
     // The buffer collection *should* be valid here.
-    auto import_result = renderer->ImportImage(
+    auto import_result = renderer->ImportBufferImage(
         {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1});
     EXPECT_TRUE(import_result);
     loop.RunUntilIdle();
@@ -256,11 +255,11 @@ void MultithreadingTest(Renderer* renderer) {
   EXPECT_EQ(bcid_set.size(), kNumThreads);
   for (const auto& bcid : bcid_set) {
     // The buffer collection *should* be valid here.
-    auto result = renderer->ImportImage({.collection_id = bcid,
-                                         .identifier = sysmem_util::GenerateUniqueImageId(),
-                                         .vmo_index = 0,
-                                         .width = 1,
-                                         .height = 1});
+    auto result = renderer->ImportBufferImage({.collection_id = bcid,
+                                               .identifier = sysmem_util::GenerateUniqueImageId(),
+                                               .vmo_index = 0,
+                                               .width = 1,
+                                               .height = 1});
     EXPECT_TRUE(result);
   }
 }
@@ -293,14 +292,14 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
   EXPECT_EQ(allocation_status, ZX_OK);
 
   // Now that the renderer and client have set their contraints, we can import the render target.
-  // Create the render_target image meta_data.
+  // Create the render_target image metadata.
   ImageMetadata render_target = {.collection_id = target_id,
                                  .identifier = sysmem_util::GenerateUniqueImageId(),
                                  .vmo_index = 0,
                                  .width = kWidth,
                                  .height = kHeight,
                                  .is_render_target = true};
-  auto target_import = renderer->ImportImage(render_target);
+  auto target_import = renderer->ImportBufferImage(render_target);
   EXPECT_TRUE(target_import);
 
   // Create the release fence that will be passed along to the Render()
@@ -503,7 +502,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   const uint32_t kTargetWidth = 16;
   const uint32_t kTargetHeight = 8;
 
-  // Create the render_target image meta_data.
+  // Create the render_target image metadata.
   ImageMetadata render_target = {
       .collection_id = target_id,
       .identifier = sysmem_util::GenerateUniqueImageId(),
@@ -520,10 +519,10 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
                                       .width = 2,
                                       .height = 1};
 
-  auto import_res = renderer.ImportImage(render_target);
+  auto import_res = renderer.ImportBufferImage(render_target);
   EXPECT_TRUE(import_res);
 
-  import_res = renderer.ImportImage(renderable_texture);
+  import_res = renderer.ImportBufferImage(renderable_texture);
   EXPECT_TRUE(import_res);
 
   // Create a renderable where the upper-left hand corner should be at position (6,3)
@@ -661,7 +660,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   const uint32_t kTargetWidth = 16;
   const uint32_t kTargetHeight = 8;
 
-  // Create the render_target image meta_data.
+  // Create the render_target image metadata.
   ImageMetadata render_target = {
       .collection_id = target_id,
       .identifier = sysmem_util::GenerateUniqueImageId(),
@@ -687,9 +686,9 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
                                        .has_transparency = true};
 
   // Import all the images.
-  renderer.ImportImage(render_target);
-  renderer.ImportImage(renderable_texture);
-  renderer.ImportImage(transparent_texture);
+  renderer.ImportBufferImage(render_target);
+  renderer.ImportBufferImage(renderable_texture);
+  renderer.ImportBufferImage(transparent_texture);
 
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;

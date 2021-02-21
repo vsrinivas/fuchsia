@@ -29,10 +29,10 @@ class NullRenderer final : public Renderer {
   void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |BufferCollectionImporter|
-  bool ImportImage(const ImageMetadata& meta_data) override;
+  bool ImportBufferImage(const ImageMetadata& metadata) override;
 
   // |BufferCollectionImporter|
-  void ReleaseImage(sysmem_util::GlobalImageId image_id) override;
+  void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(

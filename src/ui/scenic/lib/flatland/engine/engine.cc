@@ -48,6 +48,19 @@ bool Engine::ImportBufferCollection(
   FX_DCHECK(display_controller_);
   auto sync_token = token.BindSync();
 
+  // Create a duped renderer token.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
+  zx_status_t status =
+      sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+
+  // Import the collection to the renderer.
+  if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
+                                         std::move(renderer_token))) {
+    FX_LOGS(INFO) << "Renderer could not import buffer collection.";
+    return false;
+  }
+
   // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
   // display.
   fuchsia::hardware::display::ImageConfig image_config = {.pixel_format = kDefaultImageFormat};
@@ -55,6 +68,7 @@ bool Engine::ImportBufferCollection(
   std::unique_lock<std::mutex> lock(lock_);
   auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                     std::move(sync_token), image_config);
+
   return result;
 }
 
@@ -62,31 +76,37 @@ void Engine::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId colle
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);
+  renderer_->ReleaseBufferCollection(collection_id);
 }
 
-bool Engine::ImportImage(const ImageMetadata& meta_data) {
+bool Engine::ImportBufferImage(const ImageMetadata& metadata) {
   FX_DCHECK(display_controller_);
 
-  if (meta_data.identifier == 0) {
+  if (metadata.identifier == 0) {
     FX_LOGS(ERROR) << "ImageMetadata identifier is invalid.";
     return false;
   }
 
-  if (meta_data.collection_id == sysmem_util::kInvalidId) {
+  if (metadata.collection_id == sysmem_util::kInvalidId) {
     FX_LOGS(ERROR) << "ImageMetadata collection ID is invalid.";
     return false;
   }
 
-  if (meta_data.width == 0 || meta_data.height == 0) {
+  if (metadata.width == 0 || metadata.height == 0) {
     FX_LOGS(ERROR) << "ImageMetadata has a null dimension: "
-                   << "(" << meta_data.width << ", " << meta_data.height << ").";
+                   << "(" << metadata.width << ", " << metadata.height << ").";
+    return false;
+  }
+
+  if (!renderer_->ImportBufferImage(metadata)) {
+    FX_LOGS(ERROR) << "Renderer could not import image.";
     return false;
   }
 
   uint64_t display_image_id;
   fuchsia::hardware::display::ImageConfig image_config = {
-      .width = meta_data.width,
-      .height = meta_data.height,
+      .width = metadata.width,
+      .height = metadata.height,
       // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
       // display. Right now we hardcode ARGB_8888 to match the format used in tests for textures.
       .pixel_format = kDefaultImageFormat};
@@ -96,7 +116,7 @@ bool Engine::ImportImage(const ImageMetadata& meta_data) {
   {
     std::unique_lock<std::mutex> lock(lock_);
     auto status = (*display_controller_.get())
-                      ->ImportImage(image_config, meta_data.collection_id, meta_data.vmo_index,
+                      ->ImportImage(image_config, metadata.collection_id, metadata.vmo_index,
                                     &import_image_status, &display_image_id);
     FX_DCHECK(status == ZX_OK);
 
@@ -106,18 +126,21 @@ bool Engine::ImportImage(const ImageMetadata& meta_data) {
     }
 
     // Add the display-specific ID to the global map.
-    image_id_map_[meta_data.identifier] = display_image_id;
+    image_id_map_[metadata.identifier] = display_image_id;
     return true;
   }
 }
 
-void Engine::ReleaseImage(sysmem_util::GlobalImageId image_id) {
+void Engine::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
   auto display_image_id = InternalImageId(image_id);
 
   // Locks the rest of the function.
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseImage(display_image_id);
+
+  // Release image from the renderer.
+  renderer_->ReleaseBufferImage(image_id);
 }
 
 uint64_t Engine::CreateDisplayLayer() {
@@ -350,13 +373,16 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
   FX_DCHECK(status == ZX_OK);
 
   // Register the buffer collection with the renderer
-  auto renderer_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto result = renderer_->RegisterRenderTargetCollection(renderer_id, sysmem_allocator,
+  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
                                                           std::move(renderer_token));
   FX_DCHECK(result);
 
-  // Register the buffer collection with the display controller.
-  result = ImportBufferCollection(renderer_id, sysmem_allocator, std::move(display_token));
+  // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
+  // display.
+  fuchsia::hardware::display::ImageConfig image_config = {.pixel_format = kDefaultImageFormat};
+  result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
+                                               std::move(display_token), image_config);
   FX_DCHECK(result);
 
   // Finally set the engine constraints.
@@ -379,7 +405,7 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
 
   // Import the images as well.
   for (uint32_t i = 0; i < num_vmos; i++) {
-    ImageMetadata target = {.collection_id = renderer_id,
+    ImageMetadata target = {.collection_id = collection_id,
                             .identifier = sysmem_util::GenerateUniqueImageId(),
                             .vmo_index = i,
                             .width = kWidth,
@@ -389,16 +415,13 @@ sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
 
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
-    bool res = ImportImage(target);
-    FX_DCHECK(res);
-
-    res = renderer_->ImportImage(target);
+    bool res = ImportBufferImage(target);
     FX_DCHECK(res);
   }
 
   display_engine_data.vmo_count = num_vmos;
   display_engine_data.curr_vmo = 0;
-  return renderer_id;
+  return collection_id;
 }
 
 uint64_t Engine::InternalImageId(sysmem_util::GlobalImageId image_id) const {

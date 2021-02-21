@@ -74,10 +74,10 @@ class BufferCollectionImporter {
   // true upon a successful import and false otherwise.
   //
   // TODO(62240): Give more detailed errors.
-  virtual bool ImportImage(const ImageMetadata& meta_data) = 0;
+  virtual bool ImportBufferImage(const ImageMetadata& metadata) = 0;
 
   // Deregisters the provided image from the service.
-  virtual void ReleaseImage(sysmem_util::GlobalImageId image_id) = 0;
+  virtual void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) = 0;
 
   virtual ~BufferCollectionImporter() = default;
 };

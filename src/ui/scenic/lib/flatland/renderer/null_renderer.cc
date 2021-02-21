@@ -71,17 +71,17 @@ void NullRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId
   collection_map_.erase(collection_id);
 }
 
-bool NullRenderer::ImportImage(const ImageMetadata& meta_data) {
+bool NullRenderer::ImportBufferImage(const ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
-  const auto& collection_itr = collection_map_.find(meta_data.collection_id);
+  const auto& collection_itr = collection_map_.find(metadata.collection_id);
   if (collection_itr == collection_map_.end()) {
-    FX_LOGS(ERROR) << "Collection with id " << meta_data.collection_id << " does not exist.";
+    FX_LOGS(ERROR) << "Collection with id " << metadata.collection_id << " does not exist.";
     return false;
   }
 
   auto& collection = collection_itr->second;
   if (!collection.BuffersAreAllocated()) {
-    FX_LOGS(ERROR) << "Buffers for collection " << meta_data.collection_id
+    FX_LOGS(ERROR) << "Buffers for collection " << metadata.collection_id
                    << " have not been allocated.";
     return false;
   }
@@ -90,23 +90,23 @@ bool NullRenderer::ImportImage(const ImageMetadata& meta_data) {
   const auto vmo_count = sysmem_info.buffer_count;
   auto image_constraints = sysmem_info.settings.image_format_constraints;
 
-  if (meta_data.vmo_index >= vmo_count) {
-    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << meta_data.vmo_index
+  if (metadata.vmo_index >= vmo_count) {
+    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << metadata.vmo_index
                    << " must be less than vmo_count " << vmo_count;
     return false;
   }
 
-  if (meta_data.width < image_constraints.min_coded_width ||
-      meta_data.width > image_constraints.max_coded_width) {
-    FX_LOGS(ERROR) << "CreateImage failed, width " << meta_data.width
+  if (metadata.width < image_constraints.min_coded_width ||
+      metadata.width > image_constraints.max_coded_width) {
+    FX_LOGS(ERROR) << "CreateImage failed, width " << metadata.width
                    << " is not within valid range [" << image_constraints.min_coded_width << ","
                    << image_constraints.max_coded_width << "]";
     return false;
   }
 
-  if (meta_data.height < image_constraints.min_coded_height ||
-      meta_data.height > image_constraints.max_coded_height) {
-    FX_LOGS(ERROR) << "CreateImage failed, height " << meta_data.height
+  if (metadata.height < image_constraints.min_coded_height ||
+      metadata.height > image_constraints.max_coded_height) {
+    FX_LOGS(ERROR) << "CreateImage failed, height " << metadata.height
                    << " is not within valid range [" << image_constraints.min_coded_height << ","
                    << image_constraints.max_coded_height << "]";
     return false;
@@ -115,7 +115,7 @@ bool NullRenderer::ImportImage(const ImageMetadata& meta_data) {
   return true;
 }
 
-void NullRenderer::ReleaseImage(sysmem_util::GlobalImageId image_id) {}
+void NullRenderer::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {}
 
 // Check that the buffer collections for each of the images passed in have been validated.
 // DCHECK if they have not.

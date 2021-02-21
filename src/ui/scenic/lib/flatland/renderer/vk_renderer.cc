@@ -137,7 +137,7 @@ bool VkRenderer::RegisterCollection(
   return true;
 }
 
-bool VkRenderer::ImportImage(const ImageMetadata& metadata) {
+bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
   const auto& collection_itr = collection_map_.find(metadata.collection_id);
   if (collection_itr == collection_map_.end()) {
@@ -197,7 +197,7 @@ bool VkRenderer::ImportImage(const ImageMetadata& metadata) {
   return true;
 }
 
-void VkRenderer::ReleaseImage(sysmem_util::GlobalImageId image_id) {
+void VkRenderer::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
   std::unique_lock<std::mutex> lock(lock_);
   if (texture_map_.find(image_id) != texture_map_.end()) {
     texture_map_.erase(image_id);
