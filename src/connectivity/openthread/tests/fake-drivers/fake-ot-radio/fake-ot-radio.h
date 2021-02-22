@@ -55,7 +55,8 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
  private:
   // FIDL request handlers
-  void SetChannel(zx::channel channel, SetChannelCompleter::Sync& _completer);
+  void SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+                  SetChannelCompleter::Sync& _completer) override;
   // Loop
   zx_status_t RadioThread();
   uint32_t GetTimeoutMs();
@@ -64,22 +65,23 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   void FrameHandler(::fidl::VectorView<uint8_t> data);
   void PostSendInboundFrameTask(std::vector<uint8_t> packet);
 
-  uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
+  static uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
 
   // Nested class for FIDL implementation
   class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {
    public:
-    LowpanSpinelDeviceFidlImpl(FakeOtRadioDevice& ot_radio);
-    zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel);
+    explicit LowpanSpinelDeviceFidlImpl(FakeOtRadioDevice& ot_radio);
+    zx_status_t Bind(async_dispatcher_t* dispatcher,
+                     fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> channel);
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer);
-    void Close(CloseCompleter::Sync& completer);
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer);
+    void Open(OpenCompleter::Sync& completer) override;
+    void Close(CloseCompleter::Sync& completer) override;
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer) override;
+    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer) override;
     void ReadyToReceiveFrames(uint32_t number_of_frames,
-                              ReadyToReceiveFramesCompleter::Sync& completer);
+                              ReadyToReceiveFramesCompleter::Sync& completer) override;
 
     FakeOtRadioDevice& ot_radio_obj_;
   };

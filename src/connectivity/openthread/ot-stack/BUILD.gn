@@ -33,23 +33,21 @@ source_set("app") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
+    "//src/connectivity/openthread/tests/ot-devmgr/fidl:devmgr_llcpp",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/svc",
   ]
 
   include_dirs =
       [ "//src/connectivity/openthread/third_party/openthread/platform" ]
 
   configs += [ ":unused" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("bin") {

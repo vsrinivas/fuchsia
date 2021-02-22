@@ -184,7 +184,7 @@ async fn connect_to_spinel_device_proxy_hack() -> Result<(Option<App>, SpinelDev
     let (client_side, server_side) = fidl::endpoints::create_endpoints::<SpinelDeviceMarker>()?;
 
     spinel_device_setup_proxy
-        .set_channel(server_side.into_channel())
+        .set_channel(server_side)
         .await?
         .map_err(|x| format_err!("spinel_device_setup.set_channel() returned error {}", x))?;
 

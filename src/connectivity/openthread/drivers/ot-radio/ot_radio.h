@@ -118,7 +118,8 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   } thrd_status_ = {false, false};
 
   // FIDL request handlers
-  void SetChannel(zx::channel channel, SetChannelCompleter::Sync& _completer);
+  void SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+                  SetChannelCompleter::Sync& _completer) override;
 
   thrd_t thread_;
   async::Loop loop_;
@@ -131,7 +132,8 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {
    public:
     LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio);
-    zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel);
+    zx_status_t Bind(async_dispatcher_t* dispatcher,
+                     fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> channel);
 
    private:
     // FIDL request handlers

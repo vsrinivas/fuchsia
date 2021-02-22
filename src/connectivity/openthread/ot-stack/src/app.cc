@@ -5,21 +5,13 @@
 #include "app.h"
 
 #include <alarm.h>
-#include <fcntl.h>
-#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/svc/dir.h>
 #include <radio.h>
 #include <zircon/compiler.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include <fbl/auto_lock.h>
 #include <openthread/tasklet.h>
@@ -49,13 +41,14 @@ void OtStackApp::RadioAllowanceInit() {
     Shutdown();
     return;
   }
-  auto* result = fidl_result.Unwrap();
-  if (result->result.is_err() == false) {
-    // send inbound allowance
-    device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInit);
-  } else {
-    FX_LOGS(DEBUG) << "ot-stack: radio returned err in spinel Open()";
+  auto& result = fidl_result.value().result;
+  if (result.is_err()) {
+    FX_LOGS(DEBUG) << "ot-stack: radio returned err in spinel Open(): "
+                   << static_cast<uint32_t>(result.err());
+    return;
   }
+  // send inbound allowance
+  device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInit);
 }
 
 void OtStackApp::HandleRadioOnReadyForSendFrame(uint32_t allowance) {
@@ -63,7 +56,7 @@ void OtStackApp::HandleRadioOnReadyForSendFrame(uint32_t allowance) {
 }
 
 void OtStackApp::HandleClientReadyToReceiveFrames(uint32_t allowance) {
-  if (client_inbound_allowance_ == 0 && client_inbound_queue_.size() > 0) {
+  if (client_inbound_allowance_ == 0 && !client_inbound_queue_.empty()) {
     async::PostTask(loop_.dispatcher(), [this]() { this->SendOneFrameToClient(); });
   }
   client_inbound_allowance_ += allowance;
@@ -80,7 +73,7 @@ void OtStackApp::UpdateRadioInboundAllowance() {
   OT_STACK_ASSERT(radio_inbound_allowance_ > 0);
   radio_inbound_allowance_--;
   radio_inbound_cnt++;
-  if (((radio_inbound_allowance_ & 1) == 0) && device_client_ptr_.get()) {
+  if (((radio_inbound_allowance_ & 1) == 0) && device_client_ptr_) {
     device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInc);
     radio_inbound_allowance_ += kInboundAllowanceInc;
   }
@@ -91,7 +84,7 @@ void OtStackApp::UpdateClientOutboundAllowance() {
   OT_STACK_ASSERT(client_outbound_allowance_ > 0);
   client_outbound_allowance_--;
   client_outbound_cnt++;
-  if (((client_outbound_allowance_ & 1) == 0) && device_client_ptr_.get()) {
+  if (((client_outbound_allowance_ & 1) == 0) && device_client_ptr_) {
     FX_LOGS(DEBUG) << "ot-stack: OnReadyForSendFrames: " << client_outbound_allowance_;
     (*binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
     client_outbound_allowance_ += kOutboundAllowanceInc;
@@ -106,26 +99,8 @@ void OtStackApp::UpdateClientInboundAllowance() {
   FX_LOGS(DEBUG) << "ot-stack: updated client_inbound_allowance_:" << client_inbound_allowance_;
 }
 
-void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher,
-                                                  const char* service_name,
-                                                  zx_handle_t service_request) {
-  fidl::OnUnboundFn<OtStackApp::LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl*, fidl::UnbindInfo info,
-         fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> channel) {
-        FX_LOGS(INFO) << "channel handle " << channel.channel().get() << " unbound with reason "
-                      << static_cast<uint32_t>(info.reason);
-      };
-  auto res =
-      fidl::BindServer(dispatcher, zx::channel(service_request), this, std::move(on_unbound));
-  if (res.is_error()) {
-    FX_LOGS(ERROR) << "Failed to bind FIDL server with status: " << res.error();
-    return;
-  }
-  app_.binding_ = res.take_value();
-}
-
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
-  if (app_.connected_to_device_ == false) {
+  if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected when client called Open()";
     completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
     app_.Shutdown();
@@ -148,7 +123,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
-  if (app_.connected_to_device_ == false) {
+  if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
     app_.Shutdown();
@@ -161,13 +136,12 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& complet
     app_.Shutdown();
     return;
   }
-  auto* result = fidl_result.Unwrap();
-  completer.Reply(std::move(result->result));
+  completer.Reply(std::move(fidl_result.value().result));
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
     GetMaxFrameSizeCompleter::Sync& completer) {
-  if (app_.connected_to_device_ == false) {
+  if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-stack: ot-radio not connected";
     app_.Shutdown();
     return;
@@ -178,13 +152,12 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
     app_.Shutdown();
     return;
   }
-  auto* result = fidl_result.Unwrap();
-  completer.Reply(result->size);
+  completer.Reply(fidl_result.value().size);
 }
 
 void OtStackApp::PushFrameToOtLib() {
   FX_LOGS(INFO) << "ot-stack: entering push frame to ot-lib task";
-  assert(client_outbound_queue_.size() > 0);
+  assert(!client_outbound_queue_.empty());
   ot::Ncp::otNcpGetInstance()->HandleFidlReceiveDone(client_outbound_queue_.front().data(),
                                                      client_outbound_queue_.front().size());
   client_outbound_queue_.pop_front();
@@ -193,20 +166,20 @@ void OtStackApp::PushFrameToOtLib() {
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
                                                        SendFrameCompleter::Sync& completer) {
-  if (app_.connected_to_device_ == false) {
+  if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
   }
   FX_LOGS(INFO) << "ot-stack: SendFrame() received";
   app_.UpdateClientOutboundAllowance();
   // Invoke ot-lib
-  app_.client_outbound_queue_.push_back(std::vector<uint8_t>(data.cbegin(), data.cend()));
+  app_.client_outbound_queue_.emplace_back(data.cbegin(), data.cend());
   async::PostTask(app_.loop_.dispatcher(), [this]() { this->app_.PushFrameToOtLib(); });
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
     uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync& completer) {
-  if (app_.connected_to_device_ == false) {
+  if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
   }
@@ -232,7 +205,7 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint
   FX_LOGS(INFO) << "ot-stack-callbackform: radio-callback: waiting for frame";
   {
     fbl::AutoLock lock(&app_.radio_q_mtx_);
-    if (app_.radio_inbound_queue_.size() == 0) {
+    if (app_.radio_inbound_queue_.empty()) {
       sync_completion_reset(&app_.radio_rx_complete_);
     }
   }
@@ -242,12 +215,13 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint
   if (res == ZX_ERR_TIMED_OUT) {
     // This method will be called multiple times by ot-lib. It is okay to timeout here.
     return std::vector<uint8_t>{};
-  } else if (res != ZX_OK) {
+  }
+  if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "ot-stack-callbackform: radio-callback: waiting frame end with err";
     return std::vector<uint8_t>{};
   }
   fbl::AutoLock lock0(&app_.radio_q_mtx_);
-  assert(app_.radio_inbound_queue_.size() > 0);
+  assert(!app_.radio_inbound_queue_.empty());
   std::vector<uint8_t> vec = std::move(app_.radio_inbound_queue_.front());
   app_.radio_inbound_queue_.pop_front();
   return vec;
@@ -257,7 +231,7 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::Process() {
   FX_LOGS(INFO) << "ot-stack-callbackform: radio-callback: checking for frame";
   std::vector<uint8_t> vec;
   fbl::AutoLock lock(&app_.radio_q_mtx_);
-  if (app_.radio_inbound_queue_.size() > 0) {
+  if (!app_.radio_inbound_queue_.empty()) {
     vec = std::move(app_.radio_inbound_queue_.front());
     app_.radio_inbound_queue_.pop_front();
     FX_LOGS(INFO) << "ot-stack-callbackform: radio-callback: check for frame: new frame";
@@ -271,7 +245,7 @@ void OtStackApp::OtStackCallBackImpl::SendOneFrameToClient(uint8_t* buffer, uint
     FX_LOGS(WARNING) << "ot-stack: reset frame received from ot-radio";
     return;
   }
-  app_.client_inbound_queue_.push_back(std::vector<uint8_t>(buffer, buffer + size));
+  app_.client_inbound_queue_.emplace_back(buffer, buffer + size);
   app_.SendOneFrameToClient();
 }
 
@@ -291,38 +265,41 @@ void OtStackApp::OtStackCallBackImpl::PostDelayedAlarmTask(zx::duration delay) {
       app_.loop_.dispatcher(), [this]() { this->app_.AlarmTask(); }, delay);
 }
 
-static void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
-  auto app = static_cast<OtStackApp*>(untyped_context);
-  app->AddFidlRequestHandler(service_name, service_request);
-}
-
-void OtStackApp::AddFidlRequestHandler(const char* service_name, zx_handle_t service_request) {
-  if (binding_) {  // TODO (jiamingw) add support for multiple clients
-    FX_LOGS(ERROR) << "FIDL connect request rejected: already bound";
-    return;
-  }
-  fidl_request_handler_ptr_->Bind(loop_.dispatcher(), service_name, service_request);
-}
-
 // Setup FIDL server side which handle requests from upper layer components.
 zx_status_t OtStackApp::SetupFidlService() {
-  zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
+  async_dispatcher_t* dispatcher = loop_.dispatcher();
 
-  if (directory_request == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR) << "Got invalid directory_request channel";
-    return ZX_ERR_INTERNAL;
-  }
-
-  svc_dir_t* dir = nullptr;
-  zx_status_t status = svc_dir_create(loop_.dispatcher(), directory_request, &dir);
+  outgoing_ = std::make_unique<svc::Outgoing>(dispatcher);
+  zx_status_t status = outgoing_->ServeFromStartupInfo();
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error creating service directory";
     return status;
   }
 
   fidl_request_handler_ptr_ = std::make_unique<LowpanSpinelDeviceFidlImpl>(*this);
 
-  status = svc_dir_add_service(dir, "svc", "fuchsia.lowpan.spinel.Device", this, connect);
+  status = outgoing_->svc_dir()->AddEntry(
+      fidl_spinel::Device::Name,
+      fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fidl_spinel::Device> request) {
+        if (binding_) {  // TODO (jiamingw) add support for multiple clients
+          FX_LOGS(ERROR) << "FIDL connect request rejected: already bound";
+          return ZX_ERR_ALREADY_BOUND;
+        }
+        auto binding = fidl::BindServer(
+            loop_.dispatcher(), std::move(request), fidl_request_handler_ptr_.get(),
+            [](LowpanSpinelDeviceFidlImpl* /*unused*/, fidl::UnbindInfo info,
+               fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> /*unused*/) {
+              FX_LOGS(INFO) << "channel handle unbound with reason: "
+                            << static_cast<uint32_t>(info.reason);
+            });
+
+        if (binding.is_error()) {
+          FX_LOGS(ERROR) << "Failed to bind FIDL server with status: " << binding.error();
+          return binding.error();
+        }
+        binding_ = binding.take_value();
+        return ZX_OK;
+      }));
+
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error adding service in ot-stack";
     return status;
@@ -335,7 +312,7 @@ void OtStackApp::SendOneFrameToClient() {
     FX_LOGS(ERROR) << "ot-stack: Sending frame to client, but client is not connected";
     assert(0);
   }
-  if (client_inbound_queue_.size() > 0 && client_inbound_allowance_ > 0) {
+  if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
     ::fidl::VectorView<uint8_t> data;
     uint8_t* ptr = client_inbound_queue_.front().data();
     data.set_data(fidl::unowned_ptr_t<uint8_t>(ptr));
@@ -343,7 +320,7 @@ void OtStackApp::SendOneFrameToClient() {
     (*binding_)->OnReceiveFrame(std::move(data));
     UpdateClientInboundAllowance();
     client_inbound_queue_.pop_front();
-    if (client_inbound_queue_.size() > 0 && client_inbound_allowance_ > 0) {
+    if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
       async::PostTask(loop_.dispatcher(), [this]() { this->SendOneFrameToClient(); });
     }
     FX_LOGS(DEBUG) << "ot-stack: sent one frame to the client of ot-stack";
@@ -434,128 +411,74 @@ zx_status_t OtStackApp::ConnectToOtRadioDev() {
 
 // Get the spinel setup client from a file path. Set `client_ptr_` on success.
 zx_status_t OtStackApp::SetDeviceSetupClientInDevmgr(const std::string& path) {
-  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
-  if (!fd.is_valid()) {
-    FX_LOGS(ERROR) << "failed to connect to device\n";
-    return ZX_ERR_INTERNAL;
-  }
-
-  zx::channel chan;
-  zx_status_t status = fdio_get_service_handle(fd.release(), chan.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Fdio get handle failed";
-    return status;
+  auto client_end = service::Connect<fidl_spinel::DeviceSetup>(path.c_str());
+  if (client_end.is_error()) {
+    FX_LOGS(ERROR) << "failed to connect to device: " << client_end.status_string();
+    return client_end.status_value();
   }
 
   device_setup_client_ptr_ =
-      std::make_unique<fidl_spinel::DeviceSetup::SyncClient>(std::move(chan));
-  return ZX_OK;
-}
-
-zx_status_t OtStackApp::ConnectServiceByName(const char name[], zx::channel* out) {
-  static zx_handle_t service_root;
-
-  {
-    static std::once_flag once;
-    static zx_status_t status;
-    std::call_once(once, [&]() {
-      zx::channel client_end, server_end;
-      status = zx::channel::create(0, &client_end, &server_end);
-      if (status != ZX_OK) {
-        return;
-      }
-      status = fdio_service_connect("/svc/.", server_end.release());
-      if (status != ZX_OK) {
-        return;
-      }
-      service_root = client_end.release();
-    });
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = fdio_service_connect_at(service_root, name, server_end.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out = std::move(client_end);
+      std::make_unique<fidl_spinel::DeviceSetup::SyncClient>(std::move(*client_end));
   return ZX_OK;
 }
 
 // Get the spinel setup client from a file path. Set `client_ptr_` on success.
 zx_status_t OtStackApp::SetDeviceSetupClientInIsolatedDevmgr(const std::string& path) {
-  zx_status_t res = ZX_OK;
-
-  res = ConnectServiceByName("fuchsia.openthread.devmgr.IsolatedDevmgr", &isolated_devfs_);
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_service_connect_by_name failed";
-    return res;
+  auto isolated_devfs = service::Connect<llcpp::fuchsia::openthread::devmgr::IsolatedDevmgr>();
+  if (isolated_devfs.is_error()) {
+    FX_LOGS(ERROR) << "failed to connect to isolated devmgr: " << isolated_devfs.status_string();
+    return isolated_devfs.status_value();
   }
-
-  zx::channel fake_device_server_side, fake_device_client_side;
-  res = zx::channel::create(0, &fake_device_server_side, &fake_device_client_side);
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "zx::channel::create failed";
-    return res;
-  }
-
-  res = fdio_service_connect_at(isolated_devfs_.get(), path.c_str(),
-                                fake_device_server_side.release());
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_service_connect_at failed";
-    return res;
+  // IsolatedDevmgr composes fuchsia.io.Directory, but FIDL bindings don't know.
+  auto client_end = service::ConnectAt<fidl_spinel::DeviceSetup>(
+      fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory>(isolated_devfs->channel().borrow()),
+      path.c_str());
+  if (client_end.is_error()) {
+    FX_LOGS(ERROR) << "failed to connect to device setup: " << client_end.status_string();
+    return client_end.status_value();
   }
 
   device_setup_client_ptr_ =
-      std::make_unique<fidl_spinel::DeviceSetup::SyncClient>(std::move(fake_device_client_side));
+      std::make_unique<fidl_spinel::DeviceSetup::SyncClient>(std::move(*client_end));
   return ZX_OK;
 }
 
 zx_status_t OtStackApp::SetupOtRadioDev() {
-  if (device_setup_client_ptr_.get() == nullptr) {
+  if (device_setup_client_ptr_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx::channel server_end;
-  zx::channel client_end;
-
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    return status;
+  auto endpoints = fidl::CreateEndpoints<fidl_spinel::Device>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
   }
+  auto [client_end, server_end] = std::move(endpoints.value());
 
   auto fidl_result = device_setup_client_ptr_->SetChannel(std::move(server_end));
   if (fidl_result.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot set the channel to device";
+    FX_LOGS(ERROR) << "Cannot set the channel to device: " << fidl_result.status_string();
     return fidl_result.status();
   }
 
-  auto* result = fidl_result.Unwrap();
-  if (result->result.is_err()) {
+  auto& result = fidl_result.value().result;
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "Cannot set the channel to device: " << static_cast<uint32_t>(result.err());
     return ZX_ERR_INTERNAL;
   }
   FX_LOGS(INFO) << "successfully connected to driver";
 
-  event_thread_ = std::thread(
-      [](void* cookie) { return reinterpret_cast<OtStackApp*>(cookie)->EventThread(); }, this);
-  status = zx::port::create(0, &port_);
+  event_thread_ = std::thread(&OtStackApp::EventThread, this);
+  zx_status_t status = zx::port::create(0, &port_);
   if (status != ZX_OK) {
     return status;
   }
 
-  device_channel_ = zx::unowned_channel(client_end);
+  device_channel_ = zx::unowned_channel(client_end.channel());
   device_client_ptr_ = std::make_unique<fidl_spinel::Device::SyncClient>(std::move(client_end));
   connected_to_device_ = true;
 
-  status = zx_object_wait_async(device_channel_->get(), port_.get(), kPortRadioChannelRead,
-                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
+  status = device_channel_->wait_async(port_, kPortRadioChannelRead,
+                                       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to wait for events";
   }
@@ -564,7 +487,7 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
 
 void OtStackApp::EventLoopHandleInboundFrame(::fidl::VectorView<uint8_t> data) {
   fbl::AutoLock lock(&radio_q_mtx_);
-  radio_inbound_queue_.push_back(std::vector<uint8_t>(data.cbegin(), data.cend()));
+  radio_inbound_queue_.emplace_back(data.cbegin(), data.cend());
   sync_completion_signal(&radio_rx_complete_);
   async::PostTask(loop_.dispatcher(), [this]() {
     platformRadioProcess(static_cast<otInstance*>(this->ot_instance_ptr_.value()));
@@ -601,7 +524,7 @@ void OtStackApp::EventThread() {
           FX_LOGS(ERROR) << "ot-radio channel closed, terminating event thread";
           return;
         }
-        ::fidl::Result result = HandleOneEvent(zx::unowned_channel(device_client_ptr_->channel()));
+        ::fidl::Result result = HandleOneEvent(device_client_ptr_->client_end());
         if (!result.ok() || (handler_status_ != ZX_OK)) {
           FX_PLOGS(ERROR, result.ok() ? handler_status_ : result.status())
               << "error calling fidl_spinel::Device::SyncClient::HandleEvents(), terminating event "
@@ -610,9 +533,8 @@ void OtStackApp::EventThread() {
           loop_.Shutdown();
           return;
         }
-        zx_status_t status =
-            zx_object_wait_async(device_channel_->get(), port_.get(), kPortRadioChannelRead,
-                                 ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
+        zx_status_t status = device_channel_->wait_async(
+            port_, kPortRadioChannelRead, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
         if (status != ZX_OK) {
           FX_PLOGS(ERROR, status) << "failed to wait for events, terminating event thread";
           return;
@@ -633,8 +555,8 @@ void OtStackApp::TerminateEventThread() {
 
 void OtStackApp::DisconnectDevice() {
   device_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
-  device_client_ptr_.release();
-  device_setup_client_ptr_.release();
+  device_client_ptr_.reset();
+  device_setup_client_ptr_.reset();
   connected_to_device_ = false;
 }
 

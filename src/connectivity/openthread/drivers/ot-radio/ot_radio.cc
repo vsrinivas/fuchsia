@@ -4,32 +4,26 @@
 
 #include "ot_radio.h"
 
-#include <ctype.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fidl/llcpp/server.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
 
-#include <iostream>
 #include <iterator>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <hw/arch_ops.h>
 #include <hw/reg.h>
 
 #include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bind.h"
@@ -41,11 +35,11 @@ namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
 
-zx_status_t OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher,
-                                                            zx::channel channel) {
+zx_status_t OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
+    async_dispatcher_t* dispatcher, fidl::ServerEnd<lowpan_spinel_fidl::Device> channel) {
   fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnbindInfo,
-         fidl::ServerEnd<lowpan_spinel_fidl::Device>) {
+      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnbindInfo /*unused*/,
+         fidl::ServerEnd<lowpan_spinel_fidl::Device> /*unused*/) {
         server->ot_radio_obj_.fidl_impl_obj_.release();
       };
   auto res = fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
@@ -140,18 +134,19 @@ zx_status_t OtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
   return transaction.Status();
 }
 
-void OtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync& completer) {
+void OtRadioDevice::SetChannel(fidl::ServerEnd<llcpp::fuchsia::lowpan::spinel::Device> request,
+                               SetChannelCompleter::Sync& completer) {
   if (fidl_impl_obj_ != nullptr) {
     zxlogf(ERROR, "ot-radio: channel already set");
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
     return;
   }
-  if (!channel.is_valid()) {
+  if (!request.is_valid()) {
     completer.ReplyError(ZX_ERR_BAD_HANDLE);
     return;
   }
   fidl_impl_obj_ = std::make_unique<LowpanSpinelDeviceFidlImpl>(*this);
-  auto status = fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(channel));
+  auto status = fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(request));
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {

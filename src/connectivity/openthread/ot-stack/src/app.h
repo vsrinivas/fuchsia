@@ -6,10 +6,12 @@
 #define SRC_CONNECTIVITY_OPENTHREAD_OT_STACK_SRC_APP_H_
 
 #include <fuchsia/lowpan/spinel/llcpp/fidl.h>
+#include <fuchsia/openthread/devmgr/llcpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ot-stack/ot-stack-callback.h>
+#include <lib/svc/outgoing.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
@@ -39,19 +41,13 @@ enum {
   kPortTerminate,
 };
 
-typedef enum {
-  kInbound = 1,
-  kOutbound,
-} packet_direction_e;
-
 class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
  public:
-  OtStackApp(){};
+  OtStackApp() = default;
 
   zx_status_t Init(const std::string& path, bool is_test_env);
   async::Loop* loop() { return &loop_; }
 
-  void AddFidlRequestHandler(const char* service_name, zx_handle_t service_request);
   void EventLoopHandleInboundFrame(::fidl::VectorView<uint8_t> data);
   void HandleRadioOnReadyForSendFrame(uint32_t allowance);
   void HandleClientReadyToReceiveFrames(uint32_t allowance);
@@ -63,7 +59,6 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
   zx_status_t SetDeviceSetupClientInDevmgr(const std::string& path);
   zx_status_t SetDeviceSetupClientInIsolatedDevmgr(const std::string& path);
   zx_status_t SetupOtRadioDev();
-  zx_status_t ConnectServiceByName(const char name[], zx::channel* out);
   zx_status_t InitRadioDrievr();
   void InitOpenThreadLibrary(bool reset_rcp);
 
@@ -82,7 +77,6 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
   void UpdateClientInboundAllowance();
   void SendOneFrameToClient();
   void AlarmTask();
-  void HandleEvents();
   void EventThread();
   void TerminateEventThread();
   void DisconnectDevice();
@@ -90,39 +84,38 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
 
   class LowpanSpinelDeviceFidlImpl : public fidl_spinel::Device::Interface {
    public:
-    LowpanSpinelDeviceFidlImpl(OtStackApp& ot_stack_app);
-    void Bind(async_dispatcher_t* dispatcher, const char* service_name,
-              zx_handle_t service_request);
+    explicit LowpanSpinelDeviceFidlImpl(OtStackApp& ot_stack_app);
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer);
-    void Close(CloseCompleter::Sync& completer);
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer);
+    void Open(OpenCompleter::Sync& completer) override;
+    void Close(CloseCompleter::Sync& completer) override;
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer) override;
+    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer) override;
     void ReadyToReceiveFrames(uint32_t number_of_frames,
-                              ReadyToReceiveFramesCompleter::Sync& completer);
+                              ReadyToReceiveFramesCompleter::Sync& completer) override;
 
     OtStackApp& app_;
   };
 
   class OtStackCallBackImpl : public OtStackCallBack {
    public:
-    OtStackCallBackImpl(OtStackApp& ot_stack_app);
-    ~OtStackCallBackImpl(){};
+    explicit OtStackCallBackImpl(OtStackApp& ot_stack_app);
+    ~OtStackCallBackImpl() override = default;
 
-    void SendOneFrameToRadio(uint8_t* buffer, uint32_t size);
-    std::vector<uint8_t> WaitForFrameFromRadio(uint64_t timeout_us);
-    std::vector<uint8_t> Process();
-    void SendOneFrameToClient(uint8_t* buffer, uint32_t size);
-    void PostNcpFidlInboundTask();
-    void PostOtLibTaskletProcessTask();
-    void PostDelayedAlarmTask(zx::duration delay);
+    void SendOneFrameToRadio(uint8_t* buffer, uint32_t size) override;
+    std::vector<uint8_t> WaitForFrameFromRadio(uint64_t timeout_us) override;
+    std::vector<uint8_t> Process() override;
+    void SendOneFrameToClient(uint8_t* buffer, uint32_t size) override;
+    void PostNcpFidlInboundTask() override;
+    void PostOtLibTaskletProcessTask() override;
+    void PostDelayedAlarmTask(zx::duration delay) override;
 
    private:
     OtStackApp& app_;
   };
 
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
   std::unique_ptr<ot::Fuchsia::BootstrapImpl> bootstrap_impl_;
 
   zx::port port_;
@@ -133,14 +126,14 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
 
   std::string device_path_;
   bool connected_to_device_ = false;
-  std::unique_ptr<fidl_spinel::DeviceSetup::SyncClient> device_setup_client_ptr_ = 0;
-  std::unique_ptr<fidl_spinel::Device::SyncClient> device_client_ptr_ = 0;
+  std::unique_ptr<fidl_spinel::DeviceSetup::SyncClient> device_setup_client_ptr_ = nullptr;
+  std::unique_ptr<fidl_spinel::Device::SyncClient> device_client_ptr_ = nullptr;
   zx::unowned_channel device_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
 
-  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
+  std::unique_ptr<svc::Outgoing> outgoing_ = nullptr;
 
   sync_completion_t radio_rx_complete_;
-  std::unique_ptr<OtStackCallBackImpl> lowpan_spinel_ptr_ = 0;
+  std::unique_ptr<OtStackCallBackImpl> lowpan_spinel_ptr_ = nullptr;
   uint32_t radio_inbound_allowance_ = 0;
   uint32_t radio_inbound_cnt = 0;
   uint32_t radio_outbound_allowance_ = 0;
@@ -158,7 +151,6 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
 
   std::optional<void*> ot_instance_ptr_ = nullptr;
   bool is_test_env_;
-  zx::channel isolated_devfs_;
 
   zx_status_t handler_status_ = ZX_OK;
 };

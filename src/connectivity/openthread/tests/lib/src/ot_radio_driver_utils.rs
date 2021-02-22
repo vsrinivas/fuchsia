@@ -19,7 +19,7 @@ pub async fn ot_radio_set_channel(device: &File) -> Result<ClientEnd<DeviceMarke
     let device_setup_channel = fasync::Channel::from_channel(fdio::clone_channel(device)?)?;
     let device_setup_proxy = DeviceSetupProxy::new(device_setup_channel);
     let (client_side, server_side) = create_endpoints::<DeviceMarker>()?;
-    match device_setup_proxy.set_channel(server_side.into_channel()).await {
+    match device_setup_proxy.set_channel(server_side).await {
         Ok(_r) => Ok(client_side),
         Err(e) => Err(e.into()),
     }
