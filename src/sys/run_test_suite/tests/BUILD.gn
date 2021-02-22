@@ -99,6 +99,14 @@ fuchsia_unittest_package("run_test_suite_integration_tests") {
     "//examples/tests:run-closes-channel-example",
     "//examples/tests:run-hangs-example",
   ]
+
+  # There's expected error logs that happen due to races given that the logging component just
+  # logs and exits quickly.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
