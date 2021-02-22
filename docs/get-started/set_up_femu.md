@@ -75,7 +75,7 @@ Note: Command will differ depending on the type of machines you use.
   Note: `FUCHSIA_ROOT` is the path to the Fuchsia checkout on your local machine (ex: `~/fuchsia`).
 
   ```posix-terminal
-  fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/script/start-unsecure-internet.sh
+  fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
   ``` 
 
 {% dynamic else %}
@@ -83,7 +83,7 @@ Note: Command will differ depending on the type of machines you use.
 Note: `FUCHSIA_ROOT` is the path to the Fuchsia checkout on your local machine (ex: `~/fuchsia`).
 
 ```posix-terminal
-fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/script/start-unsecure-internet.sh
+fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
 ```
 {% dynamic endif %}
 
