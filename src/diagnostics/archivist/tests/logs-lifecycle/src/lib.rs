@@ -5,11 +5,9 @@
 use diagnostics_data::{Data, Logs};
 use diagnostics_reader::ArchiveReader;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::ChildRef;
 use fuchsia_async::{OnSignals, Task};
-use fuchsia_component::client::connect_to_protocol_at_dir_root;
 use fuchsia_zircon as zx;
 use futures::StreamExt;
 
@@ -21,17 +19,7 @@ async fn test_logs_lifecycle() {
     fuchsia_syslog::init().unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
 
-    let realm = fuchsia_component::client::realm().unwrap();
-    let mut archivist_ref = ChildRef { name: "archivist".to_string(), collection: None };
-
-    let (archivist_outgoing, server_end) = create_endpoints::<DirectoryMarker>().unwrap();
-    realm.bind_child(&mut archivist_ref, server_end).await.unwrap().unwrap();
-
-    let archivist_outgoing = archivist_outgoing.into_proxy().unwrap();
-    let archive =
-        connect_to_protocol_at_dir_root::<ArchiveAccessorMarker>(&archivist_outgoing).unwrap();
     let reader = ArchiveReader::new()
-        .with_archive(archive)
         .with_minimum_schema_count(0) // we want this to return even when no log messages
         .retry_if_empty(false);
 
@@ -43,6 +31,7 @@ async fn test_logs_lifecycle() {
         }
     });
 
+    let realm = fuchsia_component::client::realm().unwrap();
     let mut child_ref = ChildRef { name: "logs_when_launched".to_string(), collection: None };
 
     for i in 1..100 {

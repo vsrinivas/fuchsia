@@ -15,7 +15,6 @@ rustc_test("test") {
   name = "logs-lifecycle"
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/diagnostics/data/rust",
@@ -60,8 +59,5 @@ fuchsia_component("logs-when-launched") {
 fuchsia_test_package("package") {
   package_name = "test-logs-lifecycle"
   test_components = [ ":component" ]
-  deps = [
-    ":logs-when-launched",
-    "//src/diagnostics/archivist:archivist-for-embedding-v2",
-  ]
+  deps = [ ":logs-when-launched" ]
 }
