@@ -293,6 +293,8 @@ Given the [table][lang-tables] definition:
 The FIDL toolchain `User` class with the following methods:
 
 * `User()`: Default constructor, initializes with all fields unset.
+* `User(::fidl::AnyAllocator& allocator)`: Constructor which allocates the frame but with all
+fields unset.
 * `User(User&&)`: Default move constructor.
 * `~User()`: Default destructor.
 * `User& operator=(User&&)`: Default move assignment.
@@ -302,38 +304,39 @@ The FIDL toolchain `User` class with the following methods:
 * `const uint8_t& age() const` and `const fidl::StringView& name() const`:
   Read-only field accessor methods. Calling these methods without first setting
   the field leads to an assertion error.
-* `uint8_t& age()` and `fidl::StringView& mutable_age()`: Mutable field accessor
+* `uint8_t& mutable_age()` and `fidl::StringView& mutable_name()`: Mutable field accessor
   methods. Calling these methods without first setting the variant leads to an
   assertion error.
-* `User& set_age(uint8_t _value)` and `User& set_name(std::string _value)`:
-  Field setters.
+* `void set_age(::fidl::ObjectView<uint8>)`: set age an already allocated value.
+* `void set_age(::fidl::AnyAllocator&, uint8_t)`: set age with the given value. The allocator is
+  used to allocate the storage.
+* `void set_age(std::nullptr_t)`: unset age.
+* `void set_name(::fidl::ObjectView<::fidl::StringView>)`: set name with an already allocated value.
+* `void set_name(::::fidl::Allocator&, ::fidlAllocator&, std::string_view)`: set name with the given
+  value. The storage for the storage of the value (StringView) and the storage of the string are
+  allocated using the two allocators. The same allocator should be given to the two allocator
+  arguments.
+* `void set_name(std::nullptr_t)`: unset name.
 
-In order to build a table, three additional classes are generated:
-`User::Frame`, `User::Builder`, and `User::UnownedBuilder`.
+In order to build a table, two additional classes are generated:
+`User::Frame` and `User::UnownedBuilder`.
 
 `User::Frame` is a container for the table's internal storage, and is allocated
 separately from the builder because LLCPP maintains the object layout of the
-underlying wire format. It only needs to be used in conjunction with
-`User::Builder`. `User::Frame` has the following methods:
+underlying wire format. It is only use internally by `User(::fidl::AnyAllocator&)` and
+`User::UnownedBuilder`. `User::Frame` has the following methods:
 
 * `Frame()`: Default constructor.
 
-`User::Builder` and `User::UnownedBuilder` both provide the following methods
-for constructing a new `User`:
+`User::UnownedBuilder` provide thes following methods for constructing a new `User`:
 
-* `Builder&& set_age(fidl::tracking_ptr<uint8_t> elem)` and `Builder&&
+* `UnownedBuilder&& set_age(fidl::tracking_ptr<uint8_t> elem)` and `UnownedBuilder&&
   set_name(fidl::tracking_ptr<fidl::StringView> elem)`: Sets the specified field
   and returns the updated Builder.
 * `User build()`: Returns a User based on the Builder's data.
 
-However, they differ in that `User::UnownedBuilder` directly owns the underlying
-`Frame`, which simplifies working with unowned data. The unowned builder is
-constructed using the default constructor, whereas `User::Builder` explicitly
-takes in a Frame:
-
-```c++
-Builder(fidl::tracking_ptr<User::Frame>&& frame_ptr)
-```
+`User::UnownedBuilder` directly owns the underlying `Frame`, which simplifies working with unowned
+data. The unowned builder is constructed using the default constructor.
 
 Example usage:
 

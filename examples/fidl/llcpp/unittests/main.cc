@@ -50,12 +50,10 @@ TEST(FidlExamples, Unions) {
 
 // [START tables]
 TEST(FidlExamples, Tables) {
-  llcpp::fuchsia::examples::User user =
-      llcpp::fuchsia::examples::User::Builder(
-          std::make_unique<llcpp::fuchsia::examples::User::Frame>())
-          .set_age(std::make_unique<uint8_t>(30))
-          .set_name(std::make_unique<fidl::StringView>("jdoe"))
-          .build();
+  fidl::FidlAllocator allocator;
+  llcpp::fuchsia::examples::User user(allocator);
+  user.set_age(allocator, 30);
+  user.set_name(allocator, allocator, "jdoe");
   ASSERT_FALSE(user.IsEmpty());
   ASSERT_EQ(user.age(), 30);
 }
