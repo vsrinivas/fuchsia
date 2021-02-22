@@ -85,6 +85,10 @@ enum class ComponentIdIndex::Error {
   DUPLICATE_INSTANCE_ID,
   // There are two index entries for the same appmgr_moniker.
   DUPLICATE_MONIKER,
+  // An appmgr moniker was not specified. This is not a fatal error, since the
+  // index is also shared with component_manager and a component_manager
+  // moniker may be present.
+  MISSING_MONIKER
 };
 
 }  // namespace component

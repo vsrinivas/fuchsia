@@ -75,6 +75,33 @@ TEST_F(ComponentIdIndexTest, LookupInstanceId_Exists) {
   EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id);
 }
 
+TEST_F(ComponentIdIndexTest, MissingAppmgrMonikerIsOk) {
+  auto config_dir = MakeAppmgrConfigDirWithIndex(R"({
+    "instances": [
+      {
+        "instance_id": "aaaad44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b35aaaa",
+        "moniker": "/a/b/c"
+      },
+      {
+        "instance_id": "8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280",
+        "appmgr_moniker": {
+          "realm_path": ["sys"],
+          "url": "fuchsia-pkg://example.com/pkg#meta/component.cmx"
+        }
+      }
+    ]
+  })");
+  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+
+  auto index = result.take_value();
+  Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
+                     .realm_path = {"sys"}};
+  auto id = index->LookupMoniker(moniker).value_or("");
+  EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id);
+}
+
+
 TEST_F(ComponentIdIndexTest, LookupTransitionalMoniker_Exists) {
   auto config_dir = MakeAppmgrConfigDirWithIndex(R"({
     "instances": [
@@ -239,13 +266,6 @@ TEST_F(ComponentIdIndexTest, ParseErrors) {
                   ]
                 })",
                .expected = ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID},
-      TestCase{.name = "missing appmgr_moniker",
-               .index = R"({
-                  "instances": [{
-                    "instance_id": "8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280"
-                  }]
-                })",
-               .expected = ComponentIdIndex::Error::INVALID_MONIKER},
       TestCase{.name = "duplicate moniker",
                .index = R"({
                   "instances" : [

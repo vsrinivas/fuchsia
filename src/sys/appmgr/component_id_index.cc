@@ -73,8 +73,13 @@ fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjso
     return fit::error(ComponentIdIndex::Error::INVALID_INSTANCE_ID);
   }
 
-  // `appmgr_moniker` is a required object.
-  if (!entry.HasMember("appmgr_moniker") || !entry["appmgr_moniker"].IsObject()) {
+  // `appmgr_moniker` is missing.
+  if (!entry.HasMember("appmgr_moniker")) {
+    return fit::error(ComponentIdIndex::Error::MISSING_MONIKER);
+  }
+
+  // `appmgr_moniker` must be an object.
+  if (!entry["appmgr_moniker"].IsObject()) {
     FX_LOGS(ERROR) << "appmgr_moniker must be valid object.";
     return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
   }
@@ -191,6 +196,11 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
   for (const auto& entry : instances) {
     auto parsed_entry = ParseEntry(entry);
     if (parsed_entry.is_error()) {
+      if (parsed_entry.error() == ComponentIdIndex::Error::MISSING_MONIKER) {
+        // skip this entry -- even though it is missing an appmgr moniker, but
+        // might have a component_manager-based moniker.
+        continue;
+      }
       return fit::error(parsed_entry.error());
     }
 
