@@ -312,9 +312,9 @@ fields unset.
   used to allocate the storage.
 * `void set_age(std::nullptr_t)`: unset age.
 * `void set_name(::fidl::ObjectView<::fidl::StringView>)`: set name with an already allocated value.
-* `void set_name(::::fidl::Allocator&, ::fidlAllocator&, std::string_view)`: set name with the given
-  value. The storage for the storage of the value (StringView) and the storage of the string are
-  allocated using the two allocators. The same allocator should be given to the two allocator
+* `void set_name(::fidl::AnyAllocator&, ::fidl::AnyAllocator&, std::string_view)`: set name with the
+  given value. The storage for the storage of the value (StringView) and the storage of the string
+  are allocated using the two allocators. The same allocator should be given to the two allocator
   arguments.
 * `void set_name(std::nullptr_t)`: unset name.
 
