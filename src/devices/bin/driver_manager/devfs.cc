@@ -27,6 +27,7 @@
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
+#include <fbl/string_buffer.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "async_loop_owned_rpc_handler.h"
@@ -91,6 +92,8 @@ void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase
   }
 }
 
+class DevfsFidlServer;
+
 class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
                   public AsyncLoopOwnedRpcHandler<DcIostate> {
  public:
@@ -111,10 +114,101 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
                         const zx_packet_signal_t* signal);
 
  private:
+  friend class DevfsFidlServer;
+
   uint64_t readdir_ino_ = 0;
 
   // pointer to our devnode, nullptr if it has been removed
   Devnode* devnode_ = nullptr;
+
+  std::unique_ptr<DevfsFidlServer> server_;
+};
+
+
+// This is a wrapper-adapter while the rest of the infrastructure here uses fidl_txn_t. It forwards
+// fidl::Transaction::Reply() to fidl_txn_t.reply().
+class TxnForwarder : public fidl::Transaction {
+ public:
+  explicit TxnForwarder(fidl_txn_t* txn) : txn_(txn) {}
+
+  TxnForwarder& operator=(const TxnForwarder&) = delete;
+  TxnForwarder(const TxnForwarder&) = delete;
+
+  TxnForwarder& operator=(TxnForwarder&&) = delete;
+  TxnForwarder(TxnForwarder&&) = delete;
+
+  zx_status_t Reply(fidl::OutgoingMessage* message) override {
+    if (closed_) {
+      return status_;
+    }
+    return txn_->reply(txn_, message->message());
+  }
+
+  void Close(zx_status_t epitaph) override {
+    closed_ = true;
+    status_ = epitaph;
+  }
+
+  std::unique_ptr<Transaction> TakeOwnership() final {
+    ZX_ASSERT_MSG(false, "TxnForwarder cannot take ownership.");
+  }
+
+  zx_status_t GetStatus() const {
+    return status_;
+  }
+
+ private:
+  fidl_txn_t* txn_;
+  bool closed_ = false;
+  zx_status_t status_ = ZX_OK;
+};
+
+// This is an llcpp-backed server equivalent to the switch() in DevfsFidlHandler(). Entries are
+// DevfsFidlHandler() are being migrated to methods here. See https://fxbug.dev/68648.
+class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
+ public:
+  explicit DevfsFidlServer(DcIostate* iostate) : owner_(iostate) {}
+
+  // Awful hacks for now to integrate with DcIostate::DevfsFidlHandler().
+  void set_current_dispatcher(async_dispatcher_t* dispatcher) { current_dispatcher_ = dispatcher; }
+  void clear_current_dispatcher() { current_dispatcher_ = nullptr; }
+
+  void Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
+             CloneCompleter::Sync& completer) override {}
+  void Close(CloseCompleter::Sync& completer) override {}
+  void Describe(DescribeCompleter::Sync& completer) override {}
+  void Sync(SyncCompleter::Sync& completer) override {}
+  void GetAttr(GetAttrCompleter::Sync& completer) override {}
+  void SetAttr(uint32_t flags, fio::wire::NodeAttributes attributes,
+               SetAttrCompleter::Sync& completer) override {}
+
+  void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
+            OpenCompleter::Sync& completer) override;
+  void AddInotifyFilter(::llcpp::fuchsia::io2::wire::InotifyWatchMask filters,
+                        fidl::StringView path, uint32_t watch_descriptor, zx::socket socket,
+                        fidl::ServerEnd<::llcpp::fuchsia::io2::Inotifier> controller,
+                        AddInotifyFilterCompleter::Sync& completer) override {}
+  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
+  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {}
+  void Rewind(RewindCompleter::Sync& completer) override {}
+  void GetToken(GetTokenCompleter::Sync& completer) override {}
+  void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
+              RenameCompleter::Sync& completer) override {}
+  void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
+            LinkCompleter::Sync& completer) override {}
+  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
+             WatchCompleter::Sync& completer) override {}
+  void Mount(fidl::ClientEnd<fio::Directory> remote, MountCompleter::Sync& completer) override {}
+  void MountAndCreate(fidl::ClientEnd<fio::Directory> remote, fidl::StringView name, uint32_t flags,
+                      MountAndCreateCompleter::Sync& completer) override {}
+  void Unmount(UnmountCompleter::Sync& completer) override {}
+  void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
+  void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {}
+
+ private:
+  DcIostate* owner_;
+  async_dispatcher_t* current_dispatcher_ = nullptr;
 };
 
 struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
@@ -544,7 +638,9 @@ Devnode::Devnode(fbl::String name) : name(std::move(name)) {}
 
 Devnode::~Devnode() { devfs_remove(this); }
 
-DcIostate::DcIostate(Devnode* dn) : devnode_(dn) { devnode_->iostate.push_back(this); }
+DcIostate::DcIostate(Devnode* dn) : devnode_(dn), server_(std::make_unique<DevfsFidlServer>(this)) {
+  devnode_->iostate.push_back(this);
+}
 
 DcIostate::~DcIostate() { DetachFromDevnode(); }
 
@@ -747,20 +843,12 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       return txn->reply(txn, &raw_msg);
     }
     case fuchsia_io_DirectoryOpenOrdinal: {
-      DECODE_REQUEST(msg, DirectoryOpen);
-      DEFINE_REQUEST(msg, DirectoryOpen);
-      uint32_t len = static_cast<uint32_t>(request->path.size);
-      zx_handle_t h = request->object;
-      uint32_t flags = request->flags;
-      if (len == 0 || len > fio::MAX_PATH) {
-        zx_handle_close(h);
-      } else {
-        char path[fio::MAX_PATH + 1];
-        memcpy(path, request->path.data, len);
-        path[len] = 0;
-        devfs_open(dn, dispatcher, h, path, flags);
-      }
-      return ZX_OK;
+      TxnForwarder transaction(txn);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_NodeGetAttrOrdinal: {
       DECODE_REQUEST(msg, NodeGetAttr);
@@ -825,6 +913,16 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
   // close inbound handles so they do not leak
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+void DevfsFidlServer::Open(uint32_t flags, uint32_t mode, fidl::StringView path,
+                           fidl::ServerEnd<fio::Node> object, OpenCompleter::Sync& completer) {
+  if (path.size() <= fio::MAX_PATH) {
+    fbl::StringBuffer<fio::MAX_PATH + 1> terminated_path;
+    terminated_path.Append(path.data(), path.size());
+    devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(),
+               terminated_path.data(), flags);
+  }
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
