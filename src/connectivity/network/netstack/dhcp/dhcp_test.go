@@ -691,9 +691,6 @@ func signalTimeout(ctx context.Context, timeout chan time.Time) {
 }
 
 func TestRetransmissionExponentialBackoff(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// The actual value of retransTimeout does not matter because the timer is
 	// stubbed out in this test.
 	retransTimeout := time.Millisecond
@@ -765,6 +762,9 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("offerTimeouts=%d,ackTimeouts=%d", tc.offerTimeouts, tc.ackTimeouts), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			_, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			info := c.Info()
 			info.Retransmission = retransTimeout
