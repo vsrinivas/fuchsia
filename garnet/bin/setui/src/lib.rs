@@ -238,15 +238,14 @@ macro_rules! register_handler {
 /// presence will cause this handler to be included.
 macro_rules! register_fidl_handler {
     ($components:ident, $service_dir:ident, $service_messenger_factory:ident,
-            $messenger_factory:ident, $interface:ident, $handler_mod:ident$(, $target:ident)+) => {
+            $interface:ident, $handler_mod:ident$(, $target:ident)+) => {
         if false $(|| $components.contains(&SettingType::$target))+
         {
             let service_messenger_factory = $service_messenger_factory.clone();
-            let factory = $messenger_factory.clone();
             $service_dir.add_fidl_service(
                     move |stream: $interface| {
-                        crate::$handler_mod::fidl_io::spawn(factory.clone(),
-                                service_messenger_factory.clone(), stream);
+                        crate::$handler_mod::fidl_io::spawn(service_messenger_factory.clone(),
+                        stream);
                     });
         }
     }
@@ -686,7 +685,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         LightRequestStream,
         light,
         Light
@@ -696,7 +694,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         AccessibilityRequestStream,
         accessibility,
         Accessibility
@@ -706,7 +703,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         AudioRequestStream,
         audio,
         Audio
@@ -716,7 +712,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         DeviceRequestStream,
         device,
         Device
@@ -726,7 +721,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         DisplayRequestStream,
         display,
         Display,
@@ -737,7 +731,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         DoNotDisturbRequestStream,
         do_not_disturb,
         DoNotDisturb
@@ -747,7 +740,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         FactoryResetRequestStream,
         factory_reset,
         FactoryReset
@@ -757,7 +749,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         IntlRequestStream,
         intl,
         Intl
@@ -767,7 +758,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         NightModeRequestStream,
         night_mode,
         NightMode
@@ -777,7 +767,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         PrivacyRequestStream,
         privacy,
         Privacy
@@ -787,7 +776,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         InputRequestStream,
         input,
         Input
@@ -797,7 +785,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components,
         service_dir,
         messenger_factory,
-        switchboard_messenger_factory,
         SetupRequestStream,
         setup,
         Setup
@@ -807,7 +794,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
         crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(
             messenger_factory.clone(),
-            policy_messenger_factory.clone(),
             stream,
         );
     });

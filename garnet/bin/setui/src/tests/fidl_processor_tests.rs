@@ -3,13 +3,9 @@
 // found in the LICENSE file.
 
 use crate::fidl_processor::processor::{BaseFidlProcessor, ProcessingUnit, RequestResultCreator};
-use crate::internal::switchboard;
-use crate::message::base;
-use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::MessengerType;
-use crate::message::messenger::MessengerClient;
 use crate::service;
-use crate::{internal, ExitSender};
+use crate::ExitSender;
 use anyhow::format_err;
 use fidl::endpoints::{Request, ServiceMarker};
 use fidl_fuchsia_settings::{
@@ -41,16 +37,12 @@ where
     }
 }
 
-impl<S, P, A, R> ProcessingUnit<S, P, A, R> for TestProcessingUnit<S>
+impl<S> ProcessingUnit<S> for TestProcessingUnit<S>
 where
     S: ServiceMarker,
-    P: base::Payload + 'static,
-    A: base::Address + 'static,
-    R: base::Role + 'static,
 {
     fn process(
         &self,
-        _messenger: MessengerClient<P, A, R>,
         _service_messenger: service::message::Messenger,
         request: Request<S>,
         exit_tx: ExitSender,
@@ -62,35 +54,20 @@ where
 /// Creates and starts a `BaseFidlProcessor` that includes the given processing units. Returns a
 /// proxy to make FIDL calls on.
 async fn create_processor(
-    processing_units: Vec<
-        Box<
-            dyn ProcessingUnit<
-                PrivacyMarker,
-                switchboard::Payload,
-                switchboard::Address,
-                DefaultRole,
-            >,
-        >,
-    >,
+    processing_units: Vec<Box<dyn ProcessingUnit<PrivacyMarker>>>,
 ) -> PrivacyProxy {
     let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PrivacyMarker>().unwrap();
 
     let service_messenger_factory = service::message::create_hub();
-    let switchboard_messenger_factory = internal::switchboard::message::create_hub();
-    let (switchboard_messenger, _) =
-        switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let (service_messenger, _) = service_messenger_factory
         .create(MessengerType::Unbound)
         .await
         .expect("should create messenger");
 
-    let fidl_processor = BaseFidlProcessor::<
-        PrivacyMarker,
-        switchboard::Payload,
-        switchboard::Address,
-        DefaultRole,
-    >::with_processing_units(
-        stream, service_messenger, switchboard_messenger, processing_units
+    let fidl_processor = BaseFidlProcessor::<PrivacyMarker>::with_processing_units(
+        stream,
+        service_messenger,
+        processing_units,
     );
 
     // Start processing.
