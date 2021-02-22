@@ -143,7 +143,7 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
   num_unacked = 0;
   send_delay = SEND_DELAY_SHORT;
 
-  seqno++;
+  seqno = seqno + 1;
   pending = 0;
   debuglog_send();
 }
