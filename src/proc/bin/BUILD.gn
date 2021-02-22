@@ -5,3 +5,8 @@
 group("bin") {
   deps = [ "starnix" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "starnix:tests" ]
+}

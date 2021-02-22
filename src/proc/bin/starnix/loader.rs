@@ -112,3 +112,42 @@ pub async fn load_executable(
 
     Ok(process)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn trivial_initial_stack() {
+        let stack_vmo = zx::Vmo::create(0x4000).expect("VMO creation should succeed.");
+        let stack_base: usize = 0x3000_0000;
+        let original_stack_start_addr: usize = 0x3000_1000;
+
+        let params = ProcessParameters {
+            name: CString::new("trivial").unwrap(),
+            argv: vec![],
+            environ: vec![],
+            aux: vec![],
+        };
+
+        let stack_start_addr =
+            populate_initial_stack(&stack_vmo, &params, stack_base, original_stack_start_addr)
+                .expect("Populate initial stack should succeed.");
+
+        let argc_size: usize = 8;
+        let argv_terminator_size: usize = 8;
+        let environ_terminator_size: usize = 8;
+        let aux_random: usize = 16;
+        let aux_null: usize = 16;
+        let random_seed: usize = 16;
+
+        let payload_size = argc_size
+            + argv_terminator_size
+            + environ_terminator_size
+            + aux_random
+            + aux_null
+            + random_seed;
+
+        assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
+    }
+}

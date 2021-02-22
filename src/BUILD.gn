@@ -83,6 +83,7 @@ group("tests_no_e2e") {
     "media:tests",
     "modular:tests",
     "power:tests",
+    "proc:tests",
     "recovery:tests_no_e2e",
     "security:tests",
     "session:tests",
