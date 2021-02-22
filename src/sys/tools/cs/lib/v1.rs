@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::get_capabilities,
     crate::io::Directory,
-    futures::future::{BoxFuture, FutureExt},
+    crate::{get_capabilities, get_capabilities_timeout},
+    futures::future::{join_all, BoxFuture, FutureExt},
+    std::sync::Arc,
 };
 
 static SPACER: &str = "  ";
@@ -14,38 +15,46 @@ static UNKNOWN: &str = "UNKNOWN";
 /// Used as a helper function to traverse <realm id>/r/, <realm id>/c/,
 /// <component instance id>/c/, following through into their id subdirectories.
 async fn open_id_directories(id_dir: Directory) -> Vec<Directory> {
-    let mut realms = vec![];
-    for id in id_dir.entries().await {
-        assert!(id.chars().all(char::is_numeric));
-        let realm = id_dir.open_dir(&id).expect(
-            format!("open_dir() failed: failed to open realm directory with id `{}`!", &id)
-                .as_str(),
-        );
-        realms.push(realm);
-    }
-    realms
+    let mut ids = id_dir.entries().await;
+    let proxy = Arc::new(id_dir);
+    join_all(ids.drain(..).map(move |id| {
+        let proxy = proxy.clone();
+        async move {
+            assert!(id.chars().all(char::is_numeric));
+            let realm = proxy.open_dir(&id).expect(
+                format!("open_dir() failed: failed to open realm directory with id `{}`!", &id)
+                    .as_str(),
+            );
+            realm
+        }
+    }))
+    .await
 }
 
 fn visit_child_realms(child_realms_dir: Directory) -> BoxFuture<'static, Vec<V1Realm>> {
     async move {
-        let mut child_realms = vec![];
-
+        let mut realm_names = child_realms_dir.entries().await;
+        let proxy = Arc::new(child_realms_dir);
         // visit all entries within <realm id>/r/
-        for realm_name in child_realms_dir.entries().await {
-            // visit <realm id>/r/<child realm name>/<child realm id>/
-            let id_dir = child_realms_dir.open_dir(&realm_name).expect(
-                format!(
-                    "open_dir() failed: failed to open child realm directory with id `{}`!",
-                    &realm_name
-                )
-                .as_str(),
-            );
-            for realm_dir in open_id_directories(id_dir).await.drain(..) {
-                child_realms.push(V1Realm::create(realm_dir).await);
+        join_all(realm_names.drain(..).map(move |realm_name| {
+            let proxy = proxy.clone();
+            async move {
+                // visit <realm id>/r/<child realm name>/<child realm id>/
+                let id_dir = proxy.open_dir(&realm_name).expect(
+                    format!(
+                        "open_dir() failed: failed to open child realm directory with id `{}`!",
+                        &realm_name
+                    )
+                    .as_str(),
+                );
+                join_all(open_id_directories(id_dir).await.drain(..).map(|d| V1Realm::create(d)))
+                    .await
             }
-        }
-
-        child_realms
+        }))
+        .await
+        .drain(..)
+        .flatten()
+        .collect()
     }
     .boxed()
 }
@@ -54,20 +63,26 @@ fn visit_child_realms(child_realms_dir: Directory) -> BoxFuture<'static, Vec<V1R
 /// Each component visited is added to the |child_components| vector.
 fn visit_child_components(child_components_dir: Directory) -> BoxFuture<'static, Vec<V1Component>> {
     async move {
-        let mut child_components = vec![];
-
-        for component_name in child_components_dir.entries().await {
-            // Visits */c/<component name>/<component instance id>.
-            let id_dir = child_components_dir.open_dir(&component_name).expect(
-                format!("open_dir() failed: failed to open `{}` directory!", &component_name)
-                    .as_str(),
-            );
-            for component_dir in open_id_directories(id_dir).await.drain(..) {
-                child_components.push(V1Component::create(component_dir).await);
+        let mut component_names = child_components_dir.entries().await;
+        let proxy = Arc::new(child_components_dir);
+        join_all(component_names.drain(..).map(move |component_name| {
+            let proxy = proxy.clone();
+            async move {
+                // Visits */c/<component name>/<component instance id>.
+                let id_dir = proxy.open_dir(&component_name).expect(
+                    format!("open_dir() failed: failed to open `{}` directory!", &component_name)
+                        .as_str(),
+                );
+                join_all(
+                    open_id_directories(id_dir).await.drain(..).map(|d| V1Component::create(d)),
+                )
+                .await
             }
-        }
-
-        child_components
+        }))
+        .await
+        .drain(..)
+        .flatten()
+        .collect()
     }
     .boxed()
 }
@@ -82,21 +97,24 @@ pub struct V1Realm {
 
 impl V1Realm {
     pub async fn create(realm_dir: Directory) -> V1Realm {
-        let name = realm_dir.read_file("name").await.expect("read_file(`name`) failed!");
-        let job_id = realm_dir
-            .read_file("job-id")
-            .await
+        let child_realms_dir = realm_dir.open_dir("r").expect("open_dir(`r`) failed!");
+        let child_components_dir = realm_dir.open_dir("c").expect("open_dir(`c`) failed!");
+
+        let (name, job_id, child_realms, child_components) = futures::join!(
+            realm_dir.read_file("name"),
+            realm_dir.read_file("job-id"),
+            visit_child_realms(child_realms_dir),
+            visit_child_components(child_components_dir),
+        );
+
+        let name = name.expect("read_file(`name`) failed!");
+
+        let job_id = job_id
             .expect("read_file(`job-id`) failed!")
             .parse::<u32>()
             .expect("parse(`job-id`) failed!");
-        let child_realms_dir = realm_dir.open_dir("r").expect("open_dir(`r`) failed!");
-        let child_components_dir = realm_dir.open_dir("c").expect("open_dir(`c`) failed!");
-        V1Realm {
-            name,
-            job_id,
-            child_realms: visit_child_realms(child_realms_dir).await,
-            child_components: visit_child_components(child_components_dir).await,
-        }
+
+        V1Realm { name, job_id, child_realms, child_components }
     }
 
     pub fn print_tree_recursive(&self, level: usize) {
@@ -152,12 +170,19 @@ pub struct V1Component {
 
 impl V1Component {
     async fn create(component_dir: Directory) -> V1Component {
-        let job_id = component_dir
-            .read_file("job-id")
-            .await
+        let (job_id, url, name) = futures::join!(
+            component_dir.read_file("job-id"),
+            component_dir.read_file("url"),
+            component_dir.read_file("name"),
+        );
+
+        let job_id = job_id
             .expect("read_file(`job-id`) failed!")
             .parse::<u32>()
             .expect("parse(`job-id`) failed!");
+        let url = url.expect("read_file(`url`) failed!");
+        let name = name.expect("read_file(`name`) failed!");
+
         let process_id = if component_dir.exists("process-id").await {
             Some(
                 component_dir
@@ -170,8 +195,7 @@ impl V1Component {
         } else {
             None
         };
-        let url = component_dir.read_file("url").await.expect("read_file(`url`) failed!");
-        let name = component_dir.read_file("name").await.expect("read_file(`name`) failed!");
+
         let in_dir = component_dir.open_dir("in").expect("open_dir(`in`) failed!");
 
         let merkle_root = if in_dir.exists("pkg").await {
@@ -195,11 +219,13 @@ impl V1Component {
             vec![]
         };
 
-        let incoming_capabilities =
-            get_capabilities(in_dir).await.expect("Failed to get incoming capabilities.");
+        let incoming_capabilities = get_capabilities(in_dir).await;
 
         let outgoing_capabilities = if component_dir.exists("out").await {
-            get_capabilities(component_dir.open_dir("out").expect("open_dir(`out`) failed!")).await
+            get_capabilities_timeout(
+                component_dir.open_dir("out").expect("open_dir(`out`) failed!"),
+            )
+            .await
         } else {
             // The directory doesn't exist. This is probably because
             // there is no runtime on the component.
