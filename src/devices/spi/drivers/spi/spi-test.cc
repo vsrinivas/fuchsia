@@ -90,6 +90,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
         EXPECT_NE(txdata_size, 0, "");
         EXPECT_EQ(out_rxdata, nullptr, "");
         EXPECT_EQ(rxdata_size, 0, "");
+        *out_rxdata_actual = 0;
         break;
       case SpiTestMode::kReceive:
         EXPECT_EQ(txdata, nullptr, "");
@@ -98,7 +99,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
         EXPECT_NE(rxdata_size, 0, "");
         memset(out_rxdata, 0, rxdata_size);
         memcpy(out_rxdata, kTestData, std::min(rxdata_size, sizeof(kTestData)));
-        *out_rxdata_actual = rxdata_size;
+        *out_rxdata_actual = rxdata_size + (corrupt_rx_actual_ ? 1 : 0);
         break;
       case SpiTestMode::kExchange:
         EXPECT_NE(txdata, nullptr, "");
@@ -108,7 +109,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
         EXPECT_EQ(txdata_size, rxdata_size, "");
         memset(out_rxdata, 0, rxdata_size);
         memcpy(out_rxdata, txdata, std::min(rxdata_size, txdata_size));
-        *out_rxdata_actual = std::min(rxdata_size, txdata_size);
+        *out_rxdata_actual = std::min(rxdata_size, txdata_size) + (corrupt_rx_actual_ ? 1 : 0);
         break;
     }
 
@@ -212,6 +213,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
   fbl::Vector<SpiChild*> children_;
   fbl::Vector<fake_ddk::FidlMessenger*> fidl_clients_;
   uint32_t current_test_cs_;
+  bool corrupt_rx_actual_ = false;
 
   enum class SpiTestMode {
     kTransmit,
@@ -267,6 +269,8 @@ TEST(SpiDevice, SpiTest) {
 }
 
 TEST(SpiDevice, SpiFidlVmoTest) {
+  using ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight;
+
   constexpr uint8_t kTestData[] = {1, 2, 3, 4, 5, 6, 7};
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -298,26 +302,38 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   ASSERT_OK(zx::vmo::create(4096, 0, &cs1_vmo));
 
   {
-    zx::vmo vmo;
-    ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    auto result = cs0_client->RegisterVmo_Sync(1, std::move(vmo), 0, 4096);
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    ::llcpp::fuchsia::mem::Range vmo = {.offset = 0, .size = 4096};
+    ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
+    auto result = cs0_client->RegisterVmoNew_Sync(1, std::move(vmo),
+                                                  SharedVmoRight::READ | SharedVmoRight::WRITE);
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
   }
 
   {
-    zx::vmo vmo;
-    ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
-    auto result = cs1_client->RegisterVmo_Sync(2, std::move(vmo), 0, 4096);
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    ::llcpp::fuchsia::mem::Range vmo = {.offset = 0, .size = 4096};
+    ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
+    auto result = cs1_client->RegisterVmoNew_Sync(2, std::move(vmo),
+                                                  SharedVmoRight::READ | SharedVmoRight::WRITE);
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
   }
 
   ASSERT_OK(cs0_vmo.write(kTestData, 1024, sizeof(kTestData)));
   {
-    auto result = cs0_client->ExchangeVmo_Sync(1, 1024, 1, 2048, sizeof(kTestData));
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    auto result = cs0_client->ExchangeNew_Sync(
+        {
+            .vmo_id = 1,
+            .offset = 1024,
+            .size = sizeof(kTestData),
+        },
+        {
+            .vmo_id = 1,
+            .offset = 2048,
+            .size = sizeof(kTestData),
+        });
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
 
     uint8_t buf[sizeof(kTestData)];
     ASSERT_OK(cs0_vmo.read(buf, 2048, sizeof(buf)));
@@ -326,15 +342,23 @@ TEST(SpiDevice, SpiFidlVmoTest) {
 
   ASSERT_OK(cs1_vmo.write(kTestData, 1024, sizeof(kTestData)));
   {
-    auto result = cs1_client->TransmitVmo_Sync(2, 1024, sizeof(kTestData));
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    auto result = cs1_client->TransmitNew_Sync({
+        .vmo_id = 2,
+        .offset = 1024,
+        .size = sizeof(kTestData),
+    });
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
   }
 
   {
-    auto result = cs0_client->ReceiveVmo_Sync(1, 1024, sizeof(kTestData));
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    auto result = cs0_client->ReceiveNew_Sync({
+        .vmo_id = 1,
+        .offset = 1024,
+        .size = sizeof(kTestData),
+    });
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
 
     uint8_t buf[sizeof(kTestData)];
     ASSERT_OK(cs0_vmo.read(buf, 1024, sizeof(buf)));
@@ -342,15 +366,15 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   }
 
   {
-    auto result = cs0_client->UnregisterVmo_Sync(1);
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    auto result = cs0_client->UnregisterVmoNew_Sync(1);
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
   }
 
   {
-    auto result = cs1_client->UnregisterVmo_Sync(2);
-    ASSERT_OK(result.status());
-    EXPECT_OK(result->status);
+    auto result = cs1_client->UnregisterVmoNew_Sync(2);
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_response());
   }
 
   zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(ddk.bus_device_);
@@ -390,7 +414,7 @@ TEST(SpiDevice, SpiFidlVectorTest) {
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
   {
     fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
-    auto result = cs0_client->Transmit_Sync(std::move(tx_buffer));
+    auto result = cs0_client->TransmitVector_Sync(std::move(tx_buffer));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
   }
@@ -398,7 +422,7 @@ TEST(SpiDevice, SpiFidlVectorTest) {
   ddk.current_test_cs_ = 1;
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kReceive;
   {
-    auto result = cs1_client->Receive_Sync(sizeof(test_data));
+    auto result = cs1_client->ReceiveVector_Sync(sizeof(test_data));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
     ASSERT_EQ(result->data.count(), countof(test_data));
@@ -409,11 +433,74 @@ TEST(SpiDevice, SpiFidlVectorTest) {
   ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
   {
     fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
-    auto result = cs0_client->Exchange_Sync(std::move(tx_buffer));
+    auto result = cs0_client->ExchangeVector_Sync(std::move(tx_buffer));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
     ASSERT_EQ(result->rxdata.count(), countof(test_data));
     EXPECT_BYTES_EQ(result->rxdata.data(), test_data, sizeof(test_data));
+  }
+
+  zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(ddk.bus_device_);
+  ddk.bus_device_->DdkUnbind(ddk::UnbindTxn(zxdev));
+  EXPECT_EQ(ddk.children_.size(), 0);
+  EXPECT_EQ(ddk.bus_device_, nullptr);
+}
+
+TEST(SpiDevice, SpiFidlVectorErrorTest) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("spi-test-thread"));
+
+  FakeDdkSpiImpl ddk;
+
+  fidl::Client<::llcpp::fuchsia::hardware::spi::Device> cs0_client, cs1_client;
+
+  SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
+  EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[0]->SpiConnectServer(std::move(server));
+    ASSERT_OK(cs0_client.Bind(std::move(client), loop.dispatcher()));
+  }
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[1]->SpiConnectServer(std::move(server));
+    ASSERT_OK(cs1_client.Bind(std::move(client), loop.dispatcher()));
+  }
+
+  ddk.corrupt_rx_actual_ = true;
+
+  uint8_t test_data[] = {1, 2, 3, 4, 5, 6, 7};
+
+  ddk.current_test_cs_ = 0;
+  ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
+  {
+    fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
+    auto result = cs0_client->TransmitVector_Sync(std::move(tx_buffer));
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+
+  ddk.current_test_cs_ = 1;
+  ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kReceive;
+  {
+    auto result = cs1_client->ReceiveVector_Sync(sizeof(test_data));
+    ASSERT_OK(result.status());
+    EXPECT_EQ(result->status, ZX_ERR_INTERNAL);
+    EXPECT_EQ(result->data.count(), 0);
+  }
+
+  ddk.current_test_cs_ = 0;
+  ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
+  {
+    fidl::VectorView tx_buffer(fidl::unowned_ptr(test_data), countof(test_data));
+    auto result = cs0_client->ExchangeVector_Sync(std::move(tx_buffer));
+    ASSERT_OK(result.status());
+    EXPECT_EQ(result->status, ZX_ERR_INTERNAL);
+    EXPECT_EQ(result->rxdata.count(), 0);
   }
 
   zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(ddk.bus_device_);

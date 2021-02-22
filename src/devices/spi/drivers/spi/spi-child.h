@@ -37,6 +37,13 @@ class SpiChild : public SpiChildType,
   void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync& completer) override;
   void Receive(uint32_t size, ReceiveCompleter::Sync& completer) override;
   void Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync& completer) override;
+
+  void TransmitVector(::fidl::VectorView<uint8_t> data,
+                      TransmitVectorCompleter::Sync& completer) override;
+  void ReceiveVector(uint32_t size, ReceiveVectorCompleter::Sync& completer) override;
+  void ExchangeVector(::fidl::VectorView<uint8_t> txdata,
+                      ExchangeVectorCompleter::Sync& completer) override;
+
   void RegisterVmo(uint32_t vmo_id, ::zx::vmo vmo, uint64_t offset, uint64_t size,
                    RegisterVmoCompleter::Sync& completer) override;
   void UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) override;
@@ -46,6 +53,19 @@ class SpiChild : public SpiChildType,
                   ReceiveVmoCompleter::Sync& completer) override;
   void ExchangeVmo(uint32_t tx_vmo_id, uint64_t tx_offset, uint32_t rx_vmo_id, uint64_t rx_offset,
                    uint64_t size, ExchangeVmoCompleter::Sync& completer) override;
+
+  void RegisterVmoNew(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
+                      ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight rights,
+                      RegisterVmoNewCompleter::Sync& completer) override;
+  void UnregisterVmoNew(uint32_t vmo_id, UnregisterVmoNewCompleter::Sync& completer) override;
+
+  void TransmitNew(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer buffer,
+                   TransmitNewCompleter::Sync& completer) override;
+  void ReceiveNew(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer buffer,
+                  ReceiveNewCompleter::Sync& completer) override;
+  void ExchangeNew(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer tx_buffer,
+                   ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer rx_buffer,
+                   ExchangeNewCompleter::Sync& completer) override;
 
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,

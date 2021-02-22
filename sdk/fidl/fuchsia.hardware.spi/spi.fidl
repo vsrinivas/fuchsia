@@ -4,12 +4,15 @@
 
 library fuchsia.hardware.spi;
 
+using fuchsia.hardware.sharedmemory;
+using fuchsia.mem;
 using zx;
 
 const uint32 MAX_TRANSFER_SIZE = 8196; // arbitrary - to be removed
 
-[ForDeprecatedCBindings]
 protocol Device {
+    // TODO(fxbug.dev/67570): Finish the transition to composing fuchsia.hardware.sharedmemory.
+
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     Transmit(vector<uint8>:MAX_TRANSFER_SIZE data) -> (zx.status status);
     /// Half-duplex receive data from a SPI device; always reads the full size requested.
@@ -19,6 +22,12 @@ protocol Device {
     Exchange(vector<uint8>:MAX_TRANSFER_SIZE txdata) -> (zx.status status,
                                                          vector<uint8>:MAX_TRANSFER_SIZE rxdata);
 
+    /// New names for the above methods.
+    TransmitVector(vector<uint8>:MAX_TRANSFER_SIZE data) -> (zx.status status);
+    ReceiveVector(uint32 size) -> (zx.status status, vector<uint8>:MAX_TRANSFER_SIZE data);
+    ExchangeVector(vector<uint8>:MAX_TRANSFER_SIZE txdata)
+        -> (zx.status status, vector<uint8>:MAX_TRANSFER_SIZE rxdata);
+
     RegisterVmo(uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size) -> (zx.status status);
     UnregisterVmo(uint32 vmo_id) -> (zx.status status, zx.handle:VMO vmo);
 
@@ -27,4 +36,15 @@ protocol Device {
     ReceiveVmo(uint32 vmo_id, uint64 offset, uint64 size) -> (zx.status status);
     ExchangeVmo(uint32 tx_vmo_id, uint64 tx_offset, uint32 rx_vmo_id, uint64 rx_offset, uint64 size)
         -> (zx.status status);
+
+    /// See fuchsisa.hardware.sharedmemory.
+    RegisterVmoNew(uint32 vmo_id, fuchsia.mem.Range vmo,
+                   fuchsia.hardware.sharedmemory.SharedVmoRight rights)
+        -> () error zx.status;
+    UnregisterVmoNew(uint32 vmo_id) -> (zx.handle:VMO vmo) error zx.status;
+
+    TransmitNew(fuchsia.hardware.sharedmemory.SharedVmoBuffer buffer) -> () error zx.status;
+    ReceiveNew(fuchsia.hardware.sharedmemory.SharedVmoBuffer buffer) -> () error zx.status;
+    ExchangeNew(fuchsia.hardware.sharedmemory.SharedVmoBuffer tx_buffer,
+                fuchsia.hardware.sharedmemory.SharedVmoBuffer rx_buffer) -> () error zx.status;
 };
