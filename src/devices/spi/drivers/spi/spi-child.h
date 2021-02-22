@@ -34,25 +34,24 @@ class SpiChild : public SpiChildType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync& completer) override;
-  void Receive(uint32_t size, ReceiveCompleter::Sync& completer) override;
-  void Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync& completer) override;
-
   void TransmitVector(::fidl::VectorView<uint8_t> data,
                       TransmitVectorCompleter::Sync& completer) override;
   void ReceiveVector(uint32_t size, ReceiveVectorCompleter::Sync& completer) override;
   void ExchangeVector(::fidl::VectorView<uint8_t> txdata,
                       ExchangeVectorCompleter::Sync& completer) override;
 
-  void RegisterVmo(uint32_t vmo_id, ::zx::vmo vmo, uint64_t offset, uint64_t size,
+  void RegisterVmo(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
+                   ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight rights,
                    RegisterVmoCompleter::Sync& completer) override;
   void UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) override;
-  void TransmitVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
-                   TransmitVmoCompleter::Sync& completer) override;
-  void ReceiveVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
-                  ReceiveVmoCompleter::Sync& completer) override;
-  void ExchangeVmo(uint32_t tx_vmo_id, uint64_t tx_offset, uint32_t rx_vmo_id, uint64_t rx_offset,
-                   uint64_t size, ExchangeVmoCompleter::Sync& completer) override;
+
+  void Transmit(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer buffer,
+                TransmitCompleter::Sync& completer) override;
+  void Receive(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer buffer,
+               ReceiveCompleter::Sync& completer) override;
+  void Exchange(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer tx_buffer,
+                ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer rx_buffer,
+                ExchangeCompleter::Sync& completer) override;
 
   void RegisterVmoNew(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
                       ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight rights,

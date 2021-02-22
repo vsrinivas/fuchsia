@@ -304,8 +304,8 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   {
     ::llcpp::fuchsia::mem::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
-    auto result = cs0_client->RegisterVmoNew_Sync(1, std::move(vmo),
-                                                  SharedVmoRight::READ | SharedVmoRight::WRITE);
+    auto result = cs0_client->RegisterVmo_Sync(1, std::move(vmo),
+                                               SharedVmoRight::READ | SharedVmoRight::WRITE);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
@@ -313,15 +313,15 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   {
     ::llcpp::fuchsia::mem::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
-    auto result = cs1_client->RegisterVmoNew_Sync(2, std::move(vmo),
-                                                  SharedVmoRight::READ | SharedVmoRight::WRITE);
+    auto result = cs1_client->RegisterVmo_Sync(2, std::move(vmo),
+                                               SharedVmoRight::READ | SharedVmoRight::WRITE);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
 
   ASSERT_OK(cs0_vmo.write(kTestData, 1024, sizeof(kTestData)));
   {
-    auto result = cs0_client->ExchangeNew_Sync(
+    auto result = cs0_client->Exchange_Sync(
         {
             .vmo_id = 1,
             .offset = 1024,
@@ -342,7 +342,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
 
   ASSERT_OK(cs1_vmo.write(kTestData, 1024, sizeof(kTestData)));
   {
-    auto result = cs1_client->TransmitNew_Sync({
+    auto result = cs1_client->Transmit_Sync({
         .vmo_id = 2,
         .offset = 1024,
         .size = sizeof(kTestData),
@@ -352,7 +352,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   }
 
   {
-    auto result = cs0_client->ReceiveNew_Sync({
+    auto result = cs0_client->Receive_Sync({
         .vmo_id = 1,
         .offset = 1024,
         .size = sizeof(kTestData),
@@ -366,13 +366,13 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   }
 
   {
-    auto result = cs0_client->UnregisterVmoNew_Sync(1);
+    auto result = cs0_client->UnregisterVmo_Sync(1);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
 
   {
-    auto result = cs1_client->UnregisterVmoNew_Sync(2);
+    auto result = cs1_client->UnregisterVmo_Sync(2);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
