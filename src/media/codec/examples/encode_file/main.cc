@@ -26,12 +26,14 @@ constexpr char kInputOption[] = "input";
 constexpr char kInputWidthOption[] = "input-width";
 constexpr char kInputHeightOption[] = "input-height";
 constexpr char kInputFramesOption[] = "input-frames";
+constexpr char kInputFormatOption[] = "input-format";
 constexpr char kOutputOption[] = "output";
 constexpr char kEncoderBitrateOption[] = "bitrate";
 constexpr char kEncoderFramerateOption[] = "framerate";
 constexpr char kEncoderCodecOption[] = "codec";
 constexpr char kEncoderGopSizeOption[] = "gop";
 constexpr char kDefaultInputFrames[] = "0";
+constexpr char kDefaultInputFormat[] = "NV12";
 constexpr char kDefaultOutputFile[] = "/tmp/out.h264";
 constexpr char kDefaultEncoderBitrate[] = "1000000";
 constexpr char kDefaultEncoderFramerate[] = "24";
@@ -39,6 +41,8 @@ constexpr char kDefaultEncoderCodec[] = "h264";
 constexpr char kDefaultEncoderGop[] = "30";
 constexpr char kH264[] = "h264";
 constexpr char kH265[] = "h265";
+constexpr char kNV12[] = "NV12";
+constexpr char kI420[] = "I420";
 }  // namespace
 
 static void Usage(const fxl::CommandLine& command_line) {
@@ -46,7 +50,8 @@ static void Usage(const fxl::CommandLine& command_line) {
   printf("Open an input file, encode it, and write output to a file\n");
   printf("\nValid options:\n");
   printf(
-      "  --%s=<filename>\tRequired. The input file to read from. Should contain raw NV12 video "
+      "  --%s=<filename>\tRequired. The input file to read from. Should contain raw NV12 or I420 "
+      "video "
       "frames.\n",
       kInputOption);
   printf("  --%s=<width>\tRequired. The input width in pixels.\n", kInputWidthOption);
@@ -54,6 +59,9 @@ static void Usage(const fxl::CommandLine& command_line) {
   printf("\n    By default will encode all frames in input file\n");
   printf("  --%s=<frames>\tThe number of frames to encode from input file\n", kInputFramesOption);
   printf("\n    By default will write to %s\n", kDefaultOutputFile);
+  printf("  --%s=<format>\tThe raw pixel format of the input. Can be NV12 or I420.\n",
+         kInputFormatOption);
+  printf("\n    By default will select %s\n", kDefaultInputFormat);
   printf("  --%s=<filename>\tThe output file to write encoded video to\n", kOutputOption);
   printf("\n    By default will select encoded bitrate of %s\n", kDefaultEncoderBitrate);
   printf("  --%s=<bitrate>\tTarget encoded bitrate\n", kEncoderBitrateOption);
@@ -97,6 +105,7 @@ int main(int argc, char* argv[]) {
 
   auto input_frames =
       command_line.GetOptionValueWithDefault(kInputFramesOption, kDefaultInputFrames);
+  auto format_str = command_line.GetOptionValueWithDefault(kInputFormatOption, kDefaultInputFormat);
   auto out_filename = command_line.GetOptionValueWithDefault(kOutputOption, kDefaultOutputFile);
   auto bitrate_str =
       command_line.GetOptionValueWithDefault(kEncoderBitrateOption, kDefaultEncoderBitrate);
@@ -113,16 +122,30 @@ int main(int argc, char* argv[]) {
   uint32_t input_height = fxl::StringToNumber<uint32_t>(in_height_str);
   uint32_t input_frame_limit = fxl::StringToNumber<uint32_t>(input_frames);
 
+  if (format_str != kNV12 && format_str != kI420) {
+    std::cerr << "Invalid input format" << std::endl;
+    Usage(command_line);
+    return EXIT_FAILURE;
+  }
+
   if (codec_str != kH264 && codec_str != kH265) {
     std::cerr << "Invalid codec" << std::endl;
     Usage(command_line);
     return EXIT_FAILURE;
   }
 
+  fuchsia::sysmem::PixelFormatType input_format;
+
+  if (format_str == kNV12) {
+    input_format = fuchsia::sysmem::PixelFormatType::NV12;
+  } else if (format_str == kI420) {
+    input_format = fuchsia::sysmem::PixelFormatType::I420;
+  }
+
   std::string mime_type = "video/";
   mime_type.append(codec_str);
 
-  // NV12 frame size
+  // NV12 and I420 frame size
   size_t frame_size = input_width * input_height * 3 / 2;
 
   in_file.open(in_filename, std::ios::in | std::ios::binary);
@@ -177,7 +200,7 @@ int main(int argc, char* argv[]) {
 
   // TODO(afoxley) add support for non-equal display and coded dimensions
   fuchsia::sysmem::ImageFormat_2 image_format = {
-      .pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12,
+      .pixel_format.type = input_format,
       .coded_width = input_width,
       .coded_height = input_height,
       .bytes_per_row = input_width,

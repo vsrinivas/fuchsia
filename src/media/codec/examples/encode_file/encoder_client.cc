@@ -72,7 +72,8 @@ EncoderClient::EncoderClient(uint32_t bitrate, uint32_t gop_size, const std::str
 EncoderClient::~EncoderClient() {}
 
 zx_status_t EncoderClient::Start(fuchsia::sysmem::ImageFormat_2 image_format, uint32_t framerate) {
-  if (image_format.pixel_format.type != fuchsia::sysmem::PixelFormatType::NV12) {
+  if (image_format.pixel_format.type != fuchsia::sysmem::PixelFormatType::NV12 &&
+      image_format.pixel_format.type != fuchsia::sysmem::PixelFormatType::I420) {
     std::cout << "Unsupported pixel format" << std::endl;
     return ZX_ERR_INVALID_ARGS;
   }
