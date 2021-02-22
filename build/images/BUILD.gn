@@ -8,6 +8,7 @@ import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/config/clang/clang.gni")
 import("//build/dev.gni")
+import("//build/dist/fini_manifest.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/collect_blob_manifest.gni")
@@ -18,6 +19,7 @@ import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
+import("//build/images/system_image_fuchsia_packages.gni")
 import("//build/images/vbmeta.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
@@ -218,6 +220,8 @@ action("cache_index") {
   ]
 }
 
+# Generate a response file that lists the content of all package()
+# instances that the system image depends on.
 system_image_manifest_args = "system_image.manifest_args"
 system_image_manifest_args_path = target_gen_dir + "/system_image.manifest_args"
 
@@ -233,6 +237,14 @@ generated_file(system_image_manifest_args) {
   deps += [ "//build/input:system_image" ]
 }
 
+# Generate a response file that lists the content of all
+# fuchsia_package() instances that the system image depends on.
+#
+system_image_fuchsia_packages_list("system_image_fuchsia_packages") {
+  testonly = fuchsia_zbi_testonly
+  deps = [ "//build/input:system_image" ]
+}
+
 # The system_image "package" manifest is everything that appears in /system.
 generate_manifest("system_image.manifest") {
   visibility = [ ":*" ]
@@ -241,9 +253,17 @@ generate_manifest("system_image.manifest") {
   # Now each package() target in the build contributes manifest entries.
   # For system_image packages, these contain binaries that need their
   # references resolved from the auxiliary manifests or /boot (above).
-  deps = [ ":" + system_image_manifest_args ]
+  deps = [
+    ":" + system_image_manifest_args,
+    ":system_image_fuchsia_packages",
+  ]
   sources = [ system_image_manifest_args_path ]
-  args = [ "@" + rebase_path(system_image_manifest_args_path, root_build_dir) ]
+  sources += get_target_outputs(deps[1])
+
+  args = [
+    "@" + rebase_path(sources[0], root_build_dir),
+    "@" + rebase_path(sources[1], root_build_dir),
+  ]
 
   args += [ "--entry-manifest=" +
             get_label_info(":$target_name", "label_no_toolchain") ]

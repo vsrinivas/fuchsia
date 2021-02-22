@@ -113,6 +113,16 @@ template("fuchsia_package") {
           # See fxbug.dev/45680 for more information.
           distribution_entries_barrier = []
         }
+
+        # Used by system_image_fuchsia_packages_list() to allow embedding
+        # the content of this package into the system image, if necessary.
+        package_fini_manifest = [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            fini_manifest = rebase_path(package_manifest_file, root_build_dir)
+          },
+        ]
+        package_fini_manifest_barrier = []
       }
     }
   } else {

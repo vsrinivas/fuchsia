@@ -1,0 +1,70 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Create a response file that lists the content of all fuchsia packages
+# reachable from a given list of deps, with the exception of their meta/
+# directories.
+#
+# This file is only used to generate a final system image manifest.
+#
+# Use get_target_outputs() to get the path to the generated file.
+#
+# Parameters:
+#   deps, testonly, visibility: Usual GN meaning.
+template("system_image_fuchsia_packages_list") {
+  _fini_manifests_json = "${target_name}_fini_manifests"
+  _fini_manifests_json_path =
+      target_gen_dir + "/${target_name}.fini_manifests.json"
+
+  # First collect metadata to list all the fini manifest of the fuchsia_package()
+  # instances reachable from invoker.deps. This generates a JSON file which is a list
+  # of scopes with the following schema:
+  #
+  #    label: label of the fuchsia_package() instance.
+  #    fini_manifest: path to the package's FINI manifest, relative to root_build_dir.
+  #
+  # The fini_manifest contains lines that look like <destination>=<source>
+  # Where <destination> is a package installation location, and <source> is the path
+  # to the input file, relative to root_build_dir.
+  #
+  generated_file(_fini_manifests_json) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    deps = invoker.deps
+    outputs = [ _fini_manifests_json_path ]
+    data_keys = [ "package_fini_manifest" ]
+    walk_keys = [ "package_fini_manifest_barrier" ]
+    output_conversion = "json"
+  }
+
+  # Then convert  this file to a .system.rsp format that is suitable for the final
+  # system manifest file. It's a succession of lines that look like:
+  #
+  #  --entry-manifest=<label>
+  #     Specifies the label corresponding to future --entry values after this one.
+  #
+  #  --entry=<destination>=<source>
+  #     One system manifest entry, format similar to the one described above.
+  #
+  # Note that the script will omit any meta/... content from the input fini manifest
+  # intentionally.
+  #
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    script = "//build/images/convert_fini_manifests_to_system_rsp.py"
+    sources = [ _fini_manifests_json_path ]
+    outputs = [ target_gen_dir + "/${target_name}.fuchsia_packages.rsp" ]
+    depfile = outputs[0] + ".d"
+    args = [
+      "--input=" + rebase_path(sources[0], root_build_dir),
+      "--output=" + rebase_path(outputs[0], root_build_dir),
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+    ]
+    deps = [ ":" + _fini_manifests_json ]
+  }
+}
