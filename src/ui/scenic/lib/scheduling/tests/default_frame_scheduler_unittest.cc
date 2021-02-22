@@ -141,7 +141,7 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
                    early_time, update_time);
 }
 
-TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
+TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSquashedAndSingleRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   // Schedule an extra update for now.
@@ -161,6 +161,32 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
 
   // The two updates should be squashed and presented together.
   EXPECT_EQ(mock_updater_->on_frame_presented_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->last_latched_times().size(), 1u);
+  ASSERT_EQ(mock_updater_->last_latched_times().count(kSessionId), 1u);
+  EXPECT_EQ(mock_updater_->last_latched_times().at(kSessionId).size(), 2u);
+}
+
+TEST_F(FrameSchedulerTest, SquashedPresents_ShouldScheduleForInitialPresent) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  // Schedule two updates. The first with a later requested_presentation_time than the second. They
+  // should be squashed.
+  constexpr SessionId kSessionId = 1;
+  ScheduleUpdate(scheduler, kSessionId, zx::time(1.5f * vsync_timing_->vsync_interval().get()));
+  ScheduleUpdate(scheduler, kSessionId, zx::time(0));
+
+  // Run loop past when a frame would have been scheduled in case update #2 was used.
+  // Observe no attempt to apply changes.
+  const zx::time now = Now();
+  test_loop().RunUntil(now + vsync_timing_->vsync_interval());
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+
+  // Wait for the requested time for update 1 to pass. Should now see an attempted update.
+  test_loop().RunUntil(now + zx::duration(2 * vsync_timing_->vsync_interval().get()));
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+
+  // Both updates should have been applied.
+  mock_renderer_->EndFrame();
   EXPECT_EQ(mock_updater_->last_latched_times().size(), 1u);
   ASSERT_EQ(mock_updater_->last_latched_times().count(kSessionId), 1u);
   EXPECT_EQ(mock_updater_->last_latched_times().at(kSessionId).size(), 2u);

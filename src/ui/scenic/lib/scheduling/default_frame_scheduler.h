@@ -81,8 +81,8 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // appropriately.
   void RequestFrame(zx::time requested_presentation_time);
 
-  // Check if there are pending updates, and if there are then find the next lowest requested
-  // presentation time and uses it to request another frame.
+  // Check if there are pending updates, and if there are then find the lowest next requested
+  // presentation time among all sessions and use it to request another frame.
   void HandleNextFrameRequest();
 
   // Update the global scene and then draw it... maybe.  There are multiple reasons why this might
@@ -183,8 +183,11 @@ class DefaultFrameScheduler final : public FrameScheduler {
   async::TaskMethod<DefaultFrameScheduler, &DefaultFrameScheduler::MaybeRenderFrame>
       frame_render_task_{this};
 
+  uint64_t wakeups_without_render_ = 0;
+
   inspect::Node inspect_node_;
   inspect::UintProperty inspect_frame_number_;
+  inspect::UintProperty inspect_wakeups_without_render_;
   inspect::UintProperty inspect_last_successful_update_start_time_;
   inspect::UintProperty inspect_last_successful_render_start_time_;
 

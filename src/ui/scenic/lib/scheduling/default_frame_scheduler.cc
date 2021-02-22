@@ -42,6 +42,7 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
   FX_DCHECK(frame_predictor_);
 
   inspect_frame_number_ = inspect_node_.CreateUint("most_recent_frame_number", frame_number_);
+  inspect_wakeups_without_render_ = inspect_node_.CreateUint("wakeups_without_rendering", 0);
   inspect_last_successful_update_start_time_ =
       inspect_node_.CreateUint("last_successful_update_start_time", 0);
   inspect_last_successful_render_start_time_ =
@@ -127,16 +128,21 @@ void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
 }
 
 void DefaultFrameScheduler::HandleNextFrameRequest() {
+  // Finds and requests a frame for the lowest requested_presentation_time across all sessions'
+  // next update.
   if (!pending_present_requests_.empty()) {
-    auto min_it =
-        std::min_element(pending_present_requests_.begin(), pending_present_requests_.end(),
-                         [](const auto& left, const auto& right) {
-                           const auto leftPresentationTime = left.second.first;
-                           const auto rightPresentationTime = right.second.first;
-                           return leftPresentationTime < rightPresentationTime;
-                         });
+    SessionId last_session = scheduling::kInvalidSessionId;
+    zx::time next_min_time = zx::time(std::numeric_limits<zx_time_t>::max());
+    for (const auto& [id_pair, request] : pending_present_requests_) {
+      if (id_pair.session_id != last_session) {
+        last_session = id_pair.session_id;
+        next_min_time = std::min(next_min_time, request.first);
+      }
+    }
 
-    RequestFrame(min_it->second.first);
+    if (next_min_time.get() != std::numeric_limits<zx_time_t>::max()) {
+      RequestFrame(next_min_time);
+    }
   }
 }
 
@@ -169,7 +175,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   // The second value, |wakeup_time_|, here is important for ensuring our flows stay connected.
   // If you change it please ensure the "request_to_render" flow stays connected.
-  bool needs_render = ApplyUpdates(target_presentation_time, wakeup_time_, frame_number);
+  const bool needs_render = ApplyUpdates(target_presentation_time, wakeup_time_, frame_number);
 
   if (needs_render) {
     inspect_last_successful_update_start_time_.Set(update_start_time.get());
@@ -181,6 +187,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   frame_predictor_->ReportUpdateDuration(zx::duration(update_end_time - update_start_time));
 
   if (!needs_render && last_frame_is_presented_ && !render_continuously_) {
+    inspect_wakeups_without_render_.Set(++wakeups_without_render_);
+
     // Nothing to render. Continue with next request in the queue.
     HandleNextFrameRequest();
     return;
@@ -248,7 +256,7 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
   TRACE_FLOW_BEGIN("gfx", "request_to_render", flow_id);
   pending_present_requests_.try_emplace(id_pair, requested_presentation_time, flow_id);
 
-  RequestFrame(requested_presentation_time);
+  HandleNextFrameRequest();
 }
 
 void DefaultFrameScheduler::GetFuturePresentationInfos(
@@ -497,11 +505,9 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
   RefreshSessionUpdaters();
   const auto update_map = CollectUpdatesForThisFrame(target_presentation_time);
   const bool have_updates = !update_map.empty();
-  if (have_updates) {
-    PrepareUpdates(update_map, latched_time, frame_number);
-    const auto update_results = ApplyUpdatesToEachUpdater(update_map, frame_number);
-    RemoveFailedSessions(update_results.sessions_with_failed_updates);
-  }
+  PrepareUpdates(update_map, latched_time, frame_number);
+  const auto update_results = ApplyUpdatesToEachUpdater(update_map, frame_number);
+  RemoveFailedSessions(update_results.sessions_with_failed_updates);
 
   // If anything was updated, we need to render.
   return have_updates;
