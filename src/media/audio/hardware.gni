@@ -11,8 +11,9 @@ import("//build/testing/environments.gni")
 hardware_envs = [
   astro_env,
   nelson_env,
-  sherlock_env,
   nuc_env,
+  sherlock_env,
+  vim3_env,
 ]
 
 # These should be targeted by tests that MUST run on native audio hardware.

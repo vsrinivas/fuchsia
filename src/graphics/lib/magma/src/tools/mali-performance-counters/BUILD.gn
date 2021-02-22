@@ -10,8 +10,9 @@ test_package("mali-performance-counters-test") {
     {
       name = "mali-performance-counters-test"
       environments = [
-        sherlock_env,
         astro_env,
+        sherlock_env,
+        vim3_env,
       ]
     },
   ]

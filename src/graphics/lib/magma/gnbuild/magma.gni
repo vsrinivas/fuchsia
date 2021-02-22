@@ -69,6 +69,7 @@ intel_gpu_envs = [ nuc_env ]
 arm_gpu_envs = [
   astro_env,
   sherlock_env,
+  vim3_env,
 ]
 
 # General hardware environments for magma tests to target.

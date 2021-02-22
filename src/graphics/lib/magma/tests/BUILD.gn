@@ -134,7 +134,10 @@ test_package("magma-abi-conformance-tests-vsi") {
       name = "magma_abi_conformance_tests"
       manifest = "meta/magma-abi-conformance-tests-vsi.cmx"
 
-      environments = [ sherlock_env ]
+      environments = [
+        sherlock_env,
+        vim3_env,
+      ]
     },
   ]
 }

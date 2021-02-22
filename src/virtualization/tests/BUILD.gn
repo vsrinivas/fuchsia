@@ -15,7 +15,10 @@ guest_packages = [
 ]
 
 # TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
-guest_environments = nuc_env_fails_on_asan + [ sherlock_env ]
+guest_environments = nuc_env_fails_on_asan + [
+                       sherlock_env,
+                       vim3_env,
+                     ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 linux_tests_resources = [
@@ -458,6 +461,7 @@ test_package("hypervisor_tests_pkg") {
         nelson_env,
         nuc_env,
         sherlock_env,
+        vim3_env,
       ]
     },
   ]

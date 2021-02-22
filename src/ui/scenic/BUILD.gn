@@ -95,6 +95,7 @@ test_package("scenic_tests") {
       environments = [
         astro_env,
         sherlock_env,
+        vim3_env,
       ]
     },
     {

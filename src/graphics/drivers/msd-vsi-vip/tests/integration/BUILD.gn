@@ -30,7 +30,10 @@ test_package("test-magma-vsi-exec") {
     {
       name = "test_magma_vsi_exec_bin"
       manifest = "meta/test_magma_vsi_exec.cmx"
-      environments = [ sherlock_env ]
+      environments = [
+        sherlock_env,
+        vim3_env,
+      ]
       log_settings = {
         max_severity = "ERROR"
       }
@@ -65,7 +68,10 @@ test_package("msd-vsi-vip-integration-tests") {
   tests = [
     {
       name = "msd_vsi_vip_integration_tests"
-      environments = [ sherlock_env ]
+      environments = [
+        sherlock_env,
+        vim3_env,
+      ]
       log_settings = {
         max_severity = "ERROR"
       }
