@@ -107,9 +107,13 @@ PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors)
   SetImageDimens(width_, height_);
 }
 
-PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, uint32_t fgcolor, uint32_t bgcolor,
-                           bool mirrors)
-    : VirtualLayer(displays, !mirrors), fgcolor_(fgcolor), bgcolor_(bgcolor), mirrors_(mirrors) {
+PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, Image::Pattern pattern,
+                           uint32_t fgcolor, uint32_t bgcolor, bool mirrors)
+    : VirtualLayer(displays, !mirrors),
+      image_pattern_(pattern),
+      fgcolor_(fgcolor),
+      bgcolor_(bgcolor),
+      mirrors_(mirrors) {
   override_colors_ = true;
   image_format_ = displays_[0]->format();
   SetImageDimens(width_, height_);
@@ -126,11 +130,11 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
     bg_color = bgcolor_;
   }
 
-  images_[0] =
-      Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color, modifier_);
+  images_[0] = Image::Create(dc, image_width_, image_height_, image_format_, image_pattern_,
+                             fg_color, bg_color, modifier_);
   if (layer_flipping_) {
-    images_[1] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
-                               modifier_);
+    images_[1] = Image::Create(dc, image_width_, image_height_, image_format_, image_pattern_,
+                               fg_color, bg_color, modifier_);
   }
   if (!images_[0] || (layer_flipping_ && !images_[1])) {
     return false;
@@ -347,8 +351,8 @@ CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(di
 bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
   fhd::CursorInfo info = displays_[0]->cursor();
   uint32_t bg_color = 0xffffffff;
-  image_ = Image::Create(dc, info.width, info.height, info.pixel_format, get_fg_color(), bg_color,
-                         false);
+  image_ = Image::Create(dc, info.width, info.height, info.pixel_format, Image::Pattern::kBorder,
+                         get_fg_color(), bg_color, false);
   if (!image_) {
     return false;
   }

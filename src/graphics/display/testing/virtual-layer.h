@@ -106,8 +106,8 @@ class PrimaryLayer : public VirtualLayer {
  public:
   explicit PrimaryLayer(Display* display);
   explicit PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors = false);
-  explicit PrimaryLayer(const fbl::Vector<Display>& displays, uint32_t fgcolor, uint32_t bgcolor,
-                        bool mirrors = false);
+  explicit PrimaryLayer(const fbl::Vector<Display>& displays, Image::Pattern pattern,
+                        uint32_t fgcolor, uint32_t bgcolor, bool mirrors = false);
 
   // Set* methods to configure the layer.
   void SetImageDimens(uint32_t width, uint32_t height) {
@@ -167,6 +167,8 @@ class PrimaryLayer : public VirtualLayer {
   uint32_t image_height_ = 0;
   uint32_t image_format_ = 0;
   bool override_colors_ = false;
+
+  Image::Pattern image_pattern_ = Image::Pattern::kCheckerboard;
   uint32_t fgcolor_;
   uint32_t bgcolor_;
 

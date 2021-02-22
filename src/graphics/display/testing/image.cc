@@ -47,21 +47,22 @@ namespace testing {
 namespace display {
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
-             uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
-             uint64_t modifier)
+             uint32_t collection_id, void* buf, Pattern pattern, uint32_t fg_color,
+             uint32_t bg_color, uint64_t modifier)
     : width_(width),
       height_(height),
       stride_(stride),
       format_(format),
       collection_id_(collection_id),
       buf_(buf),
+      pattern_(pattern),
       fg_color_(fg_color),
       bg_color_(bg_color),
       modifier_(modifier) {}
 
 Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t height,
-                     zx_pixel_format_t format, uint32_t fg_color, uint32_t bg_color,
-                     uint64_t modifier) {
+                     zx_pixel_format_t format, Pattern pattern, uint32_t fg_color,
+                     uint32_t bg_color, uint64_t modifier) {
   std::unique_ptr<sysmem::Allocator::SyncClient> allocator;
   {
     zx::channel client, server;
@@ -237,36 +238,15 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   }
   zx_cache_flush(ptr, buffer_size, ZX_CACHE_FLUSH_DATA);
 
-  return new Image(width, height, stride_pixels, format, collection_id, ptr, fg_color, bg_color,
-                   modifier);
+  return new Image(width, height, stride_pixels, format, collection_id, ptr, pattern, fg_color,
+                   bg_color, modifier);
 }
 
 #define STRIPE_SIZE 37  // prime to make movement more interesting
 
 void Image::Render(int32_t prev_step, int32_t step_num) {
   if (format_ == ZX_PIXEL_FORMAT_NV12) {
-    uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
-    uint32_t real_height = height_;
-    for (uint32_t y = 0; y < real_height; y++) {
-      uint8_t* buf = static_cast<uint8_t*>(buf_) + y * stride_;
-      memset(buf, 128, stride_);
-    }
-
-    for (uint32_t y = 0; y < real_height / 2; y++) {
-      for (uint32_t x = 0; x < width_ / 2; x++) {
-        uint8_t* buf = static_cast<uint8_t*>(buf_) + real_height * stride_ + y * stride_ + x * 2;
-        int32_t in_stripe = (((x * 2) / STRIPE_SIZE % 2) != ((y * 2) / STRIPE_SIZE % 2));
-        if (in_stripe) {
-          buf[0] = 16;
-          buf[1] = 256 - 16;
-        } else {
-          buf[0] = 256 - 16;
-          buf[1] = 16;
-        }
-      }
-    }
-    zx_cache_flush(reinterpret_cast<uint8_t*>(buf_), byte_stride * height_ * 3 / 2,
-                   ZX_CACHE_FLUSH_DATA);
+    RenderNv12(prev_step, step_num);
   } else {
     uint32_t start, end;
     bool draw_stripe;
@@ -281,117 +261,173 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
       end = std::max(cur, prev);
       draw_stripe = cur > prev;
     }
+    if (pattern_ == Pattern::kCheckerboard) {
+      auto pixel_generator = [this, draw_stripe](uint32_t x, uint32_t y) {
+        bool in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
 
-    if (modifier_ == sysmem::FORMAT_MODIFIER_LINEAR) {
-      for (unsigned y = start; y < end; y++) {
-        for (unsigned x = 0; x < width_; x++) {
-          int32_t in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
-          int32_t color = in_stripe ? fg_color_ : bg_color_;
+        int32_t color = in_stripe ? fg_color_ : bg_color_;
+        return color;
+      };
 
-          uint32_t* ptr = static_cast<uint32_t*>(buf_) + (y * stride_) + x;
-          *ptr = color;
-        }
+      if (modifier_ == sysmem::FORMAT_MODIFIER_LINEAR) {
+        RenderLinear(pixel_generator, start, end);
+      } else {
+        RenderTiled(pixel_generator, start, end);
       }
-      uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
-      zx_cache_flush(reinterpret_cast<uint8_t*>(buf_) + (byte_stride * start),
-                     byte_stride * (end - start), ZX_CACHE_FLUSH_DATA);
+    } else if (pattern_ == Pattern::kBorder) {
+      auto pixel_generator = [this](uint32_t x, uint32_t y) {
+        bool in_stripe = (y == 0) || (x == 0) || (y == height_ - 1) || (x == width_ - 1);
+
+        int32_t color = in_stripe ? fg_color_ : bg_color_;
+        return color;
+      };
+
+      if (modifier_ == sysmem::FORMAT_MODIFIER_LINEAR) {
+        RenderLinear(pixel_generator, start, end);
+      } else {
+        RenderTiled(pixel_generator, start, end);
+      }
     } else {
-      constexpr uint32_t kTileBytesPerPixel = 4u;
+      ZX_DEBUG_ASSERT(false);
+    }
+  }
+}
 
-      uint32_t tile_pixel_width = 0u;
-      uint32_t tile_pixel_height = 0u;
-      uint8_t* body = nullptr;
-      switch (modifier_) {
-        case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
-          tile_pixel_width = kIntelTilePixelWidth;
-          tile_pixel_height = kIntelTilePixelHeight;
-          body = static_cast<uint8_t*>(buf_);
-        } break;
-        case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
-          tile_pixel_width = kAfbcTilePixelWidth;
-          tile_pixel_height = kAfbcTilePixelHeight;
-          uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
-          uint32_t height_in_tiles = (height_ + tile_pixel_height - 1) / tile_pixel_height;
-          uint32_t tile_count = width_in_tiles * height_in_tiles;
-          uint32_t body_offset = ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) /
-                                  kAfbcBodyAlignment) *
-                                 kAfbcBodyAlignment;
-          body = static_cast<uint8_t*>(buf_) + body_offset;
-        } break;
-        default:
-          // Not reached.
-          assert(0);
+void Image::RenderNv12(int32_t prev_step, int32_t step_num) {
+  ZX_DEBUG_ASSERT(pattern_ == Pattern::kCheckerboard);
+  uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
+  uint32_t real_height = height_;
+  for (uint32_t y = 0; y < real_height; y++) {
+    uint8_t* buf = static_cast<uint8_t*>(buf_) + y * stride_;
+    memset(buf, 128, stride_);
+  }
+
+  for (uint32_t y = 0; y < real_height / 2; y++) {
+    for (uint32_t x = 0; x < width_ / 2; x++) {
+      uint8_t* buf = static_cast<uint8_t*>(buf_) + real_height * stride_ + y * stride_ + x * 2;
+      int32_t in_stripe = (((x * 2) / STRIPE_SIZE % 2) != ((y * 2) / STRIPE_SIZE % 2));
+      if (in_stripe) {
+        buf[0] = 16;
+        buf[1] = 256 - 16;
+      } else {
+        buf[0] = 256 - 16;
+        buf[1] = 16;
       }
+    }
+  }
+  zx_cache_flush(reinterpret_cast<uint8_t*>(buf_), byte_stride * height_ * 3 / 2,
+                 ZX_CACHE_FLUSH_DATA);
+}
 
-      uint32_t tile_num_bytes = tile_pixel_width * tile_pixel_height * kTileBytesPerPixel;
-      uint32_t tile_num_pixels = tile_num_bytes / kTileBytesPerPixel;
+template <typename T>
+void Image::RenderLinear(T pixel_generator, uint32_t start_y, uint32_t end_y) {
+  for (unsigned y = start_y; y < end_y; y++) {
+    for (unsigned x = 0; x < width_; x++) {
+      int32_t color = pixel_generator(x, y);
+
+      uint32_t* ptr = static_cast<uint32_t*>(buf_) + (y * stride_) + x;
+      *ptr = color;
+    }
+  }
+  uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
+  zx_cache_flush(reinterpret_cast<uint8_t*>(buf_) + (byte_stride * start_y),
+                 byte_stride * (end_y - start_y), ZX_CACHE_FLUSH_DATA);
+}
+
+template <typename T>
+void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
+  constexpr uint32_t kTileBytesPerPixel = 4u;
+
+  uint32_t tile_pixel_width = 0u;
+  uint32_t tile_pixel_height = 0u;
+  uint8_t* body = nullptr;
+  switch (modifier_) {
+    case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
+      tile_pixel_width = kIntelTilePixelWidth;
+      tile_pixel_height = kIntelTilePixelHeight;
+      body = static_cast<uint8_t*>(buf_);
+    } break;
+    case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+      tile_pixel_width = kAfbcTilePixelWidth;
+      tile_pixel_height = kAfbcTilePixelHeight;
       uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
+      uint32_t height_in_tiles = (height_ + tile_pixel_height - 1) / tile_pixel_height;
+      uint32_t tile_count = width_in_tiles * height_in_tiles;
+      uint32_t body_offset =
+          ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) / kAfbcBodyAlignment) *
+          kAfbcBodyAlignment;
+      body = static_cast<uint8_t*>(buf_) + body_offset;
+    } break;
+    default:
+      // Not reached.
+      assert(0);
+  }
 
-      for (unsigned y = start; y < end; y++) {
-        for (unsigned x = 0; x < width_; x++) {
-          int32_t in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
-          int32_t color = in_stripe ? fg_color_ : bg_color_;
+  uint32_t tile_num_bytes = tile_pixel_width * tile_pixel_height * kTileBytesPerPixel;
+  uint32_t tile_num_pixels = tile_num_bytes / kTileBytesPerPixel;
+  uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
 
-          uint32_t* ptr = reinterpret_cast<uint32_t*>(body);
-          {
-            // Add the offset to the pixel's tile
-            uint32_t tile_idx = (y / tile_pixel_height) * width_in_tiles + (x / tile_pixel_width);
-            ptr += (tile_num_pixels * tile_idx);
-            switch (modifier_) {
-              case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
-                constexpr uint32_t kSubtileColumnWidth = 4u;
-                // Add the offset within the pixel's tile
-                uint32_t subtile_column_offset =
-                    ((x % tile_pixel_width) / kSubtileColumnWidth) * tile_pixel_height;
-                uint32_t subtile_line_offset =
-                    (subtile_column_offset + (y % tile_pixel_height)) * kSubtileColumnWidth;
-                ptr += subtile_line_offset + (x % kSubtileColumnWidth);
-              } break;
-              case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
-                constexpr uint32_t kAfbcSubtileOffset[4][4] = {
-                    {2u, 1u, 14u, 13u},
-                    {3u, 0u, 15u, 12u},
-                    {4u, 7u, 8u, 11u},
-                    {5u, 6u, 9u, 10u},
-                };
-                constexpr uint32_t kAfbcSubtileWidth = 4u;
-                constexpr uint32_t kAfbcSubtileHeight = 4u;
-                uint32_t subtile_num_pixels = kAfbcSubtileWidth * kAfbcSubtileHeight;
-                uint32_t subtile_x = (x % tile_pixel_width) / kAfbcSubtileWidth;
-                uint32_t subtile_y = (y % tile_pixel_height) / kAfbcSubtileHeight;
-                ptr += kAfbcSubtileOffset[subtile_x][subtile_y] * subtile_num_pixels +
-                       (y % kAfbcSubtileHeight) * kAfbcSubtileWidth + (x % kAfbcSubtileWidth);
-              } break;
-              default:
-                // Not reached.
-                assert(0);
-            }
-          }
-          *ptr = color;
+  for (unsigned y = start_y; y < end_y; y++) {
+    for (unsigned x = 0; x < width_; x++) {
+      int32_t color = pixel_generator(x, y);
+
+      uint32_t* ptr = reinterpret_cast<uint32_t*>(body);
+      {
+        // Add the offset to the pixel's tile
+        uint32_t tile_idx = (y / tile_pixel_height) * width_in_tiles + (x / tile_pixel_width);
+        ptr += (tile_num_pixels * tile_idx);
+        switch (modifier_) {
+          case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
+            constexpr uint32_t kSubtileColumnWidth = 4u;
+            // Add the offset within the pixel's tile
+            uint32_t subtile_column_offset =
+                ((x % tile_pixel_width) / kSubtileColumnWidth) * tile_pixel_height;
+            uint32_t subtile_line_offset =
+                (subtile_column_offset + (y % tile_pixel_height)) * kSubtileColumnWidth;
+            ptr += subtile_line_offset + (x % kSubtileColumnWidth);
+          } break;
+          case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+            constexpr uint32_t kAfbcSubtileOffset[4][4] = {
+                {2u, 1u, 14u, 13u},
+                {3u, 0u, 15u, 12u},
+                {4u, 7u, 8u, 11u},
+                {5u, 6u, 9u, 10u},
+            };
+            constexpr uint32_t kAfbcSubtileWidth = 4u;
+            constexpr uint32_t kAfbcSubtileHeight = 4u;
+            uint32_t subtile_num_pixels = kAfbcSubtileWidth * kAfbcSubtileHeight;
+            uint32_t subtile_x = (x % tile_pixel_width) / kAfbcSubtileWidth;
+            uint32_t subtile_y = (y % tile_pixel_height) / kAfbcSubtileHeight;
+            ptr += kAfbcSubtileOffset[subtile_x][subtile_y] * subtile_num_pixels +
+                   (y % kAfbcSubtileHeight) * kAfbcSubtileWidth + (x % kAfbcSubtileWidth);
+          } break;
+          default:
+            // Not reached.
+            assert(0);
         }
       }
+      *ptr = color;
+    }
+  }
+  uint32_t y_start_tile = start_y / tile_pixel_height;
+  uint32_t y_end_tile = (end_y + tile_pixel_height - 1) / tile_pixel_height;
+  for (unsigned i = 0; i < width_in_tiles; i++) {
+    for (unsigned j = y_start_tile; j < y_end_tile; j++) {
+      unsigned offset = (tile_num_bytes * (j * width_in_tiles + i));
+      zx_cache_flush(body + offset, tile_num_bytes, ZX_CACHE_FLUSH_DATA);
 
-      uint32_t y_start_tile = start / tile_pixel_height;
-      uint32_t y_end_tile = (end + tile_pixel_height - 1) / tile_pixel_height;
-      for (unsigned i = 0; i < width_in_tiles; i++) {
-        for (unsigned j = y_start_tile; j < y_end_tile; j++) {
-          unsigned offset = (tile_num_bytes * (j * width_in_tiles + i));
-          zx_cache_flush(body + offset, tile_num_bytes, ZX_CACHE_FLUSH_DATA);
-
-          // We also need to update block header when using AFBC.
-          if (modifier_ == sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
-            unsigned hdr_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
-            uint8_t* hdr_ptr = reinterpret_cast<uint8_t*>(buf_) + hdr_offset;
-            // Store offset of uncompressed tile memory in byte 0-3.
-            uint32_t body_offset = body - reinterpret_cast<uint8_t*>(buf_);
-            *(reinterpret_cast<uint32_t*>(hdr_ptr)) = body_offset + offset;
-            // Set byte 4-15 to disable compression for tile memory.
-            hdr_ptr[4] = hdr_ptr[7] = hdr_ptr[10] = hdr_ptr[13] = 0x41;
-            hdr_ptr[5] = hdr_ptr[8] = hdr_ptr[11] = hdr_ptr[14] = 0x10;
-            hdr_ptr[6] = hdr_ptr[9] = hdr_ptr[12] = hdr_ptr[15] = 0x04;
-            zx_cache_flush(hdr_ptr, kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
-          }
-        }
+      // We also need to update block header when using AFBC.
+      if (modifier_ == sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+        unsigned hdr_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
+        uint8_t* hdr_ptr = reinterpret_cast<uint8_t*>(buf_) + hdr_offset;
+        // Store offset of uncompressed tile memory in byte 0-3.
+        uint32_t body_offset = body - reinterpret_cast<uint8_t*>(buf_);
+        *(reinterpret_cast<uint32_t*>(hdr_ptr)) = body_offset + offset;
+        // Set byte 4-15 to disable compression for tile memory.
+        hdr_ptr[4] = hdr_ptr[7] = hdr_ptr[10] = hdr_ptr[13] = 0x41;
+        hdr_ptr[5] = hdr_ptr[8] = hdr_ptr[11] = hdr_ptr[14] = 0x10;
+        hdr_ptr[6] = hdr_ptr[9] = hdr_ptr[12] = hdr_ptr[15] = 0x04;
+        zx_cache_flush(hdr_ptr, kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
       }
     }
   }

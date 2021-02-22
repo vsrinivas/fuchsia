@@ -630,6 +630,7 @@ void usage(void) {
       "                           For Linear gamma, use g = 1\n"
       "--clamp-rgb c            : Set minimum RGB value [0 255].\n"
       "--configs-per-vsync n    : Number of configs applied per vsync\n"
+      "--pattern pattern        : Image pattern to use - 'checkerboard' (default) or 'border'\n"
       "\nTest Modes:\n\n"
       "--bundle N       : Run test from test bundle N as described below\n\n"
       "                   bundle %d: Display a single pattern using single buffer\n"
@@ -746,6 +747,7 @@ int main(int argc, const char* argv[]) {
   argc--;
   argv++;
 
+  testing::display::Image::Pattern image_pattern = testing::display::Image::Pattern::kCheckerboard;
   uint32_t fgcolor_rgba = 0xffff0000;  // red (default)
   uint32_t bgcolor_rgba = 0xffffffff;  // white (default)
   bool use_color_correction = false;
@@ -889,6 +891,19 @@ int main(int argc, const char* argv[]) {
       configs_per_vsync = atoi(argv[1]);
       argv += 2;
       argc -= 2;
+    } else if (strcmp(argv[0], "--pattern") == 0) {
+      if (strcmp(argv[1], "checkerboard") == 0) {
+        image_pattern = testing::display::Image::Pattern::kCheckerboard;
+      } else if (strcmp(argv[1], "border") == 0) {
+        image_pattern = testing::display::Image::Pattern::kBorder;
+      } else {
+        printf("Invalid image pattern \"%s\".\n", argv[1]);
+        usage();
+        return 0;
+      }
+      argv += 2;
+      argc -= 2;
+
     } else if (strcmp(argv[0], "--help") == 0) {
       usage();
       return 0;
@@ -1036,8 +1051,8 @@ int main(int argc, const char* argv[]) {
     layers.push_back(std::move(layer4));
   } else if (testbundle == FLIP) {
     // Amlogic display test
-    std::unique_ptr<PrimaryLayer> layer1 =
-        fbl::make_unique_checked<PrimaryLayer>(&ac, displays, fgcolor_rgba, bgcolor_rgba);
+    std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(
+        &ac, displays, image_pattern, fgcolor_rgba, bgcolor_rgba);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -1052,8 +1067,8 @@ int main(int argc, const char* argv[]) {
   } else if (testbundle == SIMPLE) {
     // Simple display test
     bool mirrors = true;
-    std::unique_ptr<PrimaryLayer> layer1 =
-        fbl::make_unique_checked<PrimaryLayer>(&ac, displays, fgcolor_rgba, bgcolor_rgba, mirrors);
+    std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(
+        &ac, displays, image_pattern, fgcolor_rgba, bgcolor_rgba, mirrors);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }

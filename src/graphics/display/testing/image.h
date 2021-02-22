@@ -26,9 +26,14 @@ typedef struct image_import {
 
 class Image {
  public:
+  enum class Pattern {
+    kCheckerboard,
+    kBorder,
+  };
+
   static Image* Create(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc,
-                       uint32_t width, uint32_t height, zx_pixel_format_t format, uint32_t fg_color,
-                       uint32_t bg_color, uint64_t modifier);
+                       uint32_t width, uint32_t height, zx_pixel_format_t format, Pattern pattern,
+                       uint32_t fg_color, uint32_t bg_color, uint64_t modifier);
 
   void Render(int32_t prev_step, int32_t step_num);
 
@@ -44,7 +49,16 @@ class Image {
 
  private:
   Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
-        uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color, uint64_t modifier);
+        uint32_t collection_id, void* buf, Pattern pattern, uint32_t fg_color, uint32_t bg_color,
+        uint64_t modifier);
+
+  void RenderNv12(int32_t prev_step, int32_t step_num);
+
+  // pixel_generator takes a width and a height and generates a uint32_t pixel color for it.
+  template <typename T>
+  void RenderLinear(T pixel_generator, uint32_t start_y, uint32_t end_y);
+  template <typename T>
+  void RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y);
 
   uint32_t width_;
   uint32_t height_;
@@ -54,6 +68,7 @@ class Image {
   uint32_t collection_id_;
   void* buf_;
 
+  const Pattern pattern_;
   uint32_t fg_color_;
   uint32_t bg_color_;
   uint64_t modifier_;
