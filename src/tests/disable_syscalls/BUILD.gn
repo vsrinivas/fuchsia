@@ -52,7 +52,7 @@ if (is_linux) {
     go_library(target_name) {
       testonly = true
       source_dir = "//src/tests/disable_syscalls/$split_name"
-      deps = [ "//tools/emulator" ]
+      deps = [ "//tools/emulator/emulatortest" ]
       forward_variables_from(invoker, [ "sources" ])
     }
 

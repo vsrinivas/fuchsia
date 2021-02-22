@@ -11,36 +11,25 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 func TestDisableDebuggingDisableSerialSyscalls(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "zircon-r" // zedboot zbi.
 	device.KernelArgs = append(device.KernelArgs, "kernel.enable-debugging-syscalls=false", "kernel.enable-serial-syscalls=false")
 
-	stdout, stderr, err := distro.RunNonInteractive(
+	stdout, stderr := distro.RunNonInteractive(
 		"/boot/bin/syscall-check",
 		filepath.Join(exDir, "test_data", "tools", "minfs"),
 		filepath.Join(exDir, "test_data", "tools", "zbi"),
 		device,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	ensureContains(t, stdout, "zx_debug_read: disabled")
 	ensureContains(t, stdout, "zx_debug_write: disabled")
 

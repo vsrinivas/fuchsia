@@ -204,7 +204,7 @@ func (d *Distribution) systemPath(arch Arch) string {
 	return ""
 }
 
-// TargetCPU returs the target CPU used by the build that produced this library.
+// TargetCPU returns the target CPU used by the build that produced this library.
 func (d *Distribution) TargetCPU() (Arch, error) {
 	buildinfo, err := d.loadBuildInfo()
 	if err != nil {

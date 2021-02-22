@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 func execDir(t *testing.T) string {
@@ -34,73 +35,30 @@ func startAscendd(t *testing.T, exDir string) *exec.Cmd {
 // Test that ascendd can connect to overnetstack via serial.
 func TestOvernetSerial(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "overnet"
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true")
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
+	i := distro.Create(device)
 
-	if err = i.StartPiped(startAscendd(t, exDir)); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	if err = i.WaitForLogMessage("Established Client Overnet serial connection"); err != nil {
-		t.Fatal(err)
-	}
+	i.StartPiped(startAscendd(t, exDir))
+	i.WaitForLogMessage("Established Client Overnet serial connection")
 }
 
 // Test that ascendd can connect to overnetstack via serial.
 func TestNoSpinningIfNoSerial(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "overnet"
 	device.KernelArgs = append(device.KernelArgs, "console.shell=false", "kernel.enable-debugging-syscalls=false", "kernel.enable-serial-syscalls=false")
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.StartPiped(startAscendd(t, exDir)); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	if err = i.WaitForLogMessage("SERIAL LINK Debug completed with failure"); err != nil {
-		t.Fatal(err)
-	}
+	i := distro.Create(device)
+	i.StartPiped(startAscendd(t, exDir))
+	i.WaitForLogMessage("SERIAL LINK Debug completed with failure")
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
@@ -26,56 +27,25 @@ func execDir(t *testing.T) string {
 
 func TestFemu(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Femu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	i := distro.Create(device)
+	i.Start()
 
 	// This message indicates that FEMU has successfully come up and that the Fuchsia system is fairly functional.
-	if err = i.WaitForLogMessage("[component_manager] INFO: Component manager is starting up..."); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("[component_manager] INFO: Component manager is starting up...")
 }
 
 func TestFemuWithDisk(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Femu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
 
@@ -87,30 +57,13 @@ func TestFemuWithDisk(t *testing.T) {
 		Device:     &fvdpb.Device{Model: "virtio-blk-pci"},
 	})
 
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	i := distro.Create(device)
+	i.Start()
 
 	// This message indicates that disks have been bound.  This message comes from fshost.
-	if err = i.WaitForLogMessage("/dev/class/block/000 ignored"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("/dev/class/block/000 ignored")
 
 	// Check that the emulated disk is there.
-	if err = i.RunCommand("lsblk"); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.WaitForLogMessage("/dev/sys/pci/00:03.0/virtio-block/block"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("lsblk")
+	i.WaitForLogMessage("/dev/sys/pci/00:03.0/virtio-block/block")
 }

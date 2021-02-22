@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
@@ -52,7 +53,7 @@ func cmdWithTimeout(t *testing.T, shouldWork bool, name string, arg ...string) {
 	}
 }
 
-func attemptNetcp(t *testing.T, i *emulator.Instance, shouldWork bool) {
+func attemptNetcp(t *testing.T, shouldWork bool) {
 	cmdWithTimeout(
 		t, shouldWork,
 		toolPath(t, "netcp"),
@@ -68,7 +69,7 @@ func randomTokenAsString(t *testing.T) string {
 	return hex.EncodeToString(b[:])
 }
 
-func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
+func attemptNetruncmd(t *testing.T, i *emulatortest.Instance, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -82,39 +83,31 @@ func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
 
 	time.Sleep(time.Second)
 	tokenFromSerial := randomTokenAsString(t)
-	if err := i.RunCommand("echo '" + tokenFromSerial + "'"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("echo '" + tokenFromSerial + "'")
 
 	if shouldWork {
 		// If netruncmd works, we should get the token echo'd by netruncmd first,
 		// then the terminator (which is sent over serial).
-		if err := i.WaitForLogMessage(tokenFromNetruncmd); err != nil {
-			t.Fatal(err)
-		}
-		if err := i.WaitForLogMessage(tokenFromSerial); err != nil {
-			t.Fatal(err)
-		}
+		i.WaitForLogMessage(tokenFromNetruncmd)
+		i.WaitForLogMessage(tokenFromSerial)
 		t.Logf("%s succeeded as expected", name)
 	} else {
 		// If netruncmd isn't working, we must not see the netruncmd token, and
 		// should only get the serial token.
-		if err := i.WaitForLogMessageAssertNotSeen(tokenFromSerial, tokenFromNetruncmd); err != nil {
-			t.Fatal(err)
-		}
+		i.WaitForLogMessageAssertNotSeen(tokenFromSerial, tokenFromNetruncmd)
 		t.Logf("%s failed as expected", name)
 	}
 }
 
-func attemptNetls(t *testing.T, i *emulator.Instance, shouldWork bool) {
+func attemptNetls(t *testing.T, shouldWork bool) {
 	cmdWithTimeout(t, shouldWork, toolPath(t, "netls"))
 }
 
-func attemptNetaddr(t *testing.T, i *emulator.Instance, shouldWork bool) {
+func attemptNetaddr(t *testing.T, shouldWork bool) {
 	cmdWithTimeout(t, shouldWork, toolPath(t, "netaddr"))
 }
 
-func attemptTftp(t *testing.T, i *emulator.Instance, shouldWork bool) {
+func attemptTftp(t *testing.T, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -151,7 +144,7 @@ func attemptTftp(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	}
 }
 
-func attemptLoglistener(t *testing.T, i *emulator.Instance, shouldWork bool) {
+func attemptLoglistener(t *testing.T, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -181,24 +174,12 @@ func attemptLoglistener(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	}
 }
 
-func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulator.Instance {
+func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulatortest.Instance {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	})
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, appendCmdline...)
 
@@ -209,30 +190,14 @@ func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 		Kind:   "tap",
 		Device: &fvdpb.Device{Model: "virtio-net-pci"},
 	})
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	})
+	i := distro.Create(device)
+	i.Start()
 
 	// Make sure netsvc in expected mode.
-	if err = i.WaitForLogMessage("netsvc: running in " + modeString + " mode"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("netsvc: running in " + modeString + " mode")
 
 	// Make sure netsvc is booted.
-	if err = i.WaitForLogMessage("netsvc: start"); err != nil {
-		t.Fatal(err)
-	}
-
+	i.WaitForLogMessage("netsvc: start")
 	return i
 }
 
@@ -242,12 +207,12 @@ func TestNetsvcAllFeatures(t *testing.T) {
 
 	// Setting all-features to true means netsvc will work normally, and all
 	// features should work.
-	attemptLoglistener(t, i, true)
-	attemptNetaddr(t, i, true)
-	attemptNetcp(t, i, true)
-	attemptNetls(t, i, true)
+	attemptLoglistener(t, true)
+	attemptNetaddr(t, true)
+	attemptNetcp(t, true)
+	attemptNetls(t, true)
 	attemptNetruncmd(t, i, true)
-	attemptTftp(t, i, true)
+	attemptTftp(t, true)
 }
 
 func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
@@ -256,12 +221,12 @@ func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
 
 	// Setting all-features to true means netsvc will work normally, and all
 	// features should work.
-	attemptLoglistener(t, i, true)
-	attemptNetaddr(t, i, true)
-	attemptNetcp(t, i, true)
-	attemptNetls(t, i, true)
+	attemptLoglistener(t, true)
+	attemptNetaddr(t, true)
+	attemptNetcp(t, true)
+	attemptNetls(t, true)
 	attemptNetruncmd(t, i, true)
-	attemptTftp(t, i, true)
+	attemptTftp(t, true)
 }
 
 func TestNetsvcLimited(t *testing.T) {
@@ -270,12 +235,12 @@ func TestNetsvcLimited(t *testing.T) {
 
 	// Explicitly setting all-features to false should be the same as default, and
 	// most operations should fail.
-	attemptLoglistener(t, i, false)
-	attemptNetaddr(t, i, true)
-	attemptNetcp(t, i, false)
-	attemptNetls(t, i, true)
+	attemptLoglistener(t, false)
+	attemptNetaddr(t, true)
+	attemptNetcp(t, false)
+	attemptNetls(t, true)
 	attemptNetruncmd(t, i, false)
-	attemptTftp(t, i, false)
+	attemptTftp(t, false)
 }
 
 func execDir(t *testing.T) string {

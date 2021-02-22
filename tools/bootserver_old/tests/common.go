@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
@@ -170,24 +171,12 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 }
 
 // StartQemu starts a QEMU instance with the given kernel commandline args.
-func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulator.Instance {
+func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulatortest.Instance {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	distro, err := emulator.UnpackFrom(*TestDataDir, emulator.DistributionParams{})
-	if err != nil {
-		t.Fatalf("Failed to unpack QEMU: %s", err)
-	}
-	t.Cleanup(func() {
-		if err := distro.Delete(); err != nil {
-			t.Errorf("failed to cleanup qemu image: %v", err)
-		}
-	})
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatalf("Failed to get distro CPU: %s", err)
-	}
-
+	distro := emulatortest.UnpackFrom(*TestDataDir, emulator.DistributionParams{})
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, appendCmdline...)
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "zircon.nodename="+DefaultNodename)
@@ -200,29 +189,13 @@ func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 		Kind:   "tap",
 		Device: &fvdpb.Device{Model: "virtio-net-pci"},
 	})
-	instance, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := instance.Start(); err != nil {
-		t.Fatalf("Failed to start QEMU instance: %s", err)
-	}
-	t.Cleanup(func() {
-		if err := instance.Kill(); err != nil {
-			t.Errorf("failed to kill qemu: %v", err)
-		}
-	})
+	instance := distro.Create(device)
+	instance.Start()
 
 	// Make sure netsvc in expected mode.
-	if err := instance.WaitForLogMessage("netsvc: running in " + modeString + " mode"); err != nil {
-		t.Fatal(err)
-	}
+	instance.WaitForLogMessage("netsvc: running in " + modeString + " mode")
 
 	// Make sure netsvc is booted.
-	if err := instance.WaitForLogMessage("netsvc: start"); err != nil {
-		t.Fatal(err)
-	}
-
+	instance.WaitForLogMessage("netsvc: start")
 	return instance
 }

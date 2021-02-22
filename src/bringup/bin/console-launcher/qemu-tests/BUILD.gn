@@ -16,7 +16,7 @@ group("tests") {
 if (is_linux) {
   go_library("lib") {
     testonly = true
-    deps = [ "//tools/emulator" ]
+    deps = [ "//tools/emulator/emulatortest" ]
     sources = [ "console_qemu_test.go" ]
   }
 

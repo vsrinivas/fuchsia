@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 // ExpectedRebootType declares what is the expectation for the reboot
@@ -27,81 +28,41 @@ const (
 // it by issuing cmd.
 func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType, zbi_name string) {
 	e := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(e, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(e, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	})
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog")
 	device.Drive = nil
+	i := distro.Create(device)
+	i.Start()
 
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	if err = i.WaitForLogMessage("initializing platform"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("initializing platform")
 
 	// Make sure the shell is ready to accept commands over serial, and wait for fshost to start.
-	if err = i.WaitForLogMessages([]string{"console.shell: enabled", "fshost.cm"}); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessages([]string{"console.shell: enabled", "fshost.cm"})
 
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up in case our command will need to interact with the platform
 		// driver for power operations.
-		if err = i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY"); err != nil {
-			t.Fatal(err)
-		}
-		if err = i.WaitForLogMessage("ACPI_READY"); err != nil {
-			t.Fatal(err)
-		}
+		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY")
+		i.WaitForLogMessage("ACPI_READY")
 	}
 
 	// Trigger a reboot in one of the various ways.
-	if err = i.RunCommand(cmd); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand(cmd)
 
 	if kind == CleanReboot {
 		// Make sure the file system is notified and unmounts.
-		if err = i.WaitForLogMessage("fshost shutdown complete"); err != nil {
-			t.Fatal(err)
-		}
+		i.WaitForLogMessage("fshost shutdown complete")
 	}
 
 	// Is the target rebooting?
-	if err = i.WaitForLogMessage("Shutting down debuglog"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("Shutting down debuglog")
 
 	// See that the target comes back up.
-	if err = i.WaitForLogMessage("welcome to Zircon"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("welcome to Zircon")
 }
 
 func execDir(t *testing.T) string {

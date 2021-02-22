@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 var cmdline = []string{"devmgr.log-to-debuglog", "kernel.oom.behavior=reboot"}
@@ -18,130 +19,60 @@ var cmdline = []string{"devmgr.log-to-debuglog", "kernel.oom.behavior=reboot"}
 // system reboots in a somewhat orderly fashion.
 func TestOOMSignal(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	}()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	i := distro.Create(device)
+	i.Start()
 
 	// Ensure the kernel OOM system was properly initialized.
-	if err = i.WaitForLogMessage("memory-pressure: memory availability state - Normal"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
 
 	// Make sure the shell is ready to accept commands over serial.
-	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger a simulated OOM, without leaking any memory.
-	if err = i.RunCommand("k pmm oom signal"); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("k pmm oom signal")
+	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
 
 	// Make sure the file system is notified and unmounts.
-	if err = i.WaitForLogMessage("Successfully waited for VFS exit completion"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("Successfully waited for VFS exit completion")
 
 	// Ensure the OOM thread reboots the target.
-	if err = i.WaitForLogMessage("memory-pressure: rebooting due to OOM"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("memory-pressure: rebooting due to OOM")
 
 	// Ensure that the reboot has stowed a correct crashlog.
-	if err = i.WaitForLogMessage("memory-pressure: stowing crashlog"); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("memory-pressure: stowing crashlog")
+	i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)")
 
 	// Ensure that the system reboots without panicking.
-	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
 // Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
 // reboots.
 func TestOOM(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Femu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	}()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	i := distro.Create(device)
+	i.Start()
 
 	// Ensure the kernel OOM system was properly initialized.
-	if err = i.WaitForLogMessage("memory-pressure: memory availability state - Normal"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
 
 	// Make sure the shell is ready to accept commands over serial.
-	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger an OOM.
-	if err = i.RunCommand("k pmm oom"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("k pmm oom")
 
 	// Ensure the memory state transition happens.
 	//
@@ -156,14 +87,10 @@ func TestOOM(t *testing.T) {
 	// we have a separate test |TestOOMSignal| to verify that a simulated OOM signal, i.e. an
 	// OOM signal without actually leaking any memory, results in the expected sequence of
 	// events.
-	if err = i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
 
 	// Ensure that the system reboots without panicking.
-	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
 // Similar to |TestOOM| this test will trigger an out of memory situation and verify the system
@@ -173,60 +100,27 @@ func TestOOM(t *testing.T) {
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Femu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	}()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	i := distro.Create(device)
+	i.Start()
 
 	// Ensure the kernel OOM system was properly initialized.
-	if err = i.WaitForLogMessage("memory-pressure: memory availability state - Normal"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
 
 	// Make sure the shell is ready to accept commands over serial.
-	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger an OOM.
-	if err = i.RunCommand("k pmm oom hard"); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("k pmm oom hard")
+	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
 
 	// Ensure that the system reboots without panicking.
-	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
 func execDir(t *testing.T) string {

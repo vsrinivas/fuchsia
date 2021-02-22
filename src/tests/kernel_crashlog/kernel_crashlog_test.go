@@ -10,27 +10,17 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 // Boots an instance, |crash_cmd|, waits for the system to reboot, prints the
 // recovered crash report.
-func testCommon(t *testing.T, crash_cmd string) *emulator.Instance {
+func testCommon(t *testing.T, crash_cmd string) *emulatortest.Instance {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	})
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
+	arch := distro.TargetCPU()
 	if arch != emulator.Arm64 {
 		// TODO(maniscalco): Flesh out the qemu/x64 support for stowing/retrieving a
 		// crashlog.
@@ -49,53 +39,29 @@ func testCommon(t *testing.T, crash_cmd string) *emulator.Instance {
 	// commands.
 	device.KernelArgs = append(device.KernelArgs, "kernel.halt-on-panic=false", "zircon.autorun.boot=/boot/bin/sh+-c+k")
 
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
+	i := distro.Create(device)
 
 	// Boot.
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	})
+	i.Start()
 
 	// Wait for the system to finish booting.
-	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("usage: k <command>")
 
 	// Crash the kernel.
-	if err = i.RunCommand(crash_cmd); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.WaitForLogMessage("ZIRCON KERNEL PANIC"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand(crash_cmd)
+	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
 
 	// Now that the kernel has panicked, it should reboot.  Wait for it to come back up.
-	if err = i.WaitForLogMessage("welcome to Zircon"); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("welcome to Zircon")
+	i.WaitForLogMessage("usage: k <command>")
 
 	// Early in boot, the system should have recovered the stowed crashlog and stored it in
 	// last-panic.txt.  We're dumping that file using dd instead of cat because dd is part of
 	// the system image and cat is not.
-	if err = i.RunCommand("dd if=/boot/log/last-panic.txt"); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("dd if=/boot/log/last-panic.txt")
 
 	// See that the crashlog looks reasonable.
-	if err = i.WaitForLogMessage("ZIRCON REBOOT REASON (KERNEL PANIC)"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("ZIRCON REBOOT REASON (KERNEL PANIC)")
 	return i
 }
 
@@ -105,23 +71,13 @@ func TestKernelCrashlog(t *testing.T) {
 	// See that the crash report contains ESR and FAR.
 	//
 	// This is a regression test for fxbug.dev/52182.
-	if err := i.WaitForLogMessage("esr:         0x96000045"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("far:                0x1"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("esr:         0x96000045")
+	i.WaitForLogMessage("far:                0x1")
 
 	// And a backtrace and counters.
-	if err := i.WaitForLogMessage("BACKTRACE"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("{{{bt:0"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("counters: "); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("BACKTRACE")
+	i.WaitForLogMessage("{{{bt:0")
+	i.WaitForLogMessage("counters: ")
 }
 
 // See that when the kernel crashes because of an assert failure the crashlog contains the assert
@@ -130,27 +86,13 @@ func TestKernelCrashlogAssert(t *testing.T) {
 	i := testCommon(t, "k crash_assert")
 	// See that there's a backtrace, followed by some counters, and finally the assert
 	// message.
-	if err := i.WaitForLogMessage("BACKTRACE"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("{{{bt:0"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("counters: "); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("panic buffer: "); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("KERNEL PANIC"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("ASSERT FAILED"); err != nil {
-		t.Fatal(err)
-	}
-	if err := i.WaitForLogMessage("value 42"); err != nil {
-		t.Fatal(err)
-	}
+	i.WaitForLogMessage("BACKTRACE")
+	i.WaitForLogMessage("{{{bt:0")
+	i.WaitForLogMessage("counters: ")
+	i.WaitForLogMessage("panic buffer: ")
+	i.WaitForLogMessage("KERNEL PANIC")
+	i.WaitForLogMessage("ASSERT FAILED")
+	i.WaitForLogMessage("value 42")
 }
 
 func execDir(t *testing.T) string {

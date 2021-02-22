@@ -13,87 +13,32 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 func TestShellDisabled(t *testing.T) {
 	exPath := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	}()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false")
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	if err = i.WaitForLogMessage("console-launcher: running"); err != nil {
-		t.Fatal(err)
-	}
+	i := distro.Create(device)
+	i.Start()
+	i.WaitForLogMessage("console-launcher: running")
 	tokenFromSerial := randomTokenAsString(t)
-	if err = i.RunCommand("echo '" + tokenFromSerial + "'"); err != nil {
-		t.Fatal(err)
-	}
-	if err = i.AssertLogMessageNotSeenWithinTimeout(tokenFromSerial, 3*time.Second); err != nil {
-		t.Fatal(err)
-	}
+	i.RunCommand("echo '" + tokenFromSerial + "'")
+	i.AssertLogMessageNotSeenWithinTimeout(tokenFromSerial, 3*time.Second)
 }
 
 func TestAutorunDisabled(t *testing.T) {
 	exPath := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = distro.Delete(); err != nil {
-			t.Error(err)
-		}
-	}()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false", "zircon.autorun.boot=foobar")
-	i, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = i.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = i.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	if err = i.WaitForLogMessage("Couldn't launch autorun command 'foobar'"); err != nil {
-		t.Fatal(err)
-	}
+	i := distro.Create(device)
+	i.Start()
+	i.WaitForLogMessage("Couldn't launch autorun command 'foobar'")
 }
 
 func execDir(t *testing.T) string {

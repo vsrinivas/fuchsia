@@ -10,22 +10,15 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
+	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
 func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 
 	// Enable the lockup detector.
@@ -34,25 +27,13 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	// message, we can be sure the system has booted and is ready to accept "k"
 	// commands.
 	device.KernelArgs = append(device.KernelArgs, "kernel.lockup-detector.critical-section-threshold-ms=500", "zircon.autorun.boot=/boot/bin/sh+-c+k")
-	d, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
+	d := distro.Create(device)
 
 	// Boot.
-	if err = d.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = d.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	d.Start()
 
 	// Wait for the system to finish booting.
-	if err = d.WaitForLogMessage("usage: k <command>"); err != nil {
-		t.Fatal(err)
-	}
+	d.WaitForLogMessage("usage: k <command>")
 
 	// Force two lockups and see that an OOPS is emitted for each one.
 	//
@@ -60,38 +41,20 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	// we want to verify that doing so does not mess up the lockup detector's state and prevent
 	// subsequent events from being detected.
 	for i := 0; i < 2; i++ {
-		if err = d.RunCommand("k lockup test 1 600"); err != nil {
-			t.Fatal(err)
-		}
-		if err = d.WaitForLogMessage("locking up CPU"); err != nil {
-			t.Fatal(err)
-		}
-		if err = d.WaitForLogMessage("ZIRCON KERNEL OOPS"); err != nil {
-			t.Fatal(err)
-		}
-		if err = d.WaitForLogMessage("CPU-1 in critical section for"); err != nil {
-			t.Fatal(err)
-		}
-		if err = d.WaitForLogMessage("done"); err != nil {
-			t.Fatal(err)
-		}
+		d.RunCommand("k lockup test 1 600")
+		d.WaitForLogMessage("locking up CPU")
+		d.WaitForLogMessage("ZIRCON KERNEL OOPS")
+		d.WaitForLogMessage("CPU-1 in critical section for")
+		d.WaitForLogMessage("done")
 	}
 }
 
 func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 	exDir := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer distro.Delete()
-	arch, err := distro.TargetCPU()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs,
 		// Enable the lockup detector.
@@ -103,47 +66,23 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 		"kernel.lockup-detector.heartbeat-age-threshold-ms=200",
 		"zircon.autorun.boot=/boot/bin/sh+-c+k",
 	)
-	d, err := distro.Create(device)
-	if err != nil {
-		t.Fatal(err)
-	}
+	d := distro.Create(device)
 
 	// Boot.
-	if err = d.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err = d.Kill(); err != nil {
-			t.Error(err)
-		}
-	}()
+	d.Start()
 
 	// Wait for the system to finish booting.
-	if err = d.WaitForLogMessage("usage: k <command>"); err != nil {
-		t.Fatal(err)
-	}
+	d.WaitForLogMessage("usage: k <command>")
 
 	// Force a lockup and see that a heartbeat OOPS is emitted.
-	if err = d.RunCommand("k lockup test 1 1000"); err != nil {
-		t.Fatal(err)
-	}
-	if err = d.WaitForLogMessage("locking up CPU"); err != nil {
-		t.Fatal(err)
-	}
-	if err = d.WaitForLogMessage("ZIRCON KERNEL OOPS"); err != nil {
-		t.Fatal(err)
-	}
-	if err = d.WaitForLogMessage("no heartbeat from CPU-1"); err != nil {
-		t.Fatal(err)
-	}
+	d.RunCommand("k lockup test 1 1000")
+	d.WaitForLogMessage("locking up CPU")
+	d.WaitForLogMessage("ZIRCON KERNEL OOPS")
+	d.WaitForLogMessage("no heartbeat from CPU-1")
 	// See that the CPU's run queue is printed and contains the thread named "lockup-spin", the
 	// one responsible for the lockup.
-	if err = d.WaitForLogMessage("lockup-spin"); err != nil {
-		t.Fatal(err)
-	}
-	if err = d.WaitForLogMessage("done"); err != nil {
-		t.Fatal(err)
-	}
+	d.WaitForLogMessage("lockup-spin")
+	d.WaitForLogMessage("done")
 }
 
 func execDir(t *testing.T) string {

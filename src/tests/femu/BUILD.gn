@@ -21,7 +21,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
     sources = [ "femu_test.go" ]
-    deps = [ "//tools/emulator" ]
+    deps = [ "//tools/emulator/emulatortest" ]
   }
 
   go_test("femu_test") {

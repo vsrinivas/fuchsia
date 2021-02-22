@@ -22,7 +22,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    deps = [ "//tools/emulator" ]
+    deps = [ "//tools/emulator/emulatortest" ]
     sources = [ "kernel_lockup_detector_test.go" ]
   }
 
