@@ -91,6 +91,14 @@ async fn open_rw_dir(parent_dir: &io::DirectoryProxy, path: &str) -> io::Directo
     open_dir_with_flags(parent_dir, io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, path).await
 }
 
+/// Helper function to call `get_token` on a directory. Only use this if testing something
+/// other than the `get_token` call directly.
+async fn get_token(dir: &io::DirectoryProxy) -> fidl::Handle {
+    let (status, token) = dir.get_token().await.expect("get_token failed");
+    assert_eq!(Status::from_raw(status), Status::OK);
+    token.expect("handle missing")
+}
+
 /// Helper function to read a file and return its contents. Only use this if testing something other
 /// than the read call directly.
 async fn read_file(dir: &io::DirectoryProxy, path: &str) -> Vec<u8> {
@@ -814,11 +822,7 @@ async fn rename_with_sufficient_rights() {
         let test_dir = get_directory_from_harness(&harness, root);
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
-
-        // Get token for destination directory.
-        let (status, token) = dest_dir.get_token().await.expect("get_token failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
-        let dest_token = token.expect("handle missing");
+        let dest_token = get_token(&dest_dir).await;
 
         // Rename src/old.txt -> dest/new.txt.
         let status = src_dir.rename("old.txt", dest_token, "new.txt").await.expect("rename failed");
@@ -854,11 +858,7 @@ async fn rename_with_insufficient_rights() {
         let test_dir = get_directory_from_harness(&harness, root);
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
-
-        // Get token for destination directory.
-        let (status, token) = dest_dir.get_token().await.expect("get_token failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
-        let dest_token = token.expect("handle missing");
+        let dest_token = get_token(&dest_dir).await;
 
         // Try renaming src/old.txt -> dest/new.txt.
         let status = src_dir.rename("old.txt", dest_token, "new.txt").await.expect("rename failed");
