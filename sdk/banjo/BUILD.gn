@@ -115,7 +115,6 @@ group("banjo") {
     "fuchsia.sysmem",
     "zircon.hw.pci",
     "zircon.hw.usb",
-    "zircon.syscalls.pci",
   ]
 }
 

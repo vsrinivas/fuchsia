@@ -8,18 +8,18 @@
 namespace ddk {
 
 zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy, std::optional<MmioBuffer>* mmio) {
-  zx_pci_bar_t bar;
+  pci_bar_t bar;
   zx_status_t status = GetBar(index, &bar);
   if (status != ZX_OK) {
     return status;
   }
 
   // TODO(cja): PIO may be mappable on non-x86 architectures
-  if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
+  if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.u.handle == ZX_HANDLE_INVALID) {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  zx::vmo vmo(bar.handle);
+  zx::vmo vmo(bar.u.handle);
 
   size_t vmo_size;
   status = vmo.get_size(&vmo_size);

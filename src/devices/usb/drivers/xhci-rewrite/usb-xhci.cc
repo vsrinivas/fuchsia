@@ -1715,7 +1715,7 @@ void UsbXhci::Shutdown(zx_status_t status) {
 }
 
 void UsbXhci::InitQuirks() {
-  zx_pcie_device_info_t info;
+  pcie_device_info_t info;
   pci_.GetDeviceInfo(&info);
   if ((info.vendor_id == 0x1033) && (info.device_id == 0x194)) {
     qemu_quirk_ = true;

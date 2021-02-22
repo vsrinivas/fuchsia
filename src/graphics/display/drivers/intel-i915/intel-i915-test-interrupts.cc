@@ -12,7 +12,7 @@ namespace {
 
 class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
  public:
-  zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res) { return ZX_ERR_NOT_SUPPORTED; }
 
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
     irq_mapped_ = which_irq;
@@ -24,15 +24,15 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_OK;
   }
 
-  zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+  zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+  zx_status_t PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t PciEnableBusMaster(bool enable) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value) { return ZX_ERR_NOT_SUPPORTED; }

@@ -59,12 +59,12 @@ TEST_F(FakePciProtocolTests, EnableBusMaster) {
 }
 
 TEST_F(FakePciProtocolTests, GetDeviceInfo) {
-  zx_pcie_device_info_t actual{};
-  zx_pcie_device_info_t zeroed{};
+  pcie_device_info_t actual{};
+  pcie_device_info_t zeroed{};
   ASSERT_OK(pci().GetDeviceInfo(&actual));
   ASSERT_EQ(0, memcmp(&zeroed, &actual, sizeof(zeroed)));
 
-  zx_pcie_device_info_t expected = {
+  pcie_device_info_t expected = {
       .vendor_id = 0x1,
       .device_id = 0x2,
 
@@ -77,6 +77,7 @@ TEST_F(FakePciProtocolTests, GetDeviceInfo) {
       .dev_id = 0x8,
       .func_id = 0x9,
   };
+
   fake_pci().SetDeviceInfo(expected);
   ASSERT_OK(pci().GetDeviceInfo(&actual));
   ASSERT_EQ(0, memcmp(&expected, &actual, sizeof(expected)));
@@ -339,7 +340,7 @@ TEST_F(FakePciProtocolTests, GetBar) {
   ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
   ASSERT_DEATH([&]() { fake_pci().SetBar(0, page_size + 1, std::move(vmo)); });
 
-  zx_pci_bar_t bar{};
+  pci_bar_t bar{};
   ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(0, &bar));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(6, &bar));
 
@@ -351,7 +352,7 @@ TEST_F(FakePciProtocolTests, GetBar) {
   ASSERT_OK(pci().GetBar(valid_bar, &bar));
   // Verify that the VMO we got back wit hthe protocol method matches the setup
   // and that the other fields are correct.
-  ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.handle)));
+  ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.u.handle)));
   ASSERT_EQ(valid_bar, bar.id);
   ASSERT_EQ(bar_size, bar.size);
 }

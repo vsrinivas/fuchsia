@@ -155,6 +155,7 @@ if (platform_enable_user_pci) {
       "//sdk/banjo/fuchsia.hardware.platform.device",
       "//sdk/banjo/fuchsia.hardware.sysmem",
       "//src/devices/lib/driver",
+      "//src/devices/lib/pci",
       "//src/lib/ddk",
       "//src/lib/ddktl",
     ]

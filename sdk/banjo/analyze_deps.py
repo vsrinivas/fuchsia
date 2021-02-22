@@ -12,12 +12,10 @@ import sys
 
 _LIBRARY_LABEL = r'^//sdk/banjo/([^:]+):\1(\.\.\.)?$'
 
-_DUMMY_LIBRARIES = set(
-    [
-        'zircon.hw.pci',
-        'zircon.hw.usb',
-        'zircon.syscalls.pci',
-    ])
+_DUMMY_LIBRARIES = set([
+    'zircon.hw.pci',
+    'zircon.hw.usb',
+])
 
 
 def _extract_dependencies(label, base_depth, deps, result):

@@ -42,7 +42,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     uint8_t size;
   };
 
-  zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) {
+  zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res) {
     if (!out_res) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -62,7 +62,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     out_res->id = bar_id;
     out_res->size = bar.size;
     out_res->type = ZX_PCI_BAR_TYPE_MMIO;
-    out_res->handle = bar_vmo.release();
+    out_res->u.handle = bar_vmo.release();
     return ZX_OK;
   }
 
@@ -115,7 +115,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+  zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
     ZX_ASSERT(out_max_irqs);
     ZX_ASSERT(mode < PCI_IRQ_MODE_COUNT);
 
@@ -145,7 +145,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+  zx_status_t PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
     switch (mode) {
       case PCI_IRQ_MODE_LEGACY:
         if (requested_irq_count > 1) {
@@ -196,7 +196,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_OK;
   }
 
-  zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_info) {
+  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_info) {
     ZX_ASSERT(out_info);
     *out_info = info_;
     return ZX_OK;
@@ -325,7 +325,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return borrow;
   }
 
-  zx_pcie_device_info_t SetDeviceInfo(zx_pcie_device_info_t info) {
+  pcie_device_info_t SetDeviceInfo(pcie_device_info_t info) {
     info_ = info;
     config_.write(&info_.vendor_id, PCI_CFG_VENDOR_ID, sizeof(info_.vendor_id));
     config_.write(&info_.device_id, PCI_CFG_DEVICE_ID, sizeof(info_.device_id));
@@ -467,7 +467,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   zx::bti bti_;
   uint32_t reset_cnt_;
   std::optional<bool> bus_master_en_;
-  zx_pcie_device_info_t info_ = {};
+  pcie_device_info_t info_ = {};
   zx::vmo config_;
   pci_protocol_t protocol_ = {.ops = &pci_protocol_ops_, .ctx = this};
 };

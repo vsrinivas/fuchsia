@@ -527,7 +527,7 @@ static void e1000_identify_hardware(struct adapter* adapter) {
   pci_config_read16(pci, PCI_CONFIG_COMMAND, &adapter->hw.bus.pci_cmd_word);
 
   /* Save off the information about this board */
-  zx_pcie_device_info_t pci_info;
+  pcie_device_info_t pci_info;
   zx_status_t status = pci_get_device_info(pci, &pci_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pci_get_device_info failure");
@@ -583,13 +583,13 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
       return ZX_ERR_IO_NOT_PRESENT;
     }
 
-    zx_pci_bar_t bar;
+    pci_bar_t bar;
     status = pci_get_bar(pci, iorid, &bar);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Unable to allocate bus resource: ioport (%d)", status);
     }
 
-    adapter->osdep.iobase = bar.addr;
+    adapter->osdep.iobase = bar.u.addr;
     adapter->hw.io_base = 0;
   }
 

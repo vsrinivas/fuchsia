@@ -169,15 +169,15 @@ class AddressSpaceDeviceTest : public zxtest::Test {
     // Simulate expected PCI banjo methods.
     mock_pci_.ExpectGetBti(ZX_OK, 0 /*index*/, std::move(out_bti))
         .ExpectGetBar(ZX_OK, PCI_CONTROL_BAR_ID,
-                      zx_pci_bar_t{.id = 0,
-                                   .type = ZX_PCI_BAR_TYPE_MMIO,
-                                   .size = kCtrlSize,
-                                   .handle = vmo_control.release()})
+                      pci_bar_t{.id = 0,
+                                .type = ZX_PCI_BAR_TYPE_MMIO,
+                                .size = kCtrlSize,
+                                .u.handle = vmo_control.release()})
         .ExpectGetBar(ZX_OK, PCI_AREA_BAR_ID,
-                      zx_pci_bar_t{.id = 1,
-                                   .type = ZX_PCI_BAR_TYPE_MMIO,
-                                   .size = kAreaSize,
-                                   .handle = vmo_area.release()});
+                      pci_bar_t{.id = 1,
+                                .type = ZX_PCI_BAR_TYPE_MMIO,
+                                .size = kAreaSize,
+                                .u.handle = vmo_area.release()});
 
     ddk_.SetProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto());
     dut_ = std::make_unique<AddressSpaceDevice>(fake_ddk::FakeParent());

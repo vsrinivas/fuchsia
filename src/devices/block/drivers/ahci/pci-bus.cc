@@ -39,7 +39,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   }
   mmio_ = ddk::MmioBuffer(buf);
 
-  zx_pcie_device_info_t config;
+  pcie_device_info_t config;
   status = pci_get_device_info(&pci_, &config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error getting pci config information");

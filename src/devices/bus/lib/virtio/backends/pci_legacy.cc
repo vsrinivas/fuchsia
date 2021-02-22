@@ -41,7 +41,7 @@ void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint32_t val) {
 
 zx_status_t PciLegacyBackend::Init() {
   fbl::AutoLock guard(&lock());
-  zx_pci_bar_t bar0;
+  pci_bar_t bar0;
   zx_status_t status = pci().GetBar(0u, &bar0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Couldn't get IO bar for device: %d", tag(), status);
@@ -52,7 +52,7 @@ zx_status_t PciLegacyBackend::Init() {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  bar0_base_ = static_cast<uint16_t>(bar0.addr & 0xffff);
+  bar0_base_ = static_cast<uint16_t>(bar0.u.addr & 0xffff);
   // TODO(cja): When MSI support is added we need to dynamically add
   // the extra two fields here that offset the device config.
   // Virtio 1.0 section 4.1.4.8

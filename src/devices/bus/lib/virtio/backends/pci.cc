@@ -21,7 +21,7 @@
 
 namespace virtio {
 
-PciBackend::PciBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info)
+PciBackend::PciBackend(ddk::PciProtocolClient pci, pcie_device_info_t info)
     : pci_(pci), info_(info) {
   snprintf(tag_, sizeof(tag_), "pci[%02x:%02x.%1x]", info_.bus_id, info_.dev_id, info_.func_id);
 }

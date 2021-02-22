@@ -88,32 +88,32 @@ zx_status_t AddressSpaceDevice::Bind() {
     return status;
   }
 
-  zx_pci_bar_t control_bar;
+  pci_bar_t control_bar;
   status = pci_.GetBar(PCI_CONTROL_BAR_ID, &control_bar);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: get_bar: could not get control BAR", kTag);
     return status;
   }
   ZX_DEBUG_ASSERT(control_bar.type == ZX_PCI_BAR_TYPE_MMIO);
-  ZX_DEBUG_ASSERT(control_bar.handle != ZX_HANDLE_INVALID);
+  ZX_DEBUG_ASSERT(control_bar.u.handle != ZX_HANDLE_INVALID);
 
   fbl::AutoLock lock(&mmio_lock_);
-  status = ddk::MmioBuffer::Create(0, control_bar.size, zx::vmo(control_bar.handle),
+  status = ddk::MmioBuffer::Create(0, control_bar.size, zx::vmo(control_bar.u.handle),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to create MMIO buffer: %d", kTag, status);
     return status;
   }
 
-  zx_pci_bar_t area_bar;
+  pci_bar_t area_bar;
   status = pci_.GetBar(PCI_AREA_BAR_ID, &area_bar);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: get_bar: could not get area BAR: %d", kTag, status);
     return status;
   }
   ZX_DEBUG_ASSERT(area_bar.type == ZX_PCI_BAR_TYPE_MMIO);
-  ZX_DEBUG_ASSERT(area_bar.handle != ZX_HANDLE_INVALID);
-  dma_region_ = zx::vmo(area_bar.handle);
+  ZX_DEBUG_ASSERT(area_bar.u.handle != ZX_HANDLE_INVALID);
+  dma_region_ = zx::vmo(area_bar.u.handle);
 
   mmio_->Write32(PAGE_SIZE, REGISTER_GUEST_PAGE_SIZE);
 

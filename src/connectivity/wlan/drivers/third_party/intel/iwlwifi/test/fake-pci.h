@@ -48,7 +48,7 @@ class FakePci {
   static zx_status_t PciConfigWrite8(void* ctx, uint16_t offset, uint8_t value) { return ZX_OK; }
   static zx_status_t PciEnableBusMaster(void* ctx, bool enable) { return ZX_OK; }
 
-  static zx_status_t PciGetDeviceInfo(void* ctx, zx_pcie_device_info_t* out_info) {
+  static zx_status_t PciGetDeviceInfo(void* ctx, pcie_device_info_t* out_info) {
     out_info->device_id = test_device_id;
     return ZX_OK;
   }
@@ -71,7 +71,7 @@ class FakePci {
     return ZX_OK;
   }
 
-  static zx_status_t PciGetBar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_res) {
+  static zx_status_t PciGetBar(void* ctx, uint32_t bar_id, pci_bar_t* out_res) {
     zx::vmo vmo_bar;
     const int vmo_size = 4096u;
     zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo_bar);
@@ -82,7 +82,7 @@ class FakePci {
     out_res->id = bar_id;
     out_res->type = ZX_PCI_BAR_TYPE_MMIO;
     out_res->size = vmo_size;
-    out_res->handle = vmo_bar.release();
+    out_res->u.handle = vmo_bar.release();
 
     return ZX_OK;
   }

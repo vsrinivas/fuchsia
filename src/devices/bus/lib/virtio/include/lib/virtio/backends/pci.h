@@ -17,7 +17,7 @@ namespace virtio {
 
 class PciBackend : public Backend {
  public:
-  PciBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info);
+  PciBackend(ddk::PciProtocolClient pci, pcie_device_info_t info);
   zx_status_t Bind() final;
   virtual zx_status_t Init() = 0;
   const char* tag() { return tag_; }
@@ -33,13 +33,13 @@ class PciBackend : public Backend {
 
  protected:
   const ddk::PciProtocolClient& pci() { return pci_; }
-  zx_pcie_device_info_t info() { return info_; }
+  pcie_device_info_t info() { return info_; }
   fbl::Mutex& lock() { return lock_; }
   zx::port& wait_port() { return wait_port_; }
 
  private:
   ddk::PciProtocolClient pci_;
-  zx_pcie_device_info_t info_;
+  pcie_device_info_t info_;
   fbl::Mutex lock_;
   zx::port wait_port_;
   char tag_[16];  // pci[XX:XX.X] + \0, aligned to 8
@@ -50,8 +50,7 @@ class PciBackend : public Backend {
 // the IO Bar 0. It has complications with address offsets when MSI-X is enabled.
 class PciLegacyBackend : public PciBackend {
  public:
-  PciLegacyBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info)
-      : PciBackend(pci, info) {}
+  PciLegacyBackend(ddk::PciProtocolClient pci, pcie_device_info_t info) : PciBackend(pci, info) {}
   ~PciLegacyBackend() override;
   zx_status_t Init() final;
 
@@ -101,8 +100,7 @@ class PciLegacyBackend : public PciBackend {
 // PciModernBackend is for v1.0+ Virtio using MMIO mapped bars and PCI capabilities.
 class PciModernBackend : public PciBackend {
  public:
-  PciModernBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info)
-      : PciBackend(pci, info) {}
+  PciModernBackend(ddk::PciProtocolClient pci, pcie_device_info_t info) : PciBackend(pci, info) {}
   // The dtor handles cleanup of allocated bars because we cannot tear down
   // the mappings safely while the virtio device is being used by a driver.
   ~PciModernBackend() override = default;

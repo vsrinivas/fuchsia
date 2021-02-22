@@ -191,7 +191,7 @@ TEST_F(PciProtocolTests, EnableBusMaster) {
 }
 
 TEST_F(PciProtocolTests, GetBarArgumentCheck) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   // Test that only valid BAR ids are accepted.
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(PCI_MAX_BAR_REGS, &info));
 }
@@ -201,7 +201,7 @@ TEST_F(PciProtocolTests, GetBarArgumentCheck) {
 // affects the expected BAR information then these tests also need to be
 // updated.
 TEST_F(PciProtocolTests, GetBar0) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   zx::vmo vmo;
   size_t size;
 
@@ -209,13 +209,13 @@ TEST_F(PciProtocolTests, GetBar0) {
   ASSERT_OK(pci().GetBar(0, &info));
   ASSERT_EQ(info.id, 0);
   ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
-  vmo.reset(info.handle);
+  vmo.reset(info.u.handle);
   vmo.get_size(&size);
   ASSERT_EQ(size, kTestDeviceBars[0].size);
 }
 
 TEST_F(PciProtocolTests, GetBar1) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   zx::vmo vmo;
   size_t size;
 
@@ -223,19 +223,19 @@ TEST_F(PciProtocolTests, GetBar1) {
   ASSERT_OK(pci().GetBar(1, &info));
   ASSERT_EQ(info.id, 1);
   ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
-  vmo.reset(info.handle);
+  vmo.reset(info.u.handle);
   vmo.get_size(&size);
   ASSERT_EQ(size, kTestDeviceBars[1].size);
 }
 
 TEST_F(PciProtocolTests, GetBar2) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   // BAR 2 contains MSI-X registers and should be denied
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, pci().GetBar(2, &info));
 }
 
 TEST_F(PciProtocolTests, GetBar3) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   zx::vmo vmo;
   size_t size;
 
@@ -243,19 +243,19 @@ TEST_F(PciProtocolTests, GetBar3) {
   ASSERT_OK(pci().GetBar(3, &info));
   ASSERT_EQ(info.id, 3);
   ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
-  vmo.reset(info.handle);
+  vmo.reset(info.u.handle);
   vmo.get_size(&size);
   ASSERT_EQ(size, kTestDeviceBars[3].size);
 }
 
 TEST_F(PciProtocolTests, GetBar4) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   // BAR 4 (Bar 3 second half, should be NOT_FOUND)
   ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(4, &info));
 }
 
 TEST_F(PciProtocolTests, GetBar5) {
-  zx_pci_bar_t info = {};
+  pci_bar_t info = {};
   // BAR 5 (I/O ports @ 0x2000, size 128)
   ASSERT_STATUS(ZX_ERR_INTERNAL, pci().GetBar(5, &info));
   // TODO(61631): If the resource is sorted out we can verify the other fields.
@@ -414,7 +414,7 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
   ASSERT_OK(pci().ConfigRead8(PCI_CFG_CLASS_CODE_INTR, &program_interface));
   ASSERT_OK(pci().ConfigRead8(PCI_CFG_REVISION_ID, &revision_id));
 
-  zx_pcie_device_info_t info;
+  pcie_device_info_t info;
   ASSERT_OK(pci().GetDeviceInfo(&info));
   ASSERT_EQ(vendor_id, info.vendor_id);
   ASSERT_EQ(device_id, info.device_id);

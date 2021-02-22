@@ -97,7 +97,7 @@ zx_status_t DeviceProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
 
 // TODO(fxbug.dev/33713): Convert this to using a better wire format when we no longer
 // have to support the kernel driver.
-zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
+zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};
   zx_handle_t handle;
@@ -118,7 +118,7 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
   out_bar->size = resp.bar.size;
   if (!resp.bar.is_mmio) {
     out_bar->type = ZX_PCI_BAR_TYPE_PIO;
-    out_bar->addr = resp.bar.io_addr;
+    out_bar->u.addr = resp.bar.io_addr;
     // x86 PIO space access requires permission in the I/O bitmap. If an IO BAR
     // is used then the handle returned corresponds to a resource with access to
     // this range of IO space.
@@ -126,7 +126,7 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
     // In a test environment we are not passed a handle back. We can still verify
     // the I/O address and size.
     if (handle != ZX_HANDLE_INVALID) {
-      st = zx_ioports_request(handle, static_cast<uint16_t>(out_bar->addr),
+      st = zx_ioports_request(handle, static_cast<uint16_t>(out_bar->u.addr),
                               static_cast<uint32_t>(out_bar->size));
       if (st != ZX_OK) {
         zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
@@ -135,7 +135,7 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
     }
   } else {
     out_bar->type = ZX_PCI_BAR_TYPE_MMIO;
-    out_bar->handle = handle;
+    out_bar->u.handle = handle;
   }
 
   return ZX_OK;
@@ -176,7 +176,7 @@ zx_status_t DeviceProxy::PciConfigureIrqMode(uint32_t requested_irq_count) {
                     &resp);
 }
 
-zx_status_t DeviceProxy::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+zx_status_t DeviceProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};
 
@@ -190,7 +190,7 @@ zx_status_t DeviceProxy::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_m
   return st;
 }
 
-zx_status_t DeviceProxy::PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+zx_status_t DeviceProxy::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};
 
@@ -199,7 +199,7 @@ zx_status_t DeviceProxy::PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requeste
   return RpcRequest(PCI_OP_SET_IRQ_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
 }
 
-zx_status_t DeviceProxy::PciGetDeviceInfo(zx_pcie_device_info_t* out_info) {
+zx_status_t DeviceProxy::PciGetDeviceInfo(pcie_device_info_t* out_info) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};
 

@@ -44,7 +44,7 @@ struct PciMsgBar {
 
 // For use with QUERY_IRQ_MODE, SET_IRQ_MODE, and MAP_INTERRUPT
 struct PciMsgIrq {
-  zx_pci_irq_mode_t mode;
+  pci_irq_mode_t mode;
   union {
     uint32_t which_irq;
     uint32_t max_irqs;
@@ -66,7 +66,7 @@ const uint16_t kPciCapOffsetFirst = UINT8_MAX;
 const uint16_t kPciExtCapOffsetFirst = UINT16_MAX;
 
 // TODO(fxbug.dev/33713): port this to non-zx_pcie structures
-using PciMsgDeviceInfo = zx_pcie_device_info_t;
+using PciMsgDeviceInfo = pcie_device_info_t;
 
 struct PciRpcMsg {
   zx_txid_t txid;  // handled by zx_channel_call

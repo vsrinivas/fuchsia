@@ -19,6 +19,7 @@
 
 #include "src/devices/bus/drivers/pci/kpci/kpci-private.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"
+#include "src/devices/lib/pci/pci.h"
 
 zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle, pci_msg_t* req,
                             pci_msg_t* resp) {
@@ -210,7 +211,7 @@ static zx_status_t pci_op_get_first_capability(void* ctx, uint8_t type, uint8_t*
   return pci_op_get_next_capability(ctx, type, PCI_CFG_CAPABILITIES_PTR - 1u, out_offset);
 }
 
-static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_bar) {
+static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, pci_bar_t* out_bar) {
   kpci_device_t* dev = ctx;
   pci_msg_t req = {
       .bar.id = bar_id,
@@ -221,14 +222,16 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
 
   if (st == ZX_OK) {
     // Grab the payload and copy the handle over if one was passed back to us
-    *out_bar = resp.bar;
+    zx_pci_bar_to_banjo(resp.bar, out_bar);
+    // *out_bar = resp.bar;
+
     if (out_bar->type == ZX_PCI_BAR_TYPE_PIO) {
 #if __x86_64__
       // x86 PIO space access requires permission in the I/O bitmap
       // TODO: this is the last remaining use of get_root_resource in pci
       // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-      st =
-          zx_ioports_request(get_root_resource(), (uint16_t)out_bar->addr, (uint16_t)out_bar->size);
+      st = zx_ioports_request(get_root_resource(), (uint16_t)out_bar->u.addr,
+                              (uint16_t)out_bar->size);
       if (st != ZX_OK) {
         zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
         return st;
@@ -240,7 +243,7 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
              __func__);
 #endif
     } else {
-      out_bar->handle = handle;
+      out_bar->u.handle = handle;
     }
   }
   return st;
@@ -280,8 +283,7 @@ static zx_status_t pci_op_get_bti(void* ctx, uint32_t index, zx_handle_t* out_ha
   return st;
 }
 
-static zx_status_t pci_op_query_irq_mode(void* ctx, zx_pci_irq_mode_t mode,
-                                         uint32_t* out_max_irqs) {
+static zx_status_t pci_op_query_irq_mode(void* ctx, pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   kpci_device_t* dev = ctx;
   pci_msg_t req = {
       .irq.mode = mode,
@@ -294,7 +296,7 @@ static zx_status_t pci_op_query_irq_mode(void* ctx, zx_pci_irq_mode_t mode,
   return st;
 }
 
-static zx_status_t pci_op_set_irq_mode(void* ctx, zx_pci_irq_mode_t mode,
+static zx_status_t pci_op_set_irq_mode(void* ctx, pci_irq_mode_t mode,
                                        uint32_t requested_irq_count) {
   kpci_device_t* dev = ctx;
   pci_msg_t req = {
@@ -320,13 +322,13 @@ static zx_status_t pci_op_configure_irq_mode(void* ctx, uint32_t requested_irq_c
   return pci_rpc_request(dev, PCI_OP_CONFIGURE_IRQ_MODE, NULL, &req, &resp);
 }
 
-static zx_status_t pci_op_get_device_info(void* ctx, zx_pcie_device_info_t* out_info) {
+static zx_status_t pci_op_get_device_info(void* ctx, pcie_device_info_t* out_info) {
   kpci_device_t* dev = ctx;
   pci_msg_t req = {};
   pci_msg_t resp = {};
   zx_status_t st = pci_rpc_request(dev, PCI_OP_GET_DEVICE_INFO, NULL, &req, &resp);
   if (st == ZX_OK) {
-    *out_info = resp.info;
+    zx_pci_device_info_to_banjo(resp.info, out_info);
   }
   return st;
 }
@@ -394,7 +396,7 @@ static zx_status_t pci_proxy_create(void* ctx, zx_device_t* parent, const char* 
   }
 
   unsigned long index = strtoul(args, NULL, 10);
-  zx_pcie_device_info_t info;
+  pcie_device_info_t info;
   kpci_device_t* device = calloc(1, sizeof(kpci_device_t));
   if (!device) {
     return ZX_ERR_NO_MEMORY;

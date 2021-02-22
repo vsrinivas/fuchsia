@@ -3376,7 +3376,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_pcie_device_info_t pci_info;
+  pcie_device_info_t pci_info;
   if (pci_get_device_info(&pci, &pci_info) != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }

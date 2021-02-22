@@ -23,7 +23,7 @@ zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBacken
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  zx_pcie_device_info_t info;
+  pcie_device_info_t info;
   status = pci.GetDeviceInfo(&info);
   if (status != ZX_OK) {
     return zx::error(status);

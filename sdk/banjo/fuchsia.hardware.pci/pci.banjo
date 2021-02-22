@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.pci;
 
-using zircon.syscalls.pci;
+using fuchsia.hardware.syscalls.pci;
 using zx;
 
 enum PciCfg : uint16 {
@@ -118,14 +118,14 @@ enum PciIrqMode : uint8 {
 /// fxbug.dev/33713: Remove the zx_pcie types and implement them here
 [BanjoLayout = "ddk-protocol"]
 protocol Pci {
-    GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
+    GetBar(uint32 bar_id) -> (zx.status s, fuchsia.hardware.syscalls.pci.PciBar res);
     EnableBusMaster(bool enable) -> (zx.status s);
     ResetDevice() -> (zx.status s);
     MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT @handle);
-    QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
-    SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
+    QueryIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode) -> (zx.status s, uint32 max_irqs);
+    SetIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
     ConfigureIrqMode(uint32 requested_irq_count) -> (zx.status s);
-    GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo info);
+    GetDeviceInfo() -> (zx.status s, fuchsia.hardware.syscalls.pci.PcieDeviceInfo info);
     ConfigRead8(uint16 offset) -> (zx.status s, uint8 value);
     ConfigRead16(uint16 offset) -> (zx.status s, uint16 value);
     ConfigRead32(uint16 offset) -> (zx.status s, uint32 value);

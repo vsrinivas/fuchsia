@@ -991,7 +991,7 @@ zx_status_t iwl_pci_create(void* ctx, zx_device_t* parent, struct iwl_trans** ou
     return status;
   }
 
-  zx_pcie_device_info_t pci_info;
+  pcie_device_info_t pci_info;
   status = pci_get_device_info(&pci, &pci_info);
   if (status != ZX_OK) {
     return status;
