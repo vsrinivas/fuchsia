@@ -122,6 +122,9 @@ zx_status_t Lcd::Enable() {
     status = LoadInitTable(lcd_init_sequence_G101B158_FT, sizeof(lcd_init_sequence_G101B158_FT));
   } else if (panel_type_ == PANEL_TV080WXM_FT) {
     status = LoadInitTable(lcd_init_sequence_TV080WXM_FT, sizeof(lcd_init_sequence_TV080WXM_FT));
+  } else if (panel_type_ == PANEL_TV101WXM_FT_9365) {
+    status = LoadInitTable(lcd_init_sequence_TV101WXM_FT_9365,
+                           sizeof(lcd_init_sequence_TV101WXM_FT_9365));
   } else {
     DISP_ERROR("Unsupported panel detected!\n");
     status = ZX_ERR_NOT_SUPPORTED;

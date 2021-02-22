@@ -12,6 +12,7 @@
 #define PANEL_ILI9881C UINT8_C(0x04)
 #define PANEL_ST7701S UINT8_C(0x05)
 #define PANEL_TV080WXM_FT UINT8_C(0x06)
+#define PANEL_TV101WXM_FT_9365 UINT8_C(0x07)
 #define PANEL_UNKNOWN UINT8_C(0xFF)
 
 // Astro/Sherlock Display Configuration. These configuration comes directly from
@@ -126,6 +127,22 @@ const display_setting_t kDisplaySettingTV080WXM_FT = {
     .hsync_pol = 0,
     .vsync_width = 8,
     .vsync_bp = 32,
+    .vsync_pol = 0,
+};
+const display_setting_t kDisplaySettingTV101WXM_FT_9365 = {
+    .lane_num = 4,
+    .bit_rate_max = 566,
+    .clock_factor = 8,
+    .lcd_clock = 70701600,
+    .h_active = 800,
+    .v_active = 1280,
+    .h_period = 890,
+    .v_period = 1324,
+    .hsync_width = 20,
+    .hsync_bp = 50,
+    .hsync_pol = 0,
+    .vsync_width = 4,
+    .vsync_bp = 20,
     .vsync_pol = 0,
 };
 

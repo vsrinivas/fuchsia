@@ -157,7 +157,13 @@ zx_status_t Sherlock::DisplayInit() {
     if (pt) {
       display_panel_info[0].panel_type = PANEL_G101B158_FT;
     } else {
-      display_panel_info[0].panel_type = PANEL_TV101WXM_FT;
+      gpio_impl_.ConfigIn(GPIO_DDIC_DETECT, GPIO_NO_PULL);
+      gpio_impl_.Read(GPIO_DDIC_DETECT, &pt);
+      if (pt == 1) {
+        display_panel_info[0].panel_type = PANEL_TV101WXM_FT;
+      } else {
+        display_panel_info[0].panel_type = PANEL_TV101WXM_FT_9365;
+      }
     }
     display_panel_metadata[0].data_size = sizeof(display_panel_info);
     display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);

@@ -103,12 +103,13 @@ static const gpio_pin_t gpio_pins[] = {
     {T931_GPIOE(4)},     {T931_GPIOE(5)},     {T931_GPIOE(6)},     {T931_GPIOE(7)},
 };
 #else
-#define GPIO_PIN_COUNT 29
+#define GPIO_PIN_COUNT 30
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     {T931_WIFI_HOST_WAKE},
     // For display.
     {GPIO_PANEL_DETECT},
+    {GPIO_DDIC_DETECT},
     {GPIO_LCD_RESET},
     // For touch screen.
     {GPIO_TOUCH_INTERRUPT},

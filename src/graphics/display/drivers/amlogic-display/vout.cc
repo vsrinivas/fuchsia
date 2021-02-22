@@ -67,6 +67,9 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
     case PANEL_TV080WXM_FT:
       init_disp_table = &kDisplaySettingTV080WXM_FT;
       break;
+    case PANEL_TV101WXM_FT_9365:
+      init_disp_table = &kDisplaySettingTV101WXM_FT;
+      break;
     default:
       DISP_ERROR("Unsupported panel detected!\n");
       return ZX_ERR_NOT_SUPPORTED;
