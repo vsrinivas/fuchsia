@@ -722,7 +722,7 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
 }
 
 TEST(ImageFormat, GoldfishOptimal_V2_LLCPP) {
-  fidl::HeapAllocator allocator;
+  fidl::FidlAllocator allocator;
   constexpr uint32_t kWidth = 64;
   constexpr uint32_t kHeight = 128;
   constexpr uint32_t kStride = kWidth * 6;
