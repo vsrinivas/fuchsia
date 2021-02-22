@@ -159,13 +159,17 @@ fn missing_binary_error(
 
     Error::validate(format!(
         r"{}
-    program.binary={} but '{}' is not provided by deps!
+program.binary={} but {} is not provided by deps!
 
-    Did you mean {:?}?
+Did you mean {}?
 
-    Try any of the following:
-    {:?}",
-        header, program_binary, program_binary, nearest_match, package_targets
+Try any of the following:
+{}",
+        header,
+        program_binary,
+        program_binary,
+        nearest_match,
+        package_targets.join("\n")
     ))
 }
 
@@ -388,7 +392,8 @@ mod tests {
             }),
         );
 
-        assert_matches!(validate(&component_manifest, &package_manifest, None), Err(_));
+        assert_matches!(validate(&component_manifest, &package_manifest, None),
+        Err(Error::Validate { schema_name: None, err, .. }) if err.contains("test/hello_world is not provided by deps!") && err.contains("Did you mean bin/hello_world?"));
     }
 
     #[test]
