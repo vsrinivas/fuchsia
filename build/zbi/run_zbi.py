@@ -5,6 +5,7 @@
 '''Runs the zbi tool, taking care of unwrapping response files.'''
 
 import argparse
+import os
 import subprocess
 
 
@@ -36,6 +37,9 @@ def main():
         contents = depfile.read().strip()
     with open(args.depfile, 'w') as final_depfile:
         final_depfile.write(contents + ' ' + args.rspfile)
+
+    # Remove the intermediate depfile.
+    os.remove(intermediate_depfile)
 
 
 if __name__ == '__main__':
