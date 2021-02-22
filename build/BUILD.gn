@@ -126,7 +126,6 @@ group("deprecated_package") {
     "//sdk/lib/inspect/contrib/cpp/tests/*",
     "//sdk/lib/media/cpp/*",
     "//sdk/lib/modular/cpp/*",
-    "//sdk/lib/modular/testing/cpp/*",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner/*",
     "//sdk/lib/sys/cpp/testing/examples/*",
     "//sdk/lib/sys/cpp/testing/examples/test_with_environment/*",
