@@ -188,7 +188,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/graphics/lib/magma/tests/integration:magma_abi_conformance_tests",
     "//src/graphics/lib/magma/tests/integration:virtmagma_abi_conformance_tests",
-    "//src/graphics/tests/goldfish_benchmark:bin",
+    "//src/graphics/tests/goldfish_benchmark:goldfish_benchmark_bin",
     "//src/graphics/tests/goldfish_test:bin",
     "//src/graphics/tests/goldfish_test:goldfish_test_bin",
     "//src/graphics/tests/vkloop:vkloop",

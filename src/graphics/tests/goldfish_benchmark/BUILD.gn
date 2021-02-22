@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-executable("bin") {
+executable("goldfish_benchmark_bin") {
   testonly = true
 
   output_name = "goldfish_benchmark"
@@ -28,21 +28,17 @@ executable("bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-package("goldfish_benchmark") {
+fuchsia_component("goldfish_benchmark_cmp") {
   testonly = true
+  component_name = "goldfish_benchmark"
+  deps = [ ":goldfish_benchmark_bin" ]
+  manifest = "meta/goldfish_benchmark.cmx"
+}
 
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "goldfish_benchmark"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/goldfish_benchmark.cmx")
-      dest = "goldfish_benchmark.cmx"
-    },
-  ]
+fuchsia_test_package("goldfish_benchmark") {
+  package_name = "goldfish-benchmark"
+  test_components = [ ":goldfish_benchmark_cmp" ]
+  test_specs = {
+    environments = [ aemu_env ]
+  }
 }
