@@ -162,13 +162,14 @@ pub fn sys_unknown(
     syscall_number: syscall_number_t,
 ) -> Result<SyscallResult, Errno> {
     println!("starnix: UNKNOWN syscall: {}", syscall_number);
-    println!("starnix: rax=0x{:x}", ctx.registers.rax);
-    println!("starnix: rdi=0x{:x}", ctx.registers.rdi);
-    println!("starnix: rsi=0x{:x}", ctx.registers.rsi);
-    println!("starnix: rdx=0x{:x}", ctx.registers.rdx);
-    println!("starnix: r10=0x{:x}", ctx.registers.r10);
-    println!("starnix: r8=0x{:x}", ctx.registers.r8);
-    println!("starnix: r9=0x{:x}", ctx.registers.r9);
+    println!("starnix: rip={:#x}", ctx.registers.rip);
+    println!("starnix: rax={:#x}", ctx.registers.rax);
+    println!("starnix: rdi={:#x}", ctx.registers.rdi);
+    println!("starnix: rsi={:#x}", ctx.registers.rsi);
+    println!("starnix: rdx={:#x}", ctx.registers.rdx);
+    println!("starnix: r10={:#x}", ctx.registers.r10);
+    println!("starnix: r8={:#x}", ctx.registers.r8);
+    println!("starnix: r9={:#x}", ctx.registers.r9);
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)
 }
