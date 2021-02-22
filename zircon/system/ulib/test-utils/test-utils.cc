@@ -256,6 +256,8 @@ zx_handle_t tu_launch_fini(springboard* sb) {
   return process;
 }
 
+void tu_launch_abort(springboard* sb) { delete sb; }
+
 void tu_process_wait_signaled(zx_handle_t process) {
   zx_signals_t signals = ZX_PROCESS_TERMINATED;
   zx_signals_t pending;

@@ -49,9 +49,6 @@ test("elf-search") {
   ]
   data_deps = [ ":elf-search-test-helper" ]
   include_dirs = [ "include" ]
-
-  # TODO(fxbug.dev/46871): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("elf-search-bootfs-test") {

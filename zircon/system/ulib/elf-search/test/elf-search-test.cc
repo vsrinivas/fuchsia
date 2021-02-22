@@ -5,6 +5,7 @@
 #include <elf-search.h>
 #include <elf.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
@@ -159,6 +160,7 @@ TEST(ElfSearchTest, ForEachModule) {
   const char* argv[] = {helper.c_str()};
   springboard_t* sb =
       tu_launch_init(ZX_HANDLE_INVALID, "mod-test", 1, argv, 0, nullptr, 0, nullptr, nullptr);
+  auto delete_sb = fit::defer([=] { tu_launch_abort(sb); });
   zx_handle_t vmar = springboard_get_root_vmar_handle(sb);
 
   uintptr_t base, entry;
@@ -172,9 +174,9 @@ TEST(ElfSearchTest, ForEachModule) {
     ASSERT_OK(elf_load_extra(vmar, mod.vmo.get(), &base, &entry), "Unable to load extra ELF");
   }
   zx::process process;
-  auto ac = fbl::MakeAutoCall([&]() { process.kill(); });
   EXPECT_NE(ZX_HANDLE_INVALID,
             *process.reset_and_get_address() = springboard_get_process_handle(sb));
+  auto ac = fbl::MakeAutoCall([&]() { process.kill(); });
 
   // These modules appear in the list as they are the mimimum possible set of mappings that a
   // process can be spawned with using fuchsia.process.Launcher, which tu_launch_init relies on.

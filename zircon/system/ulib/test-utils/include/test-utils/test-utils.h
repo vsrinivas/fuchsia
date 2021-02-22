@@ -72,6 +72,10 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
 
 zx_handle_t tu_launch_fini(springboard_t* sb);
 
+// Frees a process.
+// The given springboard object becomes invalid after this function returns.
+void tu_launch_abort(springboard_t* sb);
+
 // Wait for |channel| to be readable.
 // Returns true if the channel is readable, and false if the peer has closed its end.
 // Note: This waits "forever", and relies on the watchdog to catch hung tests.
