@@ -27,6 +27,14 @@ int ParseCommonArgs(int argc, char** argv, const char** error, std::string* inte
   }
   return 0;
 }
+
+uint32_t NamegenParse(const std::string& str) {
+  if (str == "1") {
+    return 1;
+  }
+  return 0;
+}
+
 }  // namespace
 
 int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** error,
@@ -53,13 +61,18 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
   fidl::StringView string_keys[]{
       fidl::StringView{"netsvc.interface"},
       fidl::StringView{"zircon.nodename"},
+      fidl::StringView{"zircon.namegen"},
   };
+  std::string namegen_str("");
   auto string_resp = client.GetStrings(fidl::unowned_vec(string_keys));
   if (string_resp.ok()) {
     auto& values = string_resp->values;
     out->interface = std::string{values[0].data(), values[0].size()};
     out->nodename = std::string{values[1].data(), values[1].size()};
+    namegen_str = std::string{values[2].data(), values[2].size()};
   }
+
+  out->namegen = NamegenParse(namegen_str);
 
   int err = ParseCommonArgs(argc, argv, error, &out->interface);
   if (err) {
@@ -84,6 +97,15 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
         return -1;
       }
       out->ethdir = argv[2];
+      argv++;
+      argc--;
+    }
+    if (!strncmp(argv[1], "--namegen", 10)) {
+      if (argc < 3) {
+        *error = "netsvc: missing argument to --namegen";
+        return -1;
+      }
+      out->namegen = NamegenParse(std::string{argv[2]});
       argv++;
       argc--;
     }

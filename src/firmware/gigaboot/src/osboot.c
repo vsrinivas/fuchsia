@@ -460,9 +460,10 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // Default boot defaults to network
   const char* defboot = cmdline_get("bootloader.default", "network");
   const char* nodename = cmdline_get("zircon.nodename", "");
+  uint32_t namegen = cmdline_get_uint32("zircon.namegen", 0);
 
   // See if there's a network interface
-  bool have_network = netboot_init(nodename) == 0;
+  bool have_network = netboot_init(nodename, namegen) == 0;
   if (have_network) {
     if (have_fb) {
       draw_nodename(netboot_nodename());
@@ -675,12 +676,16 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     swap_to_head('f', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_NORMAL) {
     // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot
-    // selection code. swap_to_head('m', valid_keys, key_idx);
+    // selection code.
+    //
+    // swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
     swap_to_head('z', valid_keys, key_idx);
   } else if (!memcmp(defboot, "local", 5)) {
     // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot
-    // selection code. swap_to_head('m', valid_keys, key_idx);
+    // selection code.
+    //
+    // swap_to_head('m', valid_keys, key_idx);
   } else {
     swap_to_head('n', valid_keys, key_idx);
   }

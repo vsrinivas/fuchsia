@@ -131,7 +131,7 @@ typedef struct nbfile_t {
     size_t offset; // write pointer
 } nbfile;
 
-int netboot_init(const char* nodename);
+int netboot_init(const char* nodename, uint32_t namegen);
 const char* netboot_nodename(void);
 int netboot_poll(void);
 void netboot_close(void);

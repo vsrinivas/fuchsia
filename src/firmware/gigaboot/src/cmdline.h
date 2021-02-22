@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_CMDLINE_H_
-#define ZIRCON_BOOTLOADER_SRC_CMDLINE_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_CMDLINE_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_CMDLINE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -25,4 +25,4 @@ size_t cmdline_to_string(char* ptr, size_t max);
 // append any load option arguments to the command line
 void cmdline_append_load_options(void);
 
-#endif  // ZIRCON_BOOTLOADER_SRC_CMDLINE_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_CMDLINE_H_

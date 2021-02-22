@@ -1,15 +1,13 @@
-/*
- * Copyright 2020 The Fuchsia Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_
-#define ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_
+#ifndef SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_NAME_TOKENS_H_
+#define SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_NAME_TOKENS_H_
 
-// This list must be consistent with
-// //src/bringup/bin/netsvc/eff_short_wordlist_1.h
-const char dictionary[1296][6] = {
+#define TOKEN_DICTIONARY_SIZE 1296
+
+const char dictionary[TOKEN_DICTIONARY_SIZE][6] = {
     "acid",  "acorn", "acre",  "acts",  "afar",  "affix", "aged",  "agent", "agile", "aging",
     "agony", "ahead", "aide",  "aids",  "aim",   "ajar",  "alarm", "alias", "alibi", "alien",
     "alike", "alive", "aloe",  "aloft", "aloha", "alone", "amend", "amino", "ample", "amuse",
@@ -142,4 +140,4 @@ const char dictionary[1296][6] = {
     "zebra", "zero",  "zesty", "zippy", "zone",  "zoom",
 };
 
-#endif  // ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_
+#endif  // SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_NAME_TOKENS_H_
