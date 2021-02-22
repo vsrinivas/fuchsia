@@ -11,10 +11,6 @@
 
 namespace media::audio::tools {
 
-enum class BenchmarkType { All, CreationOnly, MixingOnly, OutputOnly };
-enum GainType : uint32_t { Mute, Unity, Scaled, Ramped };
-enum OutputDataRange : uint32_t { Silence, OutOfRange, Normal };
-
 // TODO(fxbug.dev/50811): Consider migrating to google/benchmark
 
 // The AudioPerformance class profiles the performance of the Mixer, Gain and OutputProducer
@@ -34,69 +30,52 @@ class AudioPerformance {
   // class is static only - prevent attempts to instantiate it
   AudioPerformance() = delete;
 
-  static void SetBenchmarkCreationOnly() { benchmark_type_ = BenchmarkType::CreationOnly; }
-  static void SetBenchmarkMixingOnly() { benchmark_type_ = BenchmarkType::MixingOnly; }
-  static void SetBenchmarkOutputOnly() { benchmark_type_ = BenchmarkType::OutputOnly; }
+  enum class GainType { Mute, Unity, Scaled, Ramped };
+  enum class InputRange { Silence, OutOfRange, Normal };
 
-  // Subsequent methods profile the performance of mixer creation, the core Mix() function, and the
-  // final ProduceOutput() function. Each displays nanoseconds required, in various configurations.
-  // Results are displayed in an easily-imported format.
-  static int Profile();
+  struct MixerConfig {
+    Mixer::Resampler sampler_type;
+    uint32_t num_input_chans;
+    uint32_t num_output_chans;
+    uint32_t source_rate;
+    uint32_t dest_rate;
+    fuchsia::media::AudioSampleFormat sample_format;
+    GainType gain_type;  // ProfileMixer() only
+    bool accumulate;     // ProfileMixer() only
+
+    std::string ToStringForCreate() const;
+    std::string ToStringForMixer() const;
+  };
+
+  struct OutputProducerConfig {
+    fuchsia::media::AudioSampleFormat sample_format;
+    InputRange input_range;
+    uint32_t num_chans;
+
+    std::string ToString() const;
+  };
+
+  static void ProfileMixerCreation(const std::vector<MixerConfig>& configs,
+                                   zx::duration duration_per_config);
+  static void ProfileMixer(const std::vector<MixerConfig>& configs,
+                           zx::duration duration_per_config);
+  static void ProfileOutputProducer(const std::vector<OutputProducerConfig>& configs,
+                                    zx::duration duration_per_config);
 
  private:
-  // After first run ("cold"), the timings measured are usually tightly clustered (+/-1-2%).
-  //
-  // We set these values to keep profile times reasonable: totalling no more than 5 minutes
-  // (30/240/30 secs respectively) for a Release core build running on standard platforms.
-  static constexpr uint32_t kNumMixerCreationRuns = 50;
-  static constexpr uint32_t kNumMixerProfilerRuns = 29;
-  static constexpr uint32_t kNumOutputProfilerRuns = 341;
-
-  static const uint32_t kProfilerBufferSize;
-  static const uint32_t kProfilerFrequency;
-
-  static void ProfileMixerCreation();
   static void DisplayMixerCreationLegend();
   static void DisplayMixerCreationColumnHeader();
-  static void ProfileMixerCreationType(Mixer::Resampler sampler_type);
-  static void ProfileMixerCreationTypeChan(Mixer::Resampler sampler_type, uint32_t num_input_chans,
-                                           uint32_t num_output_chans);
-  static void ProfileMixerCreationTypeChanRate(Mixer::Resampler sampler_type,
-                                               uint32_t num_input_chans, uint32_t num_output_chans,
-                                               uint32_t source_rate, uint32_t dest_rate);
-  static void ProfileMixerCreationTypeChanRateFormat(
-      Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
-      uint32_t source_rate, uint32_t dest_rate, fuchsia::media::AudioSampleFormat sample_format);
+  static void ProfileMixerCreation(const MixerConfig& cfg, zx::duration total_duration);
 
-  static void ProfileMixing();
-  static void DisplayMixerConfigLegend();
+  static void DisplayMixerLegend();
   static void DisplayMixerColumnHeader();
-  static void ProfileSampler(Mixer::Resampler sampler_type);
-  static void ProfileSamplerIn(uint32_t in_chans, Mixer::Resampler sampler_type);
-  static void ProfileSamplerChans(uint32_t in_chans, uint32_t out_chans,
-                                  Mixer::Resampler sampler_type);
-  static void ProfileSamplerChansRate(uint32_t in_chans, uint32_t out_chans,
-                                      Mixer::Resampler sampler_type, uint32_t source_rate);
-  static void ProfileSamplerChansRateScale(uint32_t in_chans, uint32_t out_chans,
-                                           Mixer::Resampler sampler_type, uint32_t source_rate,
-                                           GainType gain_type);
-  static void ProfileSamplerChansRateScaleMix(uint32_t num_input_chans, uint32_t num_output_chans,
-                                              Mixer::Resampler sampler_type, uint32_t source_rate,
-                                              GainType gain_type, bool accumulate);
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  static void ProfileMix(uint32_t num_input_chans, uint32_t num_output_chans,
-                         Mixer::Resampler sampler_type, uint32_t source_rate, GainType gain_type,
-                         bool accumulate);
+  static void ProfileMixer(const MixerConfig& cfg, zx::duration total_duration);
 
-  static void ProfileOutputProducers();
   static void DisplayOutputConfigLegend();
   static void DisplayOutputColumnHeader();
-  static void ProfileOutputChans(uint32_t num_chans);
-  static void ProfileOutputRange(uint32_t num_chans, OutputDataRange data_range);
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  static void ProfileOutputType(uint32_t num_chans, OutputDataRange data_range);
-
-  static BenchmarkType benchmark_type_;
+  static void ProfileOutputProducer(const OutputProducerConfig& cfg, zx::duration total_duration);
 };
 
 }  // namespace media::audio::tools

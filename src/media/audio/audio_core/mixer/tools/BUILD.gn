@@ -18,6 +18,7 @@ executable("profiler_bin") {
   ]
 
   deps = [
+    "//garnet/lib/profiler",
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/audio_core/mixer/test:frequency_set",
