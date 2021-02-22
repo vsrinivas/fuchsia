@@ -139,7 +139,7 @@ Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispat
     : parent_(parent),
       driver_binder_(driver_binder),
       dispatcher_(dispatcher),
-      name_(std::move(name)),
+      name_(name),
       offers_(std::move(offers)),
       symbols_(std::move(symbols)) {}
 
