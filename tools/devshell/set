@@ -7,8 +7,7 @@
 ### set up a build directory
 
 ## usage: fx set PRODUCT.BOARD [--with GNLABEL1,GNLABEL2,...]
-##               [--release] [--auto-dir | --build-dir BUILDDIR]
-##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
+##               [--release] [--auto-dir] [--args ARG] [--variant VARIANT]
 ##               [--with-base GNLABEL1,GNLABEL2,...]
 ##
 ## where PRODUCT is an entry from `//products` or `//vendor/*/products` and
@@ -58,12 +57,6 @@
 ##                         attempts to make builds faster using remote build
 ##                         servers. Defaults to detecting whether goma has been
 ##                         set up via `fx goma`.
-##   --help-args           Display GN arguments documentation.  If --help-args
-##                         is followed by a GN build argument identifier, just
-##                         that argument's documentation is displayed.
-##                         If --help-args is used alone, all GN build arguments
-##                         are displayed (lots of output).
-##                         This option requires an existing build directory.
 ##   --ide                 Pass --ide=VALUE to gn when generating to create project
 ##                         files usable with that IDE. Useful values include "vs"
 ##                         for Visual Studio or "xcode" for Xcode.
@@ -346,6 +339,8 @@ function main {
         else
           gn_switches+=(--list)
         fi
+        fx-warn "DEPRECATED: \"fx set --help-args[=ARG]\""
+        fx-warn "       NEW: \"fx args [--list=ARG]\""
         ;;
       --ccache)
         ccache=1
