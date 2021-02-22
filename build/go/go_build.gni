@@ -159,9 +159,6 @@ template("go_build") {
 
     sources = [ "//build/go/gen_library_metadata.py" ]
 
-    godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
-    inputs = [ godepfile ]
-
     if (is_fuchsia) {
       # For Fuchsia binaries, use a Go-specific sysroot instead of the
       # standard one which only contains empty linker stubs (see
@@ -170,8 +167,6 @@ template("go_build") {
     }
 
     args = [
-      "--godepfile",
-      rebase_path(godepfile, "", root_build_dir),
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
       "--depfile",
@@ -366,6 +361,7 @@ template("go_build") {
         rebase_path(root_build_dir),
         "--go-dep-files",
       ]
+      inputs = []
       foreach(dep, invoker.deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")

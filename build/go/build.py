@@ -6,20 +6,18 @@
 # Build script for a Go app.
 
 import argparse
+import errno
+import json
 import os
+import shutil
 import subprocess
 import sys
-import string
-import shutil
-import errno
 
 from gen_library_metadata import get_sources
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--godepfile', help='Path to godepfile tool', required=True)
     parser.add_argument(
         '--root-out-dir', help='Path to root of build output', required=True)
     parser.add_argument(
@@ -169,8 +167,9 @@ def main():
                 map_directly = True
                 # Paths with /.../ in the middle designate go packages that include
                 # subpackages, but also explicitly list all their source files.
-                # The construction of these paths is done in the
-                # godepfile tool, so we remove these sentinel values here.
+                #
+                # The construction of these paths is done in the go list invocation, so we
+                # remove these sentinel values here.
                 dst = dst.replace('/.../', '/')
 
             dstdir = os.path.join(gopath_src, dst)
@@ -333,15 +332,68 @@ def main():
             ])
 
     if retcode == 0:
-        if args.depfile is not None:
-            godepfile_args = [args.godepfile, '-o', dist]
-            for f, t in link_to_source_list:
-                godepfile_args += ['-prefixmap', '%s=%s' % (f, t)]
-            if args.is_test:
-                godepfile_args += ['-test']
-            godepfile_args += [args.package]
-            with open(args.depfile, 'wb') as into:
-                subprocess.check_call(godepfile_args, env=env, stdout=into)
+        frontier = set([(args.package, args.is_test)])
+        visited = set()
+        with open(args.depfile, 'w') as into:
+            into.write(dist)
+            into.write(':')
+            while frontier:
+                (import_path, is_test) = frontier.pop()
+                if import_path == 'C':
+                    continue
+                visited.add(import_path)
+
+                package = json.loads(
+                    subprocess.check_output(
+                        [go_tool, 'list', '-json', import_path], env=env))
+
+                imports_fields = [
+                    'Imports',
+                ]
+                files_fields = [
+                    'GoFiles',
+                    'CgoFiles',
+                    'CompiledGoFiles',
+                    'CFiles',
+                    'CXXFiles',
+                    'MFiles',
+                    'HFiles',
+                    'FFiles',
+                    'SFiles',
+                    'SwigFiles',
+                    'SwigCXXFiles',
+                    'SysoFiles',
+                ]
+                if is_test:
+                    imports_fields += [
+                        'TestImports',
+                        'XTestImports',
+                    ]
+                    files_fields += [
+                        'TestGoFiles',
+                        'XTestGoFiles',
+                    ]
+
+                for field in imports_fields:
+                    imports = package.get(field)
+                    if imports:
+                        for dependency in imports:
+                            if dependency not in visited:
+                                frontier.add((dependency, False))
+
+                src_dir = package['Dir']
+                for f, t in link_to_source_list:
+                    if src_dir.startswith(f):
+                        src_dir = t + src_dir[len(f):]
+                        break
+
+                prefix = f' {src_dir}/'
+                for field in files_fields:
+                    files = package.get(field)
+                    if files:
+                        for file in files:
+                            into.write(prefix)
+                            into.write(file)
 
     return retcode
 
