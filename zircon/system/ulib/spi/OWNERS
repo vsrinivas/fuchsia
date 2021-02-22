@@ -1,0 +1,4 @@
+include /src/devices/spi/OWNERS
+bradenkell@google.com
+
+# COMPONENT: Zircon>drivers
