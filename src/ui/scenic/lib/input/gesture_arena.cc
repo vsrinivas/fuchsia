@@ -155,37 +155,8 @@ void GestureArena::UpdateStream(uint64_t added_length, bool is_last_message) {
   }
 }
 
-std::vector<ContenderId> GestureArena::contenders() const {
-  std::vector<ContenderId> contenders;
-  for (const auto& [id, _] : contenders_) {
-    FX_DCHECK(_.response_status != GestureResponse::kNo);
-    contenders.emplace_back(id);
-  }
-  return contenders;
-}
-
-ContestResults GestureArena::SetWinner(ContenderId id) {
-  const auto contender = contenders_.at(id);
-  contenders_.erase(id);
-
-  ContestResults results{.winner = id, .end_of_contest = true};
-  // Mark all remaining contenders as losers.
-  for (const auto& [loser_id, _] : contenders_) {
-    results.losers.emplace_back(loser_id);
-  }
-
-  contenders_.clear();
-  priority_to_id_.clear();
-
-  priority_to_id_.emplace(contender.priority, id);
-  contenders_.insert({id, contender});
-
-  return results;
-}
-
 ContestResults GestureArena::RecordResponse(ContenderId contender_id,
                                             const std::vector<GestureResponse>& responses) {
-  FX_DCHECK(!contest_has_ended_);
   FX_DCHECK(std::count(responses.begin(), responses.end(), GestureResponse::kUndefined) == 0);
   FX_DCHECK(contenders_.count(contender_id));
   FX_DCHECK(!IsHoldType(contenders_.at(contender_id).response_status) || responses.size() == 1)
@@ -194,8 +165,7 @@ ContestResults GestureArena::RecordResponse(ContenderId contender_id,
   ContestResults results;
   for (const auto response : responses) {
     // Remove contender from the arena on a NO response.
-    const bool remove_contender = response == GestureResponse::kNo;
-    if (remove_contender) {
+    if (response == GestureResponse::kNo) {
       RemoveContender(contender_id);
       results.losers.push_back(contender_id);
       if (contenders_.empty()) {
@@ -209,19 +179,17 @@ ContestResults GestureArena::RecordResponse(ContenderId contender_id,
 
     const std::optional<ContenderId> winner = TryResolve();
     if (winner.has_value()) {
-      results = SetWinner(winner.value());
-      // Add the removed id back in if necessary.
-      if (remove_contender) {
-        results.losers.push_back(contender_id);
+      results.winner = winner;
+      contenders_.erase(winner.value());
+      // Mark all remaining contenders as losers.
+      for (const auto& [id, contender] : contenders_) {
+        results.losers.emplace_back(id);
       }
+      results.end_of_contest = true;
       break;
     }
-
-    if (remove_contender)
-      break;
   }
 
-  contest_has_ended_ = results.end_of_contest;
   return results;
 }
 

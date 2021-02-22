@@ -22,6 +22,8 @@ source_set("input") {
     "input_system.cc",
     "input_system.h",
     "internal_pointer_event.h",
+    "pointer_event_buffer.cc",
+    "pointer_event_buffer.h",
   ]
 
   deps = [
