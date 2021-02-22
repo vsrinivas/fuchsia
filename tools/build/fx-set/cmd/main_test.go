@@ -233,9 +233,7 @@ func TestParseArgsAndEnv(t *testing.T) {
 			tc.expected.checkoutDir = checkoutDir
 
 			if tc.expected.buildDir == "" {
-				tc.expected.buildDir = filepath.Join(checkoutDir, defaultBuildDir)
-			} else if !filepath.IsAbs(tc.expected.buildDir) {
-				tc.expected.buildDir = filepath.Join(checkoutDir, tc.expected.buildDir)
+				tc.expected.buildDir = defaultBuildDir
 			}
 
 			env := map[string]string{checkoutDirEnvVar: checkoutDir}

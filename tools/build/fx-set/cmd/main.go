@@ -113,7 +113,7 @@ func mainImpl(ctx context.Context) error {
 
 	contextSpec := &fintpb.Context{
 		CheckoutDir: args.checkoutDir,
-		BuildDir:    args.buildDir,
+		BuildDir:    filepath.Join(args.checkoutDir, args.buildDir),
 	}
 
 	_, err = fint.Set(ctx, staticSpec, contextSpec)
@@ -228,7 +228,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	}
 
 	if cmd.buildDir == "" {
-		cmd.buildDir = filepath.Join(cmd.checkoutDir, defaultBuildDir)
+		cmd.buildDir = defaultBuildDir
 	} else if autoDir {
 		return nil, fmt.Errorf("'fx --dir' and 'fx set --auto-dir' are mutually exclusive")
 	}
@@ -274,7 +274,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 			}
 		}
 		nameComponents := append([]string{productDotBoard}, cmd.variants...)
-		cmd.buildDir = filepath.Join(cmd.checkoutDir, "out", strings.Join(nameComponents, "-"))
+		cmd.buildDir = filepath.Join("out", strings.Join(nameComponents, "-"))
 	}
 
 	return cmd, nil
