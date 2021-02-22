@@ -190,6 +190,8 @@ TEST(Workqueue, CancelCurrent) {
   canceler.leaving.Wait(ZX_TIME_INFINITE);
   work2.proceed.Signal();
   delete queue;
+  // Make sure that the canceler finishes before we exit, canceling it if needed.
+  canceler.work.Cancel();
 }
 
 }  // namespace
