@@ -13,7 +13,7 @@ using fuchsia.ui.views;
 ///
 /// The presented views can be annotated with `fuchsia.session.Annotations` to communicate
 /// presentation properties to the `GraphicalPresenter`.
-[Discoverable]
+[Discoverable, Deprecated = "Use fuchsia.element.GraphicalPresenter"]
 protocol GraphicalPresenter {
     /// Presents the view described by `view_spec`.
     ///
@@ -45,6 +45,7 @@ protocol GraphicalPresenter {
 };
 
 /// Epitaph returned when `ViewController` is closed to signal an error.
+[Deprecated = "Not applicable to fuchsia.element.GraphicalPresenter"]
 enum ViewControllerEpitaph {
     /// The provided `ViewSpec` was missing a valid `ViewHolderToken`.
     INVALID_VIEW_SPEC = 1;
@@ -54,6 +55,7 @@ enum ViewControllerEpitaph {
 };
 
 /// A description of a view that can be presented by a `GraphicalPresenter`.
+[Deprecated = "Use fuchsia.element.ViewSpec"]
 resource table ViewSpec {
     /// The view holder token for the presented view.
     1: fuchsia.ui.views.ViewHolderToken view_holder_token;
@@ -99,6 +101,7 @@ resource table ViewSpec {
 /// * `ViewControllerEpitaph.REJECTED` if the presenter rejected the request
 ///   to present the view (see [`GraphicalPresenter.PresentView`])
 /// * `ViewControllerEpitaph.ZX_OK` when the view is dismissed
+[Deprecated = "Use fuchsia.element.ViewController"]
 protocol ViewController {
     /// Annotates the view with `annotations`.
     ///
