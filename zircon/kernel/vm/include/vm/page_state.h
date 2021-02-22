@@ -11,7 +11,7 @@
 // Defines the state of a VM page (|vm_page_t|).
 //
 // Be sure to keep this enum in sync with the definition of |vm_page_t|.
-enum vm_page_state : uint32_t {
+enum vm_page_state : uint8_t {
   VM_PAGE_STATE_FREE = 0,
   VM_PAGE_STATE_ALLOC,
   VM_PAGE_STATE_OBJECT,
@@ -26,11 +26,11 @@ enum vm_page_state : uint32_t {
   VM_PAGE_STATE_COUNT_
 };
 
-#define VM_PAGE_STATE_BITS 4
-static_assert((1u << VM_PAGE_STATE_BITS) >= VM_PAGE_STATE_COUNT_, "");
-
 typedef struct vm_page_counts {
   int64_t by_state[VM_PAGE_STATE_COUNT_];
 } vm_page_counts_t;
+
+// Returns a string description of |state|.
+const char* page_state_to_string(vm_page_state state);
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_STATE_H_

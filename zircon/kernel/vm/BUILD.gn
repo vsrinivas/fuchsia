@@ -15,6 +15,7 @@ zx_library("vm") {
     "page.cc",
     "page_queues.cc",
     "page_source.cc",
+    "page_state.cc",
     "physmap.cc",
     "pinned_vm_object.cc",
     "pmm.cc",

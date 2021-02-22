@@ -13,6 +13,8 @@
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 
+#include <ktl/atomic.h>
+#include <ktl/type_traits.h>
 #include <vm/page_state.h>
 
 // core per page structure allocated at pmm arena creation time
@@ -62,20 +64,17 @@ typedef struct vm_page {
 
   // offset 0x29
 
-  struct {
-    uint8_t flags;
-    // logically private; use |state()| and |set_state()|
-    uint8_t state_priv : VM_PAGE_STATE_BITS;
-  };
+  // logically private; use |state()| and |set_state()|
+  ktl::atomic<vm_page_state> state_priv;
 
-  // offset 0x2b
+  // offset 0x2a
 
-  // five bytes of padding would be inserted here to make sizeof(vm_page) a multiple of 8
-  // explicit padding is added to validate all commented offsets were indeed correct.
-  char padding[5];
+  // This padding is inserted here to make sizeof(vm_page) a multiple of 8 and help validate that
+  // all commented offsets were indeed correct.
+  char padding[6];
 
   // helper routines
-  bool is_free() const { return state_priv == VM_PAGE_STATE_FREE; }
+  bool is_free() const { return state() == VM_PAGE_STATE_FREE; }
 
   void dump() const;
 
@@ -83,7 +82,7 @@ typedef struct vm_page {
   // future plan to store in a compressed form
   paddr_t paddr() const { return paddr_priv; }
 
-  vm_page_state state() const { return vm_page_state(state_priv); }
+  vm_page_state state() const { return state_priv.load(ktl::memory_order_relaxed); }
 
   void set_state(vm_page_state new_state);
 
@@ -100,9 +99,9 @@ typedef struct vm_page {
 } vm_page_t;
 
 // assert that the page structure isn't growing uncontrollably
-static_assert(sizeof(vm_page) == 0x30, "");
+static_assert(sizeof(vm_page) == 0x30);
 
-// helpers
-const char* page_state_to_string(unsigned int state);
+// assert that |vm_page| is a POD
+static_assert(ktl::is_trivial_v<vm_page> && ktl::is_standard_layout_v<vm_page>);
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_H_

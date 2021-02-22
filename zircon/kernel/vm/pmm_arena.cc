@@ -226,7 +226,7 @@ void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) const {
 
   printf("\tpage states:\n");
   for (unsigned int i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
-    printf("\t\t%-12s %-16zu (%zu bytes)\n", page_state_to_string(i), state_count[i],
+    printf("\t\t%-12s %-16zu (%zu bytes)\n", page_state_to_string(vm_page_state(i)), state_count[i],
            state_count[i] * PAGE_SIZE);
   }
 

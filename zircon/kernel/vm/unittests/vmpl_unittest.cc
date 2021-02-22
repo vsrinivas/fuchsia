@@ -406,8 +406,8 @@ static bool vmpl_page_gap_iter_test() {
     for (unsigned j = 0; j < (1 << kCount); j++) {
       for (unsigned k = 0; k < kCount; k++) {
         if (j & (1 << k)) {
-          // Ensure pages are in an initialized state every iteration.
-          pages[k] = (vm_page_t){};
+          // Ensure pages are ready to be added to a list in every iteration.
+          list_initialize(&pages[k].queue_node);
           list[k] = pages + k;
         } else {
           list[k] = nullptr;

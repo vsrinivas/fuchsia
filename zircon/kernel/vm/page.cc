@@ -21,35 +21,11 @@
 
 #define LOCAL_TRACE 0
 
-const char* page_state_to_string(unsigned int state) {
-  switch (state) {
-    case VM_PAGE_STATE_FREE:
-      return "free";
-    case VM_PAGE_STATE_ALLOC:
-      return "alloc";
-    case VM_PAGE_STATE_WIRED:
-      return "wired";
-    case VM_PAGE_STATE_HEAP:
-      return "heap";
-    case VM_PAGE_STATE_OBJECT:
-      return "object";
-    case VM_PAGE_STATE_MMU:
-      return "mmu";
-    case VM_PAGE_STATE_IPC:
-      return "ipc";
-    case VM_PAGE_STATE_CACHE:
-      return "cache";
-    case VM_PAGE_STATE_SLAB:
-      return "slab";
-    default:
-      return "unknown";
-  }
-}
-
 void vm_page::dump() const {
-  printf("page %p: address %#" PRIxPTR " state %s flags %#x", this, paddr(),
-         page_state_to_string(state_priv), flags);
-  if (state_priv == VM_PAGE_STATE_OBJECT) {
+  const vm_page_state page_state = state();
+  printf("page %p: address %#" PRIxPTR " state %s", this, paddr(),
+         page_state_to_string(page_state));
+  if (page_state == VM_PAGE_STATE_OBJECT) {
     printf(" pin_count %d split_bits %d%d\n", object.pin_count, object.cow_left_split,
            object.cow_right_split);
   } else {
@@ -58,11 +34,8 @@ void vm_page::dump() const {
 }
 
 void vm_page::set_state(vm_page_state new_state) {
-  constexpr uint32_t kMask = (1 << VM_PAGE_STATE_BITS) - 1;
-  DEBUG_ASSERT_MSG(new_state == (new_state & kMask), "invalid state %u\n", new_state);
-
-  const vm_page_state old_state = vm_page_state(state_priv);
-  state_priv = (new_state & kMask);
+  const vm_page_state old_state = state();
+  state_priv.store(new_state, ktl::memory_order_relaxed);
 
   // By only modifying the counters for the current CPU with preemption disabled, we can ensure
   // the values are not modified concurrently. See comment at the definition of |vm_page_counts|.
