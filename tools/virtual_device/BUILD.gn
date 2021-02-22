@@ -93,5 +93,5 @@ golden_file("pb_go_diff") {
   current = "$root_gen_dir/go-proto-gen/src/tools/virtual_device/proto/virtual_device.pb.go"
   golden = "proto/virtual_device.pb.go"
   deps = [ ":proto_lib_gen" ]
-  warn_on_changes = false
+  warn_on_changes = true
 }
