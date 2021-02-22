@@ -131,7 +131,6 @@ class TestContext {
       magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
         DASSERT(batch->IsCommandBuffer());
         auto command_buffer = static_cast<CommandBuffer*>(batch.release());
-        DLOG("command buffer received 0x%" PRIx64, command_buffer->GetBatchBufferId());
         callback_(std::unique_ptr<CommandBuffer>(command_buffer));
         return MAGMA_STATUS_OK;
       }
@@ -166,8 +165,6 @@ class TestContext {
     auto context = std::make_shared<ClientContext>(connection, address_space);
 
     std::vector<std::unique_ptr<CommandBuffer>> command_buffers;
-
-    std::vector<uint64_t> command_buffer_ids;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
 
     for (uint32_t i = 0; i < command_buffer_count; i++) {
@@ -198,7 +195,6 @@ class TestContext {
       ASSERT_NE(command_buffer, nullptr);
 
       command_buffers.push_back(std::move(command_buffer));
-      command_buffer_ids.push_back(command_buffers[i]->GetBatchBufferId());
 
       magma::Status status = context->SubmitCommandBuffer(std::move(command_buffers[i]));
       EXPECT_EQ(MAGMA_STATUS_OK, status.get());
@@ -210,11 +206,7 @@ class TestContext {
     }
 
     EXPECT_TRUE(finished_semaphore->Wait(5000));
-    ASSERT_EQ(submitted_command_buffers.size(), command_buffer_ids.size());
-
-    for (uint32_t i = 0; i < command_buffer_ids.size(); i++) {
-      EXPECT_EQ(submitted_command_buffers[i]->GetBatchBufferId(), command_buffer_ids[i]);
-    }
+    ASSERT_EQ(submitted_command_buffers.size(), command_buffers.size());
 
     context->Shutdown();
   }

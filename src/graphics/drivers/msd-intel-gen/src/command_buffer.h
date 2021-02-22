@@ -42,6 +42,7 @@ class CommandBuffer : public MappedBatch {
 
   bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override;
 
+  // Returns 0 if the command buffer has no resources.
   uint64_t GetBatchBufferId() override;
 
   uint32_t GetPipeControlFlags() override;
@@ -70,6 +71,7 @@ class CommandBuffer : public MappedBatch {
   bool IsCommandBuffer() override { return true; }
 
   uint32_t batch_buffer_resource_index() const {
+    DASSERT(num_resources() > 0);
     return command_buffer_->batch_buffer_resource_index;
   }
 
@@ -80,6 +82,7 @@ class CommandBuffer : public MappedBatch {
   uint32_t signal_semaphore_count() const { return command_buffer_->signal_semaphore_count; }
 
   uint32_t batch_start_offset() const {
+    DASSERT(num_resources() > 0);
     return magma::to_uint32(command_buffer_->batch_start_offset);
   }
 

@@ -33,6 +33,12 @@ magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                     "ExecuteCommandBuffer: batch buffer resource index invalid");
 
+  if (cmd_buf->resource_count == 0) {
+    // These shouldn't be used.
+    cmd_buf->batch_buffer_resource_index = 0;
+    cmd_buf->batch_start_offset = 0;
+  }
+
   // validate exec resources
   for (uint32_t i = 0; i < cmd_buf->resource_count; i++) {
     uint64_t id = resources[i].buffer_id;
