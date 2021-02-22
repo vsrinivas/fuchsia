@@ -7,6 +7,7 @@ use {
     anyhow::{bail, Result},
     ffx_core::ffx_plugin,
     ffx_target_status_args as args,
+    fidl_fuchsia_buildinfo::ProviderProxy,
     fidl_fuchsia_hwinfo::{BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
@@ -20,13 +21,15 @@ mod status;
     ChannelControlProxy = "core/appmgr:out:fuchsia.update.channelcontrol.ChannelControl",
     BoardProxy = "core/appmgr:out:fuchsia.hwinfo.Board",
     DeviceProxy = "core/appmgr:out:fuchsia.hwinfo.Device",
-    ProductProxy = "core/appmgr:out:fuchsia.hwinfo.Product"
+    ProductProxy = "core/appmgr:out:fuchsia.hwinfo.Product",
+    ProviderProxy = "core/appmgr:out:fuchsia.buildinfo.Provider"
 )]
 pub async fn status_cmd(
     channel_control_proxy: ChannelControlProxy,
     board_proxy: BoardProxy,
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
+    build_info_proxy: ProviderProxy,
     target_status_args: args::TargetStatus,
 ) -> Result<()> {
     status_cmd_impl(
@@ -34,6 +37,7 @@ pub async fn status_cmd(
         board_proxy,
         device_proxy,
         product_proxy,
+        build_info_proxy,
         target_status_args,
         Box::new(stdout()),
     )
@@ -46,6 +50,7 @@ async fn status_cmd_impl<W: Write>(
     board_proxy: BoardProxy,
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
+    build_info_proxy: ProviderProxy,
     target_status_args: args::TargetStatus,
     mut writer: W,
 ) -> Result<()> {
@@ -59,9 +64,10 @@ async fn status_cmd_impl<W: Write>(
         gather_board_status(board_proxy),
         gather_device_status(device_proxy),
         gather_product_status(product_proxy),
-        gather_update_status(channel_control_proxy)
+        gather_update_status(channel_control_proxy),
+        gather_build_info_status(build_info_proxy)
     ) {
-        Ok((board, device, product, update)) => vec![board, device, product, update],
+        Ok((board, build, device, product, update)) => vec![board, build, device, product, update],
         Err(e) => bail!(e),
     };
     if target_status_args.json {
@@ -70,6 +76,21 @@ async fn status_cmd_impl<W: Write>(
         status::output_for_human(&status, &target_status_args, &mut writer)?;
     }
     Ok(())
+}
+
+/// Determine the build info for the target.
+async fn gather_build_info_status(build: ProviderProxy) -> Result<StatusEntry> {
+    let info = build.get_build_info().await?;
+    Ok(StatusEntry::group(
+        "Build",
+        "build",
+        "",
+        vec![
+            StatusEntry::str_value("Version", "version", "Build version.", &info.version),
+            StatusEntry::str_value("Product", "product", "Product config.", &info.product_config),
+            StatusEntry::str_value("Board", "board", "Board config.", &info.board_config),
+        ],
+    ))
 }
 
 /// Determine the device info for the device.
@@ -217,6 +238,7 @@ async fn gather_update_status(channel_control: ChannelControlProxy) -> Result<St
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
     use fidl_fuchsia_hwinfo::{
         BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo, ProductRequest,
     };
@@ -251,7 +273,27 @@ mod tests {
         \nUpdate: \
         \n    Current channel: \"fake_channel\"\
         \n    Next channel: \"fake_target\"\
+        \nBuild: \
+        \n    Version: \"fake_version\"\
+        \n    Product: \"fake_product\"\
+        \n    Board: \"fake_board\"\
         \n";
+
+    fn setup_fake_build_info_server() -> ProviderProxy {
+        setup_fake_build_info_proxy(move |req| match req {
+            ProviderRequest::GetBuildInfo { responder } => {
+                responder
+                    .send(BuildInfo {
+                        version: Some("fake_version".to_string()),
+                        product_config: Some("fake_product".to_string()),
+                        board_config: Some("fake_board".to_string()),
+                        ..BuildInfo::EMPTY
+                    })
+                    .unwrap();
+            }
+            _ => assert!(false),
+        })
+    }
 
     fn setup_fake_board_server() -> BoardProxy {
         setup_fake_board_proxy(move |req| match req {
@@ -275,6 +317,7 @@ mod tests {
             setup_fake_board_server(),
             setup_fake_device_server(),
             setup_fake_product_server(),
+            setup_fake_build_info_server(),
             args::TargetStatus::default(),
             &mut output,
         )
@@ -291,6 +334,7 @@ mod tests {
             setup_fake_board_server(),
             setup_fake_device_server(),
             setup_fake_product_server(),
+            setup_fake_build_info_server(),
             args::TargetStatus { json: true, ..Default::default() },
             &mut output,
         )
@@ -299,17 +343,19 @@ mod tests {
         let v: Value =
             serde_json::from_str(std::str::from_utf8(&output).unwrap()).expect("Valid JSON");
         assert!(v.is_array());
-        assert_eq!(v.as_array().unwrap().len(), 4);
+        assert_eq!(v.as_array().unwrap().len(), 5);
 
         assert_eq!(v[0]["label"], Value::String("board".to_string()));
         assert_eq!(v[1]["label"], Value::String("device".to_string()));
         assert_eq!(v[2]["label"], Value::String("product".to_string()));
         assert_eq!(v[3]["label"], Value::String("update".to_string()));
+        assert_eq!(v[4]["label"], Value::String("build".to_string()));
 
         assert_eq!(v[0]["child"].as_array().unwrap().len(), 2);
         assert_eq!(v[1]["child"].as_array().unwrap().len(), 3);
         assert_eq!(v[2]["child"].as_array().unwrap().len(), 16);
         assert_eq!(v[3]["child"].as_array().unwrap().len(), 2);
+        assert_eq!(v[4]["child"].as_array().unwrap().len(), 3);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
