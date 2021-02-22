@@ -51,11 +51,14 @@ void main() {
     const componentUrl =
         'fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx';
     await ermine.launch(componentUrl);
-    var runningComponents = await ermine.component.list();
-    expect(runningComponents.where((e) => e.contains(componentUrl)).length, 1);
-    var views = await ermine.launchedViews();
-    var terminalViews = views.where((view) => view['url'] == componentUrl);
-    expect(terminalViews.length, 1);
+    expect(
+        await ermine.waitFor(() async {
+          var views = (await ermine.launchedViews())
+              .where((view) => view['url'] == componentUrl)
+              .toList();
+          return views.length == 1;
+        }),
+        isTrue);
 
     // Get the view rect.
     final viewRect = await ermine.getViewRect(componentUrl);
