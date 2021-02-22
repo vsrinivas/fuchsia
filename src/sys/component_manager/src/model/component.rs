@@ -1778,7 +1778,7 @@ pub mod tests {
         let mut event_stream = event_source
             .subscribe(vec![EventSubscription::new(
                 EventType::CapabilityReady.into(),
-                EventMode::Sync,
+                EventMode::Async,
             )])
             .await
             .expect("subscribe to event stream");
@@ -1815,7 +1815,7 @@ pub mod tests {
                     EventType::Started.into(),
                 ]
                 .into_iter()
-                .map(|event| EventSubscription::new(event, EventMode::Sync))
+                .map(|event| EventSubscription::new(event, EventMode::Async))
                 .collect(),
             )
             .await
@@ -1844,7 +1844,7 @@ pub mod tests {
         assert_eq!(component_timestamp, started_timestamp);
 
         let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(EventType::Running.into(), EventMode::Sync)])
+            .subscribe(vec![EventSubscription::new(EventType::Running.into(), EventMode::Async)])
             .await
             .expect("subscribe to event stream");
         let event = event_stream.wait_until(EventType::Running, vec![].into()).await.unwrap().event;
