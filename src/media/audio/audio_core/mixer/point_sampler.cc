@@ -124,8 +124,8 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
 
 // Regarding ScalerType::MUTED: in the MUTED specialization, the mixer simply skips over the
 // appropriate range in the destination buffer, leaving whatever data is already there. We do not
-// take additional effort to clear the buffer if 'accumulate' is set, in fact we ignore it in the
-// MUTED case. The caller is responsible for clearing the destination buffer before Mix is initially
+// take additional effort to clear the buffer if 'accumulate' is FALSE, in fact we ignore it if
+// MUTED. The caller is responsible for clearing the destination buffer before Mix is initially
 // called. DoAccumulate is still valuable in the non-mute case, a saving a read+FADD per sample.
 //
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>

@@ -305,24 +305,26 @@ class AudioResult {
   //
   //
   // Scale
-  //
+
   // The lowest (furthest-from-Unity) AScale with no observable attenuation on full-scale data (i.e.
   // the smallest AScale indistinguishable from Unity).
   //
-  // This const is determined by the number of precision bits in a float32. Conceptually, it is
-  // exactly (2^25 - 1) / (2^25) -- float32 contains 25 bits of precision, minus 1 for sign, plus 1
-  // for rounding effects. At this value exactly (or slightly more, if it cannot be perfectly
-  // expressed in float32), all values effectly round back to their original values.
+  // This const is determined by the number of precision bits in float32. At this value or higher,
+  // scaled values round back to original values.
   static constexpr float kMinGainDbUnity = -0.000000258856886667820f;
-
+  //
   // The highest (closest-to-Unity) AScale with an observable effect on full-scale (i.e. the largest
   // sub-Unity AScale distinguishable from Unity).
   //
-  // Related to kMinGainDbUnity, this const is also determined by the number of precision bits in a
-  // float32. Conceptually, it is infinitesimally less than (2^25 - 1) / (2^25). At this value, for
-  // the first time the largest values (i.e. full-scale) will not round back to their original
-  // values.
+  // Related to kMinGainDbUnity, scaled by this gain_db or lower, 1.0 and -1.0 round to new values.
   static constexpr float kMaxGainDbNonUnity = -0.000000258865572365570f;
+  //
+  // Measured results for kMinGainDbUnity and kMaxGainDbNonUnity confirm what can be derived:
+  // Ratio (2^25-1)/2^25, multiplied by full-scale (1.0) float, produces hex equivalent 0x0.FFFFFF8
+  // Float lacks precision for the final "8" so the result will be rounded. Above this ratio, we are
+  // indistinguishable from Unity. At less than this ratio -- at least for full-scale signals -- we
+  // differ from Unity. MinGainUnity and MaxGainNonUnity are db values on EITHER side of this ratio.
+  //
 
   // The lowest (closest-to-zero) AScale at which full-scale data are not silenced (i.e. the
   // smallest AScale that is distinguishable from Mute).
@@ -330,8 +332,8 @@ class AudioResult {
   // This value would actually be infinitesimally close to zero, if it were not for our -160dB
   // limit. kMinGainDbNonMute is essentially kMutedGainDb -- plus the smallest-possible increment
   // that a float32 can express. Note the close relation to kMaxGainDbMute.
-  static constexpr float kMinGainDbNonMute = -159.99999f;
-
+  static constexpr float kMinGainDbNonMute = -159.999992f;
+  //
   // The highest (furthest-from-Mute) AScale at which full-scale data are silenced (i.e. the largest
   // AScale that is indistinguishable from Mute).
   //
@@ -339,6 +341,18 @@ class AudioResult {
   // limit. kMaxGainDbMute is essentially kMutedGainDb -- plus an increment that float32 ultimately
   // CANNOT express.
   static constexpr float kMaxGainDbMute = -159.999993f;
+  //
+  // Measured results for kMinGainDbNonMute and kMaxGainDbMute confirm what can be derived:
+  // -160 in float is [mantissa: 1.25, binary exponent: 7]. Mantissa 1.25 is 0x1.400000 with a final
+  // hex digit of 3 significant bits. "Half a float32 bit" here is that additional least significant
+  // bit. Thus for float32, the dividing line between what IS and IS NOT distinguishable from
+  // -160.0f has a mantissa of -0x1.3FFFFF.
+  //
+  // Reduced: kMinGainDbNonMute|kMaxGainDbMute should be just greater|less than this value:
+  //
+  //   -1    *    (2^24 + (2^22 - 1)) / 2^24    *    2^7
+  //  sign        \------- mantissa -------/       exponent
+  //
 
   static_assert(kMinGainDbUnity > kMaxGainDbNonUnity,
                 "kMaxGainDbNonUnity should be distinguishable from Unity");

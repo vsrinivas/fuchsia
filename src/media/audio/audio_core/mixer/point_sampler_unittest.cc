@@ -17,6 +17,9 @@ using testing::Pointwise;
 
 using Resampler = ::media::audio::Mixer::Resampler;
 
+// TODO(fxbug.dev/70578): Relocate position-related tests here, from audio_fidelity_tests
+// TODO(fxbug.dev/70580): Refactor the set of pass-thru, rechannel, accumulate and gain unittests,
+// so they run on SincSampler as well  (perhaps moving them into a mixer_unittest.cc).
 class PointSamplerTest : public testing::Test {
  protected:
   static const std::vector<uint32_t> kFrameRates;
@@ -63,14 +66,14 @@ class PointSamplerTest : public testing::Test {
 
   // Use the supplied mixer to mix without SRC. Assumes no accumulation, but can be overridden.
   void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
-             int32_t num_frames) {
+             int32_t num_frames, float gain_db = Gain::kUnityGainDb) {
     ASSERT_NE(mixer, nullptr);
 
     uint32_t dest_offset = 0;
     int32_t frac_source_offset = 0;
 
     auto& info = mixer->bookkeeping();
-    info.gain.SetSourceGain(Gain::kUnityGainDb);
+    info.gain.SetSourceGain(gain_db);
 
     bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf,
                                  num_frames << kPtsFractionalBits, &frac_source_offset, accumulate);
@@ -131,7 +134,7 @@ TEST_F(PointSamplerTest, Construction) {
 }
 
 // Rate mismatch is unsupported
-TEST_F(PointSamplerTest, Construction_DifferingRates) {
+TEST_F(PointSamplerTest, ConstructionDifferingRates) {
   for (auto source_rate : kFrameRates) {
     for (auto dest_rate : kFrameRates) {
       if (source_rate == dest_rate) {
@@ -161,7 +164,7 @@ TEST_F(PointSamplerTest, Construction_DifferingRates) {
 }
 
 // Out-of-range rates are unsupported
-TEST_F(PointSamplerTest, Construction_UnsupportedRate) {
+TEST_F(PointSamplerTest, ConstructionUnsupportedRate) {
   for (auto bad_rate : kUnsupportedFrameRates) {
     // Use channel configs and formats that are known-good.
     auto channel_config = kChannelConfigs[0];
@@ -185,7 +188,7 @@ TEST_F(PointSamplerTest, Construction_UnsupportedRate) {
 }
 
 // These channel configs are unsupported
-TEST_F(PointSamplerTest, Construction_UnsupportedChannelConfig) {
+TEST_F(PointSamplerTest, ConstructionUnsupportedChannelConfig) {
   for (auto bad_channel_config : kUnsupportedChannelConfigs) {
     // Use rates and formats that are known-good.
     auto rate = kFrameRates[0];
@@ -209,7 +212,7 @@ TEST_F(PointSamplerTest, Construction_UnsupportedChannelConfig) {
 }
 
 // This format is unsupported
-TEST_F(PointSamplerTest, Construction_UnsupportedFormat) {
+TEST_F(PointSamplerTest, ConstructionUnsupportedFormat) {
   // Use channel configs and rates that are known-good.
   auto channel_config = kChannelConfigs[0];
   auto rate = kFrameRates[0];
@@ -226,10 +229,11 @@ TEST_F(PointSamplerTest, Construction_UnsupportedFormat) {
 
 // PassThru - can audio data flow through a Mix() call without change, in various configurations?
 //
+class PointSamplerPassThruTest : public PointSamplerTest {};
 
 // Can 8-bit values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
 // conversion, unity scale and no accumulation, we expect bit-equality.
-TEST_F(PointSamplerTest, PassThru_8) {
+TEST_F(PointSamplerPassThruTest, Uint8) {
   auto source = std::vector<uint8_t>{0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
 
   auto accum = std::vector<float>(source.size());
@@ -253,7 +257,7 @@ TEST_F(PointSamplerTest, PassThru_8) {
 
 // Can 16-bit values flow unchanged (2-2, N-N) thru the system? With 1:1 frame
 // conversion, unity scale and no accumulation, we expect bit-equality.
-TEST_F(PointSamplerTest, PassThru_16) {
+TEST_F(PointSamplerPassThruTest, Int16) {
   auto source = std::vector<int16_t>{-0x8000, 0x7FFF, -0x67A7, 0x4D4D, -0x123, 0, 0x2600, -0x2DCB};
 
   auto accum = std::vector<float>(source.size());
@@ -275,7 +279,7 @@ TEST_F(PointSamplerTest, PassThru_16) {
 
 // Can 24-bit values flow unchanged (2-2, N-N) thru the system? With 1:1 frame
 // conversion, unity scale and no accumulation, we expect bit-equality.
-TEST_F(PointSamplerTest, PassThru_24) {
+TEST_F(PointSamplerPassThruTest, Int24In32) {
   auto source =
       std::vector<int32_t>{kMinInt24In32, kMaxInt24In32, -0x67A7E700, 0x4D4D4D00, -0x1234500, 0,
                            0x26006200,    -0x2DCBA900};
@@ -301,7 +305,7 @@ TEST_F(PointSamplerTest, PassThru_24) {
 
 // Can float values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
 // conversion, unity scale and no accumulation, we expect bit-equality.
-TEST_F(PointSamplerTest, PassThru_Float) {
+TEST_F(PointSamplerPassThruTest, Float) {
   auto source = std::vector<float>{-1.0, 1.0f,      -0.809783935f, 0.603912353f, -0.00888061523f,
                                    0.0f, 0.296875f, -0.357757568f};
 
@@ -318,8 +322,13 @@ TEST_F(PointSamplerTest, PassThru_Float) {
   EXPECT_THAT(accum, Pointwise(FloatEq(), source));
 }
 
+// Rechannelization tests
+//
+// Do we map source channels to destination channels correctly, in the overall mixer context?
+class PointSamplerRechannelTest : public PointSamplerTest {};
+
 // Are all valid data values passed correctly to 16-bit outputs for the 1->2 channel mapping.
-TEST_F(PointSamplerTest, PassThru_MonoToStereo) {
+TEST_F(PointSamplerRechannelTest, MonoToStereo) {
   auto source = std::vector<int16_t>{-0x08000, -0x3FFF, -1, 0, 1, 0x7FFF};
 
   auto accum = std::vector<float>(source.size() * 2);
@@ -338,7 +347,7 @@ TEST_F(PointSamplerTest, PassThru_MonoToStereo) {
 // Validate that we correctly mix stereo->mono, including precision below the source data format.
 // The two samples in each input frame should be averaged, for each single-sample output frame.
 // This includes resolution below what can be expressed with the 16-bit source format.
-TEST_F(PointSamplerTest, PassThru_StereoToMono) {
+TEST_F(PointSamplerRechannelTest, StereoToMono) {
   auto source = std::vector<int16_t>{
       0,       0,        // Various values ...
       0x1,     -0x1,     // ... that sum ...
@@ -364,7 +373,7 @@ TEST_F(PointSamplerTest, PassThru_StereoToMono) {
 // Validate that we correctly mix quad->mono, including precision beyond the source format.
 // The four samples in each input frame should be averaged, for each single-sample output frame.
 // This includes resolution below what can be expressed with the 24-bit source format.
-TEST_F(PointSamplerTest, PassThru_QuadToMono) {
+TEST_F(PointSamplerRechannelTest, QuadToMono) {
   auto source = std::vector<int32_t>{
       // clang-format off
        0x00000100,           0,              0,              0,       // should become 0.25
@@ -399,7 +408,7 @@ TEST_F(PointSamplerTest, PassThru_QuadToMono) {
 }
 
 // Validate quad->stereo mixing, including sub-format precision. Note: 0|1|2|3 becomes 0+2 | 1+3
-TEST_F(PointSamplerTest, PassThru_QuadToStereo) {
+TEST_F(PointSamplerRechannelTest, QuadToStereo) {
   auto source = std::vector<int32_t>{
       // clang-format off
       0x00000100,   -0x00000100,           0,             0,      // [0,2]=>0.5,  [1,3]=>-0.5
@@ -429,7 +438,7 @@ TEST_F(PointSamplerTest, PassThru_QuadToStereo) {
 }
 
 // Are all valid data values passed correctly to 16-bit outputs for the 1->4 channel mapping?
-TEST_F(PointSamplerTest, PassThru_MonoToQuad) {
+TEST_F(PointSamplerRechannelTest, MonoToQuad) {
   auto source = std::vector<int16_t>{-0x8000, -0x3FFF, -1, 0, 1, 0x7FFF};
 
   auto accum = std::vector<float>(source.size() * 4);
@@ -449,7 +458,7 @@ TEST_F(PointSamplerTest, PassThru_MonoToQuad) {
 
 // Are all valid data values passed correctly to 16-bit outputs for the 2->4 channel mapping?
 // Here, we split a stereo source frame to quad output as [L, R, L, R].
-TEST_F(PointSamplerTest, PassThru_StereoToQuad) {
+TEST_F(PointSamplerRechannelTest, StereoToQuad) {
   // Input data in the [L, R] channelization -- arbitrary values in the 24-in-32 format
   auto source = std::vector<int32_t>{
       // clang-format off
@@ -475,9 +484,16 @@ TEST_F(PointSamplerTest, PassThru_StereoToQuad) {
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
+// Accumulate tests
+//
+// Can values in our multi-stream accumulator temporarily exceed the max or min values for an
+// individual stream? What is our accumulator's limit; does it clamp or rollover?
+//
+class PointSamplerAccumulateTest : public PointSamplerTest {};
+
 // Do we obey the 'accumulate' flag if mixing into existing accumulated data?
-// Most of the above tests depend on accum FALSE working correctly: just validate TRUE here.
-TEST_F(PointSamplerTest, PassThru_Accumulate) {
+// The PassThru tests depend on accum FALSE working correctly: just validate TRUE here.
+TEST_F(PointSamplerAccumulateTest, Basic) {
   auto source = std::vector<int16_t>{-0x1111, 0x3333, -0x6666, 0x4444};
 
   auto accum = std::vector<float>{0x5432, 0x1234, -0x0123, -0x3210};
@@ -493,6 +509,174 @@ TEST_F(PointSamplerTest, PassThru_Accumulate) {
 
   DoMix(mixer.get(), source.data(), accum.data(), true, accum.size() / 2);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
+}
+
+// Can accumulator result exceed the max range of individual streams?
+TEST_F(PointSamplerAccumulateTest, BeyondSourceLimit) {
+  // When mixed 2x and 3x, these full-scale values far exceed any int16 range
+  auto max_source = std::array<int16_t, 2>{0x7FFF, -0x8000};
+
+  std::vector<float> accum(2);
+  std::copy(max_source.begin(), max_source.end(), accum.begin());
+  ShiftRightBy(accum, 15);
+
+  std::vector<float> expect_double(2);
+  std::vector<float> expect_triple(2);
+  std::copy(accum.begin(), accum.end(), expect_double.begin());
+  std::copy(accum.begin(), accum.end(), expect_triple.begin());
+  for (auto idx = 0u; idx < accum.size(); ++idx) {
+    expect_double[idx] *= 2.0f;
+    expect_triple[idx] *= 3.0f;
+  }
+
+  // These values exceed the per-stream range of int16
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  DoMix(mixer.get(), max_source.data(), accum.data(), true, accum.size());
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect_double));
+
+  // These values even exceed uint16
+  DoMix(mixer.get(), max_source.data(), accum.data(), true, accum.size());
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect_triple));
+}
+
+// As an optimization, mixers skip mixing altogether if the gain is below a certain mute-equivalent
+// threshold. They do this even when "accumulate" is false (technically they should write silence).
+// Validate the SampleAndHold interpolator for this behavior.
+TEST_F(PointSamplerAccumulateTest, NoOpWhenMuted) {
+  auto source = std::array<int16_t, 4>{-32768, 32767, -16384, 16383};
+
+  auto accum = std::vector<float>(source.size());
+  std::copy(source.begin(), source.end(), accum.begin());
+  ShiftRightBy(accum, 15);
+
+  auto expect = std::vector<float>(accum.size());
+  std::copy(accum.begin(), accum.end(), expect.begin());
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  // Use a gain guaranteed to silence any signal -- Gain::kMinGainDb.
+  DoMix(mixer.get(), source.data(), accum.data(), true, accum.size(), Gain::kMinGainDb);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+
+  // When accumulate = false but gain is sufficiently low, overwriting previous contents is skipped.
+  // This should lead to the same results as above.
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size(), Gain::kMinGainDb);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// Data scaling tests
+//
+// These scaling tests involve gain or accumulation, in the context of mixing (as opposed to gain
+// unittests that directly probe the Gain object in isolation).
+//
+class PointSamplerScalingTest : public PointSamplerTest {
+ protected:
+  float DbFromScale(float scale) { return 20.0f * log10(scale); }
+};
+
+// Validate data-scaling accuracy in PointSampler mixing, for scaling of exactly 10.0x and 0.25x.
+TEST_F(PointSamplerScalingTest, Linearity) {
+  auto source = std::vector<int16_t>{0x0CE4, 0x0CCC, 0x23, 4, -0x0E, -0x19, -0x0CCC, -0x0CDB};
+  std::array<float, 8> accum;
+
+  // Validate that +20.0 dB scales values by 10x. We calculate our own gain value rather than use
+  // Gain::ScaleToDb, as Mixer+Gain interactions (via APIs like that) are what we're testing.
+  float desired_scale_factor = 10.0f;
+  float stream_gain_db = DbFromScale(desired_scale_factor);  // 20.0f;
+  auto mixer = SelectPointSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size(), stream_gain_db);
+
+  auto expect = std::vector<float>(8);
+  for (auto idx = 0u; idx < expect.size(); ++idx) {
+    expect[idx] = desired_scale_factor * static_cast<float>(source[idx]);
+  }
+  ShiftRightBy(expect, 15);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+
+  // How precisely linear is a gain stage?  -12.0411998dB should cause 0.25x in value. Again, we
+  // directly calculate a db value, since Gain APIs are within the scope that is being tested.
+  desired_scale_factor = 0.25;
+  stream_gain_db = DbFromScale(desired_scale_factor);  //-12.0411998f;
+  mixer = SelectPointSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
+
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size(), stream_gain_db);
+
+  for (auto idx = 0u; idx < expect.size(); ++idx) {
+    expect[idx] = desired_scale_factor * static_cast<float>(source[idx]);
+  }
+  ShiftRightBy(expect, 15);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// kMinGainDbUnity is the lowest gain_db with no observable attenuation of a full-scale signal
+// (i.e. how far away from Unity can we be, and still be indistinguishable from Unity).
+static constexpr float kMinGainDbUnity = -0.000000258856886667820f;
+// This is the highest gain_db with an observable effect on a full-scale signal (i.e. the closest
+// possible value to Unity that produces a different result).
+static constexpr float kMaxGainDbNonUnity = -0.000000258865572365570f;
+// Calculated as follows (validated on various devices/calculators/spreadsheets/etc.)
+// Ratio (2^25-1)/2^25, multiplied by full-scale (1.0) float, produces hex equivalent 0x0.FFFFFF8
+// Float lacks precision for the final "8" so the result will be rounded. Above this ratio, we are
+// indistinguishable from Unity. At less than this ratio -- at least for full-scale signals -- we
+// differ from Unity. MinGainUnity and MaxGainNonUnity are db values on EITHER side of this ratio.
+
+// kMinGainDbNonMute is the lowest (closest-to-zero) gain_db at which audio is not silenced (i.e.
+// the smallest gain distinguishable from Mute). Although results may be less than our "hex integer,
+// right-shifted" pattern can represent, results are still non-zero and thus verify our scale limit.
+static constexpr float kMinGainDbNonMute = -159.999992f;
+// kMaxGainDbMute is the highest (furthest-from-Mute) gain that silences full scale data (i.e. the
+// largest value INdistinguishable from Mute). Consider a gain_db ever-so-slightly above -160dB:
+// if the increment is small enough, float32 treats it as -160dB, our "automatically mute" limit.
+static constexpr float kMaxGainDbMute = -159.999993f;
+// What db value is "half a float32 bit" less than 160.0? This "rounding boundary" marks where
+// values become indistinguishable from 160.0 db itself.
+// 160 in float is [mantissa: 1.25, binary exponent: 7]. Mantissa 1.25 is 0x1.400000 where the last
+// hex digit has 3 significant bits. So "half a float32 bit" here is that final digit's least
+// significant bit. Thus for float32, the dividing line between what IS and IS NOT distinguishable
+// from -160.0f has a mantissa in hex of -0x1.3FFFFF.
+// Reduced to formula, kMinGainDbNonMute|kMaxGainDbMute should be just greater|less than this value:
+//
+//   -1    *    (2^24 + (2^22 - 1)) / 2^24    *    2^7
+//  sign        \------- mantissa -------/       exponent
+
+// How does our gain scaling respond to scale values close to the limits?
+// Using 16-bit inputs, verify the behavior of our Gain object when given the
+// closest-to-Unity and closest-to-Mute scale values.
+TEST_F(PointSamplerScalingTest, Precision) {
+  auto max_source = std::array<int16_t, 2>{0x7FFF, -0x8000};  // max/min 16-bit signed values.
+  auto accum = std::vector<float>(2);
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  DoMix(mixer.get(), max_source.data(), accum.data(), false, accum.size(), kMinGainDbUnity);
+
+  //  At this gain_scale, resulting audio should be unchanged.
+  auto max_expect1 = std::vector<float>{0x7FFF, -0x8000};
+  ShiftRightBy(max_expect1, 15);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), max_expect1));
+
+  // mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  DoMix(mixer.get(), max_source.data(), accum.data(), false, accum.size(), kMaxGainDbNonUnity);
+
+  // Float32 has 25-bit precision (not 28), hence our min delta is 0x8 (not 1).
+  auto max_expect2 = std::vector<float>{0x07FFEFF8, -0x07FFFFF8};
+  ShiftRightBy(max_expect2, 27);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), max_expect2));
+
+  auto min_source = std::array<int16_t, 2>{1, -1};
+  // mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  DoMix(mixer.get(), min_source.data(), accum.data(), false, accum.size(), kMinGainDbNonMute);
+
+  // How we specify expectations for other tests (specify as integral float, shift-right) cannot
+  // precisely express these values. Nonetheless, they are present and non-zero!
+  auto min_expect = std::array<float, 2>{3.051763215e-13, -3.051763215e-13};
+  EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
+
+  // Per mixer optimization, we skip mixing if gain is Mute-equivalent. This
+  // is equivalent to setting 'accumulate' and adding zeroes, so set that flag here and expect no
+  // change in the accumulator, even with max inputs.
+  // mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  DoMix(mixer.get(), max_source.data(), accum.data(), true, accum.size(), kMaxGainDbMute);
+
+  EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
 }
 
 }  // namespace
