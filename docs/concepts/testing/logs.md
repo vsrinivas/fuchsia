@@ -69,6 +69,8 @@ set `max_severity` to `"INFO"`.
 
 Valid values for `max_severity`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`.
 
+See also: [choosing severity for log records][choose-severity].
+
 ### Legacy configuration
 
 The section above shows a method for configuring allowed log severity as
@@ -84,5 +86,6 @@ above.
 In the case of a conflict, the legacy configuration takes precedence and a
 warning is printed when running the test.
 
+[choose-severity]: /docs/development/diagnostics/logs/severity.md
 [legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity
 [syslog]: /docs/development/diagnostics/logs/README.md
