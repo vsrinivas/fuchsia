@@ -101,4 +101,8 @@ message Static {
 
   // Which IDE files to generate.
   repeated string ide_files = 24;
+
+  // Passed to --json-ide-script GN flag; GN will execute each of these scripts
+  // after regenerating the project.json IDE file.
+  repeated string json_ide_scripts = 25;
 }

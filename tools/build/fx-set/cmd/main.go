@@ -161,6 +161,7 @@ type setArgs struct {
 	isRelease        bool
 	netboot          bool
 	cargoTOMLGen     bool
+	jsonIDEScripts   []string
 	universePackages []string
 	basePackages     []string
 	cachePackages    []string
@@ -209,6 +210,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
 	flagSet.BoolVar(&cmd.netboot, "netboot", false, "")
 	flagSet.BoolVar(&cmd.cargoTOMLGen, "cargo-toml-gen", false, "")
+	flagSet.StringSliceVar(&cmd.jsonIDEScripts, "json-ide-script", []string{}, "")
 	flagSet.StringSliceVar(&cmd.universePackages, "with", []string{}, "")
 	flagSet.StringSliceVar(&cmd.basePackages, "with-base", []string{}, "")
 	flagSet.StringSliceVar(&cmd.cachePackages, "with-cache", []string{}, "")
@@ -366,6 +368,7 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 		GnArgs:           gnArgs,
 		UseGoma:          useGomaFinal,
 		IdeFiles:         args.ideFiles,
+		JsonIdeScripts:   args.jsonIDEScripts,
 	}, nil
 }
 

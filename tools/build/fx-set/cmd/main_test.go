@@ -216,6 +216,15 @@ func TestParseArgsAndEnv(t *testing.T) {
 				ideFiles: []string{"json", "vs"},
 			},
 		},
+		{
+			name: "json ide scripts",
+			args: []string{"core.x64", "--json-ide-script", "//foo.py", "--json-ide-script", "//bar.py"},
+			expected: setArgs{
+				product:        "core",
+				board:          "x64",
+				jsonIDEScripts: []string{"//foo.py", "//bar.py"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -281,6 +290,7 @@ func TestConstructStaticSpec(t *testing.T) {
 				hostLabels:       []string{"host"},
 				variants:         []string{"variant"},
 				ideFiles:         []string{"json"},
+				jsonIDEScripts:   []string{"foo.py"},
 				gnArgs:           []string{"args"},
 				noGoma:           true,
 			},
@@ -294,6 +304,7 @@ func TestConstructStaticSpec(t *testing.T) {
 				HostLabels:       []string{"host"},
 				Variants:         []string{"variant"},
 				IdeFiles:         []string{"json"},
+				JsonIdeScripts:   []string{"foo.py"},
 				GnArgs:           []string{"args"},
 				UseGoma:          false,
 			},

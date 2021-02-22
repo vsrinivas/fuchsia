@@ -157,6 +157,13 @@ func TestRunGen(t *testing.T) {
 				"--ide=vs",
 			},
 		},
+		{
+			name: "json ide scripts",
+			staticSpec: &fintpb.Static{
+				JsonIdeScripts: []string{"foo.py", "bar.py"},
+			},
+			expectedOptions: []string{"--json-ide-script=foo.py", "--json-ide-script=bar.py"},
+		},
 	}
 
 	for _, tc := range testCases {
