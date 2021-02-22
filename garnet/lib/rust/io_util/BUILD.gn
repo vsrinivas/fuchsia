@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("io_util") {
   with_unit_tests = true
@@ -42,29 +43,27 @@ rustc_library("io_util") {
   }
 }
 
-test_package("io_util_tests") {
-  deps = [ ":io_util_test" ]
+resource("file_resource") {
+  sources = [ "data/file" ]
+  outputs = [ "data/file" ]
+}
 
-  resources = [
-    {
-      path = "data/file"
-      dest = "file"
-    },
-    {
-      path = "data/fidl_file"
-      dest = "fidl_file"
-    },
-    {
-      path = "data/file"
-      dest = "subdir/subdir-file"
-    },
-  ]
+resource("fidl_file_resource") {
+  sources = [ "data/fidl_file" ]
+  outputs = [ "data/fidl_file" ]
+}
 
-  tests = [
-    {
-      name = "io_util_lib_test"
-      dest = "io_util_tests"
-      environments = basic_envs
-    },
+resource("subdir_file_resource") {
+  sources = [ "data/file" ]
+  outputs = [ "data/subdir/subdir-file" ]
+}
+
+fuchsia_unittest_package("io_util_tests") {
+  manifest = "meta/io_util_tests.cmx"
+  deps = [
+    ":fidl_file_resource",
+    ":file_resource",
+    ":io_util_test",
+    ":subdir_file_resource",
   ]
 }

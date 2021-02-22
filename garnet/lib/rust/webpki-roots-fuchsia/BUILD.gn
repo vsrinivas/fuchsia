@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("webpki-roots-fuchsia") {
   name = "webpki-roots-fuchsia"
@@ -21,12 +20,7 @@ rustc_library("webpki-roots-fuchsia") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("webpki-roots-fuchsia_tests") {
+fuchsia_unittest_package("webpki-roots-fuchsia_tests") {
+  manifest = "meta/webpki_roots_fuchsia_lib_test.cmx"
   deps = [ ":webpki-roots-fuchsia_test" ]
-
-  tests = [
-    {
-      name = "webpki_roots_fuchsia_lib_test"
-    },
-  ]
 }

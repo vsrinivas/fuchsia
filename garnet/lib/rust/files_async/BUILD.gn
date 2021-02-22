@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("files_async") {
   with_unit_tests = true
@@ -36,13 +36,11 @@ rustc_library("files_async") {
   }
 }
 
-test_package("files_async_tests") {
+fuchsia_unittest_package("files_async_tests") {
+  manifest = "meta/files_async_lib_test.cmx"
   deps = [ ":files_async_test" ]
 
-  tests = [
-    {
-      name = "files_async_lib_test"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }

@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 static_library("perfmon") {
   sources = [
@@ -99,15 +98,9 @@ executable("perfmon_tests_app") {
   deps += [ "//src/zircon/lib/zircon" ]
 }
 
-test_package("perfmon_tests") {
+fuchsia_unittest_package("perfmon_tests") {
+  manifest = "meta/perfmon_tests.cmx"
   deps = [ ":perfmon_tests_app" ]
-
-  tests = [
-    {
-      name = "perfmon_tests"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

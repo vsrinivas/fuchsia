@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 gperftools_src_root = "//third_party/gperftools/src/tests/"
 
@@ -55,24 +55,12 @@ executable("profiledata_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("profiler_tests") {
+fuchsia_package("profiler_tests") {
   #  testonly = true
 
   deps = [
     ":profiledata_unittest",
     ":profiler_unittest",
     ":stacktrace_unittest",
-  ]
-
-  binaries = [
-    {
-      name = "stacktrace_unittest"
-    },
-    {
-      name = "profiler_unittest"
-    },
-    {
-      name = "profiledata_unittest"
-    },
   ]
 }
