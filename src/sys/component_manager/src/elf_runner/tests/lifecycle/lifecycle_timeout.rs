@@ -25,7 +25,7 @@ async fn test_stop_timeouts() {
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(
             vec![Stopped::NAME, Destroyed::NAME],
-            EventMode::Sync,
+            EventMode::Async,
         )])
         .await
         .unwrap();
