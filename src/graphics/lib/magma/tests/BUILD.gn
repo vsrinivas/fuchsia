@@ -13,10 +13,10 @@ group("tests") {
     ":magma-abi-conformance-tests",
     ":magma-abi-conformance-tests-arm",
     ":magma-abi-conformance-tests-vsi",
-    ":magma_info_test",
     ":magma_nonhardware_tests",
     "codegen",
     "icd_strip",
+    "//src/graphics/lib/magma/src/tools:magma-info-test",
   ]
 
   # Add driver dependencies:
@@ -138,19 +138,6 @@ test_package("magma-abi-conformance-tests-vsi") {
         sherlock_env,
         vim3_env,
       ]
-    },
-  ]
-}
-
-# Run magma_info as a test to make sure it doesn't crash.
-test_package("magma_info_test") {
-  deps = [ "//src/graphics/lib/magma/src/tools:magma_info" ]
-
-  tests = [
-    {
-      name = "magma_info"
-      dest = "magma_info_test"
-      environments = magma_hardware_envs
     },
   ]
 }

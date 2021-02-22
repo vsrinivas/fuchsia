@@ -2,36 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/layers.gni")
-
-package("magma-tools") {
-  deps = [
-    ":tools",
-    "src/tools/mali-performance-counters",
-  ]
-  binaries = [
-    {
-      name = "magma_info"
-    },
-    {
-      name = "mali-performance-counters"
-      shell = true
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/magma-info.cmx")
-      dest = "magma-info.cmx"
-    },
-    {
-      path = rebase_path("meta/mali-performance-counters.cmx")
-      dest = "mali-performance-counters.cmx"
-    },
-  ]
-}
-
 # This config allows inclusion of headers via relative paths from src
 config("magma_src_include_config") {
   include_dirs = [ "src" ]
@@ -42,6 +12,12 @@ config("magma_tests_include_config") {
   include_dirs = [ "tests" ]
 }
 
-group("tools") {
-  public_deps = [ "src/tools" ]
+group("magma-tools") {
+  testonly = true
+  deps = [ ":magma" ]
+}
+
+group("magma") {
+  testonly = true
+  deps = [ "src/tools" ]
 }

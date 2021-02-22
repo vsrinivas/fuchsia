@@ -1,24 +1,10 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-test_package("mali-performance-counters-test") {
-  deps = [ ":mali-performance-counters-test-executable" ]
-  tests = [
-    {
-      name = "mali-performance-counters-test"
-      environments = [
-        astro_env,
-        sherlock_env,
-        vim3_env,
-      ]
-    },
-  ]
-}
-
-source_set("common_srcs") {
+source_set("sources") {
   sources = [
     "mali-performance-counters.cc",
     "mali-performance-counters.h",
@@ -38,22 +24,23 @@ source_set("common_srcs") {
   configs -= [ "//build/config:no_exceptions" ]
 }
 
-executable("mali-performance-counters") {
+executable("mali-performance-counters-bin") {
   sources = [ "main.cc" ]
+  output_name = "mali-performance-counters"
 
-  deps = [ ":common_srcs" ]
+  deps = [ ":sources" ]
 
   cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
 }
 
-executable("mali-performance-counters-test-executable") {
+executable("mali-performance-counters-test-bin") {
   testonly = true
   output_name = "mali-performance-counters-test"
   sources = [ "test.cc" ]
 
   deps = [
-    ":common_srcs",
+    ":sources",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
@@ -61,4 +48,34 @@ executable("mali-performance-counters-test-executable") {
 
   cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
+}
+
+fuchsia_component("mali-performance-counters-test-cmp") {
+  testonly = true
+  component_name = "mali-performance-counters-test"
+  deps = [ ":mali-performance-counters-test-bin" ]
+  manifest = "meta/mali_performance_counters_test.cmx"
+}
+
+fuchsia_test_package("mali-performance-counters-test") {
+  test_components = [ ":mali-performance-counters-test-cmp" ]
+  test_specs = {
+    environments = [
+      sherlock_env,
+      astro_env,
+      vim3_env,
+    ]
+  }
+}
+
+fuchsia_shell_package("mali-performance-counters-pkg") {
+  deps = [ ":mali-performance-counters-bin" ]
+}
+
+group("mali-performance-counters") {
+  testonly = true
+  deps = [
+    ":mali-performance-counters-pkg",
+    ":mali-performance-counters-test",
+  ]
 }

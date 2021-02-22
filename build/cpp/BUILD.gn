@@ -184,7 +184,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:device_client",
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:logger",
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:sysmem_connection",
-    "//src/graphics/lib/magma/src/tools:magma_info",
+    "//src/graphics/lib/magma/src/tools:magma-info-bin",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/graphics/lib/magma/tests/integration:magma_abi_conformance_tests",
     "//src/graphics/lib/magma/tests/integration:virtmagma_abi_conformance_tests",

@@ -3,13 +3,46 @@
 # found in the LICENSE file.
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/component_index/component_index.gni")
 
 group("tools") {
-  public_deps = [ ":magma_info" ]
+  testonly = true
+  deps = [
+    ":magma-info",
+    ":magma-info-test",
+    "mali-performance-counters",
+  ]
 }
 
-executable("magma_info") {
-  sources = [ "info.cc" ]
+fuchsia_component("magma-info-cmp") {
+  component_name = "magma-info"
+  deps = [ ":magma-info-bin" ]
+  manifest = "meta/magma-info.cmx"
+}
+
+add_to_component_index("component-index") {
+  package_name = "magma-info"
+  manifest = "meta/magma-info.cmx"
+}
+
+fuchsia_package("magma-info") {
+  deps = [
+    ":component-index",
+    ":magma-info-cmp",
+  ]
+}
+
+fuchsia_test_package("magma-info-test") {
+  test_components = [ ":magma-info-cmp" ]
+  test_specs = {
+    environments = magma_hardware_envs
+  }
+}
+
+executable("magma-info-bin") {
+  sources = [ "magma_info.cc" ]
+  output_name = "magma-info"
 
   deps = [
     "$magma_build_root/include:magma_abi",

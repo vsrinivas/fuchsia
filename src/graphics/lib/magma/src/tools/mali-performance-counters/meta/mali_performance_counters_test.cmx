@@ -4,7 +4,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/mali-performance-counters-test"
+        "binary": "bin/mali-performance-counters-test"
     },
     "sandbox": {
         "dev": [
