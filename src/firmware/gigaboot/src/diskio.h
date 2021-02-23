@@ -61,10 +61,17 @@ int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, c
 
 efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length);
 
-// guid_value_from_name takes in a GUID name and puts the associated GUID value
-// into value.
-// Returns 0 on success, -1 if the guid_name was not found.
-int guid_value_from_name(const char* guid_name, uint8_t* value);
+// Converts a user-facing partition name into a type GUID.
+//
+// Accepts both legacy and new partition names, but always returns the legacy
+// type GUID since that's what all Gigaboot devices use at the moment. Accepting
+// both names will allow us to start moving over to the new partition scheme in
+// the future if we want.
+//
+// name: partition name.
+//
+// Returns the matching partition type GUID, or NULL if no match was found.
+const uint8_t* partition_type_guid(const char* name);
 
 __END_CDECLS
 

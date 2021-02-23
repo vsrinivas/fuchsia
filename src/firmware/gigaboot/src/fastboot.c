@@ -437,13 +437,13 @@ void fb_flash(char *cmd) {
     return;
   }
 
-  uint8_t guid_value[GPT_GUID_LEN];
-  if (guid_value_from_name(partition, guid_value)) {
-    fb_send_fail("could not find guid value of partition");
+  const uint8_t *type_guid = partition_type_guid(partition);
+  if (!type_guid) {
+    fb_send_fail("could not find partition type GUID");
     return;
   }
 
-  efi_status status = write_partition(gImg, gSys, guid_value, partition, PARTITION_OFFSET,
+  efi_status status = write_partition(gImg, gSys, type_guid, partition, PARTITION_OFFSET,
                                       (unsigned char *)curr_img.data, curr_img.size);
   if (status != EFI_SUCCESS) {
     char err_msg[FB_CMD_MAX_LEN];
@@ -466,9 +466,9 @@ void fb_erase(char *cmd) {
     return;
   }
 
-  uint8_t guid_value[GPT_GUID_LEN];
-  if (guid_value_from_name(partition, guid_value)) {
-    fb_send_fail("could not find guid value of partition");
+  const uint8_t *type_guid = partition_type_guid(partition);
+  if (!type_guid) {
+    fb_send_fail("could not find partition type GUID");
     return;
   }
 
@@ -479,7 +479,7 @@ void fb_erase(char *cmd) {
   }
 
   gpt_entry_t entry;
-  if (disk_find_partition(&disk, DEBUG, guid_value, NULL, NULL, &entry)) {
+  if (disk_find_partition(&disk, DEBUG, type_guid, NULL, NULL, &entry)) {
     fb_send_fail("could not find partition");
     return;
   }

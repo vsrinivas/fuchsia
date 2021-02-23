@@ -30,6 +30,7 @@ namespace {
 
 using testing::_;
 using testing::DoAll;
+using testing::ElementsAreArray;
 using testing::Return;
 using testing::SetArgPointee;
 
@@ -394,24 +395,26 @@ TEST(DiskFindPartition, SkipInvalidPartitions) {
   EXPECT_EQ(partitions[3], partition);
 }
 
-TEST(GuidValueFromName, KnownPartitionNames) {
+TEST(PartitionTypeGuid, KnownPartitionNames) {
   const std::pair<const char*, const std::vector<uint8_t>> known_partitions[] = {
-      {"zircon-a", GUID_ZIRCON_A_VALUE}, {"zircon-b", GUID_ZIRCON_B_VALUE},
-      {"zircon-r", GUID_ZIRCON_R_VALUE}, {"vbmeta_a", GUID_VBMETA_A_VALUE},
-      {"vbmeta_b", GUID_VBMETA_B_VALUE}, {"vbmeta_r", GUID_VBMETA_R_VALUE},
+      {"zircon_a", GUID_ZIRCON_A_VALUE}, {"zircon-a", GUID_ZIRCON_A_VALUE},
+      {"zircon_b", GUID_ZIRCON_B_VALUE}, {"zircon-b", GUID_ZIRCON_B_VALUE},
+      {"zircon_r", GUID_ZIRCON_R_VALUE}, {"zircon-r", GUID_ZIRCON_R_VALUE},
+      {"vbmeta_a", GUID_VBMETA_A_VALUE}, {"vbmeta_b", GUID_VBMETA_B_VALUE},
+      {"vbmeta_r", GUID_VBMETA_R_VALUE}, {"bootloader", GUID_EFI_VALUE},
       {"fuchsia-esp", GUID_EFI_VALUE},
   };
 
   for (const auto& [name, expected_guid] : known_partitions) {
-    std::vector<uint8_t> guid(GPT_GUID_LEN);
-    EXPECT_EQ(0, guid_value_from_name(name, guid.data()));
-    EXPECT_EQ(expected_guid, guid);
+    const uint8_t* type_guid = partition_type_guid(name);
+    EXPECT_THAT(expected_guid, ElementsAreArray(type_guid, GPT_GUID_LEN));
   }
 }
 
-TEST(GuidValueFromName, UnknownPartitionName) {
-  std::vector<uint8_t> guid(GPT_GUID_LEN);
-  EXPECT_NE(0, guid_value_from_name("unknown_partition", guid.data()));
+TEST(PartitionTypeGuid, UnknownPartitionName) {
+  EXPECT_EQ(nullptr, partition_type_guid(""));
+  EXPECT_EQ(nullptr, partition_type_guid("unknown_partition"));
+  EXPECT_EQ(nullptr, partition_type_guid("zircon_a_with_suffix"));
 }
 
 struct IsUsbBootState {

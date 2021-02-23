@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/types.h>
@@ -460,30 +461,60 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
   return status;
 }
 
-int guid_value_from_name(const char* guid_name, uint8_t* value) {
-  if (!strncmp(guid_name, GUID_ZIRCON_A_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else if (!strncmp(guid_name, GUID_ZIRCON_B_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else if (!strncmp(guid_name, GUID_ZIRCON_R_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else if (!strncmp(guid_name, GUID_VBMETA_A_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else if (!strncmp(guid_name, GUID_VBMETA_B_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else if (!strncmp(guid_name, GUID_VBMETA_R_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else if (!strncmp(guid_name, GUID_EFI_NAME, GPT_NAME_LEN)) {
-    uint8_t guid_value[GPT_GUID_LEN] = GUID_EFI_VALUE;
-    memcpy(value, guid_value, GPT_GUID_LEN);
-  } else {
-    return -1;
+// Mapping from either legacy or new partition naming scheme to the expected
+// on-disk type GUID.
+static const struct {
+  const char* legacy_name;
+  const char* name;
+  const uint8_t type_guid[GPT_GUID_LEN];
+} partition_map[] = {
+    {
+        .legacy_name = GUID_ZIRCON_A_NAME,
+        .name = GPT_ZIRCON_A_NAME,
+        .type_guid = GUID_ZIRCON_A_VALUE,
+    },
+    {
+        .legacy_name = GUID_ZIRCON_B_NAME,
+        .name = GPT_ZIRCON_B_NAME,
+        .type_guid = GUID_ZIRCON_B_VALUE,
+    },
+    {
+        .legacy_name = GUID_ZIRCON_R_NAME,
+        .name = GPT_ZIRCON_R_NAME,
+        .type_guid = GUID_ZIRCON_R_VALUE,
+    },
+    // Note: even though both vbmeta names are actually the same, still check
+    // both constants here to avoid depending on this always being true.
+    {
+        .legacy_name = GUID_VBMETA_A_NAME,
+        .name = GPT_VBMETA_A_NAME,
+        .type_guid = GUID_VBMETA_A_VALUE,
+    },
+    {
+        .legacy_name = GUID_VBMETA_B_NAME,
+        .name = GPT_VBMETA_B_NAME,
+        .type_guid = GUID_VBMETA_B_VALUE,
+    },
+    {
+        .legacy_name = GUID_VBMETA_R_NAME,
+        .name = GPT_VBMETA_R_NAME,
+        .type_guid = GUID_VBMETA_R_VALUE,
+    },
+    {
+        .legacy_name = GUID_EFI_NAME,
+        // No bootloader_{a,b,r} support, just use standard "bootloader".
+        .name = "bootloader",
+        .type_guid = GUID_EFI_VALUE,
+    },
+};
+
+const uint8_t* partition_type_guid(const char* name) {
+  for (size_t i = 0; i < countof(partition_map); ++i) {
+    if (strcmp(partition_map[i].legacy_name, name) == 0 ||
+        strcmp(partition_map[i].name, name) == 0) {
+      return partition_map[i].type_guid;
+    }
   }
-  return 0;
+
+  return NULL;
 }
