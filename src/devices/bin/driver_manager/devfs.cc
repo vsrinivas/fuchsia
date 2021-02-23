@@ -174,7 +174,7 @@ class DevfsFidlServer : public fio::DirectoryAdmin::Interface {
   void clear_current_dispatcher() { current_dispatcher_ = nullptr; }
 
   void Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
-             CloneCompleter::Sync& completer) override {}
+             CloneCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override {}
   void Describe(DescribeCompleter::Sync& completer) override {}
   void Sync(SyncCompleter::Sync& completer) override {}
@@ -810,16 +810,12 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
   uint64_t ordinal = hdr->ordinal;
   switch (ordinal) {
     case fuchsia_io_NodeCloneOrdinal: {
-      DECODE_REQUEST(msg, NodeClone);
-      DEFINE_REQUEST(msg, NodeClone);
-      zx_handle_t h = request->object;
-      uint32_t flags = request->flags;
-      if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
-        flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-      }
-      char path[] = ".";
-      devfs_open(dn, dispatcher, h, path, flags | ZX_FS_FLAG_NOREMOTE);
-      return ZX_OK;
+      TxnForwarder transaction(txn);
+      ios->server_->set_current_dispatcher(dispatcher);
+      auto result = fio::DirectoryAdmin::Dispatch(ios->server_.get(), msg, &transaction);
+      ios->server_->clear_current_dispatcher();
+      ZX_ASSERT(result == fidl::DispatchResult::kFound);
+      return transaction.GetStatus();
     }
     case fuchsia_io_NodeDescribeOrdinal: {
       DECODE_REQUEST(msg, NodeDescribe);
@@ -923,6 +919,16 @@ void DevfsFidlServer::Open(uint32_t flags, uint32_t mode, fidl::StringView path,
     devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(),
                terminated_path.data(), flags);
   }
+}
+
+void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
+                            CloneCompleter::Sync& completer) {
+  if (flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
+    flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+  }
+  char path[] = ".";
+  devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(), path,
+             flags | ZX_FS_FLAG_NOREMOTE);
 }
 
 void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
