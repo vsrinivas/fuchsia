@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "fake_factory_items"
@@ -33,21 +32,14 @@ rustc_binary("bin") {
   ]
 }
 
-package("fake_factory_items") {
+fuchsia_component("fake_factory_items_comp") {
+  component_name = "fake_factory_items"
+  manifest = "meta/fake_factory_items.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "fake_factory_items"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/fake_factory_items.cmx")
-      dest = "fake_factory_items.cmx"
-    },
-  ]
+fuchsia_package("fake_factory_items") {
+  deps = [ ":fake_factory_items_comp" ]
 }
 
 rustc_test("fake_factory_items_test") {
@@ -66,47 +58,27 @@ rustc_test("fake_factory_items_test") {
   sources = [ "tests/fake_factory_items_test.rs" ]
 }
 
-test_package("fake_factory_items_tests") {
+resource("testdata") {
+  testonly = true
+  sources = [
+    "testdata/empty",
+    "testdata/fake_factory_items.json",
+    "testdata/random1",
+    "testdata/random2",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_test_component("fake_factory_items_test_comp") {
+  component_name = "fake_factory_items_test"
+  manifest = "meta/fake_factory_items_test.cmx"
+  deps = [ ":fake_factory_items_test" ]
+}
+
+fuchsia_test_package("fake_factory_items_tests") {
+  test_components = [ ":fake_factory_items_test_comp" ]
   deps = [
-    ":bin",
-    ":fake_factory_items_test",
-  ]
-
-  binaries = [
-    {
-      name = "fake_factory_items"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/fake_factory_items.cmx")
-      dest = "fake_factory_items.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("testdata/empty")
-      dest = "empty"
-    },
-    {
-      path = rebase_path("testdata/random1")
-      dest = "random1"
-    },
-    {
-      path = rebase_path("testdata/random2")
-      dest = "random2"
-    },
-    {
-      path = rebase_path("testdata/fake_factory_items.json")
-      dest = "fake_factory_items.json"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fake_factory_items_test"
-    },
+    ":fake_factory_items_comp",
+    ":testdata",
   ]
 }

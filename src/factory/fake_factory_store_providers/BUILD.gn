@@ -3,11 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "fake_factory_store_provider"
@@ -36,41 +35,27 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("fake_factory_store_providers") {
-  deps = [ ":bin" ]
+components = [
+  "alpha",
+  "cast",
+  "misc",
+  "playready",
+  "weave",
+  "widevine",
+]
+component_deps = []
+foreach(comp, components) {
+  comp_target_name = "${comp}_comp"
+  component_deps += [ ":$comp_target_name" ]
+  fuchsia_component(comp_target_name) {
+    component_name = comp
+    manifest = "meta/${comp}.cmx"
+    deps = [ ":bin" ]
+  }
+}
 
-  binaries = [
-    {
-      name = "fake_factory_store_provider"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/alpha.cmx")
-      dest = "alpha.cmx"
-    },
-    {
-      path = rebase_path("meta/cast.cmx")
-      dest = "cast.cmx"
-    },
-    {
-      path = rebase_path("meta/misc.cmx")
-      dest = "misc.cmx"
-    },
-    {
-      path = rebase_path("meta/playready.cmx")
-      dest = "playready.cmx"
-    },
-    {
-      path = rebase_path("meta/weave.cmx")
-      dest = "weave.cmx"
-    },
-    {
-      path = rebase_path("meta/widevine.cmx")
-      dest = "widevine.cmx"
-    },
-  ]
+fuchsia_package("fake_factory_store_providers") {
+  deps = component_deps
 }
 
 rustc_test("fake_factory_store_providers_test") {
@@ -92,14 +77,9 @@ rustc_test("fake_factory_store_providers_test") {
   sources = [ "tests/fake_factory_store_providers_test.rs" ]
 }
 
-test_package("fake_factory_store_providers_tests") {
+fuchsia_unittest_package("fake_factory_store_providers_tests") {
+  manifest = "meta/fake_factory_store_providers_test.cmx"
   deps = [ ":fake_factory_store_providers_test" ]
-
-  tests = [
-    {
-      name = "fake_factory_store_providers_test"
-    },
-  ]
 }
 
 config_data("test_fake_factory_store_providers_config") {

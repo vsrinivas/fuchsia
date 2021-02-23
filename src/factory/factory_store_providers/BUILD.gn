@@ -4,11 +4,10 @@
 
 import("//build/config.gni")
 import("//build/dist/resource.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/zbi/zbi.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "factory_store_providers"
@@ -49,21 +48,14 @@ rustc_binary("bin") {
   ]
 }
 
-package("factory_store_providers") {
+fuchsia_component("factory_store_providers_comp") {
+  component_name = "factory_store_providers"
+  manifest = "meta/factory_store_providers.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "factory_store_providers"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/factory_store_providers.cmx")
-      dest = "factory_store_providers.cmx"
-    },
-  ]
+fuchsia_package("factory_store_providers") {
+  deps = [ ":factory_store_providers_comp" ]
 }
 
 config_data("config") {
@@ -118,6 +110,17 @@ foreach(file, test_files) {
   }
 }
 
+test_file_resources = []
+foreach(file, test_files) {
+  name = "test_resource_$file"
+  test_file_resources += [ ":$name" ]
+  resource(name) {
+    testonly = true
+    sources = [ "testdata/input/$file" ]
+    outputs = [ "data/{{source_file_part}}" ]
+  }
+}
+
 zbi("items") {
   testonly = true
   cpu = ""  # Mark the zbi as incomplete.
@@ -127,170 +130,74 @@ zbi("items") {
 
 items_zbi_outputs = get_target_outputs(":items")
 
-test_package("factory_store_providers_ext4_tests") {
-  deps = [
-    ":bin",
-    ":factory_store_providers_ext4_tests_config",
-    ":factory_store_providers_test",
-    "//src/storage/ext4/server:bin",
-  ]
-
-  binaries = [
-    {
-      name = "ext4_readonly"
-    },
-    {
-      name = "factory_store_providers"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("testdata/factory_ext4.img")
-      dest = "factory_ext4.img"
-    },
-    {
-      path = rebase_path("testdata/input/another_cast_file")
-      dest = "another_cast_file"
-    },
-    {
-      path = rebase_path("testdata/input/other/misc")
-      dest = "misc"
-    },
-    {
-      path = rebase_path("testdata/input/passed_misc_file")
-      dest = "passed_misc_file"
-    },
-    {
-      path = rebase_path("testdata/input/multi_validated_file")
-      dest = "multi_validated_file"
-    },
-    {
-      path = rebase_path("testdata/input/pr/file1")
-      dest = "file1"
-    },
-    {
-      path = rebase_path("testdata/input/some_cast_file")
-      dest = "some_cast_file"
-    },
-    {
-      path = rebase_path("testdata/input/widevine_file")
-      dest = "widevine_file"
-    },
-    {
-      path = rebase_path("testdata/input/weave_file")
-      dest = "weave_file"
-    },
-    {
-      path = rebase_path("testdata/input/alpha_file")
-      dest = "alpha_file"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/factory_store_providers.cmx")
-      dest = "factory_store_providers.cmx"
-    },
-    {
-      path = rebase_path("//src/storage/ext4/server/meta/ext4_readonly.cmx")
-      dest = "ext4_readonly.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "factory_store_providers_test"
-      dest = "factory_store_providers_ext4_test"
-    },
-  ]
+resource("factory_ext4_image") {
+  testonly = true
+  sources = [ "testdata/factory_ext4.img" ]
+  outputs = [ "data/factory_ext4.img" ]
 }
 
-test_package("factory_store_providers_tests") {
+fuchsia_test_component("factory_store_providers_ext4_test_comp") {
+  component_name = "factory_store_providers_ext4_test"
+  manifest = "meta/factory_store_providers_ext4_test.cmx"
+  deps = [ ":factory_store_providers_test" ]
+}
+
+fuchsia_test_package("factory_store_providers_ext4_tests") {
+  test_components = [ ":factory_store_providers_ext4_test_comp" ]
   deps = [
-    ":bin",
-    ":bin_test",
-    ":factory_store_providers_test",
-    ":factory_store_providers_tests_config",
-    ":items",
-    "//src/factory/fake_factory_items:bin",
-  ]
+           "//src/storage/ext4/server:ext4_readonly_comp",
+           ":factory_store_providers_comp",
 
-  binaries = [
-    {
-      name = "factory_store_providers"
-    },
-    {
-      name = "fake_factory_items"
-    },
-  ]
+           ":factory_store_providers_ext4_tests_config",
 
-  resources = [
-    {
-      path = items_zbi_outputs[0]
-      dest = "items.zbi"
-    },
-    {
-      path = rebase_path("testdata/input/another_cast_file")
-      dest = "another_cast_file"
-    },
-    {
-      path = rebase_path("testdata/fake_factory_items.json")
-      dest = "fake_factory_items.json"
-    },
-    {
-      path = rebase_path("testdata/input/other/misc")
-      dest = "misc"
-    },
-    {
-      path = rebase_path("testdata/input/passed_misc_file")
-      dest = "passed_misc_file"
-    },
-    {
-      path = rebase_path("testdata/input/multi_validated_file")
-      dest = "multi_validated_file"
-    },
-    {
-      path = rebase_path("testdata/input/pr/file1")
-      dest = "file1"
-    },
-    {
-      path = rebase_path("testdata/input/some_cast_file")
-      dest = "some_cast_file"
-    },
-    {
-      path = rebase_path("testdata/input/widevine_file")
-      dest = "widevine_file"
-    },
-    {
-      path = rebase_path("testdata/input/weave_file")
-      dest = "weave_file"
-    },
-    {
-      path = rebase_path("testdata/input/alpha_file")
-      dest = "alpha_file"
-    },
-  ]
+           ":factory_ext4_image",
+         ] + test_file_resources
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/factory_store_providers.cmx")
-      dest = "factory_store_providers.cmx"
-    },
-    {
-      path = rebase_path("../fake_factory_items/meta/fake_factory_items.cmx")
-      dest = "fake_factory_items.cmx"
-    },
-  ]
+resource("items_zbi") {
+  testonly = true
+  sources = [ items_zbi_outputs[0] ]
+  outputs = "data/items.zbi"
+  deps = [ ":items" ]
+}
 
-  tests = [
-    {
-      name = "factory_store_providers_test"
-    },
-    {
-      name = "factory_store_providers_bin_test"
-    },
+resource("fake_factory_items_json") {
+  testonly = true
+  sources = [ "testdata/fake_factory_items.json" ]
+  outputs = "data/fake_factory_items.json"
+}
+
+fuchsia_component("fake_factory_items_comp") {
+  component_name = "fake_factory_items"
+  manifest = "../fake_factory_items/meta/fake_factory_items.cmx"
+  deps = [ "../fake_factory_items:bin" ]
+}
+
+fuchsia_test_component("factory_store_providers_test_comp") {
+  component_name = "factory_store_providers_test"
+  manifest = "meta/factory_store_providers_test.cmx"
+  deps = [ ":factory_store_providers_test" ]
+}
+
+fuchsia_unittest_component("factory_store_providers_bin_test_comp") {
+  component_name = "factory_store_providers_bin_test"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("factory_store_providers_tests") {
+  test_components = [
+    ":factory_store_providers_bin_test_comp",
+    ":factory_store_providers_test_comp",
   ]
+  deps = [
+           ":factory_store_providers_comp",
+           ":fake_factory_items_comp",
+
+           ":factory_store_providers_tests_config",
+
+           ":items_zbi",
+           ":fake_factory_items_json",
+         ] + test_file_resources
 }
 
 config_data("factory_store_providers_ext4_tests_config") {

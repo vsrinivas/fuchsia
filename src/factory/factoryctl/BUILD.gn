@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "factoryctl"
@@ -35,46 +34,23 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("factoryctl") {
+fuchsia_component("factoryctl_comp") {
+  component_name = "factoryctl"
+  manifest = "meta/factoryctl.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "factoryctl"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/factoryctl.cmx")
-      dest = "factoryctl.cmx"
-    },
-  ]
 }
 
-test_package("factoryctl_tests") {
-  deps = [
-    ":bin",
-    ":bin_test",
-  ]
+fuchsia_shell_package("factoryctl") {
+  deps = [ ":factoryctl_comp" ]
+}
 
-  binaries = [
-    {
-      name = "factoryctl"
-    },
-  ]
+fuchsia_unittest_component("factoryctl_bin_test_comp") {
+  component_name = "factoryctl_bin_test"
+  manifest = "meta/factoryctl_bin_test.cmx"
+  deps = [ ":bin_test" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/factoryctl.cmx")
-      dest = "factoryctl.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "factoryctl_bin_test"
-    },
-  ]
+fuchsia_test_package("factoryctl_tests") {
+  test_components = [ ":factoryctl_bin_test_comp" ]
+  deps = [ ":factoryctl_comp" ]
 }
