@@ -748,9 +748,15 @@ def main():
     # Parse trace file.
     all_accesses = parse_fsatrace_output(raw_trace.splitlines())
 
-    # Filter out access we don't want to track.
+    # Ignore directory accesses.
+    # Files' contents are what matters for reproducibilty.
+    file_accesses = [
+        access for access in all_accesses if not os.path.isdir(access.path)
+    ]
+
+    # Filter out accesses we don't want to track.
     filtered_accesses = [
-        access for access in all_accesses if access.should_check(
+        access for access in file_accesses if access.should_check(
             # Ignore accesses that fall outside of the source root.
             required_path_prefix=src_root,
             ignored_prefixes=ignored_prefixes,
