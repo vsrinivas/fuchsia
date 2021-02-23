@@ -35,7 +35,7 @@
         {
             event: [ "started" ],
             from: "framework",
-            modes: [ "sync" ],
+            modes: [ "async" ],
         },
     ],
 }

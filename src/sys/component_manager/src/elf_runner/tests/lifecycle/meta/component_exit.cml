@@ -25,10 +25,12 @@
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
-            event: [
-                "capability_routed",
-                "stopped",
-            ],
+            event: [ "stopped" ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+        {
+            event: [ "capability_routed" ],
             from: "framework",
             modes: [ "sync" ],
         },

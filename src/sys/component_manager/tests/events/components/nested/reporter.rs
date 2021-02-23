@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Handler, Started},
+        events::{Event, EventMode, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
@@ -19,7 +19,7 @@ async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
     event_source.start_component_tree().await;
@@ -30,6 +30,5 @@ async fn main() {
         let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
         let target_moniker = event.target_moniker();
         let _ = echo.echo_string(Some(target_moniker)).await;
-        event.resume().await.unwrap();
     }
 }

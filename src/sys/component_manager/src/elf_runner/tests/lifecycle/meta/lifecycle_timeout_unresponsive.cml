@@ -30,7 +30,7 @@
                 "stopped",
             ],
             from: "framework",
-            modes: [ "sync" ],
+            modes: [ "async" ],
         },
     ],
     offer: [
