@@ -222,13 +222,15 @@ static_assert(match_comparisons(less{}, less{}), "");
 // Test trivial copy/move.
 namespace trivial_copy_move_tests {
 struct trivially_move_only {
+  constexpr trivially_move_only() = default;
+
   constexpr trivially_move_only(const trivially_move_only&) = delete;
   constexpr trivially_move_only& operator=(const trivially_move_only&) = delete;
 
   constexpr trivially_move_only(trivially_move_only&&) = default;
   constexpr trivially_move_only& operator=(trivially_move_only&&) = default;
 
-  int value;
+  int value = 0;
 };
 
 static_assert(std::is_trivially_copy_constructible<trivially_move_only>::value == false);
@@ -246,10 +248,12 @@ static_assert(std::is_trivially_move_assignable<cpp17::optional<trivially_move_o
               true);
 
 struct trivially_copyable {
+  constexpr trivially_copyable() = default;
+
   constexpr trivially_copyable(const trivially_copyable&) = default;
   constexpr trivially_copyable& operator=(const trivially_copyable&) = default;
 
-  int value;
+  int value = 0;
 };
 
 static_assert(std::is_trivially_copy_constructible<trivially_copyable>::value == true);
