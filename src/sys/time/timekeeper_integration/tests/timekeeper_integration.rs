@@ -36,7 +36,6 @@ where
     F: FnOnce(PushSourcePuppet, RtcUpdates, LoggerQuerierProxy) -> Fut,
     Fut: Future,
 {
-    let _ = fuchsia_syslog::init();
     let mut executor = fasync::Executor::new().unwrap();
     executor.run_singlethreaded(async move {
         let clock_arc = Arc::new(clock);
@@ -77,7 +76,7 @@ async fn wait_until<F: Fn() -> bool>(poll_fn: F) {
     .await;
 }
 
-#[test]
+#[fuchsia::test]
 fn test_no_rtc_start_clock_from_time_source() {
     let clock = new_clock();
     timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, cobalt| async move {
@@ -133,7 +132,7 @@ fn test_no_rtc_start_clock_from_time_source() {
     });
 }
 
-#[test]
+#[fuchsia::test]
 fn test_invalid_rtc_start_clock_from_time_source() {
     let clock = new_clock();
     timekeeper_test(
@@ -208,7 +207,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
     );
 }
 
-#[test]
+#[fuchsia::test]
 fn test_start_clock_from_rtc() {
     let clock = new_clock();
     let monotonic_before = zx::Time::get_monotonic();
@@ -323,7 +322,7 @@ fn test_start_clock_from_rtc() {
     );
 }
 
-#[test]
+#[fuchsia::test]
 fn test_reject_before_backstop() {
     let clock = new_clock();
     timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, cobalt| async move {
@@ -356,7 +355,7 @@ fn test_reject_before_backstop() {
     });
 }
 
-#[test]
+#[fuchsia::test]
 fn test_slew_clock() {
     // Constants for controlling the duration of the slew we want to induce. These constants
     // are intended to tune the test to avoid flakes and do not necessarily need to match up with
@@ -408,7 +407,7 @@ fn test_slew_clock() {
     });
 }
 
-#[test]
+#[fuchsia::test]
 fn test_step_clock() {
     const STEP_ERROR: zx::Duration = zx::Duration::from_hours(1);
     let clock = new_clock();
@@ -471,7 +470,7 @@ fn avg(time_1: zx::Time, time_2: zx::Time) -> zx::Time {
     zx::Time::from_nanos(avg as i64)
 }
 
-#[test]
+#[fuchsia::test]
 fn test_restart_crashed_time_source() {
     let clock = new_clock();
     timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {

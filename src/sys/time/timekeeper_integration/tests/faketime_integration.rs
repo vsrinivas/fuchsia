@@ -35,9 +35,6 @@ where
     F: FnOnce(PushSourcePuppet, LoggerQuerierProxy, FakeClockController) -> Fut,
     Fut: Future<Output = ()>,
 {
-    // This result is dropped as init() fails if called multiple times in a process.
-    // TODO(satsukiu): use fuchsia::test instead which handles this detail.
-    let _ = fuchsia_syslog::init();
     let mut executor = fasync::Executor::new().expect("Failed to create executor");
     executor.run_singlethreaded(async move {
         let clock_arc = Arc::new(clock);
@@ -48,7 +45,7 @@ where
     });
 }
 
-#[test]
+#[fuchsia::test]
 fn test_kill_inactive_time_source() {
     let clock = new_clock();
     faketime_test(Arc::clone(&clock), |mut push_source_controller, cobalt, fake_time| async move {
