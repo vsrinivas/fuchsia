@@ -730,33 +730,6 @@ class ImageCompactor {
     }
   }
 
-  // TODO(reveman): Remove deprecated API.
-  void CmdWriteCompactImageMemorySizeDEPRECATED(VkCommandBuffer commandBuffer, VkImage image,
-                                                VkImageLayout imageLayout, VkBuffer buffer,
-                                                VkDeviceSize bufferOffset,
-                                                const VkImageSubresourceLayers* subresourceLayers) {
-    FX_CHECK(compact_images_.find(image) != compact_images_.end());
-    auto& compact_image = compact_images_[image];
-
-    // Compact image support is limited to single layer 2D images.
-    FX_CHECK(subresourceLayers->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
-    FX_CHECK(subresourceLayers->mipLevel == 0);
-    FX_CHECK(subresourceLayers->baseArrayLayer == 0);
-    FX_CHECK(subresourceLayers->layerCount == 1);
-
-    if (IsCompactLayout(imageLayout)) {
-      VkBufferCopy region = {
-          .srcOffset = 0,
-          .dstOffset = bufferOffset,
-          .size = 4,
-      };
-      dispatch_->CmdCopyBuffer(commandBuffer, compact_image.aux.buffer, buffer, 1, &region);
-    } else {
-      dispatch_->CmdFillBuffer(commandBuffer, buffer, bufferOffset, 4,
-                               static_cast<uint32_t>(compact_image.allocation_size));
-    }
-  }
-
   VkResult TrimCompactImageDeviceMemory(VkImage image, VkDeviceMemory memory,
                                         VkDeviceSize memoryOffset) {
     FX_CHECK(compact_images_.find(image) != compact_images_.end());
@@ -1376,16 +1349,6 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(
                                 pImageMemoryBarriers);
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdWriteCompactImageMemorySizeFUCHSIA(
-    VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, VkBuffer buffer,
-    VkDeviceSize bufferOffset, const VkImageSubresourceLayers* subresourceLayers) {
-  dispatch_key device_key = get_dispatch_key(commandBuffer);
-  LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
-
-  device_layer_data->compactor->CmdWriteCompactImageMemorySizeDEPRECATED(
-      commandBuffer, image, imageLayout, buffer, bufferOffset, subresourceLayers);
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL TrimCompactImageDeviceMemoryFUCHSIA(VkDevice device, VkImage image,
                                                                    VkDeviceMemory memory,
                                                                    VkDeviceSize memoryOffset) {
@@ -1479,9 +1442,6 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
   }
   if (!strcmp(name, "CmdPipelineBarrier")) {
     return reinterpret_cast<PFN_vkVoidFunction>(CmdPipelineBarrier);
-  }
-  if (!strcmp(name, "CmdWriteCompactImageMemorySizeFUCHSIA")) {
-    return reinterpret_cast<PFN_vkVoidFunction>(CmdWriteCompactImageMemorySizeFUCHSIA);
   }
   if (!strcmp(name, "TrimCompactImageDeviceMemoryFUCHSIA")) {
     return reinterpret_cast<PFN_vkVoidFunction>(TrimCompactImageDeviceMemoryFUCHSIA);

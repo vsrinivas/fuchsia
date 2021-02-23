@@ -38,7 +38,6 @@ class ComputeView : public BaseView {
     escher::GpuMemPtr gpu_mem;
     escher::TexturePtr texture;
     escher::BufferPtr buffer;
-    escher::BufferPtr aux_buffer;
     escher::BufferPtr host_buffer;
     uint32_t body_offset = 0;
     uint32_t base_y = 0;

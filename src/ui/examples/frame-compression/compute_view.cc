@@ -864,16 +864,6 @@ void ComputeView::RenderFrameFromPng(Image& image, png_structp png, uint32_t fra
 
   switch (modifier_) {
     case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
-      // Create auxiliary buffer if it doesn't exist, or insert pipeline barrier.
-      if (!image.aux_buffer) {
-        // 4 bytes for compact image size.
-        uint32_t aux_buffer_size = 4;
-        image.aux_buffer = escher_->gpu_allocator()->AllocateBuffer(
-            escher_->resource_recycler(), aux_buffer_size,
-            vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
-            vk::MemoryPropertyFlags());
-      }
-
       if (scratch_image_->layout() != vk::ImageLayout::eTransferDstOptimal) {
         command_buffer->TransitionImageLayout(scratch_image_, scratch_image_->layout(),
                                               vk::ImageLayout::eTransferDstOptimal);
@@ -902,11 +892,6 @@ void ComputeView::RenderFrameFromPng(Image& image, png_structp png, uint32_t fra
       // Transition to compact image layout.
       command_buffer->TransitionImageLayout(scratch_image_, scratch_image_->layout(),
                                             vk::ImageLayout::eTransferSrcOptimal);
-
-      // Write compact image size to aux buffer.
-      vk_command_buffer.writeCompactImageMemorySizeFUCHSIA(
-          scratch_image_->vk(), vk::ImageLayout::eTransferSrcOptimal, image.aux_buffer->vk(), 0,
-          &subresource, vk_loader);
 
       if (image.texture->image()->layout() != vk::ImageLayout::eGeneral) {
         command_buffer->TransitionImageLayout(
@@ -983,27 +968,9 @@ fit::promise<inspect::Inspector> ComputeView::PopulateImageStats(const Image& im
 
   inspector.GetRoot().CreateUint(kImageBytes, image.buffer->size(), &inspector);
 
-  if (image.aux_buffer) {
-    auto frame =
-        escher_->NewFrame("Aux Readback", 0,
-                          /* enable_gpu_logging */ false, escher::CommandBuffer::Type::kCompute,
-                          /* use_protected_memory */ false);
-    auto vk_command_buffer = frame->vk_command_buffer();
-
-    auto buffer = escher_->buffer_cache()->NewHostBuffer(image.aux_buffer->size());
-    FX_CHECK(buffer);
-
-    vk::BufferCopy region;
-    region.srcOffset = 0;
-    region.dstOffset = 0;
-    region.size = image.aux_buffer->size();
-    vk_command_buffer.copyBuffer(image.aux_buffer->vk(), buffer->vk(), 1, &region);
-    frame->EndFrame(escher::SemaphorePtr(), nullptr);
-    escher_->vk_device().waitIdle();
-
-    uint32_t image_size = reinterpret_cast<uint32_t*>(buffer->host_ptr())[0];
-    inspector.GetRoot().CreateUint(kImageBytesUsed, image_size, &inspector);
-  } else if (image.host_buffer) {
+  if (image.host_buffer) {
+    // TODO(reveman): Querying commitment for memory when
+    // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT is supported.
     inspector.GetRoot().CreateUint(kImageBytesUsed, image.buffer->size(), &inspector);
   } else {
     inspector.GetRoot().CreateUint(kImageBytesUsed, 0, &inspector);

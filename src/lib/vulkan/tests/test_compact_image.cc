@@ -147,10 +147,6 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   VkDevice device;
   EXPECT_EQ(VK_SUCCESS, vkCreateDevice(physical_devices[0], &device_create_info, nullptr, &device));
 
-  PFN_vkCmdWriteCompactImageMemorySizeFUCHSIA f_vkCmdWriteCompactImageMemorySizeFUCHSIA =
-      reinterpret_cast<PFN_vkCmdWriteCompactImageMemorySizeFUCHSIA>(
-          vkGetDeviceProcAddr(device, "vkCmdWriteCompactImageMemorySizeFUCHSIA"));
-  EXPECT_TRUE(f_vkCmdWriteCompactImageMemorySizeFUCHSIA);
   PFN_vkTrimCompactImageDeviceMemoryFUCHSIA f_vkTrimCompactImageDeviceMemoryFUCHSIA =
       reinterpret_cast<PFN_vkTrimCompactImageDeviceMemoryFUCHSIA>(
           vkGetDeviceProcAddr(device, "vkTrimCompactImageDeviceMemoryFUCHSIA"));
@@ -336,9 +332,6 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   vkCmdCopyBufferToImage(command_buffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
                          &region);
 
-  f_vkCmdWriteCompactImageMemorySizeFUCHSIA(
-      command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer, 0, &subresource_layers);
-
   VkImageMemoryBarrier transfer_dst_transfer_src_image_memory_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
       .pNext = nullptr,
@@ -352,9 +345,6 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0,
                        nullptr, 1, &transfer_dst_transfer_src_image_memory_barrier);
-
-  f_vkCmdWriteCompactImageMemorySizeFUCHSIA(
-      command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 4, &subresource_layers);
 
   EXPECT_EQ(VK_SUCCESS, vkEndCommandBuffer(command_buffer));
 
@@ -374,14 +364,6 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   };
   EXPECT_EQ(VK_SUCCESS, vkQueueSubmit(queue, 1, &submit_info, 0));
   EXPECT_EQ(VK_SUCCESS, vkQueueWaitIdle(queue));
-
-  uint32_t transfer_dst_layout_size = reinterpret_cast<uint32_t*>(pData)[0];
-  EXPECT_EQ(0u, transfer_dst_layout_size & 0xff000000);
-  EXPECT_NE(0u, transfer_dst_layout_size);
-
-  uint32_t transfer_src_layout_size = reinterpret_cast<uint32_t*>(pData)[1];
-  EXPECT_EQ(0u, transfer_src_layout_size & 0xff000000);
-  EXPECT_NE(0u, transfer_src_layout_size);
 
   // Trim device memory to compact size. This will reduce the memory
   // committment to what is required for the current image layout.
