@@ -50,6 +50,8 @@ rustc_binary("bin") {
     "src/peer/gain_control.rs",
     "src/peer/task.rs",
     "src/profile.rs",
+    "src/protocol.rs",
+    "src/protocol/features.rs",
     "src/service_definitions.rs",
   ]
 }
