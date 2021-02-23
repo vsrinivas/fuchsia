@@ -1140,15 +1140,58 @@ impl Ipv4Addr {
         common_prefix_len(me.iter().copied().zip(other.iter().copied()))
     }
 
-    /// Converts the address to an IPv4-mapped IPv6 address according to
-    /// [RFC 4291 Section 2.5.5.2].
+    /// Converts the address to an IPv4-compatible IPv6 address according to
+    /// [RFC 4291 Section 2.5.5.1].
+    ///
+    /// IPv4-compatible IPv6 addresses were defined to assist in the IPv6
+    /// transition, and are now specified in [RFC 4291 Section 2.5.5.1]. The
+    /// lowest-order 32 bits carry an IPv4 address, while the highest-order 96
+    /// bits are all set to 0 as in this diagram from the RFC:
+    ///
+    /// ```text
+    /// |                80 bits               | 16 |      32 bits        |
+    /// +--------------------------------------+--------------------------+
+    /// |0000..............................0000|0000|    IPv4 address     |
+    /// +--------------------------------------+----+---------------------+
+    /// ```
+    ///
+    /// Per RFC 4291, "The 'IPv4-Compatible IPv6 address' is now deprecated
+    /// because the current IPv6 transition mechanisms no longer use these
+    /// addresses. New or updated implementations are not required to support
+    /// this address type."
+    ///
+    /// The more modern embedding format is IPv4-mapped IPv6 addressing - see
+    /// [`to_ipv6_mapped`].
+    ///
+    /// [RFC 4291 Section 2.5.5.1]: https://tools.ietf.org/html/rfc4291#section-2.5.5.1
+    /// [`to_ipv6_mapped`]: Ipv4Addr::to_ipv6_mapped
+    #[inline]
+    pub fn to_ipv6_compatible(self) -> Ipv6Addr {
+        let Self([a, b, c, d]) = self;
+        Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a, b, c, d])
+    }
+
+    /// Converts the address to an IPv4-mapped IPv6 address according to [RFC
+    /// 4291 Section 2.5.5.2].
+    ///
+    /// IPv4-mapped IPv6 addresses are used to represent the addresses of IPv4
+    /// nodes as IPv6 addresses, and are defined in [RFC 4291 Section 2.5.5.2].
+    /// The lowest-order 32 bits carry an IPv4 address, the middle order 16 bits
+    /// carry the literal 0xFFFF, and the highest order 80 bits are set to 0 as
+    /// in this diagram from the RFC:
+    ///
+    /// ```text
+    /// |                80 bits               | 16 |      32 bits        |
+    /// +--------------------------------------+--------------------------+
+    /// |0000..............................0000|FFFF|    IPv4 address     |
+    /// +--------------------------------------+----+---------------------+
+    /// ```
     ///
     /// [RFC 4291 Section 2.5.5.2]: https://tools.ietf.org/html/rfc4291#section-2.5.5.2
-    pub fn to_v6_mapped(self) -> Ipv6Addr {
-        let Self(self_bytes) = self;
-        let mut bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0];
-        bytes[12..].copy_from_slice(&self_bytes[..]);
-        Ipv6Addr::new(bytes)
+    #[inline]
+    pub fn to_ipv6_mapped(self) -> Ipv6Addr {
+        let Self([a, b, c, d]) = self;
+        Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, a, b, c, d])
     }
 }
 
@@ -1316,15 +1359,77 @@ impl Ipv6Addr {
         let Ipv6Addr(other) = other;
         common_prefix_len(me.iter().copied().zip(other.iter().copied()))
     }
+
+    /// Tries to extract the IPv4 address from an IPv4-compatible IPv6 address.
+    ///
+    /// IPv4-compatible IPv6 addresses were defined to assist in the IPv6
+    /// transition, and are now specified in [RFC 4291 Section 2.5.5.1]. The
+    /// lowest-order 32 bits carry an IPv4 address, while the highest-order 96
+    /// bits are all set to 0 as in this diagram from the RFC:
+    ///
+    /// ```text
+    /// |                80 bits               | 16 |      32 bits        |
+    /// +--------------------------------------+--------------------------+
+    /// |0000..............................0000|0000|    IPv4 address     |
+    /// +--------------------------------------+----+---------------------+
+    /// ```
+    ///
+    /// `to_ipv4_compatible` checks to see if `self` is an IPv4-compatible
+    /// IPv6 address. If it is, the IPv4 address is extracted and returned.
+    ///
+    /// Per RFC 4291, "The 'IPv4-Compatible IPv6 address' is now deprecated
+    /// because the current IPv6 transition mechanisms no longer use these
+    /// addresses. New or updated implementations are not required to support
+    /// this address type."
+    ///
+    /// The more modern embedding format is IPv4-mapped IPv6 addressing - see
+    /// [`to_ipv4_mapped`].
+    ///
+    /// [RFC 4291 Section 2.5.5.1]: https://tools.ietf.org/html/rfc4291#section-2.5.5.1
+    /// [`to_ipv4_mapped`]: Ipv6Addr::to_ipv4_mapped
+    pub fn to_ipv4_compatible(&self) -> Option<Ipv4Addr> {
+        if let [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a, b, c, d] = self.0 {
+            Some(Ipv4Addr::new([a, b, c, d]))
+        } else {
+            None
+        }
+    }
+
+    /// Tries to extract the IPv4 address from an IPv4-mapped IPv6 address.
+    ///
+    /// IPv4-mapped IPv6 addresses are used to represent the addresses of IPv4
+    /// nodes as IPv6 addresses, and are defined in [RFC 4291 Section 2.5.5.2].
+    /// The lowest-order 32 bits carry an IPv4 address, the middle order 16 bits
+    /// carry the literal 0xFFFF, and the highest order 80 bits are set to 0 as
+    /// in this diagram from the RFC:
+    ///
+    /// ```text
+    /// |                80 bits               | 16 |      32 bits        |
+    /// +--------------------------------------+--------------------------+
+    /// |0000..............................0000|FFFF|    IPv4 address     |
+    /// +--------------------------------------+----+---------------------+
+    /// ```
+    ///
+    /// `to_ipv4_mapped` checks to see if `self` is an IPv4-mapped
+    /// IPv6 address. If it is, the IPv4 address is extracted and returned.
+    ///
+    /// [RFC 4291 Section 2.5.5.2]: https://tools.ietf.org/html/rfc4291#section-2.5.5.2
+    pub fn to_ipv4_mapped(&self) -> Option<Ipv4Addr> {
+        if let [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, a, b, c, d] = self.0 {
+            Some(Ipv4Addr::new([a, b, c, d]))
+        } else {
+            None
+        }
+    }
 }
 
 impl sealed::Sealed for Ipv6Addr {}
 
 /// [`Ipv4Addr`] is convertible into [`Ipv6Addr`] through
-/// [`Ipv4Addr::to_v6_mapped`].
+/// [`Ipv4Addr::to_ipv6_mapped`].
 impl From<Ipv4Addr> for Ipv6Addr {
     fn from(addr: Ipv4Addr) -> Self {
-        addr.to_v6_mapped()
+        addr.to_ipv6_mapped()
     }
 }
 
@@ -2510,19 +2615,33 @@ mod tests {
     }
 
     #[test]
-    fn test_ipv6_from_ipv4() {
+    fn test_ipv4_embedded() {
+        // Test Ipv4Addr's to_ipv6_compatible and to_ipv6_mapped methods.
+
         assert_eq!(
-            Ipv6Addr::from(Ipv4Addr::new([1, 2, 3, 4])),
+            Ipv4Addr::new([1, 2, 3, 4]).to_ipv6_compatible(),
+            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4])
+        );
+        assert_eq!(
+            Ipv4Addr::new([1, 2, 3, 4]).to_ipv6_mapped(),
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 1, 2, 3, 4]),
         );
-        assert_eq!(
-            Ipv6Addr::from(Ipv4Addr::new([192, 168, 0, 1])),
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 192, 168, 0, 1]),
-        );
-        assert_eq!(
-            Ipv6Addr::from(Ipv4Addr::new([129, 144, 52, 38])),
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 129, 144, 52, 38]),
-        );
+
+        // Test Ipv6Addr's to_ipv4_compatible and to_ipv4_mapped methods.
+
+        let compatible = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4]);
+        let mapped = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 1, 2, 3, 4]);
+        let not_embedded = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 1, 2, 3, 4]);
+        let v4 = Ipv4Addr::new([1, 2, 3, 4]);
+
+        assert_eq!(compatible.to_ipv4_compatible(), Some(v4));
+        assert_eq!(compatible.to_ipv4_mapped(), None);
+
+        assert_eq!(mapped.to_ipv4_compatible(), None);
+        assert_eq!(mapped.to_ipv4_mapped(), Some(v4));
+
+        assert_eq!(not_embedded.to_ipv4_compatible(), None);
+        assert_eq!(not_embedded.to_ipv4_mapped(), None);
     }
 
     #[test]
