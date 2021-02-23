@@ -36,7 +36,8 @@ rustc_library("netstack3-core") {
   ]
 
   sources = [
-    "src/algorithm.rs",
+    "src/algorithm/mod.rs",
+    "src/algorithm/port_alloc.rs",
     "src/context.rs",
     "src/data_structures/id_map.rs",
     "src/data_structures/id_map_collection.rs",
@@ -95,7 +96,8 @@ rustc_test("netstack3-core_test") {
   ]
 
   sources = [
-    "src/algorithm.rs",
+    "src/algorithm/mod.rs",
+    "src/algorithm/port_alloc.rs",
     "src/benchmarks.rs",
     "src/context.rs",
     "src/data_structures/id_map.rs",
