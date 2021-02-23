@@ -270,6 +270,7 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
 }
 
 constexpr char kBlobVmoNamePrefix[] = "blob";
+constexpr char kInactiveBlobVmoNamePrefix[] = "inactive-blob";
 constexpr char kBlobMerkleVmoNamePrefix[] = "mrkl";
 
 void FormatVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out, const char* prefix) {
@@ -280,6 +281,10 @@ void FormatVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out, c
 
 void FormatBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
   FormatVmoName(node, out, kBlobVmoNamePrefix);
+}
+
+void FormatInactiveBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+  FormatVmoName(node, out, kInactiveBlobVmoNamePrefix);
 }
 
 void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {

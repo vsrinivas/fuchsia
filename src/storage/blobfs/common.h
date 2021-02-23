@@ -88,6 +88,7 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 // Name collisions are possible, but rare; the name is based on a prefix of the merkle root
 // hash of |node|.
 void FormatBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatInactiveBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 
 }  // namespace blobfs

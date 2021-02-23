@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <chrono>
 #include <condition_variable>
@@ -13,6 +14,7 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
+#include <fs/vfs_types.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -415,6 +417,87 @@ TEST_P(BlobTest, BlobPrepareWriteFailure) {
 #endif
     ASSERT_EQ(file->Close(), ZX_OK);
   }
+}
+
+std::string VmoName(const zx::vmo& vmo) {
+  char buf[ZX_MAX_NAME_LEN + 1] = {'\0'};
+  EXPECT_EQ(vmo.get_property(ZX_PROP_NAME, buf, ZX_MAX_NAME_LEN), ZX_OK);
+  return std::string(buf, ::strlen(buf));
+}
+
+TEST_P(BlobTest, VmoNameActiveWhileFdOpen) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  auto root = OpenRoot();
+  const std::string active_name = std::string("blob-").append(std::string_view(info->path + 1, 8));
+  const std::string inactive_name =
+      std::string("inactive-blob-").append(std::string_view(info->path + 1, 8));
+
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+  size_t out_actual = 0;
+  ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+  ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+  // Make sure the async part of the write finishes.
+  loop_.RunUntilIdle();
+  ASSERT_EQ(file->Close(), ZX_OK);
+  ASSERT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+  auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
+
+  // Blobfs lazily creates the data VMO on first read.
+  EXPECT_FALSE(blob->DataVmo());
+  char c;
+  size_t actual;
+  ASSERT_EQ(blob->Read(&c, sizeof(c), 0u, &actual), ZX_OK);
+  EXPECT_TRUE(blob->DataVmo());
+  EXPECT_EQ(VmoName(blob->DataVmo()), active_name);
+
+  ASSERT_EQ(blob->Close(), ZX_OK);
+  EXPECT_EQ(VmoName(blob->DataVmo()), inactive_name);
+
+  ASSERT_EQ(blob->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+  EXPECT_EQ(VmoName(blob->DataVmo()), active_name);
+
+  ASSERT_EQ(blob->Close(), ZX_OK);
+}
+
+TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  auto root = OpenRoot();
+  const std::string active_name = std::string("blob-").append(std::string_view(info->path + 1, 8));
+  const std::string inactive_name =
+      std::string("inactive-blob-").append(std::string_view(info->path + 1, 8));
+
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+  size_t out_actual = 0;
+  ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+  ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+  // Make sure the async part of the write finishes.
+  loop_.RunUntilIdle();
+  ASSERT_EQ(file->Close(), ZX_OK);
+  ASSERT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+  auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
+
+  zx::vmo vmo;
+  size_t size;
+  ASSERT_EQ(blob->GetVmo(fio::VMO_FLAG_READ, &vmo, &size), ZX_OK);
+  ASSERT_EQ(blob->Close(), ZX_OK);
+  EXPECT_EQ(VmoName(blob->DataVmo()), active_name);
+
+  // The ZX_VMO_ZERO_CHILDREN signal is asynchronous; unfortunately polling is the best we can do.
+  vmo.reset();
+  bool active = true;
+  const auto start = std::chrono::steady_clock::now();
+  constexpr auto kMaxWait = std::chrono::seconds(60);
+  while (std::chrono::steady_clock::now() <= start + kMaxWait) {
+    loop_.RunUntilIdle();
+    if (VmoName(blob->DataVmo()) == inactive_name) {
+      active = false;
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+  }
+  EXPECT_FALSE(active) << "Name did not become inactive after deadline";
 }
 
 using BlobMigrationTest = BlobTestWithOldMinorVersion;

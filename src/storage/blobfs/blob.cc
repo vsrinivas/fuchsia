@@ -938,6 +938,15 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
     FX_LOGS(WARNING) << "Purging blob " << MerkleRoot()
                      << " failed: " << zx_status_get_string(status);
   }
+  if (!HasReferences()) {
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
+    FormatInactiveBlobDataVmoName(inode_, &data_vmo_name);
+    if (zx_status_t status = data_mapping_.vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(),
+                                                              data_vmo_name.size());
+        status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
+    }
+  }
 }
 
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
@@ -1233,6 +1242,15 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
 zx_status_t Blob::Open([[maybe_unused]] ValidatedOptions options,
                        fbl::RefPtr<Vnode>* out_redirect) {
   fd_count_++;
+  if (IsDataLoaded()) {
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
+    FormatBlobDataVmoName(inode_, &data_vmo_name);
+    if (zx_status_t status = data_mapping_.vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(),
+                                                              data_vmo_name.size());
+        status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
+    }
+  }
   return ZX_OK;
 }
 
@@ -1240,6 +1258,15 @@ zx_status_t Blob::Close() {
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
   ZX_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
   fd_count_--;
+  if (IsDataLoaded() && !HasReferences()) {
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
+    FormatInactiveBlobDataVmoName(inode_, &data_vmo_name);
+    if (zx_status_t status = data_mapping_.vmo().set_property(ZX_PROP_NAME, data_vmo_name.c_str(),
+                                                              data_vmo_name.size());
+        status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
+    }
+  }
   // Attempt purge in case blob was unlinked prior to close
   return TryPurge();
 }

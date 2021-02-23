@@ -107,11 +107,16 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // Other methods.
 
+  // Returns whether there are any external references to the blob.
+  // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
+  // the blob could change after (or during) the call.
+  bool HasReferences() const { return fd_count_ > 0 || clone_ref_; }
+
   // Identifies if we can safely remove all on-disk and in-memory storage used by this blob.
   // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
   // the blob could change after (or during) the call, and the blob might not really be purgeable.
   bool Purgeable() const {
-    return fd_count_ == 0 && !clone_ref_ && (DeletionQueued() || state() != BlobState::kReadable);
+    return !HasReferences() && (DeletionQueued() || state() != BlobState::kReadable);
   }
 
   bool DeletionQueued() const { return deletable_; }
@@ -157,6 +162,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Sets the target_compression_size in write_info to |size|.
   // Setter made public for testing.
   void SetTargetCompressionSize(uint64_t size);
+
+  // Exposed for testing.
+  const zx::vmo& DataVmo() const { return data_mapping_.vmo(); }
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
