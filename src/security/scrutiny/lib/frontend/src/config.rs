@@ -143,6 +143,19 @@ pub enum LoggingVerbosity {
     Off,
 }
 
+impl From<String> for LoggingVerbosity {
+    fn from(item: String) -> Self {
+        match item.as_str() {
+            "error" => LoggingVerbosity::Error,
+            "warn" => LoggingVerbosity::Warn,
+            "info" => LoggingVerbosity::Info,
+            "debug" => LoggingVerbosity::Debug,
+            "trace" => LoggingVerbosity::Trace,
+            _ => LoggingVerbosity::Off,
+        }
+    }
+}
+
 /// The DataModel is a required feature of the Scrutiny runtime. Every
 /// configuration must include a model configuration.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -209,5 +222,21 @@ pub struct ServerConfig {
 impl ServerConfig {
     pub fn default() -> ServerConfig {
         ServerConfig { port: 8080, visualizer_path: "/scripts/scrutiny".to_string() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_logging_verbosity_from_string() {
+        assert_eq!(LoggingVerbosity::from("error".to_string()), LoggingVerbosity::Error);
+        assert_eq!(LoggingVerbosity::from("warn".to_string()), LoggingVerbosity::Warn);
+        assert_eq!(LoggingVerbosity::from("info".to_string()), LoggingVerbosity::Info);
+        assert_eq!(LoggingVerbosity::from("debug".to_string()), LoggingVerbosity::Debug);
+        assert_eq!(LoggingVerbosity::from("trace".to_string()), LoggingVerbosity::Trace);
+        assert_eq!(LoggingVerbosity::from("off".to_string()), LoggingVerbosity::Off);
+        assert_eq!(LoggingVerbosity::from("".to_string()), LoggingVerbosity::Off);
     }
 }

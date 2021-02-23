@@ -12,21 +12,11 @@
 ## are loaded.
 ##
 ## USAGE:
-## scrutiny [OPTIONS]
+## scrutiny shell [OPTIONS]
 ##
 ## FLAGS:
 ##   -h, --help       Prints help information
 ##   -V, --version    Prints version information
-##
-## OPTIONS:
-##   -c <command>           Run a single command
-##   -l <log>               Path to output scrutiny.log [default: /tmp/scrutiny.log]
-##   -m <model>             The uri of the data model. [default: /tmp/scrutiny/]
-##   -p <port>              The port to run the scrutiny service on. [default: 8080]
-##   -v <verbosity>         The verbosity level of logging [default: info]  [possible values: off, error, warn, info, debug, trace]
-##   -i <visualizer>        The root path (relative to $FUCHSIA_DIR) for the visualizer interface. .html, .css, and .json
-##                          files relative to this root path will be served relative to the scrutiny service root.
-##                          [default: /scripts/scrutiny]
 ##
 ## EXAMPLES:
 ## To run these examples first launch scrutiny with fx scrutiny from the cmdline. The
@@ -60,4 +50,4 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
-"${FUCHSIA_BUILD_DIR}/host-tools/scrutiny" "$@"
+"${FUCHSIA_BUILD_DIR}/host-tools/ffx" scrutiny "$@"
