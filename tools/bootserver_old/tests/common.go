@@ -175,7 +175,9 @@ func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	distro := emulatortest.UnpackFrom(*TestDataDir, emulator.DistributionParams{})
+	distro := emulatortest.UnpackFrom(t, *TestDataDir, emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, appendCmdline...)
