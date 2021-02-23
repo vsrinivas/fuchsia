@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io' show Directory, File, Platform, Process, ProcessResult;
+import 'dart:io' show Directory, File, Platform, Process, ProcessResult, stderr;
 
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
@@ -46,8 +46,8 @@ class RunFidlcat {
   Future<ProcessResult> agentResult;
   StringBuffer stdoutBuffer;
   StringBuffer stderrBuffer;
-  String stdout;
-  String stderr;
+  String stdoutString;
+  String stderrString;
   String additionalResult;
   Process fidlcatProcess;
 
@@ -92,9 +92,9 @@ class RunFidlcat {
       arguments =
           ['--connect=$target:$port', '--quit-agent-on-exit'] + arguments;
     }
+    stdoutBuffer = StringBuffer();
+    stderrBuffer = StringBuffer();
     do {
-      stdoutBuffer = StringBuffer();
-      stderrBuffer = StringBuffer();
       fidlcatProcess = await Process.start(path, arguments);
       fidlcatProcess.stdout.listen(
         (s) => stdoutBuffer.write(String.fromCharCodes(s)),
@@ -105,9 +105,9 @@ class RunFidlcat {
     } while (
         await fidlcatProcess.exitCode == 2); // 2 means can't connect (yet).
 
-    stdout = stdoutBuffer.toString();
-    stderr = stderrBuffer.toString();
-    additionalResult = 'stderr ===\n$stderr\nstdout ===\n$stdout';
+    stdoutString = stdoutBuffer.toString();
+    stderrString = stderrBuffer.toString();
+    additionalResult = 'stderr ===\n$stderrString\nstdout ===\n$stdoutString';
   }
 }
 
@@ -120,12 +120,19 @@ void main(List<String> arguments) {
 
   sl4f.Sl4f sl4fDriver;
 
-  setUp(() async {
+  setUpAll(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
-    await sl4fDriver.startServer();
+    stderr.write('start sl4f server\n');
+
+    /// The default value for tries is 150. Because each try can take 7 seconds, by default,
+    /// startServer can take 1050 seconds to fail which is more than the 5 minute timeout we
+    /// have. Use 10 tries (which should be enough): if startServer can't start after 10 tries,
+    /// there are no reasons it could start after more tries.
+    await sl4fDriver.startServer(tries: 10);
+    stderr.write('sl4f server started\n');
   });
 
-  tearDown(() async {
+  tearDownAll(() async {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
@@ -136,6 +143,8 @@ void main(List<String> arguments) {
   /// output is present.  It starts the agent on the target, and then launches fidlcat with the
   /// correct parameters.
   group('fidlcat', () {
+    /// All the tests which need a debug agent.
+
     test('Simple test of echo client output and shutdown', () async {
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
@@ -144,10 +153,41 @@ void main(List<String> arguments) {
       ]);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
+          reason: instance.additionalResult);
+
+      await instance.agentResult;
+    });
+
+    test('Test --stay-alive', () async {
+      var instance = RunFidlcat();
+      var fidlcat = instance.run(log, sl4fDriver, fidlcatPath,
+          RunMode.withAgent, ['--remote-name=echo_client', '--stay-alive']);
+
+      /// fuchsia-pkg URL for the echo client.
+      const String echoClientUrl =
+          'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx';
+
+      /// Launch three instances of echo client one after the other.
+      await sl4fDriver.ssh.run('run $echoClientUrl');
+      await sl4fDriver.ssh.run('run $echoClientUrl');
+      await sl4fDriver.ssh.run('run $echoClientUrl');
+
+      /// Because, with the --stay-alive version, fidlcat never ends, we need to kill it to end the
+      /// test.
+      instance.fidlcatProcess.kill();
+
+      /// Wait for fidlcat to be killed.
+      await fidlcat;
+
+      /// Check that fidlcat stayed alive.
+      expect(
+          instance.stderrString,
+          contains(
+              'Waiting for more processes to monitor. Use Ctrl-C to exit fidlcat.'),
           reason: instance.additionalResult);
 
       await instance.agentResult;
@@ -162,7 +202,7 @@ void main(List<String> arguments) {
         'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
       ]);
 
-      final lines = instance.stdout.split('\n\n');
+      final lines = instance.stdoutString.split('\n\n');
 
       /// If we had use --remote-name twice, we would have a lot of messages between
       /// "Monitoring echo_client" and "Monitoring echo_server".
@@ -185,7 +225,7 @@ void main(List<String> arguments) {
         'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
       ]);
 
-      final lines = instance.stdout.split('\n\n');
+      final lines = instance.stdoutString.split('\n\n');
 
       /// The first displayed message must be EchoString.
       expect(lines[2],
@@ -204,7 +244,7 @@ void main(List<String> arguments) {
         'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
       ]);
 
-      final lines = instance.stdout.split('\n\n');
+      final lines = instance.stdoutString.split('\n\n');
 
       /// The first and second displayed messages must be EchoString (everything else has been
       /// filtered out).
@@ -238,7 +278,7 @@ void main(List<String> arguments) {
       ]);
 
       expect(
-          instanceSave.stdout,
+          instanceSave.stdoutString,
           contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
@@ -251,13 +291,14 @@ void main(List<String> arguments) {
           RunMode.withoutAgent, ['--from', savePath]);
 
       expect(
-          instanceReplay.stdout,
+          instanceReplay.stdoutString,
           contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instanceReplay.additionalResult);
     });
 
+    /// All the tests which don't need a debug agent.
     test('Test --with=generate-tests (more than one proces)', () async {
       final String echoProto =
           Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
@@ -270,7 +311,7 @@ void main(List<String> arguments) {
           ['--with=generate-tests=${fidlcatTemp.path}', '--from=$echoProto']);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           equals('Error: Cannot generate tests for more than one process.\n'
               ''),
           reason: instance.additionalResult);
@@ -291,7 +332,7 @@ void main(List<String> arguments) {
       ]);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           equals('Writing tests on disk\n'
               '  process name: echo_client_cpp\n'
               '  output directory: "${fidlcatTemp.path}"\n'
@@ -375,7 +416,7 @@ void main(List<String> arguments) {
       ]);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           equals('Writing tests on disk\n'
               '  process name: echo_client_cpp_synchronous\n'
               '  output directory: "${fidlcatTemp.path}"\n'
@@ -423,7 +464,7 @@ void main(List<String> arguments) {
       ]);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           equals('Writing tests on disk\n'
               '  process name: echo_client_cpp_synchronous\n'
               '  output directory: "${fidlcatTemp.path}"\n'
@@ -454,7 +495,7 @@ void main(List<String> arguments) {
           ['--with=summary', '--from=$echoProto']);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           equals(
               '--------------------------------------------------------------------------------'
               'echo_client_cpp.cmx 26251: 26 handles\n'
@@ -670,7 +711,7 @@ void main(List<String> arguments) {
           ['--with=top', '--from=$echoProto']);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           equals(
               '--------------------------------------------------------------------------------'
               'echo_client_cpp.cmx 26251: 11 events\n'
@@ -770,7 +811,7 @@ void main(List<String> arguments) {
           ['--with=top', '--from=$snapshotProto']);
 
       expect(
-          instance.stdout,
+          instance.stdoutString,
           contains('  unknown interfaces: : 1 event\n'
               '      6862061078.193704 call   ordinal=36dadb5482dc1d55('
               'Channel:9b71d5c7(dir:/svc/fuchsia.feedback.DataProvider))\n'),
@@ -785,40 +826,9 @@ void main(List<String> arguments) {
           ['--messages=.*x.*', '--from=$snapshotProto']);
 
       /// We only check that fidlcat didn't crash.
-      expect(instance.stdout,
+      expect(instance.stdoutString,
           contains('Stop monitoring exceptions.cmx koid 19884\n'),
           reason: instance.additionalResult);
-    });
-
-    test('Test --stay-alive', () async {
-      var instance = RunFidlcat();
-      var fidlcat = instance.run(log, sl4fDriver, fidlcatPath,
-          RunMode.withAgent, ['--remote-name=echo_client', '--stay-alive']);
-
-      /// fuchsia-pkg URL for the echo client.
-      const String echoClientUrl =
-          'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx';
-
-      /// Launch three instances of echo client one after the other.
-      await sl4fDriver.ssh.run('run $echoClientUrl');
-      await sl4fDriver.ssh.run('run $echoClientUrl');
-      await sl4fDriver.ssh.run('run $echoClientUrl');
-
-      /// Because, with the --stay-alive version, fidlcat never ends, we need to kill it to end the
-      /// test.
-      instance.fidlcatProcess.kill();
-
-      /// Wait for fidlcat to be killed.
-      await fidlcat;
-
-      /// Check that fidlcat stayed alive.
-      expect(
-          instance.stderr,
-          contains(
-              'Waiting for more processes to monitor. Use Ctrl-C to exit fidlcat.'),
-          reason: instance.additionalResult);
-
-      await instance.agentResult;
     });
   }, timeout: _timeout);
 }
