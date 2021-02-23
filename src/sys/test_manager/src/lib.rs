@@ -89,9 +89,9 @@ pub async fn run_test_manager(
                         })
                         .detach();
                     }
-                    Err(e) => {
-                        error!("Failed to launch test: {:?}", e);
-                        responder.send(&mut Err(e.into())).map_err(TestManagerError::Response)?;
+                    Err(err) => {
+                        error!(?err, "Failed to launch test");
+                        responder.send(&mut Err(err.into())).map_err(TestManagerError::Response)?;
                     }
                 }
             }
@@ -102,13 +102,20 @@ pub async fn run_test_manager(
 
 struct RunningTest {
     instance: TopologyInstance,
-    _logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
+    logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
 }
 
 impl RunningTest {
     async fn destroy(mut self) {
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
+        // When serving logs over ArchiveIteartor in the host, we should also wait for all logs to
+        // be drained.
+        if let Some(task) = self.logs_iterator_task {
+            task.await.unwrap_or_else(|err| {
+                error!(?err, "Failed to await for logs streaming task");
+            });
+        }
         destroy_waiter.await;
     }
 
@@ -156,7 +163,7 @@ async fn launch_test(
         .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
 
     let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc);
-    let _logs_iterator_task = match options.logs_iterator {
+    let logs_iterator_task = match options.logs_iterator {
         None => None,
         Some(ftest_manager::LogsIterator::Archive(iterator)) => {
             let task = isolated_logs_provider
@@ -178,7 +185,7 @@ async fn launch_test(
         .connect_request_to_protocol_at_exposed_dir(suite_request)
         .map_err(LaunchTestError::ConnectToTestSuite)?;
 
-    Ok(RunningTest { instance, _logs_iterator_task })
+    Ok(RunningTest { instance, logs_iterator_task })
 }
 
 async fn get_topology(

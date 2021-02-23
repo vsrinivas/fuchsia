@@ -45,16 +45,27 @@ async fn launch_test(
     test_url: &str,
 ) -> Result<(ftest::SuiteProxy, ftest_manager::SuiteControllerProxy), Error> {
     let harness = connect_test_manager().await?;
-    let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
+    let suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
+        harness: &harness,
+        test_url,
+        force_log_protocol: None,
+    })
+    .await?;
     Ok(suite_instance.into_proxies())
 }
 
 async fn run_test(
     test_url: &str,
     test_run_options: TestRunOptions,
+    force_log_protocol: Option<test_executor::LogStreamProtocol>,
 ) -> Result<(Vec<TestEvent>, Vec<String>), Error> {
     let harness = connect_test_manager().await?;
-    let mut suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
+    let mut suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
+        harness: &harness,
+        test_url,
+        force_log_protocol,
+    })
+    .await?;
 
     let log_stream = suite_instance.take_log_stream().expect("got log stream");
 
@@ -144,6 +155,7 @@ async fn launch_and_test_echo_test() {
             parallel: None,
             arguments: vec![],
         },
+        None,
     )
     .await
     .unwrap();
@@ -175,6 +187,7 @@ async fn launch_and_test_no_on_finished() {
             parallel: None,
             arguments: vec![],
         },
+        None,
     )
     .await
     .unwrap();
@@ -207,6 +220,7 @@ async fn launch_and_test_gtest_runner_sample_test() {
             parallel: None,
             arguments: vec![],
         },
+        None,
     )
     .await
     .unwrap();
@@ -253,7 +267,7 @@ async fn test_not_resolved() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn collect_isolated_logs() {
+async fn collect_isolated_logs_using_batch() {
     let test_url = "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/test-root.cm";
     let (_events, logs) = run_test(
         test_url,
@@ -262,6 +276,28 @@ async fn collect_isolated_logs() {
             parallel: None,
             arguments: vec![],
         },
+        Some(test_executor::LogStreamProtocol::BatchIterator),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        logs,
+        vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn collect_isolated_logs_using_archive_iterator() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/test-root.cm";
+    let (_events, logs) = run_test(
+        test_url,
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: None,
+            arguments: vec![],
+        },
+        Some(test_executor::LogStreamProtocol::ArchiveIterator),
     )
     .await
     .unwrap();

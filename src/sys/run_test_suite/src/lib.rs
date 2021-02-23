@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_test::Invocation,
     fidl_fuchsia_test_manager::HarnessProxy,
     fuchsia_async as fasync,
-    futures::{channel::mpsc, join, prelude::*, stream::BoxStream},
+    futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
     std::collections::HashSet,
     std::fmt,
     std::io::{self, Write},
@@ -233,7 +233,7 @@ async fn run_test_for_invocations<W: Write>(
 }
 
 pub struct TestStreams<'a> {
-    pub results: BoxStream<'a, Result<RunResult, anyhow::Error>>,
+    pub results: LocalBoxStream<'a, Result<RunResult, anyhow::Error>>,
     pub logs: LogStream,
 }
 
@@ -259,8 +259,12 @@ pub async fn run_test<'a, W: Write + Send>(
         writer: &'a mut W,
     }
 
-    let mut suite_instance =
-        test_executor::SuiteInstance::new(&test_params.harness, &test_params.test_url).await?;
+    let mut suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
+        harness: &test_params.harness,
+        test_url: &test_params.test_url,
+        force_log_protocol: None,
+    })
+    .await?;
     let log_stream = suite_instance.take_log_stream().unwrap();
 
     let args = FoldArgs {
@@ -313,7 +317,7 @@ pub async fn run_test<'a, W: Write + Send>(
         args.current_count = next_count;
         Ok(Some((result, args)))
     })
-    .boxed();
+    .boxed_local();
 
     Ok(TestStreams { logs: log_stream, results })
 }
@@ -321,7 +325,7 @@ pub async fn run_test<'a, W: Write + Send>(
 async fn collect_results(
     test_url: &str,
     count: std::num::NonZeroU16,
-    mut stream: BoxStream<'_, Result<RunResult, anyhow::Error>>,
+    mut stream: LocalBoxStream<'_, Result<RunResult, anyhow::Error>>,
 ) -> Outcome {
     let mut i: u16 = 1;
     let mut final_outcome = Outcome::Passed;

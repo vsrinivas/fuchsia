@@ -19,7 +19,12 @@ async fn run_test(
     test_run_options: TestRunOptions,
 ) -> Result<Vec<TestEvent>, Error> {
     let harness = test_runners_test_lib::connect_to_test_manager().await?;
-    let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
+    let suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
+        harness: &harness,
+        test_url,
+        force_log_protocol: None,
+    })
+    .await?;
 
     let (sender, recv) = mpsc::channel(1);
 

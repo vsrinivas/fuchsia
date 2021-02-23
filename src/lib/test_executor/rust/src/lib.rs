@@ -30,7 +30,7 @@ use {
     std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin},
 };
 
-pub use crate::diagnostics::LogStream;
+pub use crate::diagnostics::{LogStream, LogStreamProtocol};
 
 mod diagnostics;
 
@@ -349,16 +349,31 @@ pub struct SuiteInstance {
     log_stream: Option<LogStream>,
 }
 
+/// Options with which a `SuiteInstance` can be created
+pub struct SuiteInstanceOpts<'a> {
+    /// The test harness connection.
+    pub harness: &'a HarnessProxy,
+
+    /// The URL of the test to run.
+    pub test_url: &'a str,
+
+    /// Whether or not to force a specific protocol streaming for fetching logs. When unset, it'll
+    /// default to `BatchIterator` when running on a Fuchsia system or `ArchiveIterator` when
+    /// running on a host system. When running on a host system, only `ArchiveIterator` can be
+    /// used, so this option will be ignored.
+    pub force_log_protocol: Option<LogStreamProtocol>,
+}
+
 impl SuiteInstance {
     /// Launches the test and returns an encapsulated object.
-    pub async fn new(harness: &HarnessProxy, test_url: &str) -> Result<Self, anyhow::Error> {
-        if !test_url.ends_with(".cm") {
+    pub async fn new(opts: SuiteInstanceOpts<'_>) -> Result<Self, anyhow::Error> {
+        if !opts.test_url.ends_with(".cm") {
             return Err(anyhow::anyhow!(
                 "Tried to run a component as a v2 test that doesn't have a .cm extension"
             ));
         }
 
-        let (suite, controller, log_stream) = Self::launch_test_suite(harness, test_url).await?;
+        let (suite, controller, log_stream) = Self::launch_test_suite(opts).await?;
         Ok(Self { suite, controller, log_stream: Some(log_stream) })
     }
 
@@ -373,18 +388,19 @@ impl SuiteInstance {
     }
 
     async fn launch_test_suite(
-        harness: &HarnessProxy,
-        test_url: &str,
+        opts: SuiteInstanceOpts<'_>,
     ) -> Result<(SuiteProxy, SuiteControllerProxy, LogStream), anyhow::Error> {
         let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
         let (controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
-        debug!("Launching test component `{}`", test_url);
-        let (log_stream, logs_iterator_server) = LogStream::new()?;
-        let options =
-            LaunchOptions { logs_iterator: Some(logs_iterator_server), ..LaunchOptions::EMPTY };
-        harness
-            .launch_suite(&test_url, options, suite_server_end, controller_server_end)
+        debug!("Launching test component `{}`", opts.test_url);
+        let mut log_stream = diagnostics::LogStream::create(opts.force_log_protocol)?;
+        let options = LaunchOptions {
+            logs_iterator: log_stream.take_iterator_server_end(),
+            ..LaunchOptions::EMPTY
+        };
+        opts.harness
+            .launch_suite(&opts.test_url, options, suite_server_end, controller_server_end)
             .await
             .context("launch_test call failed")?
             .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {

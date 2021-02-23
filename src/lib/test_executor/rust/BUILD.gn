@@ -11,6 +11,7 @@ lib_sources = [
 ]
 
 lib_deps = [
+  "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
   "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
   "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
   "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
@@ -24,22 +25,14 @@ lib_deps = [
   "//third_party/rust_crates:linked-hash-map",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:pin-project",
+  "//third_party/rust_crates:serde_json",
   "//third_party/rust_crates:thiserror",
 ]
-
-host_lib_deps = []
-if (!is_fuchsia) {
-  host_lib_deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//third_party/rust_crates:serde_json",
-  ]
-}
 
 shared_test_deps = [
   "//third_party/rust_crates:maplit",
   "//third_party/rust_crates:matches",
   "//third_party/rust_crates:pretty_assertions",
-  "//third_party/rust_crates:serde_json",
 ]
 
 rustc_library("test_executor") {
@@ -56,8 +49,6 @@ rustc_library("test_executor") {
     ]
   }
 
-  deps += host_lib_deps
-
   test_deps = shared_test_deps + [
                 "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
                 "//src/lib/zircon/rust:fuchsia-zircon",
@@ -69,7 +60,7 @@ rustc_library("test_executor") {
 if (!is_fuchsia) {
   rustc_test("test_executor_host_unittests") {
     sources = lib_sources
-    deps = shared_test_deps + lib_deps + host_lib_deps
+    deps = shared_test_deps + lib_deps
   }
 }
 
