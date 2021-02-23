@@ -4,8 +4,9 @@
 
 import("//build/cipd.gni")
 import("//build/config.gni")
-import("//build/driver_package.gni")
+import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
 # Only including packages built inside this file.
 have_libvulkan_img =
@@ -49,21 +50,21 @@ group("magma-vulkan-no-hardware") {
   }
 }
 
-driver_package("magma-img-rgx-mt8167-firmware") {
+fuchsia_package("magma-img-rgx-mt8167-firmware") {
   # internal access is needed to get the firmware.
   if (internal_access) {
-    # The firmware is treated as a library, so the copy needs to go into the
-    # shared library toolchain directory instead of the main toolchain.
-    deps = [ ":firmware($shlib_toolchain)" ]
-    libraries = [
-      {
-        name = "firmware/rgx.fw.22.40.54.30"
-      },
-    ]
+    deps = [ ":firmware" ]
   }
 }
 
-driver_package("magma-img-rgx-mt8167") {
+if (have_prebuilt_libvulkan_img && build_libvulkan_img_rgx == []) {
+  resource("prebuilt_libvulkan_img_rgx") {
+    sources = [ prebuilt_libvulkan_img_path ]
+    outputs = [ "lib/libvulkan_img_rgx_mt8167.so" ]
+  }
+}
+
+fuchsia_package("magma-img-rgx-mt8167") {
   deps = [ "//src/graphics/drivers/msd-img-rgx/mtk:msd_img_rgx_mt8167" ]
 
   if (magma_enable_developer_build) {
@@ -72,34 +73,14 @@ driver_package("magma-img-rgx-mt8167") {
 
   if (build_libvulkan_img_rgx != []) {
     deps += build_libvulkan_img_rgx
-    libraries = [
-      {
-        name = "libvulkan_img_rgx_mt8167.so"
-      },
-    ]
   } else if (have_prebuilt_libvulkan_img) {
-    libraries = [
-      {
-        name = "libvulkan_img_rgx_mt8167.so"
-        source = rebase_path(prebuilt_libvulkan_img_path)
-      },
-    ]
+    deps += [ ":prebuilt_libvulkan_img_rgx" ]
   }
-  drivers = [
-    {
-      name = "libmsd_img_rgx_mt8167.so"
-    },
-  ]
 }
 
-driver_package("magma-img-rgx-no-hardware") {
+fuchsia_package("magma-img-rgx-no-hardware") {
   deps = [
     "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
-  ]
-  drivers = [
-    {
-      name = "libmsd_img_rgx_no_hardware.so"
-    },
   ]
 }
 
@@ -114,8 +95,8 @@ if (have_libvulkan_img) {
   }
 }
 
-copy("firmware") {
+resource("firmware") {
   sources =
       [ "//src/graphics/drivers/msd-img-rgx/mtk/firmware/rgx.fw.22.40.54.30" ]
-  outputs = [ "$root_out_dir/firmware/rgx.fw.22.40.54.30" ]
+  outputs = [ "lib/firmware/rgx.fw.22.40.54.30" ]
 }
