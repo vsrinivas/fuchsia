@@ -5,8 +5,8 @@
         "href": "https://fuchsia.googlesource.com"
     }],
     "source": {
-        "baseUrl": "https://fuchsia.googlesource.com/fuchsia/+/",
-        "package": "/",
-        "line": "#"
+        "baseUrl": "https://cs.opensource.google/fuchsia/fuchsia/+/",
+        "filenamePrefix": ":",
+        "line": ";l="
     }
 }

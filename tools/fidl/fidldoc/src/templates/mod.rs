@@ -209,9 +209,10 @@ fn sl(fidl_json: &Value, location: &Value) -> String {
     if location.get("line").is_some() {
         // Output source link with line number
         format!(
-            "{baseUrl}{tag}/{filename}{linePrefix}{lineNo}",
+            "{baseUrl}{tag}{filenamePrefix}{filename}{linePrefix}{lineNo}",
             baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
             tag = fidl_json["tag"].as_str().unwrap(),
+            filenamePrefix = fidl_json["config"]["source"]["filenamePrefix"].as_str().unwrap(),
             filename = rpf(location["filename"].as_str().unwrap()),
             linePrefix = fidl_json["config"]["source"]["line"].as_str().unwrap(),
             lineNo = location["line"]
@@ -219,9 +220,10 @@ fn sl(fidl_json: &Value, location: &Value) -> String {
     } else {
         // Output general source link, without line number
         format!(
-            "{baseUrl}{tag}/{filename}",
+            "{baseUrl}{tag}{filenamePrefix}{filename}",
             baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
             tag = fidl_json["tag"].as_str().unwrap(),
+            filenamePrefix = fidl_json["config"]["source"]["filenamePrefix"].as_str().unwrap(),
             filename = rpf(location["filename"].as_str().unwrap())
         )
     }
@@ -361,6 +363,7 @@ mod test {
             "config": json!({
                 "source": json!({
                     "baseUrl": "https://example.com/",
+                    "filenamePrefix": ":",
                     "line": "#"
                 })
             })
@@ -371,13 +374,13 @@ mod test {
             "line": 42
         });
 
-        assert_eq!(sl(&fidl_json, &location_line), "https://example.com/HEAD/sample.fidl#42");
+        assert_eq!(sl(&fidl_json, &location_line), "https://example.com/HEAD:sample.fidl#42");
 
         let location_no_line = json!({
             "filename": "foobar.fidl"
         });
 
-        assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/HEAD/foobar.fidl");
+        assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/HEAD:foobar.fidl");
 
         let location_with_folders = json!({
             "filename": "../../sdk/fidl/fuchsia.bluetooth/address.fidl"
@@ -385,7 +388,7 @@ mod test {
 
         assert_eq!(
             sl(&fidl_json, &location_with_folders),
-            "https://example.com/HEAD/sdk/fidl/fuchsia.bluetooth/address.fidl"
+            "https://example.com/HEAD:sdk/fidl/fuchsia.bluetooth/address.fidl"
         );
 
         let location_with_folders_and_line = json!({
@@ -395,7 +398,7 @@ mod test {
 
         assert_eq!(
             sl(&fidl_json, &location_with_folders_and_line),
-            "https://example.com/HEAD/sdk/fidl/fuchsia.bluetooth/address.fidl#9"
+            "https://example.com/HEAD:sdk/fidl/fuchsia.bluetooth/address.fidl#9"
         );
     }
 

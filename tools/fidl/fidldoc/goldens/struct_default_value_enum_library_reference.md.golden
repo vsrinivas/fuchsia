@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Foo {#Foo}
-*Defined in [fidl.test.structdefaultvalueenumlibraryreference/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl#5)*
+*Defined in [fidl.test.structdefaultvalueenumlibraryreferenceexample.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl;l=5)*
 
 
 
