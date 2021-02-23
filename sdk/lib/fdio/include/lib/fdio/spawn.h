@@ -69,6 +69,8 @@ __BEGIN_CDECLS
 //
 // ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
 //
+// ZX_ERR_PEER_CLOSED: Cannot connect to |fuchsia.process.Launcher|.
+//
 // Returns the result of |fdio_spawn_vmo| in all other cases.
 zx_status_t fdio_spawn(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
                        const char* const* argv, ZX_HANDLE_ACQUIRE zx_handle_t* process_out);
@@ -226,6 +228,8 @@ struct fdio_spawn_action {
 //
 // ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
 //
+// ZX_ERR_PEER_CLOSED: Cannot connect to |fuchsia.process.Launcher|.
+//
 // Returns the result of |fdio_spawn_vmo| in all other cases.
 zx_status_t fdio_spawn_etc(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
                            const char* const* argv, const char* const* environ, size_t action_count,
@@ -255,7 +259,11 @@ zx_status_t fdio_spawn_etc(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const 
 //
 // ZX_ERR_OUT_OF_RANGE: |executable_vmo| is smaller than the resolver prefix.
 //
-// ZX_ERR_INTERNAL: Cannot connect to process launcher.
+// ZX_ERR_PEER_CLOSED: Cannot connect to |fuchsia.process.Launcher|.
+//
+// ZX_ERR_INTERNAL: A dependency needed to launch the process was unavailable.
+// Most commonly this indicates a failure attempting to resolve a |#!resolve |
+// line using |fuchsia.process.Resolver|.
 //
 // May return other errors.
 zx_status_t fdio_spawn_vmo(ZX_HANDLE_USE zx_handle_t job, uint32_t flags,
