@@ -69,6 +69,9 @@ var (
 	failFastZedbootVersionMismatch bool
 	imageManifest                  string
 	mode                           bootserver.Mode
+	// TODO(ihuh): Remove when no longer used. This is not actually used
+	// anywhere. It is just here to hold the value of the --no-bind flag.
+	noBind bool
 
 	// errIncompleteTransfer represents a failure to transfer pave images
 	// to the device.
@@ -98,6 +101,7 @@ func init() {
 	flag.StringVar(&imageManifest, "images", "", "use an image manifest to pave")
 	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
 
+	flag.StringVar(&bootIpv6, "a", "", "only boot device with this IPv6 address")
 	flag.BoolVar(&allowZedbootVersionMismatch, "allow-zedboot-version-mismatch", false, "warn on zedboot version mismatch rather than fail")
 	flag.StringVar(&authorizedKeysFile, "authorized-keys", "", "use the supplied file as an authorized_keys file")
 	flag.IntVar(&tftpBlockSize, "b", 0, "tftp block size")
@@ -105,10 +109,11 @@ func init() {
 	flag.BoolVar(&bootOnce, "1", true, "only boot once, then exit")
 	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
 	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
+	// TODO(ihuh): Remove once all uses of this flag are removed. This is already true by default if -a or -n are provided.
+	flag.BoolVar(&noBind, "no-bind", false, "do not bind to bootserver port. Should be used with -a <IPV6>")
 	flag.IntVar(&windowSize, "w", 0, "tftp window size, ignored with --netboot")
 
 	//  TODO(fxbug.dev/38517): Implement the following unsupported flags.
-	flag.StringVar(&bootIpv6, "a", "", "only boot device with this IPv6 address")
 	flag.IntVar(&packetInterval, "i", defaultMicrosecBetweenPackets, "number of microseconds between packets; ignored with --tftp")
 	// We currently always default to tftp
 	flag.BoolVar(&useNetboot, "netboot", false, "use the netboot protocol")
@@ -304,11 +309,19 @@ func populateReaders(imgs []bootserver.Image) (func() error, error) {
 }
 
 func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string, authorizedKeys []byte) error {
-	addr, msg, conn, err := netutil.GetAdvertisement(ctx, nodename)
+	var addr *net.UDPAddr
+	if bootIpv6 != "" {
+		ipAddr, err := net.ResolveIPAddr("ip6", bootIpv6)
+		if err != nil {
+			return fmt.Errorf("%s: invalid ipv6 address specified", bootIpv6)
+		}
+		addr = &net.UDPAddr{IP: ipAddr.IP, Zone: ipAddr.Zone}
+	}
+	addr, msg, cleanup, err := netutil.GetAdvertisement(ctx, nodename, addr)
 	if err != nil {
 		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
 	}
-	defer conn.Close()
+	defer cleanup()
 	if msg.BootloaderVersion != bootloaderVersion {
 		mismatchErrMsg := fmt.Sprintf("WARNING: Bootserver version '%s' != remote Zedboot version '%s'", bootloaderVersion, msg.BootloaderVersion)
 		if allowZedbootVersionMismatch {

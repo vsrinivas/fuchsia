@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -88,6 +89,94 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 	}
 }
 
+func writeNetbootMessageToPort(conn *net.UDPConn, port int, message string) error {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return err
+	}
+	wrote := false
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		res := netbootMessage{}
+		copy(res.Data[:], message)
+		var resBuf bytes.Buffer
+		if err = binary.Write(&resBuf, binary.LittleEndian, res); err != nil {
+			return fmt.Errorf("binary write: %v", err)
+		}
+		_, err = conn.WriteToUDP(resBuf.Bytes(), &net.UDPAddr{IP: net.IPv6linklocalallnodes, Port: port, Zone: iface.Name})
+		if err == nil {
+			wrote = true
+		}
+	}
+	if !wrote {
+		return err
+	}
+	return nil
+}
+
+func getIpv6Addr(conn *net.UDPConn) (*net.UDPAddr, error) {
+	// Make a new connection with a separate port which `conn` will write
+	// to so that we can read the address from it.
+	conn2, err := net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero})
+	if err != nil {
+		return nil, err
+	}
+	defer conn2.Close()
+	conn2Addr, err := net.ResolveUDPAddr("udp6", conn2.LocalAddr().String())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := writeNetbootMessageToPort(conn, conn2Addr.Port, "message"); err != nil {
+		return nil, err
+	}
+
+	var b []byte
+	_, addr, err := conn2.ReadFromUDP(b)
+	return addr, err
+}
+
+func startFakeAdvertServers(t *testing.T, nodenames []string, advertPort, maxAdverts int) (*net.UDPAddr, func()) {
+	t.Helper()
+	conn, err := net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverAddr, err := getIpv6Addr(conn)
+	if err != nil {
+		conn.Close()
+		t.Fatal(err)
+	}
+	go func(t *testing.T) {
+		t.Helper()
+		i := 0
+		for {
+			if maxAdverts > 0 && i == maxAdverts {
+				break
+			}
+			i += 1
+			for _, n := range nodenames {
+				if err := writeNetbootMessageToPort(conn, advertPort, n); err != nil {
+					conn.Close()
+					break
+				}
+			}
+		}
+	}(t)
+	return serverAddr, func() {
+		t.Helper()
+		// Odds are this isn't fatal, so just log for debugging.
+		if err := conn.Close(); err != nil {
+			log.Printf("closing fake server: %v", err)
+		}
+	}
+}
+
 func TestParseBeacon(t *testing.T) {
 	c := NewClient(time.Second)
 	tests := []struct {
@@ -160,6 +249,117 @@ func TestBeacon(t *testing.T) {
 	_, err = c.Beacon()
 	if err == nil {
 		t.Errorf("Expected error for multiple Beacon() calls")
+	}
+}
+
+func TestBeaconForDevice(t *testing.T) {
+	nodename := "nodename"
+	noNodenameServers := []string{
+		"nodename=name;version=1.2.3",
+		"nodename=name2;version=1.2.3",
+	}
+	withNodenameServers := append(noNodenameServers, fmt.Sprintf("nodename=%s;version=1.2.3", nodename))
+	for _, tc := range []struct {
+		name     string
+		servers  []string
+		nodename string
+		useIpv6  bool
+		// expectedNodenames is a list of possible nodenames we expect to get a beacon for.
+		expectedNodenames []string
+		wantErr           bool
+	}{
+		{
+			name:              "found nodename",
+			servers:           withNodenameServers,
+			nodename:          nodename,
+			expectedNodenames: []string{nodename},
+			wantErr:           false,
+		},
+		{
+			name:     "cannot find nodename",
+			servers:  noNodenameServers,
+			nodename: nodename,
+			wantErr:  true,
+		},
+		{
+			name:              "returned first nodename for wildcard",
+			servers:           noNodenameServers,
+			nodename:          NodenameWildcard,
+			expectedNodenames: []string{"name", "name2"},
+			wantErr:           false,
+		},
+		{
+			name:              "found ipv6 address",
+			servers:           noNodenameServers,
+			nodename:          NodenameWildcard,
+			useIpv6:           true,
+			expectedNodenames: []string{"name", "name2"},
+			wantErr:           false,
+		},
+		{
+			name:     "cannot find ipv6 address",
+			servers:  noNodenameServers,
+			nodename: NodenameWildcard,
+			useIpv6:  true,
+			wantErr:  true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Continually send advertisements until Beacon returns.
+			maxAdverts := 0
+			if tc.wantErr {
+				// If we expect an err, we only need to send the adverts a few times
+				// before timing out. Otherwise, there will be a spam of logs for
+				// finding a beacon for the wrong nodename.
+				maxAdverts = 5
+			}
+			// Get connection with reusable port to find a port to use as the advert port.
+			conn, err := UDPConnWithReusablePort(0, "", true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			_, portStr, err := net.SplitHostPort(conn.LocalAddr().String())
+			if err != nil {
+				t.Fatal(err)
+			}
+			port, err := strconv.Atoi(portStr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serverAddr, cleanup := startFakeAdvertServers(t, tc.servers, port, maxAdverts)
+			defer cleanup()
+
+			c := newClientWithPorts(port+1, port)
+			var ipv6Address *net.UDPAddr
+			if tc.useIpv6 {
+				if tc.wantErr {
+					ipv6Address = &net.UDPAddr{IP: serverAddr.IP, Zone: "nonexistent"}
+				} else {
+					ipv6Address = serverAddr
+				}
+			}
+			_, msg, cleanup, err := c.BeaconForDevice(context.Background(), tc.nodename, ipv6Address, true)
+			defer cleanup()
+			if tc.wantErr != (err != nil) {
+				t.Errorf("expected err: %v, got: %v", tc.wantErr, err)
+			}
+			if tc.wantErr != (msg == nil) {
+				t.Errorf("expected advertisement: %v, got advertisement: %v", !tc.wantErr, msg != nil)
+			}
+			if msg != nil {
+				foundExpectedNodename := false
+				for _, n := range tc.expectedNodenames {
+					if msg.Nodename == n {
+						foundExpectedNodename = true
+						break
+					}
+				}
+				if !foundExpectedNodename {
+					t.Errorf("expected nodename from: %v, got: %s", tc.expectedNodenames, msg.Nodename)
+				}
+			}
+		})
 	}
 }
 

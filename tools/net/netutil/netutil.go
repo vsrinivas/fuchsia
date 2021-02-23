@@ -32,20 +32,24 @@ func GetNodeAddress(ctx context.Context, nodename string) (*net.UDPAddr, error) 
 }
 
 // GetAdvertisement returns the netsvc address for the given node along with
-// the advertisement message sent from the node.
-func GetAdvertisement(ctx context.Context, nodename string) (*net.UDPAddr, *netboot.Advertisement, *net.UDPConn, error) {
+// the advertisement message sent from the node. If both nodename and ipv6Addr
+// are provided, GetAdvertisement will listen for a node that matches both.
+func GetAdvertisement(ctx context.Context, nodename string, ipv6Addr *net.UDPAddr) (*net.UDPAddr, *netboot.Advertisement, func(), error) {
 	// Retry, as the netstack might not yet be up.
 	var addr *net.UDPAddr
 	var msg *netboot.Advertisement
-	var conn *net.UDPConn
+	var cleanup func()
 	var err error
 	n := netboot.NewClient(time.Second)
 	err = retry.Retry(ctx, retry.WithMaxDuration(retry.NewConstantBackoff(5*time.Second), time.Minute), func() error {
-		addr, msg, conn, err = n.BeaconForNodename(ctx, nodename, nodename != netboot.NodenameWildcard)
+		// Reuse port if a specific nodename or ip address is provided so multiple
+		// bootservers can be run at the same time to pave different devices.
+		reusable := nodename != netboot.NodenameWildcard || ipv6Addr != nil
+		addr, msg, cleanup, err = n.BeaconForDevice(ctx, nodename, ipv6Addr, reusable)
 		return err
 	}, nil)
 	if err != nil {
-		return addr, msg, conn, fmt.Errorf("%s %q: %v", constants.CannotFindNodeErrMsg, nodename, err)
+		return addr, msg, cleanup, fmt.Errorf("%s %q: %v", constants.CannotFindNodeErrMsg, nodename, err)
 	}
-	return addr, msg, conn, nil
+	return addr, msg, cleanup, nil
 }

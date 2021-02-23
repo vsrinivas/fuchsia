@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -459,11 +460,17 @@ func (n *Client) BeaconOnInterface(networkInterface string) (*net.UDPAddr, error
 	return addr, err
 }
 
-func (n *Client) beaconForNodename(ctx context.Context, conn *net.UDPConn, nodename string) (*net.UDPAddr, *Advertisement, error) {
+func (n *Client) beaconForDevice(ctx context.Context, conn *net.UDPConn, nodename string, ipv6Addr *net.UDPAddr) (*net.UDPAddr, *Advertisement, error) {
 	for {
 		addr, msg, err := n.beacon(conn)
 		if err != nil {
 			return nil, nil, err
+		}
+		if ipv6Addr != nil {
+			if !reflect.DeepEqual(addr.IP, ipv6Addr.IP) || (ipv6Addr.Zone != "" && addr.Zone != ipv6Addr.Zone) {
+				logger.Debugf(ctx, "ignoring message not from allowed address %q", ipv6Addr)
+				continue
+			}
 		}
 		if nodename == NodenameWildcard {
 			logger.Debugf(ctx, "found nodename %s", msg.Nodename)
@@ -477,15 +484,17 @@ func (n *Client) beaconForNodename(ctx context.Context, conn *net.UDPConn, noden
 	}
 }
 
-// BeaconForNodename receives the beacon packet for a particular nodename.
-func (n *Client) BeaconForNodename(ctx context.Context, nodename string, reusable bool) (*net.UDPAddr, *Advertisement, *net.UDPConn, error) {
+// BeaconForDevice receives the beacon packet for a particular device with the given nodename or ipv6 address.
+func (n *Client) BeaconForDevice(ctx context.Context, nodename string, ipv6Addr *net.UDPAddr, reusable bool) (*net.UDPAddr, *Advertisement, func(), error) {
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
 	conn, err := UDPConnWithReusablePort(n.AdvertPort, "", reusable)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, func() {}, err
 	}
-	defer conn.Close()
+	cleanup := func() {
+		conn.Close()
+	}
 
 	type response struct {
 		addr *net.UDPAddr
@@ -494,18 +503,20 @@ func (n *Client) BeaconForNodename(ctx context.Context, nodename string, reusabl
 	}
 	r := make(chan response)
 	go func() {
-		addr, msg, err := n.beaconForNodename(ctx, conn, nodename)
+		addr, msg, err := n.beaconForDevice(ctx, conn, nodename, ipv6Addr)
 		r <- response{addr, msg, err}
 	}()
 
 	select {
 	case <-ctx.Done():
-		return nil, nil, nil, fmt.Errorf("beacon waiting for results: %w", ctx.Err())
+		cleanup()
+		return nil, nil, func() {}, fmt.Errorf("beacon waiting for results: %w", ctx.Err())
 	case resp := <-r:
 		if resp.err != nil {
-			return nil, nil, nil, resp.err
+			cleanup()
+			return nil, nil, func() {}, resp.err
 		}
-		return resp.addr, resp.msg, conn, nil
+		return resp.addr, resp.msg, cleanup, nil
 	}
 }
 
