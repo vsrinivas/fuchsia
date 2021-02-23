@@ -30,6 +30,8 @@ toc:
     path: /docs/contribute/open_projects/cpp/wconversion.md
   - title: "Undefined behavior issues"
     path: /docs/contribute/open_projects/cpp/ubsan.md
+  - title: "Low-level C++ typed channel migration"
+    path: /docs/contribute/open_projects/cpp/typed_channels.md
 - title: "Logging"
   section:
   - title: "Dismantle the global log severity file"
