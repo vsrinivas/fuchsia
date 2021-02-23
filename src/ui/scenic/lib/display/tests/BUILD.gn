@@ -15,6 +15,7 @@ executable("unittests") {
     "display_controller_listener_unittest.cc",
     "display_controller_unittest.cc",
     "display_manager2_unittest.cc",
+    "display_manager_unittest.cc",
   ]
   deps = [
     ":mocks",

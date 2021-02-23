@@ -50,6 +50,8 @@ class DisplayManager {
   void OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
                          std::vector<uint64_t> removed);
   void OnClientOwnershipChange(bool has_ownership);
+  void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images,
+               uint64_t cookie);
 
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> default_display_controller_;
   std::shared_ptr<display::DisplayControllerListener> default_display_controller_listener_;

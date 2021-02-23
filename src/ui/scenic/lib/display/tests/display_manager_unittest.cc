@@ -1,19 +1,18 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include "src/ui/scenic/lib/display/display_manager.h"
 
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <zircon/syscalls.h>
 
 #include <unordered_set>
 
 #include <gtest/gtest.h>
 
-#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
-#include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -34,42 +33,30 @@ ChannelPair CreateChannelPair() {
 
 }  // namespace
 
-class DisplaySwapchainMockTest : public gtest::TestLoopFixture {
+class DisplayManagerMockTest : public gtest::TestLoopFixture {
  public:
   // |testing::Test|
   void SetUp() override {
     TestLoopFixture::SetUp();
 
     async_set_default_dispatcher(dispatcher());
-    sysmem_ = std::make_unique<Sysmem>();
     display_manager_ = std::make_unique<display::DisplayManager>([]() {});
   }
 
   // |testing::Test|
   void TearDown() override {
     display_manager_.reset();
-    sysmem_.reset();
     TestLoopFixture::TearDown();
-  }
-
-  std::unique_ptr<DisplaySwapchain> CreateSwapchain(display::Display* display) {
-    auto swapchain = std::make_unique<DisplaySwapchain>(
-        sysmem_.get(), display_manager_->default_display_controller(),
-        display_manager_->default_display_controller_listener(), 2, display, /*escher*/ nullptr);
-    display_manager_->default_display_controller_listener()->SetOnVsyncCallback(
-        fit::bind_member(swapchain.get(), &DisplaySwapchain::OnVsync));
-    return swapchain;
   }
 
   display::DisplayManager* display_manager() { return display_manager_.get(); }
   display::Display* display() { return display_manager()->default_display(); }
 
  private:
-  std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
 };
 
-TEST_F(DisplaySwapchainMockTest, AcknowledgeVsync) {
+TEST_F(DisplayManagerMockTest, DisplayVsyncCallback) {
   const uint64_t kDisplayId = 0;
   const uint32_t kDisplayWidth = 1024;
   const uint32_t kDisplayHeight = 768;
@@ -77,7 +64,7 @@ TEST_F(DisplaySwapchainMockTest, AcknowledgeVsync) {
   const size_t kAcknowledgeRate = 5;
 
   std::unordered_set<uint64_t> cookies_sent;
-  size_t num_vsync_swapchain_received = 0;
+  size_t num_vsync_display_received = 0;
   size_t num_vsync_acknowledgement = 0;
 
   auto controller_channel = CreateChannelPair();
@@ -100,10 +87,10 @@ TEST_F(DisplaySwapchainMockTest, AcknowledgeVsync) {
         ++num_vsync_acknowledgement;
       });
 
-  auto swapchain = CreateSwapchain(display());
-  swapchain->RegisterVsyncListener([&num_vsync_swapchain_received](zx::time vsync_timestamp) {
-    ++num_vsync_swapchain_received;
-  });
+  display_manager()->default_display()->SetVsyncCallback(
+      [&num_vsync_display_received](zx::time timestamp, std::vector<uint64_t> images) {
+        ++num_vsync_display_received;
+      });
 
   for (size_t vsync_id = 1; vsync_id <= kTotalVsync; vsync_id++) {
     // We only require acknowledgement for every |kAcknowledgeRate| Vsync IDs.
@@ -120,7 +107,7 @@ TEST_F(DisplaySwapchainMockTest, AcknowledgeVsync) {
     EXPECT_TRUE(RunLoopUntilIdle());
   }
 
-  EXPECT_EQ(num_vsync_swapchain_received, kTotalVsync);
+  EXPECT_EQ(num_vsync_display_received, kTotalVsync);
   EXPECT_EQ(num_vsync_acknowledgement, kTotalVsync / kAcknowledgeRate);
 }
 

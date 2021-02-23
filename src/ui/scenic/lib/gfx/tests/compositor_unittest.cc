@@ -122,14 +122,21 @@ TEST_F(CompositorTest, Validation) {
         });
     mock_display_controller.Bind(std::move(device_channel), std::move(controller_channel));
 
-    // Waits for a call to |SetDisplayColorConversion| by client.
+    // Waits for initial call to |SetOnVsyncCallback| by DisplayManager.
     mock_display_controller.WaitForMessage();
+
+    // Waits for a call to |SetDisplayColorConversion| by client.
+    EXPECT_EQ(0U, mock_display_controller.set_display_color_conversion_count());
+    mock_display_controller.WaitForMessage();
+    EXPECT_EQ(1U, mock_display_controller.set_display_color_conversion_count());
 
     // Wait for |CheckConfig|.
+    EXPECT_EQ(0U, mock_display_controller.check_config_count());
     mock_display_controller.WaitForMessage();
+    EXPECT_EQ(1U, mock_display_controller.check_config_count());
   });
 
-  ASSERT_TRUE(Apply(
+  EXPECT_TRUE(Apply(
       scenic::NewSetDisplayColorConversionCmdHACK(CompositorId, preoffsets, matrix, postoffsets)));
 
   server.join();
@@ -160,14 +167,21 @@ TEST_F(CompositorTest, ValidateMinimumRGB) {
     });
     mock_display_controller.Bind(std::move(device_channel), std::move(controller_channel));
 
-    // Waits for a call to |SetDisplayMinimumRgb| by client.
+    // Waits for initial call to |SetOnVsyncCallback| by DisplayManager.
     mock_display_controller.WaitForMessage();
+
+    // Waits for a call to |SetDisplayMinimumRgb| by client.
+    EXPECT_EQ(0U, mock_display_controller.set_minimum_rgb_count());
+    mock_display_controller.WaitForMessage();
+    EXPECT_EQ(1U, mock_display_controller.set_minimum_rgb_count());
 
     // Wait for |CheckConfig|.
+    EXPECT_EQ(0U, mock_display_controller.check_config_count());
     mock_display_controller.WaitForMessage();
+    EXPECT_EQ(1U, mock_display_controller.check_config_count());
   });
 
-  ASSERT_TRUE(Apply(scenic::NewSetDisplayMinimumRgbCmdHACK(minimum)));
+  EXPECT_TRUE(Apply(scenic::NewSetDisplayMinimumRgbCmdHACK(minimum)));
 
   server.join();
 }

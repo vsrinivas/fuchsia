@@ -33,7 +33,7 @@ void Display::Unclaim() {
   claimed_ = false;
 }
 
-void Display::OnVsync(zx::time timestamp) {
+void Display::OnVsync(zx::time timestamp, std::vector<uint64_t> images) {
   zx::duration time_since_last_vsync = timestamp - vsync_timing_->last_vsync_time();
 
   if (vsync_timing_->last_vsync_time() != zx::time(0)) {
@@ -52,6 +52,10 @@ void Display::OnVsync(zx::time timestamp) {
 
   TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp", timestamp.get(),
                 "Vsync interval", vsync_timing_->vsync_interval().get());
+
+  if (vsync_callback_) {
+    vsync_callback_(timestamp, std::move(images));
+  }
 }
 
 }  // namespace display

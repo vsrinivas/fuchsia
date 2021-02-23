@@ -55,11 +55,7 @@ DisplaySwapchain::DisplaySwapchain(
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
-    display_controller_listener_->SetOnVsyncCallback(
-        fit::bind_member(this, &DisplaySwapchain::OnVsync));
-    if ((*display_controller_)->EnableVsync(true) != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to enable vsync";
-    }
+    display_->SetVsyncCallback(fit::bind_member(this, &DisplaySwapchain::OnVsync));
 
     InitializeFrameRecords();
 
@@ -103,12 +99,7 @@ DisplaySwapchain::~DisplaySwapchain() {
     return;
   }
 
-  // Turn off operations.
-  if ((*display_controller_)->EnableVsync(false) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to disable vsync";
-  }
-
-  display_controller_listener_->SetOnVsyncCallback(nullptr);
+  display_->SetVsyncCallback(nullptr);
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
   // callback; OnFrameDropped will clean up and make the state consistent.
@@ -410,17 +401,7 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   }
 }
 
-void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
-                               std::vector<uint64_t> image_ids, uint64_t cookie) {
-  if (on_vsync_) {
-    on_vsync_(zx::time(timestamp));
-  }
-
-  // Respond acknowledgement message to display controller.
-  if (cookie) {
-    (*display_controller_)->AcknowledgeVsync(cookie);
-  }
-
+void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids) {
   if (image_ids.empty()) {
     return;
   }
@@ -440,7 +421,7 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
       record->presented = true;
 
       if (match && record->frame_timings) {
-        record->frame_timings->OnFramePresented(record->swapchain_index, zx::time(timestamp));
+        record->frame_timings->OnFramePresented(record->swapchain_index, timestamp);
       } else {
         record->frame_timings->OnFrameDropped(record->swapchain_index);
       }

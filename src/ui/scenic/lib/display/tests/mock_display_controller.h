@@ -59,6 +59,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   void set_import_event_fn(ImportEventFn fn) { import_event_fn_ = fn; }
 
   void ImportEvent(zx::event event, uint64_t event_id) override {
+    ++import_event_count_;
     if (import_event_fn_) {
       import_event_fn_(std::move(event), event_id);
     }
@@ -79,6 +80,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   void SetDisplayColorConversion(uint64_t display_id, std::array<float, 3> preoffsets,
                                  std::array<float, 9> coefficients,
                                  std::array<float, 3> postoffsets) override {
+    ++set_display_color_conversion_count_;
     if (set_display_color_conversion_fn_) {
       set_display_color_conversion_fn_(display_id, preoffsets, coefficients, postoffsets);
     }
@@ -87,6 +89,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   void SetMinimumRgb(uint8_t minimum, SetMinimumRgbCallback callback) override {
     auto result = fuchsia::hardware::display::Controller_SetMinimumRgb_Result::WithResponse(
         fuchsia::hardware::display::Controller_SetMinimumRgb_Response());
+    ++set_minimum_rgb_count_;
     if (set_minimum_rgb_fn_) {
       set_minimum_rgb_fn_(minimum);
     }
@@ -100,6 +103,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   }
 
   void SetDisplayLayers(uint64_t display_id, ::std::vector<uint64_t> layer_ids) override {
+    ++set_display_layers_count_;
     if (set_display_layers_fn_) {
       set_display_layers_fn_(display_id, layer_ids);
     }
@@ -114,6 +118,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   void SetLayerPrimaryPosition(uint64_t layer_id, fuchsia::hardware::display::Transform transform,
                                fuchsia::hardware::display::Frame src_frame,
                                fuchsia::hardware::display::Frame dest_frame) override {
+    ++set_layer_primary_position_count_;
     if (set_layer_primary_position_fn_) {
       set_layer_primary_position_fn_(layer_id, transform, src_frame, dest_frame);
     }
@@ -124,6 +129,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   void CheckConfig(bool discard, CheckConfigCallback callback) override {
     fuchsia::hardware::display::ConfigResult result = fuchsia::hardware::display::ConfigResult::OK;
     std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+    ++check_config_count_;
     if (check_config_fn_) {
       check_config_fn_(discard, &result, &ops);
     }
@@ -136,6 +142,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   }
 
   void AcknowledgeVsync(uint64_t cookie) override {
+    ++acknowledge_vsync_count_;
     if (acknowledge_vsync_fn_) {
       acknowledge_vsync_fn_(cookie);
     }
@@ -149,6 +156,17 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   fidl::Binding<fuchsia::hardware::display::Controller>& binding() { return binding_; }
 
+  // Number of times each function has been called.
+  uint32_t check_config_count() const { return check_config_count_; }
+  uint32_t set_display_color_conversion_count() const {
+    return set_display_color_conversion_count_;
+  }
+  uint32_t set_minimum_rgb_count() const { return set_minimum_rgb_count_; }
+  uint32_t import_event_count() const { return import_event_count_; }
+  uint32_t acknowledge_vsync_count() const { return acknowledge_vsync_count_; }
+  uint32_t set_display_layers_count() const { return set_display_layers_count_; }
+  uint32_t set_layer_primary_position_count() const { return set_layer_primary_position_count_; }
+
  private:
   CheckConfigFn check_config_fn_;
   SetDisplayColorConversionFn set_display_color_conversion_fn_;
@@ -157,6 +175,14 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   AcknowledgeVsyncFn acknowledge_vsync_fn_;
   SetDisplayLayersFn set_display_layers_fn_;
   SetLayerPrimaryPositionFn set_layer_primary_position_fn_;
+
+  uint32_t check_config_count_ = 0;
+  uint32_t set_display_color_conversion_count_ = 0;
+  uint32_t set_minimum_rgb_count_ = 0;
+  uint32_t import_event_count_ = 0;
+  uint32_t acknowledge_vsync_count_ = 0;
+  uint32_t set_display_layers_count_ = 0;
+  uint32_t set_layer_primary_position_count_ = 0;
 
   fidl::Binding<fuchsia::hardware::display::Controller> binding_;
   zx::channel device_channel_;

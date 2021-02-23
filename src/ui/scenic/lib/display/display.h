@@ -5,17 +5,18 @@
 #ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_
 #define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_
 
+#include <lib/fit/function.h>
+#include <lib/zx/event.h>
+#include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 #include <array>
 #include <cstdint>
 #include <vector>
 
-#include "lib/zx/event.h"
 #include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/display/color_transform.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
-#include "zircon/pixelformat.h"
 
 namespace scenic_impl {
 namespace display {
@@ -29,9 +30,8 @@ class Display {
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
   virtual ~Display() = default;
 
-  // Should be registered by DisplayCompositor to be called on every received
-  // vsync signal.
-  void OnVsync(zx::time timestamp);
+  using VsyncCallback = fit::function<void(zx::time timestamp, std::vector<uint64_t> images)>;
+  void SetVsyncCallback(VsyncCallback callback) { vsync_callback_ = std::move(callback); }
 
   std::shared_ptr<const scheduling::VsyncTiming> vsync_timing() { return vsync_timing_; }
 
@@ -50,10 +50,15 @@ class Display {
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
 
+  // Called by DisplayManager, other users of Display should probably not call this.
+  void OnVsync(zx::time timestamp, std::vector<uint64_t> images);
+
  protected:
   std::shared_ptr<scheduling::VsyncTiming> vsync_timing_;
 
  private:
+  VsyncCallback vsync_callback_;
+
   // The maximum vsync interval we would ever expect.
   static constexpr zx::duration kMaximumVsyncInterval = zx::msec(100);
 

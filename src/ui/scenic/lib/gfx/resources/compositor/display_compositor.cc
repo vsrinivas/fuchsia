@@ -14,14 +14,10 @@ const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     ResourceType::kCompositor | ResourceType::kDisplayCompositor, "DisplayCompositor"};
 
 DisplayCompositor::DisplayCompositor(Session* session, SessionId session_id, ResourceId id,
-                                     SceneGraphWeakPtr scene_graph, display::Display* display,
+                                     SceneGraphWeakPtr scene_graph,
                                      std::unique_ptr<DisplaySwapchain> display_swapchain)
     : Compositor(session, session_id, id, DisplayCompositor::kTypeInfo, std::move(scene_graph),
-                 std::move(display_swapchain)) {
-  FX_CHECK(display);
-  static_cast<DisplaySwapchain*>(this->swapchain())
-      ->RegisterVsyncListener([display](zx::time timestamp) { display->OnVsync(timestamp); });
-}
+                 std::move(display_swapchain)) {}
 
 }  // namespace gfx
 }  // namespace scenic_impl

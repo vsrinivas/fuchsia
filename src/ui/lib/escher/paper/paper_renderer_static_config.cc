@@ -12,8 +12,8 @@ const std::vector<std::string> kPaperRendererShaderPaths = {
     "shaders/paper/frag/main_ambient_light.frag",
     "shaders/paper/frag/main_point_light.frag",
     "shaders/paper/vert/main_shadow_volume_extrude.vert",
-    // TODO(jjosh): file bug to move these out of here, but still ensure they're built
-    // for the Escher shader tests.  Suitable existing bug exists?
+    // TODO(fxbug.dev/70252): the following files are not part of PaperRenderer; they're used only
+    // by tests.  They should be moved elsewhere.
     "shaders/test/main.frag",
     "shaders/test/shadow_map_generation.frag",
     "shaders/test/shadow_map_lighting.frag",

@@ -393,7 +393,15 @@ bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
       transform.matrix = command.matrix;
       transform.postoffsets = command.postoffsets;
       return swapchain->SetDisplayColorConversion(transform);
+    } else {
+      const char* msg = "ApplySetDisplayColorConversionCmd: compositor has no swapchain.";
+      session->error_reporter()->ERROR() << msg;
+      FX_LOGS(ERROR) << msg;
     }
+  } else {
+    const char* msg = "ApplySetDisplayColorConversionCmd: no compositor found.";
+    session->error_reporter()->ERROR() << msg;
+    FX_LOGS(ERROR) << msg;
   }
   return false;
 }
@@ -423,8 +431,12 @@ bool GfxCommandApplier::ApplySetDisplayMinimumRgbCmd(
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   display_controller->CheckConfig(/*discard=*/false, &result, &ops);
-  FX_CHECK(result == fuchsia::hardware::display::ConfigResult::OK)
-      << "Result: " << static_cast<uint32_t>(result);
+  if (result != fuchsia::hardware::display::ConfigResult::OK) {
+    const char* msg = "GfxCommandApplier::ApplySetDisplayMinimumRgbCmd config result: ";
+    session->error_reporter()->ERROR() << msg <<  static_cast<uint32_t>(result);
+    FX_LOGS(ERROR) << msg <<  static_cast<uint32_t>(result);
+    return false;
+  }
   return true;
 }
 
@@ -1568,9 +1580,8 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
   // a second time for the same format.
   command_context->warm_pipeline_cache_callback(swapchain->GetImageFormat());
 
-  return fxl::AdoptRef(new DisplayCompositor(session, session->id(), id,
-                                             session->session_context().scene_graph, display,
-                                             std::move(swapchain)));
+  return fxl::AdoptRef(new DisplayCompositor(
+      session, session->id(), id, session->session_context().scene_graph, std::move(swapchain)));
 }
 
 ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(

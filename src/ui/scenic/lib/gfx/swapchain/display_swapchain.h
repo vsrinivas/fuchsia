@@ -44,24 +44,10 @@ class DisplaySwapchain : public Swapchain {
       uint64_t swapchain_image_count, display::Display* display, escher::Escher* escher);
   ~DisplaySwapchain() override;
 
-  // Callback to call on every vsync. Arguments are:
-  // - the timestamp of the vsync.
-  using OnVsyncCallback = fit::function<void(zx::time vsync_timestamp)>;
-
   // |Swapchain|
   bool DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& frame_timings,
                            size_t swapchain_index, const HardwareLayerAssignment& hla,
                            DrawCallback draw_callback) override;
-
-  // Register a callback to be called on each vsync.
-  // Only allows a single listener at a time.
-  void RegisterVsyncListener(OnVsyncCallback on_vsync) {
-    FX_CHECK(!on_vsync_);
-    on_vsync_ = std::move(on_vsync);
-  }
-
-  // Remove the registered vsync listener.
-  void UnregisterVsyncListener() { on_vsync_ = nullptr; }
 
   // Passes along color correction information to the display
   bool SetDisplayColorConversion(const ColorTransform& transform) override;
@@ -123,8 +109,7 @@ class DisplaySwapchain : public Swapchain {
   // as a render target.
   void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
 
-  void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> image_ids,
-               uint64_t cookie);
+  void OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids);
 
   // Sets the config which will be used for all imported images.
   void SetImageConfig(uint64_t layer_id, int32_t width, int32_t height, zx_pixel_format_t format);
@@ -173,8 +158,6 @@ class DisplaySwapchain : public Swapchain {
 
   vk::Device device_;
   vk::Queue queue_;
-
-  OnVsyncCallback on_vsync_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };
