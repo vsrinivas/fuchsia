@@ -108,8 +108,9 @@ sdk_atom("vulkan_layers") {
   resources = vulkan_validation_layers.resources +
               image_pipe_swapchain.resources + compact_image.resources
 
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain.loadable_modules
+  loadable_modules =
+      vulkan_validation_layers.loadable_modules +
+      image_pipe_swapchain.loadable_modules + compact_image.loadable_modules
   non_sdk_deps = vulkan_validation_layers.public_deps +
                  image_pipe_swapchain.public_deps + compact_image.public_deps
 

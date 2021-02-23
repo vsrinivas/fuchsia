@@ -601,9 +601,10 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     image_info.is_external = true;
 
     auto escher_image = escher::impl::NaiveImage::AdoptVkImage(
-        escher_->resource_recycler(), image_info, vk_image, std::move(image_gpu_mem),
+        escher_->resource_recycler(), image_info, vk_image, escher::GpuMemPtr(image_gpu_mem),
         image_create_info.initialLayout);
 
+    image.gpu_mem = std::move(image_gpu_mem);
     image.texture = escher_->NewTexture(std::move(escher_image), vk::Filter::eNearest);
 
     //
@@ -690,8 +691,9 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     image_info.is_external = false;
 
     scratch_image_ = escher::impl::NaiveImage::AdoptVkImage(
-        escher_->resource_recycler(), image_info, vk_image, std::move(image_gpu_mem),
+        escher_->resource_recycler(), image_info, vk_image, escher::GpuMemPtr(image_gpu_mem),
         image_create_info.initialLayout);
+    scratch_gpu_mem_ = std::move(image_gpu_mem);
   }
 
   //
@@ -951,6 +953,21 @@ void ComputeView::RenderFrameFromPng(Image& image, png_structp png, uint32_t fra
   }
 
   frame->EndFrame(image.acquire_semaphore, nullptr);
+
+  // Trim memory after last frame whe using AFBC and compact images.
+  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER) {
+    bool last_frame = frame_number == (paint_count_ - 1);
+    if (last_frame) {
+      escher_->vk_device().waitIdle();
+      vk_device.trimCompactImageMemoryFUCHSIA(scratch_image_->vk(), scratch_gpu_mem_->base(), 0,
+                                              vk_loader);
+      for (uint32_t i = 0; i < kNumImages; ++i) {
+        auto& image = images_[i];
+        vk_device.trimCompactImageMemoryFUCHSIA(scratch_image_->vk(), image.gpu_mem->base(), 0,
+                                                vk_loader);
+      }
+    }
+  }
 }
 
 fit::promise<inspect::Inspector> ComputeView::PopulateStats() const {

@@ -21,7 +21,7 @@
 namespace compact_image {
 
 constexpr VkExtensionProperties device_extensions[] = {{
-    .extensionName = "VK_FUCHSIA_compact_image",
+    .extensionName = VK_FUCHSIA_COMPACT_IMAGE_EXTENSION_NAME,
     .specVersion = 1,
 }};
 
@@ -31,6 +31,11 @@ constexpr VkLayerProperties compact_image_layer = {
     1,
     "Compact Image",
 };
+
+constexpr uint32_t kCommitMemoryOperations =
+    VK_MEMORY_OP_PIN_BIT_FUCHSIA | VK_MEMORY_OP_COMMIT_BIT_FUCHSIA;
+constexpr uint32_t kDecommitMemoryOperations =
+    VK_MEMORY_OP_UNPIN_BIT_FUCHSIA | VK_MEMORY_OP_DECOMMIT_BIT_FUCHSIA;
 
 //
 // Shaders
@@ -112,8 +117,13 @@ inline void* __vk_find_struct(void* start, VkStructureType sType) {
 //
 class ImageCompactor {
  public:
-  ImageCompactor(VkDevice device, VkLayerDispatchTable* dispatch)
-      : device_(device), dispatch_(dispatch) {}
+  ImageCompactor(VkDevice device, VkLayerDispatchTable* dispatch,
+                 const VkPhysicalDeviceMemoryProperties& memory_properties,
+                 uint32_t memory_operation_granularity)
+      : device_(device),
+        dispatch_(dispatch),
+        memory_properties_(memory_properties),
+        memory_operation_granularity_(memory_operation_granularity) {}
 
   // Returns true if vendor ID and device ID are supported.
   static bool IsSupportedGPU(uint32_t vendor_id, uint32_t device_id) {
@@ -211,7 +221,7 @@ class ImageCompactor {
     if (result != VK_SUCCESS) {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
-    result = AllocateAndBindBufferMemory(scratch_.buffer, nullptr, pAllocator, &scratch_.memory,
+    result = AllocateAndBindBufferMemory(scratch_.buffer, nullptr, 0, pAllocator, &scratch_.memory,
                                          &scratch_.device_address);
     if (result != VK_SUCCESS) {
       return VK_ERROR_INITIALIZATION_FAILED;
@@ -241,7 +251,6 @@ class ImageCompactor {
 
   VkResult CreateImage(const VkImageCreateInfo* pCreateInfo,
                        const VkAllocationCallbacks* pAllocator, VkImage* pImage) {
-    // Early out if this is a regular image.
     if (!(pCreateInfo->flags & VK_IMAGE_CREATE_COMPACT_BIT_FUCHSIA)) {
       return dispatch_->CreateImage(device_, pCreateInfo, pAllocator, pImage);
     }
@@ -303,6 +312,22 @@ class ImageCompactor {
       dispatch_->DestroyBufferCollectionFUCHSIA(device_, collection, pAllocator);
     });
 
+    VkImageCreateInfo image_create_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = pCreateInfo->flags & ~VK_IMAGE_CREATE_COMPACT_BIT_FUCHSIA,
+        .imageType = pCreateInfo->imageType,
+        .format = pCreateInfo->format,
+        .extent = pCreateInfo->extent,
+        .mipLevels = pCreateInfo->mipLevels,
+        .arrayLayers = pCreateInfo->arrayLayers,
+        .samples = pCreateInfo->samples,
+        .tiling = pCreateInfo->tiling,
+        .usage = pCreateInfo->usage,
+        .sharingMode = pCreateInfo->sharingMode,
+        .initialLayout = pCreateInfo->initialLayout,
+    };
+
     VkSysmemColorSpaceFUCHSIA color_space = {
         .colorSpace = static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::SRGB),
     };
@@ -319,7 +344,7 @@ class ImageCompactor {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA,
         .pNext = nullptr,
         .createInfoCount = 1,
-        .pCreateInfos = pCreateInfo,
+        .pCreateInfos = &image_create_info,
         .pFormatConstraints = &image_format_constraints_info,
         .minBufferCount = 1,
         .maxBufferCount = 1,
@@ -378,6 +403,11 @@ class ImageCompactor {
     if (status != ZX_OK) {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    const char* kVmoName = "CompactImage";
+    // Set the name priority to 20 to override Vulkan.
+    constexpr uint32_t kNamePriority = 20;
+    buffer_collection->SetName(kNamePriority, kVmoName);
 
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.min_buffer_count = 1;
@@ -440,15 +470,20 @@ class ImageCompactor {
         [this, buffer, pAllocator] { dispatch_->DestroyBuffer(device_, buffer, pAllocator); });
 
     // Create memory allocation by importing the sysmem collection.
+    VkControlOpsMemoryAllocateInfoFUCHSIA control_ops_info = {
+        .sType = VK_STRUCTURE_TYPE_CONTROL_OPS_MEMORY_ALLOCATE_INFO_FUCHSIA,
+        .pNext = nullptr,
+        .supportedOperations = kCommitMemoryOperations | kDecommitMemoryOperations,
+    };
     VkImportMemoryBufferCollectionFUCHSIA import_info = {
         .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
-        .pNext = nullptr,
+        .pNext = &control_ops_info,
         .collection = collection_for_buffer,
         .index = 0,
     };
     VkDeviceMemory buffer_memory;
     VkDeviceAddress buffer_device_address;
-    result = AllocateAndBindBufferMemory(buffer, &import_info, pAllocator, &buffer_memory,
+    result = AllocateAndBindBufferMemory(buffer, &import_info, 0, pAllocator, &buffer_memory,
                                          &buffer_device_address);
     if (result != VK_SUCCESS) {
       return result;
@@ -471,8 +506,10 @@ class ImageCompactor {
 
     VkDeviceMemory aux_buffer_memory;
     VkDeviceAddress aux_buffer_device_address;
-    result = AllocateAndBindBufferMemory(aux_buffer, nullptr, pAllocator, &aux_buffer_memory,
-                                         &aux_buffer_device_address);
+    result = AllocateAndBindBufferMemory(
+        aux_buffer, nullptr,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, pAllocator,
+        &aux_buffer_memory, &aux_buffer_device_address);
     if (result != VK_SUCCESS) {
       return result;
     }
@@ -481,6 +518,17 @@ class ImageCompactor {
       dispatch_->FreeMemory(device_, aux_buffer_memory, pAllocator);
     });
 
+    void* aux_buffer_data = nullptr;
+    dispatch_->MapMemory(device_, aux_buffer_memory, 0, VK_WHOLE_SIZE, 0, &aux_buffer_data);
+    if (result != VK_SUCCESS) {
+      return result;
+    }
+    *reinterpret_cast<uint32_t*>(aux_buffer_data) =
+        buffer_collection_info.settings.buffer_settings.size_bytes;
+
+    auto cleanup_aux_buffer_data = fbl::MakeAutoCall(
+        [this, aux_buffer_memory] { dispatch_->UnmapMemory(device_, aux_buffer_memory); });
+
     // Create image after successfully initializing extra state.
     VkBufferCollectionImageCreateInfoFUCHSIA collection_image_create_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
@@ -488,21 +536,7 @@ class ImageCompactor {
         .collection = collection,
         .index = 0,
     };
-    VkImageCreateInfo image_create_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = &collection_image_create_info,
-        .flags = pCreateInfo->flags & ~VK_IMAGE_CREATE_COMPACT_BIT_FUCHSIA,
-        .imageType = pCreateInfo->imageType,
-        .format = pCreateInfo->format,
-        .extent = pCreateInfo->extent,
-        .mipLevels = pCreateInfo->mipLevels,
-        .arrayLayers = pCreateInfo->arrayLayers,
-        .samples = pCreateInfo->samples,
-        .tiling = pCreateInfo->tiling,
-        .usage = pCreateInfo->usage,
-        .sharingMode = pCreateInfo->sharingMode,
-        .initialLayout = pCreateInfo->initialLayout,
-    };
+    image_create_info.pNext = &collection_image_create_info;
     result = dispatch_->CreateImage(device_, &image_create_info, pAllocator, pImage);
     if (result != VK_SUCCESS) {
       return result;
@@ -517,22 +551,24 @@ class ImageCompactor {
     cleanup_buffer_memory.cancel();
     cleanup_aux_buffer.cancel();
     cleanup_aux_buffer_memory.cancel();
+    cleanup_aux_buffer_data.cancel();
 
     compact_images_.insert(
         {*pImage, CompactImage{
                       .collection = collection,
                       .buffer = Buffer{.buffer = buffer,
                                        .memory = buffer_memory,
-                                       .device_address = buffer_device_address},
+                                       .device_address = buffer_device_address,
+                                       .data = nullptr},
                       .aux = Buffer{.buffer = aux_buffer,
                                     .memory = aux_buffer_memory,
-                                    .device_address = aux_buffer_device_address},
+                                    .device_address = aux_buffer_device_address,
+                                    .data = aux_buffer_data},
                       .allocation_size = buffer_collection_info.settings.buffer_settings.size_bytes,
                       .width_in_superblocks = width_in_superblocks,
                       .height_in_superblocks = height_in_superblocks,
-                      .compact_memory_bound = false,
                   }});
-    return result;
+    return VK_SUCCESS;
   }
 
   void DestroyImage(VkImage image, const VkAllocationCallbacks* pAllocator) {
@@ -541,6 +577,7 @@ class ImageCompactor {
       dispatch_->DestroyBuffer(device_, it->second.buffer.buffer, pAllocator);
       dispatch_->FreeMemory(device_, it->second.buffer.memory, pAllocator);
       dispatch_->DestroyBuffer(device_, it->second.aux.buffer, pAllocator);
+      dispatch_->UnmapMemory(device_, it->second.aux.memory);
       dispatch_->FreeMemory(device_, it->second.aux.memory, pAllocator);
       dispatch_->DestroyBufferCollectionFUCHSIA(device_, it->second.collection, pAllocator);
       compact_images_.erase(it);
@@ -559,9 +596,10 @@ class ImageCompactor {
       pMemoryRequirements->memoryRequirements.memoryTypeBits &= properties.memoryTypeBits;
       auto dedicated_requirements = static_cast<VkMemoryDedicatedRequirements*>(
           vk_find_struct(pMemoryRequirements, MEMORY_DEDICATED_REQUIREMENTS));
-      // Add dedicated allocation preference as required for compact images.
+      // Add dedicated allocation requirement for compact images.
       if (dedicated_requirements) {
         dedicated_requirements->prefersDedicatedAllocation = VK_TRUE;
+        dedicated_requirements->requiresDedicatedAllocation = VK_TRUE;
       }
     }
   }
@@ -595,53 +633,7 @@ class ImageCompactor {
         .allocationSize = pAllocateInfo->allocationSize,
         .memoryTypeIndex = pAllocateInfo->memoryTypeIndex,
     };
-    VkResult result = dispatch_->AllocateMemory(device_, &allocation_info, pAllocator, pMemory);
-    if (result != VK_SUCCESS) {
-      return result;
-    }
-
-    dedicated_image_memory_.insert({*pMemory, dedicated_alloc_info->image});
-    return VK_SUCCESS;
-  }
-
-  void FreeMemory(VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator) {
-    dispatch_->FreeMemory(device_, memory, pAllocator);
-    dedicated_image_memory_.erase(memory);
-  }
-
-  VkResult BindImageMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) {
-    VkResult result = dispatch_->BindImageMemory(device_, image, memory, memoryOffset);
-    if (result != VK_SUCCESS) {
-      return result;
-    }
-
-    // Activate packing for compact image if bound to buffer collection
-    // backed memory.
-    auto it = compact_images_.find(image);
-    if (it != compact_images_.end()) {
-      it->second.compact_memory_bound = IsDedicatedImageMemory(memory, image);
-    }
-
-    return VK_SUCCESS;
-  }
-
-  VkResult BindImageMemory2(uint32_t bindInfoCount, const VkBindImageMemoryInfo* pBindInfos) {
-    VkResult result = dispatch_->BindImageMemory2(device_, bindInfoCount, pBindInfos);
-    if (result != VK_SUCCESS) {
-      return result;
-    }
-
-    for (uint32_t i = 0; i < bindInfoCount; ++i) {
-      // Activate packing for compact image if bound to buffer collection
-      // backed memory.
-      auto it = compact_images_.find(pBindInfos[i].image);
-      if (it != compact_images_.end()) {
-        it->second.compact_memory_bound =
-            IsDedicatedImageMemory(pBindInfos[i].memory, pBindInfos[i].image);
-      }
-    }
-
-    return VK_SUCCESS;
+    return dispatch_->AllocateMemory(device_, &allocation_info, pAllocator, pMemory);
   }
 
   VkResult BeginCommandBuffer(VkCommandBuffer commandBuffer,
@@ -712,16 +704,16 @@ class ImageCompactor {
     if (!pack_image_memory_barriers.empty() || !pack_image_memory_barriers.empty()) {
       auto& state = command_buffer_state_[commandBuffer];
 
-      // Emit commands for image barriers that use pack shader.
-      for (auto& barrier : pack_image_memory_barriers) {
-        PackingPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, barrier,
-                               pack_pipeline_);
-      }
-
       // Emit commands for image barriers that use unpack shader.
       for (auto& barrier : unpack_image_memory_barriers) {
         PackingPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, barrier,
                                unpack_pipeline_);
+      }
+
+      // Emit commands for image barriers that use pack shader.
+      for (auto& barrier : pack_image_memory_barriers) {
+        PackingPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, barrier,
+                               pack_pipeline_);
       }
 
       // Restore compute bind point if needed.
@@ -738,10 +730,11 @@ class ImageCompactor {
     }
   }
 
-  void CmdWriteCompactImageMemorySize(VkCommandBuffer commandBuffer, VkImage image,
-                                      VkImageLayout imageLayout, VkBuffer buffer,
-                                      VkDeviceSize bufferOffset,
-                                      const VkImageSubresourceLayers* subresourceLayers) {
+  // TODO(reveman): Remove deprecated API.
+  void CmdWriteCompactImageMemorySizeDEPRECATED(VkCommandBuffer commandBuffer, VkImage image,
+                                                VkImageLayout imageLayout, VkBuffer buffer,
+                                                VkDeviceSize bufferOffset,
+                                                const VkImageSubresourceLayers* subresourceLayers) {
     FX_CHECK(compact_images_.find(image) != compact_images_.end());
     auto& compact_image = compact_images_[image];
 
@@ -751,7 +744,7 @@ class ImageCompactor {
     FX_CHECK(subresourceLayers->baseArrayLayer == 0);
     FX_CHECK(subresourceLayers->layerCount == 1);
 
-    if (IsCompactLayout(imageLayout) && compact_image.compact_memory_bound) {
+    if (IsCompactLayout(imageLayout)) {
       VkBufferCopy region = {
           .srcOffset = 0,
           .dstOffset = bufferOffset,
@@ -764,20 +757,37 @@ class ImageCompactor {
     }
   }
 
+  VkResult TrimCompactImageDeviceMemory(VkImage image, VkDeviceMemory memory,
+                                        VkDeviceSize memoryOffset) {
+    FX_CHECK(compact_images_.find(image) != compact_images_.end());
+    auto& compact_image = compact_images_[image];
+
+    VkMemoryRangeFUCHSIA range = {
+        .memory = memory,
+        .offset = RoundUp(*reinterpret_cast<uint32_t*>(compact_image.aux.data),
+                          memory_operation_granularity_) +
+                  memoryOffset,
+        .size = VK_WHOLE_SIZE,
+    };
+    return dispatch_->ModifyMemoryRangesFUCHSIA(
+        device_, VK_MEMORY_OP_UNPIN_BIT_FUCHSIA | VK_MEMORY_OP_DECOMMIT_BIT_FUCHSIA, 1, &range,
+        nullptr);
+  }
+
  private:
   struct Buffer {
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkBuffer buffer;
+    VkDeviceMemory memory;
     VkDeviceAddress device_address;
+    void* data;
   };
   struct CompactImage {
-    VkBufferCollectionFUCHSIA collection = VK_NULL_HANDLE;
+    VkBufferCollectionFUCHSIA collection;
     Buffer buffer;
     Buffer aux;
     VkDeviceSize allocation_size;
     uint32_t width_in_superblocks;
     uint32_t height_in_superblocks;
-    bool compact_memory_bound;
   };
   struct CommandBufferState {
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -819,15 +829,7 @@ class ImageCompactor {
 
   bool IsCompactImage(VkImage image) const {
     auto it = compact_images_.find(image);
-    return it != compact_images_.end() && it->second.compact_memory_bound;
-  }
-
-  bool IsDedicatedImageMemory(VkDeviceMemory memory, VkImage image) const {
-    auto it = dedicated_image_memory_.find(memory);
-    if (it == dedicated_image_memory_.end()) {
-      return false;
-    }
-    return it->second == image;
+    return it != compact_images_.end();
   }
 
   VkResult CreatePipelineLayout(uint32_t push_constant_block_size,
@@ -902,12 +904,23 @@ class ImageCompactor {
   }
 
   VkResult AllocateAndBindBufferMemory(VkBuffer buffer, const void* pNext,
+                                       VkMemoryPropertyFlags memory_flags,
                                        const VkAllocationCallbacks* pAllocator,
                                        VkDeviceMemory* pMemory, VkDeviceAddress* pDeviceAddress) {
     VkMemoryRequirements memory_requirements;
     dispatch_->GetBufferMemoryRequirements(device_, buffer, &memory_requirements);
 
-    uint32_t memory_type_index = __builtin_ctz(memory_requirements.memoryTypeBits);
+    uint32_t memory_type_index = VK_MAX_MEMORY_TYPES;
+    for (uint32_t i = 0; i < memory_properties_.memoryTypeCount; i++) {
+      if ((memory_requirements.memoryTypeBits & (1 << i)) == 0) {
+        continue;
+      }
+      if ((memory_properties_.memoryTypes[i].propertyFlags & memory_flags) == memory_flags) {
+        memory_type_index = i;
+        break;
+      }
+    }
+    FX_CHECK(memory_type_index != VK_MAX_MEMORY_TYPES);
     VkMemoryAllocateInfo allocate_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = pNext,
@@ -985,7 +998,7 @@ class ImageCompactor {
 
     // Image and buffer barriers to ensure that memory written by
     // compute shader is visible to destination stage.
-    VkImageMemoryBarrier post_image_barrier = {
+    VkImageMemoryBarrier post_image_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .pNext = nullptr,
         .srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
@@ -995,25 +1008,28 @@ class ImageCompactor {
         .image = barrier.image,
         .subresourceRange = barrier.subresourceRange,
     };
-    VkBufferMemoryBarrier post_buffer_barrier = {
+    VkBufferMemoryBarrier post_buffer_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
         .pNext = nullptr,
         .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_HOST_READ_BIT,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .buffer = compact_image.aux.buffer,
         .offset = 0,
         .size = 4,
     };
+
     dispatch_->CmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dstStageMask,
                                   dependencyFlags | VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1,
-                                  &post_buffer_barrier, 1, &post_image_barrier);
+                                  &post_buffer_memory_barrier, 1, &post_image_memory_barrier);
   }
 
   VkDevice device_;
   VkLayerDispatchTable* dispatch_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  VkPhysicalDeviceMemoryProperties memory_properties_;
+  uint32_t memory_operation_granularity_;
   Buffer scratch_;
   VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
   VkPipeline pack_pipeline_ = VK_NULL_HANDLE;
@@ -1118,6 +1134,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
 
   bool khr_buffer_device_address = false;
   bool fuchsia_buffer_collection_extension_available = false;
+  bool fuchsia_memory_control_extension_available = false;
   uint32_t device_extension_count;
   VkResult result = gpu_layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
       gpu, nullptr, &device_extension_count, nullptr);
@@ -1135,6 +1152,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
                     device_extensions[i].extensionName)) {
           fuchsia_buffer_collection_extension_available = true;
         }
+        if (!strcmp(VK_FUCHSIA_MEMORY_CONTROL_EXTENSION_NAME, device_extensions[i].extensionName)) {
+          fuchsia_memory_control_extension_available = true;
+        }
       }
     }
   }
@@ -1146,12 +1166,48 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
     fprintf(stderr, "Device extension not available: %s\n",
             VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   }
-  if (!khr_buffer_device_address || !fuchsia_buffer_collection_extension_available) {
+  if (!fuchsia_memory_control_extension_available) {
+    fprintf(stderr, "Device extension not available: %s\n",
+            VK_FUCHSIA_MEMORY_CONTROL_EXTENSION_NAME);
+  }
+  if (!khr_buffer_device_address || !fuchsia_buffer_collection_extension_available ||
+      !fuchsia_memory_control_extension_available) {
     return VK_ERROR_INITIALIZATION_FAILED;
   }
 
-  VkPhysicalDeviceProperties gpu_properties;
-  gpu_layer_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &gpu_properties);
+  VkPhysicalDeviceMemoryControlPropertiesFUCHSIA gpu_memory_control_properties = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_CONTROL_PROPERTIES_FUCHSIA,
+      .pNext = nullptr,
+  };
+  VkPhysicalDeviceProperties2 gpu_properties = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+      .pNext = &gpu_memory_control_properties,
+  };
+  gpu_layer_data->instance_dispatch_table->GetPhysicalDeviceProperties2(gpu, &gpu_properties);
+
+  if (!ImageCompactor::IsSupportedGPU(gpu_properties.properties.vendorID,
+                                      gpu_properties.properties.deviceID)) {
+    fprintf(stderr, "Unsupported GPU for image compactor\n");
+    return VK_ERROR_INITIALIZATION_FAILED;
+  }
+
+  if ((gpu_memory_control_properties.startMemoryOperations & kCommitMemoryOperations) !=
+      kCommitMemoryOperations) {
+    fprintf(stderr, "Start memory operations missing: %d\n",
+            ~gpu_memory_control_properties.startMemoryOperations & kCommitMemoryOperations);
+    return VK_ERROR_INITIALIZATION_FAILED;
+  }
+
+  if ((gpu_memory_control_properties.endMemoryOperations & kDecommitMemoryOperations) !=
+      kDecommitMemoryOperations) {
+    fprintf(stderr, "End memory operations missing: %d\n",
+            ~gpu_memory_control_properties.endMemoryOperations & kDecommitMemoryOperations);
+    return VK_ERROR_INITIALIZATION_FAILED;
+  }
+
+  VkPhysicalDeviceMemoryProperties gpu_memory_properties;
+  gpu_layer_data->instance_dispatch_table->GetPhysicalDeviceMemoryProperties(
+      gpu, &gpu_memory_properties);
 
   VkDeviceCreateInfo create_info = *pCreateInfo;
   std::vector<const char*> enabled_extensions;
@@ -1160,6 +1216,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   }
   enabled_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_FUCHSIA_MEMORY_CONTROL_EXTENSION_NAME);
   create_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extensions.size());
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
@@ -1191,14 +1248,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   layer_init_device_dispatch_table(*pDevice, device_layer_data->device_dispatch_table.get(),
                                    fpGetDeviceProcAddr);
 
-  // Create image compactor if GPU is supported.
-  if (ImageCompactor::IsSupportedGPU(gpu_properties.vendorID, gpu_properties.deviceID)) {
-    device_layer_data->compactor =
-        std::make_unique<ImageCompactor>(*pDevice, device_layer_data->device_dispatch_table.get());
-    return device_layer_data->compactor->Init(fpGetDeviceProcAddr, pAllocator);
-  }
-
-  return VK_SUCCESS;
+  // Create and initialize image compactor.
+  device_layer_data->compactor = std::make_unique<ImageCompactor>(
+      *pDevice, device_layer_data->device_dispatch_table.get(), gpu_memory_properties,
+      gpu_memory_control_properties.memoryOperationGranularity);
+  return device_layer_data->compactor->Init(fpGetDeviceProcAddr, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator) {
@@ -1257,39 +1311,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device,
   FX_CHECK(compactor);
 
   return compactor->AllocateMemory(pAllocateInfo, pAllocator, pMemory);
-}
-
-VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory,
-                                      const VkAllocationCallbacks* pAllocator) {
-  dispatch_key device_key = get_dispatch_key(device);
-  LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
-  ImageCompactor* compactor = device_layer_data->compactor.get();
-
-  FX_CHECK(compactor);
-
-  compactor->FreeMemory(memory, pAllocator);
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image,
-                                               VkDeviceMemory memory, VkDeviceSize memoryOffset) {
-  dispatch_key device_key = get_dispatch_key(device);
-  LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
-  ImageCompactor* compactor = device_layer_data->compactor.get();
-
-  FX_CHECK(compactor);
-
-  return compactor->BindImageMemory(image, memory, memoryOffset);
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory2(VkDevice device, uint32_t bindInfoCount,
-                                                const VkBindImageMemoryInfo* pBindInfos) {
-  dispatch_key device_key = get_dispatch_key(device);
-  LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
-  ImageCompactor* compactor = device_layer_data->compactor.get();
-
-  FX_CHECK(compactor);
-
-  return compactor->BindImageMemory2(bindInfoCount, pBindInfos);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
@@ -1361,8 +1382,20 @@ VKAPI_ATTR void VKAPI_CALL CmdWriteCompactImageMemorySizeFUCHSIA(
   dispatch_key device_key = get_dispatch_key(commandBuffer);
   LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
 
-  device_layer_data->compactor->CmdWriteCompactImageMemorySize(
+  device_layer_data->compactor->CmdWriteCompactImageMemorySizeDEPRECATED(
       commandBuffer, image, imageLayout, buffer, bufferOffset, subresourceLayers);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL TrimCompactImageDeviceMemoryFUCHSIA(VkDevice device, VkImage image,
+                                                                   VkDeviceMemory memory,
+                                                                   VkDeviceSize memoryOffset) {
+  dispatch_key device_key = get_dispatch_key(device);
+  LayerData* device_layer_data = GetLayerDataPtr(device_key, layer_data_map);
+  ImageCompactor* compactor = device_layer_data->compactor.get();
+
+  FX_CHECK(compactor);
+
+  return compactor->TrimCompactImageDeviceMemory(image, memory, memoryOffset);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(uint32_t* pCount,
@@ -1438,15 +1471,6 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
   if (!strcmp(name, "AllocateMemory")) {
     return reinterpret_cast<PFN_vkVoidFunction>(AllocateMemory);
   }
-  if (!strcmp(name, "FreeMemory")) {
-    return reinterpret_cast<PFN_vkVoidFunction>(FreeMemory);
-  }
-  if (!strcmp(name, "BindImageMemory")) {
-    return reinterpret_cast<PFN_vkVoidFunction>(BindImageMemory);
-  }
-  if (!strcmp(name, "BindImageMemory2")) {
-    return reinterpret_cast<PFN_vkVoidFunction>(BindImageMemory2);
-  }
   if (!strcmp(name, "BeginCommandBuffer")) {
     return reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer);
   }
@@ -1458,6 +1482,9 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
   }
   if (!strcmp(name, "CmdWriteCompactImageMemorySizeFUCHSIA")) {
     return reinterpret_cast<PFN_vkVoidFunction>(CmdWriteCompactImageMemorySizeFUCHSIA);
+  }
+  if (!strcmp(name, "TrimCompactImageDeviceMemoryFUCHSIA")) {
+    return reinterpret_cast<PFN_vkVoidFunction>(TrimCompactImageDeviceMemoryFUCHSIA);
   }
   if (!strcmp("EnumerateDeviceExtensionProperties", name)) {
     return reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties);

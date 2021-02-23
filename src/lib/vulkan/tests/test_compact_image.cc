@@ -92,7 +92,7 @@ TEST(CompactImage, DeviceExtensions) {
   EXPECT_EQ(VK_SUCCESS, vkCreateDevice(physical_devices[0], &device_create_info, nullptr, &device));
 }
 
-TEST(CompactImage, CmdWriteCompactImageMemorySizeFUCHSIA) {
+TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   VkInstanceCreateInfo instance_info = {
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pNext = nullptr,
@@ -151,6 +151,10 @@ TEST(CompactImage, CmdWriteCompactImageMemorySizeFUCHSIA) {
       reinterpret_cast<PFN_vkCmdWriteCompactImageMemorySizeFUCHSIA>(
           vkGetDeviceProcAddr(device, "vkCmdWriteCompactImageMemorySizeFUCHSIA"));
   EXPECT_TRUE(f_vkCmdWriteCompactImageMemorySizeFUCHSIA);
+  PFN_vkTrimCompactImageDeviceMemoryFUCHSIA f_vkTrimCompactImageDeviceMemoryFUCHSIA =
+      reinterpret_cast<PFN_vkTrimCompactImageDeviceMemoryFUCHSIA>(
+          vkGetDeviceProcAddr(device, "vkTrimCompactImageDeviceMemoryFUCHSIA"));
+  EXPECT_TRUE(f_vkTrimCompactImageDeviceMemoryFUCHSIA);
 
   uint32_t width = 600;
   uint32_t height = 1024;
@@ -352,23 +356,6 @@ TEST(CompactImage, CmdWriteCompactImageMemorySizeFUCHSIA) {
   f_vkCmdWriteCompactImageMemorySizeFUCHSIA(
       command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 4, &subresource_layers);
 
-  VkImageMemoryBarrier transfer_src_general_image_memory_barrier = {
-      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-      .pNext = nullptr,
-      .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
-      .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-      .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-      .image = image,
-      .subresourceRange = subresource_range,
-  };
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0,
-                       nullptr, 1, &transfer_src_general_image_memory_barrier);
-
-  f_vkCmdWriteCompactImageMemorySizeFUCHSIA(
-      command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer, 8, &subresource_layers);
-
   EXPECT_EQ(VK_SUCCESS, vkEndCommandBuffer(command_buffer));
 
   VkQueue queue;
@@ -396,7 +383,9 @@ TEST(CompactImage, CmdWriteCompactImageMemorySizeFUCHSIA) {
   EXPECT_EQ(0u, transfer_src_layout_size & 0xff000000);
   EXPECT_NE(0u, transfer_src_layout_size);
 
-  uint32_t general_layout_size = reinterpret_cast<uint32_t*>(pData)[2];
-  EXPECT_EQ(0u, general_layout_size & 0xff000000);
-  EXPECT_NE(0u, general_layout_size);
+  // Trim device memory to compact size. This will reduce the memory
+  // committment to what is required for the current image layout.
+  f_vkTrimCompactImageDeviceMemoryFUCHSIA(device, image, image_memory, 0);
+  // TODO(reveman): Querying commitment for memory when
+  // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT is supported.
 }

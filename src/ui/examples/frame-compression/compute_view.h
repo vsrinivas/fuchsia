@@ -35,6 +35,7 @@ class ComputeView : public BaseView {
     zx::event acquire_fence;
     zx::event release_fence;
     uint32_t image_id;
+    escher::GpuMemPtr gpu_mem;
     escher::TexturePtr texture;
     escher::BufferPtr buffer;
     escher::BufferPtr aux_buffer;
@@ -67,6 +68,7 @@ class ComputeView : public BaseView {
   Image images_[kNumImages];
   std::vector<png_bytep> row_pointers_;
   escher::ImagePtr scratch_image_;
+  escher::GpuMemPtr scratch_gpu_mem_;
   vk::Buffer scratch_buffer_;
   vk::PipelineLayout pipeline_layout_;
   vk::Pipeline pipeline_;
