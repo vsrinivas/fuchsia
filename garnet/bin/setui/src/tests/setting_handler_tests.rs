@@ -120,9 +120,9 @@ async fn test_spawn() {
     // Exercises failed spawn of a simple controller.
     verify_handle!(Handler::<FailController>::spawn);
     // Exercises successful spawn of a data controller.
-    verify_handle!(DataHandler::<DoNotDisturbInfo, SucceedDataController<DoNotDisturbInfo>>::spawn);
+    verify_handle!(DataHandler::<SucceedDataController<DoNotDisturbInfo>>::spawn);
     // Exercises failed spawn of a data controller.
-    verify_handle!(DataHandler::<DoNotDisturbInfo, FailDataController<DoNotDisturbInfo>>::spawn);
+    verify_handle!(DataHandler::<FailDataController<DoNotDisturbInfo>>::spawn);
 }
 
 #[fuchsia_async::run_until_stalled(test)]

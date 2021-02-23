@@ -7,54 +7,42 @@
 
 use {
     crate::accessibility::accessibility_controller::AccessibilityController,
-    crate::accessibility::types::AccessibilityInfo,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
     crate::audio::policy::State,
-    crate::audio::types::AudioInfo,
     crate::base::SettingType,
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
     crate::display::light_sensor_controller::LightSensorController,
-    crate::display::types::DisplayInfo,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
-    crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::factory_reset::factory_reset_controller::FactoryResetController,
-    crate::factory_reset::types::FactoryResetInfo,
     crate::handler::base::GenerateHandler,
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::setting_handler::persist::Handler as DataHandler,
-    crate::handler::setting_handler::Handler,
     crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::handler::setting_proxy::SettingProxy,
     crate::input::input_controller::InputController,
-    crate::input::types::InputInfoSources,
     crate::inspect::inspect_broker::InspectBroker,
     crate::inspect::policy_inspect_broker::PolicyInspectBroker,
     crate::internal::core::message as core_message,
     crate::intl::intl_controller::IntlController,
-    crate::intl::types::IntlInfo,
     crate::light::light_controller::LightController,
-    crate::light::types::LightInfo,
     crate::monitor::base as monitor_base,
     crate::night_mode::night_mode_controller::NightModeController,
-    crate::night_mode::types::NightModeInfo,
     crate::policy::base::PolicyType,
     crate::policy::policy_handler,
     crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
     crate::policy::policy_proxy::PolicyProxy,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
-    crate::privacy::types::PrivacyInfo,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
-    crate::setup::types::SetupInfo,
     crate::switchboard::switchboard::SwitchboardBuilder,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::{
@@ -71,6 +59,7 @@ use {
     fuchsia_zircon::DurationNum,
     futures::lock::Mutex,
     futures::StreamExt,
+    handler::setting_handler::Handler,
     serde::Deserialize,
     std::collections::{HashMap, HashSet},
     std::sync::atomic::AtomicU64,
@@ -531,7 +520,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Accessibility,
             AccessibilityController,
-            DataHandler::<AccessibilityInfo, AccessibilityController>::spawn
+            DataHandler::<AccessibilityController>::spawn
         );
         // Account
         register_handler!(
@@ -549,7 +538,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Audio,
             AudioController,
-            DataHandler::<AudioInfo, AudioController>::spawn
+            DataHandler::<AudioController>::spawn
         );
         // Device
         register_handler!(
@@ -568,9 +557,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::Display,
             DisplayController,
             if controller_flags.contains(&ControllerFlag::ExternalBrightnessControl) {
-                DataHandler::<DisplayInfo, DisplayController<ExternalBrightnessControl>>::spawn
+                DataHandler::<DisplayController<ExternalBrightnessControl>>::spawn
             } else {
-                DataHandler::<DisplayInfo, DisplayController>::spawn
+                DataHandler::<DisplayController>::spawn
             }
         );
         // Light
@@ -580,7 +569,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Light,
             LightController,
-            DataHandler::<LightInfo, LightController>::spawn
+            DataHandler::<LightController>::spawn
         );
         // Light sensor
         register_handler!(
@@ -598,7 +587,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Input,
             InputController,
-            DataHandler::<InputInfoSources, InputController>::spawn
+            DataHandler::<InputController>::spawn
         );
         // Intl
         register_handler!(
@@ -607,7 +596,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Intl,
             IntlController,
-            DataHandler::<IntlInfo, IntlController>::spawn
+            DataHandler::<IntlController>::spawn
         );
         // Do not disturb
         register_handler!(
@@ -616,7 +605,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::DoNotDisturb,
             DoNotDisturbController,
-            DataHandler::<DoNotDisturbInfo, DoNotDisturbController>::spawn
+            DataHandler::<DoNotDisturbController>::spawn
         );
         // Factory Reset
         register_handler!(
@@ -625,7 +614,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::FactoryReset,
             FactoryResetController,
-            DataHandler::<FactoryResetInfo, FactoryResetController>::spawn
+            DataHandler::<FactoryResetController>::spawn
         );
         // Night mode
         register_handler!(
@@ -634,7 +623,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::NightMode,
             NightModeController,
-            DataHandler::<NightModeInfo, NightModeController>::spawn
+            DataHandler::<NightModeController>::spawn
         );
         // Privacy
         register_handler!(
@@ -643,7 +632,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Privacy,
             PrivacyController,
-            DataHandler::<PrivacyInfo, PrivacyController>::spawn
+            DataHandler::<PrivacyController>::spawn
         );
         // Setup
         register_handler!(
@@ -652,7 +641,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             factory_handle,
             SettingType::Setup,
             SetupController,
-            DataHandler::<SetupInfo, SetupController>::spawn
+            DataHandler::<SetupController>::spawn
         );
     }
 }

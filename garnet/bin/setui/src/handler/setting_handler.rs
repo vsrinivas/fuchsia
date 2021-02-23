@@ -441,19 +441,11 @@ pub mod persist {
         client.write(value, write_through).await
     }
 
-    pub struct Handler<
-        S: Storage + 'static,
-        C: controller::Create + super::controller::Handle + Send + Sync + 'static,
-    > {
+    pub struct Handler<C: controller::Create + super::controller::Handle + Send + Sync + 'static> {
         _data: PhantomData<C>,
-        _storage: PhantomData<S>,
     }
 
-    impl<
-            S: Storage + 'static,
-            C: controller::Create + super::controller::Handle + Send + Sync + 'static,
-        > Handler<S, C>
-    {
+    impl<C: controller::Create + super::controller::Handle + Send + Sync + 'static> Handler<C> {
         pub fn spawn<F: StorageFactory + 'static>(
             context: Context<F>,
         ) -> BoxFuture<'static, ControllerGenerateResult> {
