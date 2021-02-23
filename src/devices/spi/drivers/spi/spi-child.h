@@ -53,19 +53,6 @@ class SpiChild : public SpiChildType,
                 ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer rx_buffer,
                 ExchangeCompleter::Sync& completer) override;
 
-  void RegisterVmoNew(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
-                      ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoRight rights,
-                      RegisterVmoNewCompleter::Sync& completer) override;
-  void UnregisterVmoNew(uint32_t vmo_id, UnregisterVmoNewCompleter::Sync& completer) override;
-
-  void TransmitNew(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer buffer,
-                   TransmitNewCompleter::Sync& completer) override;
-  void ReceiveNew(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer buffer,
-                  ReceiveNewCompleter::Sync& completer) override;
-  void ExchangeNew(::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer tx_buffer,
-                   ::llcpp::fuchsia::hardware::sharedmemory::SharedVmoBuffer rx_buffer,
-                   ExchangeNewCompleter::Sync& completer) override;
-
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
                          size_t* out_rxdata_actual);

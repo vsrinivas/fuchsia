@@ -5,14 +5,11 @@
 library fuchsia.hardware.spi;
 
 using fuchsia.hardware.sharedmemory;
-using fuchsia.mem;
 using zx;
 
 const uint32 MAX_TRANSFER_SIZE = 8196; // arbitrary - to be removed
 
 protocol Device {
-    // TODO(fxbug.dev/67570): Finish the transition to composing fuchsia.hardware.sharedmemory.
-
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     TransmitVector(vector<uint8>:MAX_TRANSFER_SIZE data) -> (zx.status status);
     /// Half-duplex receive data from a SPI device; always reads the full size requested.
@@ -21,17 +18,6 @@ protocol Device {
     /// buffer.
     ExchangeVector(vector<uint8>:MAX_TRANSFER_SIZE txdata)
         -> (zx.status status, vector<uint8>:MAX_TRANSFER_SIZE rxdata);
-
-    /// See fuchsisa.hardware.sharedmemory.
-    RegisterVmoNew(uint32 vmo_id, fuchsia.mem.Range vmo,
-                   fuchsia.hardware.sharedmemory.SharedVmoRight rights)
-        -> () error zx.status;
-    UnregisterVmoNew(uint32 vmo_id) -> (zx.handle:VMO vmo) error zx.status;
-
-    TransmitNew(fuchsia.hardware.sharedmemory.SharedVmoBuffer buffer) -> () error zx.status;
-    ReceiveNew(fuchsia.hardware.sharedmemory.SharedVmoBuffer buffer) -> () error zx.status;
-    ExchangeNew(fuchsia.hardware.sharedmemory.SharedVmoBuffer tx_buffer,
-                fuchsia.hardware.sharedmemory.SharedVmoBuffer rx_buffer) -> () error zx.status;
 
     compose fuchsia.hardware.sharedmemory.SharedVmoIo;
     compose fuchsia.hardware.sharedmemory.SharedVmoRegister;

@@ -125,65 +125,6 @@ void SpiChild::Exchange(sharedmemory::SharedVmoBuffer tx_buffer,
   completer.Reply(std::move(result));
 }
 
-void SpiChild::RegisterVmoNew(uint32_t vmo_id, ::llcpp::fuchsia::mem::Range vmo,
-                              sharedmemory::SharedVmoRight rights,
-                              RegisterVmoNewCompleter::Sync& completer) {
-  zx_status_t status = spi_.RegisterVmo(cs_, vmo_id, std::move(vmo.vmo), vmo.offset, vmo.size,
-                                        static_cast<uint32_t>(rights));
-  if (status == ZX_OK) {
-    completer.ReplySuccess();
-  } else {
-    completer.ReplyError(status);
-  }
-}
-
-void SpiChild::UnregisterVmoNew(uint32_t vmo_id, UnregisterVmoNewCompleter::Sync& completer) {
-  zx::vmo vmo;
-  zx_status_t status = spi_.UnregisterVmo(cs_, vmo_id, &vmo);
-  if (status == ZX_OK) {
-    completer.ReplySuccess(std::move(vmo));
-  } else {
-    completer.ReplyError(status);
-  }
-}
-
-void SpiChild::TransmitNew(sharedmemory::SharedVmoBuffer buffer,
-                           TransmitNewCompleter::Sync& completer) {
-  zx_status_t status = spi_.TransmitVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
-  if (status == ZX_OK) {
-    completer.ReplySuccess();
-  } else {
-    completer.ReplyError(status);
-  }
-}
-
-void SpiChild::ReceiveNew(sharedmemory::SharedVmoBuffer buffer,
-                          ReceiveNewCompleter::Sync& completer) {
-  zx_status_t status = spi_.ReceiveVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
-  if (status == ZX_OK) {
-    completer.ReplySuccess();
-  } else {
-    completer.ReplyError(status);
-  }
-}
-
-void SpiChild::ExchangeNew(sharedmemory::SharedVmoBuffer tx_buffer,
-                           sharedmemory::SharedVmoBuffer rx_buffer,
-                           ExchangeNewCompleter::Sync& completer) {
-  if (tx_buffer.size != rx_buffer.size) {
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  zx_status_t status = spi_.ExchangeVmo(cs_, tx_buffer.vmo_id, tx_buffer.offset, rx_buffer.vmo_id,
-                                        rx_buffer.offset, tx_buffer.size);
-  if (status == ZX_OK) {
-    completer.ReplySuccess();
-  } else {
-    completer.ReplyError(status);
-  }
-}
-
 zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::spi::Device::Dispatch(this, msg, &transaction);
