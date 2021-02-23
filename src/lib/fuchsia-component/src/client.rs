@@ -273,6 +273,43 @@ pub fn connect_to_unified_service_instance_at_dir<US: UnifiedServiceMarker>(
     Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
+/// Opens the exposed directory from a child. Only works in CFv2, and only works if this component
+/// uses `fuchsia.sys2.Realm`.
+pub async fn open_childs_exposed_directory(
+    child_name: String,
+    collection_name: Option<String>,
+) -> Result<DirectoryProxy, Error> {
+    let realm_proxy = connect_to_service::<RealmMarker>()?;
+    let (directory_proxy, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    realm_proxy
+        .bind_child(
+            &mut ChildRef { name: child_name.clone(), collection: collection_name.clone() },
+            server_end,
+        )
+        .await?
+        .map_err(|e| {
+            format_err!(
+                "failed to bind to child {} in collection {:?}: {:?}",
+                child_name,
+                collection_name,
+                e
+            )
+        })?;
+    Ok(directory_proxy)
+}
+
+/// Connects to a FIDL service exposed by a child that's within the `/svc` directory. Only works in
+/// CFv2, and only works if this component uses `fuchsia.sys2.Realm`.
+pub async fn connect_to_childs_service<S: DiscoverableService>(
+    child_name: String,
+    collection_name: Option<String>,
+) -> Result<S::Proxy, Error> {
+    let child_exposed_directory =
+        open_childs_exposed_directory(child_name, collection_name).await?;
+    connect_to_protocol_at_dir_root::<S>(&child_exposed_directory)
+}
+
 /// Adds a new directory handle to the namespace for the new process.
 pub fn add_handle_to_namespace(namespace: &mut FlatNamespace, path: String, dir: zx::Handle) {
     namespace.paths.push(path);

@@ -4,7 +4,7 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component::client::{connect_to_childs_service, ScopedInstance},
     fuchsia_syslog as syslog,
     futures::future::join_all,
     log::*,
@@ -53,15 +53,31 @@ async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
         let scoped_instance = ScopedInstance::new("coll".to_string(), url)
             .await
             .context("instance creation failed")?;
-        let echo_proxy = scoped_instance
-            .connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()
-            .context("failed to connect to echo in exposed dir")?;
-        let out = echo_proxy
-            .echo_string(Some("hippos"))
+        {
+            let echo_proxy = scoped_instance
+                .connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()
+                .context("failed to connect to echo in exposed dir")?;
+            let out = echo_proxy
+                .echo_string(Some("hippos"))
+                .await
+                .context("echo_string failed")?
+                .ok_or(format_err!("empty result"))?;
+            assert_eq!(out, "hippos");
+        }
+        {
+            let echo_proxy = connect_to_childs_service::<fecho::EchoMarker>(
+                scoped_instance.child_name(),
+                Some("coll".to_string()),
+            )
             .await
-            .context("echo_string failed")?
-            .ok_or(format_err!("empty result"))?;
-        assert_eq!(out, "hippos");
+            .context("failed to connect to child's echo service")?;
+            let out = echo_proxy
+                .echo_string(Some("hippos"))
+                .await
+                .context("echo_string failed")?
+                .ok_or(format_err!("empty result"))?;
+            assert_eq!(out, "hippos");
+        }
         instances.push(scoped_instance);
     }
     Ok(instances)
