@@ -209,7 +209,7 @@ pub async fn get_inspect_data<'a>(
         // handle to Netstack diagnostics, and then request the snapshot of
         // inspect data once that event is received.
         .retry_if_empty(true)
-        .get()
+        .snapshot::<diagnostics_reader::Inspect>()
         .await
         .context("failed to get inspect data")?
         .into_iter()

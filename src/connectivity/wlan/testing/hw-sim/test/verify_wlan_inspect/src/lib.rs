@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     diagnostics_hierarchy::{self, DiagnosticsHierarchy, Property, PropertyEntry},
-    diagnostics_reader::{ArchiveReader, ComponentSelector},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
@@ -300,7 +300,7 @@ async fn verify_wlan_inspect() {
 async fn get_inspect_hierarchy() -> Result<DiagnosticsHierarchy, Error> {
     ArchiveReader::new()
         .add_selector(ComponentSelector::new(vec!["wlanstack.cmx".to_string()]))
-        .get()
+        .snapshot::<Inspect>()
         .await?
         .into_iter()
         .next()

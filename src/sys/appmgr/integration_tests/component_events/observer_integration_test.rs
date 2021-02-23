@@ -3,7 +3,7 @@
 
 use {
     anyhow::{Context, Error},
-    diagnostics_reader::{ArchiveReader, ComponentSelector},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_fuchsia_sys::{
         EnvironmentControllerEvent, EnvironmentControllerProxy, EnvironmentMarker,
         EnvironmentOptions, EnvironmentProxy, LauncherProxy,
@@ -62,7 +62,7 @@ async fn check_nested(
         moniker.push(TEST_COMPONENT.clone());
         fetcher = fetcher.add_selector(ComponentSelector::new(moniker));
     }
-    let results = fetcher.get().await?.into_iter().collect::<Vec<_>>();
+    let results = fetcher.snapshot::<Inspect>().await?.into_iter().collect::<Vec<_>>();
     assert_eq!(results.len(), expected_results);
     for result in results {
         assert_inspect_tree!(result.payload.as_ref().unwrap(), root: contains {

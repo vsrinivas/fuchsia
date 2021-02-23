@@ -7,7 +7,7 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     cobalt_client::traits::AsEventCodes,
     diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
-    diagnostics_reader::{ArchiveReader, ComponentSelector},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
@@ -860,7 +860,7 @@ impl<P: PkgFs> TestEnv<P> {
                 self.nested_environment_label.clone(),
                 "pkg-resolver.cmx".to_string(),
             ]))
-            .get()
+            .snapshot::<Inspect>()
             .await
             .expect("read inspect hierarchy")
             .into_iter()

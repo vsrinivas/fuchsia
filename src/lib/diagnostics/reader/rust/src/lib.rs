@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use diagnostics_data::{DiagnosticsData, InspectData};
+use diagnostics_data::DiagnosticsData;
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
@@ -219,12 +219,6 @@ impl ArchiveReader {
     {
         let iterator = self.batch_iterator(M::DATA_TYPE, StreamMode::SnapshotThenSubscribe)?;
         Ok(Subscription::new(iterator))
-    }
-
-    /// Use `snapshot::<Inspect>()` instead for identical functionality.
-    pub async fn get(self) -> Result<Vec<InspectData>, Error> {
-        // TODO delete after internal CL 238572 lands
-        self.snapshot::<Inspect>().await
     }
 
     /// Connects to the ArchiveAccessor and returns inspect data matching provided selectors.

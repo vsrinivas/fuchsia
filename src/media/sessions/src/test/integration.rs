@@ -4,7 +4,7 @@
 
 use crate::{Result, SessionId};
 use anyhow::Context as _;
-use diagnostics_reader::{ArchiveReader, ComponentSelector};
+use diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect};
 use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
 use fidl_fuchsia_diagnostics::*;
@@ -186,7 +186,7 @@ impl TestService {
         ArchiveReader::new()
             .with_archive(self.archive.clone())
             .add_selector(ComponentSelector::new(vec![MEDIASESSION_CMX.to_string()]))
-            .get()
+            .snapshot::<Inspect>()
             .await
             .expect("Got batch")
             .into_iter()
@@ -811,13 +811,13 @@ async fn player_is_interrupted() -> Result<()> {
 
     service.start_interruption(AudioRenderUsage::Media).await;
     player
-        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause { .. }))
         .await
         .expect("Waiting for player to receive pause");
 
     service.stop_interruption(AudioRenderUsage::Media).await;
     player
-        .wait_for_request(|request| matches!(request, PlayerRequest::Play {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Play { .. }))
         .await
         .expect("Waiting for player to receive `Play` command");
 
@@ -844,7 +844,7 @@ async fn unenrolled_player_is_not_paused_when_interrupted() -> Result<()> {
 
     service.start_interruption(AudioRenderUsage::Media).await;
     player2
-        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause { .. }))
         .await
         .expect("Waiting for player to receive pause");
 
@@ -877,13 +877,13 @@ async fn player_paused_before_interruption_is_not_resumed_by_its_end() -> Result
 
     service.start_interruption(AudioRenderUsage::Media).await;
     player1
-        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause { .. }))
         .await
         .expect("Waiting for player to receive pause");
 
     service.stop_interruption(AudioRenderUsage::Media).await;
     player1
-        .wait_for_request(|request| matches!(request, PlayerRequest::Play {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Play { .. }))
         .await
         .expect("Waiting for player to receive play");
 
@@ -913,13 +913,13 @@ async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result
 
     service.start_interruption(AudioRenderUsage::Media).await;
     player
-        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause { .. }))
         .await
         .expect("Waiting for player to receive pause");
 
     session.pause()?;
     player
-        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause { .. }))
         .await
         .expect("Waiting for player to receive pause");
 
@@ -1000,7 +1000,7 @@ async fn active_session_initializes_clients_with_active_player() -> Result<()> {
     session.play().context("Sending play command to session")?;
 
     player
-        .wait_for_request(|request| matches!(request, PlayerRequest::Play {..}))
+        .wait_for_request(|request| matches!(request, PlayerRequest::Play { .. }))
         .await
         .expect("Waiting for player to receive play command");
 

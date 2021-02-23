@@ -4,7 +4,7 @@
 
 use {
     diagnostics_hierarchy::DiagnosticsHierarchy,
-    diagnostics_reader::{ArchiveReader, ComponentSelector},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
 };
 
 /// Get the Inspect `NodeHierarchy` for the component under test running in the nested environment.
@@ -18,7 +18,7 @@ pub async fn get_inspect_hierarchy(
             nested_environment_label.to_string(),
             component_name.to_string(),
         ]))
-        .get()
+        .snapshot::<Inspect>()
         .await
         .expect("read inspect hierarchy")
         .into_iter()

@@ -16,7 +16,7 @@ use {
 // [START include_test_stuff]
 use {
     anyhow::format_err,
-    diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
 };
 // [END include_test_stuff]
@@ -71,7 +71,7 @@ impl IntegrationTest {
                 self.environment_label.clone(),
                 "inspect_rust_codelab_part_5.cmx".to_string(),
             ]))
-            .get()
+            .snapshot::<Inspect>()
             .await?
             .into_iter()
             .next()
