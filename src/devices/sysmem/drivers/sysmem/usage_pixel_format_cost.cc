@@ -89,15 +89,15 @@ struct PlatformCostsEntry {
   const std::list<const UsagePixelFormatCostEntry>& costs;
 };
 
-static void AddRgbaPixelFormat(fidl::Allocator& allocator, uint64_t format_modifier, double cost,
+static void AddRgbaPixelFormat(fidl::AnyAllocator& allocator, uint64_t format_modifier, double cost,
                                std::list<const UsagePixelFormatCostEntry>& result) {
   // Both RGBA and BGRA versions have similar cost, if they're supported.
   for (auto format : {llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32,
                       llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8}) {
-    auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
     pixel_format.set_type(allocator, format);
     pixel_format.set_format_modifier_value(allocator, format_modifier);
-    auto buffer_usage = allocator.make_table<llcpp::fuchsia::sysmem2::BufferUsage>();
+    llcpp::fuchsia::sysmem2::BufferUsage buffer_usage(allocator);
     buffer_usage.set_none(allocator, 0u);
     buffer_usage.set_cpu(allocator, 0u);
     buffer_usage.set_vulkan(allocator, 0u);
@@ -120,8 +120,8 @@ static void AddRgbaPixelFormat(fidl::Allocator& allocator, uint64_t format_modif
 // idea to avoid spending the time to update this number each time more entries are added, since the
 // opportunity cost of that time will almost certainly be more than any real savings from updating
 // this number.
-constexpr size_t kBufferThenHeapAllocatorSize = 3792;
-fidl::BufferThenHeapAllocator<kBufferThenHeapAllocatorSize> allocator;
+constexpr size_t kAllocatorSize = 3792;
+fidl::FidlAllocator<kAllocatorSize> allocator;
 
 const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
@@ -181,9 +181,9 @@ const PlatformCostsEntry kArm_Mali_Costs = {
 const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
   // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
-  auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+  llcpp::fuchsia::sysmem2::PixelFormat pixel_format(allocator);
   pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12);
-  auto buffer_usage = allocator.make_table<llcpp::fuchsia::sysmem2::BufferUsage>();
+  llcpp::fuchsia::sysmem2::BufferUsage buffer_usage(allocator);
   buffer_usage.set_none(allocator, 0u);
   buffer_usage.set_cpu(allocator, 0u);
   buffer_usage.set_vulkan(allocator, 0u);
