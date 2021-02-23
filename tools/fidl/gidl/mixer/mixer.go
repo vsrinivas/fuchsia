@@ -67,10 +67,10 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 		default:
 			panic(fmt.Sprintf("string value has non-string decl: %T", decl))
 		}
-	case gidlir.Handle:
+	case gidlir.HandleWithRights:
 		switch decl := decl.(type) {
 		case *HandleDecl:
-			visitor.OnHandle(value, decl)
+			visitor.OnHandle(value.Handle, decl)
 		default:
 			panic(fmt.Sprintf("handle value has non-handle decl: %T", decl))
 		}
@@ -342,15 +342,15 @@ func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
 	switch value := value.(type) {
 	default:
 		return fmt.Errorf("expecting handle, found %T (%v)", value, value)
-	case gidlir.Handle:
-		if v := int(value); v < 0 || v >= len(ctx.handleDefs) {
-			return fmt.Errorf("handle #%d out of range", value)
+	case gidlir.HandleWithRights:
+		if v := int(value.Handle); v < 0 || v >= len(ctx.handleDefs) {
+			return fmt.Errorf("handle #%d out of range", value.Handle)
 		}
 		if decl.subtype == fidl.Handle {
 			// The declaration is an untyped handle. Any subtype conforms.
 			return nil
 		}
-		if subtype := ctx.handleDefs[value].Subtype; subtype != decl.subtype {
+		if subtype := ctx.handleDefs[value.Handle].Subtype; subtype != decl.subtype {
 			return fmt.Errorf("expecting handle<%s>, found handle<%s>", decl.subtype, subtype)
 		}
 		return nil

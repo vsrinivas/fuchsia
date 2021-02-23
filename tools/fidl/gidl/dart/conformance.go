@@ -189,7 +189,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueType:   valueType,
 				Bytes:       buildBytes(encoding.Bytes),
 				HandleDefs:  buildHandleDefs(encodeSuccess.HandleDefs),
-				Handles:     toDartIntList(encoding.Handles),
+				Handles:     toDartIntList(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
 			})
 		}
 	}
@@ -210,13 +210,14 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:          testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Value:         valueStr,
-				ValueType:     valueType,
-				Bytes:         buildBytes(encoding.Bytes),
-				HandleDefs:    buildHandleDefs(decodeSuccess.HandleDefs),
-				Handles:       toDartIntList(encoding.Handles),
-				UnusedHandles: toDartIntList(gidlir.GetUnusedHandles(decodeSuccess.Value, encoding.Handles)),
+				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Value:      valueStr,
+				ValueType:  valueType,
+				Bytes:      buildBytes(encoding.Bytes),
+				HandleDefs: buildHandleDefs(decodeSuccess.HandleDefs),
+				Handles:    toDartIntList(encoding.Handles),
+				UnusedHandles: toDartIntList(gidlir.GetUnusedHandles(decodeSuccess.Value,
+					encoding.Handles)),
 			})
 		}
 	}

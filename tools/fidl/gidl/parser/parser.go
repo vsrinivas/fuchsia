@@ -12,6 +12,7 @@ import (
 	"text/scanner"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Parser struct {
@@ -150,6 +151,7 @@ const (
 	isValue
 	isBytes
 	isHandles
+	isHandleDispositions
 	isHandleDefs
 	isErr
 	isBindingsAllowlist
@@ -168,6 +170,8 @@ func (kind bodyElement) String() string {
 		return "bytes"
 	case isHandles:
 		return "handles"
+	case isHandleDispositions:
+		return "handle_dispositions"
 	case isHandleDefs:
 		return "handle_defs"
 	case isErr:
@@ -185,10 +189,67 @@ func (kind bodyElement) String() string {
 	}
 }
 
+type encodingData struct {
+	WireFormat ir.WireFormat
+	Bytes      []byte
+
+	// At most one of Handle or HandleDispositions will be non-empty.
+	Handles            []ir.Handle
+	HandleDispositions []ir.HandleDisposition
+}
+
+func toIrEncodings(v []encodingData) []ir.Encoding {
+	var out []ir.Encoding
+	for _, e := range v {
+		if e.HandleDispositions != nil {
+			out = append(out, ir.Encoding{
+				WireFormat: e.WireFormat,
+				Bytes:      e.Bytes,
+				Handles:    ir.GetHandlesFromHandleDispositions(e.HandleDispositions),
+			})
+		} else {
+			out = append(out, ir.Encoding{
+				WireFormat: e.WireFormat,
+				Bytes:      e.Bytes,
+				Handles:    e.Handles,
+			})
+		}
+	}
+	return out
+}
+
+func toIrHandleDispositionEncodings(v []encodingData) []ir.HandleDispositionEncoding {
+	var out []ir.HandleDispositionEncoding
+	for _, e := range v {
+		if e.HandleDispositions != nil {
+			out = append(out, ir.HandleDispositionEncoding{
+				WireFormat:         e.WireFormat,
+				Bytes:              e.Bytes,
+				HandleDispositions: e.HandleDispositions,
+			})
+		} else {
+			var handleDispositions []ir.HandleDisposition
+			for _, handle := range e.Handles {
+				handleDispositions = append(handleDispositions, ir.HandleDisposition{
+					Handle: handle,
+					Type:   fidl.ObjectTypeNone,
+					Rights: fidl.HandleRightsSameRights,
+				})
+			}
+			out = append(out, ir.HandleDispositionEncoding{
+				WireFormat:         e.WireFormat,
+				Bytes:              e.Bytes,
+				HandleDispositions: handleDispositions,
+			})
+		}
+	}
+	return out
+}
+
 type body struct {
 	Type                     string
 	Value                    ir.Value
-	Encodings                []ir.Encoding
+	Encodings                []encodingData
 	HandleDefs               []ir.HandleDef
 	Err                      ir.ErrorCode
 	BindingsAllowlist        *ir.LanguageList
@@ -197,19 +258,38 @@ type body struct {
 	EnableEchoCallBenchmark  bool
 }
 
-func (b *body) addEncoding(e ir.Encoding) {
+func (b *body) addEncoding(e encodingData) error {
 	for i := range b.Encodings {
 		if b.Encodings[i].WireFormat == e.WireFormat {
-			if b.Encodings[i].Bytes == nil {
+			if e.Bytes != nil {
+				if b.Encodings[i].Bytes == nil {
+					return fmt.Errorf("bytes already set")
+				}
 				b.Encodings[i].Bytes = e.Bytes
 			}
-			if b.Encodings[i].Handles == nil {
+			if e.Handles != nil {
+				if b.Encodings[i].Handles != nil {
+					return fmt.Errorf("handles already set")
+				}
+				if b.Encodings[i].HandleDispositions != nil {
+					return fmt.Errorf("cannot add handles when handle dispositions is set")
+				}
 				b.Encodings[i].Handles = e.Handles
 			}
-			return
+			if e.HandleDispositions != nil {
+				if b.Encodings[i].Handles != nil {
+					return fmt.Errorf("cannot add handles when handle dispositions is set")
+				}
+				if b.Encodings[i].HandleDispositions != nil {
+					return fmt.Errorf("handle dispositions already set")
+				}
+				b.Encodings[i].HandleDispositions = e.HandleDispositions
+			}
+			return nil
 		}
 	}
 	b.Encodings = append(b.Encodings, e)
+	return nil
 }
 
 type sectionMetadata struct {
@@ -228,7 +308,7 @@ var sections = map[string]sectionMetadata{
 			encodeSuccess := ir.EncodeSuccess{
 				Name:              name,
 				Value:             body.Value,
-				Encodings:         body.Encodings,
+				Encodings:         toIrHandleDispositionEncodings(body.Encodings),
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -237,7 +317,7 @@ var sections = map[string]sectionMetadata{
 			decodeSuccess := ir.DecodeSuccess{
 				Name:              name,
 				Value:             body.Value,
-				Encodings:         body.Encodings,
+				Encodings:         toIrEncodings(body.Encodings),
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -248,13 +328,13 @@ var sections = map[string]sectionMetadata{
 	"encode_success": {
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
 		optionalKinds: map[bodyElement]struct{}{
-			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+			isHandleDispositions: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
 		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeSuccess{
 				Name:              name,
 				Value:             body.Value,
-				Encodings:         body.Encodings,
+				Encodings:         toIrHandleDispositionEncodings(body.Encodings),
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -271,7 +351,7 @@ var sections = map[string]sectionMetadata{
 			result := ir.DecodeSuccess{
 				Name:              name,
 				Value:             body.Value,
-				Encodings:         body.Encodings,
+				Encodings:         toIrEncodings(body.Encodings),
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -309,7 +389,7 @@ var sections = map[string]sectionMetadata{
 			result := ir.DecodeFailure{
 				Name:              name,
 				Type:              body.Type,
-				Encodings:         body.Encodings,
+				Encodings:         toIrEncodings(body.Encodings),
 				HandleDefs:        body.HandleDefs,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
@@ -457,7 +537,9 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 			return err
 		}
 		for _, e := range encodings {
-			result.addEncoding(e)
+			if err := result.addEncoding(e); err != nil {
+				return err
+			}
 		}
 		kind = isBytes
 	case "handles":
@@ -466,9 +548,22 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 			return err
 		}
 		for _, e := range encodings {
-			result.addEncoding(e)
+			if err := result.addEncoding(e); err != nil {
+				return err
+			}
 		}
 		kind = isHandles
+	case "handle_dispositions":
+		encodings, err := p.parseHandleDispositionSection()
+		if err != nil {
+			return err
+		}
+		for _, e := range encodings {
+			if err := result.addEncoding(e); err != nil {
+				return err
+			}
+		}
+		kind = isHandleDispositions
 	case "handle_defs":
 		handleDefs, err := p.parseHandleDefSection()
 		if err != nil {
@@ -532,6 +627,48 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 	return nil
 }
 
+func (p *Parser) parseHandleRestrict() (interface{}, error) {
+	if _, err := p.consumeToken(tLparen); err != nil {
+		return nil, err
+	}
+	handle, err := p.parseHandle(handleInfo{usesInValue: 1})
+	if err != nil {
+		return nil, err
+	}
+	objectType := fidl.ObjectTypeNone
+	rights := fidl.HandleRightsSameRights
+	for p.peekTokenKind(tComma) {
+		p.nextToken()
+
+		labelTok, err := p.consumeToken(tText)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consumeToken(tColon); err != nil {
+			return nil, err
+		}
+
+		switch labelTok.value {
+		case "rights":
+			rights, err = p.parseHandleRights()
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unknown restrict label: %s", labelTok.value)
+		}
+	}
+	if _, err := p.consumeToken(tRparen); err != nil {
+		return nil, err
+	}
+	return ir.HandleWithRights{
+		Handle: handle,
+		Type:   objectType,
+		Rights: rights,
+	}, nil
+}
+
 func (p *Parser) parseValue() (interface{}, error) {
 	tok, err := p.peekToken()
 	if err != nil {
@@ -558,6 +695,9 @@ func (p *Parser) parseValue() (interface{}, error) {
 		if tok.value == "raw_float" {
 			return p.parseRawFloat()
 		}
+		if tok.value == "restrict" {
+			return p.parseHandleRestrict()
+		}
 		return p.parseRecord(tok.value)
 	case tLsquare:
 		return p.parseSlice()
@@ -577,7 +717,15 @@ func (p *Parser) parseValue() (interface{}, error) {
 			return parseNum(tok, true)
 		}
 	case tHash:
-		return p.parseHandle(handleInfo{usesInValue: 1})
+		handle, err := p.parseHandle(handleInfo{usesInValue: 1})
+		if err != nil {
+			return nil, err
+		}
+		return ir.HandleWithRights{
+			Handle: handle,
+			Type:   fidl.ObjectTypeNone,
+			Rights: fidl.HandleRightsSameRights,
+		}, nil
 	default:
 		tok, err := p.peekToken()
 		if err != nil {
@@ -785,8 +933,8 @@ func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
 	return result, nil
 }
 
-func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
-	var res []ir.Encoding
+func (p *Parser) parseByteSection() ([]encodingData, error) {
+	var res []encodingData
 	firstTok, err := p.peekToken()
 	if err != nil {
 		return nil, err
@@ -797,7 +945,7 @@ func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 			return err
 		}
 		for _, wf := range wireFormats {
-			res = append(res, ir.Encoding{
+			res = append(res, encodingData{
 				WireFormat: wf,
 				Bytes:      b,
 			})
@@ -861,17 +1009,38 @@ func (p *Parser) parseByte() (byte, error) {
 	return byte(b), nil
 }
 
-func (p *Parser) parseHandleSection() ([]ir.Encoding, error) {
-	var res []ir.Encoding
+func (p *Parser) parseHandleSection() ([]encodingData, error) {
+	var res []encodingData
 	err := p.parseWireFormatMapping(func(wireFormats []ir.WireFormat) error {
 		h, err := p.parseHandleList(handleInfo{usesInHandles: 1})
 		if err != nil {
 			return err
 		}
 		for _, wf := range wireFormats {
-			res = append(res, ir.Encoding{
+			res = append(res, encodingData{
 				WireFormat: wf,
 				Handles:    h,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (p *Parser) parseHandleDispositionSection() ([]encodingData, error) {
+	var res []encodingData
+	err := p.parseWireFormatMapping(func(wireFormats []ir.WireFormat) error {
+		h, err := p.parseHandleDispositionList(handleInfo{usesInHandles: 1})
+		if err != nil {
+			return err
+		}
+		for _, wf := range wireFormats {
+			res = append(res, encodingData{
+				WireFormat:         wf,
+				HandleDispositions: h,
 			})
 		}
 		return nil
@@ -896,6 +1065,100 @@ func (p *Parser) parseHandleList(info handleInfo) ([]ir.Handle, error) {
 		return nil, err
 	}
 	return handles, nil
+}
+
+func (p *Parser) parseHandleWithOptionalTypeAndRights(allowType bool) (ir.Handle, fidl.ObjectType, fidl.HandleRights, error) {
+	handle, err := p.parseHandle(handleInfo{usesInValue: 1})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	objectType := fidl.ObjectTypeNone
+	rights := fidl.HandleRightsSameRights
+	for p.peekTokenKind(tComma) {
+		p.nextToken()
+
+		labelTok, err := p.consumeToken(tText)
+		if err != nil {
+			return 0, 0, 0, err
+		}
+
+		if _, err := p.consumeToken(tColon); err != nil {
+			return 0, 0, 0, err
+		}
+
+		switch labelTok.value {
+		case "type":
+			valueTok, err := p.consumeToken(tText)
+			if err != nil {
+				return 0, 0, 0, err
+			}
+			objectType = fidl.ObjectTypeFromHandleSubtype(fidl.HandleSubtype(valueTok.value))
+		case "rights":
+			rights, err = p.parseHandleRights()
+			if err != nil {
+				return 0, 0, 0, err
+			}
+		default:
+			return 0, 0, 0, fmt.Errorf("unknown handle disposition label: %s", labelTok.value)
+		}
+	}
+	return handle, objectType, rights, nil
+}
+
+func (p *Parser) parseHandleDispositionList(info handleInfo) ([]ir.HandleDisposition, error) {
+	var handleDispositions []ir.HandleDisposition
+	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
+		if _, err := p.consumeToken(tLacco); err != nil {
+			return err
+		}
+		handle, err := p.parseHandle(handleInfo{usesInValue: 1})
+		if err != nil {
+			return err
+		}
+		objectType := fidl.ObjectTypeNone
+		rights := fidl.HandleRightsSameRights
+		for p.peekTokenKind(tComma) {
+			p.nextToken()
+
+			labelTok, err := p.consumeToken(tText)
+			if err != nil {
+				return err
+			}
+
+			if _, err := p.consumeToken(tColon); err != nil {
+				return err
+			}
+
+			switch labelTok.value {
+			case "type":
+				valueTok, err := p.consumeToken(tText)
+				if err != nil {
+					return err
+				}
+				objectType = fidl.ObjectTypeFromHandleSubtype(fidl.HandleSubtype(valueTok.value))
+			case "rights":
+				rights, err = p.parseHandleRights()
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("unknown handle disposition label: %s", labelTok.value)
+			}
+		}
+		handleDispositions = append(handleDispositions, ir.HandleDisposition{
+			Handle: handle,
+			Type:   objectType,
+			Rights: rights,
+		})
+		if _, err := p.consumeToken(tRacco); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return handleDispositions, nil
 }
 
 func (p *Parser) parseHandle(info handleInfo) (ir.Handle, error) {
@@ -953,6 +1216,40 @@ func (p *Parser) parseHandleDefSection() ([]ir.HandleDef, error) {
 	return res, nil
 }
 
+func (p *Parser) parseHandleRights() (fidl.HandleRights, error) {
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return 0, err
+	}
+	rights, ok := ir.HandleRightsByName(tok.value)
+	if !ok {
+		return 0, p.newParseError(tok, "expected handle right: %s", tok.value)
+	}
+	for p.peekTokenKind(tPlus) || p.peekTokenKind(tNeg) {
+		opTok, err := p.nextToken()
+		if err != nil {
+			return 0, err
+		}
+		tok, err := p.consumeToken(tText)
+		if err != nil {
+			return 0, err
+		}
+		opRights, ok := ir.HandleRightsByName(tok.value)
+		if !ok {
+			return 0, p.newParseError(tok, "expected handle right: %s", tok.value)
+		}
+		switch opTok.kind {
+		case tPlus:
+			rights |= opRights
+		case tNeg:
+			rights &= ^opRights
+		default:
+			panic("unexpected state")
+		}
+	}
+	return rights, nil
+}
+
 func (p *Parser) parseHandleDef() (ir.HandleDef, error) {
 	tok, err := p.consumeToken(tText)
 	if err != nil {
@@ -982,35 +1279,9 @@ func (p *Parser) parseHandleDef() (ir.HandleDef, error) {
 		if err != nil {
 			return ir.HandleDef{}, err
 		}
-		tok, err = p.consumeToken(tText)
+		rights, err = p.parseHandleRights()
 		if err != nil {
 			return ir.HandleDef{}, err
-		}
-		rights, ok = ir.HandleRightsByName(tok.value)
-		if !ok {
-			return ir.HandleDef{}, p.newParseError(tok, "expected handle right: %s", tok.value)
-		}
-		for p.peekTokenKind(tPlus) || p.peekTokenKind(tNeg) {
-			opTok, err := p.nextToken()
-			if err != nil {
-				return ir.HandleDef{}, err
-			}
-			tok, err := p.consumeToken(tText)
-			if err != nil {
-				return ir.HandleDef{}, err
-			}
-			opRights, ok := ir.HandleRightsByName(tok.value)
-			if !ok {
-				return ir.HandleDef{}, p.newParseError(tok, "expected handle right: %s", tok.value)
-			}
-			switch opTok.kind {
-			case tPlus:
-				rights |= opRights
-			case tNeg:
-				rights &= ^opRights
-			default:
-				panic("unexpected state")
-			}
 		}
 	}
 	tok, err = p.consumeToken(tRparen)

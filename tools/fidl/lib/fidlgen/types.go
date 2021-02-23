@@ -333,6 +333,35 @@ func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 
 type HandleRights uint32
 
+const (
+	HandleRightsNone HandleRights = 0
+
+	HandleRightsDuplicate     HandleRights = 1 << 0
+	HandleRightsTransfer      HandleRights = 1 << 1
+	HandleRightsRead          HandleRights = 1 << 2
+	HandleRightsWrite         HandleRights = 1 << 3
+	HandleRightsExecute       HandleRights = 1 << 4
+	HandleRightsMap           HandleRights = 1 << 5
+	HandleRightsGetProperty   HandleRights = 1 << 6
+	HandleRightsSetProperty   HandleRights = 1 << 7
+	HandleRightsEnumerate     HandleRights = 1 << 8
+	HandleRightsDestroy       HandleRights = 1 << 9
+	HandleRightsSetPolicy     HandleRights = 1 << 10
+	HandleRightsGetPolicy     HandleRights = 1 << 11
+	HandleRightsSignal        HandleRights = 1 << 12
+	HandleRightsSignalPeer    HandleRights = 1 << 13
+	HandleRightsWait          HandleRights = 1 << 14
+	HandleRightsInspect       HandleRights = 1 << 15
+	HandleRightsManageJob     HandleRights = 1 << 16
+	HandleRightsManageProcess HandleRights = 1 << 17
+	HandleRightsManageThread  HandleRights = 1 << 18
+	HandleRightsApplyProfile  HandleRights = 1 << 19
+
+	HandleRightsSameRights HandleRights = 1 << 31
+
+	HandleRightsBasic HandleRights = HandleRightsTransfer | HandleRightsDuplicate | HandleRightsWait | HandleRightsInspect
+)
+
 type LiteralKind string
 
 const (

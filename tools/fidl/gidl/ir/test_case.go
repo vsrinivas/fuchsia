@@ -21,7 +21,7 @@ type All struct {
 type EncodeSuccess struct {
 	Name              string
 	Value             interface{}
-	Encodings         []Encoding
+	Encodings         []HandleDispositionEncoding
 	HandleDefs        []HandleDef
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
@@ -99,29 +99,29 @@ func HandleSubtypeByName(s string) (fidl.HandleSubtype, bool) {
 // handleRightsByName is initialized in two phases, constants here, and combined
 // rights in `init`.
 var handleRightsByName = map[string]fidl.HandleRights{
-	"none":        0,
-	"same_rights": 1 << 31,
+	"none":        fidl.HandleRightsNone,
+	"same_rights": fidl.HandleRightsSameRights,
 
-	"duplicate":      1 << 0,
-	"transfer":       1 << 1,
-	"read":           1 << 2,
-	"write":          1 << 3,
-	"execute":        1 << 4,
-	"map":            1 << 5,
-	"get_property":   1 << 6,
-	"set_property":   1 << 7,
-	"enumerate":      1 << 8,
-	"destroy":        1 << 9,
-	"set_policy":     1 << 10,
-	"get_policy":     1 << 11,
-	"signal":         1 << 12,
-	"signal_peer":    1 << 13,
-	"wait":           1 << 14,
-	"inspect":        1 << 15,
-	"manage_job":     1 << 16,
-	"manage_process": 1 << 17,
-	"manage_thread":  1 << 18,
-	"apply_profile":  1 << 19,
+	"duplicate":      fidl.HandleRightsDuplicate,
+	"transfer":       fidl.HandleRightsTransfer,
+	"read":           fidl.HandleRightsRead,
+	"write":          fidl.HandleRightsWrite,
+	"execute":        fidl.HandleRightsExecute,
+	"map":            fidl.HandleRightsMap,
+	"get_property":   fidl.HandleRightsGetProperty,
+	"set_property":   fidl.HandleRightsSetProperty,
+	"enumerate":      fidl.HandleRightsEnumerate,
+	"destroy":        fidl.HandleRightsDestroy,
+	"set_policy":     fidl.HandleRightsSetPolicy,
+	"get_policy":     fidl.HandleRightsGetPolicy,
+	"signal":         fidl.HandleRightsSignal,
+	"signal_peer":    fidl.HandleRightsSignalPeer,
+	"wait":           fidl.HandleRightsWait,
+	"inspect":        fidl.HandleRightsInspect,
+	"manage_job":     fidl.HandleRightsManageJob,
+	"manage_process": fidl.HandleRightsManageProcess,
+	"manage_thread":  fidl.HandleRightsManageThread,
+	"apply_profile":  fidl.HandleRightsApplyProfile,
 }
 
 func init() {
@@ -148,10 +148,22 @@ func HandleRightsByName(rightsName string) (fidl.HandleRights, bool) {
 	return rights, ok
 }
 
+type HandleDisposition struct {
+	Handle Handle
+	Type   fidl.ObjectType
+	Rights fidl.HandleRights
+}
+
 type Encoding struct {
 	WireFormat WireFormat
 	Bytes      []byte
 	Handles    []Handle
+}
+
+type HandleDispositionEncoding struct {
+	WireFormat         WireFormat
+	Bytes              []byte
+	HandleDispositions []HandleDisposition
 }
 
 type WireFormat string

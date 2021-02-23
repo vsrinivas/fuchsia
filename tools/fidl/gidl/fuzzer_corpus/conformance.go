@@ -40,6 +40,17 @@ func getEncoding(encodings []gidlir.Encoding) (gidlir.Encoding, bool) {
 	return gidlir.Encoding{}, false
 }
 
+func getHandleDispositionEncoding(encodings []gidlir.HandleDispositionEncoding) (gidlir.HandleDispositionEncoding, bool) {
+	for _, encoding := range encodings {
+		// Only supported encoding wire format: v1.
+		if encoding.WireFormat == gidlir.V1WireFormat {
+			return encoding, true
+		}
+	}
+
+	return gidlir.HandleDispositionEncoding{}, false
+}
+
 func getHandleObjectTypes(handles []gidlir.Handle, defs []gidlir.HandleDef) []fidl.ObjectType {
 	var objectTypes []fidl.ObjectType
 	for _, h := range handles {
@@ -51,14 +62,14 @@ func getHandleObjectTypes(handles []gidlir.Handle, defs []gidlir.HandleDef) []fi
 func convertEncodeSuccesses(gtcs []gidlir.EncodeSuccess) []testCase {
 	var tcs []testCase
 	for _, gtc := range gtcs {
-		encoding, ok := getEncoding(gtc.Encodings)
+		encoding, ok := getHandleDispositionEncoding(gtc.Encodings)
 		if !ok {
 			continue
 		}
 
 		tcs = append(tcs, testCase{
 			name:        fmt.Sprintf("EncodeSuccess_%s", gtc.Name),
-			objectTypes: getHandleObjectTypes(encoding.Handles, gtc.HandleDefs),
+			objectTypes: getHandleObjectTypes(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions), gtc.HandleDefs),
 			bytes:       encoding.Bytes,
 		})
 	}

@@ -195,7 +195,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
 				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandles(encoding.Handles),
+				Handles:     BuildRawHandles(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
 				FuchsiaOnly: fuchsiaOnly,
 			})
 		}

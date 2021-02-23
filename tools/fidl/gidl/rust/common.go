@@ -133,8 +133,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", escapeStr(value))
 		}
 		return wrapNullable(decl, expr)
-	case gidlir.Handle:
-		expr := buildHandleValue(value)
+	case gidlir.HandleWithRights:
+		expr := buildHandleValue(value.Handle)
 		return wrapNullable(decl, expr)
 	case gidlir.Record:
 		switch decl := decl.(type) {

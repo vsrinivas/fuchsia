@@ -203,7 +203,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Value:      value,
 				Bytes:      buildBytes(encoding.Bytes),
 				HandleDefs: buildHandleDefs(encodeSuccess.HandleDefs),
-				Handles:    buildHandleInfos(encoding.Handles),
+				Handles:    buildHandleInfos(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
 			})
 		}
 	}

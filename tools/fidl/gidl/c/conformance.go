@@ -242,7 +242,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
 				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(encoding.Handles),
+				Handles:     libhlcpp.BuildRawHandles(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
 				FuchsiaOnly: fuchsiaOnly,
 			})
 		}

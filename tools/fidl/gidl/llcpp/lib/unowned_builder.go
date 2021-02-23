@@ -85,8 +85,8 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 		}
 	case string:
 		return fmt.Sprintf("fidl::StringView(%s, %d)", strconv.Quote(value), len(value))
-	case gidlir.Handle:
-		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value)
+	case gidlir.HandleWithRights:
+		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:

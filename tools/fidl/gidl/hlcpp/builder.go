@@ -124,8 +124,8 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 		}
 	case string:
 		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
-	case gidlir.Handle:
-		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value)
+	case gidlir.HandleWithRights:
+		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
 	case []interface{}:

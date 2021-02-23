@@ -4,6 +4,10 @@
 
 package ir
 
+import (
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+)
+
 // Value represents any acceptable value used to represent a FIDL value.
 // This type may wrap one of:
 // - `string` for strings
@@ -25,6 +29,13 @@ type RawFloat uint64
 
 // A Handle is an index into the test's []HandleDef.
 type Handle int
+
+// A HandleWithRights is a Handle with rights information.
+type HandleWithRights struct {
+	Handle Handle
+	Type   fidl.ObjectType
+	Rights fidl.HandleRights
+}
 
 // Record represents a value for a struct, table, or union type.
 type Record struct {

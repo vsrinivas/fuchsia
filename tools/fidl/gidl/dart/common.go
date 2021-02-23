@@ -84,8 +84,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case string:
 		return toDartStr(value)
-	case gidlir.Handle:
-		rawHandle := buildHandleValue(value)
+	case gidlir.HandleWithRights:
+		rawHandle := buildHandleValue(value.Handle)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
 		case fidl.Handle:

@@ -128,6 +128,14 @@ func TypeFromValue(value Value) string {
 	return record.Name
 }
 
+func GetHandlesFromHandleDispositions(handleDispositions []HandleDisposition) []Handle {
+	var handles []Handle
+	for _, handleDisposition := range handleDispositions {
+		handles = append(handles, handleDisposition.Handle)
+	}
+	return handles
+}
+
 // GetUnusedHandles returns the list of handles from the input slice that do not
 // appear in the provided Value
 func GetUnusedHandles(value Value, handles []Handle) []Handle {

@@ -60,6 +60,14 @@ func checkStruct(t *testing.T, decl *StructDecl, expectedName string, expectedNu
 	}
 }
 
+func defaultMetadataForHandle(h gidlir.Handle) gidlir.HandleWithRights {
+	return gidlir.HandleWithRights{
+		Handle: h,
+		Type:   fidl.ObjectTypeNone,
+		Rights: fidl.HandleRightsSameRights,
+	}
+}
+
 func TestLookupDeclByNameNonNullable(t *testing.T) {
 	decl, ok := testSchema(t).lookupDeclByName("ExampleStruct", false)
 	if !ok {
@@ -324,11 +332,26 @@ func TestHandleDeclConforms(t *testing.T) {
 		context{},
 		&HandleDecl{subtype: fidl.Event, nullable: false},
 		[]conformTest{
-			conformFail{gidlir.Handle(-1), "out of range"},
-			conformFail{gidlir.Handle(0), "out of range"},
-			conformFail{gidlir.Handle(1), "out of range"},
-			conformFail{gidlir.Handle(2), "out of range"},
-			conformFail{gidlir.Handle(3), "out of range"},
+			conformFail{
+				defaultMetadataForHandle(-1),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(0),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(1),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(2),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(3),
+				"out of range",
+			},
 			conformFail{nil, "expecting non-null handle"},
 			conformFail{"foo", "expecting handle"},
 			conformFail{0, "expecting handle"},
@@ -345,11 +368,23 @@ func TestHandleDeclConforms(t *testing.T) {
 		},
 		&HandleDecl{subtype: fidl.Handle, nullable: false},
 		[]conformTest{
-			conformOk{gidlir.Handle(0)},
-			conformOk{gidlir.Handle(1)},
-			conformOk{gidlir.Handle(2)},
-			conformFail{gidlir.Handle(-1), "out of range"},
-			conformFail{gidlir.Handle(3), "out of range"},
+			conformOk{
+				defaultMetadataForHandle(0),
+			},
+			conformOk{
+				defaultMetadataForHandle(1),
+			},
+			conformOk{
+				defaultMetadataForHandle(2),
+			},
+			conformFail{
+				defaultMetadataForHandle(-1),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(3),
+				"out of range",
+			},
 			conformFail{nil, "expecting non-null handle"},
 			conformFail{"foo", "expecting handle"},
 			conformFail{0, "expecting handle"},
@@ -366,11 +401,24 @@ func TestHandleDeclConforms(t *testing.T) {
 		},
 		&HandleDecl{subtype: fidl.Event, nullable: false},
 		[]conformTest{
-			conformOk{gidlir.Handle(0)},
-			conformOk{gidlir.Handle(2)},
-			conformFail{gidlir.Handle(1), "expecting handle<event>"},
-			conformFail{gidlir.Handle(-1), "out of range"},
-			conformFail{gidlir.Handle(3), "out of range"},
+			conformOk{
+				defaultMetadataForHandle(0),
+			},
+			conformOk{
+				defaultMetadataForHandle(2),
+			},
+			conformFail{
+				defaultMetadataForHandle(1),
+				"expecting handle<event>",
+			},
+			conformFail{
+				defaultMetadataForHandle(-1),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(3),
+				"out of range",
+			},
 			conformFail{nil, "expecting non-null handle"},
 			conformFail{"foo", "expecting handle"},
 			conformFail{0, "expecting handle"},
@@ -387,12 +435,26 @@ func TestHandleDeclConforms(t *testing.T) {
 		},
 		&HandleDecl{subtype: fidl.Port, nullable: true},
 		[]conformTest{
-			conformOk{gidlir.Handle(1)},
+			conformOk{
+				defaultMetadataForHandle(1),
+			},
 			conformOk{nil},
-			conformFail{gidlir.Handle(0), "expecting handle<port>"},
-			conformFail{gidlir.Handle(2), "expecting handle<port>"},
-			conformFail{gidlir.Handle(-1), "out of range"},
-			conformFail{gidlir.Handle(3), "out of range"},
+			conformFail{
+				defaultMetadataForHandle(0),
+				"expecting handle<port>",
+			},
+			conformFail{
+				defaultMetadataForHandle(2),
+				"expecting handle<port>",
+			},
+			conformFail{
+				defaultMetadataForHandle(-1),
+				"out of range",
+			},
+			conformFail{
+				defaultMetadataForHandle(3),
+				"out of range",
+			},
 			conformFail{0, "expecting handle"},
 		},
 	)
@@ -742,12 +804,21 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 		},
 		[]conformTest{
 			conformOk{[]interface{}{}},
-			conformOk{[]interface{}{gidlir.Handle(0)}},
-			conformOk{[]interface{}{gidlir.Handle(0), gidlir.Handle(1)}},
-			conformOk{[]interface{}{gidlir.Handle(1), gidlir.Handle(0)}},
+			conformOk{[]interface{}{defaultMetadataForHandle(0)}},
+			conformOk{[]interface{}{
+				defaultMetadataForHandle(0),
+				defaultMetadataForHandle(1),
+			}},
+			conformOk{[]interface{}{
+				defaultMetadataForHandle(1),
+				defaultMetadataForHandle(0),
+			}},
 			// The parser is responsible for ensuring handles are used exactly
 			// once, not the mixer, so this passes.
-			conformOk{[]interface{}{gidlir.Handle(0), gidlir.Handle(0)}},
+			conformOk{[]interface{}{
+				defaultMetadataForHandle(0),
+				defaultMetadataForHandle(0),
+			}},
 			conformFail{[]interface{}{uint64(0)}, "[0]: expecting handle"},
 			conformFail{[]interface{}{nil}, "[0]: expecting non-null handle"},
 		},
@@ -784,7 +855,11 @@ func TestVisit(t *testing.T) {
 		{uint64(1), &IntegerDecl{subtype: fidl.Uint8}, "Uint64"},
 		{1.23, &FloatDecl{subtype: fidl.Float32}, "Float64"},
 		{"foo", &StringDecl{}, "String"},
-		{gidlir.Handle(0), &HandleDecl{subtype: fidl.Event}, "Handle"},
+		{
+			defaultMetadataForHandle(0),
+			&HandleDecl{subtype: fidl.Event},
+			"Handle",
+		},
 		{nil, &StringDecl{nullable: true}, "Null"},
 		// These values and decls are not fully initialized, but for the
 		// purposes of Visit() it should not matter.

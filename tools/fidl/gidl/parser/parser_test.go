@@ -14,8 +14,6 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-const SAME_RIGHTS = 2147483648
-
 func TestParseValues(t *testing.T) {
 	type testCase struct {
 		gidl          string
@@ -33,8 +31,30 @@ func TestParseValues(t *testing.T) {
 		{gidl: `"\""`, expectedValue: "\""},
 		{gidl: `true`, expectedValue: true},
 		{gidl: `null`, expectedValue: nil},
-		{gidl: `#0`, expectedValue: ir.Handle(0)},
-		{gidl: `#123`, expectedValue: ir.Handle(123)},
+		{gidl: `#0`, expectedValue: ir.HandleWithRights{
+			Handle: ir.Handle(0),
+			Type:   fidl.ObjectTypeNone,
+			Rights: fidl.HandleRightsSameRights,
+		},
+		},
+		{gidl: `#123`, expectedValue: ir.HandleWithRights{
+			Handle: ir.Handle(123),
+			Type:   fidl.ObjectTypeNone,
+			Rights: fidl.HandleRightsSameRights,
+		},
+		},
+		{gidl: `restrict(#123)`, expectedValue: ir.HandleWithRights{
+			Handle: ir.Handle(123),
+			Type:   fidl.ObjectTypeNone,
+			Rights: fidl.HandleRightsSameRights,
+		},
+		},
+		{gidl: `restrict(#123, rights: read + write)`, expectedValue: ir.HandleWithRights{
+			Handle: ir.Handle(123),
+			Type:   fidl.ObjectTypeNone,
+			Rights: fidl.HandleRightsRead | fidl.HandleRightsWrite,
+		},
+		},
 		{gidl: `SomeRecord {}`, expectedValue: ir.Record{
 			Name: "SomeRecord",
 		}},
@@ -140,6 +160,7 @@ func TestFailsParseValues(t *testing.T) {
 		{gidl: `"\xwrong"`, expectedErrorSubstr: "improperly escaped string"},
 		{gidl: `#-1`, expectedErrorSubstr: `want "<text>", got "-"`},
 		{gidl: `SomeRecord { 0x01020304: 5, }`, expectedErrorSubstr: "unexpected tokenKind"},
+		{gidl: `restrict(#123, type: channel, rights: read + write)`, expectedErrorSubstr: "unknown restrict label"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {
@@ -153,13 +174,13 @@ func TestFailsParseValues(t *testing.T) {
 func TestParseBytes(t *testing.T) {
 	type testCase struct {
 		gidl          string
-		expectedValue []ir.Encoding
+		expectedValue []encodingData
 	}
 	testCases := []testCase{
 		// empty
 		{
 			gidl: `{ alpha = [] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      nil,
@@ -169,7 +190,7 @@ func TestParseBytes(t *testing.T) {
 		// base 10
 		{
 			gidl: `{ alpha = [1, 2, 3] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{1, 2, 3},
@@ -179,7 +200,7 @@ func TestParseBytes(t *testing.T) {
 		// base 16
 		{
 			gidl: `{ alpha = [0x0, 0xff, 0xA, 0x0a, 7] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0, 255, 10, 10, 7},
@@ -189,7 +210,7 @@ func TestParseBytes(t *testing.T) {
 		// character codes
 		{
 			gidl: `{ alpha = ['h', 'e', 'l', 'l', 'o'] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{'h', 'e', 'l', 'l', 'o'},
@@ -199,7 +220,7 @@ func TestParseBytes(t *testing.T) {
 		// positive number
 		{
 			gidl: `{ alpha = [num(2147483647):4] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0xff, 0xff, 0xff, 0x7f},
@@ -209,7 +230,7 @@ func TestParseBytes(t *testing.T) {
 		// negative number
 		{
 			gidl: `{ alpha = [num(-32768):2] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0x00, 0x80},
@@ -219,7 +240,7 @@ func TestParseBytes(t *testing.T) {
 		// padding
 		{
 			gidl: `{ alpha = [padding:3] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0, 0, 0},
@@ -229,7 +250,7 @@ func TestParseBytes(t *testing.T) {
 		// repeat a byte
 		{
 			gidl: `{ alpha = [repeat(0x33):3] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0x33, 0x33, 0x33},
@@ -239,7 +260,7 @@ func TestParseBytes(t *testing.T) {
 		// multiple byte generators in same list
 		{
 			gidl: `{ alpha = [num(127):2, repeat(0x33):3] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0x7f, 0x00, 0x33, 0x33, 0x33},
@@ -249,7 +270,7 @@ func TestParseBytes(t *testing.T) {
 		// mix plain bytes, characters, and generators
 		{
 			gidl: `{ alpha = [num(127):2, 255, padding:1, 'A'] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{0x7f, 0x00, 0xff, 0x00, 'A'},
@@ -259,7 +280,7 @@ func TestParseBytes(t *testing.T) {
 		// trailing comma allowed
 		{
 			gidl: `{ alpha = [1,2,] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{1, 2},
@@ -269,7 +290,7 @@ func TestParseBytes(t *testing.T) {
 		// multiple wire formats, same bytes (empty), ordering 1
 		{
 			gidl: `{ alpha, beta = [] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      nil,
@@ -283,7 +304,7 @@ func TestParseBytes(t *testing.T) {
 		// multiple wire formats, same bytes (empty), ordering 2
 		{
 			gidl: `{ beta, alpha = [] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "beta",
 					Bytes:      nil,
@@ -297,7 +318,7 @@ func TestParseBytes(t *testing.T) {
 		// multiple wire formats, same bytes (non-empty)
 		{
 			gidl: `{ alpha, beta = [1, 2, 3] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{1, 2, 3},
@@ -314,7 +335,7 @@ func TestParseBytes(t *testing.T) {
 				alpha = [1, 2, 3],
 				beta = [repeat(4):3],
 			}`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Bytes:      []byte{1, 2, 3},
@@ -399,7 +420,7 @@ func TestParseBytesFailures(t *testing.T) {
 func TestParseHandles(t *testing.T) {
 	type testCase struct {
 		gidl          string
-		expectedValue []ir.Encoding
+		expectedValue []encodingData
 	}
 	testCases := []testCase{
 		// no entries
@@ -410,7 +431,7 @@ func TestParseHandles(t *testing.T) {
 		// empty list
 		{
 			gidl: `{ alpha = [] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    nil,
@@ -420,7 +441,7 @@ func TestParseHandles(t *testing.T) {
 		// one handle
 		{
 			gidl: `{ alpha = [#0] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    []ir.Handle{0},
@@ -430,7 +451,7 @@ func TestParseHandles(t *testing.T) {
 		// several handles
 		{
 			gidl: `{ alpha = [#42, #1, #3] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    []ir.Handle{42, 1, 3},
@@ -440,7 +461,7 @@ func TestParseHandles(t *testing.T) {
 		// trailing comma allowed
 		{
 			gidl: `{ alpha = [#0,#1,] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    []ir.Handle{0, 1},
@@ -450,7 +471,7 @@ func TestParseHandles(t *testing.T) {
 		// multiple wire formats, same handles (empty), ordering 1
 		{
 			gidl: `{ alpha, beta = [] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    nil,
@@ -464,7 +485,7 @@ func TestParseHandles(t *testing.T) {
 		// multiple wire formats, same handles (empty), ordering 2
 		{
 			gidl: `{ beta, alpha = [] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "beta",
 					Handles:    nil,
@@ -478,7 +499,7 @@ func TestParseHandles(t *testing.T) {
 		// multiple wire formats, same handles (non-empty)
 		{
 			gidl: `{ alpha, beta = [#0, #1] }`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    []ir.Handle{0, 1},
@@ -495,7 +516,7 @@ func TestParseHandles(t *testing.T) {
 				alpha = [#0, #1],
 				beta = [#1, #0],
 			}`,
-			expectedValue: []ir.Encoding{
+			expectedValue: []encodingData{
 				{
 					WireFormat: "alpha",
 					Handles:    []ir.Handle{0, 1},
@@ -576,16 +597,16 @@ func TestParseHandleDefs(t *testing.T) {
 		{
 			gidl: `{ #0 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
 		},
 		// several handles
 		{
 			gidl: `{ #0 = event(), #1 = event(), #2 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
 		},
 		// handle rights
@@ -786,7 +807,7 @@ func TestParseSuccessCase(t *testing.T) {
 					},
 				},
 			},
-			Encodings: []ir.Encoding{{
+			Encodings: []ir.HandleDispositionEncoding{{
 				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					0, 0, 0, 0, 0, 0, 0, 0, // length
@@ -822,6 +843,10 @@ func TestParseSuccessCase(t *testing.T) {
 func TestParseEncodeSuccessCase(t *testing.T) {
 	gidl := `
 	encode_success("OneStringOfMaxLengthFive-empty") {
+		handle_defs = {
+			#0 = event(rights: write),
+			#1 = channel(),
+		},
 		value = OneStringOfMaxLengthFive {
 			first: "four",
 		},
@@ -831,11 +856,21 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
+		handle_dispositions = {
+			v1 = [
+				{ #0, type: event, rights: basic + signal },
+				{ #1 },
+			],
+		}
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
+			HandleDefs: []ir.HandleDef{
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsWrite},
+				{Subtype: fidl.Channel, Rights: fidl.HandleRightsSameRights},
+			},
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
@@ -847,11 +882,23 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 					},
 				},
 			},
-			Encodings: []ir.Encoding{{
+			Encodings: []ir.HandleDispositionEncoding{{
 				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					0, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				},
+				HandleDispositions: []ir.HandleDisposition{
+					{
+						Handle: 0,
+						Type:   fidl.ObjectTypeEvent,
+						Rights: fidl.HandleRightsBasic | fidl.HandleRightsSignal,
+					},
+					{
+						Handle: 1,
+						Type:   fidl.ObjectTypeNone,
+						Rights: fidl.HandleRightsSameRights,
+					},
 				},
 			}},
 		}},
@@ -862,8 +909,9 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 func TestParseDecodeSuccessCase(t *testing.T) {
 	gidl := `
 	decode_success("OneStringOfMaxLengthFive-empty") {
-		value = OneStringOfMaxLengthFive {
-			first: "four",
+		handle_defs = {
+			#0 = event(rights: write),
+			#1 = channel(),
 		},
 		bytes = {
 			v1 = [
@@ -871,11 +919,21 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
+		handles = { v1 = [ #0 ] },
+		value = OneStringOfMaxLengthFive {
+			first: "four",
+			handle0: #0,
+			handle1: restrict(#1, rights: basic + signal),
+		},
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
+			HandleDefs: []ir.HandleDef{
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsWrite},
+				{Subtype: fidl.Channel, Rights: fidl.HandleRightsSameRights},
+			},
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
@@ -885,6 +943,26 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 						},
 						Value: "four",
 					},
+					{
+						Key: ir.FieldKey{
+							Name: "handle0",
+						},
+						Value: ir.HandleWithRights{
+							Handle: ir.Handle(0),
+							Type:   fidl.ObjectTypeNone,
+							Rights: fidl.HandleRightsSameRights,
+						},
+					},
+					{
+						Key: ir.FieldKey{
+							Name: "handle1",
+						},
+						Value: ir.HandleWithRights{
+							Handle: ir.Handle(1),
+							Type:   fidl.ObjectTypeNone,
+							Rights: fidl.HandleRightsBasic | fidl.HandleRightsSignal,
+						},
+					},
 				},
 			},
 			Encodings: []ir.Encoding{{
@@ -893,6 +971,7 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 					0, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 				},
+				Handles: []ir.Handle{0},
 			}},
 		}},
 	}
@@ -1023,7 +1102,7 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 						},
 					},
 				},
-				Encodings: []ir.Encoding{{
+				Encodings: []ir.HandleDispositionEncoding{{
 					WireFormat: ir.V1WireFormat,
 					Bytes: []byte{
 						0, 0, 0, 0, 0, 0, 0, 0, // length
@@ -1132,7 +1211,7 @@ func TestParseSucceedsMultipleWireFormats(t *testing.T) {
 				Name:   "MultipleWireFormats",
 				Fields: []ir.Field(nil),
 			},
-			Encodings: []ir.Encoding{
+			Encodings: []ir.HandleDispositionEncoding{
 				{
 					WireFormat: "zero",
 					Bytes:      []byte{0},
@@ -1254,18 +1333,28 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Name: "HasHandles",
 				Fields: []ir.Field{
 					{
-						Key:   ir.FieldKey{Name: "h"},
-						Value: ir.Handle(0),
+						Key: ir.FieldKey{Name: "h"},
+						Value: ir.HandleWithRights{
+							Handle: ir.Handle(0),
+							Type:   fidl.ObjectTypeNone,
+							Rights: fidl.HandleRightsSameRights,
+						},
 					},
 				},
 			},
-			Encodings: []ir.Encoding{{
+			Encodings: []ir.HandleDispositionEncoding{{
 				WireFormat: ir.V1WireFormat,
 				Bytes:      []byte{255, 255, 255, 255, 0, 0, 0, 0},
-				Handles:    []ir.Handle{0},
+				HandleDispositions: []ir.HandleDisposition{
+					{
+						Handle: 0,
+						Type:   fidl.ObjectTypeNone,
+						Rights: fidl.HandleRightsSameRights,
+					},
+				},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
@@ -1274,8 +1363,12 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Name: "HasHandles",
 				Fields: []ir.Field{
 					{
-						Key:   ir.FieldKey{Name: "h"},
-						Value: ir.Handle(0),
+						Key: ir.FieldKey{Name: "h"},
+						Value: ir.HandleWithRights{
+							Handle: ir.Handle(0),
+							Type:   fidl.ObjectTypeNone,
+							Rights: fidl.HandleRightsSameRights,
+						},
 					},
 				},
 			},
@@ -1285,7 +1378,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
 		}},
 	}
@@ -1319,18 +1412,28 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Name: "HasHandles",
 				Fields: []ir.Field{
 					{
-						Key:   ir.FieldKey{Name: "h"},
-						Value: ir.Handle(0),
+						Key: ir.FieldKey{Name: "h"},
+						Value: ir.HandleWithRights{
+							Handle: ir.Handle(0),
+							Type:   fidl.ObjectTypeNone,
+							Rights: fidl.HandleRightsSameRights,
+						},
 					},
 				},
 			},
-			Encodings: []ir.Encoding{{
+			Encodings: []ir.HandleDispositionEncoding{{
 				WireFormat: ir.V1WireFormat,
 				Bytes:      []byte{255, 255, 255, 255, 0, 0, 0, 0},
-				Handles:    []ir.Handle{0},
+				HandleDispositions: []ir.HandleDisposition{
+					{
+						Handle: 0,
+						Type:   fidl.ObjectTypeNone,
+						Rights: fidl.HandleRightsSameRights,
+					},
+				},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
@@ -1339,8 +1442,12 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Name: "HasHandles",
 				Fields: []ir.Field{
 					{
-						Key:   ir.FieldKey{Name: "h"},
-						Value: ir.Handle(0),
+						Key: ir.FieldKey{Name: "h"},
+						Value: ir.HandleWithRights{
+							Handle: ir.Handle(0),
+							Type:   fidl.ObjectTypeNone,
+							Rights: fidl.HandleRightsSameRights,
+						},
 					},
 				},
 			},
@@ -1350,7 +1457,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: SAME_RIGHTS},
+				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
 			},
 		}},
 	}

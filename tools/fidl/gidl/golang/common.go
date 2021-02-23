@@ -131,8 +131,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("&[]string{%q}[0]", value)
 		}
 		return strconv.Quote(value)
-	case gidlir.Handle:
-		rawHandle := fmt.Sprintf("handles[%d]", value)
+	case gidlir.HandleWithRights:
+		rawHandle := fmt.Sprintf("handles[%d]", value.Handle)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
 		case fidl.Handle:
