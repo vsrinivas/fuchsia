@@ -60,7 +60,7 @@ type. For example if a directory capability is used instead of the protocol
 capability...
 
 ```json5
-"use": [
+use: [
     {
         directory: "example-data",
         rights: [ "r*" ],
@@ -189,7 +189,7 @@ D.cml:
     // ...
     use: [
         {
-            "protocol": "fuchsia.example.Foo",
+            protocol: "fuchsia.example.Foo",
         },
     ],
 }

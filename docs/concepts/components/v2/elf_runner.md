@@ -39,10 +39,10 @@ component under the name `elf`:
 
 ```cml
 {
-    "program": {
-        "runner": "elf",
-        "binary": "bin/echo",
-        "args": [ "Hello", "world!" ],
+    program: {
+        runner: "elf",
+        binary: "bin/echo",
+        args: [ "Hello", "world!" ],
     }
 }
 ```
@@ -55,10 +55,10 @@ manifest. Currently `stop` is the only method in the Lifecycle protocol.
 
 ```cml
 {
-    "program": {
-        "runner": "elf",
-        "binary": "bin/echo",
-        "lifecycle": { stop_event: "notify" },
+    program: {
+        runner: "elf",
+        binary: "bin/echo",
+        lifecycle: { stop_event: "notify" },
     }
 }
 

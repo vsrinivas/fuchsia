@@ -21,9 +21,9 @@ The [Application Binary Interface](/docs/concepts/system/abi/system.md) (ABI)
 for a system is the binary-level interface to the system. Typically you don't
 write software that uses the system ABI directly. Instead, you write software
 against the system API. When the software is compiled, the binary artifact
-created by the compiler interfaces with the system through the ABI.
-Changes to the system ABI may require you to recompile your source code to
-account for the changes in the ABI.
+created by the compiler interfaces with the system through the ABI. Changes to
+the system ABI may require you to recompile your source code to account for the
+changes in the ABI.
 
 ### **Agent** {#agent}
 
@@ -49,12 +49,13 @@ Banjo is a language for defining protocols that are used to communicate between
 [drivers](#driver). It is different from [FIDL](#fidl) in that it specifies an
 ABI for drivers to use to call into each other, rather than an IPC protocol.
 
-### **OpaqueTest** {#opaque-test}
+### **Binding** {#binding}
 
-`OpaqueTest` is a Rust client-side library that sets up hermetic tests
-for a v2 component.
+In Components v2, a [component instance](#component-instance) _binds_ to another
+component instance when it connects to a capability provided by the other
+component instance. This is the most common reason for a component to start.
 
--   [Hermetic testing using OpaqueTest](/docs/concepts/components/v2/opaque_test.md)
+-   [Documentation](/docs/concepts/components/v2/lifecycle.md#binding)
 
 ### **bootfs** {#bootfs}
 
@@ -186,10 +187,10 @@ runtime. A component instance has its own [environment](#environment) and
 A tree structure that represents the runtime state of parent-child relationships
 between [component instances](#component-instance). If instance A launches
 instance B then in the tree A will be the parent of B. The component instance
-tree is used to route capabilities such
-that parents can [offer](#offer) capabilities to their children to [use](#use),
-and children can [expose](#expose) capabilities for their parents to expose to
-their parents or offer to other children.
+tree is used to route capabilities such that parents can [offer](#offer)
+capabilities to their children to [use](#use), and children can
+[expose](#expose) capabilities for their parents to expose to their parents or
+offer to other children.
 
 Component instance tree is a [components v2](#components-v2) concept.
 
@@ -220,7 +221,6 @@ Additional metadata that is carried in a
 [component manifest](#component-manifest). This is an extension point to the
 [component framework](#component-framework).
 
-
 ### **Component Instance Identifier** {#component-instance-id}
 
 A unique, stable identifer for a component instance. The instance id is _the_
@@ -228,8 +228,8 @@ canonical identifier for a component instance. The component runtime uses this
 to key a component's persistent resources, if it has any. While a component
 instance's moniker may change, its instance ID remains the same.
 
-Instance IDs are assigned to component instances using a [component ID
-index](/docs/development/components/component_id_index.md).
+Instance IDs are assigned to component instances using a
+[component ID index](/docs/development/components/component_id_index.md).
 
 ### **Component URL** {#component-url}
 
@@ -255,7 +255,7 @@ See also: [Components v2](#components-v2)
 [libsys]: /sdk/lib/sys
 [libsvc]: /sdk/lib/svc
 
-### **Components v2**  {#components-v2}
+### **Components v2** {#components-v2}
 
 A shorthand for the [Component](#component) Architecture in its modern
 implementation. Includes a runtime as implemented by
@@ -315,9 +315,9 @@ more devices.
 
 ### **Driver Host** {#driverhost}
 
-A Driver Host is a process containing one or more device drivers.
-They are created by the Driver Manager, as needed, to provide isolation between
-drivers for stability and security.
+A Driver Host is a process containing one or more device drivers. They are
+created by the Driver Manager, as needed, to provide isolation between drivers
+for stability and security.
 
 ### **Driver Manager** {#drivermanager}
 
@@ -341,9 +341,9 @@ Elements are a [Session Framework](#session-framework) concept.
 A [FIDL](#fidl) struct (see [`fuchsia.session.Annotation`]).
 
 A collection of named attributes associated with an [element](#element).
-Annotations are specified at element creation time by [element
-proposers](#element-proposer) and remain mutable for the lifetime of the
-element.
+Annotations are specified at element creation time by
+[element proposers](#element-proposer) and remain mutable for the lifetime of
+the element.
 
 Element annotations are a [Session Framework](#session-framework) concept.
 
@@ -446,9 +446,9 @@ included in the [Fuchsia IDK](#fuchsia-idk).
 
 The [Fuchsia emulator (FEMU)](/docs/concepts/emulator/index.md) is the default
 emulator for Fuchsia. It allows you to test Fuchsia components and applications
-without needing a Fuchsia device. FEMU is based on the [Android Emulator
-(AEMU)](https://developer.android.com/studio/run/emulator), which is a fork of
-[QEMU](https://www.qemu.org/).
+without needing a Fuchsia device. FEMU is based on the
+[Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator),
+which is a fork of [QEMU](https://www.qemu.org/).
 
 ### **Fuchsia Package** {#fuchsia-package}
 
@@ -477,10 +477,10 @@ environment to form a full SDK.
 
 ### **Fuchsia System Interface** {#fuchsia-system-interface}
 
-The [Fuchsia System Interface](/docs/concepts/system/abi/system.md) is the binary
-interface that the Fuchsia operating system presents to software it runs. For
-example, the entry points into the vDSO as well as all the FIDL protocols are
-part of the Fuchsia System Interface.
+The [Fuchsia System Interface](/docs/concepts/system/abi/system.md) is the
+binary interface that the Fuchsia operating system presents to software it runs.
+For example, the entry points into the vDSO as well as all the FIDL protocols
+are part of the Fuchsia System Interface.
 
 ### **Fuchsia Volume Manager** {#fuchsia-volume-manager}
 
@@ -508,13 +508,13 @@ A [FIDL](#fidl) protocol (see [`fuchsia.element.GraphicalPresenter`]).
 
 A `GraphicalPresenter` organizes and presents graphical views.
 
-The presented views can be annotated with [Element
-Annotations](#element-annotation) to communicate presentation properties to the
-`GraphicalPresenter`. This protocol is used, for example, when a [session
-component](#session) written in Rust wants to delegate presentation logic to a
-child [component](#component) written in Flutter, or when a session component
-that manages the lifecycle of elements delegates the presentation of element
-views to a child component that implements `GraphicalPresenter`.
+The presented views can be annotated with
+[Element Annotations](#element-annotation) to communicate presentation
+properties to the `GraphicalPresenter`. This protocol is used, for example, when
+a [session component](#session) written in Rust wants to delegate presentation
+logic to a child [component](#component) written in Flutter, or when a session
+component that manages the lifecycle of elements delegates the presentation of
+element views to a child component that implements `GraphicalPresenter`.
 
 For more information, see the
 [GraphicalPresenter concept documentation](/docs/concepts/session/graphical_presenter.md).
@@ -551,8 +551,8 @@ exposed capabilities.
 
 ### **Input pipeline client library** {#input-pipeline-client-library}
 
-A client library available to [session](#session) authors to simplify
-the consumption and routing of input events from physical hardware.
+A client library available to [session](#session) authors to simplify the
+consumption and routing of input events from physical hardware.
 
 -   [Input client library](/docs/concepts/session/input.md)
 
@@ -560,17 +560,17 @@ Input pipeline is a [Session Framework](#session-framework) concept.
 
 ### **Input pipeline InputDeviceBinding** {#input-pipeline-input-device-binding}
 
-A Rust trait in the [input pipeline client
-library](#input-pipeline-client-library).
+A Rust trait in the
+[input pipeline client library](#input-pipeline-client-library).
 
 An `InputDeviceBinding` represents a connection to a physical input device (e.g.
 mouse, keyboard) in an input pipeline. An `InputDeviceBinding` does the
 following:
 
-1. Connects to an [`InputReport`](#input-report) file located at
-   `/dev/class/input-report/XXX`.
-2. Generates [`InputEvent`s](#input-pipeline-input-event) from the
-   `DeviceDescriptor` and incoming [`InputReport`s](#input-report).
+1.  Connects to an [`InputReport`](#input-report) file located at
+    `/dev/class/input-report/XXX`.
+2.  Generates [`InputEvent`s](#input-pipeline-input-event) from the
+    `DeviceDescriptor` and incoming [`InputReport`s](#input-report).
 
 The input pipeline creates and owns `InputDeviceBinding`s as new input
 peripherals are connected to a device.
@@ -608,8 +608,8 @@ phase (pressed, released, etc.).
 
 ### **Input pipeline InputEvent** {#input-pipeline-input-event}
 
-A Rust struct in the [input pipeline client
-library](#input-pipeline-client-library).
+A Rust struct in the
+[input pipeline client library](#input-pipeline-client-library).
 
 An event from an input device containing context (a `InputDeviceDescriptor`) and
 state (e.g. phase and location of a button press). The input pipeline generates
@@ -619,18 +619,18 @@ state (e.g. phase and location of a button press). The input pipeline generates
 
 ### **Input pipeline InputHandler** {#input-pipeline-input-handler}
 
-A Rust trait in the [input pipeline client
-library](#input-pipeline-client-library).
+A Rust trait in the
+[input pipeline client library](#input-pipeline-client-library).
 
 An `InputHandler` represents a client of
 [`InputEvent`s](#input-pipeline-input-event) in an input pipeline. When an
 `InputHandler` receives an [`InputEvent`](#input-pipeline-input-event), it does
 at least one of the following:
 
-1. Forwards the [`InputEvent`](#input-pipeline-input-event) to the relevant
-   client component.
-2. Outputs a vector of [`InputEvent`s](#input-pipeline-input-event) for the next
-   `InputHandler` to process.
+1.  Forwards the [`InputEvent`](#input-pipeline-input-event) to the relevant
+    client component.
+2.  Outputs a vector of [`InputEvent`s](#input-pipeline-input-event) for the
+    next `InputHandler` to process.
 
 `InputHandler` is a [Session Framework](#session-framework) concept.
 
@@ -657,9 +657,8 @@ manage their local checkouts.
 ### **Job** {#job}
 
 A Job is a [kernel object](#kernel-object) that groups a set of related
-[processes](#process), their child processes, and their jobs (if any).
-Every process in the system belongs to a job and all jobs form a single
-rooted tree.
+[processes](#process), their child processes, and their jobs (if any). Every
+process in the system belongs to a job and all jobs form a single rooted tree.
 
 -   [Job Overview](/docs/reference/kernel_objects/job.md)
 
@@ -690,9 +689,9 @@ userspace, system calls -- features that Zircon added.
 A [Modular](/docs/concepts/modular/overview.md) concept that is being
 deprecated.
 
-A module is a role a [component](#Component) can play to contribute UI to a
-user experience container (story) within a Modular session.
-Any component that exports a Scenic `ViewProvider` can be be used as a module.
+A module is a role a [component](#Component) can play to contribute UI to a user
+experience container (story) within a Modular session. Any component that
+exports a Scenic `ViewProvider` can be be used as a module.
 
 See [Module concept docs](/docs/concepts/modular/module.md) for more.
 
@@ -719,8 +718,8 @@ Fuchsia's standard C library (libc) is based on Musl Libc.
 ### **Namespace** {#namespace}
 
 A namespace is the composite hierarchy of files, directories, sockets,
-[service](#service)s, and other named objects offered to components by
-their [environment](#environment).
+[service](#service)s, and other named objects offered to components by their
+[environment](#environment).
 
 -   [Fuchsia Namespace Spec](/docs/concepts/process/namespaces.md)
 
@@ -738,6 +737,13 @@ as [GN](#gn) in Fuchsia.
 -   [Manual](https://ninja-build.org/manual.html)
 -   [Ninja rules in GN](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#ninja_rules)
 -   [Fuchsia build overview](/docs/concepts/build_system/fuchsia_build_system_overview.md)
+
+### **OpaqueTest** {#opaque-test}
+
+`OpaqueTest` is a Rust client-side library that sets up hermetic tests for a v2
+component.
+
+-   [Hermetic testing using OpaqueTest](/docs/concepts/components/v2/opaque_test.md)
 
 ### **Outgoing directory** {#outgoing-directory}
 
@@ -759,8 +765,8 @@ Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
 
 ### **Process** {#process}
 
-A Process is a [kernel object](#kernel-object) that represents an instance
-of a program as a set of instructions that are executed by one or more
+A Process is a [kernel object](#kernel-object) that represents an instance of a
+program as a set of instructions that are executed by one or more
 [threads](#thread) together with a collection of [capabilities](#capability).
 Every process is contained in a [job](#job).
 
@@ -771,12 +777,25 @@ Every process is contained in a [job](#job).
 In [FIDL](#fidl), a protocol groups methods and events to describe how one
 process interacts with another.
 
-In [components v1](#components-v1), a component may access a protocol
-(called a "service" in v1) from its [environment](#environment) through its
+In [components v1](#components-v1), a component may access a protocol (called a
+"service" in v1) from its [environment](#environment) through its
 [namespace](#namespace) by naming the protocol in its services whitelist.
 
 In [components v2](#components-v2), a protocol is used and routed to other
 components as a [protocol capability](#protocol-capability).
+
+### **Protocol capability** {#protocol-capability}
+
+A [capability](#capability) that permits communicating with a
+[protocol](#protocol) over a [channel](#channel) using a specified [FIDL](#fidl)
+protocol. The server end of the channel is held by the
+[component instance](#component-instance) that provides the capability. The
+client end of the channel is given to the
+[component instance](#component-instance) that [uses](#use) the capability.
+
+-   [Capability routing](#capability-routing)
+
+Protocol capability is a [components v2](#components-v2) concept.
 
 ### **Realm** {#realm}
 
@@ -858,8 +877,8 @@ The session framework is a framework for building products on Fuchsia. The
 framework provides software libraries, FIDL protocols, developer tools, and
 standards that are composed to create a particular product’s user experience.
 
-See the session framework [conceptual
-documentation](/docs/concepts/session/introduction.md).
+See the session framework
+[conceptual documentation](/docs/concepts/session/introduction.md).
 
 ### **Session Launcher** {#session-launcher}
 
@@ -876,23 +895,10 @@ Session Launcher is a [Session Framework](#session-framework) concept.
 ### **Session Manager** {#session-manager}
 
 The platform component, started late in the Fuchsia boot sequence, that manages
-the lifecycle of the [session](#session). The session manager  defines the set
-of system capabilities provided to sessions at runtime.
+the lifecycle of the [session](#session). The session manager defines the set of
+system capabilities provided to sessions at runtime.
 
 Session Manager is a [Session Framework](#session-framework) concept.
-
-### **Protocol capability** {#protocol-capability}
-
-A [capability](#capability) that permits communicating with a
-[protocol](#protocol) over a [channel](#channel) using a specified [FIDL](#fidl)
-protocol. The server end of the channel is held by the
-[component instance](#component-instance) that provides the capability. The
-client end of the channel is given to the
-[component instance](#component-instance) that [uses](#use) the capability.
-
--   [Capability routing](#capability-routing)
-
-Protocol capability is a [components v2](#components-v2) concept.
 
 ### **Storage capability** {#storage-capability}
 
@@ -924,8 +930,8 @@ Storage capability is a [components v2](#components-v2) concept.
 
 ### **Thread** {#thread}
 
-A Thread is a [kernel object](#kernel-object) that represents a time-shared
-CPU execution context. Each thread is contained in a [process](#process).
+A Thread is a [kernel object](#kernel-object) that represents a time-shared CPU
+execution context. Each thread is contained in a [process](#process).
 
 -   [Thread Overview](/docs/reference/kernel_objects/thread.md)
 
@@ -965,8 +971,8 @@ global scene graph. Each `ViewHolderToken` has exactly one corresponding
 
 A [FIDL](#fidl) struct (see [`fuchsia.ui.views.ViewRef`]).
 
-A `ViewRef` is a handle to a kernel object that identifies a unique View
-across the system. Two `ViewRef`s to the same View have the same [KOID](#koid).
+A `ViewRef` is a handle to a kernel object that identifies a unique View across
+the system. Two `ViewRef`s to the same View have the same [KOID](#koid).
 
 [`fuchsia.ui.views.ViewRef`]: https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewRef
 
@@ -983,9 +989,9 @@ A `ViewSpec` is a description of a view to be presented by a
 
 A [FIDL](#fidl) struct (see [`fuchsia.ui.views.ViewToken`]).
 
-A `ViewToken` uniquely identifies a View, which is the root point for a
-subgraph in the global scene graph. Each `ViewToken` has exactly one
-corresponding [`ViewHolderToken`](#view-holder-token).
+A `ViewToken` uniquely identifies a View, which is the root point for a subgraph
+in the global scene graph. Each `ViewToken` has exactly one corresponding
+[`ViewHolderToken`](#view-holder-token).
 
 [`fuchsia.ui.views.ViewToken`]: https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewToken
 

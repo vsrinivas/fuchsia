@@ -50,14 +50,14 @@ file of a component that accesses its own hub.
 
 ```
 {
-    "program": {
-        "runner": "elf",
-        "binary": "bin/program"
+    program: {
+        runner: "elf",
+        binary: "bin/program"
     },
-    "use": [
+    use: [
         {
-            "directory": "hub",
-            "from": "framework",
+            directory: "hub",
+            from: "framework",
         },
     ]
 }
@@ -279,25 +279,25 @@ In the parent component manifest:
 
 ```
 {
-    "offer": [
+    offer: [
         // Route the root hub to hub_client.
         {
-          "directory": "/hub",
-          "from": "framework",
-          "to": "#hub_client",
+          directory: "/hub",
+          from: "framework",
+          to: "#hub_client",
         },
         // Route the ELF runner capability to hub_client.
         {
-          "runner": "elf",
-          "from": "parent",
-          "to": "#hub_client",
+          runner: "elf",
+          from: "parent",
+          to: "#hub_client",
         },
     ],
-    "children": [
+    children: [
         {
-            "name": "hub_client",
-            "url": "fuchsia-pkg://fuchsia.com/hub_test#meta/hub_client.cm",
-            "startup": "eager",
+            name: "hub_client",
+            url: "fuchsia-pkg://fuchsia.com/hub_test#meta/hub_client.cm",
+            startup: "eager",
         },
     ],
 ```
@@ -306,15 +306,15 @@ In `hub_client.cml`:
 
 ```
 {
-    "program": {
-        "runner": "elf",
-        "binary": "bin/hub_client",
+    program: {
+        runner: "elf",
+        binary: "bin/hub_client",
     },
-    "use": [
+    use: [
         {
-          "directory": "/hub",
-          "from": "parent",
-          "as": "/parent_hub"
+          directory: "/hub",
+          from: "parent",
+          as: "/parent_hub"
         }
     ]
 }
@@ -330,14 +330,14 @@ In `hub_client_sibling.cml`:
 
 ```
 {
-    "program": {
-        "runner": "elf",
-        "binary": "bin/hub_client_sibling",
+    program: {
+        runner: "elf",
+        binary: "bin/hub_client_sibling",
     },
-    "expose": [
+    expose: [
         {
-            "directory": "/hub",
-            "from": "framework",
+            directory: "/hub",
+            from: "framework",
         },
     ],
 }
@@ -348,24 +348,24 @@ In the parent component manifest file:
 ```
 {
     // Route hub_client_sibling's view of the hub to hub_client.
-    "offer": [
+    offer: [
         {
-            "directory": "/hub",
-            "from": "#hub_client_sibling",
-            "to": "#hub_client",
-            "as": "/sibling_hub",
+            directory: "/hub",
+            from: "#hub_client_sibling",
+            to: "#hub_client",
+            as: "/sibling_hub",
         }
     ],
-    "children": [
+    children: [
         {
-            "name": "hub_client_sibling",
-            "url": "fuchsia-pkg://fuchsia.com/hub_test#meta/hub_client_sibling.cm",
-            "startup": "eager",
+            name: "hub_client_sibling",
+            url: "fuchsia-pkg://fuchsia.com/hub_test#meta/hub_client_sibling.cm",
+            startup: "eager",
         },
         {
-            "name": "hub_client",
-            "url": "fuchsia-pkg://fuchsia.com/hub_test#meta/hub_client.cm",
-            "startup": "eager",
+            name: "hub_client",
+            url: "fuchsia-pkg://fuchsia.com/hub_test#meta/hub_client.cm",
+            startup: "eager",
         },
     ],
 }
@@ -375,13 +375,14 @@ In hub_client.cml:
 
 ```
 {
-    "program": {
-        "runner": "elf",
-        "binary": "bin/hub_client",
+    program: {
+        runner: "elf",
+        binary: "bin/hub_client",
     },
-    "use": [
+    use: [
         {
-            "directory": "/sibling_hub", "from": "parent",
+            directory: "/sibling_hub",
+            from: "parent",
         }
     ]
 }
@@ -390,7 +391,7 @@ In hub_client.cml:
 ## Lifecycle of an instance
 
 <!--
-TODO: Avoid using `"startup": "eager"` in component manifests.
+TODO: Avoid using `startup: "eager"` in component manifests.
 -->
 
 To illustrate how the hub changes in response to lifecycle events, consider an
@@ -401,19 +402,20 @@ component is given below:
 
     ```
     {
-        "program": {
-            "binary": "bin/A"
+        program: {
+            runner: "elf",
+            binary: "bin/A"
         },
-        "use": [
+        use: [
             {
-                "directory": "/hub",
-                "from": "framework",
+                directory: "/hub",
+                from: "framework",
             },
         ]
-        "collections": [
+        collections: [
             {
-                "name": "coll",
-                "durability": "transient",
+                name: "coll",
+                durability: "transient",
             },
         ]
     }
@@ -423,14 +425,14 @@ component is given below:
 
     ```
     {
-        "program": {
-            "binary": "bin/B"
+        program: {
+            binary: "bin/B"
         },
-        "children": [
+        children: [
             {
-                "name": "baz",
-                "url": "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-                "startup": "eager",
+                name: "baz",
+                url: "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
+                startup: "eager",
             }
         ]
     }
@@ -441,8 +443,8 @@ component is given below:
     ```
     // C.cmx
     {
-        "program": {
-            "binary": "bin/C"
+        program: {
+            binary: "bin/C"
         }
     }
     ```
