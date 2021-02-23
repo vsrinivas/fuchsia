@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "encoding-validator"
+  output_name = "encoding_validator"
   edition = "2018"
   with_unit_tests = true
   deps = [

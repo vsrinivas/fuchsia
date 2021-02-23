@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "sink-validator"
+  output_name = "sink_validator"
   edition = "2018"
   with_unit_tests = true
   deps = [

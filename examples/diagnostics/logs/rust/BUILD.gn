@@ -16,7 +16,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
-  name = "rust-logs-example"
+  output_name = "rust_logs_example"
 
   deps = [
     "//src/lib/fuchsia-async",

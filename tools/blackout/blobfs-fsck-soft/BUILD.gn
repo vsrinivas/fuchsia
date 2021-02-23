@@ -7,6 +7,7 @@ import("//src/sys/build/components.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("blobfs-fsck-soft-host") {
+    output_name = "blobfs_fsck_soft_host"
     testonly = true
     edition = "2018"
     deps = [
@@ -31,6 +32,7 @@ if (host_toolchain == current_toolchain) {
 }
 
 rustc_binary("blobfs-fsck-soft-target-bin") {
+  output_name = "blobfs_fsck_soft_target_bin"
   with_unit_tests = true
   testonly = true
   edition = "2018"

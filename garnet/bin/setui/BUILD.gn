@@ -368,7 +368,7 @@ package("setui_service") {
 rustc_binary("setui-config-test") {
   testonly = true
   edition = "2018"
-  name = "setui-config-test"
+  output_name = "setui_config_test"
   deps = [
     ":lib",
     "//src/lib/syslog/rust:syslog",

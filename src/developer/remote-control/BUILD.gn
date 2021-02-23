@@ -72,7 +72,7 @@ rustc_library("lib") {
 }
 
 rustc_binary("bin") {
-  name = "remote-control-bin"
+  output_name = "remote_control_bin"
   edition = "2018"
 
   deps = [

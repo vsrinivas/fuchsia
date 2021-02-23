@@ -41,7 +41,7 @@ base_resolver_deps = [
 ]
 
 rustc_binary("bin") {
-  name = "base-resolver"
+  output_name = "base_resolver"
 
   # base-resolver must always be small (even in debug builds) since it is part of the
   # Zircon boot image.

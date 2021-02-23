@@ -16,7 +16,8 @@ omaha_app_id_file = "$root_gen_dir/omaha-app-id.txt"
 write_file(omaha_app_id_file, omaha_app_id)
 
 rustc_binary("bin") {
-  name = "omaha-client-service"
+  output_name = "omaha_client_service"
+
   with_unit_tests = true
   edition = "2018"
 

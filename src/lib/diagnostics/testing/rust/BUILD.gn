@@ -57,6 +57,7 @@ fuchsia_component("emitter-for-test") {
 }
 
 rustc_binary("emitter-bin") {
+  output_name = "emitter_bin"
   testonly = true
   edition = "2018"
   source_root = "test/emitter.rs"

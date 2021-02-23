@@ -16,7 +16,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
-  name = "flutter-runner-launch-smoke-test"
+  output_name = "flutter_runner_launch_smoke_test"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `flutter_runner_launch_smoke_test_bin_test`.

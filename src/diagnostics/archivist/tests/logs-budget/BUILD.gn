@@ -13,7 +13,7 @@ group("logs-budget") {
 
 rustc_binary("test") {
   testonly = true
-  name = "logs-budget"
+  output_name = "logs_budget"
 
   deps = [
     ":fidl-rustc",

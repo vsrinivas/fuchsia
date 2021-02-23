@@ -90,7 +90,7 @@ fuchsia_component("llcpp-server") {
 ## Rust Test Server
 
 rustc_binary("rust_server") {
-  name = "rust-server"
+  output_name = "rust_server"
   output_dir = target_out_dir
   edition = "2018"
   source_root = "rust_server.rs"

@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("sys_realm_analyzer") {
-    name = "sys-realm-analyzer"
+    output_name = "sys_realm_analyzer"
     with_unit_tests = true
     edition = "2018"
     deps = [

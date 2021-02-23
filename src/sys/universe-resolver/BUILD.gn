@@ -14,7 +14,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
-  name = "universe-resolver"
+  output_name = "universe_resolver"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `universe_resolver_bin_test`.

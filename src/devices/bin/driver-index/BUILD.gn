@@ -16,7 +16,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
-  name = "driver-index"
+  output_name = "driver_index"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `driver_index_bin_test`.

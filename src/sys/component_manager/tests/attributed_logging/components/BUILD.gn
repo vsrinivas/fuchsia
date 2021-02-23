@@ -15,7 +15,7 @@ rustc_binary("empty") {
 
 rustc_binary("use-unoffered") {
   source_root = "use-unoffered.rs"
-  name = "use-unoffered"
+  output_name = "use_unoffered"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -27,7 +27,7 @@ rustc_binary("use-unoffered") {
 
 rustc_binary("archive-reader") {
   source_root = "archive-reader.rs"
-  name = "archive-reader"
+  output_name = "archive_reader"
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/lib/diagnostics/data",
