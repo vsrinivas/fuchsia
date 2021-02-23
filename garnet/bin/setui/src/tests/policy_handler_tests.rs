@@ -5,7 +5,6 @@
 use crate::handler::base::{Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::handler::setting_handler::persist::Storage;
 use crate::internal::core;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
@@ -40,7 +39,7 @@ impl FakePolicyHandler {
 }
 
 #[async_trait]
-impl<S: Storage> Create<S> for FakePolicyHandler {
+impl Create for FakePolicyHandler {
     async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
         Ok(Self { client_proxy, handle_policy_request_callback: None })
     }
@@ -94,12 +93,11 @@ async fn test_write() {
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
     // called.
-    let mut handler = <FakePolicyHandler as Create<PrivacyInfo>>::create(client_proxy.clone())
-        .await
-        .expect("failed to create handler");
+    let mut handler =
+        FakePolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
-            client_proxy.write(expected_value.clone(), false).await.expect("write failed");
+            client_proxy.write(&expected_value, false).await.expect("write failed");
             Ok(Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true))))
         })
     }));

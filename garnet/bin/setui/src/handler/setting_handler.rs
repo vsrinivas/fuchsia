@@ -156,6 +156,8 @@ pub mod controller {
     }
 }
 
+// TODO(fxbug.dev/70633) Convert Arc<Mutex<...>> into interior mutability within ClientImpl.
+// Then remove/replace ClientProxy with ClientImpl.
 #[derive(Clone)]
 pub struct ClientProxy {
     client_handle: Arc<Mutex<ClientImpl>>,

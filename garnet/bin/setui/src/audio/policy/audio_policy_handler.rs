@@ -108,7 +108,7 @@ struct VolumeLimits {
 }
 
 #[async_trait]
-impl Create<State> for AudioPolicyHandler {
+impl Create for AudioPolicyHandler {
     async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
         Ok(Self {
             state: AudioPolicyHandler::restore_policy_state(client_proxy.read().await),
@@ -342,7 +342,7 @@ impl AudioPolicyHandler {
             .add_transform(transform);
 
         // Persist the policy state.
-        self.client_proxy.write(self.state.clone(), false).await?;
+        self.client_proxy.write(&self.state, false).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;
@@ -383,7 +383,7 @@ impl AudioPolicyHandler {
         ))?;
 
         // Persist the policy state.
-        self.client_proxy.write(self.state.clone(), false).await?;
+        self.client_proxy.write(&self.state, false).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;

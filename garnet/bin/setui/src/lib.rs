@@ -12,7 +12,6 @@ use {
     crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
-    crate::audio::policy::State,
     crate::base::SettingType,
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
@@ -407,7 +406,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             .expect("was not able to initialize storage for audio policy");
         policy_handler_factory.register(
             PolicyType::Audio,
-            Box::new(policy_handler::create_handler::<State, AudioPolicyHandler, _>),
+            Box::new(policy_handler::create_handler::<AudioPolicyHandler, _>),
         );
 
         EnvironmentBuilder::get_configuration_handlers(

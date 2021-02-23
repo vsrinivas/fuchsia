@@ -20,9 +20,6 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::sync::Arc;
 
-pub trait Storage: DeviceStorageCompatible + Send + Sync {}
-impl<T: DeviceStorageCompatible + Send + Sync> Storage for T {}
-
 /// PolicyHandlers are in charge of applying and persisting policies set by clients.
 #[async_trait]
 pub trait PolicyHandler {
@@ -115,7 +112,7 @@ pub enum ResponseTransform {
 
 /// Trait used to create policy handlers.
 #[async_trait]
-pub trait Create<S: Storage>: Sized {
+pub trait Create: Sized {
     async fn create(handler: ClientProxy) -> Result<Self, Error>;
 }
 
@@ -123,12 +120,11 @@ pub trait Create<S: Storage>: Sized {
 ///
 /// [`PolicyHandler`]: trait.PolicyHandler.html
 /// [`Context`]: ../base/struct.Context.html
-pub fn create_handler<S, C, T: StorageFactory + 'static>(
+pub fn create_handler<C, T: StorageFactory + 'static>(
     context: Context<T>,
 ) -> BoxFuture<'static, GenerateHandlerResult>
 where
-    S: Storage + 'static,
-    C: Create<S> + PolicyHandler + Send + Sync + 'static,
+    C: Create + PolicyHandler + Send + Sync + 'static,
 {
     Box::pin(async move {
         let storage = context.storage_factory.get_store(context.id).await;
@@ -198,7 +194,7 @@ impl ClientProxy {
 
     pub async fn read<S>(&self) -> S
     where
-        S: Storage,
+        S: DeviceStorageCompatible,
     {
         self.storage.get().await
     }
@@ -206,16 +202,15 @@ impl ClientProxy {
     /// Returns Ok if the value was written, or an Error if the write failed. The argument
     /// `write_through` will block returning until the value has been completely written to
     /// persistent store, rather than any temporary in-memory caching.
-    // TODO(fxbug.dev/67371) Take value by ref since we don't need to own the value here.
-    pub async fn write<S>(&self, value: S, write_through: bool) -> Result<(), PolicyError>
+    pub async fn write<S>(&self, value: &S, write_through: bool) -> Result<(), PolicyError>
     where
-        S: Storage,
+        S: DeviceStorageCompatible,
     {
-        if value == self.read().await {
+        if *value == self.read().await {
             return Ok(());
         }
 
-        match self.storage.write(&value, write_through).await {
+        match self.storage.write(value, write_through).await {
             Ok(_) => Ok(()),
             Err(_) => Err(PolicyError::WriteFailure(self.policy_type)),
         }
