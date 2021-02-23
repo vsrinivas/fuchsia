@@ -49,6 +49,13 @@
         {
             storage: "temp",
             from: "#test_tmpfs",
+            subdir: "temp",
+            backing_dir: "memfs",
+        },
+        {
+            storage: "cache",
+            from: "#test_tmpfs",
+            subdir: "cache",
             backing_dir: "memfs",
         },
         { protocol: "fuchsia.test.manager.Harness" },
@@ -110,6 +117,7 @@
             to: [
                 "#gtest_runner",
                 "#rust_test_runner",
+                "#tests",
             ],
         },
         {
@@ -131,9 +139,9 @@
             to: [ "#tests" ],
         },
         {
-            storage: "data",
+            storage: "cache",
             from: "self",
-            to: [ "#tests" ]
+            to: [ "#tests" ],
         },
 
         // temporary solution for tests that depend on having admin rights on

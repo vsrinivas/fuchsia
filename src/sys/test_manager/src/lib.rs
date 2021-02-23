@@ -231,6 +231,11 @@ async fn get_topology(
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
+            capability: Capability::storage("cache", "/cache"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
