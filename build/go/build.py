@@ -332,24 +332,22 @@ def main():
             ])
 
     if retcode == 0:
-        frontier = set([(args.package, args.is_test)])
-        visited = set()
+        go_list_args = [go_tool, 'list', '-json', '-deps']
+        if args.is_test:
+            go_list_args += ['-test']
+        go_list_args += [args.package]
+        output = subprocess.check_output(go_list_args, env=env, text=True)
         with open(args.depfile, 'w') as into:
             into.write(dist)
             into.write(':')
-            while frontier:
-                (import_path, is_test) = frontier.pop()
-                if import_path == 'C':
-                    continue
-                visited.add(import_path)
+            while output:
+                try:
+                    package = json.loads(output)
+                    output = output[:0]
+                except json.JSONDecodeError as e:
+                    package = json.loads(output[:e.pos])
+                    output = output[e.pos:]
 
-                package = json.loads(
-                    subprocess.check_output(
-                        [go_tool, 'list', '-json', import_path], env=env))
-
-                imports_fields = [
-                    'Imports',
-                ]
                 files_fields = [
                     'GoFiles',
                     'CgoFiles',
@@ -364,22 +362,11 @@ def main():
                     'SwigCXXFiles',
                     'SysoFiles',
                 ]
-                if is_test:
-                    imports_fields += [
-                        'TestImports',
-                        'XTestImports',
-                    ]
+                if 'ForTest' in package:
                     files_fields += [
                         'TestGoFiles',
                         'XTestGoFiles',
                     ]
-
-                for field in imports_fields:
-                    imports = package.get(field)
-                    if imports:
-                        for dependency in imports:
-                            if dependency not in visited:
-                                frontier.add((dependency, False))
 
                 src_dir = package['Dir']
                 for f, t in link_to_source_list:
@@ -387,13 +374,14 @@ def main():
                         src_dir = t + src_dir[len(f):]
                         break
 
-                prefix = f' {src_dir}/'
                 for field in files_fields:
                     files = package.get(field)
                     if files:
                         for file in files:
-                            into.write(prefix)
-                            into.write(file)
+                            if args.go_cache in file:
+                                continue
+                            into.write(' ')
+                            into.write(os.path.join(src_dir, file))
 
     return retcode
 
