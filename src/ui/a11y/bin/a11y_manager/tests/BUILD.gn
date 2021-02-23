@@ -47,6 +47,7 @@ executable("a11y_manager_apptests") {
 }
 
 resource("l10n_en_resource") {
+  deps = [ "//src/ui/a11y/lib/screen_reader/i18n:l10n_to_json_en" ]
   sources = [ "$target_gen_dir/../../../lib/screen_reader/i18n/en/l10n.json" ]
   outputs = [ "data/assets/locales/en/l10n.json" ]
 }
