@@ -58,12 +58,16 @@ void main() {
 
   Future<List<Map<String, dynamic>>> _waitForViews(
       String componentUrl, int instances,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {bool testForFocus = false,
+      Duration timeout = const Duration(seconds: 30)}) async {
     return ermine.waitFor(() async {
       var views = (await ermine.launchedViews())
           .where((view) => view['url'] == componentUrl)
           .toList();
       if (views.length == instances) {
+        if (testForFocus) {
+          expect(views.last['focused'], isTrue);
+        }
         return views;
       }
       return null;
@@ -81,14 +85,12 @@ void main() {
     // Close first instance using keyboard shortcut.
     // TODO(http://fxb/66076): Replace action with shortcut when implemented.
     await ermine.driver.requestData('close');
-    var views = await _waitForViews(componentUrl, 2);
-    expect(views.last['focused'], isTrue);
+    await _waitForViews(componentUrl, 2, testForFocus: true);
     expect(await _waitForInstances(componentUrl, 2), isTrue);
 
     // Close second instance clicking the close button on view title bar.
     await ermine.driver.tap(find.byValueKey('close'));
-    views = await _waitForViews(componentUrl, 1);
-    expect(views.last['focused'], isTrue);
+    await _waitForViews(componentUrl, 1, testForFocus: true);
     expect(await _waitForInstances(componentUrl, 1), isTrue);
 
     // Close the third instance by injecting 'exit\n'.
