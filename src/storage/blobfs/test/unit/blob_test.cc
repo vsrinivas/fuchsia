@@ -46,21 +46,19 @@ class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, Comp
   void SetUp() override {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     device_ = device.get();
-    ASSERT_EQ(FormatFilesystem(device.get(),
-                               FilesystemOptions{
-                                   .blob_layout_format = std::get<0>(GetParam()),
-                                   .oldest_minor_version = GetOldestMinorVersion(),
-                               }),
-              ZX_OK);
 
-    ;
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device),
-                             MountOptions{.compression_settings =
-                                              {
-                                                  .compression_algorithm = std::get<1>(GetParam()),
-                                              }},
-                             zx::resource(), &fs_),
-              ZX_OK);
+    FilesystemOptions filesystem_options{
+        .blob_layout_format = std::get<0>(GetParam()),
+        .oldest_minor_version = GetOldestMinorVersion(),
+    };
+    ASSERT_EQ(FormatFilesystem(device.get(), filesystem_options), ZX_OK);
+
+    MountOptions mount_options{.compression_settings = {
+                                   .compression_algorithm = std::get<1>(GetParam()),
+                               }};
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), mount_options);
+    ASSERT_TRUE(blobfs_or.is_ok());
+    fs_ = std::move(blobfs_or.value());
   }
 
   void TearDown() override { device_ = nullptr; }
@@ -136,9 +134,9 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
-                           zx::resource(), &fs_),
-            ZX_OK);
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  ASSERT_TRUE(blobfs_or.is_ok());
+  fs_ = std::move(blobfs_or.value());
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
   uint64_t block;
@@ -179,8 +177,9 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   // Remount and try and read the blob.
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), options, zx::resource(), &fs_),
-            ZX_OK);
+  auto remounted_blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), options);
+  ASSERT_TRUE(remounted_blobfs_or.is_ok());
+  fs_ = std::move(remounted_blobfs_or.value());
 
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
@@ -238,9 +237,9 @@ TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
       EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
     } else {
       // Remount
-      ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), MountOptions(),
-                               zx::resource(), &fs_),
-                ZX_OK);
+      auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
+      ASSERT_TRUE(blobfs_or.is_ok());
+      fs_ = std::move(blobfs_or.value());
       root = OpenRoot();
     }
   }
@@ -253,9 +252,9 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
-                           zx::resource(), &fs_),
-            ZX_OK);
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  ASSERT_TRUE(blobfs_or.is_ok());
+  fs_ = std::move(blobfs_or.value());
 
   // Create a blob where the Merkle tree in the compact layout fits perfectly into the space
   // remaining at the end of the blob.
@@ -278,9 +277,10 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
   }
 
   // Remount to avoid caching.
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
-                           zx::resource(), &fs_),
-            ZX_OK);
+  auto remounted_blobfs_or =
+      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  ASSERT_TRUE(remounted_blobfs_or.is_ok());
+  fs_ = std::move(remounted_blobfs_or.value());
 
   // Read back the blob
   {
@@ -398,9 +398,9 @@ TEST_P(BlobTest, BlobPrepareWriteFailure) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
-                           zx::resource(), &fs_),
-            ZX_OK);
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  ASSERT_TRUE(blobfs_or.is_ok());
+  fs_ = std::move(blobfs_or.value());
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
   {
@@ -518,9 +518,9 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
   }
 
   // Remount
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), MountOptions(),
-                           zx::resource(), &fs_),
-            ZX_OK);
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
+  ASSERT_TRUE(blobfs_or.is_ok());
+  fs_ = std::move(blobfs_or.value());
   root = OpenRoot();
 
   // Read back the blob
@@ -555,9 +555,9 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
   }
 
   // Remount
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), MountOptions(),
-                           zx::resource(), &fs_),
-            ZX_OK);
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
+  ASSERT_TRUE(blobfs_or.is_ok());
+  fs_ = std::move(blobfs_or.value());
   root = OpenRoot();
 
   // Read back the blob

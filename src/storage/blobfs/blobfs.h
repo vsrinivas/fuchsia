@@ -18,6 +18,7 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -72,9 +73,10 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Creates a blobfs object with the default compression algorithm.
   //
   // The dispatcher should be for the current thread that blobfs is running on.
-  static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                            const MountOptions& options, zx::resource vmex_resource,
-                            std::unique_ptr<Blobfs>* out);
+  static zx::status<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
+                                                    std::unique_ptr<BlockDevice> device,
+                                                    const MountOptions& options = MountOptions(),
+                                                    zx::resource vmex_resource = zx::resource());
 
   static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
 

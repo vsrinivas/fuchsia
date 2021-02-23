@@ -34,10 +34,9 @@ TEST(CreateTest, ValidSuperblock) {
   std::unique_ptr<FakeBlockDevice> device;
   CreateAndFormatDevice(&device);
 
-  std::unique_ptr<blobfs::Blobfs> blobfs;
-  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
-            ZX_OK);
-  EXPECT_NE(blobfs.get(), nullptr);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
+  EXPECT_TRUE(blobfs_or.is_ok());
+  EXPECT_TRUE(*blobfs_or);
 }
 
 TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
@@ -50,11 +49,8 @@ TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
   info->alloc_inode_count++;
   DeviceBlockWrite(device.get(), block, sizeof(block), kSuperblockOffset);
 
-  std::unique_ptr<blobfs::Blobfs> blobfs;
-
-  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
-            ZX_ERR_IO_OVERRUN);
-  EXPECT_EQ(blobfs.get(), nullptr);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
+  EXPECT_EQ(blobfs_or.status_value(), ZX_ERR_IO_OVERRUN);
 }
 
 }  // namespace

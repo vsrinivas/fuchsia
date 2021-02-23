@@ -111,20 +111,21 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
 
 }  // namespace
 
-zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                           const MountOptions& options, zx::resource vmex_resource,
-                           std::unique_ptr<Blobfs>* out) {
+zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
+                                                   std::unique_ptr<BlockDevice> device,
+                                                   const MountOptions& options,
+                                                   zx::resource vmex_resource) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
 
   fuchsia_hardware_block_BlockInfo block_info;
   if (zx_status_t status = device->BlockGetInfo(&block_info); status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot acquire block info: " << status;
-    return status;
+    return zx::error(status);
   }
 
   if (block_info.flags & BLOCK_FLAG_READONLY &&
       (options.writability != blobfs::Writability::ReadOnlyDisk)) {
-    return ZX_ERR_ACCESS_DENIED;
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
 
   bool fvm_required = false;
@@ -137,7 +138,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
             LoadSuperblock(block_info, kFVMBackupSuperblockOffset, *device, block);
         status2 != ZX_OK) {
       FX_LOGS(ERROR) << "No good superblock found";
-      return status1;  // Return the first error we found.
+      return zx::error(status1);  // Return the first error we found.
     }
     // Backup superblocks are only valid with FVM.
     fvm_required = true;
@@ -153,27 +154,26 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
-  auto status_or_uncompressed_buffer = pager::StorageBackedTransferBuffer::Create(
+  auto uncompressed_buffer_or = pager::StorageBackedTransferBuffer::Create(
       pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
-  if (!status_or_uncompressed_buffer.is_ok()) {
+  if (!uncompressed_buffer_or.is_ok()) {
     FX_LOGS(ERROR) << "Could not initialize uncompressed pager transfer buffer";
-    return status_or_uncompressed_buffer.status_value();
+    return uncompressed_buffer_or.take_error();
   }
-  auto status_or_compressed_buffer = pager::StorageBackedTransferBuffer::Create(
+  auto compressed_buffer_or = pager::StorageBackedTransferBuffer::Create(
       pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
-  if (!status_or_compressed_buffer.is_ok()) {
+  if (compressed_buffer_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
-    return status_or_compressed_buffer.status_value();
+    return compressed_buffer_or.take_error();
   }
-  auto status_or_pager = pager::UserPager::Create(std::move(status_or_uncompressed_buffer).value(),
-                                                  std::move(status_or_compressed_buffer).value(),
-                                                  pager::kDecompressionBufferSize,
-                                                  fs_ptr->Metrics(), options.sandbox_decompression);
-  if (!status_or_pager.is_ok()) {
+  auto pager_or = pager::UserPager::Create(
+      std::move(uncompressed_buffer_or).value(), std::move(compressed_buffer_or).value(),
+      pager::kDecompressionBufferSize, fs_ptr->Metrics(), options.sandbox_decompression);
+  if (pager_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";
-    return status_or_pager.status_value();
+    return pager_or.take_error();
   }
-  fs->pager_ = std::move(status_or_pager).value();
+  fs->pager_ = std::move(pager_or).value();
   FX_LOGS(INFO) << "Initialized user pager";
 
   if (options.metrics) {
@@ -187,26 +187,26 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                                                    JournalBlocks(fs->info_), kBlobfsBlockSize);
     if (journal_superblock_or.is_error()) {
       FX_LOGS(ERROR) << "Failed to replay journal";
-      return journal_superblock_or.error_value();
+      return journal_superblock_or.take_error();
     }
     journal_superblock = std::move(journal_superblock_or.value());
     FX_LOGS(DEBUG) << "Journal replayed";
     if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to re-load superblock";
-      return status;
+      return zx::error(status);
     }
     if ((fs->Info().major_version >= kBlobfsCompactMerkleTreeVersion ||
          fs->Info().oldest_minor_version >= kBlobfsMinorVersionNoOldCompressionFormats) &&
         options.compression_settings.compression_algorithm != CompressionAlgorithm::CHUNKED &&
         options.compression_settings.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED) {
       FX_LOGS(ERROR) << "Unsupported compression algorithm";
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
   }
 
   if (fvm_required && (fs->Info().flags & kBlobFlagFVM) == 0) {
     FX_LOGS(ERROR) << "FVM required but superblock indicates otherwise";
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   switch (options.writability) {
@@ -217,7 +217,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                             JournalBlocks(fs->info_), std::move(journal_superblock), fs->metrics_);
       if (journal_or.is_error()) {
         FX_LOGS(ERROR) << "Failed to initialize journal";
-        return journal_or.error_value();
+        return journal_or.take_error();
       }
       fs->journal_ = std::move(journal_or.value());
 #ifndef NDEBUG
@@ -240,7 +240,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                           /*repair=*/options.writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "FVM info check failed";
-    return status;
+    return zx::error(status);
   }
 
   FX_LOGS(INFO) << "Using eviction policy " << CachePolicyToString(options.cache_policy);
@@ -254,11 +254,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // Keep the block_map aligned to a block multiple
   if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
     FX_LOGS(ERROR) << "Could not reset block bitmap";
-    return status;
+    return zx::error(status);
   }
   if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
     FX_LOGS(ERROR) << "Could not shrink block bitmap";
-    return status;
+    return zx::error(status);
   }
   fzl::ResizeableVmoMapper node_map;
 
@@ -266,44 +266,44 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   ZX_DEBUG_ASSERT(fbl::round_up(nodemap_size, kBlobfsBlockSize) == nodemap_size);
   ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(fs->info_));
   if ((status = node_map.CreateAndMap(nodemap_size, "nodemap")) != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   std::unique_ptr<IdAllocator> nodes_bitmap = {};
   if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap) != ZX_OK)) {
     FX_LOGS(ERROR) << "Failed to allocate bitmap for inodes";
-    return status;
+    return zx::error(status);
   }
 
   fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map),
                                                std::move(nodes_bitmap));
   if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to load bitmaps: " << status;
-    return status;
+    return zx::error(status);
   }
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create info vmo: " << status;
-    return status;
+    return zx::error(status);
   }
   if ((status = fs->BlockAttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to attach info vmo: " << status;
-    return status;
+    return zx::error(status);
   }
   if ((status = fs->CreateFsId()) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create fs_id: " << status;
-    return status;
+    return zx::error(status);
   }
   if ((status = fs->InitializeVnodes()) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize Vnodes";
-    return status;
+    return zx::error(status);
   }
-  zx::status<BlobLoader> loader =
+  zx::status<BlobLoader> loader_or =
       BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics(),
                          options.sandbox_decompression);
-  if (!loader.is_ok()) {
-    FX_LOGS(ERROR) << "Failed to initialize loader: " << loader.status_string();
-    return loader.status_value();
+  if (loader_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
+    return loader_or.take_error();
   }
-  fs->loader_ = std::move(loader.value());
+  fs->loader_ = std::move(loader_or.value());
 
   // At this point, the filesystem is loaded and validated. No errors should be returned after this
   // point.
@@ -348,13 +348,12 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                 << BlobLayoutFormatToString(GetBlobLayoutFormat(*superblock));
 
   status = BlobCorruptionNotifier::Create(&(fs->blob_corruption_notifier_));
-
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize corruption notifier: " << zx_status_get_string(status);
   }
 
   if (zx_status_t status = fs->Migrate(); status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   fs->UpdateFragmentationMetrics();
@@ -365,8 +364,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
       std::to_string(fs->Info().major_version) + "/" +
       std::to_string(fs->Info().oldest_minor_version));
 
-  *out = std::move(fs);
-  return ZX_OK;
+  return zx::ok(std::move(fs));
 }
 
 // Writeback enabled, journaling enabled.

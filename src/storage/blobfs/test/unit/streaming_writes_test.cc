@@ -24,12 +24,12 @@ TEST(StreamingWritesTest, FailEarlyTargetCompressionSizeSet) {
   EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread();
-  std::unique_ptr<Blobfs> fs;
-  ASSERT_EQ(
-      Blobfs::Create(loop.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs),
-      ZX_OK);
+
+  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device));
+  ASSERT_TRUE(blobfs_or.is_ok());
+
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(fs->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs_or->OpenRootNode(&root), ZX_OK);
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(/*mount_path=*/"", kBlobSize);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);

@@ -81,9 +81,11 @@ class BlobfsTestAtRevision : public testing::Test {
     ASSERT_TRUE(device);
     device_ = device.get();
     loop_.StartThread();
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), GetMountOptions(),
-                             zx::resource(), &fs_),
-              ZX_OK);
+
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), GetMountOptions());
+    ASSERT_TRUE(blobfs_or.is_ok());
+    fs_ = std::move(blobfs_or.value());
+
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
 
@@ -223,9 +225,9 @@ TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::LZ4,
                           }};
-  EXPECT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
-                           zx::resource(), &fs_),
-            ZX_ERR_INVALID_ARGS);
+
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options);
+  EXPECT_EQ(blobfs_or.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 using BlobfsTestWithLargeDevice =
@@ -481,7 +483,6 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
       .metrics_flush_time = zx::sec(5)};
 
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  std::unique_ptr<Blobfs> fs;
   auto device = MockBlockDevice::CreateAndFormat(
       {
           .blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
@@ -490,9 +491,11 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
       kNumBlocks);
   ASSERT_TRUE(device);
   loop.StartThread();
-  ASSERT_EQ(
-      Blobfs::Create(loop.dispatcher(), std::move(device), mount_options, zx::resource(), &fs),
-      ZX_OK);
+
+  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), mount_options);
+  ASSERT_TRUE(blobfs_or.is_ok());
+  std::unique_ptr<Blobfs> fs = std::move(blobfs_or.value());
+
   srand(testing::UnitTest::GetInstance()->random_seed());
 
   Stats expected;

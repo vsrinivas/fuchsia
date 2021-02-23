@@ -20,13 +20,11 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
                                                    std::unique_ptr<BlockDevice> device,
                                                    const MountOptions& options,
                                                    zx::resource vmex_resource) {
-  std::unique_ptr<Blobfs> fs;
-  zx_status_t status =
-      Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource), &fs);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::unique_ptr<Runner>(new Runner(loop, std::move(fs))));
+  auto blobfs_or =
+      Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource));
+  if (blobfs_or.is_error())
+    return blobfs_or.take_error();
+  return zx::ok(std::unique_ptr<Runner>(new Runner(loop, std::move(blobfs_or.value()))));
 }
 
 Runner::Runner(async::Loop* loop, std::unique_ptr<Blobfs> fs)

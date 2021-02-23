@@ -40,9 +40,10 @@ class BlobfsCheckerTest : public testing::Test {
     ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
-    ASSERT_EQ(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
-        ZX_OK);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device));
+    ASSERT_TRUE(blobfs_or.is_ok());
+    fs_ = std::move(blobfs_or.value());
+
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
 
@@ -98,7 +99,7 @@ class BlobfsCheckerTest : public testing::Test {
     // Read the block that contains the blob.
     storage::VmoBuffer buffer;
     ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
-    block_fifo_request_t request = {
+    block_fifo_request_t request{
         .opcode = BLOCKIO_READ,
         .vmoid = buffer.vmoid(),
         .length = kBlobfsBlockSize / kBlockSize,
@@ -119,9 +120,9 @@ class BlobfsCheckerTest : public testing::Test {
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
     // Remount.
-    ASSERT_EQ(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
-        ZX_OK);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device));
+    ASSERT_TRUE(blobfs_or.is_ok());
+    fs_ = std::move(blobfs_or.value());
   }
 
   std::unique_ptr<Blobfs> get_fs_unique() { return std::move(fs_); }

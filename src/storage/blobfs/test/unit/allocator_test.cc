@@ -565,15 +565,14 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread();
-  std::unique_ptr<Blobfs> fs;
   block_client::FakeBlockDevice& device_ref = *device;
-  ASSERT_EQ(
-      Blobfs::Create(loop.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs),
-      ZX_OK);
+
+  auto fs_or = Blobfs::Create(loop.dispatcher(), std::move(device));
+  ASSERT_TRUE(fs_or.is_ok());
 
   // Create a blob that takes up more than half of the volume.
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(fs->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(fs_or->OpenRootNode(&root), ZX_OK);
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(/*mount_path=*/"", kBlobSize);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);

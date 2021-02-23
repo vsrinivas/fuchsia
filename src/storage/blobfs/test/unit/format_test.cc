@@ -20,22 +20,21 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   MountOptions options = {};
   options.writability = Writability::ReadOnlyFilesystem;
   options.metrics = false;
-  std::unique_ptr<Blobfs> blobfs = nullptr;
-  return Blobfs::Create(nullptr, std::move(device), options, zx::resource(), &blobfs);
+
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), options);
+  return blobfs_or.status_value();
 }
 
 void CheckDefaultInodeCount(std::unique_ptr<BlockDevice> device) {
-  std::unique_ptr<Blobfs> blobfs;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
-            ZX_OK);
-  ASSERT_GE(blobfs->Info().inode_count, kBlobfsDefaultInodeCount);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
+  ASSERT_TRUE(blobfs_or.is_ok());
+  ASSERT_GE(blobfs_or->Info().inode_count, kBlobfsDefaultInodeCount);
 }
 
 void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
-  std::unique_ptr<Blobfs> blobfs;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
-            ZX_OK);
-  ASSERT_GE(blobfs->Info().journal_block_count, kDefaultJournalBlocks);
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
+  ASSERT_TRUE(blobfs_or.is_ok());
+  ASSERT_GE(blobfs_or->Info().journal_block_count, kDefaultJournalBlocks);
 }
 
 // Formatting filesystems should fail on devices that cannot be written.
@@ -232,9 +231,9 @@ TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
   MountOptions mount_options = {};
   mount_options.writability = Writability::Writable;
   mount_options.metrics = false;
-  std::unique_ptr<Blobfs> fs = nullptr;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), mount_options, zx::resource(), &fs),
-            ZX_ERR_ACCESS_DENIED);
+
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), mount_options);
+  ASSERT_EQ(blobfs_or.status_value(), ZX_ERR_ACCESS_DENIED);
 }
 
 // Validates that a formatted filesystem mounted as writable with a journal cannot be mounted on a
@@ -250,9 +249,9 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   MountOptions options = {};
   options.writability = Writability::Writable;
   options.metrics = false;
-  std::unique_ptr<Blobfs> blobfs = nullptr;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
-            Blobfs::Create(nullptr, std::move(device), options, zx::resource(), &blobfs));
+
+  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), options);
+  ASSERT_EQ(blobfs_or.status_value(), ZX_ERR_ACCESS_DENIED);
 }
 
 // After formatting a filesystem with block size valid block size N, mounting on

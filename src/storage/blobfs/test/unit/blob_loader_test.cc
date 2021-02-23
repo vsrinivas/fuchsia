@@ -74,8 +74,9 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     options_ = {.compression_settings = {
                     .compression_algorithm = compression_algorithm,
                 }};
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), options_, zx::resource(), &fs_),
-              ZX_OK);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), options_);
+    ASSERT_TRUE(blobfs_or.is_ok());
+    fs_ = std::move(blobfs_or.value());
 
     // Pre-seed with some random blobs.
     for (unsigned i = 0; i < 3; i++) {
@@ -86,8 +87,11 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 
   // Remounts the filesystem, which ensures writes are flushed and caches are wiped.
   zx_status_t Remount() {
-    return Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options_,
-                          zx::resource(), &fs_);
+    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options_);
+    if (blobfs_or.is_error())
+      return blobfs_or.error_value();
+    fs_ = std::move(blobfs_or.value());
+    return ZX_OK;
   }
 
   // AddBlob creates and writes a blob of a specified size to the file system.

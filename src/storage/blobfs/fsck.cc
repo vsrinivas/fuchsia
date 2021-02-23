@@ -18,23 +18,22 @@ namespace blobfs {
 
 zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountOptions& options) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx_status_t status = loop.StartThread();
-  if (status != ZX_OK) {
+  if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot initialize dispatch loop";
     return status;
   }
 
-  std::unique_ptr<Blobfs> blobfs;
-  status = Blobfs::Create(loop.dispatcher(), std::move(device), options, zx::resource(), &blobfs);
-  if (status != ZX_OK) {
+  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), options);
+  if (blobfs_or.is_error()) {
     FX_LOGS(ERROR) << "Cannot create filesystem for checking";
-    return status;
+    return blobfs_or.status_value();
   }
+
   BlobfsChecker::Options checker_options;
-  if (blobfs->writability() == Writability::ReadOnlyDisk) {
+  if (blobfs_or->writability() == Writability::ReadOnlyDisk) {
     checker_options.repair = false;
   }
-  return BlobfsChecker(std::move(blobfs), checker_options).Check();
+  return BlobfsChecker(std::move(blobfs_or.value()), checker_options).Check();
 }
 
 }  // namespace blobfs
