@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
+import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
 # Only including packages built inside this file.
 have_libvulkan_mali =
@@ -42,77 +42,34 @@ group("test-driver") {
   ]
 }
 
-if (have_libvulkan_mali) {
-  icd_list = []
-  if (build_libvulkan_arm_mali != []) {
-    foreach(entry, build_libvulkan_arm_mali) {
-      icd_list += [
-        {
-          name = get_label_info(entry, "name")
-        },
-      ]
-    }
-  } else if (have_prebuilt_libvulkan_arm) {
-    icd_list += [
-      {
-        name = "libvulkan_arm"
-        library_path = rebase_path(prebuilt_libvulkan_arm_path)
-      },
-    ]
+if (have_prebuilt_libvulkan_arm) {
+  resource("prebuilt_libvulkan_arm") {
+    sources = [ prebuilt_libvulkan_arm_path ]
+    outputs = [ "lib/libvulkan_arm.so" ]
   }
 }
 
-driver_package("msd-arm-mali-test") {
+fuchsia_package("msd-arm-mali-test") {
   testonly = true
-
   deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm_test" ]
-  drivers = [
-    {
-      name = "libmsd_arm_test.so"
-    },
-  ]
 }
 
-driver_package("msd-arm-mali") {
+fuchsia_package("msd-arm-mali") {
   deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm" ]
-  drivers = [
-    {
-      name = "libmsd_arm.so"
-    },
-  ]
 }
 
-driver_package("magma-arm-mali") {
-  if (have_libvulkan_mali) {
-    resources = []
-    libraries = []
-    deps = build_libvulkan_arm_mali
-
-    foreach(entry, icd_list) {
-      icd_name = entry.name
-      if (defined(entry.library_path)) {
-        libraries += [
-          {
-            source = entry.library_path
-            name = "$icd_name.so"
-          },
-        ]
-      } else {
-        libraries += [
-          {
-            name = "$icd_name.so"
-          },
-        ]
-      }
-    }
+fuchsia_package("magma-arm-mali") {
+  deps = build_libvulkan_arm_mali
+  if (have_prebuilt_libvulkan_arm) {
+    deps += [ ":prebuilt_libvulkan_arm" ]
   }
 }
 
 if (have_libvulkan_mali) {
   icd_config_data("magma-arm-mali-config") {
     icds = []
-    foreach(entry, icd_list) {
-      icd_name = entry.name
+    foreach(icd, build_libvulkan_arm_mali) {
+      icd_name = get_label_info(icd, "name")
       icds += [
         {
           lib = "${icd_name}.so"
@@ -120,29 +77,35 @@ if (have_libvulkan_mali) {
         },
       ]
     }
+    if (have_prebuilt_libvulkan_arm) {
+      icds += [
+        {
+          lib = "libvulkan_arm.so"
+          manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_arm.json"
+        },
+      ]
+    }
   }
 }
 
-test_package("msd_arm_mali_nonhardware_tests") {
+fuchsia_unittest_package("msd_arm_mali_nonhardware_tests") {
   deps = [ "//src/graphics/drivers/msd-arm-mali:tests" ]
-
-  tests = [
-    {
-      name = "msd_arm_mali_nonhardware_tests"
-    },
-  ]
+  manifest = "meta/msd_arm_mali_nonhardware_tests.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # Run with autorun or "run_test_component msd_arm_mali_integration_tests"
-test_package("msd-arm-mali-integration-tests") {
-  tests = []
-
+fuchsia_unittest_package("msd-arm-mali-integration-tests") {
   deps = [ "//src/graphics/drivers/msd-arm-mali/tests/integration" ]
-
-  tests = [
-    {
-      name = "msd_arm_mali_integration_tests"
-      environments = arm_gpu_envs
-    },
-  ]
+  manifest = "meta/msd_arm_mali_integration_tests.cmx"
+  test_specs = {
+    environments = arm_gpu_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/msd_arm_mali_integration_tests"
+        "binary": "bin/msd_arm_mali_integration_tests"
     },
     "sandbox": {
         "dev": [
