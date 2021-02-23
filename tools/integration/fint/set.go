@@ -71,7 +71,9 @@ func runSteps(
 		artifacts.FailureSummary = genStdout
 		return artifacts, err
 	}
-	if staticSpec.SkipIfUnaffected {
+	// Only run build graph analysis if the result will be emitted via
+	// artifacts, and if we actually care about checking the result.
+	if contextSpec.ArtifactDir != "" && staticSpec.SkipIfUnaffected {
 		var changedFiles []string
 		for _, f := range contextSpec.ChangedFiles {
 			changedFiles = append(changedFiles, f.Path)
