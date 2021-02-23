@@ -3,6 +3,10 @@
 {
     children: [
         {
+            name: "device_settings",
+            url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cm",
+        },
+        {
             name: "appmgr",
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
         },
@@ -93,6 +97,21 @@
         },
     ],
     offer: [
+        {
+            protocol: "fuchsia.devicesettings.DeviceSettingsManager",
+            from: "#device_settings",
+            to: [ "#appmgr" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#device_settings" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#device_settings" ],
+        },
         {
             protocol: [
                 "fuchsia.boot.RootResource",

@@ -166,6 +166,10 @@
             path: "/svc_for_sys/fuchsia.boot.RootResource",
         },
         {
+            protocol: "fuchsia.devicesettings.DeviceSettingsManager",
+            path: "/svc_for_sys/fuchsia.devicesettings.DeviceSettingsManager",
+        },
+        {
             protocol: "fuchsia.boot.WriteOnlyLog",
             path: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
         },

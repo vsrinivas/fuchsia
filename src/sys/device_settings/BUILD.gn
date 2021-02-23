@@ -40,11 +40,11 @@ rustc_binary("bin") {
 
 fuchsia_package_with_single_component("device_settings_manager") {
   deps = [ ":bin" ]
-  manifest = "meta/device_settings_manager.cmx"
+  manifest = "meta/device_settings_manager.cml"
 }
 
 fuchsia_unittest_package("device_settings_manager_tests") {
-  manifest = "meta/device_settings_manager_bin_test.cmx"
+  manifest = "meta/device_settings_manager_bin_test.cml"
   deps = [ ":bin_test" ]
   test_specs = {
   }

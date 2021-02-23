@@ -1,0 +1,22 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/device_settings_manager",
+    },
+    capabilities: [
+        { protocol: "fuchsia.devicesettings.DeviceSettingsManager" },
+    ],
+    use: [
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.devicesettings.DeviceSettingsManager",
+            from: "self",
+        },
+    ],
+}
