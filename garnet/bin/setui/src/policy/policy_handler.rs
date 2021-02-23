@@ -18,7 +18,6 @@ use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 pub trait Storage: DeviceStorageCompatible + Send + Sync {}
@@ -117,7 +116,7 @@ pub enum ResponseTransform {
 /// Trait used to create policy handlers.
 #[async_trait]
 pub trait Create<S: Storage>: Sized {
-    async fn create(handler: ClientProxy<S>) -> Result<Self, Error>;
+    async fn create(handler: ClientProxy) -> Result<Self, Error>;
 }
 
 /// Creates a [`PolicyHandler`] from the given [`Context`].
@@ -134,7 +133,7 @@ where
     Box::pin(async move {
         let storage = context.storage_factory.get_store(context.id).await;
 
-        let proxy = ClientProxy::<S>::new(
+        let proxy = ClientProxy::new(
             context.service_messenger,
             context.messenger,
             context.setting_proxy_signature,
@@ -148,16 +147,15 @@ where
 
 /// `ClientProxy` provides common functionality, like messaging and persistence to policy handlers.
 #[derive(Clone)]
-pub struct ClientProxy<S: Storage + 'static> {
+pub struct ClientProxy {
     service_messenger: service::message::Messenger,
     messenger: Messenger,
     setting_proxy_signature: Signature,
     storage: Arc<DeviceStorage>,
     policy_type: PolicyType,
-    _phantom_data: PhantomData<S>,
 }
 
-impl<S: Storage + 'static> ClientProxy<S> {
+impl ClientProxy {
     /// Sends a setting request to the underlying setting proxy this policy handler controls.
     pub fn send_setting_request(&self, request: Request) -> Receptor {
         self.messenger
@@ -183,7 +181,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
     }
 }
 
-impl<S: Storage + 'static> ClientProxy<S> {
+impl ClientProxy {
     pub fn new(
         service_messenger: service::message::Messenger,
         messenger: Messenger,
@@ -191,28 +189,28 @@ impl<S: Storage + 'static> ClientProxy<S> {
         storage: Arc<DeviceStorage>,
         policy_type: PolicyType,
     ) -> Self {
-        Self {
-            service_messenger,
-            messenger,
-            setting_proxy_signature,
-            storage,
-            policy_type,
-            _phantom_data: PhantomData,
-        }
+        Self { service_messenger, messenger, setting_proxy_signature, storage, policy_type }
     }
 
     pub fn policy_type(&self) -> PolicyType {
         self.policy_type
     }
 
-    pub async fn read(&self) -> S {
+    pub async fn read<S>(&self) -> S
+    where
+        S: Storage,
+    {
         self.storage.get().await
     }
 
     /// Returns Ok if the value was written, or an Error if the write failed. The argument
     /// `write_through` will block returning until the value has been completely written to
     /// persistent store, rather than any temporary in-memory caching.
-    pub async fn write(&self, value: S, write_through: bool) -> Result<(), PolicyError> {
+    // TODO(fxbug.dev/67371) Take value by ref since we don't need to own the value here.
+    pub async fn write<S>(&self, value: S, write_through: bool) -> Result<(), PolicyError>
+    where
+        S: Storage,
+    {
         if value == self.read().await {
             return Ok(());
         }
@@ -261,7 +259,7 @@ mod tests {
         storage_factory.initialize_storage::<PrivacyInfo>().await;
         let storage = storage_factory.get_store(CONTEXT_ID).await;
 
-        let client_proxy = ClientProxy::<PrivacyInfo> {
+        let client_proxy = ClientProxy {
             service_messenger: service_messenger_factory
                 .create(MessengerType::Unbound)
                 .await
@@ -271,7 +269,6 @@ mod tests {
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage,
             policy_type,
-            _phantom_data: PhantomData,
         };
 
         client_proxy.send_setting_request(setting_request.clone());
@@ -309,7 +306,7 @@ mod tests {
             .await
             .expect("service receptor created");
 
-        let client_proxy = ClientProxy::<PrivacyInfo> {
+        let client_proxy = ClientProxy {
             service_messenger: service_messenger_factory
                 .create(MessengerType::Unbound)
                 .await
@@ -319,7 +316,6 @@ mod tests {
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage: InMemoryStorageFactory::new().get_store(CONTEXT_ID).await,
             policy_type,
-            _phantom_data: PhantomData,
         };
 
         client_proxy.request_rebroadcast(setting_type);

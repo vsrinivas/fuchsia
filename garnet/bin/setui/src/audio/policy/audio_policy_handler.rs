@@ -89,7 +89,7 @@ pub struct AudioPolicyHandler {
     state: State,
 
     /// Offers access to common functionality like messaging and storage.
-    client_proxy: ClientProxy<State>,
+    client_proxy: ClientProxy,
 }
 
 impl DeviceStorageAccess for AudioPolicyHandler {
@@ -109,7 +109,7 @@ struct VolumeLimits {
 
 #[async_trait]
 impl Create<State> for AudioPolicyHandler {
-    async fn create(client_proxy: ClientProxy<State>) -> Result<Self, Error> {
+    async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
         Ok(Self {
             state: AudioPolicyHandler::restore_policy_state(client_proxy.read().await),
             client_proxy,

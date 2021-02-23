@@ -22,32 +22,32 @@ use futures::future::BoxFuture;
 
 const CONTEXT_ID: u64 = 0;
 
-pub type HandlePolicyRequestCallback<S> =
-    Box<dyn Fn(PolicyRequest, ClientProxy<S>) -> BoxFuture<'static, Response> + Send + Sync>;
+pub type HandlePolicyRequestCallback =
+    Box<dyn Fn(PolicyRequest, ClientProxy) -> BoxFuture<'static, Response> + Send + Sync>;
 
-pub struct FakePolicyHandler<S: Storage + 'static> {
-    client_proxy: ClientProxy<S>,
-    handle_policy_request_callback: Option<HandlePolicyRequestCallback<S>>,
+pub struct FakePolicyHandler {
+    client_proxy: ClientProxy,
+    handle_policy_request_callback: Option<HandlePolicyRequestCallback>,
 }
 
-impl<S: Storage> FakePolicyHandler<S> {
+impl FakePolicyHandler {
     fn set_handle_policy_request_callback(
         &mut self,
-        handle_policy_request_callback: HandlePolicyRequestCallback<S>,
+        handle_policy_request_callback: HandlePolicyRequestCallback,
     ) {
         self.handle_policy_request_callback = Some(handle_policy_request_callback);
     }
 }
 
 #[async_trait]
-impl<S: Storage> Create<S> for FakePolicyHandler<S> {
-    async fn create(client_proxy: ClientProxy<S>) -> Result<Self, Error> {
+impl<S: Storage> Create<S> for FakePolicyHandler {
+    async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
         Ok(Self { client_proxy, handle_policy_request_callback: None })
     }
 }
 
 #[async_trait]
-impl<S: Storage> PolicyHandler for FakePolicyHandler<S> {
+impl PolicyHandler for FakePolicyHandler {
     async fn handle_policy_request(&mut self, request: PolicyRequest) -> Response {
         self.handle_policy_request_callback.as_ref().unwrap()(request, self.client_proxy.clone())
             .await
@@ -94,8 +94,9 @@ async fn test_write() {
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
     // called.
-    let mut handler =
-        FakePolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
+    let mut handler = <FakePolicyHandler as Create<PrivacyInfo>>::create(client_proxy.clone())
+        .await
+        .expect("failed to create handler");
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
             client_proxy.write(expected_value.clone(), false).await.expect("write failed");
@@ -110,5 +111,5 @@ async fn test_write() {
     assert_eq!(store.get::<PrivacyInfo>().await, expected_value);
 
     // Verify that the written value can be read again through the client proxy.
-    assert_eq!(client_proxy.read().await, expected_value);
+    assert_eq!(client_proxy.read::<PrivacyInfo>().await, expected_value);
 }
