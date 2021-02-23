@@ -1847,7 +1847,7 @@ From //src/developer/fuchsia-criterion/BUILD.gn:13
 
 **Current value (from the default):** `"30000"`
 
-From //garnet/bin/log_listener/BUILD.gn:14
+From //garnet/bin/log_listener/BUILD.gn:13
 
 ### lsan_default_options
 Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
@@ -1979,7 +1979,7 @@ Should be a string value that only contains digits.
 
 **Current value (from the default):** `"0"`
 
-From //garnet/bin/log_listener/BUILD.gn:13
+From //garnet/bin/log_listener/BUILD.gn:12
 
 ### max_zedboot_zbi_size
 Maximum allowable size for zedboot.zbi
@@ -3402,7 +3402,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/cast/BUILD.gn:12
+From //src/chromium/build_args.gni:17
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -3417,7 +3417,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/BUILD.gn:16
+From //src/chromium/build_args.gni:13
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
