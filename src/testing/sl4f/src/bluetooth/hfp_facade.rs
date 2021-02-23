@@ -178,6 +178,23 @@ impl HfpFacade {
             .collect())
     }
 
+    /// Set the active peer with the provided id. All future commands will be directed towards that
+    /// peer.
+    ///
+    /// Arguments:
+    ///     `id`: The unique id for the peer that initiated the request.
+    pub async fn set_active_peer(&self, id: u64) -> Result<(), Error> {
+        let tag = "HfpFacade::set_active_peer";
+        let id = PeerId { value: id };
+        let mut inner = self.inner.lock().await;
+        if inner.peers.contains_key(&id) {
+            inner.active_peer = Some(id);
+        } else {
+            fx_err_and_bail!(&with_line!(tag), format_err!("Peer {:?} not connected", id));
+        }
+        Ok(())
+    }
+
     /// Handle a peer `request`. Most requests are handled by immediately responding with the
     /// relevant data which is stored in the facade's state.
     ///

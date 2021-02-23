@@ -710,6 +710,11 @@ impl Facade for HfpFacade {
                 let result = self.list_peers().await?;
                 Ok(to_value(result)?)
             }
+            "SetActivePeer" => {
+                let id = parse_arg!(args, as_u64, "peer_id")?;
+                let result = self.set_active_peer(id).await?;
+                Ok(to_value(result)?)
+            }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
         }
     }
