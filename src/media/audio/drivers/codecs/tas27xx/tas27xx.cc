@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <memory>
 
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -33,6 +34,21 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .bits_per_slot = kSupportedBitsPerSlot,
     .bits_per_sample = kSupportedBitsPerSample,
 };
+
+Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
+                 bool vsense, bool isense)
+    : SimpleCodecServer(device),
+      i2c_(i2c),
+      fault_gpio_(fault_gpio),
+      ena_vsens_(vsense),
+      ena_isens_(isense) {
+  size_t actual = 0;
+  auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
+                                    sizeof(metadata_), &actual);
+  if (status != ZX_OK) {
+    zxlogf(DEBUG, "%s device_get_metadata failed %d", __FILE__, status);
+  }
+}
 
 int Tas27xx::Thread() {
   zx::time timestamp;
@@ -286,9 +302,30 @@ zx_status_t Tas27xx::Reinitialize() {
 zx_status_t Tas27xx::Reset() {
   // Will be in software shutdown state after call.
   zx_status_t status = WriteReg(SW_RESET, 0x01);
-  DelayMs(2);
   if (status != ZX_OK) {
+    DelayMs(2);
     return status;
+  }
+  if (metadata_.number_of_writes1) {
+    for (size_t i = 0; i < metadata_.number_of_writes1; ++i) {
+      auto status =
+          WriteReg(metadata_.init_sequence1[i].address, metadata_.init_sequence1[i].value);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
+               metadata_.init_sequence1[i].address, __func__);
+        return status;
+      }
+    }
+  }
+  DelayMs(2);
+  // Run the second init sequence from metadata if available.
+  for (size_t i = 0; i < metadata_.number_of_writes2; ++i) {
+    auto status = WriteReg(metadata_.init_sequence2[i].address, metadata_.init_sequence2[i].value);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
+             metadata_.init_sequence2[i].address, __func__);
+      return status;
+    }
   }
   return Reinitialize();
 }

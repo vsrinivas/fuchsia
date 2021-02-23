@@ -14,6 +14,7 @@
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+#include <ti/ti-audio.h>
 
 #include "astro-gpios.h"
 #include "astro.h"
@@ -24,6 +25,10 @@
 #define ENABLE_DAI_MODE
 // Enable DAI test.
 //#define ENABLE_DAI_TEST
+
+#ifdef TAS2770_CONFIG_PATH
+#include TAS2770_CONFIG_PATH
+#endif
 
 namespace astro {
 
@@ -281,18 +286,42 @@ zx_status_t Astro::AudioInit() {
     zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, kCodecVid},
                                 {BIND_PLATFORM_DEV_DID, 0, kCodecDid}};
 
+    metadata::ti::TasConfig metadata = {};
+#ifdef TAS2770_CONFIG_PATH
+    metadata.number_of_writes1 = sizeof(tas2770_init_sequence1) / sizeof(cfg_reg);
+    for (size_t i = 0; i < metadata.number_of_writes1; ++i) {
+      metadata.init_sequence1[i].address = tas2770_init_sequence1[i].offset;
+      metadata.init_sequence1[i].value = tas2770_init_sequence1[i].value;
+    }
+    metadata.number_of_writes2 = sizeof(tas2770_init_sequence2) / sizeof(cfg_reg);
+    for (size_t i = 0; i < metadata.number_of_writes2; ++i) {
+      metadata.init_sequence2[i].address = tas2770_init_sequence2[i].offset;
+      metadata.init_sequence2[i].value = tas2770_init_sequence2[i].value;
+    }
+#endif
+    const device_metadata_t codec_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data = reinterpret_cast<uint8_t*>(&metadata),
+            .length = sizeof(metadata),
+        },
+    };
+
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
     comp_desc.coresident_device_index = UINT32_MAX;
     comp_desc.fragments = codec_fragments;
     comp_desc.fragments_count = countof(codec_fragments);
+    comp_desc.metadata_list = codec_metadata;
+    comp_desc.metadata_count = countof(codec_metadata);
     status = DdkAddComposite("audio-codec-tas27xx", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-
+  }
+  {
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
     snprintf(metadata.product_name, sizeof(metadata.product_name), "astro");

@@ -15,6 +15,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddktl/device.h>
+#include <ti/ti-audio.h>
 
 namespace audio {
 static constexpr uint8_t SW_RESET = 0x01;  // sw reset
@@ -63,12 +64,8 @@ static constexpr uint8_t INT_MASK0_OVER_TEMP_ERROR = (1 << 0);
 class Tas27xx : public SimpleCodecServer {
  public:
   explicit Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
-                   bool vsense, bool isense)
-      : SimpleCodecServer(device),
-        i2c_(i2c),
-        fault_gpio_(fault_gpio),
-        ena_vsens_(vsense),
-        ena_isens_(isense) {}
+                   bool vsense, bool isense);
+
   virtual ~Tas27xx() = default;
 
   // Implementation for SimpleCodecServer.
@@ -117,6 +114,7 @@ class Tas27xx : public SimpleCodecServer {
   bool started_ = false;
   GainState gain_state_ = {};
   thrd_t thread_;
+  metadata::ti::TasConfig metadata_ = {};
 };
 }  // namespace audio
 
