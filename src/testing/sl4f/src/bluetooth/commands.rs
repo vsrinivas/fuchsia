@@ -744,6 +744,16 @@ impl Facade for HfpFacade {
                 let result = self.set_call_transferred_to_ag(call_id).await?;
                 Ok(to_value(result)?)
             }
+            "SetSpeakerGain" => {
+                let value = parse_arg!(args, as_u64, "value")?;
+                let result = self.set_speaker_gain(value).await?;
+                Ok(to_value(result)?)
+            }
+            "SetMicrophoneGain" => {
+                let value = parse_arg!(args, as_u64, "value")?;
+                let result = self.set_microphone_gain(value).await?;
+                Ok(to_value(result)?)
+            }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
         }
     }

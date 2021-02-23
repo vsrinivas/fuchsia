@@ -52,7 +52,9 @@ struct PeerState {
     nrec_enabled: bool,
     battery_level: u8,
     speaker_gain: u8,
+    requested_speaker_gain: Option<u8>,
     microphone_gain: u8,
+    requested_microphone_gain: Option<u8>,
     #[derivative(Debug = "ignore")]
     gain_control_watcher: Option<fasync::Task<()>>,
     gain_control: Option<HeadsetGainProxy>,
@@ -568,6 +570,42 @@ impl HfpFacade {
         let mut inner = self.inner.lock().await;
         inner.calls.get_mut(&call_id).map(|call| call.peer_id = None);
         inner.peers.get_mut(&peer_id).map(|peer| peer.call_tasks.remove(&call_id));
+    }
+
+    /// Request that the active peer's speaker gain be set to `value`.
+    ///
+    /// Arguments:
+    ///     `value`: must be between 0-15 inclusive.
+    pub async fn set_speaker_gain(&self, value: u64) -> Result<(), Error> {
+        let value = value as u8;
+        let mut inner = self.inner.lock().await;
+        let id = inner.active_peer.unwrap();
+        let peer = inner.peers.get_mut(&id).unwrap();
+        peer.requested_speaker_gain = Some(value);
+        if peer.speaker_gain != value {
+            if let Some(gain_control) = &peer.gain_control {
+                gain_control.set_speaker_gain(value).unwrap();
+            }
+        }
+        Ok(())
+    }
+
+    /// Request that the active peer's microphone gain be set to `value`.
+    ///
+    /// Arguments:
+    ///     `value`: must be between 0-15 inclusive.
+    pub async fn set_microphone_gain(&self, value: u64) -> Result<(), Error> {
+        let value = value as u8;
+        let mut inner = self.inner.lock().await;
+        let id = inner.active_peer.unwrap();
+        let peer = inner.peers.get_mut(&id).unwrap();
+        peer.requested_microphone_gain = Some(value);
+        if peer.microphone_gain != value {
+            if let Some(gain_control) = &peer.gain_control {
+                gain_control.set_microphone_gain(value).unwrap();
+            }
+        }
+        Ok(())
     }
 
     /// Cleanup any HFP related objects.
