@@ -97,6 +97,7 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/object_view.h",
       "lib/fidl/llcpp/result.h",
       "lib/fidl/llcpp/server.h",
+      "lib/fidl/llcpp/internal/server_details.h",
       "lib/fidl/llcpp/server_end.h",
       "lib/fidl/llcpp/service_handler_interface.h",
       "lib/fidl/llcpp/soft_migration.h",
