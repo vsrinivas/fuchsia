@@ -42,7 +42,15 @@ template("_fidl_cpp_codegen_impl") {
   }
 
   compiled_action(generation_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    # default experimental mode false when unspecified
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "experimental_split_generation_domain_objects",
+                           ])
+    if (!defined(experimental_split_generation_domain_objects)) {
+      experimental_split_generation_domain_objects = false
+    }
 
     visibility = generation_visibility
 
@@ -51,8 +59,8 @@ template("_fidl_cpp_codegen_impl") {
     inputs = [ json_representation ]
 
     outputs = [
-      "$file_stem.h",
-      "$file_stem.cc",
+      "${file_stem}.h",
+      "${file_stem}.cc",
     ]
 
     args = [
@@ -68,8 +76,15 @@ template("_fidl_cpp_codegen_impl") {
       rebase_path("${clang_prefix}/clang-format", "", root_build_dir),
     ]
 
-    if (defined(invoker.additional_fidlgen_arguments)) {
-      args += invoker.additional_fidlgen_arguments
+    # From tools/fidl/fidlgen_hlcpp/codegen/codegen.go:
+    #   _test_base.h is omitted in this experimental mode
+    # TODO(fxb/70753): remove this logic once experimental flag is removed
+    if (experimental_split_generation_domain_objects) {
+      args += [ "--experimental-split-generation-domain-objects" ]
+    } else {
+      if (tool != "//tools/fidl/fidlgen_libfuzzer") {
+        outputs += [ "${file_stem}_test_base.h" ]
+      }
     }
 
     deps = [ ":$fidl_target_name($fidl_toolchain)" ]
@@ -390,8 +405,7 @@ template("fidl_cpp_family") {
     forward_variables_from(common_options, "*")
     output_stem = "cpp/natural_types"
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
-    additional_fidlgen_arguments =
-        [ "--experimental-split-generation-domain-objects" ]
+    experimental_split_generation_domain_objects = true
   }
   fidl_cpp_library("${target_name}_cpp_natural_types") {
     forward_variables_from(invoker,
