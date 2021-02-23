@@ -29,7 +29,7 @@ class Page {
       return status;
     }
 
-    page_->set_state(VM_PAGE_STATE_WIRED);
+    page_->set_state(vm_page_state::WIRED);
 
     memset(VirtualAddress(), fill, PAGE_SIZE);
     return ZX_OK;

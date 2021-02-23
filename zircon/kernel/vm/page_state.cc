@@ -8,23 +8,23 @@
 
 const char* page_state_to_string(vm_page_state state) {
   switch (state) {
-    case VM_PAGE_STATE_FREE:
+    case vm_page_state::FREE:
       return "free";
-    case VM_PAGE_STATE_ALLOC:
+    case vm_page_state::ALLOC:
       return "alloc";
-    case VM_PAGE_STATE_WIRED:
+    case vm_page_state::WIRED:
       return "wired";
-    case VM_PAGE_STATE_HEAP:
+    case vm_page_state::HEAP:
       return "heap";
-    case VM_PAGE_STATE_OBJECT:
+    case vm_page_state::OBJECT:
       return "object";
-    case VM_PAGE_STATE_MMU:
+    case vm_page_state::MMU:
       return "mmu";
-    case VM_PAGE_STATE_IPC:
+    case vm_page_state::IPC:
       return "ipc";
-    case VM_PAGE_STATE_CACHE:
+    case vm_page_state::CACHE:
       return "cache";
-    case VM_PAGE_STATE_SLAB:
+    case vm_page_state::SLAB:
       return "slab";
     default:
       return "unknown";

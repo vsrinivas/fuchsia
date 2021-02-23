@@ -44,8 +44,8 @@ bool IsZeroPage(vm_page_t* p) {
 }
 
 void InitializeVmPage(vm_page_t* p) {
-  DEBUG_ASSERT(p->state() == VM_PAGE_STATE_ALLOC);
-  p->set_state(VM_PAGE_STATE_OBJECT);
+  DEBUG_ASSERT(p->state() == vm_page_state::ALLOC);
+  p->set_state(vm_page_state::OBJECT);
   p->object.pin_count = 0;
   p->object.cow_left_split = 0;
   p->object.cow_right_split = 0;
@@ -1158,7 +1158,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool d
   // If this is actually a real page, we need to place it into the appropriate queue.
   if (p->IsPage()) {
     vm_page_t* page = p->Page();
-    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+    DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
     DEBUG_ASSERT(page->object.pin_count == 0);
     SetNotWired(page, offset);
   }
@@ -1833,7 +1833,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
           return ZX_ERR_BAD_STATE;
         }
         vm_page_t* page = p->Page();
-        DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+        DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
         if (page->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
           return ZX_ERR_UNAVAILABLE;
         }
@@ -2193,7 +2193,7 @@ void VmCowPages::SetNotWired(vm_page_t* page, uint64_t offset) {
 }
 
 void VmCowPages::UnpinPage(vm_page_t* page, uint64_t offset) {
-  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+  DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   ASSERT(page->object.pin_count > 0);
   page->object.pin_count--;
   if (page->object.pin_count == 0) {

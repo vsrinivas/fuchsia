@@ -74,7 +74,7 @@ typedef struct vm_page {
   char padding[6];
 
   // helper routines
-  bool is_free() const { return state() == VM_PAGE_STATE_FREE; }
+  bool is_free() const { return state() == vm_page_state::FREE; }
 
   void dump() const;
 

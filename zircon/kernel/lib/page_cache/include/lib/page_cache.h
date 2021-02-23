@@ -178,7 +178,7 @@ class PageCache {
     list_node* node = list_prev(&entry.free_list, &entry.free_list);
     for (size_t i = 0; i < requested_pages; i++) {
       vm_page* page = containerof(node, vm_page, queue_node);
-      page->set_state(VM_PAGE_STATE_ALLOC);
+      page->set_state(vm_page_state::ALLOC);
       node = list_prev(&entry.free_list, node);
     }
 
@@ -203,7 +203,7 @@ class PageCache {
     list_node* node = list_prev(page_list, page_list);
     while (entry.available_pages < reserve_pages_ && node != nullptr) {
       vm_page* page = containerof(node, vm_page, queue_node);
-      page->set_state(VM_PAGE_STATE_CACHE);
+      page->set_state(vm_page_state::CACHE);
       node = list_prev(page_list, node);
       entry.available_pages++;
       count++;
@@ -265,7 +265,7 @@ class PageCache {
       for (size_t i = 0; i < refill_pages; i++) {
         node = list_next(&page_list, node);
         vm_page* page = containerof(node, vm_page, queue_node);
-        page->set_state(VM_PAGE_STATE_CACHE);
+        page->set_state(vm_page_state::CACHE);
       }
       DEBUG_ASSERT(node != nullptr);
 

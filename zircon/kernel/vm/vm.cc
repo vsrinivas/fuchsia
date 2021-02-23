@@ -93,7 +93,7 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
   // mark all of the pages we allocated as WIRED
   vm_page_t* p;
-  list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(VM_PAGE_STATE_WIRED); }
+  list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(vm_page_state::WIRED); }
 }
 
 }  // namespace

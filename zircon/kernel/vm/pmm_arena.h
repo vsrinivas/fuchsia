@@ -36,9 +36,9 @@ class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
   unsigned int flags() const { return info_.flags; }
 
   // Counts the number of pages in every state. For each page in the arena,
-  // increments the corresponding VM_PAGE_STATE_*-indexed entry of
+  // increments the corresponding vm_page_state::*-indexed entry of
   // |state_count|. Does not zero out the entries first.
-  void CountStates(size_t state_count[VM_PAGE_STATE_COUNT_]) const;
+  void CountStates(size_t state_count[VmPageStateIndex(vm_page_state::COUNT_)]) const;
 
   vm_page_t* get_page(size_t index) { return &page_array_[index]; }
 

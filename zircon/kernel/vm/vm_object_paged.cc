@@ -354,13 +354,13 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
       vm_page_t* page = paddr_to_vm_page(pa);
       ASSERT(page);
 
-      if (page->state() == VM_PAGE_STATE_WIRED) {
+      if (page->state() == vm_page_state::WIRED) {
         boot_reserve_unwire_page(page);
       } else {
         // This function is only valid for memory in the boot image,
         // which should all be wired.
-        panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
-              page->state());
+        panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %zu\n", pa,
+              VmPageStateIndex(page->state()));
       }
       status = vmo->cow_pages_locked()->AddNewPageLocked(count * PAGE_SIZE, page, false, false);
       ASSERT(status == ZX_OK);

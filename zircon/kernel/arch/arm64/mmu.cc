@@ -458,7 +458,7 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
     return status;
   }
 
-  page->set_state(VM_PAGE_STATE_MMU);
+  page->set_state(vm_page_state::MMU);
   pt_pages_++;
 
   LOCAL_KTRACE("page table alloc");
@@ -480,7 +480,7 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
   if (!page) {
     panic("bad page table paddr 0x%lx\n", paddr);
   }
-  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_MMU);
+  DEBUG_ASSERT(page->state() == vm_page_state::MMU);
   cm.FreePage(page);
 
   pt_pages_--;

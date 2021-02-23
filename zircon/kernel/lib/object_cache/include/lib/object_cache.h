@@ -96,13 +96,13 @@ struct DefaultAllocator {
       return zx::error_status(page_alloc_status);
     }
 
-    vm_page->set_state(VM_PAGE_STATE_SLAB);
+    vm_page->set_state(vm_page_state::SLAB);
     return zx::ok(paddr_to_physmap(paddr));
   }
 
   static void Release(void* slab) {
     vm_page_t* page = paddr_to_vm_page(physmap_to_paddr(slab));
-    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_SLAB);
+    DEBUG_ASSERT(page->state() == vm_page_state::SLAB);
     pmm_free_page(page);
   }
 

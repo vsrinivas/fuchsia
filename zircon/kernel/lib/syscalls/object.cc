@@ -648,8 +648,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       // that dispatcher.
 
       // |get_count| returns an estimate so the sum of the counts may not equal the total.
-      uint64_t state_count[VM_PAGE_STATE_COUNT_] = {};
-      for (uint32_t i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
+      uint64_t state_count[VmPageStateIndex(vm_page_state::COUNT_)] = {};
+      for (uint32_t i = 0; i < VmPageStateIndex(vm_page_state::COUNT_); i++) {
         state_count[i] = vm_page_t::get_count(vm_page_state(i));
       }
 
@@ -663,33 +663,33 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       stats.total_bytes = pmm_count_total_bytes();
 
       // Holds the sum of bytes in the broken out states. This sum could be less than the total
-      // because we aren't counting all possible states (e.g. VM_PAGE_STATE_ALLOC). This sum could
+      // because we aren't counting all possible states (e.g. vm_page_state::ALLOC). This sum could
       // be greater than the total because per-state counts are approximate.
       uint64_t sum_bytes = 0;
 
-      stats.free_bytes = state_count[VM_PAGE_STATE_FREE] * PAGE_SIZE;
+      stats.free_bytes = state_count[VmPageStateIndex(vm_page_state::FREE)] * PAGE_SIZE;
       sum_bytes += stats.free_bytes;
 
-      stats.wired_bytes = state_count[VM_PAGE_STATE_WIRED] * PAGE_SIZE;
+      stats.wired_bytes = state_count[VmPageStateIndex(vm_page_state::WIRED)] * PAGE_SIZE;
       sum_bytes += stats.wired_bytes;
 
-      stats.total_heap_bytes = state_count[VM_PAGE_STATE_HEAP] * PAGE_SIZE;
+      stats.total_heap_bytes = state_count[VmPageStateIndex(vm_page_state::HEAP)] * PAGE_SIZE;
       sum_bytes += stats.total_heap_bytes;
       stats.free_heap_bytes = free_heap_bytes;
 
-      stats.vmo_bytes = state_count[VM_PAGE_STATE_OBJECT] * PAGE_SIZE;
+      stats.vmo_bytes = state_count[VmPageStateIndex(vm_page_state::OBJECT)] * PAGE_SIZE;
       sum_bytes += stats.vmo_bytes;
 
-      stats.mmu_overhead_bytes = state_count[VM_PAGE_STATE_MMU] * PAGE_SIZE;
+      stats.mmu_overhead_bytes = state_count[VmPageStateIndex(vm_page_state::MMU)] * PAGE_SIZE;
       sum_bytes += stats.mmu_overhead_bytes;
 
-      stats.ipc_bytes = state_count[VM_PAGE_STATE_IPC] * PAGE_SIZE;
+      stats.ipc_bytes = state_count[VmPageStateIndex(vm_page_state::IPC)] * PAGE_SIZE;
       sum_bytes += stats.ipc_bytes;
 
       // TODO(fxbug.dev/68327): Extend zx_info_kmem_stats_t and
       // zx_info_kmem_stats_extended_t with SLAB and CACHE fields.
-      sum_bytes += state_count[VM_PAGE_STATE_CACHE] * PAGE_SIZE;
-      sum_bytes += state_count[VM_PAGE_STATE_SLAB] * PAGE_SIZE;
+      sum_bytes += state_count[VmPageStateIndex(vm_page_state::CACHE)] * PAGE_SIZE;
+      sum_bytes += state_count[VmPageStateIndex(vm_page_state::SLAB)] * PAGE_SIZE;
 
       // Is there unaccounted memory?
       if (stats.total_bytes > sum_bytes) {

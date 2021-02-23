@@ -6,28 +6,33 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_STATE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_STATE_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 // Defines the state of a VM page (|vm_page_t|).
 //
 // Be sure to keep this enum in sync with the definition of |vm_page_t|.
-enum vm_page_state : uint8_t {
-  VM_PAGE_STATE_FREE = 0,
-  VM_PAGE_STATE_ALLOC,
-  VM_PAGE_STATE_OBJECT,
-  VM_PAGE_STATE_WIRED,
-  VM_PAGE_STATE_HEAP,
-  VM_PAGE_STATE_MMU,    // allocated to serve arch-specific mmu purposes
-  VM_PAGE_STATE_IOMMU,  // allocated for platform-specific iommu structures
-  VM_PAGE_STATE_IPC,
-  VM_PAGE_STATE_CACHE,
-  VM_PAGE_STATE_SLAB,
+enum class vm_page_state : uint8_t {
+  FREE = 0,
+  ALLOC,
+  OBJECT,
+  WIRED,
+  HEAP,
+  MMU,    // allocated to serve arch-specific mmu purposes
+  IOMMU,  // allocated for platform-specific iommu structures
+  IPC,
+  CACHE,
+  SLAB,
 
-  VM_PAGE_STATE_COUNT_
+  COUNT_
 };
 
+static inline constexpr size_t VmPageStateIndex(vm_page_state state) {
+  return static_cast<size_t>(state);
+}
+
 typedef struct vm_page_counts {
-  int64_t by_state[VM_PAGE_STATE_COUNT_];
+  int64_t by_state[VmPageStateIndex(vm_page_state::COUNT_)];
 } vm_page_counts_t;
 
 // Returns a string description of |state|.

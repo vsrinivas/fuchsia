@@ -62,8 +62,8 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
 
   page_array_ = (vm_page_t*)raw_page_array;
 
-  // we've just constructed |page_count| pages in the state VM_PAGE_STATE_FREE
-  vm_page::add_to_initial_count(VM_PAGE_STATE_FREE, page_count);
+  // we've just constructed |page_count| pages in the state vm_page_state::FREE
+  vm_page::add_to_initial_count(vm_page_state::FREE, page_count);
 
   // compute the range of the array that backs the array itself
   size_t array_start_index = (PAGE_ALIGN(range.pa) - info_.base) / PAGE_SIZE;
@@ -82,7 +82,7 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
 
     p.paddr_priv = base() + i * PAGE_SIZE;
     if (i >= array_start_index && i < array_end_index) {
-      p.set_state(VM_PAGE_STATE_WIRED);
+      p.set_state(vm_page_state::WIRED);
     } else {
       list_add_tail(&list, &p.queue_node);
     }
@@ -201,9 +201,9 @@ vm_page_t* PmmArena::FindFreeContiguous(size_t count, uint8_t alignment_log2) {
   return result;
 }
 
-void PmmArena::CountStates(size_t state_count[VM_PAGE_STATE_COUNT_]) const {
+void PmmArena::CountStates(size_t state_count[VmPageStateIndex(vm_page_state::COUNT_)]) const {
   for (size_t i = 0; i < size() / PAGE_SIZE; i++) {
-    state_count[page_array_[i].state()]++;
+    state_count[VmPageStateIndex(page_array_[i].state())]++;
   }
 }
 
@@ -221,11 +221,11 @@ void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) const {
   }
 
   // count the number of pages in every state
-  size_t state_count[VM_PAGE_STATE_COUNT_] = {};
+  size_t state_count[VmPageStateIndex(vm_page_state::COUNT_)] = {};
   CountStates(state_count);
 
   printf("\tpage states:\n");
-  for (unsigned int i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
+  for (unsigned int i = 0; i < VmPageStateIndex(vm_page_state::COUNT_); i++) {
     printf("\t\t%-12s %-16zu (%zu bytes)\n", page_state_to_string(vm_page_state(i)), state_count[i],
            state_count[i] * PAGE_SIZE);
   }

@@ -29,7 +29,7 @@ class ManagedPmmNode {
     ZX_ASSERT(pmm_alloc_pages(kNumPages, 0, &list) == ZX_OK);
     vm_page_t* page;
     list_for_every_entry (&list, page, vm_page_t, queue_node) {
-      page->set_state(VM_PAGE_STATE_FREE);
+      page->set_state(vm_page_state::FREE);
     }
     node_.AddFreePages(&list);
 
@@ -44,7 +44,7 @@ class ManagedPmmNode {
     ASSERT(status == ZX_OK);
     vm_page_t* page;
     list_for_every_entry (&list, page, vm_page_t, queue_node) {
-      page->set_state(VM_PAGE_STATE_ALLOC);
+      page->set_state(vm_page_state::ALLOC);
     }
     pmm_free(&list);
   }
@@ -485,7 +485,7 @@ static bool pmm_checker_test_with_fill_size(size_t fill_size) {
   // is not armed, |ValidatePattern| still returns true even though the page has no pattern.
   vm_page_t* page;
   EXPECT_EQ(pmm_alloc_page(0, &page), ZX_OK);
-  page->set_state(VM_PAGE_STATE_FREE);
+  page->set_state(vm_page_state::FREE);
   auto p = static_cast<uint8_t*>(paddr_to_physmap(page->paddr()));
   memset(p, 0, PAGE_SIZE);
   EXPECT_TRUE(checker.ValidatePattern(page));
@@ -527,7 +527,7 @@ static bool pmm_checker_test_with_fill_size(size_t fill_size) {
   EXPECT_TRUE(checker.ValidatePattern(page));
   checker.AssertPattern(page);
 
-  page->set_state(VM_PAGE_STATE_ALLOC);
+  page->set_state(vm_page_state::ALLOC);
   pmm_free_page(page);
 
   END_TEST;
@@ -661,7 +661,7 @@ static bool pmm_arena_find_free_contiguous_test() {
   // Ask for 4 pages,  aligned on a 2-page boundary.  See that the first page is skipped.
   vm_page_t* result = arena.FindFreeContiguous(4, PAGE_SIZE_SHIFT + 1);
   ASSERT_EQ(&page_array[1], result);
-  SetPageStateRange(VM_PAGE_STATE_ALLOC, result, 4);
+  SetPageStateRange(vm_page_state::ALLOC, result, 4);
 
   // [01111000]
   //
@@ -678,7 +678,7 @@ static bool pmm_arena_find_free_contiguous_test() {
   // Ask for 3 pages.
   result = arena.FindFreeContiguous(3, PAGE_SIZE_SHIFT);
   ASSERT_EQ(&page_array[5], result);
-  SetPageStateRange(VM_PAGE_STATE_ALLOC, result, 3);
+  SetPageStateRange(vm_page_state::ALLOC, result, 3);
 
   // [01111111]
   //
@@ -692,7 +692,7 @@ static bool pmm_arena_find_free_contiguous_test() {
   // Ask for the last remaining page.
   result = arena.FindFreeContiguous(1, PAGE_SIZE_SHIFT);
   ASSERT_EQ(&page_array[0], result);
-  SetPageStateRange(VM_PAGE_STATE_ALLOC, result, 1);
+  SetPageStateRange(vm_page_state::ALLOC, result, 1);
 
   // [11111111]
   //
@@ -709,7 +709,7 @@ static bool pq_add_remove() {
 
   // Pretend we have an allocated page
   vm_page_t test_page = {};
-  test_page.set_state(VM_PAGE_STATE_OBJECT);
+  test_page.set_state(vm_page_state::OBJECT);
 
   // Need a VMO to claim our pager backed page is in
   fbl::RefPtr<VmObjectPaged> vmo;
@@ -752,7 +752,7 @@ static bool pq_move_queues() {
 
   // Pretend we have an allocated page
   vm_page_t test_page = {};
-  test_page.set_state(VM_PAGE_STATE_OBJECT);
+  test_page.set_state(vm_page_state::OBJECT);
 
   // Need a VMO to claim our pager backed page is in
   fbl::RefPtr<VmObjectPaged> vmo;
@@ -802,7 +802,7 @@ static bool pq_move_self_queue() {
 
   // Pretend we have an allocated page
   vm_page_t test_page = {};
-  test_page.set_state(VM_PAGE_STATE_OBJECT);
+  test_page.set_state(vm_page_state::OBJECT);
 
   // Move the page into the queue it is already in.
   pq.SetWired(&test_page);
@@ -827,8 +827,8 @@ static bool pq_rotate_queue() {
   // Pretend we have a couple of allocated pages.
   vm_page_t wired_page = {};
   vm_page_t pager_page = {};
-  wired_page.set_state(VM_PAGE_STATE_OBJECT);
-  pager_page.set_state(VM_PAGE_STATE_OBJECT);
+  wired_page.set_state(vm_page_state::OBJECT);
+  pager_page.set_state(vm_page_state::OBJECT);
 
   // Need a VMO to claim our pager backed page is in.
   fbl::RefPtr<VmObjectPaged> vmo;

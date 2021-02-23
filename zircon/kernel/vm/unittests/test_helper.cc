@@ -103,7 +103,7 @@ zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObjectP
   if (status != ZX_OK) {
     return status;
   }
-  page->set_state(VM_PAGE_STATE_OBJECT);
+  page->set_state(vm_page_state::OBJECT);
   VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
   if (!page_or_marker) {
     return ZX_ERR_NO_MEMORY;

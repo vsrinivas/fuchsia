@@ -25,7 +25,7 @@ void vm_page::dump() const {
   const vm_page_state page_state = state();
   printf("page %p: address %#" PRIxPTR " state %s", this, paddr(),
          page_state_to_string(page_state));
-  if (page_state == VM_PAGE_STATE_OBJECT) {
+  if (page_state == vm_page_state::OBJECT) {
     printf(" pin_count %d split_bits %d%d\n", object.pin_count, object.cow_left_split,
            object.cow_right_split);
   } else {
@@ -41,8 +41,8 @@ void vm_page::set_state(vm_page_state new_state) {
   // the values are not modified concurrently. See comment at the definition of |vm_page_counts|.
   percpu::WithCurrentPreemptDisable([&old_state, &new_state](percpu* p) {
     // Be sure to not block, else we lose the protection provided by disabling preemption.
-    p->vm_page_counts.by_state[old_state] -= 1;
-    p->vm_page_counts.by_state[new_state] += 1;
+    p->vm_page_counts.by_state[VmPageStateIndex(old_state)] -= 1;
+    p->vm_page_counts.by_state[VmPageStateIndex(new_state)] += 1;
   });
 }
 
@@ -52,14 +52,14 @@ uint64_t vm_page::get_count(vm_page_state state) {
     // Because |get_count| could be called concurrently with |set_state| we're not guaranteed to
     // get a consistent snapshot of the page counts. It's OK if the values are a little off. See
     // comment at the definition of |vm_page_state|.
-    result += p->vm_page_counts.by_state[state];
+    result += p->vm_page_counts.by_state[VmPageStateIndex(state)];
   });
   return result >= 0 ? result : 0;
 }
 
 void vm_page::add_to_initial_count(vm_page_state state, uint64_t n) {
   percpu::WithCurrentPreemptDisable(
-      [&state, &n](percpu* p) { p->vm_page_counts.by_state[state] += n; });
+      [&state, &n](percpu* p) { p->vm_page_counts.by_state[VmPageStateIndex(state)] += n; });
 }
 
 static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {

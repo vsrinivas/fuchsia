@@ -28,7 +28,7 @@
 // BufferChain is a list of buffers allocated from the PMM.
 //
 // It's designed for use with channel messages.  Pages backing a BufferChain are marked as
-// VM_PAGE_STATE_IPC.
+// vm_page_state::IPC.
 //
 // The BufferChain object itself lives *inside* its first buffer.  Here's what it looks like:
 //
@@ -229,8 +229,8 @@ class BufferChain {
     }
     vm_page_t* page = list_remove_head_type(unused_pages, vm_page, queue_node);
     DEBUG_ASSERT(page != nullptr);
-    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_ALLOC);
-    page->set_state(VM_PAGE_STATE_IPC);
+    DEBUG_ASSERT(page->state() == vm_page_state::ALLOC);
+    page->set_state(vm_page_state::IPC);
     list_add_tail(used_pages, &page->queue_node);
 
     void* va = paddr_to_physmap(page->paddr());

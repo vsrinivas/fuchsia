@@ -182,7 +182,7 @@ class X86PageTableBase::ConsistencyManager {
 
   void queue_free(vm_page_t* page) {
     AssertHeld(pt_->lock_);
-    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_MMU);
+    DEBUG_ASSERT(page->state() == vm_page_state::MMU);
     list_add_tail(&to_free_, &page->queue_node);
     DEBUG_ASSERT(pt_->pages_ > 0);
     pt_->pages_--;
@@ -222,7 +222,7 @@ X86PageTableBase::ConsistencyManager::~ConsistencyManager() {
   // table lock.
   vm_page_t* p;
   list_for_every_entry (&to_free_, p, vm_page_t, queue_node) {
-    DEBUG_ASSERT(p->state() == VM_PAGE_STATE_MMU);
+    DEBUG_ASSERT(p->state() == vm_page_state::MMU);
   }
   if (!list_is_empty(&to_free_)) {
     pmm_free(&to_free_);
@@ -406,7 +406,7 @@ pt_entry_t* X86PageTableBase::AllocatePageTable() {
   if (status != ZX_OK) {
     return nullptr;
   }
-  p->set_state(VM_PAGE_STATE_MMU);
+  p->set_state(vm_page_state::MMU);
 
   pt_entry_t* page_ptr = static_cast<pt_entry_t*>(paddr_to_physmap(pa));
   DEBUG_ASSERT(page_ptr);
@@ -489,7 +489,7 @@ zx_status_t X86PageTableBase::GetMapping(volatile pt_entry_t* table, vaddr_t vad
 
   uint index = vaddr_to_index(level, vaddr);
   volatile pt_entry_t* e = table + index;
-  DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+  DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
   pt_entry_t pt_val = *e;
   if (!IS_PAGE_PRESENT(pt_val))
     return ZX_ERR_NOT_FOUND;
@@ -502,7 +502,7 @@ zx_status_t X86PageTableBase::GetMapping(volatile pt_entry_t* table, vaddr_t vad
   }
 
   volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
-  DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table))->state() != VM_PAGE_STATE_FREE);
+  DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table))->state() != vm_page_state::FREE);
   return GetMapping(next_table, vaddr, lower_level(level), ret_level, mapping);
 }
 
@@ -512,7 +512,7 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
   /* do the final page table lookup */
   uint index = vaddr_to_index(PageTableLevel::PT_L, vaddr);
   volatile pt_entry_t* e = table + index;
-  DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+  DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
   if (!IS_PAGE_PRESENT(*e))
     return ZX_ERR_NOT_FOUND;
 
@@ -559,7 +559,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
   uint index = vaddr_to_index(level, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
-    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     pt_entry_t pt_val = *e;
     // If the page isn't even mapped, just skip it
     if (!IS_PAGE_PRESENT(pt_val)) {
@@ -618,7 +618,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
       UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/false);
 
       DEBUG_ASSERT(page);
-      DEBUG_ASSERT_MSG(page->state() == VM_PAGE_STATE_MMU,
+      DEBUG_ASSERT_MSG(page->state() == vm_page_state::MMU,
                        "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state(),
                        X86_VIRT_TO_PHYS(next_table));
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
@@ -648,7 +648,7 @@ bool X86PageTableBase::RemoveMappingL0(volatile pt_entry_t* table,
   uint index = vaddr_to_index(PageTableLevel::PT_L, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
-    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     if (IS_PAGE_PRESENT(*e)) {
       UnmapEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, /*was_terminal=*/true);
       unmapped = true;
@@ -711,7 +711,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
   uint index = vaddr_to_index(level, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
-    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     pt_entry_t pt_val = *e;
     // See if there's a large page in our way
     if (IS_PAGE_PRESENT(pt_val) && IS_LARGE_PAGE(pt_val)) {
@@ -777,7 +777,7 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
   uint index = vaddr_to_index(PageTableLevel::PT_L, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
-    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     if (IS_PAGE_PRESENT(*e)) {
       return ZX_ERR_ALREADY_EXISTS;
     }
@@ -825,7 +825,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
   uint index = vaddr_to_index(level, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
-    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
+    DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     pt_entry_t pt_val = *e;
     // Skip unmapped pages (we may encounter these due to demand paging)
     if (!IS_PAGE_PRESENT(pt_val)) {
@@ -1093,7 +1093,7 @@ bool X86PageTableBase::HarvestNonTerminalPageTable(volatile pt_entry_t* table,
       UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/false);
 
       DEBUG_ASSERT(page);
-      DEBUG_ASSERT_MSG(page->state() == VM_PAGE_STATE_MMU,
+      DEBUG_ASSERT_MSG(page->state() == vm_page_state::MMU,
                        "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state(),
                        X86_VIRT_TO_PHYS(next_table));
       DEBUG_ASSERT(!list_in_list(&page->queue_node));

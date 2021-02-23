@@ -26,7 +26,7 @@ zx_status_t IommuPage::AllocatePage(IommuPage* out) {
   if (status != ZX_OK) {
     return status;
   }
-  page->set_state(VM_PAGE_STATE_IOMMU);
+  page->set_state(vm_page_state::IOMMU);
 
   void* vaddr;
   auto kernel_aspace = VmAspace::kernel_aspace();

@@ -227,7 +227,7 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
 
   DEBUG_ASSERT(page->is_free());
 
-  page->set_state(VM_PAGE_STATE_ALLOC);
+  page->set_state(vm_page_state::ALLOC);
 
   if (unlikely(free_fill_enabled_)) {
     checker_.AssertPattern(page);
@@ -398,7 +398,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
       DEBUG_ASSERT(list_in_list(&p->queue_node));
 
       list_delete(&p->queue_node);
-      p->set_state(VM_PAGE_STATE_ALLOC);
+      p->set_state(vm_page_state::ALLOC);
 
       DecrementFreeCountLocked(1);
       AsanUnpoisonPage(p);
@@ -415,13 +415,14 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
 }
 
 void PmmNode::FreePageHelperLocked(vm_page* page) {
-  LTRACEF("page %p state %u paddr %#" PRIxPTR "\n", page, page->state(), page->paddr());
+  LTRACEF("page %p state %zu paddr %#" PRIxPTR "\n", page, VmPageStateIndex(page->state()),
+          page->paddr());
 
-  DEBUG_ASSERT(page->state() != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
+  DEBUG_ASSERT(page->state() != vm_page_state::OBJECT || page->object.pin_count == 0);
   DEBUG_ASSERT(!page->is_free());
 
   // mark it free
-  page->set_state(VM_PAGE_STATE_FREE);
+  page->set_state(vm_page_state::FREE);
 
   if (unlikely(free_fill_enabled_)) {
     checker_.FillPattern(page);
