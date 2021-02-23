@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/sys/build/components.gni")
 
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {
@@ -33,33 +32,17 @@ if (target_cpu == "x64") {
     }
   }
 
-  driver_package("magma-intel-gen") {
+  fuchsia_package("magma-intel-gen") {
     if (magma_enable_developer_build) {
       testonly = true
     }
 
     deps = [ "//third_party/mesa:magma_vulkan" ]
 
-    libraries = [
-      {
-        name = "libvulkan_intel.so"
-      },
-    ]
-
     if (magma_enable_developer_build) {
       deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
-      drivers = [
-        {
-          name = "libmsd_intel_test.so"
-        },
-      ]
     } else {
       deps += [ "$msd_intel_gen_build_root:msd_intel" ]
-      drivers = [
-        {
-          name = "libmsd_intel.so"
-        },
-      ]
     }
   }
 
@@ -72,49 +55,66 @@ if (target_cpu == "x64") {
     ]
   }
 
-  test_package("magma_intel_gen_nonhardware_tests") {
-    deps = [
-      "$msd_intel_gen_build_root:tests",
-      "//third_party/mesa:tests",
-    ]
+  fuchsia_test_component("msd_intel_gen_nonhardware_tests") {
+    deps = [ "$msd_intel_gen_build_root:tests" ]
+    manifest = "meta/msd_intel_gen_nonhardware_tests.cmx"
+  }
 
-    tests = [
-      {
-        name = "msd_intel_gen_nonhardware_tests"
-      },
-      {
-        name = "mesa_unit_tests"
-      },
-      {
-        name = "state_pool"
-      },
-      {
-        name = "state_pool_free_list_only"
-      },
-      {
-        name = "state_pool_no_free"
-      },
-      {
-        name = "block_pool_no_free"
-      },
+  fuchsia_test_component("mesa_unit_tests") {
+    deps = [ "//third_party/mesa/tests:mesa_unit_tests" ]
+    manifest = "meta/mesa_unit_tests.cmx"
+  }
+
+  fuchsia_test_component("state_pool") {
+    deps = [ "//third_party/mesa/src/intel/vulkan/tests:state_pool" ]
+    manifest = "meta/state_pool.cmx"
+  }
+
+  fuchsia_test_component("state_pool_free_list_only") {
+    deps = [
+      "//third_party/mesa/src/intel/vulkan/tests:state_pool_free_list_only",
+    ]
+    manifest = "meta/state_pool_free_list_only.cmx"
+  }
+
+  fuchsia_test_component("state_pool_no_free") {
+    deps = [ "//third_party/mesa/src/intel/vulkan/tests:state_pool_no_free" ]
+    manifest = "meta/state_pool_no_free.cmx"
+  }
+
+  fuchsia_test_component("block_pool_no_free") {
+    deps = [ "//third_party/mesa/src/intel/vulkan/tests:block_pool_no_free" ]
+    manifest = "meta/block_pool_no_free.cmx"
+  }
+
+  fuchsia_test_package("magma_intel_gen_nonhardware_tests") {
+    test_components = [
+      ":msd_intel_gen_nonhardware_tests",
+      ":mesa_unit_tests",
+      ":state_pool",
+      ":state_pool_free_list_only",
+      ":state_pool_no_free",
+      ":block_pool_no_free",
     ]
   }
 
-  test_package("magma_intel_gen_integration_tests") {
-    deps = [
-      "//src/graphics/drivers/msd-intel-gen/tests/integration",
-      "//third_party/mesa:tests",
-    ]
+  fuchsia_test_component("msd_intel_gen_integration_tests") {
+    deps = [ "//src/graphics/drivers/msd-intel-gen/tests/integration" ]
+    manifest = "meta/msd_intel_gen_integration_tests.cmx"
+  }
 
-    tests = [
-      {
-        name = "msd_intel_gen_integration_tests"
-        environments = intel_gpu_envs
-      },
-      {
-        name = "mesa_integration_tests"
-        environments = intel_gpu_envs
-      },
+  fuchsia_test_component("mesa_integration_tests") {
+    deps = [ "//third_party/mesa:tests" ]
+    manifest = "meta/mesa_integration_tests.cmx"
+  }
+
+  fuchsia_test_package("magma_intel_gen_integration_tests") {
+    test_components = [
+      ":msd_intel_gen_integration_tests",
+      ":mesa_integration_tests",
     ]
+    test_specs = {
+      environments = intel_gpu_envs
+    }
   }
 }

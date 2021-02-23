@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/mesa_integration_tests"
+        "binary": "bin/mesa_integration_tests"
     },
     "sandbox": {
         "features": [

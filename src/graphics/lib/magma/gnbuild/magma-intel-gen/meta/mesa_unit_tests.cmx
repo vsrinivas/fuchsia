@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/mesa_unit_tests"
+        "binary": "bin/mesa_unit_tests"
     },
     "sandbox": {
         "features": [

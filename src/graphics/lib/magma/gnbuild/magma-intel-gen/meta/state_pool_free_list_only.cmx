@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/state_pool_free_list_only"
+        "binary": "bin/state_pool_free_list_only"
     },
     "sandbox": {
         "features": [
