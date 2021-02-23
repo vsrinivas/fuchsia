@@ -5,7 +5,12 @@
 #ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_OS_H_
 #define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_OS_H_
 
+#include <unordered_map>
+#include <vector>
+
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 namespace harvester {
 
@@ -48,7 +53,7 @@ class OS {
 
     // This is inherently racy (TOCTTOU race condition). Add a bit of slop space
     // in case children have been added.
-    children.reserve(num_children + kNumExtraSlop);
+    children.resize(num_children + kNumExtraSlop);
 
     // Fetch the actual child objects.
     size_t actual = 0;

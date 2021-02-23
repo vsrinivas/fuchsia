@@ -139,6 +139,7 @@ executable("system_monitor_harvester_test") {
     "harvester_test.cc",
     "info_resource_test.cc",
     "mock_dockyard_stub.h",
+    "os_test.cc",
     "sample_bundle_test.cc",
     "task_tree_test.cc",
     "union_find_test.cc",
