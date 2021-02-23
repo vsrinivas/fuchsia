@@ -202,7 +202,6 @@ impl IfaceManagerApi for IfaceManager {
         let (responder, receiver) = oneshot::channel();
         let req = HasWpa3IfaceRequest { responder };
         self.sender.try_send(IfaceManagerRequest::HasWpa3Iface(req))?;
-        println!("Going to send request");
         Ok(receiver.await?)
     }
 }
