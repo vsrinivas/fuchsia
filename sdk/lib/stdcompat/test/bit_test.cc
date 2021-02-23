@@ -20,14 +20,11 @@ using uint128_t = unsigned;
 
 // Types have overriden operator& to double check that |cpp20::addressof| is used intead of &.
 struct A {
-  constexpr A(const A&) = default;
-
   constexpr A* operator&() const { return nullptr; }
   std::array<uint8_t, 8> bytes;
 };
 
 struct B {
-  constexpr B(const B&) = default;
   constexpr B* operator&() const { return nullptr; }
   uint64_t number;
 };
@@ -649,7 +646,7 @@ TEST(IntPow2Test, BitFloorIsCorrect) {
 template <typename T>
 constexpr void CheckIntPow2Alias() {
   static_assert(&std::has_single_bit<T> == &cpp20::has_single_bit<T>);
-  static_assert(&std::width<T> == &cpp20::width<T>);
+  static_assert(&std::bit_width<T> == &cpp20::bit_width<T>);
   static_assert(&std::bit_ceil<T> == &cpp20::bit_ceil<T>);
   static_assert(&std::bit_floor<T> == &cpp20::bit_floor<T>);
 }
