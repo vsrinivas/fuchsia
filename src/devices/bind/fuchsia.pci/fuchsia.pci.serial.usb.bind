@@ -1,0 +1,14 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.pci.serial.usb;
+
+extend uint fuchsia.BIND_PCI_INTERFACE {
+  UHCI = 0x00,
+  OHCI = 0x10,
+  EHCI = 0x20,
+  XHCI = 0x30,
+  OTHER = 0x80,
+  DEVICE = 0xfe,
+};

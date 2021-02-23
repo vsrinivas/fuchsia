@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.pci.serial;
+
+extend uint fuchsia.BIND_PCI_SUBCLASS {
+  IEEE_1394 = 0x00,
+  ACCESS = 0x01,
+  SSA = 0x02,
+  USB = 0x03,
+  FIBER_CHANNEL = 0x04,
+  SMBUS = 0x05,
+  INFINIBAND = 0x06,
+  IPMI = 0x07,
+  SERCOS = 0x08,
+  CAN = 0x09,
+  MIPI_I3C = 0x0a,
+  OTHER = 0x80,
+};

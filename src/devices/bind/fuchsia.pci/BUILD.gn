@@ -7,3 +7,19 @@ import("//build/bind/bind.gni")
 bind_library("fuchsia.pci") {
   source = "fuchsia.pci.bind"
 }
+
+bind_library("fuchsia.pci.serial") {
+  source = "fuchsia.pci.serial.bind"
+}
+
+group("serial") {
+  public_deps = [ ":fuchsia.pci.serial" ]
+}
+
+bind_library("fuchsia.pci.serial.usb") {
+  source = "fuchsia.pci.serial.usb.bind"
+}
+
+group("serial.usb") {
+  public_deps = [ ":fuchsia.pci.serial.usb" ]
+}
