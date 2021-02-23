@@ -7,6 +7,7 @@ use {
         diagnostics::*,
     },
     anyhow::{format_err, Context, Error},
+    diagnostics_data,
     diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_cobalt::{
@@ -104,12 +105,7 @@ impl RebootSnapshotProcessor {
             let moniker = data_packet.moniker;
             match data_packet.payload {
                 None => {
-                    if data_packet.metadata.errors.is_some() {
-                        info!(
-                            "Encountered errors snapshotting for {:?}: {:?}",
-                            moniker, data_packet.metadata.errors
-                        );
-                    }
+                    process_schema_errors(&data_packet.metadata.errors, &moniker);
                 }
                 Some(payload) => self.process_single_payload(payload, &moniker).await,
             }
@@ -458,17 +454,7 @@ impl ProjectSampler {
         for data_packet in snapshot_data {
             let moniker = data_packet.moniker;
             match data_packet.payload {
-                None => {
-                    // TODO(66756): Shouldn't need to check for presence of errors is a payload
-                    // is None. We need to do this because empty root nodes are considered null
-                    // payloads.
-                    if data_packet.metadata.errors.is_some() {
-                        warn!(
-                            "Encountered errors snapshotting for {:?}: {:?}",
-                            moniker, data_packet.metadata.errors
-                        );
-                    }
-                }
+                None => process_schema_errors(&data_packet.metadata.errors, &moniker),
                 Some(payload) => {
                     for (hierarchy_path, property) in payload.property_iter() {
                         // The property iterator will visit empty nodes once,
@@ -896,6 +882,21 @@ fn compute_event_count_diff(
             selector,
             new_sample.discriminant_name()
         )),
+    }
+}
+
+fn process_schema_errors(errors: &Option<Vec<diagnostics_data::Error>>, moniker: &String) {
+    match errors {
+        Some(errors) => {
+            for error in errors {
+                if !error.message.contains("Inspect hierarchy was fully filtered") {
+                    warn!("Moniker: {}, Error: {:?}", moniker, error);
+                }
+            }
+        }
+        None => {
+            warn!("Moniker: {} encountered null payload and no errors.", moniker);
+        }
     }
 }
 
