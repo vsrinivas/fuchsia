@@ -107,27 +107,21 @@ class ErmineDriver {
   /// Returns true if a component is running.
   Future<bool> isRunning(String componentUrl,
       {Duration timeout = const Duration(seconds: 30)}) async {
-    final end = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(end)) {
-      var components = await component.list();
-      if (components.where((e) => e.contains(componentUrl)).isNotEmpty) {
-        return true;
-      }
-    }
-    return false;
+    return waitFor(() async {
+      return (await component.list())
+          .where((e) => e.contains(componentUrl))
+          .isNotEmpty;
+    }, timeout: timeout);
   }
 
   /// Returns true if a component is stopped.
   Future<bool> isStopped(String componentUrl,
       {Duration timeout = const Duration(seconds: 30)}) async {
-    final end = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(end)) {
-      var components = await component.list();
-      if (components.where((e) => e.contains(componentUrl)).isEmpty) {
-        return true;
-      }
-    }
-    return false;
+    return waitFor(() async {
+      return (await component.list())
+          .where((e) => e.contains(componentUrl))
+          .isEmpty;
+    }, timeout: timeout);
   }
 
   /// Got to the Overview screen.
@@ -213,20 +207,12 @@ class ErmineDriver {
   /// Inspect data. Waits for [timeout] duration for view to launch.
   Future<Map<String, dynamic>> waitForView(String viewUrl,
       [Duration timeout = const Duration(seconds: 30)]) async {
-    final end = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(end)) {
+    return waitFor(() async {
       final views = await launchedViews();
       final view = views.firstWhere((view) => view['url'] == viewUrl,
           orElse: () => null);
-      if (view != null) {
-        return view;
-      }
-      // Wait a second to query inspect again.
-      await Future.delayed(Duration(seconds: 1));
-    }
-    fail('Failed to find component: $viewUrl');
-    // ignore: dead_code
-    return null;
+      return view;
+    }, timeout: timeout);
   }
 
   /// Returns [Inspect] data for all launched views.
