@@ -3,6 +3,11 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/log_listener_return_code_test"
+        "binary": "bin/log_listener_return_code_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
     }
 }

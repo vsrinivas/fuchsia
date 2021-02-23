@@ -76,7 +76,6 @@ group("deprecated_package") {
     "//garnet/bin/insntrace/*",
     "//garnet/bin/insntrace/tests/*",
     "//garnet/bin/ktrace_provider/*",
-    "//garnet/bin/log_listener/*",
     "//garnet/bin/network_settings_server/*",
     "//garnet/bin/odu/*",
     "//garnet/bin/run_test_component/*",
