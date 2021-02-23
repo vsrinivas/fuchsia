@@ -6,12 +6,6 @@ import("//build/config.gni")
 import("//build/packages/prebuilt_package_with_flavors.gni")
 import("//src/chromium/build_args.gni")
 
-declare_args() {
-  # If true then the most recent canary version of the Cast Runner is used,
-  # otherwise the most recently validated version is used.
-  use_cast_runner_canary = false
-}
-
 prebuilt_archive_base_path = "//prebuilt/third_party/cast_runner"
 debug_archive_base_path = "//prebuilt/build_ids/" + target_cpu + "/chromium"
 

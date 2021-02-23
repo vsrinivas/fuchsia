@@ -7,4 +7,12 @@ declare_args() {
   # that cast_runner, web_runner, and web_engine will be obtained from. If unset, the prebuilt
   # packages from CIPD will be used.
   chromium_build_dir = ""
+
+  # Set to use the most recent canary version of prebuilt Chromium components
+  # otherwise the most recently validated version is used.
+  use_chromium_canary = false
+
+  # If true then the most recent canary version of the Cast Runner is used,
+  # otherwise the most recently validated version is used.
+  use_cast_runner_canary = false
 }
