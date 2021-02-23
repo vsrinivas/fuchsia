@@ -22,7 +22,7 @@ const CONTEXT_ID: u64 = 0;
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_default() {
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -114,7 +114,7 @@ async fn test_setup_no_reboot() {
         .await
         .register_service(hardware_power_statecontrol_service_handle.clone());
 
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

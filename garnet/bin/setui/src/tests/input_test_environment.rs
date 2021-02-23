@@ -70,7 +70,7 @@ impl TestInputEnvironmentBuilder {
         let storage_factory = Arc::new(if let Some(info) = self.starting_input_info_sources {
             InMemoryStorageFactory::with_initial_data(&info)
         } else {
-            InMemoryStorageFactory::create()
+            InMemoryStorageFactory::new()
         });
 
         // Register fake input device registry service.

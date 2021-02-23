@@ -34,7 +34,7 @@ const STARTING_BRIGHTNESS: f32 = 0.5;
 const CHANGED_BRIGHTNESS: f32 = 0.8;
 
 async fn setup_display_env() -> DisplayProxy {
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .settings(&[SettingType::Display])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -51,7 +51,7 @@ async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
         .await
         .register_service(Arc::new(Mutex::new(brightness_service_handle.clone())));
 
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .settings(&[SettingType::Display])
         .flags(&[ControllerFlag::ExternalBrightnessControl])
@@ -558,7 +558,7 @@ async fn test_display_failure() {
         }
     };
 
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))
         .settings(&[SettingType::Display, SettingType::Intl])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -576,7 +576,7 @@ async fn test_display_failure() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let display_proxy =
-        create_display_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
+        create_display_test_env_with_failures(Arc::new(InMemoryStorageFactory::new())).await;
     let result = display_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

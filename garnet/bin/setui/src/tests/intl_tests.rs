@@ -90,7 +90,7 @@ async fn create_intl_test_env_with_failures(
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Arc::new(InMemoryStorageFactory::create());
+    let factory = Arc::new(InMemoryStorageFactory::new());
     let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
 
     // Check if the initial value is correct.
@@ -129,7 +129,7 @@ async fn test_intl_e2e() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Arc::new(InMemoryStorageFactory::create());
+    let factory = Arc::new(InMemoryStorageFactory::new());
     let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
     let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
@@ -169,7 +169,7 @@ async fn test_intl_e2e_set_twice() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Arc::new(InMemoryStorageFactory::create());
+    let factory = Arc::new(InMemoryStorageFactory::new());
     let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
     let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
@@ -208,7 +208,7 @@ async fn test_intl_e2e_idempotent_set() {
 async fn test_intl_invalid_timezone() {
     const INITIAL_TIME_ZONE: &'static str = "GMT";
 
-    let factory = InMemoryStorageFactory::create();
+    let factory = InMemoryStorageFactory::new();
     let intl_service = create_test_intl_env(Arc::new(factory)).await;
 
     // Set a real value.
@@ -235,7 +235,7 @@ async fn test_intl_invalid_timezone() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let intl_service =
-        create_intl_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
+        create_intl_test_env_with_failures(Arc::new(InMemoryStorageFactory::new())).await;
     let result = intl_service.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

@@ -40,7 +40,7 @@ struct FakeServices {
 
 /// Builds the test environment.
 async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> NestedEnvironment {
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[])
         .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])

@@ -36,7 +36,7 @@ struct TestEnvironment {
 
 /// Creates an environment for audio policy.
 async fn create_test_environment() -> TestEnvironment {
-    let storage_factory = Arc::new(InMemoryStorageFactory::create());
+    let storage_factory = Arc::new(InMemoryStorageFactory::new());
 
     let service_registry = ServiceRegistry::create();
 

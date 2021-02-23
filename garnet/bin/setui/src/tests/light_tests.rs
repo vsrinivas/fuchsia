@@ -182,7 +182,7 @@ impl TestLightEnvironmentBuilder {
             }
             storage_factory
         } else {
-            InMemoryStorageFactory::create()
+            InMemoryStorageFactory::new()
         });
 
         let mut environment_builder = EnvironmentBuilder::new(Arc::clone(&storage_factory))

@@ -118,7 +118,7 @@ async fn create_handler_test_environment() -> TestEnvironment {
         .create(MessengerType::Addressable(core::Address::Switchboard))
         .await
         .expect("switchboard messenger created");
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Initialize storage since there's no EnvironmentBuilder to manage that here.
     storage_factory.initialize_storage::<State>().await;
     let store = storage_factory.get_store(CONTEXT_ID).await;
@@ -400,7 +400,7 @@ async fn test_handler_restore_persisted_state() {
         .create(MessengerType::Unbound)
         .await
         .expect("setting proxy messenger created");
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Initialize storage since there's no EnvironmentBuilder to manage that here.
     storage_factory.initialize_storage::<State>().await;
     let store = storage_factory.get_store(CONTEXT_ID).await;

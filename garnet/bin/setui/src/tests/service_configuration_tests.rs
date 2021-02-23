@@ -33,7 +33,7 @@ pub fn get_test_policy_types() -> HashSet<PolicyType> {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_no_configuration_provided() {
-    let factory = InMemoryStorageFactory::create();
+    let factory = InMemoryStorageFactory::new();
 
     let default_configuration =
         EnabledServicesConfiguration::with_services(get_test_settings_types());
@@ -68,7 +68,7 @@ async fn test_no_configuration_provided() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_default_configuration_provided() {
-    let factory = InMemoryStorageFactory::create();
+    let factory = InMemoryStorageFactory::new();
 
     // Load test configuration, which only has Accessibility, default will not be used.
     let configuration = DefaultSetting::new(None, "/config/data/service_configuration.json")
@@ -98,7 +98,7 @@ async fn test_default_configuration_provided() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_default_policy_configuration_provided() {
-    let factory = InMemoryStorageFactory::create();
+    let factory = InMemoryStorageFactory::new();
 
     // Load test configuration for policy which includes Audio, default will not be used.
     let policy_configuration = DefaultSetting::new(None, "/config/data/policy_configuration.json")

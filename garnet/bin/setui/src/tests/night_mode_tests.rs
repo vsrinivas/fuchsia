@@ -20,7 +20,7 @@ async fn test_night_mode() {
     let changed_value = NightModeInfo { night_mode_enabled: Some(true) };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Arc::new(InMemoryStorageFactory::create());
+    let factory = Arc::new(InMemoryStorageFactory::new());
 
     let env = EnvironmentBuilder::new(Arc::clone(&factory))
         .settings(&[SettingType::NightMode])

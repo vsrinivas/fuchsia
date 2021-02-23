@@ -70,7 +70,7 @@ fn main() -> Result<(), Error> {
         flags,
     );
 
-    let storage_factory = StashDeviceStorageFactory::create(
+    let storage_factory = StashDeviceStorageFactory::new(
         STASH_IDENTITY,
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );

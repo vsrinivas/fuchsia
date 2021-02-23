@@ -81,7 +81,7 @@ async fn test_accessibility_set_all() {
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Arc::new(InMemoryStorageFactory::create());
+    let factory = Arc::new(InMemoryStorageFactory::new());
     let accessibility_proxy = create_test_accessibility_env(Arc::clone(&factory)).await;
     let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
@@ -136,7 +136,7 @@ async fn test_accessibility_set_captions() {
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Arc::new(InMemoryStorageFactory::create());
+    let factory = Arc::new(InMemoryStorageFactory::new());
     let accessibility_proxy = create_test_accessibility_env(Arc::clone(&factory)).await;
     let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
@@ -184,7 +184,7 @@ async fn test_accessibility_set_captions() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let accessibility_proxy =
-        create_a11y_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
+        create_a11y_test_env_with_failures(Arc::new(InMemoryStorageFactory::new())).await;
     let result = accessibility_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

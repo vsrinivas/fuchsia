@@ -197,7 +197,7 @@ async fn test_environment_startup() {
     let (_, agent_generate) =
         TestAgent::create(startup_agent_id, LifespanTarget::Initialization, startup_tx);
 
-    assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .agents(&[service_agent_generate, agent_generate,])
         .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)

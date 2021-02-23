@@ -46,7 +46,7 @@ async fn test_light_sensor() {
         Box::pin(async { Ok(()) })
     };
 
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))
         .settings(&[SettingType::LightSensor])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -72,7 +72,7 @@ async fn test_light_sensor() {
 async fn test_watch_light_sensor_no_service_error() {
     let expected_error = fuchsia_zircon::Status::UNAVAILABLE;
 
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .settings(&[SettingType::Display])
         .spawn_and_get_nested_environment(ENV_NAME)

@@ -494,7 +494,7 @@ async fn test_persisted_values_applied_at_start() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let audio_proxy =
-        create_audio_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
+        create_audio_test_env_with_failures(Arc::new(InMemoryStorageFactory::new())).await;
     let result = audio_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

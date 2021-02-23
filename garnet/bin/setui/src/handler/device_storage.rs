@@ -367,9 +367,8 @@ pub struct StashDeviceStorageFactory {
 }
 
 impl StashDeviceStorageFactory {
-    // TODO(fxbug.dev/67371) Rename this to `new`.
     /// Construct a new instance of `StashDeviceStorageFactory`.
-    pub fn create(identity: &str, store: StoreProxy) -> StashDeviceStorageFactory {
+    pub fn new(identity: &str, store: StoreProxy) -> StashDeviceStorageFactory {
         store.identify(identity).expect("was not able to identify with stash");
         StashDeviceStorageFactory {
             store,
@@ -477,8 +476,9 @@ pub mod testing {
         initial data, use InMemoryStorageFactory::with_initial_data";
 
     impl InMemoryStorageFactory {
-        // TODO(fxbug.dev/67371) Rename this to `new`.
-        pub fn create() -> Self {
+        /// Constructs a new `InMemoryStorageFactory` with the ability to create a [`DeviceStorage`]
+        /// that can only read and write to the storage keys passed in.
+        pub fn new() -> Self {
             InMemoryStorageFactory {
                 initial_data: HashMap::new(),
                 device_storage_cache: Mutex::new(InitializationState::new()),
@@ -527,6 +527,7 @@ pub mod testing {
             }
         }
 
+        /// Retrieve the [`DeviceStorage`] singleton.
         pub async fn get_device_storage(
             &self,
             // TODO(fxbug.dev/67371) Remove StorageAccessContent
@@ -974,7 +975,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_in_memory_storage() {
-        let factory = InMemoryStorageFactory::create();
+        let factory = InMemoryStorageFactory::new();
         factory.initialize_storage::<TestStruct>().await;
 
         let store_1 = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;

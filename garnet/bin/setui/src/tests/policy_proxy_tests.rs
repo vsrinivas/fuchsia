@@ -254,7 +254,7 @@ async fn test_policy_proxy_creation() {
     let policy_proxy_result = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new()
                 .set_policy_response(Ok(policy_base::response::Payload::PolicyInfo(
                     PolicyInfo::Unknown(UnknownInfo(true)),
@@ -296,7 +296,7 @@ async fn test_policy_messages_passed_to_handler() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().set_policy_response(Ok(policy_payload.clone())).build(),
         ),
         service::message::create_hub(),
@@ -342,7 +342,7 @@ async fn test_setting_message_pass_through() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().build(),
         ),
         messenger_factory.clone(),
@@ -405,7 +405,7 @@ async fn test_setting_message_pass_through_switchboard() {
         .await
         .expect("core messenger created");
     let policy_messenger_factory = policy::message::create_hub();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Include None as the transform result so that the message passes through the policy layer
     // without interruption.
     let handler_factory = create_handler_factory(
@@ -470,7 +470,7 @@ async fn test_setting_message_result_replacement() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new()
                 // Include a different response than the original as the
                 // transform result, so that the original request is ignored.
@@ -555,7 +555,7 @@ async fn test_setting_message_result_replacement_switchboard() {
         .await
         .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Include a different response than the original as the transform result, so that the
     // original request is ignored.
     let handler_factory = create_handler_factory(
@@ -647,7 +647,7 @@ async fn test_setting_message_payload_replacement() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             // Fake handler will return request 2 to be sent to the setting handler
             FakePolicyHandlerBuilder::new()
                 .set_request_transform(RequestTransform::Request(setting_request_2))
@@ -726,7 +726,7 @@ async fn test_setting_message_payload_replacement_switchboard() {
         .await
         .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Fake handler will return request 2 to be sent to the setting handler.
     let handler_factory = create_handler_factory(
         storage_factory,
@@ -791,7 +791,7 @@ async fn test_setting_response_pass_through() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().build(),
         ),
         messenger_factory.clone(),
@@ -838,7 +838,7 @@ async fn test_setting_event_pass_through_switchboard() {
         .await
         .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Include None as the transform result so that the message passes through the policy layer
     // without interruption.
     let handler_factory = create_handler_factory(
@@ -892,7 +892,7 @@ async fn test_setting_response_replace() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new()
                 .add_response_mapping(
                     SETTING_RESPONSE.clone(),
@@ -949,7 +949,7 @@ async fn test_setting_event_replace_switchboard() {
         .await
         .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     // Include None as the transform result so that the message passes through the policy layer
     // without interruption.
     let handler_factory = create_handler_factory(
@@ -1014,7 +1014,7 @@ async fn test_multiple_messages() {
     PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
-            InMemoryStorageFactory::create(),
+            InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new()
                 .set_policy_response(Ok(policy_payload.clone()))
                 .add_request_mapping(
@@ -1101,7 +1101,7 @@ async fn test_multiple_messages_switchboard() {
         .await
         .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     let handler_factory = create_handler_factory(
         storage_factory,
         FakePolicyHandlerBuilder::new()

@@ -24,7 +24,7 @@ async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
         .lock()
         .await
         .register_service(Arc::new(Mutex::new(recovery_policy_service_handler.clone())));
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .settings(&[SettingType::FactoryReset])
         .spawn_and_get_nested_environment(ENV_NAME)

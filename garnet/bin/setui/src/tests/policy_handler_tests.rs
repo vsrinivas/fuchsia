@@ -81,7 +81,7 @@ async fn test_write() {
 
     let (_, setting_proxy_receptor) =
         core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     storage_factory.initialize_storage::<PrivacyInfo>().await;
     let store = storage_factory.get_store(CONTEXT_ID).await;
     let client_proxy = ClientProxy::new(

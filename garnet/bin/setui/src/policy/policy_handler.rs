@@ -257,7 +257,7 @@ mod tests {
             .create(MessengerType::Unbound)
             .await
             .expect("setting proxy messenger created");
-        let storage_factory = InMemoryStorageFactory::create();
+        let storage_factory = InMemoryStorageFactory::new();
         storage_factory.initialize_storage::<PrivacyInfo>().await;
         let storage = storage_factory.get_store(CONTEXT_ID).await;
 
@@ -317,7 +317,7 @@ mod tests {
                 .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
-            storage: InMemoryStorageFactory::create().get_store(CONTEXT_ID).await,
+            storage: InMemoryStorageFactory::new().get_store(CONTEXT_ID).await,
             policy_type,
             _phantom_data: PhantomData,
         };

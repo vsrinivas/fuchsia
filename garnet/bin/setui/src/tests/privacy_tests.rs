@@ -21,7 +21,7 @@ const CONTEXT_ID: u64 = 0;
 
 /// Creates an environment that will fail on a get request.
 async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = InMemoryStorageFactory::new();
     create_test_env_with_failures(Arc::new(storage_factory), ENV_NAME, SettingType::Privacy)
         .await
         .connect_to_service::<PrivacyMarker>()
@@ -48,7 +48,7 @@ async fn create_test_privacy_env(
 async fn test_privacy() {
     let initial_value = PrivacyInfo { user_data_sharing_consent: None };
     let changed_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
-    let factory = InMemoryStorageFactory::create();
+    let factory = InMemoryStorageFactory::new();
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let (privacy_service, store) = create_test_privacy_env(Arc::new(factory)).await;
