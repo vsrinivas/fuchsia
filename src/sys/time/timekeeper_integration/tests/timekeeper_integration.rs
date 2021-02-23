@@ -40,8 +40,11 @@ where
     let mut executor = fasync::Executor::new().unwrap();
     executor.run_singlethreaded(async move {
         let clock_arc = Arc::new(clock);
-        let (timekeeper, push_source_controller, rtc, cobalt) =
-            NestedTimekeeper::new(Arc::clone(&clock_arc), initial_rtc_time);
+        let (timekeeper, push_source_controller, rtc, cobalt, _) = NestedTimekeeper::new(
+            Arc::clone(&clock_arc),
+            initial_rtc_time,
+            false, // no fake clock.
+        );
         test_fn(push_source_controller, rtc, cobalt).await;
         timekeeper.teardown().await;
     });

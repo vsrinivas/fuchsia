@@ -11,6 +11,17 @@ The test component implements a number of services:
  * `test.time.TimeSourceControl` - allows a `dev_time_source` launched
  by Timekeeper to forward the `fuchsia.time.external.*` connections it recieves from
  Timekeeper to the test component.
- * `fuchsia.net.interfaces.State` - a fake that accepts connections, but immediately
- closes the channel. This fake exists to allow timekeeper to bypass the network check
- and will be removed once time sources check for network availability instead.
+
+In addition, the test launches a mock Cobalt component, which makes
+`fuchsia.cobalt.LoggerFactory` available to Timekeeper.
+
+## Fake-clock tests
+The tests in faketime_integration.rs also use `//src/lib/fake-clock`. This allows
+the test to control the monotonic time as observed by Timekeeper under test. To
+support this, the fake-clock tests additionally launch the fake clock manager
+component, which makes `fuchsia.testing.FakeClock` available to Timekeeper.
+
+## Future Work
+Timekeeper and the timekeeper integration tests are currently components v1
+components. As v2 provides significantly more support for injecting dependencies,
+much of the testing harness can be removed when migrating.

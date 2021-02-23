@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod faketime_integration;
 mod timekeeper_integration;
 
 use chrono::{Datelike, TimeZone, Timelike};
@@ -11,6 +12,9 @@ use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProx
 use fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream};
 use fidl_fuchsia_io::{NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_logger::LogSinkMarker;
+use fidl_fuchsia_testing::{
+    FakeClockControlMarker, FakeClockControlProxy, FakeClockMarker, FakeClockProxy,
+};
 use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
 use fidl_fuchsia_time_external::{PushSourceMarker, Status, TimeSample};
 use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
@@ -29,13 +33,18 @@ use lazy_static::lazy_static;
 use log::{debug, info};
 use parking_lot::Mutex;
 use push_source::{PushSource, TestUpdateAlgorithm, Update};
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 use time_metrics_registry::PROJECT_ID;
 use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
 
 /// URL for timekeeper.
 const TIMEKEEPER_URL: &str =
     "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_for_integration.cmx";
+/// URL for timekeeper with fake time.
+const TIMEKEEPER_FAKE_TIME_URL: &str =
+    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_with_fake_time.cmx";
+/// URL for the fake time component.
+const FAKE_TIME_URL: &str = "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/fake_clock.cmx";
 /// URL for fake cobalt.
 const COBALT_URL: &str = "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx";
 
@@ -141,16 +150,39 @@ impl RtcUpdates {
     }
 }
 
+/// A wrapper around a `FakeClockControlProxy` that also allows a client to read the current fake
+/// time.
+pub struct FakeClockController {
+    control_proxy: FakeClockControlProxy,
+    clock_proxy: FakeClockProxy,
+}
+
+impl Deref for FakeClockController {
+    type Target = FakeClockControlProxy;
+
+    fn deref(&self) -> &Self::Target {
+        &self.control_proxy
+    }
+}
+
+impl FakeClockController {
+    pub async fn get_monotonic(&self) -> Result<i64, fidl::Error> {
+        self.clock_proxy.get().await
+    }
+}
+
 impl NestedTimekeeper {
     /// Launches an instance of timekeeper maintaining the provided |clock| in a nested
     /// environment. If |initial_rtc_time| is provided, then the environment contains a fake RTC
     /// device that reports the time as |initial_rtc_time|.
+    /// If use_fake_clock is true, also launches a fake clock service.
     /// Returns a `NestedTimekeeper`, handles to the PushSource and RTC it obtains updates from,
-    /// and Cobalt debug querier.
+    /// Cobalt debug querier, and a fake clock control handle if use_fake_clock is true.
     pub fn new(
         clock: Arc<zx::Clock>,
         initial_rtc_time: Option<zx::Time>,
-    ) -> (Self, PushSourcePuppet, RtcUpdates, LoggerQuerierProxy) {
+        use_fake_clock: bool,
+    ) -> (Self, PushSourcePuppet, RtcUpdates, LoggerQuerierProxy, Option<FakeClockController>) {
         let mut service_fs = ServiceFs::new();
         // Route logs for components in nested env to the same logsink as the test.
         service_fs.add_proxy_service::<LogSinkMarker, _>();
@@ -164,6 +196,22 @@ impl NestedTimekeeper {
         ));
         let cobalt_querier = cobalt_app.connect_to_service::<LoggerQuerierMarker>().unwrap();
         launched_apps.push(cobalt_app);
+
+        // Launch fake clock if needed, again a new instance for each environment.
+        let fake_clock_control = if use_fake_clock {
+            let fake_clock_app =
+                AppBuilder::new(FAKE_TIME_URL).spawn(&launcher().unwrap()).unwrap();
+            service_fs.add_proxy_service_to::<FakeClockMarker, _>(Arc::clone(
+                fake_clock_app.directory_request(),
+            ));
+            let control_proxy =
+                fake_clock_app.connect_to_service::<FakeClockControlMarker>().unwrap();
+            let clock_proxy = fake_clock_app.connect_to_service::<FakeClockMarker>().unwrap();
+            launched_apps.push(fake_clock_app);
+            Some(FakeClockController { control_proxy, clock_proxy })
+        } else {
+            None
+        };
 
         // Inject test control and maintenence services.
         service_fs.add_fidl_service(InjectedServices::TimeSourceControl);
@@ -198,9 +246,11 @@ impl NestedTimekeeper {
             devmgr_server,
         );
 
+        let timekeeper_url = if use_fake_clock { TIMEKEEPER_FAKE_TIME_URL } else { TIMEKEEPER_URL };
+
         let nested_environment =
             service_fs.create_salted_nested_environment("timekeeper_test").unwrap();
-        let timekeeper_app = AppBuilder::new(TIMEKEEPER_URL)
+        let timekeeper_app = AppBuilder::new(timekeeper_url)
             .add_handle_to_namespace("/dev".to_string(), devmgr_client.into_handle())
             .spawn(nested_environment.launcher())
             .unwrap();
@@ -231,7 +281,13 @@ impl NestedTimekeeper {
             _task: fasync::Task::spawn(injected_service_fut),
         };
 
-        (nested_timekeeper, PushSourcePuppet::new(server_end_recv), rtc_updates, cobalt_querier)
+        (
+            nested_timekeeper,
+            PushSourcePuppet::new(server_end_recv),
+            rtc_updates,
+            cobalt_querier,
+            fake_clock_control,
+        )
     }
 
     async fn serve_test_control(

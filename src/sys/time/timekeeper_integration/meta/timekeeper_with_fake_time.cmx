@@ -1,0 +1,22 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--dev-time-sources",
+            "--disable-delays"
+        ],
+        "binary": "bin/timekeeper_fake_time"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.net.interfaces.State",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Launcher",
+            "fuchsia.testing.FakeClock",
+            "fuchsia.time.Maintenance"
+        ]
+    }
+}

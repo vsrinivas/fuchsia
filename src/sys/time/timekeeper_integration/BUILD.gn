@@ -1,7 +1,6 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-#
 
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_test.gni")
@@ -23,6 +22,8 @@ rustc_test("test_bin") {
   edition = "2018"
 
   sources = [
+    # TODO(fxbug.dev/70749): Move tests with fake time to another binary
+    "tests/faketime_integration.rs",
     "tests/lib.rs",
     "tests/timekeeper_integration.rs",
   ]
@@ -41,6 +42,7 @@ rustc_test("test_bin") {
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
     "//src/lib/async-utils",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/fake-clock/fidl:fidl-rustc",
     "//src/lib/fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -74,6 +76,13 @@ fuchsia_component("timekeeper_for_integration") {
   deps = [ "//src/sys/time/timekeeper:bin" ]
 }
 
+fuchsia_component("timekeeper_with_fake_time") {
+  testonly = true
+  component_name = "timekeeper_with_fake_time"
+  manifest = "meta/timekeeper_with_fake_time.cmx"
+  deps = [ "//src/sys/time/timekeeper:bin_with_fake_time" ]
+}
+
 fidl("test.time") {
   testonly = true
   sources = [ "fidl/test.fidl" ]
@@ -84,7 +93,9 @@ fuchsia_test_package("timekeeper-integration") {
   test_components = [ ":timekeeper_integration_test" ]
   deps = [
     ":timekeeper_for_integration",
+    ":timekeeper_with_fake_time",
     "dev_time_source",
+    "//src/lib/fake-clock/svc",
   ]
 
   test_specs = {
