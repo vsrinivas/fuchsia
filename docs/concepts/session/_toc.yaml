@@ -12,5 +12,7 @@ toc:
   path: /docs/concepts/session/element.md
 - title: "Element Proposers"
   path: /docs/concepts/session/element_proposer.md
+- title: "Graphical Presenter"
+  path: /docs/concepts/session/graphical_presenter.md
 - title: "Input client library"
   path: /docs/concepts/session/input.md

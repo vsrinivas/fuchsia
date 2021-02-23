@@ -10,4 +10,5 @@ toc:
   path: /docs/development/sessions/building-and-running-a-session.md
 - title: "Writing a Hello World session"
   path: /docs/development/sessions/writing-a-hello-world-session.md
-
+- title: "Session roles and responsibilities, by example"
+  path: /docs/development/sessions/roles-and-responsibilities.md

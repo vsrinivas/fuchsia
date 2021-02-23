@@ -27,7 +27,8 @@ account for the changes in the ABI.
 
 ### **Agent** {#agent}
 
-This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
+A [Modular](/docs/concepts/modular/overview.md) concept that is being
+deprecated.
 
 An agent is a role a [component](#component) can play to execute in the
 background in the context of a [session](#session). Agents are always a
@@ -290,26 +291,6 @@ A private directory within which a [component instance](#component-instance) may
 store data local to the device, canonically mapped to /data in the component
 instance’s [namespace](#namespace).
 
-### **Driver Host** {#driverhost}
-
-A Driver Host is a process containing one or more device drivers.
-They are created by the Driver Manager, as needed, to provide isolation between
-drivers for stability and security.
-
-### **Driver Manager** {#drivermanager}
-
-The Driver Manager (formerly devmgr or devcoordinator) is responsible for
-enumerating, loading, and managing the life cycle of device drivers.
-
-### **FDF** {#fdf}
-
-The Fuchsia Driver Framework is the documentation, APIs, and ABIs necessary to
-build Zircon Device Drivers. Device drivers are implemented as ELF shared
-libraries loaded by Zircon's Driver Manager.
-
--   [FDF Overview](/docs/concepts/drivers/fdf.md)
--   [FDF includes](/src/lib/ddk/include/ddk/)
-
 ### **Directory capability** {#directory-capability}
 
 A [capability](#capability) that permits access to a filesystem directory by
@@ -325,15 +306,31 @@ Directory capability is a [components v2](#components-v2) concept.
 
 ### **Driver** {#driver}
 
-A driver is a dynamic shared library that [Driver Manager](#drivermanager) can load
-into a [Driver Host](#driverhost) and that enables, and controls one or more devices.
+A driver is a dynamic shared library that [Driver Manager](#drivermanager) can
+load into a [Driver Host](#driverhost) and that enables, and controls one or
+more devices.
 
 -   [Reference](/docs/development/drivers/developer_guide/driver-development.md)
 -   [Driver Sources](/src/devices)
 
+### **Driver Host** {#driverhost}
+
+A Driver Host is a process containing one or more device drivers.
+They are created by the Driver Manager, as needed, to provide isolation between
+drivers for stability and security.
+
+### **Driver Manager** {#drivermanager}
+
+The Driver Manager (formerly devmgr or devcoordinator) is responsible for
+enumerating, loading, and managing the life cycle of device drivers.
+
 ### **Element** {#element}
 
-A [component](#component) added to a [session](#session) dynamically through the [FIDL](#fidl) protocol [`ElementManager`](#element-manager). In addition to the properties common to all components, Elements are also annotated by Element Proposers. Those annotations are shared with other components within the session.
+A [component](#component) added to a [session](#session) dynamically through the
+[FIDL](#fidl) protocol [`ElementManager`](#element-manager). In addition to the
+properties common to all components, Elements are also annotated by Element
+Proposers. Those annotations are shared with other components within the
+session.
 
 It is the session's responsibility to manage the lifecycle of elements.
 
@@ -341,27 +338,33 @@ Elements are a [Session Framework](#session-framework) concept.
 
 ### **Element Annotation** {#element-annotation}
 
-This is a [FIDL](#fidl) struct. For more information, see [`fuchsia.session.Annotation`].
+A [FIDL](#fidl) struct (see [`fuchsia.session.Annotation`]).
 
-A collection of named attributes associated with an [element](#element). Annotations are specified at element creation time by [element proposers](#element-proposer) and remain mutable for the lifetime of the element.
+A collection of named attributes associated with an [element](#element).
+Annotations are specified at element creation time by [element
+proposers](#element-proposer) and remain mutable for the lifetime of the
+element.
 
 Element annotations are a [Session Framework](#session-framework) concept.
 
-[`fuchsia.session.Annotation`]: /sdk/fidl/fuchsia.session/annotation.fidl
+[`fuchsia.session.Annotation`]: https://fuchsia.dev/reference/fidl/fuchsia.session#Annotation
 
 ### **Element Manager** {#element-manager}
 
-This is a [FIDL](#fidl) protocol. For more information, see [`fuchsia.session.ElementManager`].
+A [FIDL](#fidl) protocol (see [`fuchsia.session.ElementManager`]).
 
-A protocol used to grant [session](#session) sub-components the capability to ask for [elements](#element) to be added to the product experience at runtime.
+A protocol used to grant [session](#session) sub-components the capability to
+ask for [elements](#element) to be added to the product experience at runtime.
 
 Element manager is a [Session Framework](#session-framework) concept.
 
-[`fuchsia.session.ElementManager`]: /sdk/fidl/fuchsia.session/element_manager.fidl
+[`fuchsia.session.ElementManager`]: https://fuchsia.dev/reference/fidl/fuchsia.session#ElementManager
 
 ### **Element Proposer** {#element-proposer}
 
-A way to refer to any [component](#component) that invokes the ProposeElement() method on [`ElementManager`](#element-manager) to launch a specific [element](#element) in a [session](#session).
+A way to refer to any [component](#component) that invokes the ProposeElement()
+method on [`ElementManager`](#element-manager) to launch a specific
+[element](#element) in a [session](#session).
 
 Element Proposer is a [Session Framework](#session-framework) concept.
 
@@ -391,6 +394,15 @@ FBL is the Fuchsia Base Library, which is shared between kernel and userspace.
 
 -   [Zircon C++](/docs/development/languages/c-cpp/cxx.md)
 
+### **FDF** {#fdf}
+
+The Fuchsia Driver Framework is the documentation, APIs, and ABIs necessary to
+build Zircon Device Drivers. Device drivers are implemented as ELF shared
+libraries loaded by Zircon's Driver Manager.
+
+-   [FDF Overview](/docs/concepts/drivers/fdf.md)
+-   [FDF includes](/src/lib/ddk/include/ddk/)
+
 ### **fdio** {#fdio}
 
 `fdio` is the Zircon IO Library. It provides the implementation of posix-style
@@ -412,10 +424,11 @@ languages interact seamlessly.
 
 ### **Flutter** {#flutter}
 
-[Flutter](https://flutter.dev/) is a functional-reactive user interface framework
-optimized for Fuchsia and is used by many system components. Flutter also runs
-on a variety of other platforms, including Android and iOS. Fuchsia itself does
-not require you to use any particular language or user interface framework.
+[Flutter](https://flutter.dev/) is a functional-reactive user interface
+framework optimized for Fuchsia and is used by many system components. Flutter
+also runs on a variety of other platforms, including Android and iOS. Fuchsia
+itself does not require you to use any particular language or user interface
+framework.
 
 ### **FTP** {#ftp}
 
@@ -431,11 +444,11 @@ included in the [Fuchsia IDK](#fuchsia-idk).
 
 ### **Fuchsia emulator (FEMU)** {#fuchsia-emulator}
 
-The [Fuchsia emulator (FEMU)](/docs/concepts/emulator/index.md) is the default emulator for Fuchsia.
-It allows you to test Fuchsia components and
-applications without needing a Fuchsia device. FEMU is based on the
-[Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator),
-which is a fork of [QEMU](https://www.qemu.org/).
+The [Fuchsia emulator (FEMU)](/docs/concepts/emulator/index.md) is the default
+emulator for Fuchsia. It allows you to test Fuchsia components and applications
+without needing a Fuchsia device. FEMU is based on the [Android Emulator
+(AEMU)](https://developer.android.com/studio/run/emulator), which is a fork of
+[QEMU](https://www.qemu.org/).
 
 ### **Fuchsia Package** {#fuchsia-package}
 
@@ -446,8 +459,8 @@ identified using [fuchsia-pkg URLs](#fuchsia-pkg-url).
 
 ### **fuchsia-pkg URL** {#fuchsia-pkg-url}
 
-The [fuchsia-pkg URL](/docs/concepts/packages/package_url.md) scheme is a means for referring
-to a repository, a package, or a package resource. The syntax is
+The [fuchsia-pkg URL](/docs/concepts/packages/package_url.md) scheme is a means
+for referring to a repository, a package, or a package resource. The syntax is
 `fuchsia-pkg://<repo-hostname>[/<pkg-name>][#<path>]]`. E.g., for the component
 `echo_client_dart.cmx` published under the package `echo_dart`'s `meta`
 directory, from the `fuchsia.com` repository, its URL is
@@ -491,15 +504,24 @@ repository.
 
 ### **GraphicalPresenter** {#graphical-presenter}
 
-This is a [FIDL](#fidl) protocol. For more information, see [`GraphicalPresenter`].
+A [FIDL](#fidl) protocol (see [`fuchsia.element.GraphicalPresenter`]).
 
 A `GraphicalPresenter` organizes and presents graphical views.
 
-The presented views can be annotated with [Element Annotations](#element-annotation) to communicate presentation properties to the `GraphicalPresenter`. This protocol is used, for example, when a [session component](#session) written in Rust wants to delegate presentation logic to a child [component](#component) written in Flutter, or when a session component that manages the lifecycle of elements delegates the presentation of element views to a child component that implements `GraphicalPresenter`.
+The presented views can be annotated with [Element
+Annotations](#element-annotation) to communicate presentation properties to the
+`GraphicalPresenter`. This protocol is used, for example, when a [session
+component](#session) written in Rust wants to delegate presentation logic to a
+child [component](#component) written in Flutter, or when a session component
+that manages the lifecycle of elements delegates the presentation of element
+views to a child component that implements `GraphicalPresenter`.
+
+For more information, see the
+[GraphicalPresenter concept documentation](/docs/concepts/session/graphical_presenter.md).
 
 `GraphicalPresenter` is a [Session Framework](#session-framework) concept.
 
-[`GraphicalPresenter`]: /sdk/fidl/fuchsia.session/graphical_presenter.fidl
+[`fuchsia.element.GraphicalPresenter`]: https://fuchsia.dev/reference/fidl/fuchsia.element#GraphicalPresenter
 
 ### **Handle** {#handle}
 
@@ -532,28 +554,43 @@ exposed capabilities.
 A client library available to [session](#session) authors to simplify
 the consumption and routing of input events from physical hardware.
 
-* [Input client library](/docs/concepts/session/input.md)
+-   [Input client library](/docs/concepts/session/input.md)
 
 Input pipeline is a [Session Framework](#session-framework) concept.
 
 ### **Input pipeline InputDeviceBinding** {#input-pipeline-input-device-binding}
 
-A Rust trait in the [input pipeline client library](#input-pipeline-client-library).
+A Rust trait in the [input pipeline client
+library](#input-pipeline-client-library).
 
-An `InputDeviceBinding` represents a connection to a physical input device (e.g. mouse, keyboard) in an input pipeline. An `InputDeviceBinding` does the following:
+An `InputDeviceBinding` represents a connection to a physical input device (e.g.
+mouse, keyboard) in an input pipeline. An `InputDeviceBinding` does the
+following:
 
-1. Connects to an [`InputReport`](#input-report) file located at `/dev/class/input-report/XXX`.
-1. Generates [`InputEvents`](#input-pipeline-input-event) from the `DeviceDescriptor` and incoming [`InputReports`](#input-report).
+1. Connects to an [`InputReport`](#input-report) file located at
+   `/dev/class/input-report/XXX`.
+2. Generates [`InputEvent`s](#input-pipeline-input-event) from the
+   `DeviceDescriptor` and incoming [`InputReport`s](#input-report).
 
-The input pipeline creates and owns `InputDeviceBindings` as new input peripherals are connected to a device.
+The input pipeline creates and owns `InputDeviceBinding`s as new input
+peripherals are connected to a device.
 
 `InputDeviceBinding` is a [Session Framework](#session-framework) concept.
 
-### **Input pipeline InputDeviceDescriptor** {#input-pipeline-input-device-descriptor}
+### **Input pipeline DeviceDescriptor** {#input-pipeline-device-descriptor}
 
-A property of the Rust struct [`InputEvent`](#input-pipeline-input-event).
+A property of the Rust struct [`InputEvent`](#input-pipeline-input-event) of
+type [`enum InputDeviceDescriptor`] and a [FIDL](#fidl) table (see
+[`fuchsia.input.report.DeviceDescriptor`]).
 
-An `InputDeviceDescriptor` describes the ranges of values a particular input device can generate. For example, a `InputDeviceDescriptor::Keyboard` contains the keys available on the keyboard, and a `InputDeviceDescriptor::Touch` contains the maximum number of touch contacts and the range of `x-` and `y-`values each contact can take on.
+An `InputDeviceDescriptor` describes the ranges of values a particular input
+device can generate. For example, a `InputDeviceDescriptor::Keyboard` contains
+the keys available on the keyboard, and a `InputDeviceDescriptor::Touch`
+contains the maximum number of touch contacts and the range of `x-` and
+`y-`values each contact can take on.
+
+[`enum InputDeviceDescriptor`]: /src/session/lib/input/src/input_device.rs
+[`fuchsia.input.report.DeviceDescriptor`]: https://fuchsia.dev/reference/fidl/fuchsia.input.report#DeviceDescriptor
 
 `InputDeviceDescriptor` is a [Session Framework](#session-framework) concept.
 
@@ -561,34 +598,50 @@ An `InputDeviceDescriptor` describes the ranges of values a particular input dev
 
 A property of the Rust struct [`InputEvent`](#input-pipeline-input-event).
 
-An `InputDeviceEvent` represents an input event from an input device. `InputDeviceEvents` contain more context than the raw [`InputReports`](#input-report) they are parsed from. For example, `InputDeviceEvent::Keyboard` contains all the pressed keys, as well as the key's phase (pressed, released, etc.).
+An `InputDeviceEvent` represents an input event from an input device.
+`InputDeviceEvent`s contain more context than the raw
+[`InputReport`s](#input-report) they are parsed from. For example,
+`InputDeviceEvent::Keyboard` contains all the pressed keys, as well as the key's
+phase (pressed, released, etc.).
 
 `InputDeviceEvent` is a [Session Framework](#session-framework) concept.
 
 ### **Input pipeline InputEvent** {#input-pipeline-input-event}
 
-A Rust struct in the [input pipeline client library](#input-pipeline-client-library).
+A Rust struct in the [input pipeline client
+library](#input-pipeline-client-library).
 
-An event from an input device containing context (a `InputDeviceDescriptor`) and state (e.g. phase and location of a button press). The input pipeline generates `InputEvents` from hardware signals.
+An event from an input device containing context (a `InputDeviceDescriptor`) and
+state (e.g. phase and location of a button press). The input pipeline generates
+`InputEvent`s from hardware signals.
 
 `InputEvent` is a [Session Framework](#session-framework) concept.
 
 ### **Input pipeline InputHandler** {#input-pipeline-input-handler}
 
-A Rust trait in the [input pipeline client library](#input-pipeline-client-library).
+A Rust trait in the [input pipeline client
+library](#input-pipeline-client-library).
 
-An `InputHandler` represents a client of [`InputEvents`](#input-pipeline-input-event) in an input pipeline. When an `InputHandler` receives an [`InputEvent`](#input-pipeline-input-event), it does at least one of the following:
+An `InputHandler` represents a client of
+[`InputEvent`s](#input-pipeline-input-event) in an input pipeline. When an
+`InputHandler` receives an [`InputEvent`](#input-pipeline-input-event), it does
+at least one of the following:
 
-1) Forwards the [`InputEvent`](#input-pipeline-input-event) to the relevant client component.
-1) Outputs a vector of [`InputEvents`](#input-pipeline-input-event) for the next `InputHandler` to process.
+1. Forwards the [`InputEvent`](#input-pipeline-input-event) to the relevant
+   client component.
+2. Outputs a vector of [`InputEvent`s](#input-pipeline-input-event) for the next
+   `InputHandler` to process.
 
 `InputHandler` is a [Session Framework](#session-framework) concept.
 
 ### **InputReport** {#input-report}
 
-This is a [FIDL](#fidl) struct. For more information, see [`InputReport`](https://fuchsia.dev/reference/fidl/fuchsia.ui.input#InputReport).
+A [FIDL](#fidl) struct (see [`fuchsia.ui.InputReport`]).
 
-A stateless representation of an event from a physical input device. Zircon generates `InputReports` from HID Reports.
+A stateless representation of an event from a physical input device. Zircon
+generates `InputReport`s from HID Reports.
+
+[`fuchsia.ui.InputReport`]: https://fuchsia.dev/reference/fidl/fuchsia.ui.input#InputReport
 
 ### **Jiri** {#jiri}
 
@@ -604,7 +657,7 @@ manage their local checkouts.
 ### **Job** {#job}
 
 A Job is a [kernel object](#kernel-object) that groups a set of related
-[processes][#process], their child processes, and their jobs (if any).
+[processes](#process), their child processes, and their jobs (if any).
 Every process in the system belongs to a job and all jobs form a single
 rooted tree.
 
@@ -634,7 +687,8 @@ userspace, system calls -- features that Zircon added.
 
 ### **Module** {#module}
 
-This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
+A [Modular](/docs/concepts/modular/overview.md) concept that is being
+deprecated.
 
 A module is a role a [component](#Component) can play to contribute UI to a
 user experience container (story) within a Modular session.
@@ -644,11 +698,14 @@ See [Module concept docs](/docs/concepts/modular/module.md) for more.
 
 ### **Moniker** {#moniker}
 
-A [moniker][moniker] identifies a specific component instance in the component tree using a topological path.
+A [moniker][moniker] identifies a specific component instance in the component
+tree using a topological path.
 
-A v1 component's moniker is defined as a tuple of (path to the component's [realm][#realm], component URL).
+A v1 component's moniker is defined as a tuple of (path to the component's
+[realm](#realm), component URL).
 
-A v2 component's moniker is defined as a path to the component instance in the [component instance tree](#component-instance-tree).
+A v2 component's moniker is defined as a path to the component instance in the
+[component instance tree](#component-instance-tree).
 
 [moniker]: /docs/concepts/components/v2/monikers.md
 
@@ -732,18 +789,18 @@ container for component instances and capabilities in the subtree.
 
 ### **Runner** {#runner}
 
-A [component](#component) that provides a runtime environment for other components,
-e.g. the ELF runner, the Dart AOT runner, the Chromium web runner.
+A [component](#component) that provides a runtime environment for other
+components, e.g. the ELF runner, the Dart AOT runner, the Chromium web runner.
 
 Every component needs a runner in order to launch. Components express their
 dependency on a runner in the component's [declaration](#component-declaration).
 
-When the [component framework](#component-framework) starts a component, it first
-determines the capabilities that the component should receive, then asks the
-component's runner to launch the component. The runner is responsible for creating
-any necessary processes, loading executable code, initializing language runtimes,
-handing control to the component's entry points, and terminating the component when
-requested by the component framework.
+When the [component framework](#component-framework) starts a component, it
+first determines the capabilities that the component should receive, then asks
+the component's runner to launch the component. The runner is responsible for
+creating any necessary processes, loading executable code, initializing language
+runtimes, handing control to the component's entry points, and terminating the
+component when requested by the component framework.
 
 -   [ELF runner](/docs/concepts/components/v2/elf_runner.md)
 -   [Component runner](/docs/concepts/components/v2/capabilities/runners.md)
@@ -751,7 +808,8 @@ requested by the component framework.
 ### **Scenic** {#scenic}
 
 Scenic is a system service that composes graphical objects from multiple
-processes into a shared scene graph. Scenic includes views, input, compositor, and GPU services.
+processes into a shared scene graph. Scenic includes views, input, compositor,
+and GPU services.
 
 ### **Sequential Device Driver** {#sequential-device-driver}
 
@@ -784,29 +842,42 @@ Service capability is a [components v2](#components-v2) concept.
 
 ### **Session** {#session}
 
-A session is a [component](#component) that encapsulates a product’s user experience. It is the first product-specific component started on boot after the [Session Manager](#session-manager). Sessions typically utilize aspects of the [Session Framework](#session-framework) during their development, in automated testing, and at runtime. At runtime, there is only one session component, but it can be composed of many sub-components. For example, the session for a graphical product instantiates Scenic (graphics) as a child component.
+A session is a [component](#component) that encapsulates a product’s user
+experience. It is the first product-specific component started on boot after the
+[Session Manager](#session-manager). Sessions typically utilize aspects of the
+[Session Framework](#session-framework) during their development, in automated
+testing, and at runtime. At runtime, there is only one session component, but it
+can be composed of many sub-components. For example, the session for a graphical
+product instantiates Scenic (graphics) as a child component.
 
 Session is a [Session Framework](#session-framework) concept.
 
 ### **Session Framework** {#session-framework}
 
-The session framework is a framework for building products on Fuchsia. The framework provides software libraries, FIDL protocols, developer tools, and standards that are composed to create a particular product’s user experience.
+The session framework is a framework for building products on Fuchsia. The
+framework provides software libraries, FIDL protocols, developer tools, and
+standards that are composed to create a particular product’s user experience.
 
-See the session framework [conceptual documentation](/docs/concepts/session/introduction.md).
+See the session framework [conceptual
+documentation](/docs/concepts/session/introduction.md).
 
 ### **Session Launcher** {#session-launcher}
 
-This is a [FIDL](#fidl) protocol. For more information, see [`fuchsia.session.Launcher`].
+A [FIDL](#fidl) protocol (see [`fuchsia.session.Launcher`]).
 
-A protocol, exposed by the [Session Manager](#session-manager), used to start or restart [sessions](#session). It is available to developer tools such as `session_control` to control session components at runtime.
+A protocol, exposed by the [Session Manager](#session-manager), used to start or
+restart [sessions](#session). It is available to developer tools such as
+`session_control` to control session components at runtime.
 
 Session Launcher is a [Session Framework](#session-framework) concept.
 
-[`fuchsia.session.Launcher`]: /sdk/fidl/fuchsia.session/launcher.fidl
+[`fuchsia.session.Launcher`]: https://fuchsia.dev/reference/fidl/fuchsia.session#Launcher
 
 ### **Session Manager** {#session-manager}
 
-The platform component, started late in the Fuchsia boot sequence, that manages the lifecycle of the [session](#session). The session manager  defines the set of system capabilities provided to sessions at runtime.
+The platform component, started late in the Fuchsia boot sequence, that manages
+the lifecycle of the [session](#session). The session manager  defines the set
+of system capabilities provided to sessions at runtime.
 
 Session Manager is a [Session Framework](#session-framework) concept.
 
@@ -867,14 +938,65 @@ second process, [bootsvc](#bootsvc), from the [bootfs](#bootfs).
 
 -   [Documentation](/docs/concepts/booting/userboot.md)
 
+### **ViewController** {#view-controller}
+
+A [FIDL](#fidl) protocol (see [`fuchsia.element.ViewController`]).
+
+A `ViewController` represents a handle to a remote View that was launched by
+calling `PresentView()` on a [`GraphicalPresenter`](#graphical-presenter). With
+this handle, the caller (often, the session) can request changes--such as to
+update annotations--and control the View's lifecycle. Closing the
+`ViewController` should close the presented view, and allow the system to
+reclaim its resources.
+
+[`fuchsia.element.ViewController`]: https://fuchsia.dev/reference/fidl/fuchsia.element#ViewController
+
+### **ViewHolderToken** {#view-holder-token}
+
+A [FIDL](#fidl) struct (see [`fuchsia.ui.views.ViewHolderToken`]).
+
+A `ViewHolderToken` uniquely identifies an attachment point for a View in the
+global scene graph. Each `ViewHolderToken` has exactly one corresponding
+[`ViewToken`](#view-token).
+
+[`fuchsia.ui.views.ViewHolderToken`]: https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewHolderToken
+
+### **ViewRef** {#view-ref}
+
+A [FIDL](#fidl) struct (see [`fuchsia.ui.views.ViewRef`]).
+
+A `ViewRef` is a handle to a kernel object that identifies a unique View
+across the system. Two `ViewRef`s to the same View have the same [KOID](#koid).
+
+[`fuchsia.ui.views.ViewRef`]: https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewRef
+
+### **ViewSpec** {#view-spec}
+
+A [FIDL](#fidl) table (see [`fuchsia.element.ViewSpec`]).
+
+A `ViewSpec` is a description of a view to be presented by a
+[`GraphicalPresenter`](#graphical-presenter).
+
+[`fuchsia.element.ViewSpec`]: https://fuchsia.dev/reference/fidl/fuchsia.element#ViewSpec
+
+### **ViewToken** {#view-token}
+
+A [FIDL](#fidl) struct (see [`fuchsia.ui.views.ViewToken`]).
+
+A `ViewToken` uniquely identifies a View, which is the root point for a
+subgraph in the global scene graph. Each `ViewToken` has exactly one
+corresponding [`ViewHolderToken`](#view-holder-token).
+
+[`fuchsia.ui.views.ViewToken`]: https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewToken
+
 ### **Virtual Dynamic Shared Object** {#virtual-dynamic-shared-object}
 
 The Virtual Dynamic Shared Object (vDSO) is a Virtual Shared Library -- it is
 provided by the [Zircon](#zircon) kernel and does not appear in the filesystem
 or a package. It provides the Zircon System Call API/ABI to userspace processes
 in the form of an ELF library that's "always there." In the Fuchsia IDK and
-[Fuchsia Driver Framework](#fdf) it exists as `libzircon.so` for the purpose of having
-something to pass to the linker representing the vDSO.
+[Fuchsia Driver Framework](#fdf) it exists as `libzircon.so` for the purpose of
+having something to pass to the linker representing the vDSO.
 
 ### **Virtual Memory Address Range** {#virtual-memory-address-range}
 
