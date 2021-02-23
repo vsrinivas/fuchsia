@@ -78,9 +78,15 @@ void SemanticTreeService::CommitUpdates(CommitUpdatesCallback callback) {
     callback();
     updates_.clear();
   } else {
+    // Work around https://fxbug.dev/70758
+    std::string tree_str = tree_->ToString();
+    constexpr size_t kMaxLength = 30000;
+    if (tree_str.size() > kMaxLength) {
+      tree_str.resize(kMaxLength);
+    }
     FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << koid_
                    << " because client sent an invalid tree update. Tree before update: "
-                   << tree_->ToString();
+                   << tree_str;
     callback();
     close_channel_callback_(ZX_ERR_INVALID_ARGS);
   }
