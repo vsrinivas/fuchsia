@@ -322,12 +322,12 @@ uint64_t Blob::SizeData() const {
 }
 
 Blob::Blob(Blobfs* bs, const Digest& digest)
-    : CacheNode(digest), blobfs_(bs), clone_watcher_(this) {
+    : CacheNode(bs->vfs(), digest), blobfs_(bs), clone_watcher_(this) {
   write_info_ = std::make_unique<WriteInfo>();
 }
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
-    : CacheNode(Digest(inode.merkle_root_hash)),
+    : CacheNode(bs->vfs(), Digest(inode.merkle_root_hash)),
       blobfs_(bs),
       state_(BlobState::kReadable),
       syncing_state_(SyncingState::kDone),
@@ -1220,6 +1220,12 @@ void Blob::Sync(SyncCallback on_complete) {
     }
   }
 }
+
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+void Blob::VmoRead(uint64_t offset, uint64_t length) {
+  // TODO(fxbug.dev/51111) Implement this code.
+}
+#endif
 
 void Blob::CompleteSync() {
   // Called on the journal thread when the syncing is complete.

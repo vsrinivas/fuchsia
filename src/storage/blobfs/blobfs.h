@@ -80,6 +80,14 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   virtual ~Blobfs();
 
+  // The Vfs object associated with this Blobfs instance, if any. The Vfs will exist only when
+  // running on the target and will be null otherwise.
+  //
+  // The setter is necessary because it needs to be set after construction due to the order of the
+  // Blobfs/Runner creation.
+  VfsType* vfs() const { return vfs_; }
+  void set_vfs(VfsType* vfs) { vfs_ = vfs; }
+
   ////////////////
   // TransactionManager's fs::TransactionHandler interface.
   //
@@ -314,6 +322,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   static std::shared_ptr<BlobfsMetrics> CreateMetrics(
       std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
       zx::duration metrics_flush_time);
+
+  // Possibly-null reference to the Vfs associated with this object. See vfs() getter.
+  VfsType* vfs_ = nullptr;
 
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;

@@ -17,6 +17,7 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/cache_policy.h"
+#include "src/storage/blobfs/vfs_types.h"
 
 namespace blobfs {
 
@@ -27,11 +28,11 @@ using digest::Digest;
 class BlobCache;
 
 // An abstract blob-backed Vnode, which is managed by the BlobCache.
-class CacheNode : public fs::Vnode,
+class CacheNode : public VnodeType,
                   private fbl::Recyclable<CacheNode>,
                   public fbl::WAVLTreeContainable<CacheNode*> {
  public:
-  explicit CacheNode(const Digest& digest,
+  explicit CacheNode(VfsType* vfs, const Digest& digest,
                      std::optional<CachePolicy> override_cache_policy = std::nullopt);
   virtual ~CacheNode();
 

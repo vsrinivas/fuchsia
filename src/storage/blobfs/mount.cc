@@ -21,15 +21,11 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
-  std::unique_ptr<Runner> runner;
-  zx_status_t status =
-      Runner::Create(&loop, std::move(device), options, std::move(vmex_resource), &runner);
-  if (status != ZX_OK) {
-    return status;
-  }
+  auto runner_or = Runner::Create(&loop, std::move(device), options, std::move(vmex_resource));
+  if (runner_or.is_error())
+    return runner_or.error_value();
 
-  status = runner->ServeRoot(std::move(root), layout);
-  if (status != ZX_OK) {
+  if (zx_status_t status = runner_or.value()->ServeRoot(std::move(root), layout); status != ZX_OK) {
     return status;
   }
   loop.Run();

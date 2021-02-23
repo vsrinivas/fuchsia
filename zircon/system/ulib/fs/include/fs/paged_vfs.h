@@ -26,7 +26,7 @@ class PagedVnode;
 class PagedVfs : public ManagedVfs {
  public:
   // The caller must call Init() which must succeed before using this class.
-  PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads);
+  explicit PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads = 1);
   ~PagedVfs() override;
 
   // Creates the pager and worker threads. If any of these fail, this class should no be used.

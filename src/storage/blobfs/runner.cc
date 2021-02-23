@@ -16,27 +16,26 @@
 namespace blobfs {
 
 // static.
-zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
-                           const MountOptions& options, zx::resource vmex_resource,
-                           std::unique_ptr<Runner>* out) {
+zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
+                                                   std::unique_ptr<BlockDevice> device,
+                                                   const MountOptions& options,
+                                                   zx::resource vmex_resource) {
   std::unique_ptr<Blobfs> fs;
   zx_status_t status =
       Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource), &fs);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-
-  auto runner = std::unique_ptr<Runner>(new Runner(loop, std::move(fs)));
-  *out = std::move(runner);
-  return ZX_OK;
+  return zx::ok(std::unique_ptr<Runner>(new Runner(loop, std::move(fs))));
 }
 
 Runner::Runner(async::Loop* loop, std::unique_ptr<Blobfs> fs)
-    : ManagedVfs(loop->dispatcher()), loop_(loop), blobfs_(std::move(fs)) {
+    : VfsType(loop->dispatcher()), loop_(loop), blobfs_(std::move(fs)) {
   SetReadonly(blobfs_->writability() != Writability::Writable);
+  blobfs_->set_vfs(this);
 }
 
-Runner::~Runner() {}
+Runner::~Runner() = default;
 
 void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
   TRACE_DURATION("blobfs", "Runner::Unmount");

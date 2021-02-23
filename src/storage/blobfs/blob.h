@@ -99,6 +99,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
   void Sync(SyncCallback on_complete) final;
 
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  // fs::PagedVnode implementation.
+  void VmoRead(uint64_t offset, uint64_t length) override;
+#endif
+
   ////////////////
   // fbl::Recyclable interface.
 

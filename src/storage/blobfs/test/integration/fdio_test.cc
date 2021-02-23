@@ -39,14 +39,13 @@ void FdioTest::SetUp() {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [export_root_client, export_root_server] = *std::move(endpoints);
 
-  std::unique_ptr<Runner> runner;
-  ASSERT_EQ(Runner::Create(loop_.get(), std::move(device), mount_options_,
-                           std::move(vmex_resource_), &runner),
+  auto runner_or =
+      Runner::Create(loop_.get(), std::move(device), mount_options_, std::move(vmex_resource_));
+  ASSERT_TRUE(runner_or.is_ok());
+  runner_ = std::move(runner_or.value());
+  ASSERT_EQ(runner_->ServeRoot(std::move(export_root_server), ServeLayout::kExportDirectory),
             ZX_OK);
-  ASSERT_EQ(runner->ServeRoot(std::move(export_root_server), ServeLayout::kExportDirectory), ZX_OK);
   ASSERT_EQ(loop_->StartThread("blobfs test dispatcher"), ZX_OK);
-
-  runner_ = std::move(runner);
 
   zx::channel root_client;
   ASSERT_EQ(fs_root_handle(export_root_client.channel().get(), root_client.reset_and_get_address()),
