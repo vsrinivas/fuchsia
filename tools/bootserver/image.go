@@ -242,7 +242,7 @@ func GetImages(ctx context.Context, imageManifest string, bootMode Mode) ([]Imag
 		// Assume that this is a filesystem path.
 		imgs, closeFunc, err = ImagesFromLocalFS(imageManifest, bootMode)
 	} else if url.Scheme != "" && url.Host != "" {
-		// TODO(ihuh|joshuaseaton): handle the case of getting images directly over HTTP
+		// TODO(ihuh): handle the case of getting images directly over HTTP
 		err = fmt.Errorf("unimplemented")
 	} else {
 		err = fmt.Errorf("unknown manifest reference: %q", imageManifest)
