@@ -228,13 +228,13 @@ impl PolicyHandler for FakePolicyHandler {
 
 /// Creates a handler factory with the given `FakePolicyHandler`.
 fn create_handler_factory(
-    storage_factory_handler: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: InMemoryStorageFactory,
     policy_handler: FakePolicyHandler,
 ) -> Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>> {
     let mut handler_factory = PolicyHandlerFactoryImpl::new(
         [POLICY_TYPE].iter().copied().collect(),
         [SETTING_TYPE].iter().copied().collect(),
-        storage_factory_handler,
+        Arc::new(storage_factory),
         Arc::new(AtomicU64::new(1)),
     );
     handler_factory.register(

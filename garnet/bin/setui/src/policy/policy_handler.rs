@@ -132,13 +132,13 @@ where
     C: Create<S> + PolicyHandler + Send + Sync + 'static,
 {
     Box::pin(async move {
-        let storage = context.storage_factory_handle.lock().await.get_store::<S>(context.id);
+        let storage = context.storage_factory.get_store(context.id).await;
 
         let proxy = ClientProxy::<S>::new(
             context.service_messenger,
             context.messenger,
             context.setting_proxy_signature,
-            Arc::new(storage),
+            storage,
             context.policy_type,
         );
 
@@ -239,7 +239,6 @@ mod tests {
     use crate::service;
     use crate::switchboard::base::{SettingAction, SettingActionData};
     use crate::tests::message_utils::verify_payload;
-    use std::sync::Arc;
 
     const CONTEXT_ID: u64 = 0;
 
@@ -259,7 +258,8 @@ mod tests {
             .await
             .expect("setting proxy messenger created");
         let storage_factory = InMemoryStorageFactory::create();
-        let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
+        storage_factory.initialize_storage::<PrivacyInfo>().await;
+        let storage = storage_factory.get_store(CONTEXT_ID).await;
 
         let client_proxy = ClientProxy::<PrivacyInfo> {
             service_messenger: service_messenger_factory
@@ -269,7 +269,7 @@ mod tests {
                 .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
-            storage: Arc::new(store),
+            storage,
             policy_type,
             _phantom_data: PhantomData,
         };
@@ -317,9 +317,7 @@ mod tests {
                 .0,
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
-            storage: Arc::new(
-                InMemoryStorageFactory::create().lock().await.get_store::<PrivacyInfo>(CONTEXT_ID),
-            ),
+            storage: InMemoryStorageFactory::create().get_store(CONTEXT_ID).await,
             policy_type,
             _phantom_data: PhantomData,
         };

@@ -4,14 +4,14 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::{testing::*, DeviceStorage},
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::DeviceStorage,
     crate::privacy::types::PrivacyInfo,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::{PrivacyMarker, PrivacyProxy},
     fuchsia_zircon::Status,
-    futures::lock::Mutex,
     matches::assert_matches,
     std::sync::Arc,
 };
@@ -22,7 +22,7 @@ const CONTEXT_ID: u64 = 0;
 /// Creates an environment that will fail on a get request.
 async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
     let storage_factory = InMemoryStorageFactory::create();
-    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Privacy)
+    create_test_env_with_failures(Arc::new(storage_factory), ENV_NAME, SettingType::Privacy)
         .await
         .connect_to_service::<PrivacyMarker>()
         .unwrap()
@@ -30,20 +30,16 @@ async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
 
 /// Creates an environment for privacy.
 async fn create_test_privacy_env(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
-) -> (PrivacyProxy, DeviceStorage) {
-    let store = storage_factory
-        .lock()
-        .await
-        .get_device_storage::<PrivacyInfo>(StorageAccessContext::Test, CONTEXT_ID);
-
-    let env = EnvironmentBuilder::new(storage_factory)
+    storage_factory: Arc<InMemoryStorageFactory>,
+) -> (PrivacyProxy, Arc<DeviceStorage>) {
+    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .settings(&[SettingType::Privacy])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 
     let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
+    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
     (privacy_service, store)
 }
@@ -55,7 +51,7 @@ async fn test_privacy() {
     let factory = InMemoryStorageFactory::create();
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let (privacy_service, store) = create_test_privacy_env(factory).await;
+    let (privacy_service, store) = create_test_privacy_env(Arc::new(factory)).await;
 
     // Ensure retrieved value matches set value
     let settings = privacy_service.watch().await.expect("watch completed");

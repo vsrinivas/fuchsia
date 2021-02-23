@@ -19,6 +19,7 @@ use fidl_fuchsia_settings_policy::{
 };
 use fuchsia_component::server::NestedEnvironment;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
 
@@ -35,7 +36,7 @@ struct TestEnvironment {
 
 /// Creates an environment for audio policy.
 async fn create_test_environment() -> TestEnvironment {
-    let storage_factory = InMemoryStorageFactory::create();
+    let storage_factory = Arc::new(InMemoryStorageFactory::create());
 
     let service_registry = ServiceRegistry::create();
 

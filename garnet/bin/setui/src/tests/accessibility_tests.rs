@@ -5,14 +5,13 @@
 use {
     crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType},
     crate::base::SettingType,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_types::ColorRgba,
     fuchsia_zircon::Status,
-    futures::lock::Mutex,
     matches::assert_matches,
     std::sync::Arc,
 };
@@ -21,7 +20,7 @@ const ENV_NAME: &str = "settings_service_accessibility_test_environment";
 const CONTEXT_ID: u64 = 0;
 
 async fn create_test_accessibility_env(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: Arc<InMemoryStorageFactory>,
 ) -> AccessibilityProxy {
     EnvironmentBuilder::new(storage_factory)
         .settings(&[SettingType::Accessibility])
@@ -34,7 +33,7 @@ async fn create_test_accessibility_env(
 
 // Creates an environment that will fail on a get request.
 async fn create_a11y_test_env_with_failures(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: Arc<InMemoryStorageFactory>,
 ) -> AccessibilityProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Accessibility)
         .await
@@ -82,12 +81,9 @@ async fn test_accessibility_set_all() {
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create();
-    let store = factory
-        .lock()
-        .await
-        .get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    let accessibility_proxy = create_test_accessibility_env(factory).await;
+    let factory = Arc::new(InMemoryStorageFactory::create());
+    let accessibility_proxy = create_test_accessibility_env(Arc::clone(&factory)).await;
+    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
     // Fetch the initial value.
     let settings = accessibility_proxy.watch().await.expect("watch completed");
@@ -140,12 +136,9 @@ async fn test_accessibility_set_captions() {
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create();
-    let store = factory
-        .lock()
-        .await
-        .get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    let accessibility_proxy = create_test_accessibility_env(factory).await;
+    let factory = Arc::new(InMemoryStorageFactory::create());
+    let accessibility_proxy = create_test_accessibility_env(Arc::clone(&factory)).await;
+    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
     // Set for_media and window_color in the top-level CaptionsSettings.
     let mut first_set = AccessibilitySettings::EMPTY;
@@ -191,7 +184,7 @@ async fn test_accessibility_set_captions() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let accessibility_proxy =
-        create_a11y_test_env_with_failures(InMemoryStorageFactory::create()).await;
+        create_a11y_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
     let result = accessibility_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

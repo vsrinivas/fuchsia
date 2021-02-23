@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use crate::agent::base::BlueprintHandle;
+use crate::handler::device_storage::DeviceStorageFactory;
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::sync::Arc;
 
 /// The flags used to control behavior of controllers.
 #[derive(PartialEq, Debug, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
@@ -31,6 +34,34 @@ pub enum AgentType {
     Restore,
     /// Responsible for logging to Inspect.
     Inspect,
+}
+
+impl AgentType {
+    /// Return the storage keys needed for this particular agent.
+    pub async fn initialize_storage<T>(&self, storage_factory: &Arc<T>) -> Result<(), Error>
+    where
+        T: DeviceStorageFactory,
+    {
+        match self {
+            AgentType::CameraWatcher => {
+                storage_factory
+                    .initialize::<crate::agent::camera_watcher::CameraWatcherAgent>()
+                    .await
+            }
+            AgentType::Earcons => {
+                storage_factory.initialize::<crate::agent::earcons::agent::Agent>().await
+            }
+            AgentType::MediaButtons => {
+                storage_factory.initialize::<crate::agent::media_buttons::MediaButtonsAgent>().await
+            }
+            AgentType::Restore => {
+                storage_factory.initialize::<crate::agent::restore_agent::RestoreAgent>().await
+            }
+            AgentType::Inspect => {
+                storage_factory.initialize::<crate::agent::inspect::InspectAgent>().await
+            }
+        }
+    }
 }
 
 pub fn get_default_agent_types() -> HashSet<AgentType> {

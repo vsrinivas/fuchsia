@@ -7,7 +7,7 @@ use {
     crate::base::SettingType,
     crate::config::base::ControllerFlag,
     crate::display::types::{DisplayInfo, LowLightMode, Theme},
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -32,10 +32,9 @@ use {
 const ENV_NAME: &str = "settings_service_display_test_environment";
 const STARTING_BRIGHTNESS: f32 = 0.5;
 const CHANGED_BRIGHTNESS: f32 = 0.8;
-const CONTEXT_ID: u64 = 0;
 
 async fn setup_display_env() -> DisplayProxy {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .settings(&[SettingType::Display])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -52,7 +51,7 @@ async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
         .await
         .register_service(Arc::new(Mutex::new(brightness_service_handle.clone())));
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .settings(&[SettingType::Display])
         .flags(&[ControllerFlag::ExternalBrightnessControl])
@@ -65,7 +64,7 @@ async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
 
 // Creates an environment that will fail on a get request.
 async fn create_display_test_env_with_failures(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: Arc<InMemoryStorageFactory>,
 ) -> DisplayProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Display)
         .await
@@ -427,23 +426,16 @@ async fn validate_restore_with_storage_controller(
     theme: Option<Theme>,
 ) {
     let service_registry = ServiceRegistry::create();
-    let storage_factory = InMemoryStorageFactory::create();
-    {
-        let store = storage_factory
-            .lock()
-            .await
-            .get_device_storage::<DisplayInfo>(StorageAccessContext::Test, CONTEXT_ID);
-        let info = DisplayInfo {
-            manual_brightness_value: manual_brightness,
-            auto_brightness,
-            screen_enabled,
-            low_light_mode,
-            theme,
-        };
-        assert!(store.write(&info, false).await.is_ok());
-    }
+    let info = DisplayInfo {
+        manual_brightness_value: manual_brightness,
+        auto_brightness,
+        screen_enabled,
+        low_light_mode,
+        theme,
+    };
+    let storage_factory = InMemoryStorageFactory::with_initial_data(&info);
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Display])
@@ -487,23 +479,16 @@ async fn validate_restore_with_brightness_controller(
         .lock()
         .await
         .register_service(Arc::new(Mutex::new(brightness_service_handle.clone())));
-    let storage_factory = InMemoryStorageFactory::create();
-    {
-        let store = storage_factory
-            .lock()
-            .await
-            .get_device_storage::<DisplayInfo>(StorageAccessContext::Test, CONTEXT_ID);
-        let info = DisplayInfo {
-            manual_brightness_value: manual_brightness,
-            auto_brightness,
-            screen_enabled,
-            low_light_mode,
-            theme,
-        };
-        assert!(store.write(&info, false).await.is_ok());
-    }
+    let info = DisplayInfo {
+        manual_brightness_value: manual_brightness,
+        auto_brightness,
+        screen_enabled,
+        low_light_mode,
+        theme,
+    };
+    let storage_factory = InMemoryStorageFactory::with_initial_data(&info);
 
-    assert!(EnvironmentBuilder::new(storage_factory)
+    assert!(EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Display])
@@ -573,7 +558,7 @@ async fn test_display_failure() {
         }
     };
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(Box::new(service_gen))
         .settings(&[SettingType::Display, SettingType::Intl])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -591,7 +576,7 @@ async fn test_display_failure() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let display_proxy =
-        create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;
+        create_display_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
     let result = display_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

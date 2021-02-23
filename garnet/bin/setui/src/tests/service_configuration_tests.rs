@@ -5,7 +5,7 @@
 use {
     crate::base::SettingType,
     crate::config::default_settings::DefaultSetting,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::policy::base::PolicyType,
     crate::tests::fakes::audio_core_service,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -18,6 +18,7 @@ use {
     fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker},
     fidl_fuchsia_settings_policy::VolumePolicyControllerMarker,
     std::collections::HashSet,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
@@ -48,7 +49,7 @@ async fn test_no_configuration_provided() {
         flags,
     );
 
-    let env = EnvironmentBuilder::new(factory)
+    let env = EnvironmentBuilder::new(Arc::new(factory))
         .configuration(configuration)
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -82,7 +83,7 @@ async fn test_default_configuration_provided() {
         flags,
     );
 
-    let env = EnvironmentBuilder::new(factory)
+    let env = EnvironmentBuilder::new(Arc::new(factory))
         .configuration(configuration)
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -119,7 +120,7 @@ async fn test_default_policy_configuration_provided() {
     let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
-    let env = EnvironmentBuilder::new(factory)
+    let env = EnvironmentBuilder::new(Arc::new(factory))
         .service(ServiceRegistry::serve(service_registry))
         .configuration(configuration)
         .spawn_and_get_nested_environment(ENV_NAME)

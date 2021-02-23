@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     anyhow::format_err,
@@ -14,7 +14,6 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
-    futures::lock::Mutex,
     futures::prelude::*,
     matches::assert_matches,
     std::sync::Arc,
@@ -25,7 +24,7 @@ use crate::intl::types::IntlInfo;
 const ENV_NAME: &str = "settings_service_intl_test_environment";
 const CONTEXT_ID: u64 = 0;
 
-async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>>) -> IntlProxy {
+async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> IntlProxy {
     let service_gen = Box::new(
         |service_name: &str,
          channel: zx::Channel|
@@ -80,7 +79,7 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
 
 /// Creates an environment that will fail on a get request.
 async fn create_intl_test_env_with_failures(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: Arc<InMemoryStorageFactory>,
 ) -> IntlProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Intl)
         .await
@@ -91,10 +90,8 @@ async fn create_intl_test_env_with_failures(
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create();
-    let store =
-        factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    let intl_service = create_test_intl_env(factory).await;
+    let factory = Arc::new(InMemoryStorageFactory::create());
+    let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
 
     // Check if the initial value is correct.
     let settings = intl_service.watch().await.expect("watch completed");
@@ -124,6 +121,7 @@ async fn test_intl_e2e() {
     assert_eq!(settings, intl_settings.clone());
 
     // Verify the value we set is persisted in DeviceStorage.
+    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
     let retrieved_struct = store.get::<IntlInfo>().await;
     assert_eq!(retrieved_struct, intl_settings.clone().into());
 }
@@ -131,10 +129,9 @@ async fn test_intl_e2e() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create();
-    let store =
-        factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    let intl_service = create_test_intl_env(factory).await;
+    let factory = Arc::new(InMemoryStorageFactory::create());
+    let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
+    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
     // Initial value is not None.
     let settings = intl_service.watch().await.expect("watch completed");
@@ -172,10 +169,9 @@ async fn test_intl_e2e_set_twice() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create();
-    let store =
-        factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    let intl_service = create_test_intl_env(factory).await;
+    let factory = Arc::new(InMemoryStorageFactory::create());
+    let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
+    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
     // Check if the initial value is correct.
     let settings = intl_service.watch().await.expect("watch completed");
@@ -213,7 +209,7 @@ async fn test_intl_invalid_timezone() {
     const INITIAL_TIME_ZONE: &'static str = "GMT";
 
     let factory = InMemoryStorageFactory::create();
-    let intl_service = create_test_intl_env(factory).await;
+    let intl_service = create_test_intl_env(Arc::new(factory)).await;
 
     // Set a real value.
     let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
@@ -238,7 +234,8 @@ async fn test_intl_invalid_timezone() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
-    let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let intl_service =
+        create_intl_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
     let result = intl_service.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

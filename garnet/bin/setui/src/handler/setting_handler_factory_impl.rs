@@ -11,7 +11,6 @@ use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service::message::{Factory, Signature};
 use crate::service_context::ServiceContextHandle;
 use async_trait::async_trait;
-use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -92,11 +91,11 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
-        storage_factory_handle: Arc<Mutex<T>>,
+        storage_factory: Arc<T>,
         context_id_counter: Arc<AtomicU64>,
     ) -> SettingHandlerFactoryImpl<T> {
         SettingHandlerFactoryImpl {
-            environment: Environment::new(settings, service_context_handle, storage_factory_handle),
+            environment: Environment::new(settings, service_context_handle, storage_factory),
             generators: HashMap::new(),
             context_id_counter,
         }

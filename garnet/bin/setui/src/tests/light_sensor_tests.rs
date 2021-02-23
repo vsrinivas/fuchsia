@@ -5,7 +5,7 @@
 use {
     crate::base::SettingType,
     crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     anyhow::format_err,
@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_settings::*,
     fuchsia_zircon as zx,
     futures::future::{self, BoxFuture},
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
@@ -45,7 +46,7 @@ async fn test_light_sensor() {
         Box::pin(async { Ok(()) })
     };
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(Box::new(service_gen))
         .settings(&[SettingType::LightSensor])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -71,7 +72,7 @@ async fn test_light_sensor() {
 async fn test_watch_light_sensor_no_service_error() {
     let expected_error = fuchsia_zircon::Status::UNAVAILABLE;
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .settings(&[SettingType::Display])
         .spawn_and_get_nested_environment(ENV_NAME)

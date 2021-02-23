@@ -4,7 +4,7 @@
 
 use {
     crate::audio::default_audio_info,
-    crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, AudioStreamType},
+    crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
     crate::base::SettingType,
     crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::handler::device_storage::DeviceStorage,
@@ -173,17 +173,15 @@ struct FakeServices {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
     overridden_initial_streams: Vec<AudioStreamSettings>,
-) -> (NestedEnvironment, DeviceStorage, event::message::Receptor) {
-    let storage_factory = InMemoryStorageFactory::create();
+) -> (NestedEnvironment, Arc<DeviceStorage>, event::message::Receptor) {
     let mut initial_audio_info = default_audio_info();
 
     for stream in overridden_initial_streams {
         initial_audio_info.replace_stream(AudioStream::from(stream));
     }
 
-    let store = create_storage(storage_factory.clone(), initial_audio_info).await;
-
     let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<event::message::Factory>();
+    let storage_factory = Arc::new(InMemoryStorageFactory::with_initial_data(&initial_audio_info));
 
     // Upon instantiation, the subscriber will capture the event message
     // factory.
@@ -195,7 +193,7 @@ async fn create_environment(
             })
         });
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry))
         .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
         .settings(&[SettingType::Audio])
@@ -215,20 +213,8 @@ async fn create_environment(
         .await
         .expect("Should be able to retrieve messenger for publisher");
 
+    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
     (env, store, receptor)
-}
-
-// Gets the store from |factory| and populate it with default values.
-async fn create_storage(
-    factory: Arc<Mutex<InMemoryStorageFactory>>,
-    audio_info: AudioInfo,
-) -> DeviceStorage {
-    let store = factory
-        .lock()
-        .await
-        .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    store.write(&audio_info, false).await.unwrap();
-    store
 }
 
 // Returns a registry and audio related services it is populated with.

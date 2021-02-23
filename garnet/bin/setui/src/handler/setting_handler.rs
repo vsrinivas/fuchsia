@@ -458,14 +458,7 @@ pub mod persist {
             context: Context<F>,
         ) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
-                let storage = Arc::new(
-                    context
-                        .environment
-                        .storage_factory_handle
-                        .lock()
-                        .await
-                        .get_store::<S>(context.id),
-                );
+                let storage = context.environment.storage_factory.get_store(context.id).await;
                 let setting_type = context.setting_type;
 
                 ClientImpl::create(

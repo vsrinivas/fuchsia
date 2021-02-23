@@ -5,26 +5,21 @@
 use {
     crate::base::SettingType,
     crate::do_not_disturb::types::DoNotDisturbInfo,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::EnvironmentBuilder,
     fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings},
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_do_not_disturb() {
-    let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory
-        .lock()
-        .await
-        .get_device_storage::<DoNotDisturbInfo>(StorageAccessContext::Test, CONTEXT_ID);
-
     // Prepopulate initial value.
-    assert!(store.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
+    let storage_factory =
+        InMemoryStorageFactory::with_initial_data(&DoNotDisturbInfo::new(true, false));
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .settings(&[SettingType::DoNotDisturb])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::input::common::MediaButtonsEventBuilder,
     crate::input::input_device_configuration::{
         InputConfiguration, InputDeviceConfiguration, SourceState,
@@ -135,7 +135,7 @@ fn default_mic_cam_config_cam_disabled() -> InputConfiguration {
 
 // Creates an environment that will fail on a get request.
 async fn create_input_test_env_with_failures(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: Arc<InMemoryStorageFactory>,
 ) -> InputProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Input)
         .await
@@ -523,7 +523,8 @@ async fn test_persisted_values_applied_at_start() {
 // Test that a failure results in the correct epitaph.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
-    let input_proxy = create_input_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let input_proxy =
+        create_input_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
     let result = input_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

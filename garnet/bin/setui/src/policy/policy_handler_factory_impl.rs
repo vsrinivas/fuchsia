@@ -9,7 +9,6 @@ use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError, Poli
 use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
 use crate::service;
 use async_trait::async_trait;
-use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -20,7 +19,7 @@ use std::sync::Arc;
 pub struct PolicyHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
     policies: HashSet<PolicyType>,
     settings: HashSet<SettingType>,
-    storage_factory: Arc<Mutex<T>>,
+    storage_factory: Arc<T>,
     generators: HashMap<PolicyType, GenerateHandler<T>>,
 
     /// Atomic counter used to generate new IDs, which uniquely identify a context.
@@ -55,7 +54,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
             service_messenger,
             messenger,
             setting_proxy_signature,
-            storage_factory_handle: self.storage_factory.clone(),
+            storage_factory: self.storage_factory.clone(),
             id: self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         };
 
@@ -71,13 +70,13 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
     pub fn new(
         policies: HashSet<PolicyType>,
         settings: HashSet<SettingType>,
-        storage_factory_handle: Arc<Mutex<T>>,
+        storage_factory: Arc<T>,
         context_id_counter: Arc<AtomicU64>,
     ) -> PolicyHandlerFactoryImpl<T> {
         PolicyHandlerFactoryImpl {
             policies,
             settings,
-            storage_factory: storage_factory_handle,
+            storage_factory,
             generators: HashMap::new(),
             context_id_counter,
         }

@@ -9,7 +9,7 @@ use {
     },
     crate::audio::{create_default_modified_counters, default_audio_info},
     crate::base::SettingType,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
     crate::tests::fakes::audio_core_service::{self, AudioCoreService},
@@ -74,7 +74,7 @@ const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings
 
 /// Creates an environment that will fail on a get request.
 async fn create_audio_test_env_with_failures(
-    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+    storage_factory: Arc<InMemoryStorageFactory>,
 ) -> AudioProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Audio)
         .await
@@ -114,17 +114,6 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
         .expect("contains stream");
 }
 
-// Gets the store from |factory| and populate it with default values.
-async fn create_storage(factory: Arc<Mutex<InMemoryStorageFactory>>) -> DeviceStorage {
-    let store = factory
-        .lock()
-        .await
-        .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
-    let audio_info = default_audio_info();
-    store.write(&audio_info, false).await.unwrap();
-    store
-}
-
 // Verify that |streams| contain |stream|.
 fn verify_contains_stream(streams: &[AudioStream; 5], stream: &AudioStream) {
     streams.into_iter().find(|x| *x == stream).expect("contains changed media stream");
@@ -154,18 +143,18 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
-) -> (NestedEnvironment, DeviceStorage) {
-    let storage_factory = InMemoryStorageFactory::create();
-    let store = create_storage(storage_factory.clone()).await;
+) -> (NestedEnvironment, Arc<DeviceStorage>) {
+    let storage_factory =
+        Arc::new(InMemoryStorageFactory::with_initial_data(&default_audio_info()));
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
         .agents(&[AgentType::MediaButtons.into()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
-
+    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
     (env, store)
 }
 
@@ -363,24 +352,17 @@ async fn test_audio_input() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_restore() {
     let (service_registry, fake_services) = create_services().await;
-    let storage_factory = InMemoryStorageFactory::create();
     let expected_info = (0.9, false);
-    {
-        let store = storage_factory
-            .lock()
-            .await
-            .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
-        let mut stored_info = default_audio_info();
-        for stream in stored_info.streams.iter_mut() {
-            if stream.stream_type == AudioStreamType::Media {
-                stream.user_volume_level = expected_info.0;
-                stream.user_volume_muted = expected_info.1;
-            }
+    let mut stored_info = default_audio_info();
+    for stream in stored_info.streams.iter_mut() {
+        if stream.stream_type == AudioStreamType::Media {
+            stream.user_volume_level = expected_info.0;
+            stream.user_volume_muted = expected_info.1;
         }
-        assert!(store.write(&stored_info, false).await.is_ok());
     }
 
-    assert!(EnvironmentBuilder::new(storage_factory)
+    let storage_factory = InMemoryStorageFactory::with_initial_data(&stored_info);
+    assert!(EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Audio])
@@ -436,8 +418,6 @@ fn test_audio_info_copy() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_persisted_values_applied_at_start() {
     let (service_registry, fake_services) = create_services().await;
-    let storage_factory = InMemoryStorageFactory::create();
-    let store = create_storage(storage_factory.clone()).await;
 
     let test_audio_info = AudioInfo {
         streams: [
@@ -476,10 +456,9 @@ async fn test_persisted_values_applied_at_start() {
         modified_counters: Some(create_default_modified_counters()),
     };
 
-    // Write values in the store.
-    store.write(&test_audio_info, false).await.expect("write audio info in store");
+    let storage_factory = InMemoryStorageFactory::with_initial_data(&test_audio_info);
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(ServiceRegistry::serve(service_registry))
         .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Audio])
@@ -514,7 +493,8 @@ async fn test_persisted_values_applied_at_start() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
-    let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let audio_proxy =
+        create_audio_test_env_with_failures(Arc::new(InMemoryStorageFactory::create())).await;
     let result = audio_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

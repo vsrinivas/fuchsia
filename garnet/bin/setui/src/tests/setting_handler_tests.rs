@@ -7,8 +7,8 @@ use {
     crate::base::{SettingInfo, SettingType},
     crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::base::{ContextBuilder, Request},
-    crate::handler::device_storage::DeviceStorageFactory,
-    crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::handler::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
     crate::handler::setting_handler::persist::WriteResult,
     crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller, persist::write,
@@ -103,7 +103,7 @@ gen_data_controller!(FailDataController, false);
 
 macro_rules! verify_handle {
     ($spawn:expr) => {
-        assert!(EnvironmentBuilder::new(InMemoryStorageFactory::create())
+        assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
             .handler(SettingType::Unknown, Box::new($spawn))
             .agents(&[restore_agent::blueprint::create()])
             .settings(&[SettingType::Unknown])
@@ -136,9 +136,11 @@ async fn test_write_notify() {
         .expect("messenger should be created")
         .1
         .get_signature();
+    let storage_factory = Arc::new(InMemoryStorageFactory::create());
+    storage_factory.initialize_storage::<AccessibilityInfo>().await;
     let context = ContextBuilder::new(
         SettingType::Accessibility,
-        InMemoryStorageFactory::create(),
+        Arc::clone(&storage_factory),
         handler_messenger,
         handler_receptor,
         signature,
@@ -148,14 +150,7 @@ async fn test_write_notify() {
 
     let (client_tx, mut client_rx) = futures::channel::mpsc::unbounded::<persist::ClientProxy>();
 
-    let storage = Arc::new(
-        context
-            .environment
-            .storage_factory_handle
-            .lock()
-            .await
-            .get_store::<AccessibilityInfo>(context.id),
-    );
+    let storage = storage_factory.get_store(context.id).await;
     let setting_type = context.setting_type;
 
     ClientImpl::create(
@@ -289,7 +284,7 @@ async fn test_event_propagation() {
     let signature = handler_receptor.get_signature();
     let context = ContextBuilder::new(
         setting_type,
-        InMemoryStorageFactory::create(),
+        Arc::new(InMemoryStorageFactory::create()),
         handler_messenger,
         handler_receptor,
         receptor.get_signature(),
@@ -368,7 +363,7 @@ async fn test_rebroadcast() {
 
     let context = ContextBuilder::new(
         setting_type,
-        InMemoryStorageFactory::create(),
+        Arc::new(InMemoryStorageFactory::create()),
         handler_messenger,
         handler_receptor,
         receptor.get_signature(),
@@ -420,7 +415,7 @@ async fn verify_controller_state(state: State, n: u8) {
     let signature = handler_receptor.get_signature();
     let context = ContextBuilder::new(
         setting_type,
-        InMemoryStorageFactory::create(),
+        Arc::new(InMemoryStorageFactory::create()),
         handler_messenger,
         handler_receptor,
         receptor.get_signature(),
@@ -522,7 +517,7 @@ async fn test_unimplemented_error() {
         let signature = handler_receptor.get_signature();
         let context = ContextBuilder::new(
             setting_type,
-            InMemoryStorageFactory::create(),
+            Arc::new(InMemoryStorageFactory::create()),
             handler_messenger,
             handler_receptor,
             receptor.get_signature(),

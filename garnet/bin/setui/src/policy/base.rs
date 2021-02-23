@@ -12,7 +12,6 @@ use crate::service;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -34,6 +33,22 @@ impl PolicyType {
             #[cfg(test)]
             PolicyType::Unknown => SettingType::Unknown,
             PolicyType::Audio => SettingType::Audio,
+        }
+    }
+
+    /// Initialize the storage needed for this particular policy handler.
+    pub async fn initialize_storage<T>(&self, storage_factory: &Arc<T>) -> Result<(), Error>
+    where
+        T: DeviceStorageFactory,
+    {
+        match self {
+            #[cfg(test)]
+            Self::Unknown => Ok(()),
+            Self::Audio => {
+                storage_factory
+                    .initialize::<audio::audio_policy_handler::AudioPolicyHandler>()
+                    .await
+            }
         }
     }
 }
@@ -144,7 +159,7 @@ pub struct Context<T: DeviceStorageFactory> {
     pub service_messenger: service::message::Messenger,
     pub messenger: message::Messenger,
     pub setting_proxy_signature: message::Signature,
-    pub storage_factory_handle: Arc<Mutex<T>>,
+    pub storage_factory: Arc<T>,
     pub id: u64,
 }
 

@@ -76,7 +76,7 @@ async fn test_environment_bringup() {
         });
 
     // Ensure the environment is brought up properly.
-    assert!(EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .agents(&[TestMonitorAgent::create(monitor_actor_tx)])
         .resource_monitors(&[generate_monitor])
         .settings(&[])

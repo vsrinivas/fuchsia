@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use crate::agent::base::{AgentError, Context};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::agent;
@@ -63,7 +62,7 @@ async fn test_agent_event_propagation() {
         })
     });
 
-    let _ = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let _ = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .settings(&[])
         .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
         .agents(&[Arc::new(scaffold::agent::Blueprint::new(

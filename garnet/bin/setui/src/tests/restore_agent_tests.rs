@@ -40,7 +40,7 @@ async fn create_event_environment(
             })
         });
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .event_subscribers(&[Blueprint::create(create_subscriber)])
         .settings(&[SettingType::Setup])
@@ -63,7 +63,7 @@ async fn verify_restore_handling(
     let counter_clone = counter.clone();
     assert_eq!(
         success,
-        EnvironmentBuilder::new(InMemoryStorageFactory::create())
+        EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
             .handler(
                 SettingType::Unknown,
                 create_setting_handler(Box::new(move |request| {

@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::testing::*,
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::hardware_power_statecontrol_service::{
         Action, HardwarePowerStatecontrolService,
@@ -22,7 +22,7 @@ const CONTEXT_ID: u64 = 0;
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_default() {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -42,22 +42,14 @@ async fn test_setup_default() {
 // updated to verify restart request is made on interface change.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_with_reboot() {
-    let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory
-        .lock()
-        .await
-        .get_device_storage::<SetupInfo>(StorageAccessContext::Test, CONTEXT_ID);
-
     // Prepopulate initial value
-    {
-        let initial_data = SetupInfo {
-            configuration_interfaces: ConfigurationInterfaceFlags::WIFI
-                | ConfigurationInterfaceFlags::ETHERNET,
-        };
-        // Ethernet and WiFi is written out as initial value since the default
-        // is currently WiFi only.
-        assert!(store.write(&initial_data, false).await.is_ok());
-    }
+    let initial_data = SetupInfo {
+        configuration_interfaces: ConfigurationInterfaceFlags::WIFI
+            | ConfigurationInterfaceFlags::ETHERNET,
+    };
+    // Ethernet and WiFi is written out as initial value since the default
+    // is currently WiFi only.
+    let storage_factory = Arc::new(InMemoryStorageFactory::with_initial_data(&initial_data));
 
     let service_registry = ServiceRegistry::create();
     let hardware_power_statecontrol_service_handle =
@@ -68,7 +60,7 @@ async fn test_setup_with_reboot() {
         .register_service(hardware_power_statecontrol_service_handle.clone());
 
     // Handle reboot
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry.clone()))
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -98,6 +90,7 @@ async fn test_setup_with_reboot() {
     let settings = setup_service.watch().await.expect("watch completed");
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
+    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
     // Check to make sure value wrote out to store correctly
     assert_eq!(
         store.get::<SetupInfo>().await.configuration_interfaces,
@@ -121,7 +114,7 @@ async fn test_setup_no_reboot() {
         .await
         .register_service(hardware_power_statecontrol_service_handle.clone());
 
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

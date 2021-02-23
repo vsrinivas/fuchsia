@@ -19,7 +19,6 @@ use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use std::sync::Arc;
 
 const CONTEXT_ID: u64 = 0;
 
@@ -83,7 +82,8 @@ async fn test_write() {
     let (_, setting_proxy_receptor) =
         core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let storage_factory = InMemoryStorageFactory::create();
-    let store = Arc::new(storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID));
+    storage_factory.initialize_storage::<PrivacyInfo>().await;
+    let store = storage_factory.get_store(CONTEXT_ID).await;
     let client_proxy = ClientProxy::new(
         messenger,
         core_messenger,

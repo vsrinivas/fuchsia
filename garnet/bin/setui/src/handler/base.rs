@@ -21,7 +21,6 @@ use crate::setup::types::ConfigurationInterfaceFlags;
 
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use futures::lock::Mutex;
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -291,7 +290,7 @@ pub trait SettingHandlerFactory {
 pub struct Environment<T: DeviceStorageFactory> {
     pub settings: HashSet<SettingType>,
     pub service_context_handle: ServiceContextHandle,
-    pub storage_factory_handle: Arc<Mutex<T>>,
+    pub storage_factory: Arc<T>,
 }
 
 impl<T: DeviceStorageFactory> Clone for Environment<T> {
@@ -299,18 +298,17 @@ impl<T: DeviceStorageFactory> Clone for Environment<T> {
         Environment::new(
             self.settings.clone(),
             self.service_context_handle.clone(),
-            self.storage_factory_handle.clone(),
+            self.storage_factory.clone(),
         )
     }
 }
-
 impl<T: DeviceStorageFactory> Environment<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
-        storage_factory_handle: Arc<Mutex<T>>,
+        storage_factory: Arc<T>,
     ) -> Environment<T> {
-        return Environment { settings, service_context_handle, storage_factory_handle };
+        Environment { settings, service_context_handle, storage_factory }
     }
 }
 
@@ -334,14 +332,7 @@ impl<T: DeviceStorageFactory> Context<T> {
         environment: Environment<T>,
         id: u64,
     ) -> Context<T> {
-        return Context {
-            setting_type,
-            messenger,
-            receptor,
-            notifier_signature,
-            environment: environment.clone(),
-            id,
-        };
+        Context { setting_type, messenger, receptor, notifier_signature, environment, id }
     }
 }
 
@@ -350,7 +341,7 @@ impl<T: DeviceStorageFactory> Context<T> {
 #[cfg(test)]
 pub struct ContextBuilder<T: DeviceStorageFactory> {
     setting_type: SettingType,
-    storage_factory: Arc<Mutex<T>>,
+    storage_factory: Arc<T>,
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
     event_messenger_factory: Option<EventMessengerFactory>,
@@ -364,7 +355,7 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
 impl<T: DeviceStorageFactory> ContextBuilder<T> {
     pub fn new(
         setting_type: SettingType,
-        storage_factory: Arc<Mutex<T>>,
+        storage_factory: Arc<T>,
         messenger: Messenger,
         receptor: Receptor,
         notifier_signature: Signature,

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::{
     AgentError, Authority, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan,
@@ -198,7 +197,7 @@ async fn test_environment_startup() {
     let (_, agent_generate) =
         TestAgent::create(startup_agent_id, LifespanTarget::Initialization, startup_tx);
 
-    assert!(EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .agents(&[service_agent_generate, agent_generate,])
         .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)

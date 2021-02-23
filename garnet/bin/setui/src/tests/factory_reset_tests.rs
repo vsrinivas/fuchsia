@@ -5,7 +5,7 @@
 use crate::agent::restore_agent;
 use crate::base::SettingType;
 use crate::factory_reset::types::FactoryResetInfo;
-use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::recovery_policy_service::RecoveryPolicy;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
@@ -16,7 +16,6 @@ use std::sync::Arc;
 const ENV_NAME: &str = "settings_service_factory_test_environment";
 const STARTING_RESET: bool = true;
 const CHANGED_RESET: bool = false;
-const CONTEXT_ID: u64 = 0;
 
 async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
     let service_registry = ServiceRegistry::create();
@@ -25,7 +24,7 @@ async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
         .lock()
         .await
         .register_service(Arc::new(Mutex::new(recovery_policy_service_handler.clone())));
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .settings(&[SettingType::FactoryReset])
         .spawn_and_get_nested_environment(ENV_NAME)
@@ -92,18 +91,11 @@ async fn validate_restore(is_local_reset_allowed: bool) {
         .register_service(Arc::new(Mutex::new(recovery_policy_service_handler.clone())));
 
     // Set stored value.
-    let storage_factory = InMemoryStorageFactory::create();
-    {
-        let store = storage_factory
-            .lock()
-            .await
-            .get_device_storage::<FactoryResetInfo>(StorageAccessContext::Test, CONTEXT_ID);
-        let info = FactoryResetInfo { is_local_reset_allowed };
-        store.write(&info, false).await.expect("write should have succeeded");
-    }
+    let storage_factory =
+        InMemoryStorageFactory::with_initial_data(&FactoryResetInfo { is_local_reset_allowed });
 
     // Bring up environment with restore agent and factory reset.
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::FactoryReset])

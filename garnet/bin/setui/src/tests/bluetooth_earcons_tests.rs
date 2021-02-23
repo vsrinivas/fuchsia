@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::agent::earcons,
     crate::agent::earcons::bluetooth_handler::BLUETOOTH_DOMAIN,
@@ -41,7 +40,7 @@ struct FakeServices {
 
 /// Builds the test environment.
 async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> NestedEnvironment {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[])
         .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])

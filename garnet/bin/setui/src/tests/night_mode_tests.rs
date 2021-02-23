@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType, crate::handler::device_storage::testing::*,
-    crate::night_mode::types::NightModeInfo, crate::EnvironmentBuilder, fidl_fuchsia_settings::*,
+    crate::base::SettingType,
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::night_mode::types::NightModeInfo,
+    crate::EnvironmentBuilder,
+    fidl_fuchsia_settings::NightModeMarker,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";
@@ -16,13 +20,9 @@ async fn test_night_mode() {
     let changed_value = NightModeInfo { night_mode_enabled: Some(true) };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = InMemoryStorageFactory::create();
-    let store = factory
-        .lock()
-        .await
-        .get_device_storage::<NightModeInfo>(StorageAccessContext::Test, CONTEXT_ID);
+    let factory = Arc::new(InMemoryStorageFactory::create());
 
-    let env = EnvironmentBuilder::new(factory)
+    let env = EnvironmentBuilder::new(Arc::clone(&factory))
         .settings(&[SettingType::NightMode])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -41,6 +41,7 @@ async fn test_night_mode() {
         .expect("set completed")
         .expect("set successful");
 
+    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
     // Verify the value we set is persisted in DeviceStorage.
     let retrieved_struct = store.get().await;
     assert_eq!(changed_value, retrieved_struct);

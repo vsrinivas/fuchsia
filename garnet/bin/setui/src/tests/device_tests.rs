@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
-    crate::base::SettingType, crate::handler::device_storage::testing::*,
-    crate::EnvironmentBuilder, fidl_fuchsia_settings::DeviceMarker,
+    crate::base::SettingType, crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::EnvironmentBuilder, fidl_fuchsia_settings::DeviceMarker, std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_device_test_environment";
@@ -14,7 +13,7 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 /// sent to the switchboard.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_device() {
-    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::create()))
         .settings(&[SettingType::Device])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

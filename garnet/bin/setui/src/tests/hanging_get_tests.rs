@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
 use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -14,23 +14,15 @@ use futures::lock::Mutex;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "hanging_get_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_watches() {
-    let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory
-        .lock()
-        .await
-        .get_device_storage::<SetupInfo>(StorageAccessContext::Test, CONTEXT_ID);
     let initial_interfaces =
         ConfigurationInterfaceFlags::WIFI | ConfigurationInterfaceFlags::ETHERNET;
 
     // Prepopulate initial value
-    {
-        let initial_data = SetupInfo { configuration_interfaces: initial_interfaces };
-        assert!(store.write(&initial_data, false).await.is_ok());
-    }
+    let initial_data = SetupInfo { configuration_interfaces: initial_interfaces };
+    let storage_factory = InMemoryStorageFactory::with_initial_data(&initial_data);
 
     let service_registry = ServiceRegistry::create();
     let hardware_power_statecontrol_service_handle =
@@ -40,7 +32,7 @@ async fn test_multiple_watches() {
         .await
         .register_service(hardware_power_statecontrol_service_handle.clone());
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(ServiceRegistry::serve(service_registry.clone()))
         .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment(ENV_NAME)

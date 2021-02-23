@@ -13,7 +13,7 @@ use crate::agent::base::BlueprintHandle;
 use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
-use crate::handler::device_storage::testing::*;
+use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageFactory};
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
@@ -113,7 +113,7 @@ async fn populate_multiple_test_lights(
 struct TestLightEnvironment {
     light_service: LightProxy,
     input_service: Arc<Mutex<InputDeviceRegistryService>>,
-    store: DeviceStorage,
+    store: Arc<DeviceStorage>,
 }
 
 struct TestLightEnvironmentBuilder {
@@ -174,22 +174,18 @@ impl TestLightEnvironmentBuilder {
         // Register fake input device registry service.
         let input_service_handle = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
         service_registry.lock().await.register_service(input_service_handle.clone());
-
-        let storage_factory = InMemoryStorageFactory::create();
-        let store = storage_factory
-            .lock()
-            .await
-            .get_device_storage::<LightInfo>(StorageAccessContext::Test, CONTEXT_ID);
-
-        if let Some(info) = self.starting_light_info {
-            store.write(&info, false).await.expect("write starting values");
+        let storage_factory = Arc::new(if let Some(info) = self.starting_light_info {
+            let storage_factory = InMemoryStorageFactory::with_initial_data(&info);
             if self.hardware_light_service_handle.is_none() {
                 // If a fake hardware light service wasn't provided for us, populate the initial lights.
                 populate_single_test_lights(service_handle.clone(), info).await;
             }
-        }
+            storage_factory
+        } else {
+            InMemoryStorageFactory::create()
+        });
 
-        let mut environment_builder = EnvironmentBuilder::new(storage_factory)
+        let mut environment_builder = EnvironmentBuilder::new(Arc::clone(&storage_factory))
             .service(Box::new(ServiceRegistry::serve(service_registry)))
             .agents(&self.agents.into_iter().map(BlueprintHandle::from).collect::<Vec<_>>())
             .settings(&[SettingType::Light]);
@@ -204,14 +200,8 @@ impl TestLightEnvironmentBuilder {
                 Box::new(move |context: Context<InMemoryStorageFactory>| {
                     let config_clone = config.clone();
                     Box::pin(async move {
-                        let storage = Arc::new(
-                            context
-                                .environment
-                                .storage_factory_handle
-                                .lock()
-                                .await
-                                .get_store::<LightInfo>(context.id),
-                        );
+                        let storage =
+                            context.environment.storage_factory.get_store(context.id).await;
 
                         let setting_type = context.setting_type;
                         ClientImpl::create(
@@ -247,6 +237,8 @@ impl TestLightEnvironmentBuilder {
         let env = environment_builder.spawn_and_get_nested_environment(ENV_NAME).await.unwrap();
 
         let light_service = env.connect_to_service::<LightMarker>().unwrap();
+        let store =
+            storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
 
         TestLightEnvironment { light_service, store, input_service: input_service_handle }
     }

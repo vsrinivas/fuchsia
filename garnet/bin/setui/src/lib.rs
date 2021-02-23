@@ -219,14 +219,27 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     agent_blueprints: Vec<AgentBlueprintHandle>,
     agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
-    storage_factory: Arc<Mutex<T>>,
+    storage_factory: Arc<T>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
     resource_monitors: Vec<monitor_base::monitor::Generate>,
 }
 
 macro_rules! register_handler {
-    ($handler_factory:ident, $setting_type:expr, $spawn_method:expr) => {
+    (
+        $components:ident,
+        $storage_factory:ident,
+        $handler_factory:ident,
+        $setting_type:expr,
+        $controller:ty,
+        $spawn_method:expr
+    ) => {
+        if $components.contains(&$setting_type) {
+            $storage_factory
+                .initialize::<$controller>()
+                .await
+                .expect("should be initializing still");
+        }
         $handler_factory.register($setting_type, Box::new($spawn_method));
     };
 }
@@ -252,7 +265,7 @@ macro_rules! register_fidl_handler {
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
-    pub fn new(storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
+    pub fn new(storage_factory: Arc<T>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             configuration: None,
             agent_blueprints: vec![],
@@ -397,17 +410,36 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory.clone(),
             context_id_counter,
         );
+        // If policy registration becomes configurable, then this initialization needs to be made
+        // configurable with the registration.
+        PolicyType::Audio
+            .initialize_storage(&self.storage_factory)
+            .await
+            .expect("was not able to initialize storage for audio policy");
         policy_handler_factory.register(
             PolicyType::Audio,
             Box::new(policy_handler::create_handler::<State, AudioPolicyHandler, _>),
         );
 
-        EnvironmentBuilder::get_configuration_handlers(&flags, &mut handler_factory);
+        EnvironmentBuilder::get_configuration_handlers(
+            &settings,
+            Arc::clone(&self.storage_factory),
+            &flags,
+            &mut handler_factory,
+        )
+        .await;
 
         // Override the configuration handlers with any custom handlers specified
         // in the environment.
         for (setting_type, handler) in self.handlers {
             handler_factory.register(setting_type, handler);
+        }
+
+        for agent_type in &agent_types {
+            agent_type
+                .initialize_storage(&self.storage_factory)
+                .await
+                .expect("unable to initialize storage for agent");
         }
 
         let agent_blueprints = self
@@ -477,36 +509,64 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         return Err(format_err!("nested environment not created"));
     }
 
-    fn get_configuration_handlers(
+    async fn get_configuration_handlers(
+        components: &HashSet<SettingType>,
+        storage_factory: Arc<T>,
         controller_flags: &HashSet<ControllerFlag>,
         factory_handle: &mut SettingHandlerFactoryImpl<T>,
     ) {
         // Power
-        register_handler!(factory_handle, SettingType::Power, Handler::<PowerController>::spawn);
+        register_handler!(
+            components,
+            storage_factory,
+            factory_handle,
+            SettingType::Power,
+            PowerController,
+            Handler::<PowerController>::spawn
+        );
         // Accessibility
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Accessibility,
+            AccessibilityController,
             DataHandler::<AccessibilityInfo, AccessibilityController>::spawn
         );
         // Account
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Account,
+            AccountController,
             Handler::<AccountController>::spawn
         );
         // Audio
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Audio,
+            AudioController,
             DataHandler::<AudioInfo, AudioController>::spawn
         );
         // Device
-        register_handler!(factory_handle, SettingType::Device, Handler::<DeviceController>::spawn);
+        register_handler!(
+            components,
+            storage_factory,
+            factory_handle,
+            SettingType::Device,
+            DeviceController,
+            Handler::<DeviceController>::spawn
+        );
         // Display
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Display,
+            DisplayController,
             if controller_flags.contains(&ControllerFlag::ExternalBrightnessControl) {
                 DataHandler::<DisplayInfo, DisplayController<ExternalBrightnessControl>>::spawn
             } else {
@@ -515,56 +575,83 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         );
         // Light
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Light,
+            LightController,
             DataHandler::<LightInfo, LightController>::spawn
         );
         // Light sensor
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::LightSensor,
+            LightSensorController,
             Handler::<LightSensorController>::spawn
         );
         // Input
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Input,
+            InputController,
             DataHandler::<InputInfoSources, InputController>::spawn
         );
         // Intl
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Intl,
+            IntlController,
             DataHandler::<IntlInfo, IntlController>::spawn
         );
         // Do not disturb
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::DoNotDisturb,
+            DoNotDisturbController,
             DataHandler::<DoNotDisturbInfo, DoNotDisturbController>::spawn
         );
         // Factory Reset
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::FactoryReset,
+            FactoryResetController,
             DataHandler::<FactoryResetInfo, FactoryResetController>::spawn
         );
         // Night mode
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::NightMode,
+            NightModeController,
             DataHandler::<NightModeInfo, NightModeController>::spawn
         );
         // Privacy
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Privacy,
+            PrivacyController,
             DataHandler::<PrivacyInfo, PrivacyController>::spawn
         );
         // Setup
         register_handler!(
+            components,
+            storage_factory,
             factory_handle,
             SettingType::Setup,
+            SetupController,
             DataHandler::<SetupInfo, SetupController>::spawn
         );
     }
