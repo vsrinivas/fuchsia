@@ -332,9 +332,11 @@ impl Topology {
         self.collection_name = collection_name.into();
     }
 
-    /// Creates this topology in a child component collection. By default this happens in the
-    /// [`DEFAULT_COLLECTION_NAME`] collection.
-    pub async fn create(self) -> Result<TopologyInstance, Error> {
+    /// Initializes the topology, but doesn't create it. Returns the root URL, the collection name,
+    /// and the mocks runner. The caller should pass the URL and collection name into
+    /// `fuchsial.sys2.Realm#CreateChild`, and keep the mocks runner alive until after
+    /// `fuchsia.sys2.Realm#DestroyChild` has been called.
+    pub async fn initialize(self) -> Result<(String, String, mock::MocksRunner), Error> {
         if self.decl_tree.is_none() {
             return Err(TopologyError::RootComponentNotSetYet.into());
         }
@@ -342,10 +344,17 @@ impl Topology {
         let root_url =
             Self::registration_walker(self.framework_intermediary_proxy.clone(), decl_tree, vec![])
                 .await?;
-        let root = fclient::ScopedInstance::new(self.collection_name, root_url)
+        Ok((root_url, self.collection_name, self.mocks_runner))
+    }
+
+    /// Creates this topology in a child component collection. By default this happens in the
+    /// [`DEFAULT_COLLECTION_NAME`] collection.
+    pub async fn create(self) -> Result<TopologyInstance, Error> {
+        let (root_url, collection_name, mocks_runner) = self.initialize().await?;
+        let root = fclient::ScopedInstance::new(collection_name, root_url)
             .await
             .map_err(TopologyError::FailedToCreateChild)?;
-        Ok(TopologyInstance { root, _mocks_runner: self.mocks_runner })
+        Ok(TopologyInstance { root, _mocks_runner: mocks_runner })
     }
 
     /// Walks a topology, registering each node with the component resolver.

@@ -93,7 +93,7 @@ impl From<ftopologybuilder::MockComponentStartInfo> for MockHandles {
     }
 }
 
-pub(crate) struct MocksRunner {
+pub struct MocksRunner {
     mocks: Arc<Mutex<HashMap<String, Mock>>>,
 
     // We want the async task handling run requests from the framework intermediary to run as long
