@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/devices/bin/driver-index/bind_index_metadata.gni")
 import("//src/sys/build/components.gni")
 
 group("driver-index") {
@@ -31,6 +32,8 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
 
   sources = [ "src/main.rs" ]
@@ -49,8 +52,23 @@ fuchsia_package("package") {
 
 bind_rules("test-bind") {
   rules = "test.bind"
-  output = "my-test-driver-url.cm"
+  driver_url = "fuchsia-pkg://my-test-driver#meta/my-driver.cm"
   output_bytecode = true
+}
+
+bind_rules("test-bind2") {
+  rules = "test2.bind"
+  driver_url = "fuchsia-pkg://my-test-driver#meta/my-driver2.cm"
+  output_bytecode = true
+}
+
+bind_index_metadata("drivers_for_test") {
+  testonly = true
+  deps = [
+    ":test-bind",
+    ":test-bind2",
+  ]
+  outputs = [ "config/drivers_for_test.json" ]
 }
 
 # Run with `fx test driver-index-unittests`.
@@ -58,6 +76,6 @@ fuchsia_unittest_package("driver-index-unittests") {
   manifest = "meta/driver-index-unittests.cml"
   deps = [
     ":bin_test",
-    ":test-bind",
+    ":drivers_for_test",
   ]
 }

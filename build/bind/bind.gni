@@ -30,6 +30,9 @@ import("//build/testing/host_test_data.gni")
 #   deps (optional)
 #     [list of labels]: List of bind_library targets included by the bind rules.
 #
+#   driver_url (optional)
+#     [string]: The related driver URL that is associated with this bind program.
+#
 #   visibility
 #     Forwarded from invoker.
 #
@@ -218,6 +221,10 @@ template("bind_rules") {
     output_file = "$target_name.bindbc"
   }
 
+  if (defined(invoker.driver_url)) {
+    driver_url = invoker.driver_url
+  }
+
   response_file_target = "_${target_name}_response_file"
   response_file = "${target_gen_dir}/${target_name}.rsp"
 
@@ -277,8 +284,8 @@ template("bind_rules") {
       deps += invoker.deps
     }
     if (defined(invoker.output_bytecode) && invoker.output_bytecode) {
-      # This metadata lets the packaging system know where to put the bytecode file.
       metadata = {
+        # This metadata lets the packaging system know where to put the bytecode file.
         distribution_entries = [
           {
             source = rebase_path("$target_gen_dir/$output_file", root_build_dir)
@@ -286,6 +293,16 @@ template("bind_rules") {
             label = get_label_info(":$target_name", "label_with_toolchain")
           },
         ]
+
+        if (defined(driver_url)) {
+          # This metadata lets the driver indexer build a map of bind programs to driver URLS.
+          driver_bind_info = [
+            {
+              driver_url = "$driver_url"
+              bind_file = "/pkg/bind/$output_file"
+            },
+          ]
+        }
       }
     }
   }

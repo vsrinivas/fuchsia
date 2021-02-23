@@ -1,0 +1,53 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/generated_resource.gni")
+
+# Generates a JSON file that maps driver component URLs to bind program files.
+# The JSON looks like:
+#
+# [
+#  {
+#   "bind_file": "bind/test-bind.bindbc",
+#   "driver_url": "fuchsia-pkg://my-test-driver#meta/my-driver.cm"
+#  },
+#  ...
+# ]
+#
+# If this target is included in a package the JSON file will be located at
+# /pkg/${outputs[0]}
+#
+# Including this target in your package will also include all of the relevant
+# bind files in your package as well.
+#
+# Parameters
+#
+#   deps (required)
+#     The list of dependencies of bind_rules to be included.
+#
+#   outputs
+#     Required: List of one runtime path.  This must be a relative path (no
+#     leading `/`).  It can use placeholders based on $sources; see copy()
+#     and `gn help source_expansion`.  When this resource() target is in
+#     the dependency graph of a zbi() target, then this is the path within
+#     the BOOTFS, which appears at /boot in the namespace of early-boot and
+#     standalone Zircon processes.
+#     Type: list(path)
+template("bind_index_metadata") {
+  generated_resource(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "outputs",
+                           ])
+
+    # Include the bind files in the package as well.
+    if (defined(deps)) {
+      data_deps = deps
+    }
+    data_keys = [ "driver_bind_info" ]
+    output_conversion = "json"
+  }
+}

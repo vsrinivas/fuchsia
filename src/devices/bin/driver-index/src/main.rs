@@ -11,8 +11,27 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{zx_status_t, Status};
 use futures::prelude::*;
+use serde::Deserialize;
 use std::collections::HashSet;
 use std::rc::Rc;
+
+fn encode_err_to_stdio_err(error: bind::compiler::BindProgramDecodeError) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::Other, format!("Error decoding bind file: {}", error))
+}
+
+#[derive(Deserialize)]
+struct JsonDriver {
+    bind_file: String,
+    driver_url: String,
+}
+
+impl JsonDriver {
+    #[allow(dead_code)]
+    fn to_driver(self) -> std::io::Result<Driver> {
+        let bytes = std::fs::read(&self.bind_file)?;
+        Driver::create(self.driver_url, bytes).map_err(encode_err_to_stdio_err)
+    }
+}
 
 /// Wraps all hosted protocols into a single type that can be matched against
 /// and dispatched.
@@ -32,6 +51,13 @@ impl Driver {
     ) -> Result<Option<HashSet<DeviceProperty>>, bind::debugger::DebuggerError> {
         bind::debugger::debug(&self.bind_program, properties)
     }
+
+    fn create(
+        url: String,
+        bind_program: Vec<u8>,
+    ) -> Result<Driver, bind::compiler::BindProgramDecodeError> {
+        Ok(Driver { bind_program: bind_v1::decode_from_bytecode_v1(&bind_program)?, url: url })
+    }
 }
 
 impl std::fmt::Display for Driver {
@@ -45,53 +71,7 @@ struct Indexer {
 }
 
 impl Indexer {
-    fn index_file(&mut self, path: std::path::PathBuf) -> std::io::Result<()> {
-        let file_name = match path.file_name() {
-            Some(file_name) => file_name,
-            None => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Path must have file name",
-                ));
-            }
-        };
-        let url = match file_name.to_os_string().into_string() {
-            Ok(url) => url,
-            Err(_) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "File must be valid string",
-                ));
-            }
-        };
-
-        let bytes = std::fs::read(&path)?;
-        let instructions = match bind_v1::decode_from_bytecode_v1(&bytes) {
-            Ok(instructions) => instructions,
-            Err(e) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Error decoding {}: {:?}", url, e),
-                ));
-            }
-        };
-        self.add_driver(Driver { bind_program: instructions, url: url });
-        Ok(())
-    }
-
     #[allow(dead_code)]
-    fn index_directory(&mut self, dir: &str) -> std::io::Result<()> {
-        let entries = std::fs::read_dir(dir)?;
-        for entry in entries {
-            let entry = entry?;
-            match self.index_file(entry.path()) {
-                Ok(_) => (),
-                Err(e) => eprintln!("Error indexing file: {:?}", e),
-            }
-        }
-        Ok(())
-    }
-
     fn add_driver(&mut self, driver: Driver) {
         self.drivers.push(driver);
     }
@@ -161,6 +141,7 @@ async fn run_index_server(
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
+
     let index = Rc::new(Indexer { drivers: Vec::<Driver>::new() });
 
     service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverIndexProtocol);
@@ -281,21 +262,25 @@ mod tests {
         a.unwrap();
     }
 
-    // In this test, we read from /pkg/bind/ for bind rules that were placed there by other build
-    // targets.
+    // This test depends on '/pkg/config/drivers_for_test.json' existing in the test package.
+    // The test reads that json file to determine which bind programs to read and index.
     #[fasync::run_singlethreaded(test)]
-    async fn read_from_bind_dir() {
+    async fn read_from_json() {
         let mut index = Indexer { drivers: vec![] };
-        index.index_directory("/pkg/bind").unwrap();
-        let index = Rc::new(index);
 
+        let data = std::fs::read_to_string("/pkg/config/drivers_for_test.json").unwrap();
+        let drivers: Vec<JsonDriver> = serde_json::from_str(&data).unwrap();
+        for driver in drivers {
+            index.add_driver(driver.to_driver().unwrap());
+        }
+
+        let index = Rc::new(index);
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
         let (server_result, _) =
             future::join(run_index_server(index.clone(), stream), async move {
-                // The values checked here need to match the values from the 'test-bind' build
-                // target.
+                // Check the value from the 'test-bind' binary. This should match my-driver.cm
                 let property = fdf::NodeProperty {
                     key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
                     value: Some(1),
@@ -307,7 +292,40 @@ mod tests {
                 };
                 let result = proxy.match_driver(args).await.unwrap();
                 let (received_url, _) = result.unwrap();
-                assert_eq!("my-test-driver-url.cm".to_string(), received_url);
+                assert_eq!(
+                    "fuchsia-pkg://my-test-driver#meta/my-driver.cm".to_string(),
+                    received_url
+                );
+
+                // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
+                let property = fdf::NodeProperty {
+                    key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                    value: Some(2),
+                    ..fdf::NodeProperty::EMPTY
+                };
+                let args = fdf::NodeAddArgs {
+                    properties: Some(vec![property]),
+                    ..fdf::NodeAddArgs::EMPTY
+                };
+                let result = proxy.match_driver(args).await.unwrap();
+                let (received_url, _) = result.unwrap();
+                assert_eq!(
+                    "fuchsia-pkg://my-test-driver#meta/my-driver2.cm".to_string(),
+                    received_url
+                );
+
+                // Check an unknown value. This should return the NOT_FOUND error.
+                let property = fdf::NodeProperty {
+                    key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                    value: Some(3),
+                    ..fdf::NodeProperty::EMPTY
+                };
+                let args = fdf::NodeAddArgs {
+                    properties: Some(vec![property]),
+                    ..fdf::NodeAddArgs::EMPTY
+                };
+                let result = proxy.match_driver(args).await.unwrap();
+                assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
             })
             .await;
         server_result.unwrap();
