@@ -12,13 +12,15 @@ use {
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     async_trait::async_trait,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{debug, error, info, trace},
+    rand::Rng,
     std::{cmp::Ordering, collections::HashMap, convert::TryInto, sync::Arc},
-    wlan_common::channel::Channel,
+    wlan_common::{channel::Channel, hasher::WlanHasher},
     wlan_metrics_registry::{
         ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
         SavedNetworkInScanResultMetricDimensionBssCount,
@@ -45,6 +47,7 @@ pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
     cobalt_api: Arc<Mutex<CobaltSender>>,
+    hasher: WlanHasher,
 }
 
 struct ScanResultCache {
@@ -78,6 +81,34 @@ impl InternalBss<'_> {
         }
         return rssi;
     }
+
+    fn print_without_pii(&self, hasher: &WlanHasher) {
+        let channel = Channel::from_fidl(self.bss_info.channel);
+        let rssi = self.bss_info.rssi;
+        let recent_failure_count = self.network_info.recent_failure_count;
+        let security_type = match self.network_id.type_ {
+            fidl_policy::SecurityType::None => "open",
+            fidl_policy::SecurityType::Wep => "WEP",
+            fidl_policy::SecurityType::Wpa => "WPA",
+            fidl_policy::SecurityType::Wpa2 => "WPA2",
+            fidl_policy::SecurityType::Wpa3 => "WPA3",
+        };
+        info!(
+            "{}({:4}), {}, {:>4}dBm, chan {:8}{}{}{}",
+            hasher.hash_ssid(&self.network_id.ssid),
+            security_type,
+            hasher.hash_mac_addr(&self.bss_info.bssid),
+            rssi,
+            channel,
+            if !self.bss_info.compatible { ", NOT compatible" } else { "" },
+            if recent_failure_count > 0 {
+                format!(", {} recent failures", recent_failure_count)
+            } else {
+                "".to_string()
+            },
+            if !self.network_info.has_ever_connected { ", never used yet" } else { "" },
+        )
+    }
 }
 
 impl NetworkSelector {
@@ -89,6 +120,7 @@ impl NetworkSelector {
                 results: Vec::new(),
             })),
             cobalt_api: Arc::new(Mutex::new(cobalt_api)),
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         }
     }
 
@@ -184,7 +216,7 @@ impl NetworkSelector {
         let networks =
             merge_saved_networks_and_scan_data(saved_networks, &scan_result_guard.results).await;
 
-        match select_best_connection_candidate(networks, ignore_list) {
+        match select_best_connection_candidate(networks, ignore_list, &self.hasher) {
             Some((selected, channel, bssid)) => {
                 Some(augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await)
             }
@@ -212,12 +244,14 @@ impl NetworkSelector {
                 let networks =
                     merge_saved_networks_and_scan_data(saved_networks, &scan_results).await;
                 let ignore_list = vec![];
-                select_best_connection_candidate(networks, &ignore_list).map(|(candidate, _, _)| {
-                    // Strip out the information about passive vs active scan, because we can't know
-                    // if this network would have been observed in a passive scan (since we never
-                    // performed a passive scan).
-                    types::ConnectionCandidate { observed_in_passive_scan: None, ..candidate }
-                })
+                select_best_connection_candidate(networks, &ignore_list, &self.hasher).map(
+                    |(candidate, _, _)| {
+                        // Strip out the information about passive vs active scan, because we can't know
+                        // if this network would have been observed in a passive scan (since we never
+                        // performed a passive scan).
+                        types::ConnectionCandidate { observed_in_passive_scan: None, ..candidate }
+                    },
+                )
             }
         }
     }
@@ -333,9 +367,14 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
+    hasher: &WlanHasher,
 ) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
+    info!("Selecting from {} BSSs found for saved networks", bss_list.len());
     bss_list
         .into_iter()
+        .inspect(|bss| {
+            bss.print_without_pii(hasher);
+        })
         .filter(|bss| {
             // Filter out incompatible BSSs
             if !bss.bss_info.compatible {
@@ -366,6 +405,8 @@ fn select_best_connection_candidate<'a>(
             bss_a.score().partial_cmp(&bss_b.score()).unwrap()
         })
         .map(|bss| {
+            info!("Selected BSS:");
+            bss.print_without_pii(hasher);
             (
                 types::ConnectionCandidate {
                     network: bss.network_id,
@@ -547,7 +588,6 @@ mod tests {
             task::Poll,
         },
         pin_utils::pin_mut,
-        rand::Rng,
         std::sync::Arc,
         test_case::test_case,
         wlan_common::assert_variant,
@@ -1011,7 +1051,11 @@ mod tests {
 
         // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1034,7 +1078,11 @@ mod tests {
 
         // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1091,7 +1139,11 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1112,7 +1164,11 @@ mod tests {
 
         // weaker network (with no failures) returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1133,7 +1189,11 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1217,7 +1277,11 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1240,7 +1304,11 @@ mod tests {
 
         // other network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1297,7 +1365,11 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1313,7 +1385,11 @@ mod tests {
 
         // ignore the stronger network, other network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![test_id_2.clone()]),
+            select_best_connection_candidate(
+                networks.clone(),
+                &vec![test_id_2.clone()],
+                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+            ),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
