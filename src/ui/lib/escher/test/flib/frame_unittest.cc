@@ -42,11 +42,14 @@ VK_TEST_F(FrameTest, SubmitFrameWithUnsignalledWaitSemaphore) {
   // Submit frame while wait semaphore is not signalled.
   frame->EndFrame(SemaphorePtr(), [] {});
   EXPECT_FALSE(IsEventSignalled(acquire_semaphore_pair.second, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(IsEventSignalled(release_semaphore_pair.second, ZX_EVENT_SIGNALED));
+
+  // Release semaphore should not be signaled yet.
+  EXPECT_NE(release_semaphore_pair.second.wait_one(ZX_EVENT_SIGNALED,
+                                                   zx::deadline_after(zx::sec(1)), nullptr),
+            ZX_OK);
 
   // Signal wait semaphore.
   EXPECT_EQ(acquire_semaphore_pair.second.signal(0u, ZX_EVENT_SIGNALED), ZX_OK);
-  EXPECT_TRUE(IsEventSignalled(acquire_semaphore_pair.second, ZX_EVENT_SIGNALED));
 
   // Release semaphore should be signaled and acquire semaphore should be unsignaled by vk. We
   // should not wait more than 1 sec, because the driver can decide to signal the hung semaphore
