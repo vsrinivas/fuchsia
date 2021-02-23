@@ -36,7 +36,7 @@ class DriverOutput : public AudioOutput {
 
   ~DriverOutput();
 
-  const PipelineConfig& pipeline_config() const;
+  const PipelineConfig* pipeline_config() const override;
 
  protected:
   // AudioOutput implementation

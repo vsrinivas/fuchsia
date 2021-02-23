@@ -12,6 +12,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
+#include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -77,8 +78,8 @@ class AudioObject {
   // from a mix thread. Instead, they should use the format which was assigned to the AudioLink
   // at the time the link was created.
   virtual std::optional<Format> format() const { return std::nullopt; }
-
   virtual std::optional<StreamUsage> usage() const { return std::nullopt; }
+  virtual const PipelineConfig* pipeline_config() const { return nullptr; }
 
   bool format_valid() const { return format().has_value(); }
 

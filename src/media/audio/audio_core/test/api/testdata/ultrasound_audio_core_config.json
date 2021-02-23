@@ -21,6 +21,7 @@
           "render:ultrasound"
         ],
         "output_rate": 96000,
+        "output_channels": 2,
         "inputs": [
           {
             "name": "mix",

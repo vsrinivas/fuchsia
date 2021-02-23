@@ -60,11 +60,11 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
-const PipelineConfig& DriverOutput::pipeline_config() const {
+const PipelineConfig* DriverOutput::pipeline_config() const {
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
   return driver()
-             ? config().output_device_profile(driver()->persistent_unique_id()).pipeline_config()
-             : config().default_output_device_profile().pipeline_config();
+             ? &config().output_device_profile(driver()->persistent_unique_id()).pipeline_config()
+             : &config().default_output_device_profile().pipeline_config();
 }
 
 int64_t DriverOutput::RefTimeToSafeWriteFrame(zx::time ref_time) const {

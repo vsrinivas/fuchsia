@@ -8,6 +8,22 @@
 
 namespace media::audio {
 
+namespace {
+const PipelineConfig::MixGroup* FindUltrasoundGroup(const PipelineConfig::MixGroup& group) {
+  auto& inputs = group.input_streams;
+  if (std::find(inputs.begin(), inputs.end(), RenderUsage::ULTRASOUND) != inputs.end()) {
+    return &group;
+  }
+  for (auto& child : group.inputs) {
+    auto result = FindUltrasoundGroup(child);
+    if (result) {
+      return result;
+    }
+  }
+  return nullptr;
+}
+}  // namespace
+
 UltrasoundRenderer::UltrasoundRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request, Context* context,
     fuchsia::ultrasound::Factory::CreateRendererCallback callback)
@@ -21,23 +37,42 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::In
   if (!create_callback_) {
     return fit::error(ZX_ERR_BAD_STATE);
   }
-  auto format = dest.format();
-  if (!format) {
-    return fit::error(ZX_ERR_BAD_STATE);
+
+  uint32_t channels;
+  uint32_t frames_per_second;
+
+  // UltrasoundRenderers use FLOAT samples, but the frame rate and channel count
+  // are defined by the output pipeline we are connected to.
+  auto pipeline_config = dest.pipeline_config();
+  if (pipeline_config) {
+    auto group = FindUltrasoundGroup(pipeline_config->root());
+    if (!group) {
+      FX_LOGS(ERROR) << "PipelineConfig missing ULTRASOUND group";
+      return fit::error(ZX_ERR_BAD_STATE);
+    }
+    channels = group->output_channels;
+    frames_per_second = group->output_rate;
+  } else {
+    auto format = dest.format();
+    if (!format) {
+      return fit::error(ZX_ERR_BAD_STATE);
+    }
+    channels = format->channels();
+    frames_per_second = format->frames_per_second();
   }
+
+  format_ = Format::Create({
+                               .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                               .channels = channels,
+                               .frames_per_second = frames_per_second,
+                           })
+                .take_value();
 
   auto reference_clock_result = reference_clock().DuplicateClockReadOnly();
   if (reference_clock_result.is_error()) {
     return fit::error(reference_clock_result.error());
   }
 
-  // Ultrasound renderers require FLOAT samples.
-  auto stream_type = format->stream_type();
-  stream_type.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
-  auto create_result = Format::Create(stream_type);
-  FX_DCHECK(create_result.is_ok());
-
-  format_ = {create_result.take_value()};
   reporter().SetFormat(*format_);
   create_callback_(reference_clock_result.take_value(), format_->stream_type());
   create_callback_ = nullptr;
