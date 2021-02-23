@@ -15,7 +15,7 @@ use futures::StreamExt;
 
 use async_trait::async_trait;
 
-use crate::base::{SettingInfo, SettingType};
+use crate::base::{SettingInfo, SettingType, UnknownInfo};
 use crate::handler::base::{
     Error as HandlerError, Payload as HandlerPayload, Request, Response, SettingHandlerFactory,
     SettingHandlerFactoryError,
@@ -63,7 +63,10 @@ impl SettingHandler {
     pub fn notify(&self) {
         self.messenger
             .message(
-                setting_handler::Payload::Event(Event::Changed(SettingInfo::Unknown)).into(),
+                setting_handler::Payload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(
+                    true,
+                ))))
+                .into(),
                 Audience::Messenger(self.proxy_signature),
             )
             .send()

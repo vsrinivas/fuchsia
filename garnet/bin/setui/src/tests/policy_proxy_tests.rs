@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::{SettingInfo, SettingType};
+use crate::base::{SettingInfo, SettingType, UnknownInfo as SettingUnknownInfo};
 use crate::handler::base::{Payload, Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
@@ -18,7 +18,6 @@ use crate::policy::policy_handler::{
 };
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
-use crate::privacy::types::PrivacyInfo;
 use crate::service;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use crate::tests::message_utils::verify_payload;
@@ -48,31 +47,26 @@ static SETTING_REQUEST_PAYLOAD_SWITCHBOARD_2: core::Payload =
         data: SettingActionData::Listen(1),
     });
 
-static SETTING_RESPONSE: SettingResponse =
-    Ok(Some(SettingInfo::Privacy(PrivacyInfo { user_data_sharing_consent: Some(true) })));
+// TODO(fxbug.dev/70657): Implementing trait from *Info -> SettingInfo.
+static SETTING_RESPONSE: SettingResponse = Ok(Some(SettingInfo::Unknown(SettingUnknownInfo(true))));
 
 static SETTING_RESPONSE_PAYLOAD: Payload =
-    Payload::Response(Ok(Some(SettingInfo::Privacy(PrivacyInfo {
-        user_data_sharing_consent: Some(true),
-    }))));
+    Payload::Response(Ok(Some(SettingInfo::Unknown(SettingUnknownInfo(true)))));
 
 static SETTING_RESPONSE_MODIFIED: SettingResponse =
-    Ok(Some(SettingInfo::Privacy(PrivacyInfo { user_data_sharing_consent: Some(false) })));
+    Ok(Some(SettingInfo::Unknown(SettingUnknownInfo(false))));
 
-static SETTING_RESPONSE_PAYLOAD_SWITCHBOARD: core::Payload =
-    core::Payload::Event(SettingEvent::Response(
-        REQUEST_ID,
-        Ok(Some(SettingInfo::Privacy(PrivacyInfo { user_data_sharing_consent: Some(true) }))),
-    ));
+static SETTING_RESPONSE_PAYLOAD_SWITCHBOARD: core::Payload = core::Payload::Event(
+    SettingEvent::Response(REQUEST_ID, Ok(Some(SettingInfo::Unknown(SettingUnknownInfo(true))))),
+);
 
 static SETTING_RESULT_NO_RESPONSE: SettingResponse = Ok(None);
 static SETTING_RESULT_NO_RESPONSE_SWITCHBOARD: SettingHandlerResult = Ok(None);
 
-static SETTING_EVENT_ORIGINAL: SettingEvent = SettingEvent::Changed(SettingInfo::Unknown);
+static SETTING_EVENT_ORIGINAL: SettingEvent =
+    SettingEvent::Changed(SettingInfo::Unknown(SettingUnknownInfo(true)));
 static SETTING_EVENT_MODIFIED: SettingEvent =
-    SettingEvent::Changed(SettingInfo::Privacy(PrivacyInfo {
-        user_data_sharing_consent: Some(true),
-    }));
+    SettingEvent::Changed(SettingInfo::Unknown(SettingUnknownInfo(false)));
 
 /// `FakePolicyHandler` always returns the provided responses for handling policy/setting requests.
 /// The following mappings are Vectors rather than HashMaps as some of the represented values do not
@@ -923,7 +917,7 @@ async fn test_setting_response_replace() {
     // Send a setting request from the setting proxy to the client.
     setting_proxy_messenger
         .message(
-            Payload::Response(SETTING_RESPONSE.clone()).into(),
+            SETTING_RESPONSE_PAYLOAD.clone().into(),
             Audience::Messenger(receptor.get_signature()),
         )
         .send();

@@ -30,6 +30,8 @@ use serde::{Deserialize, Serialize};
 /// The setting types supported by the service.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum SettingType {
+    /// This value is reserved for testing purposes.
+    #[cfg(test)]
     Unknown,
     Accessibility,
     Account,
@@ -52,7 +54,8 @@ pub enum SettingType {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingInfo {
     /// This value is reserved for testing purposes.
-    Unknown,
+    #[cfg(test)]
+    Unknown(UnknownInfo),
     Accessibility(AccessibilityInfo),
     Audio(AudioInfo),
     Brightness(DisplayInfo),
@@ -74,7 +77,8 @@ impl SettingInfo {
     // TODO(fxbug.dev/66690): move this into InspectBroker
     pub fn for_inspect(&self) -> (&'static str, String) {
         match self {
-            SettingInfo::Unknown => ("Unknown", "".to_string()),
+            #[cfg(test)]
+            SettingInfo::Unknown(info) => ("Unknown", format!("{:?}", info)),
             SettingInfo::Accessibility(info) => ("Accessibility", format!("{:?}", info)),
             SettingInfo::Audio(info) => ("Audio", format!("{:?}", info)),
             SettingInfo::Brightness(info) => ("Brightness", format!("{:?}", info)),
@@ -91,3 +95,9 @@ impl SettingInfo {
         }
     }
 }
+
+/// This struct is reserved for testing purposes. Some tests need to verify data changes, bool value
+/// can be used for this purpose.
+#[derive(PartialEq, Debug, Clone)]
+#[cfg(test)]
+pub struct UnknownInfo(pub bool);

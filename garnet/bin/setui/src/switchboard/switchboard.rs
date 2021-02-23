@@ -367,6 +367,7 @@ impl Switchboard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base::UnknownInfo;
     use crate::internal::core;
     use crate::message::base::Audience;
 
@@ -582,7 +583,9 @@ mod tests {
 
         proxy_messenger
             .message(
-                core::Payload::Event(SettingEvent::Changed(SettingInfo::Unknown)),
+                core::Payload::Event(SettingEvent::Changed(SettingInfo::Unknown(UnknownInfo(
+                    true,
+                )))),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();

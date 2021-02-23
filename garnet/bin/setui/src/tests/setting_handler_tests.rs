@@ -4,7 +4,7 @@
 use {
     crate::accessibility::types::AccessibilityInfo,
     crate::agent::restore_agent,
-    crate::base::{SettingInfo, SettingType},
+    crate::base::{SettingInfo, SettingType, UnknownInfo},
     crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::base::{ContextBuilder, Request},
     crate::handler::device_storage::testing::InMemoryStorageFactory,
@@ -374,7 +374,7 @@ async fn test_rebroadcast() {
     ClientImpl::create(
         context,
         StubControllerBuilder::new()
-            .add_request_mapping(Request::Get, Ok(Some(SettingInfo::Unknown)))
+            .add_request_mapping(Request::Get, Ok(Some(SettingInfo::Unknown(UnknownInfo(true)))))
             .build(),
     )
     .await
@@ -398,8 +398,12 @@ async fn test_rebroadcast() {
         .send()
         .ack();
 
-    verify_payload(Payload::Event(Event::Changed(SettingInfo::Unknown)).into(), &mut receptor, None)
-        .await
+    verify_payload(
+        Payload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(true)))).into(),
+        &mut receptor,
+        None,
+    )
+    .await
 }
 
 // Test that the controller state is entered [n] times.

@@ -192,8 +192,7 @@ impl InspectBroker {
 mod tests {
     use fuchsia_inspect::assert_inspect_tree;
 
-    use crate::base::SettingInfo;
-    use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
+    use crate::base::{SettingInfo, UnknownInfo};
     use crate::service::message::{create_hub, Receptor};
 
     use super::*;
@@ -249,15 +248,7 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(
-                Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
-                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                    temperature_unit: Some(TemperatureUnit::Celsius),
-                    time_zone_id: Some("UTC".to_string()),
-                    hour_cycle: None,
-                }))))
-                .into(),
-            )
+            .reply(Payload::Result(Ok(Some(SettingInfo::Unknown(UnknownInfo(true))))).into())
             .send()
             .next()
             .await
@@ -266,8 +257,8 @@ mod tests {
         // Inspect broker writes value to inspect.
         assert_inspect_tree!(inspector, root: {
             setting_values: {
-                "Intl": {
-                    value: "IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None }",
+                "Unknown": {
+                    value: "UnknownInfo(true)",
                     timestamp: "0",
                 }
             }
@@ -304,7 +295,7 @@ mod tests {
         // TODO(fxb/66294): Remove get call from inspect broker.
         setting_handler
             .message(
-                Payload::Event(Event::Changed(SettingInfo::Unknown)).into(),
+                Payload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(true)))).into(),
                 Audience::Messenger(proxy_signature),
             )
             .send();
@@ -316,15 +307,7 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(
-                Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
-                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                    temperature_unit: Some(TemperatureUnit::Celsius),
-                    time_zone_id: Some("UTC".to_string()),
-                    hour_cycle: None,
-                }))))
-                .into(),
-            )
+            .reply(Payload::Result(Ok(Some(SettingInfo::Unknown(UnknownInfo(true))))).into())
             .send()
             .next()
             .await
@@ -333,8 +316,8 @@ mod tests {
         // Inspect broker writes value to inspect.
         assert_inspect_tree!(inspector, root: {
             setting_values: {
-                "Intl": {
-                    value: "IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None }",
+                "Unknown": {
+                    value: "UnknownInfo(true)",
                     timestamp: "0",
                 }
             }
