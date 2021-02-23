@@ -691,7 +691,7 @@ async fn publish_service_async(
 
 #[async_trait(?Send)]
 impl Facade for HfpFacade {
-    async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "HfpInit" => {
                 let result = self.init_hfp_service_proxy().await?;
@@ -700,6 +700,15 @@ impl Facade for HfpFacade {
             "HfpRemoveService" => {
                 self.cleanup().await;
                 Ok(to_value(())?)
+            }
+            "IncomingCall" => {
+                let remote = parse_arg!(args, as_str, "remote")?;
+                let result = self.incoming_call(&remote).await?;
+                Ok(to_value(result)?)
+            }
+            "ListPeers" => {
+                let result = self.list_peers().await?;
+                Ok(to_value(result)?)
             }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
         }
