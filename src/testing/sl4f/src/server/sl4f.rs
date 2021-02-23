@@ -48,6 +48,7 @@ use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
+use crate::bluetooth::hfp_facade::HfpFacade;
 
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
@@ -233,6 +234,7 @@ impl Sl4f {
                 "gatt_server_facade" => GattServerFacade::new(),
                 "gpio_facade" => GpioFacade::new(),
                 "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
+                "hfp_facade" => HfpFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
                 "i2c_facade" => I2cFacade::new(),
                 "input_facade" => InputFacade::new(),

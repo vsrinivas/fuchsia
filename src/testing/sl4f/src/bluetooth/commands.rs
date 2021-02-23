@@ -19,6 +19,7 @@ use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
+use crate::bluetooth::hfp_facade::HfpFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
     BleAdvertiseResponse, BleConnectPeripheralResponse, GattcDiscoverCharacteristicResponse,
@@ -686,4 +687,21 @@ async fn publish_service_async(
     let publish_service_result =
         BluetoothFacade::publish_service(&facade, service_info, local_service_id).await?;
     Ok(to_value(publish_service_result)?)
+}
+
+#[async_trait(?Send)]
+impl Facade for HfpFacade {
+    async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "HfpInit" => {
+                let result = self.init_hfp_service_proxy().await?;
+                Ok(to_value(result)?)
+            }
+            "HfpRemoveService" => {
+                self.cleanup().await;
+                Ok(to_value(())?)
+            }
+            _ => bail!("Invalid Hfp FIDL method: {:?}", method),
+        }
+    }
 }
