@@ -28,9 +28,9 @@ flutter_app("inspect_flutter_integration_tester") {
   deps = [
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
-    "//topaz/public/dart/fuchsia_modular",
     dart_package_label.fuchsia_inspect,
     dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_modular,
     dart_package_label.fuchsia_services,
   ]
 }
