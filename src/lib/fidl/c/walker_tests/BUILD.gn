@@ -34,6 +34,7 @@ source_set("test_sources") {
     "fidl_align_tests.cc",
     "fidl_coded_types.cc",
     "formatting_tests.cc",
+    "llcpp_bind_server_overloads_test.cc",
     "llcpp_client_test.cc",
     "llcpp_gen_api_test.cc",
     "llcpp_server_test.cc",
