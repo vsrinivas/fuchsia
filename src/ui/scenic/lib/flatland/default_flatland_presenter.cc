@@ -48,7 +48,8 @@ void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_prese
     // since GFX sessions may access the FrameScheduler without passing through this object. Post a
     // task to the main thread, which is where GFX runs, to account for thread safety.
     async::PostTask(main_dispatcher_, [scheduler, requested_presentation_time, id_pair] {
-      scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair);
+      scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair,
+                                          /*squashable=*/true);
     });
   } else {
     // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.

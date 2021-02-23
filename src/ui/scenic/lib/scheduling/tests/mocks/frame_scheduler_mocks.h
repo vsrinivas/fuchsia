@@ -30,7 +30,8 @@ class MockFrameScheduler : public FrameScheduler {
                             PresentId present_id) override;
 
   // |FrameScheduler|
-  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
+  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair,
+                                bool squashable) override;
 
   // |FrameScheduler|
   void GetFuturePresentationInfos(
@@ -42,7 +43,7 @@ class MockFrameScheduler : public FrameScheduler {
 
   // Testing only. Used for mock method callbacks.
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
-  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, SchedulingIdPair)>;
+  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, SchedulingIdPair, bool)>;
   using OnGetFuturePresentationInfosCallback =
       std::function<std::vector<fuchsia::scenic::scheduling::PresentationInfo>(
           zx::duration requested_prediction_span)>;

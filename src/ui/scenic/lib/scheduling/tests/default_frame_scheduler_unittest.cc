@@ -46,11 +46,11 @@ class MockSessionUpdaterWithFunctionOnUpdate : public MockSessionUpdater {
 // Schedule an update on the frame scheduler.
 static void ScheduleUpdate(const std::unique_ptr<DefaultFrameScheduler>& scheduler,
                            SessionId session_id, zx::time presentation_time,
-                           std::vector<zx::event> release_fences = {}) {
+                           std::vector<zx::event> release_fences = {}, bool squashable = true) {
   scheduling::PresentId present_id =
       scheduler->RegisterPresent(session_id, std::move(release_fences));
-  scheduler->ScheduleUpdateForSession(presentation_time,
-                                      {.session_id = session_id, .present_id = present_id});
+  scheduler->ScheduleUpdateForSession(
+      presentation_time, {.session_id = session_id, .present_id = present_id}, squashable);
 }
 
 // This function runs a single frame through the scheduler, updater, and renderer. It performs a
@@ -190,6 +190,56 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldScheduleForInitialPresent) {
   EXPECT_EQ(mock_updater_->last_latched_times().size(), 1u);
   ASSERT_EQ(mock_updater_->last_latched_times().count(kSessionId), 1u);
   EXPECT_EQ(mock_updater_->last_latched_times().at(kSessionId).size(), 2u);
+}
+
+TEST_F(FrameSchedulerTest, UnsquashablePresents_ShouldNeverBeSquashed) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+
+  // Schedule four updates with the same presentation time, but different squashability.
+  constexpr SessionId kSessionId = 1;
+  ScheduleUpdate(scheduler, kSessionId, zx::time(0), /*release_fences*/ {}, /*squashable=*/false);
+  ScheduleUpdate(scheduler, kSessionId, zx::time(0), /*release_fences*/ {}, /*squashable=*/false);
+  ScheduleUpdate(scheduler, kSessionId, zx::time(0), /*release_fences*/ {}, /*squashable=*/true);
+  ScheduleUpdate(scheduler, kSessionId, zx::time(0), /*release_fences*/ {}, /*squashable=*/false);
+
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+
+  // Present should have been scheduled and applied.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->on_frame_presented_call_count(), 0u);
+
+  // Present the frame.
+  mock_renderer_->EndFrame();
+
+  // Only one update should have been applied.
+  EXPECT_EQ(mock_updater_->on_frame_presented_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->last_latched_times().size(), 1u);
+  ASSERT_EQ(mock_updater_->last_latched_times().count(kSessionId), 1u);
+  EXPECT_EQ(mock_updater_->last_latched_times().at(kSessionId).size(), 1u);
+
+  // Next frame should also apply a single one.
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
+  mock_renderer_->EndFrame();
+  EXPECT_EQ(mock_updater_->on_frame_presented_call_count(), 2u);
+  EXPECT_EQ(mock_updater_->last_latched_times().size(), 1u);
+  ASSERT_EQ(mock_updater_->last_latched_times().count(kSessionId), 1u);
+  EXPECT_EQ(mock_updater_->last_latched_times().at(kSessionId).size(), 1u);
+
+  // Third update is squashable, so next frame should contain update 3+4.
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 3u);
+  mock_renderer_->EndFrame();
+  EXPECT_EQ(mock_updater_->on_frame_presented_call_count(), 3u);
+  EXPECT_EQ(mock_updater_->last_latched_times().size(), 1u);
+  ASSERT_EQ(mock_updater_->last_latched_times().count(kSessionId), 1u);
+  EXPECT_EQ(mock_updater_->last_latched_times().at(kSessionId).size(), 2u);
+
+  // All updates should have been completed.
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 3u);
 }
 
 TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCalls) {

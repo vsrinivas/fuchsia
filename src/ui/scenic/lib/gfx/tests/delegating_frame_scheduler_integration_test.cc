@@ -63,7 +63,8 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration1) {
   bool scheduled_update = false;
   // Mock method callback for test.
   frame_scheduler->set_schedule_update_for_session_callback(
-      [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair) {
+      [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair,
+          bool squashable) {
         scheduled_update = true;
         EXPECT_EQ(kPresentationTime, requested_presentation_time);
         EXPECT_EQ(kSessionId, id_pair.session_id);
@@ -111,7 +112,7 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
   bool scheduled_update = false;
   // Mock method callback for test.
   frame_scheduler->set_schedule_update_for_session_callback(
-      [&](zx::time presentation_time, scheduling::SchedulingIdPair id_pair) {
+      [&](zx::time presentation_time, scheduling::SchedulingIdPair id_pair, bool squashable) {
         scheduled_update = true;
         EXPECT_EQ(kPresentationTime, presentation_time);
         EXPECT_EQ(image_pipe_updater->GetSchedulingId(), id_pair.session_id);

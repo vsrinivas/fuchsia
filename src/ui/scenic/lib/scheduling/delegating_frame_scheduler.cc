@@ -49,10 +49,11 @@ PresentId DelegatingFrameScheduler::RegisterPresent(SessionId session_id,
 }
 
 void DelegatingFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
-                                                        SchedulingIdPair id_pair) {
-  CallWhenFrameSchedulerAvailable([presentation_time, id_pair](FrameScheduler* frame_scheduler) {
-    frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair);
-  });
+                                                        SchedulingIdPair id_pair, bool squashable) {
+  CallWhenFrameSchedulerAvailable(
+      [presentation_time, id_pair, squashable](FrameScheduler* frame_scheduler) {
+        frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair, squashable);
+      });
 }
 
 void DelegatingFrameScheduler::GetFuturePresentationInfos(

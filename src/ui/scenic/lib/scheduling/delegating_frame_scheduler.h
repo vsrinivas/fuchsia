@@ -50,7 +50,8 @@ class DelegatingFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   // Calls ScheduleUpdateForSession() immediately if a FrameScheduler has been set; otherwise defers
   // the call until one has been set.
-  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
+  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair,
+                                bool squashable) override;
 
   // |FrameScheduler|
   // Calls GetFuturePresentationInfos() immediately if a FrameScheduler has been set; otherwise

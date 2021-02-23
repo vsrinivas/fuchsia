@@ -134,9 +134,10 @@ void DefaultFrameScheduler::HandleNextFrameRequest() {
     SessionId last_session = scheduling::kInvalidSessionId;
     zx::time next_min_time = zx::time(std::numeric_limits<zx_time_t>::max());
     for (const auto& [id_pair, request] : pending_present_requests_) {
-      if (id_pair.session_id != last_session) {
+      if (id_pair.session_id != last_session &&
+          sessions_with_unsquashable_updates_pending_presentation_.count(id_pair.session_id) == 0) {
         last_session = id_pair.session_id;
-        next_min_time = std::min(next_min_time, request.first);
+        next_min_time = std::min(next_min_time, request.requested_presentation_time);
       }
     }
 
@@ -242,7 +243,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 }
 
 void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                                     SchedulingIdPair id_pair) {
+                                                     SchedulingIdPair id_pair, bool squashable) {
+  FX_DCHECK(id_pair.session_id != scheduling::kInvalidSessionId);
   TRACE_DURATION("gfx", "DefaultFrameScheduler::ScheduleUpdateForSession",
                  "requested_presentation_time", requested_presentation_time.get() / 1'000'000);
 
@@ -254,7 +256,10 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
 
   const trace_flow_id_t flow_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("gfx", "request_to_render", flow_id);
-  pending_present_requests_.try_emplace(id_pair, requested_presentation_time, flow_id);
+  pending_present_requests_.emplace(std::make_pair(
+      id_pair, PresentRequest{.requested_presentation_time = requested_presentation_time,
+                              .flow_id = flow_id,
+                              .squashable = squashable}));
 
   HandleNextFrameRequest();
 }
@@ -370,8 +375,13 @@ void DefaultFrameScheduler::OnFramePresented(uint64_t frame_number, zx::time ren
   }
   outstanding_latch_points_.pop_front();
 
+  sessions_with_unsquashable_updates_pending_presentation_.clear();
+
   if (!last_frame_is_presented_ || render_continuously_) {
     RequestFrame(zx::time(0));
+  } else {
+    // Schedule next frame if any unhandled presents are left.
+    HandleNextFrameRequest();
   }
 }
 
@@ -385,20 +395,30 @@ std::unordered_map<SessionId, PresentId> DefaultFrameScheduler::CollectUpdatesFo
     zx::time target_presentation_time) {
   std::unordered_map<SessionId, PresentId> updates;
 
-  SessionId current_session = 0;
+  SessionId current_session = scheduling::kInvalidSessionId;
   bool hit_limit = false;
+  bool preceding_update_is_squashable = true;
   auto it = pending_present_requests_.begin();
   while (it != pending_present_requests_.end()) {
-    auto& [id_pair, time_and_flow_id] = *it;
+    auto& [id_pair, present_request] = *it;
+
     if (current_session != id_pair.session_id) {
       current_session = id_pair.session_id;
       hit_limit = false;
+      preceding_update_is_squashable = true;
     }
 
-    if (!hit_limit && time_and_flow_id.first <= target_presentation_time) {
-      TRACE_FLOW_END("gfx", "request_to_render", time_and_flow_id.second);
+    if (!hit_limit && present_request.requested_presentation_time <= target_presentation_time &&
+        preceding_update_is_squashable &&
+        sessions_with_unsquashable_updates_pending_presentation_.count(id_pair.session_id) == 0) {
+      TRACE_FLOW_END("gfx", "request_to_render", present_request.flow_id);
       // Return only the last relevant present id for each session.
       updates[current_session] = id_pair.present_id;
+      if (!present_request.squashable) {
+        sessions_with_unsquashable_updates_pending_presentation_.emplace(id_pair.session_id);
+      }
+
+      preceding_update_is_squashable = present_request.squashable;
       it = pending_present_requests_.erase(it);
     } else {
       hit_limit = true;

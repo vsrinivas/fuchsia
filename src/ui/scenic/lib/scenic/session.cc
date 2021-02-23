@@ -182,7 +182,8 @@ void Session::SchedulePresentRequest(scheduling::PresentId present_id,
             dispatchers_.at(SystemTypeForCmd(cmd))->DispatchCommand(std::move(cmd), present_id);
           }
 
-          scheduler->ScheduleUpdateForSession(requested_presentation_time, {id_, present_id});
+          scheduler->ScheduleUpdateForSession(requested_presentation_time, {id_, present_id},
+                                              /*squashable=*/true);
         } else {
           // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
           FX_LOGS(WARNING) << "FrameScheduler is missing.";

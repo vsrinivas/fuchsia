@@ -64,7 +64,8 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   // Call public methods on the DelegatingFrameScheduler.
   const auto present_id1 = delegating_frame_scheduler.RegisterPresent(kSessionId, {}, {});
   delegating_frame_scheduler.ScheduleUpdateForSession(
-      /*presentation_time=*/zx::time(0), {.session_id = kSessionId, .present_id = present_id1});
+      /*presentation_time=*/zx::time(0), {.session_id = kSessionId, .present_id = present_id1},
+      /*squashable=*/true);
   delegating_frame_scheduler.SetRenderContinuously(true);
   delegating_frame_scheduler.GetFuturePresentationInfos(zx::duration(0), [](auto infos) {});
 

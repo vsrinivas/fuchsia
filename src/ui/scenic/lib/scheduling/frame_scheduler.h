@@ -114,7 +114,10 @@ class FrameScheduler {
 
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
-  virtual void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) = 0;
+  // |squashable| determines if the update is allowed to be combined with a following one in case
+  // of delays.
+  virtual void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair,
+                                        bool squashable) = 0;
 
   // Gets the predicted latch points and presentation times for the frames at or before the next
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.

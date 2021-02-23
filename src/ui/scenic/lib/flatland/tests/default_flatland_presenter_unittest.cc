@@ -136,8 +136,8 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
   });
 
   frame_scheduler->set_schedule_update_for_session_callback(
-      [&last_presentation_time, &last_id_pair](zx::time presentation_time,
-                                               scheduling::SchedulingIdPair id_pair) {
+      [&last_presentation_time, &last_id_pair](
+          zx::time presentation_time, scheduling::SchedulingIdPair id_pair, bool squashable) {
         last_presentation_time = presentation_time;
         last_id_pair = id_pair;
       });
@@ -200,7 +200,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
 
   frame_scheduler->set_schedule_update_for_session_callback(
       [&scheduled_updates, &function_count](zx::time presentation_time,
-                                            scheduling::SchedulingIdPair id_pair) {
+                                            scheduling::SchedulingIdPair id_pair, bool squashable) {
         scheduled_updates.insert(id_pair);
 
         ++function_count;
@@ -275,7 +275,8 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
     gfx_presents.push_back(present_id);
 
     // ScheduleUpdateForSession() is the other function being tested.
-    frame_scheduler->ScheduleUpdateForSession(zx::time(0), {kGfxSessionId, present_id});
+    frame_scheduler->ScheduleUpdateForSession(zx::time(0), {kGfxSessionId, present_id},
+                                              /*squashable=*/true);
   }
 
   {

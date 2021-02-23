@@ -49,7 +49,7 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
 
   // |FrameScheduler|
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                scheduling::SchedulingIdPair id_pair) override {
+                                scheduling::SchedulingIdPair id_pair, bool squashable) override {
     ++schedule_called_count_;
   }
 

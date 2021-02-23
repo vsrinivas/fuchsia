@@ -61,7 +61,8 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
           TRACE_FLOW_END("gfx", "wait_for_fences", trace_id);
 
           if (auto locked_frame_scheduler = this_locked->frame_scheduler_.lock()) {
-            locked_frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair);
+            locked_frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair,
+                                                             /*squashable=*/true);
           }
 
           // Release fences have been moved into frame scheduler. Delete the remaining fence

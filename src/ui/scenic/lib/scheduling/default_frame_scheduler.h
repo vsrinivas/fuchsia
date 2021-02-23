@@ -41,9 +41,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   void AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) override;
 
   // |FrameScheduler|
-  //
-  // If |render_continuously|, we keep rendering frames regardless of whether they're requested
-  // using RequestFrame().
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
@@ -51,11 +48,8 @@ class DefaultFrameScheduler final : public FrameScheduler {
                             PresentId present_id = kInvalidPresentId) override;
 
   // |FrameScheduler|
-  //
-  // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
-  // something other than a Session update i.e. an ImagePipe with a new Image to present.
-  void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                SchedulingIdPair id_pair) override;
+  void ScheduleUpdateForSession(zx::time requested_presentation_time, SchedulingIdPair id_pair,
+                                bool squashable) override;
 
   // |FrameScheduler|
   void GetFuturePresentationInfos(
@@ -63,8 +57,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
       FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
 
   // |FrameScheduler|
-  //
-  // Remove all state associated with a given session_id.
   void RemoveSession(SessionId session_id) override;
 
   constexpr static zx::duration kMinPredictedFrameDuration = zx::msec(0);
@@ -133,9 +125,17 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // Removes all references to each session passed in.
   void RemoveFailedSessions(const std::unordered_set<SessionId>& sessions_with_failed_updates);
 
-  // Map of all pending Present calls ordered by SessionId and then PresentId. Maps to requested
-  // presentation time and the corresponding flow id for each present.
-  std::map<SchedulingIdPair, std::pair<zx::time, trace_flow_id_t>> pending_present_requests_;
+  struct PresentRequest {
+    zx::time requested_presentation_time;
+    trace_flow_id_t flow_id;
+    // Determines if this Present can be combined with following Presents, or must be displayed for
+    // at least one frame.
+    bool squashable;
+  };
+  // Map of all pending Present calls ordered by SessionId and then PresentId.
+  std::map<SchedulingIdPair, PresentRequest> pending_present_requests_;
+
+  std::unordered_set<SessionId> sessions_with_unsquashable_updates_pending_presentation_;
 
   struct FrameUpdate {
     uint64_t frame_number;
